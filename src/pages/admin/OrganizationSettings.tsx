@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
+import { useI18n } from '../../i18n/useI18n'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
 import { refreshOrganizationTheme } from '../../hooks/useOrganizationTheme'
@@ -61,11 +62,12 @@ import { supabase } from '../../lib/supabase'
 
 import { type OrganizationSettings as OrgSettingsType } from '@/types/organizationSettings'
 import ContactSection from './organizationSettings/ContactSection'
-import TravelContactSection from './organizationSettings/TravelContactSection'
+import StaffSection from './organizationSettings/StaffSection'
 
 import type { Organization } from '../../types/domain/Organization'
 
 export default function OrganizationSettings() {
+  const { t } = useI18n()
   const { currentOrganization } = useOrganization()
   const { context, isReady } = useUserContext()
   const { summary: licenseSummary } = useLicense(currentOrganization?.id)
@@ -89,7 +91,7 @@ export default function OrganizationSettings() {
 
   // Valid tab values for URL parameter
   const validTabs = useMemo(() => {
-    const baseTabs = ['overview', 'contact', 'travel-contacts', 'general', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'advanced']
+    const baseTabs = ['overview', 'contact', 'general', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'staff', 'advanced']
     if (hasPaymentAccess) {
       baseTabs.push('payments')
     }
@@ -326,13 +328,14 @@ export default function OrganizationSettings() {
         <TabsList className="pa-mb-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="contact">Contact</TabsTrigger>
-          <TabsTrigger value="travel-contacts">Travel Contacts</TabsTrigger>
+          {/* Travel contacts merged into Contact tab */}
           <TabsTrigger value="general">Configuration</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="registration">Registration</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
+          <TabsTrigger value="staff">{t('admin.organizationSettings.organizationStaff')}</TabsTrigger>
           {hasPaymentAccess && <TabsTrigger value="payments">Payments</TabsTrigger>}
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
         </TabsList>
@@ -370,9 +373,7 @@ export default function OrganizationSettings() {
             {currentOrganization?.id && <ContactSection orgId={currentOrganization.id} />}
         </TabsContent>
 
-        <TabsContent value="travel-contacts">
-            <TravelContactSection />
-        </TabsContent>
+        {/* Travel contacts merged into Contact tab; section removed */}
 
         <TabsContent value="general">
           {settings && <GeneralConfigForm settings={settings.general} onSave={(d) => handleSaveSettings('general', d)} loading={saving} />}
@@ -402,6 +403,10 @@ export default function OrganizationSettings() {
 
         <TabsContent value="permissions">
            {settings && <PermissionsForm settings={settings.visibility} onSave={(d) => handleSaveSettings('visibility', d)} loading={saving} />}
+        </TabsContent>
+
+        <TabsContent value="staff">
+          {currentOrganization && <StaffSection organizationId={currentOrganization.id} />}
         </TabsContent>
 
         {hasPaymentAccess && (
@@ -974,6 +979,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
   const [refreshing, setRefreshing] = useState(false)
   const [remediating, setRemediating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const [allowPartialPayments, setAllowPartialPayments] = useState<boolean>(true)
   const [policyLoading, setPolicyLoading] = useState(true)
@@ -1001,12 +1007,12 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
       case 'requirements.past_due':
         return 'Action required: verification information is overdue.'
       case 'requirements.pending_verification':
-        return 'Stripe is reviewing your submitted information. No action needed yet.'
+        return 'Your payment processor is reviewing your submitted information. No action needed yet.'
       case 'under_review':
         return 'Your account is under review. This usually resolves within 1-2 business days.'
       default:
-        if (reason.startsWith('rejected.')) return 'Stripe restricted the account. Please contact support.'
-        return `Stripe reported: ${reason}`
+        if (reason.startsWith('rejected.')) return 'Payment processor restricted the account. Please contact support.'
+        return `Payment processor reported: ${reason.replace(/_/g, ' ')}`
     }
   }, [connectStatus?.disabledReason])
 
@@ -1116,8 +1122,20 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
     )
   }
 
+  // Status determination
+  const statusType = connectStatus?.connected 
+    ? (payoutsPaused ? 'error' : connectStatus.payoutsEnabled ? 'success' : 'warning')
+    : 'neutral'
+  const statusText = connectStatus?.connected
+    ? (payoutsPaused ? 'Payouts Paused' : connectStatus.payoutsEnabled ? 'Active & Receiving Payments' : 'Connected')
+    : 'Not Connected'
+  const statusIcon = connectStatus?.connected
+    ? (payoutsPaused ? '⚠️' : connectStatus.payoutsEnabled ? '✓' : '○')
+    : '○'
+
   return (
     <>
+    {/* Payment Options Card */}
     <Card className="pa-mb-6">
       <h3 className="pa-h3 pa-mb-4">Payment Options</h3>
       
@@ -1134,49 +1152,168 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
       </div>
     </Card>
 
-    <Card>
-      <h3 className="pa-h3 pa-mb-4">Stripe Connect Settings</h3>
-      
+    {/* Payment Processing Status Card */}
+    <Card className="pa-mb-6">
       {error && (
-        <div className="pa-alert pa-alert-error pa-mb-4" style={{ background: 'var(--pa-danger-bg)', color: 'var(--pa-danger)', padding: '1rem', borderRadius: '8px' }}>
-          {error}
+        <div className="pa-alert pa-alert-error pa-mb-6" style={{ 
+          background: 'var(--pa-danger-bg)', 
+          color: 'var(--pa-danger)', 
+          padding: '1rem', 
+          borderRadius: '8px',
+          border: '1px solid rgba(239, 68, 68, 0.3)'
+        }}>
+          <strong>Error:</strong> {error}
         </div>
       )}
 
-      {connectStatus && payoutsPaused && (
-        <div className="pa-alert pa-mb-4" style={{ background: 'var(--pa-danger-bg)', color: 'var(--pa-danger)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--pa-danger-border, rgba(220,38,38,0.3))' }}>
-          <div className="pa-flex pa-justify-between pa-items-center pa-gap-3">
-            <div>
-              <div className="pa-h4 pa-mb-1">Payouts Paused</div>
-              <div className="pa-text-sm">
-                {disabledCopy || 'Stripe paused payouts for this account. Please resolve in Stripe to resume transfers.'}
-              </div>
-              {connectStatus.requirementsDeadline && (
-                <div className="pa-text-xs pa-mt-2">
-                  Deadline: {formatDateTime(connectStatus.requirementsDeadline)}
-                </div>
-              )}
-            </div>
-            <div className="pa-flex pa-gap-2">
-              {isActionablePause ? (
+      {/* Status Hero Section */}
+      <div className="pa-flex pa-items-start pa-gap-6 pa-mb-6">
+        {/* Large Status Icon */}
+        <div style={{
+          width: '80px',
+          height: '80px',
+          borderRadius: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '40px',
+          background: statusType === 'success'
+            ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)'
+            : statusType === 'error'
+            ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%)'
+            : statusType === 'warning'
+            ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(251, 191, 36, 0.05) 100%)'
+            : 'rgba(0, 0, 0, 0.03)',
+          border: statusType === 'success'
+            ? '2px solid rgba(34, 197, 94, 0.2)'
+            : statusType === 'error'
+            ? '2px solid rgba(239, 68, 68, 0.2)'
+            : statusType === 'warning'
+            ? '2px solid rgba(251, 191, 36, 0.2)'
+            : '2px solid rgba(0, 0, 0, 0.1)',
+          flexShrink: 0
+        }}>
+          {statusIcon}
+        </div>
+
+        {/* Status Info */}
+        <div className="pa-flex-1">
+          <div className="pa-flex pa-items-center pa-gap-3 pa-mb-2">
+            <h3 className="pa-h3" style={{ margin: 0 }}>
+              Payment Processing
+            </h3>
+            <Badge variant={statusType === 'success' ? 'success' : statusType === 'error' ? 'danger' : statusType === 'warning' ? 'warning' : 'neutral'}>
+              {statusText}
+            </Badge>
+          </div>
+          
+          <p className="pa-text-muted pa-mb-3">
+            {connectStatus?.connected 
+              ? payoutsPaused
+                ? 'Your payment account needs attention to resume receiving payouts.'
+                : connectStatus.payoutsEnabled
+                ? 'Your organization is connected and ready to receive payments from families.'
+                : 'Your payment account is connected but payouts are not fully enabled.'
+              : 'Connect your payment account to start accepting payments from families for fees, tickets, and registrations.'
+            }
+          </p>
+
+          {connectStatus?.lastStatusUpdated && (
+            <div className="pa-text-xs pa-text-muted">Last synced: {formatDateTime(connectStatus.lastStatusUpdated)}</div>
+          )}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="pa-flex pa-flex-col pa-gap-2" style={{ minWidth: '160px' }}>
+          {!connectStatus?.connected ? (
+            <Button
+              variant="primary"
+              onClick={handleConnect}
+              disabled={onboarding}
+              loading={onboarding}
+              style={{ width: '100%' }}
+            >
+              Connect Account
+            </Button>
+          ) : (
+            <>
+              {(isActionablePause || hasDueRequirements) && (
                 <Button
                   variant="primary"
                   onClick={handleRemediationLink}
-                  loading={remediating}
                   disabled={remediating}
+                  loading={remediating}
+                  style={{ width: '100%' }}
                 >
-                  Fix Now
+                  {isActionablePause ? 'Fix Issues' : 'Complete Requirements'}
                 </Button>
-              ) : (
-                connectStatus?.dashboardUrl && (
-                  <Button
-                    variant="ghost"
-                    icon="open_in_new"
-                    onClick={() => window.open(connectStatus.dashboardUrl!, '_blank')}
-                  >
-                    View in Stripe
-                  </Button>
-                )
+              )}
+
+              {connectStatus.onboardingStatus !== 'completed' && !isActionablePause && !hasDueRequirements && (
+                <Button
+                  variant="primary"
+                  onClick={handleConnect}
+                  disabled={onboarding}
+                  loading={onboarding}
+                  style={{ width: '100%' }}
+                >
+                  Complete Setup
+                </Button>
+              )}
+
+              <Button
+                variant="ghost"
+                size="dense"
+                icon="refresh"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                style={{ width: '100%' }}
+              >
+                Refresh Status
+              </Button>
+
+              {connectStatus.dashboardUrl && (
+                <Button
+                  variant="ghost"
+                  size="dense"
+                  icon="open_in_new"
+                  onClick={() => window.open(connectStatus.dashboardUrl!, '_blank')}
+                  style={{ width: '100%' }}
+                >
+                  Payment Dashboard
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {connectStatus && payoutsPaused && (
+        <div style={{ 
+          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.04) 100%)',
+          border: '1px solid rgba(239, 68, 68, 0.2)',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '24px'
+        }}>
+          <div className="pa-flex pa-items-start pa-gap-3">
+            <span style={{ fontSize: '24px', lineHeight: 1 }}>🚨</span>
+            <div className="pa-flex-1">
+              <h4 className="pa-h4 pa-mb-2" style={{ color: 'var(--pa-danger, #ef4444)' }}>
+                Action Required: Payouts Paused
+              </h4>
+              <p className="pa-text-sm pa-mb-3">
+                {disabledCopy || 'Your payment processor has paused payouts for this account. Please resolve the issues below to resume receiving payments.'}
+              </p>
+              {connectStatus.requirementsDeadline && (
+                <div className="pa-text-xs pa-text-muted pa-mb-3" style={{ 
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  display: 'inline-block'
+                }}>
+                  ⏰ Deadline: <strong>{formatDateTime(connectStatus.requirementsDeadline)}</strong>
+                </div>
               )}
             </div>
           </div>
@@ -1184,192 +1321,252 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
       )}
 
       {connectStatus && !payoutsPaused && hasDueRequirements && (
-        <div className="pa-alert pa-mb-4" style={{ background: 'var(--pa-warning-bg, #FFF8E6)', color: 'var(--pa-text)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--pa-border-subtle, #F3D9A4)' }}>
-          <div className="pa-flex pa-justify-between pa-items-center pa-gap-3">
-            <div>
-              <div className="pa-h4 pa-mb-1">Verification needed</div>
-              <div className="pa-text-sm">
-                Complete the outstanding Stripe requirements to avoid payout interruptions.
-              </div>
+        <div style={{ 
+          background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(251, 191, 36, 0.04) 100%)',
+          border: '1px solid rgba(251, 191, 36, 0.3)',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '24px'
+        }}>
+          <div className="pa-flex pa-items-start pa-gap-3">
+            <span style={{ fontSize: '24px', lineHeight: 1 }}>⚡</span>
+            <div className="pa-flex-1">
+              <h4 className="pa-h4 pa-mb-2" style={{ color: 'var(--pa-warning, #fbbf24)' }}>
+                Verification Needed
+              </h4>
+              <p className="pa-text-sm pa-mb-3">
+                Complete the outstanding requirements below to avoid payout interruptions.
+              </p>
               {connectStatus.requirementsDeadline && (
-                <div className="pa-text-xs pa-mt-2">
-                  Deadline: {formatDateTime(connectStatus.requirementsDeadline)}
+                <div className="pa-text-xs pa-text-muted" style={{ 
+                  background: 'rgba(251, 191, 36, 0.1)',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  display: 'inline-block'
+                }}>
+                  ⏰ Deadline: <strong>{formatDateTime(connectStatus.requirementsDeadline)}</strong>
                 </div>
               )}
             </div>
-            <Button
-              variant="primary"
-              onClick={handleRemediationLink}
-              loading={remediating}
-              disabled={remediating}
-            >
-              Complete Now
-            </Button>
           </div>
         </div>
       )}
 
-      <div className="pa-form-group pa-mb-6">
-        <div className="pa-mb-4">
-          <div className="pa-caption pa-text-muted pa-mb-2">Connection Status</div>
-          <div className="pa-flex pa-items-center pa-gap-2">
-            <Badge variant={connectStatus?.connected ? 'success' : 'neutral'}>
-              {connectStatus?.connected ? 'Connected' : 'Not Connected'}
-            </Badge>
-            {connectStatus?.connected && (
-              <Button
-                variant="ghost"
-                size="dense"
-                icon="refresh"
-                onClick={handleRefresh}
-                disabled={refreshing}
-              >
-                Refresh Status
-              </Button>
-            )}
-            {connectStatus?.lastStatusUpdated && (
-              <span className="pa-text-xs pa-text-muted">
-                Updated {formatDateTime(connectStatus.lastStatusUpdated)}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {connectStatus?.connected && (
-          <>
-            <div className="pa-mb-4">
-              <div className="pa-caption pa-text-muted pa-mb-2">Payout Status</div>
-              <Badge variant={connectStatus.payoutsEnabled ? 'success' : 'danger'}>
+      {/* Connected: Key Info Grid */}
+      {connectStatus?.connected && (
+        <div className="pa-form-grid pa-form-grid-3 pa-mb-6" style={{ gap: '16px' }}>
+          {/* Payout Status */}
+          <div style={{
+            background: 'var(--pa-bg, white)',
+            border: '1px solid var(--pa-border, #e5e7eb)',
+            borderRadius: '12px',
+            padding: '20px',
+          }}>
+            <div className="pa-caption pa-text-muted pa-mb-2">Payout Status</div>
+            <div className="pa-flex pa-items-center pa-gap-2">
+              <Badge variant={connectStatus.payoutsEnabled ? 'success' : 'danger'} style={{ fontSize: '14px' }}>
                 {connectStatus.payoutsEnabled ? 'Active' : 'Paused'}
               </Badge>
             </div>
+          </div>
 
-            <div className="pa-mb-4">
-              <div className="pa-caption pa-text-muted pa-mb-2">Onboarding Status</div>
-              <Badge
-                variant={
-                  connectStatus.onboardingStatus === 'completed'
-                    ? 'success'
-                    : connectStatus.onboardingStatus === 'restricted'
-                      ? 'danger'
-                      : 'warning'
-                }
-              >
-                {connectStatus.onboardingStatus}
-              </Badge>
+          {/* Onboarding Status */}
+          <div style={{
+            background: 'var(--pa-bg, white)',
+            border: '1px solid var(--pa-border, #e5e7eb)',
+            borderRadius: '12px',
+            padding: '20px',
+          }}>
+            <div className="pa-caption pa-text-muted pa-mb-2">Onboarding</div>
+            <Badge
+              variant={
+                connectStatus.onboardingStatus === 'completed'
+                  ? 'success'
+                  : connectStatus.onboardingStatus === 'restricted'
+                    ? 'danger'
+                    : 'warning'
+              }
+              style={{ fontSize: '14px', textTransform: 'capitalize' }}
+            >
+              {connectStatus.onboardingStatus}
+            </Badge>
+          </div>
+
+          {/* Account Status */}
+          <div style={{
+            background: 'var(--pa-bg, white)',
+            border: '1px solid var(--pa-border, #e5e7eb)',
+            borderRadius: '12px',
+            padding: '20px',
+          }}>
+            <div className="pa-caption pa-text-muted pa-mb-2">Account Health</div>
+            <div className="pa-text-sm" style={{ fontWeight: 600 }}>
+              {disabledCopy || (hasPendingReview ? 'Under Review' : 'All Clear')}
             </div>
+          </div>
+        </div>
+      )}
 
+      {/* Requirements Checklist */}
+      {connectStatus?.connected && (connectStatus.requirementsDue?.length > 0 || connectStatus.requirementsErrors?.length > 0) && (
+        <div style={{
+          background: 'var(--pa-bg, white)',
+          border: '1px solid var(--pa-border, #e5e7eb)',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '24px'
+        }}>
+          <h4 className="pa-h4 pa-mb-4">📋 Outstanding Items</h4>
+          
+          {connectStatus.requirementsDue?.length > 0 && (
             <div className="pa-mb-4">
-              <div className="pa-caption pa-text-muted pa-mb-2">Stripe Reason</div>
-              <div className="pa-text-sm">
-                {disabledCopy || 'None reported'}
+              <div className="pa-text-sm pa-font-semibold pa-mb-2">Requirements Due:</div>
+              <div className="pa-flex pa-flex-col pa-gap-2">
+                {connectStatus.requirementsDue.map((req) => {
+                  // Convert technical requirement names to human-readable format
+                  const humanReadable = req
+                    .replace(/^person_/, 'Person: ')
+                    .replace(/^company_/, 'Company: ')
+                    .replace(/^business_/, 'Business: ')
+                    .replace(/^individual_/, 'Individual: ')
+                    .replace(/_/g, ' ')
+                    .replace(/\./g, ' - ')
+                    .replace(/\bid\b/gi, 'ID')
+                    .replace(/\bssn\b/gi, 'SSN')
+                    .replace(/\bein\b/gi, 'EIN')
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                    .join(' ')
+                  
+                  return (
+                    <div key={req} className="pa-flex pa-items-center pa-gap-2 pa-text-sm" style={{
+                      padding: '8px 12px',
+                      background: 'rgba(251, 191, 36, 0.05)',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(251, 191, 36, 0.2)'
+                    }}>
+                      <span>⚠️</span>
+                      <span>{humanReadable}</span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
+          )}
 
-            {hasPendingReview && (
-              <div className="pa-text-sm pa-text-muted pa-mb-4">
-                Stripe is reviewing recently submitted documents. You will be notified when this is complete.
+          {connectStatus.requirementsErrors?.length > 0 && (
+            <div>
+              <div className="pa-text-sm pa-font-semibold pa-mb-2">Issues Reported:</div>
+              <div className="pa-flex pa-flex-col pa-gap-2">
+                {connectStatus.requirementsErrors.map((err, idx) => {
+                  // Convert technical field names to human-readable format
+                  const humanReadableField = err.requirement
+                    ?.replace(/^person_/, 'Person: ')
+                    ?.replace(/^company_/, 'Company: ')
+                    ?.replace(/^business_/, 'Business: ')
+                    ?.replace(/^individual_/, 'Individual: ')
+                    ?.replace(/_/g, ' ')
+                    ?.replace(/\./g, ' - ')
+                    ?.replace(/\bid\b/gi, 'ID')
+                    ?.replace(/\bssn\b/gi, 'SSN')
+                    ?.replace(/\bein\b/gi, 'EIN')
+                    ?.split(' ')
+                    ?.map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                    ?.join(' ')
+                  
+                  return (
+                    <div key={`${err.code}-${idx}`} className="pa-flex pa-items-start pa-gap-2 pa-text-sm" style={{
+                      padding: '8px 12px',
+                      background: 'rgba(239, 68, 68, 0.05)',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(239, 68, 68, 0.2)'
+                    }}>
+                      <span style={{ marginTop: '2px' }}>❌</span>
+                      <div>
+                        <div>{err.reason || err.code || 'Issue detected'}</div>
+                        {humanReadableField && (
+                          <div className="pa-text-xs pa-text-muted pa-mt-1">Field: {humanReadableField}</div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-            )}
+            </div>
+          )}
+        </div>
+      )}
 
-            <div className="pa-mb-4">
-              <div className="pa-caption pa-text-muted pa-mb-2">Outstanding Requirements</div>
-              {connectStatus.requirementsDue?.length ? (
-                <ul className="pa-list pa-pl-4">
-                  {connectStatus.requirementsDue.map((req) => (
-                    <li key={req} className="pa-text-sm">{req}</li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="pa-text-sm pa-text-muted">No requirements currently due.</div>
+      {/* Pending Review Notice */}
+      {connectStatus?.connected && hasPendingReview && !payoutsPaused && (
+        <div style={{
+          background: 'rgba(59, 130, 246, 0.05)',
+          border: '1px solid rgba(59, 130, 246, 0.2)',
+          borderRadius: '12px',
+          padding: '16px',
+          marginBottom: '24px'
+        }}>
+          <div className="pa-flex pa-items-start pa-gap-2 pa-text-sm">
+            <span style={{ fontSize: '18px' }}>ℹ️</span>
+            <div>
+              <strong>Under Review:</strong> Stripe is reviewing your recently submitted documents. 
+              You'll receive an email when the review is complete. No action needed at this time.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Advanced Details (Collapsible) */}
+      {connectStatus?.connected && (
+        <div style={{
+          borderTop: '1px solid var(--pa-border, #e5e7eb)',
+          paddingTop: '20px',
+          marginTop: '24px'
+        }}>
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="pa-flex pa-items-center pa-gap-2 pa-text-sm pa-text-muted"
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              fontWeight: 600
+            }}
+          >
+            <span style={{ transform: showAdvanced ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>▶</span>
+            Advanced Details
+          </button>
+
+          {showAdvanced && (
+            <div className="pa-mt-4 pa-flex pa-flex-col pa-gap-3">
+              {connectStatus.payoutDescriptor && (
+                <div>
+                  <div className="pa-caption pa-text-muted">Payout Descriptor</div>
+                  <div className="pa-text-sm" style={{ 
+                    fontFamily: 'monospace',
+                    background: 'rgba(0, 0, 0, 0.03)',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    marginTop: '4px'
+                  }}>
+                    {connectStatus.payoutDescriptor}
+                  </div>
+                </div>
+              )}
+              
+              {connectStatus.requirementsPending && connectStatus.requirementsPending.length > 0 && (
+                <div>
+                  <div className="pa-caption pa-text-muted">Pending Verification</div>
+                  <div className="pa-text-sm pa-text-muted pa-mt-1">
+                    {connectStatus.requirementsPending.join(', ')}
+                  </div>
+                </div>
               )}
             </div>
-
-            {connectStatus.requirementsErrors?.length > 0 && (
-              <div className="pa-mb-4">
-                <div className="pa-caption pa-text-muted pa-mb-2">Stripe reported issues</div>
-                <ul className="pa-list pa-pl-4">
-                  {connectStatus.requirementsErrors.map((err, idx) => (
-                    <li key={`${err.code}-${idx}`} className="pa-text-sm">
-                      {err.reason || err.code || 'Issue detected'}
-                      {err.requirement ? ` — ${err.requirement}` : ''}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {connectStatus.payoutDescriptor && (
-              <div className="pa-mb-4">
-                <div className="pa-caption pa-text-muted pa-mb-2">Payout Descriptor</div>
-                <div className="pa-text-sm">{connectStatus.payoutDescriptor}</div>
-              </div>
-            )}
-
-            {connectStatus.dashboardUrl && (
-              <div className="pa-mb-4">
-                <Button
-                  variant="ghost"
-                  icon="open_in_new"
-                  onClick={() => window.open(connectStatus.dashboardUrl!, '_blank')}
-                >
-                  View in Stripe Dashboard
-                </Button>
-              </div>
-            )}
-
-            {(isActionablePause || hasDueRequirements) && (
-              <div className="pa-mb-4 pa-flex pa-gap-2">
-                <Button
-                  variant="primary"
-                  onClick={handleRemediationLink}
-                  disabled={remediating}
-                  loading={remediating}
-                >
-                  Fix Now
-                </Button>
-                {connectStatus.dashboardUrl && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => window.open(connectStatus.dashboardUrl!, '_blank')}
-                  >
-                    Open Stripe
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {connectStatus.onboardingStatus !== 'completed' && !isActionablePause && (
-              <div className="pa-mb-4">
-                <Button
-                  variant="primary"
-                  onClick={handleConnect}
-                  disabled={onboarding}
-                  loading={onboarding}
-                >
-                  Complete Onboarding
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-
-        {!connectStatus?.connected && (
-          <div className="pa-mb-4">
-            <p className="pa-text-sm pa-text-muted pa-mb-4">
-              Connect your Stripe account to receive payments directly from parents.
-            </p>
-            <Button
-              variant="primary"
-              onClick={handleConnect}
-              disabled={onboarding}
-              loading={onboarding}
-            >
-              Connect Stripe Account
-            </Button>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </Card>
     </>
   )

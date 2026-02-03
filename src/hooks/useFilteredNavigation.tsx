@@ -19,7 +19,7 @@
  */
 
 import { useMemo } from 'react';
-import type { NavigationSection, NavigationItem } from '@/utils/routes/types';
+import type { NavigationSection, NavigationItem } from '@/utils/routes';
 import {
     useFeatureGateBatch,
     getFeatureKeyForRoute,

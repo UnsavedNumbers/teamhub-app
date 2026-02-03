@@ -11,8 +11,8 @@ import { useOrganizationTheme } from '../hooks/useOrganizationTheme'
 import { useTheme } from '../hooks/useTheme'
 import { useT } from '../i18n/useI18n'
 import { useSidebar } from '../contexts/SidebarContext'
-import { useMobile } from '@/hooks/useMobile'
 import { useScrollLock } from '@/hooks/useScrollLock'
+import { ADMIN_LAYOUT_MOBILE_NAV_QUERY } from '@/config/breakpoints'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'
 import SidebarOrganizationSwitcher from '../components/admin/SidebarOrganizationSwitcher'
 import MobileMenu from '../components/common/MobileMenu'
@@ -32,18 +32,27 @@ export default function AdminLayout() {
   const { currentOrganization } = useOrganization()
   const { summary } = useLicense(currentOrganization?.id)
   const { expandedSections, toggleSection } = useSidebar()
-  const isMobile = useMobile()
+  const [showMobileNav, setShowMobileNav] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(ADMIN_LAYOUT_MOBILE_NAV_QUERY).matches : false
+  )
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mql = window.matchMedia(ADMIN_LAYOUT_MOBILE_NAV_QUERY)
+    const handleChange = (e: MediaQueryListEvent) => setShowMobileNav(e.matches)
+    setShowMobileNav(mql.matches)
+    mql.addEventListener('change', handleChange)
+    return () => mql.removeEventListener('change', handleChange)
+  }, [])
 
   const hasOrg = !!currentOrganization?.id
 
-  // Close mobile sidebar on route change
   const handleMobileSidebarClose = useCallback(() => {
     setMobileSidebarOpen(false)
   }, [])
 
-  // Scroll lock when mobile sidebar is open
-  useScrollLock(mobileSidebarOpen && isMobile)
+  useScrollLock(mobileSidebarOpen && showMobileNav)
 
   // Navigation menu items - four top-level items
   const rawMenuItems = useMemo(() => [
@@ -219,12 +228,10 @@ export default function AdminLayout() {
   // Mobile nav sections already filtered by useFilteredNavigation
   const mobileNavSections: NavSection[] = filteredSections as NavSection[]
 
-  // Close mobile sidebar on route change
+  // Close mobile sidebar only when the route changes (not when mobileSidebarOpen changes)
   useEffect(() => {
-    if (mobileSidebarOpen) {
-      setMobileSidebarOpen(false)
-    }
-  }, [location.pathname, mobileSidebarOpen])
+    setMobileSidebarOpen(false)
+  }, [location.pathname])
 
   if (!platformThemeLoaded || !orgThemeLoaded || !orgThemeReady) {
     return <AdminLoadingSpinner />
@@ -232,8 +239,8 @@ export default function AdminLayout() {
 
   return (
     <div className="pa-root pa-app oa-theme-active">
-      {/* Mobile header - shown only on mobile */}
-      {isMobile && (
+      {/* Mobile header - shown when viewport ≤1023px (matches CSS) */}
+      {showMobileNav && (
         <header className="pa-mobile-header">
           <Link to={getLink(RouteKeys.ADMIN_DASHBOARD)} className="pa-mobile-brand">
             <img 
@@ -257,8 +264,8 @@ export default function AdminLayout() {
         </header>
       )}
 
-      {/* Sidebar - hidden on mobile */}
-      {!isMobile && (
+      {/* Sidebar - hidden when viewport ≤1023px */}
+      {!showMobileNav && (
         <aside className="pa-sidebar">
         {/* Brand */}
         <div className="pa-sidebar-header">
@@ -412,7 +419,7 @@ export default function AdminLayout() {
       </div>
 
       {/* Mobile sidebar drawer */}
-      {isMobile && (
+      {showMobileNav && (
         <MobileMenu
           isOpen={mobileSidebarOpen}
           onClose={handleMobileSidebarClose}

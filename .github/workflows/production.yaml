@@ -28,6 +28,11 @@ jobs:
       - name: Link Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
 
+      - name: Migration dry-run
+        run: supabase db push --linked --dry-run
+
       - name: Push migrations (non-interactive)
-        run: |
-          yes | supabase db push --linked
+        run: yes | supabase db push --linked
+
+      - name: Deploy edge functions
+        run: supabase functions deploy

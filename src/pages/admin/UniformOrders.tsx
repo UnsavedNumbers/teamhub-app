@@ -160,9 +160,9 @@ export default function UniformOrders() {
         <Card>
           <EmptyState 
             icon="checkroom" 
-            title="NO UNIFORM ORDERS"
+            title={t('uniforms.orders.noOrders')}
             noCard 
-            description="Uniform orders will appear here when families submit their sizes." 
+            description={t('uniforms.orders.noOrdersDesc')} 
           />
         </Card>
       ) : (
@@ -175,7 +175,7 @@ export default function UniformOrders() {
           rowsPerPage={rowsPerPage}
           onPageChange={setPage}
           onRowsPerPageChange={setRowsPerPage}
-          emptyMessage="No uniform orders found."
+          emptyMessage={t('uniforms.orders.emptyMessage')}
         />
       )}
     </div>

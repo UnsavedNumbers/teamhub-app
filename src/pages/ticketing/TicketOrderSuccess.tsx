@@ -1,36 +1,73 @@
 /**
  * Ticket Order Success Page
- * 
+ *
  * Shown after successful Stripe checkout
+ * Works for both authenticated users and guests
  * Design: ticket_mobile_entry (success banner)
  */
 
+import { useCallback, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getTicketOrderById, getTicketsForOrder } from '@/data/services'
+import { getPublicOrderWithTickets, resendTickets, type PublicOrderResponse } from '@/data/services'
 import { useRouteLink } from '@/utils/routes'
 import TicketCard from '@/components/ticketing/TicketCard'
 
 export default function TicketOrderSuccess() {
   const { orderId } = useParams<{ orderId: string }>()
+  const myTicketsLink = useRouteLink('portal.myTickets')
+  const [isResending, setIsResending] = useState(false)
+  const [resendMessage, setResendMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  const { data: orderResponse } = useQuery({
-    queryKey: ['ticket-order', orderId],
-    queryFn: () => getTicketOrderById(orderId!, ''),
+  const scrollToTicket = useCallback((ticketId: string) => {
+    const target = document.getElementById(`ticket-${ticketId}`)
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [])
+
+  const handleResendTickets = async () => {
+    if (!orderId || !data?.order?.purchaser_email) return
+
+    setIsResending(true)
+    setResendMessage(null)
+
+    try {
+      const { data: result, error } = await resendTickets({
+        order_id: orderId,
+        email: data.order.purchaser_email,
+      })
+
+      if (error || !result) {
+        setResendMessage({ type: 'error', text: error?.message || 'Failed to resend tickets' })
+      } else {
+        setResendMessage({ type: 'success', text: result.message || 'Tickets resent successfully!' })
+        // Auto-clear success message after 5 seconds
+        setTimeout(() => setResendMessage(null), 5000)
+      }
+    } catch {
+      setResendMessage({ type: 'error', text: 'Failed to resend tickets' })
+    } finally {
+      setIsResending(false)
+    }
+  }
+
+  // Use public endpoint that works without authentication
+  const { data, isLoading, isError, error, refetch } = useQuery<PublicOrderResponse, Error>({
+    queryKey: ['public-ticket-order', orderId],
+    queryFn: () => getPublicOrderWithTickets(orderId!),
     enabled: !!orderId,
   })
 
-  const { data: ticketsResponse } = useQuery({
-    queryKey: ['tickets', orderId],
-    queryFn: () => getTicketsForOrder(orderId!),
-    enabled: !!orderId,
-  })
+  if (!orderId) {
+    return (
+      <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] flex items-center justify-center">
+        <p className="text-gray-500">Order not found.</p>
+      </div>
+    )
+  }
 
-  const order = (orderResponse as any)?.data ?? orderResponse ?? null
-  const ticketsResponseAny = ticketsResponse as any
-  const tickets = Array.isArray(ticketsResponseAny) ? ticketsResponseAny : ticketsResponseAny?.data || []
-
-  if (!order) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] flex items-center justify-center">
         <div className="text-center">
@@ -40,8 +77,38 @@ export default function TicketOrderSuccess() {
     )
   }
 
-  const event = order.ticketed_events
+  if (isError || !data) {
+    return (
+      <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 dark:text-red-400 text-lg mb-4">
+            {error?.message || 'Order not found'}
+          </p>
+          <button
+            onClick={() => refetch()}
+            className="px-4 py-2 bg-[#137fec] text-white rounded-lg"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const order = data.order
+  const event = order.event || undefined
   const orderRef = `YS-${order.id.slice(-5).toUpperCase()}`
+  const tickets = data.tickets ?? []
+  const normalizedTickets = tickets.map((ticket) => ({
+    ...ticket,
+    ticket_types: ticket.ticket_type,
+    ticketed_events: ticket.event,
+  })) as unknown as Array<
+    PublicOrderResponse['tickets'][number] & {
+      ticket_types?: { name: string; description: string | null }
+      ticketed_events?: PublicOrderResponse['tickets'][number]['event'] | null
+    }
+  >
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white">
@@ -83,17 +150,18 @@ export default function TicketOrderSuccess() {
           </div>
 
           {/* Tickets */}
-          {tickets.map((ticket: any, idx: number) => {
+          {normalizedTickets.map((ticket, idx) => {
+            const nextTicket = normalizedTickets[idx + 1]
             const ticketEvent = ticket.ticketed_events || event
             return (
-              <div key={ticket.id}>
+              <div key={ticket.id} id={`ticket-${ticket.id}`}>
                 <TicketCard
-                  ticket={ticket}
+                  ticket={ticket as any}
                   event={ticketEvent}
                   orderId={order.id}
                   showQR={true}
                 />
-                {idx < tickets.length - 1 && (
+                {idx < normalizedTickets.length - 1 && (
                   <div className="mt-6 bg-white dark:bg-gray-900 rounded-xl shadow-md overflow-hidden border border-gray-100 dark:border-gray-800 opacity-60">
                     <div className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-4">
@@ -101,11 +169,17 @@ export default function TicketOrderSuccess() {
                           <span className="material-symbols-outlined text-gray-400">qr_code_2</span>
                         </div>
                         <div>
-                          <h3 className="font-bold text-[#111418] dark:text-white">Ticket {idx + 2} of {tickets.length}</h3>
+                          <h3 className="font-bold text-[#111418] dark:text-white">Ticket {idx + 2} of {normalizedTickets.length}</h3>
                           <p className="text-xs text-gray-500">{ticket.ticket_types?.name || 'General Admission'}</p>
                         </div>
                       </div>
-                      <button className="text-[#137fec] font-bold text-sm">VIEW</button>
+                      <button
+                        className="text-[#137fec] font-bold text-sm"
+                        type="button"
+                        onClick={() => scrollToTicket(nextTicket?.id || ticket.id)}
+                      >
+                        VIEW
+                      </button>
                     </div>
                   </div>
                 )}
@@ -116,18 +190,43 @@ export default function TicketOrderSuccess() {
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 py-6">
             <Link
-              to={useRouteLink('portal.myTickets')}
+              to={myTicketsLink}
               className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
             >
               <span className="material-symbols-outlined">confirmation_number</span>
               <span className="truncate uppercase">View All My Tickets</span>
             </Link>
+
+            {/* Resend Tickets Button */}
+            <button
+              onClick={handleResendTickets}
+              disabled={isResending}
+              className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-12 px-5 bg-white dark:bg-gray-900 text-[#111418] dark:text-white border-2 border-gray-300 dark:border-gray-700 text-base font-bold leading-normal tracking-[0.015em] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="material-symbols-outlined text-lg">
+                {isResending ? 'hourglass_empty' : 'forward_to_inbox'}
+              </span>
+              <span className="truncate uppercase">
+                {isResending ? 'Sending...' : 'Resend Email'}
+              </span>
+            </button>
+
+            {/* Resend Message */}
+            {resendMessage && (
+              <div className={`rounded-lg px-4 py-3 text-sm font-medium ${
+                resendMessage.type === 'success'
+                  ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
+                  : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+              }`}>
+                {resendMessage.text}
+              </div>
+            )}
           </div>
 
           {/* Footer Support */}
           <div className="text-center pb-12">
             <p className="text-gray-500 text-sm mb-2">Need help with your entry?</p>
-            <a className="text-[#137fec] font-bold text-sm underline" href="#">
+            <a className="text-[#137fec] font-bold text-sm underline" href="mailto:support@youthsports.team">
               Contact Event Support
             </a>
           </div>

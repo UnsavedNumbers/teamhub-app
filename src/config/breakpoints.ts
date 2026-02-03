@@ -30,3 +30,10 @@ export const TABLET_MEDIA_QUERY = `(min-width: ${BREAKPOINTS.TABLET_MIN}px) and 
  * Matches: min-width: 1024px
  */
 export const DESKTOP_MEDIA_QUERY = `(min-width: ${BREAKPOINTS.DESKTOP_MIN}px)`;
+
+/**
+ * Media query for admin layout mobile nav (sidebar hidden, hamburger shown).
+ * Matches CSS in platformAdmin.css: @media (max-width: 1023px).
+ * Use in AdminLayout so the hamburger and MobileMenu render on mobile and tablet.
+ */
+export const ADMIN_LAYOUT_MOBILE_NAV_QUERY = `(max-width: ${BREAKPOINTS.TABLET_MAX}px)`;

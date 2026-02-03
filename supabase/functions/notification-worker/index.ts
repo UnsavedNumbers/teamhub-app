@@ -26,11 +26,17 @@ serve(async (req) => {
   }
 
   try {
-    // Parse request body to get appBaseUrl if provided
+    // Parse request body to get appBaseUrl and job_ids if provided
     let appBaseUrl: string | null = null
+    let jobIds: string[] | null = null
     try {
       const body = await req.json()
       appBaseUrl = body?.appBaseUrl || null
+      // Validate job_ids is an array of strings (T8)
+      if (body?.job_ids && Array.isArray(body.job_ids) && body.job_ids.every((id: any) => typeof id === 'string')) {
+        jobIds = body.job_ids
+        console.log('Received job_ids from client:', jobIds)
+      }
       console.log('Received appBaseUrl from client:', appBaseUrl)
     } catch {
       // No body or invalid JSON - that's fine
@@ -52,13 +58,32 @@ serve(async (req) => {
       console.error('Failed to remove payment_receipt jobs:', cleanupError)
     }
 
-    // Fetch queued notification jobs (limit to prevent timeout)
-    const { data: jobs, error: fetchError } = await supabase
-      .from('notification_jobs')
-      .select('*')
-      .eq('status', 'queued')
-      .order('created_at', { ascending: true })
-      .limit(10)
+    // Fetch notification jobs: either specific job_ids or queued jobs (T8)
+    let jobs: NotificationJobRow[] | null = null
+    let fetchError: any = null
+    
+    if (jobIds && jobIds.length > 0) {
+      // Fetch specific jobs by id
+      const { data, error } = await supabase
+        .from('notification_jobs')
+        .select('*')
+        .in('id', jobIds)
+        .order('created_at', { ascending: true })
+      
+      jobs = data as NotificationJobRow[] | null
+      fetchError = error
+    } else {
+      // Fetch queued notification jobs (limit to prevent timeout)
+      const { data, error } = await supabase
+        .from('notification_jobs')
+        .select('*')
+        .eq('status', 'queued')
+        .order('created_at', { ascending: true })
+        .limit(10)
+      
+      jobs = data as NotificationJobRow[] | null
+      fetchError = error
+    }
 
     if (fetchError) {
       console.error('Failed to fetch notification jobs:', fetchError)

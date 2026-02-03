@@ -9,6 +9,8 @@ import {
   isGeneralRSVP, 
   isAthleteRSVP 
 } from '../data/services'
+import { getFanCalendar } from '../data/services/fanService'
+import type { CalendarEvent as FanCalendarEvent } from '../types/staffAndFan'
 import { getContactForCategory } from '../data/services/organizationContactsService'
 import { 
     CalendarEvent, 
@@ -67,8 +69,10 @@ export default function Calendar() {
   }
 
   const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [fanEvents, setFanEvents] = useState<FanCalendarEvent[]>([])
   const [filters, setFilters] = useState<CalendarFilters>(defaultFilters)
   const [viewMode, setViewMode] = useState<CalendarViewMode>('agenda')
+  const [fanView, setFanView] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -89,6 +93,16 @@ export default function Calendar() {
     setError(null)
     
     try {
+      if (fanView) {
+        const { data: fanData, error: fanError } = await getFanCalendar()
+        if (fanError) {
+          console.error('Error fetching fan calendar:', fanError)
+          setFanEvents([])
+        } else {
+          setFanEvents((fanData?.events || []) as FanCalendarEvent[])
+        }
+      }
+
       // Determine date range based on view
       let start = new Date(currentDate)
       let end = new Date(currentDate)
@@ -222,7 +236,7 @@ export default function Calendar() {
 
   useEffect(() => {
     fetchData()
-  }, [fetchData])
+  }, [fetchData, fanView])
 
   // Handle Escape key to close modal
   useEffect(() => {
@@ -400,6 +414,21 @@ export default function Calendar() {
               </div>
             </div>
           </div>
+          
+          {/* Fan View Toggle */}
+          <div className="mb-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={fanView}
+                onChange={(e) => setFanView(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-[var(--org-btn-primary-bg)] focus:ring-[var(--org-btn-primary-bg)]"
+              />
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Fan View (includes events from followed organizations, bookmarks, and tickets)
+              </span>
+            </label>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -483,15 +512,30 @@ export default function Calendar() {
                       Retry
                     </Button>
                   </div>
-                ) : events.length === 0 ? (
+                ) : (fanView ? fanEvents : events).length === 0 ? (
                   <Card className="text-center py-12">
                     <Icon name="event" size="text-6xl" className="text-slate-400 mb-4" />
                     <CardTitle className="mb-2">{safeT('calendar.noEvents.title', 'No events')}</CardTitle>
-                    <p className="text-slate-500 dark:text-slate-400">{safeT('calendar.noEvents.description', 'No events scheduled across your organizations.')}</p>
+                    <p className="text-slate-500 dark:text-slate-400">
+                      {fanView 
+                        ? 'No events from your followed organizations, bookmarks, or tickets.'
+                        : safeT('calendar.noEvents.description', 'No events scheduled across your organizations.')
+                      }
+                    </p>
                   </Card>
                 ) : (
                     <CalendarGrid 
-                        events={events}
+                        events={fanView ? fanEvents.map((fe: any) => ({
+                          id: fe.id,
+                          title: fe.title,
+                          start_time: fe.start_time,
+                          end_time: fe.end_time,
+                          location: fe.location || null,
+                          type: fe.event?.type || 'other',
+                          description: fe.event?.description || null,
+                          rsvps: [],
+                          event_location: null,
+                        })) as unknown as CalendarEvent[] : events}
                         eventSports={eventSports}
                         viewMode={viewMode}
                         currentDate={currentDate}

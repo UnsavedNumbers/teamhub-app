@@ -35,10 +35,13 @@ export default function PlanSelection() {
   const { licensePlan, isActive: licenseActive, isPastGracePeriod, loading: licenseLoading } = useLicense(orgId)
   const isPlatformAdmin = profile?.isPlatformAdmin ?? false
 
+  const successUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS)}`
+  const cancelUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL)}`
+
   const { loadingPlan, error, handleSelect } = useCheckoutSession({
     organizationId: orgId || '',
-    successUrl: `${window.location.origin}/admin/organization/billing/checkout/success`,
-    cancelUrl: `${window.location.origin}/admin/organization/billing/checkout/cancel`,
+    successUrl,
+    cancelUrl,
   })
 
   if (!orgId) {

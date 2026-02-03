@@ -3384,38 +3384,60 @@ export type Database = {
       galleries: {
         Row: {
           allow_contributions: boolean
+          cover_photo_id: string | null
           created_at: string
+          created_by_user_id: string | null
+          description: string | null
           entity_id: string | null
           gallery_type: Database["public"]["Enums"]["gallery_type"]
           id: string
+          is_system_generated: boolean
           name: string
           org_id: string
           require_approval: boolean
           updated_at: string
+          visibility: Database["public"]["Enums"]["gallery_visibility"] | null
         }
         Insert: {
           allow_contributions?: boolean
+          cover_photo_id?: string | null
           created_at?: string
+          created_by_user_id?: string | null
+          description?: string | null
           entity_id?: string | null
           gallery_type: Database["public"]["Enums"]["gallery_type"]
           id?: string
+          is_system_generated?: boolean
           name: string
           org_id: string
           require_approval?: boolean
           updated_at?: string
+          visibility?: Database["public"]["Enums"]["gallery_visibility"] | null
         }
         Update: {
           allow_contributions?: boolean
+          cover_photo_id?: string | null
           created_at?: string
+          created_by_user_id?: string | null
+          description?: string | null
           entity_id?: string | null
           gallery_type?: Database["public"]["Enums"]["gallery_type"]
           id?: string
+          is_system_generated?: boolean
           name?: string
           org_id?: string
           require_approval?: boolean
           updated_at?: string
+          visibility?: Database["public"]["Enums"]["gallery_visibility"] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "galleries_cover_photo_fkey"
+            columns: ["cover_photo_id"]
+            isOneToOne: false
+            referencedRelation: "gallery_photos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "galleries_org_id_fkey"
             columns: ["org_id"]
@@ -3568,8 +3590,11 @@ export type Database = {
         Row: {
           album_id: string | null
           created_at: string
+          filename: string | null
           gallery_id: string
           id: string
+          size_bytes: number | null
+          sort_order: number | null
           status: Database["public"]["Enums"]["photo_status"]
           storage_path: string
           taken_at: string | null
@@ -3580,8 +3605,11 @@ export type Database = {
         Insert: {
           album_id?: string | null
           created_at?: string
+          filename?: string | null
           gallery_id: string
           id?: string
+          size_bytes?: number | null
+          sort_order?: number | null
           status?: Database["public"]["Enums"]["photo_status"]
           storage_path: string
           taken_at?: string | null
@@ -3592,8 +3620,11 @@ export type Database = {
         Update: {
           album_id?: string | null
           created_at?: string
+          filename?: string | null
           gallery_id?: string
           id?: string
+          size_bytes?: number | null
+          sort_order?: number | null
           status?: Database["public"]["Enums"]["photo_status"]
           storage_path?: string
           taken_at?: string | null
@@ -6117,7 +6148,13 @@ export type Database = {
           slug: string | null
           status: Database["public"]["Enums"]["org_status"]
           stripe_customer_id: string | null
+          stripe_payouts_disabled_reason: string | null
+          stripe_payouts_enabled: boolean | null
           stripe_price_id: string | null
+          stripe_requirements_deadline: string | null
+          stripe_requirements_due: Json | null
+          stripe_requirements_errors: Json | null
+          stripe_status_updated_at: string | null
           stripe_subscription_id: string | null
           ticket_terms: string | null
           ticketing_enabled: boolean | null
@@ -6154,7 +6191,13 @@ export type Database = {
           slug?: string | null
           status?: Database["public"]["Enums"]["org_status"]
           stripe_customer_id?: string | null
+          stripe_payouts_disabled_reason?: string | null
+          stripe_payouts_enabled?: boolean | null
           stripe_price_id?: string | null
+          stripe_requirements_deadline?: string | null
+          stripe_requirements_due?: Json | null
+          stripe_requirements_errors?: Json | null
+          stripe_status_updated_at?: string | null
           stripe_subscription_id?: string | null
           ticket_terms?: string | null
           ticketing_enabled?: boolean | null
@@ -6191,7 +6234,13 @@ export type Database = {
           slug?: string | null
           status?: Database["public"]["Enums"]["org_status"]
           stripe_customer_id?: string | null
+          stripe_payouts_disabled_reason?: string | null
+          stripe_payouts_enabled?: boolean | null
           stripe_price_id?: string | null
+          stripe_requirements_deadline?: string | null
+          stripe_requirements_due?: Json | null
+          stripe_requirements_errors?: Json | null
+          stripe_status_updated_at?: string | null
           stripe_subscription_id?: string | null
           ticket_terms?: string | null
           ticketing_enabled?: boolean | null
@@ -6606,36 +6655,48 @@ export type Database = {
         Row: {
           age_max: number | null
           age_min: number | null
+          color: string | null
           created_at: string | null
           description: string | null
           gender_category: string
           id: string
+          is_active: boolean | null
           name: string
           org_id: string
+          slug: string | null
+          sport: string | null
           sport_id: string
           updated_at: string | null
         }
         Insert: {
           age_max?: number | null
           age_min?: number | null
+          color?: string | null
           created_at?: string | null
           description?: string | null
           gender_category?: string
           id?: string
+          is_active?: boolean | null
           name: string
           org_id: string
+          slug?: string | null
+          sport?: string | null
           sport_id: string
           updated_at?: string | null
         }
         Update: {
           age_max?: number | null
           age_min?: number | null
+          color?: string | null
           created_at?: string | null
           description?: string | null
           gender_category?: string
           id?: string
+          is_active?: boolean | null
           name?: string
           org_id?: string
+          slug?: string | null
+          sport?: string | null
           sport_id?: string
           updated_at?: string | null
         }
@@ -7015,6 +7076,7 @@ export type Database = {
           name: string
           org_id: string
           program_id: string | null
+          slug: string | null
           sport_id: string | null
           start_date: string
           team_id: string | null
@@ -7028,6 +7090,7 @@ export type Database = {
           name: string
           org_id: string
           program_id?: string | null
+          slug?: string | null
           sport_id?: string | null
           start_date: string
           team_id?: string | null
@@ -7041,6 +7104,7 @@ export type Database = {
           name?: string
           org_id?: string
           program_id?: string | null
+          slug?: string | null
           sport_id?: string | null
           start_date?: string
           team_id?: string | null
@@ -8230,9 +8294,16 @@ export type Database = {
           event_id: string | null
           event_type: Database["public"]["Enums"]["ticketed_event_type"]
           id: string
+          is_home: boolean | null
+          opponent: string | null
           org_id: string
+          program_id: string | null
+          program_name_cached: string | null
+          sale_status: Database["public"]["Enums"]["ticket_sale_status"] | null
           sales_end_at: string | null
           sales_start_at: string | null
+          search_vector: unknown
+          season_id: string | null
           starts_at: string
           status: Database["public"]["Enums"]["ticketed_event_status"]
           team_id: string | null
@@ -8244,6 +8315,7 @@ export type Database = {
           venue_address_line2: string | null
           venue_city: string | null
           venue_country: string | null
+          venue_id: string | null
           venue_is_virtual: boolean | null
           venue_name: string | null
           venue_postal_code: string | null
@@ -8259,9 +8331,16 @@ export type Database = {
           event_id?: string | null
           event_type?: Database["public"]["Enums"]["ticketed_event_type"]
           id?: string
+          is_home?: boolean | null
+          opponent?: string | null
           org_id: string
+          program_id?: string | null
+          program_name_cached?: string | null
+          sale_status?: Database["public"]["Enums"]["ticket_sale_status"] | null
           sales_end_at?: string | null
           sales_start_at?: string | null
+          search_vector?: unknown
+          season_id?: string | null
           starts_at: string
           status?: Database["public"]["Enums"]["ticketed_event_status"]
           team_id?: string | null
@@ -8273,6 +8352,7 @@ export type Database = {
           venue_address_line2?: string | null
           venue_city?: string | null
           venue_country?: string | null
+          venue_id?: string | null
           venue_is_virtual?: boolean | null
           venue_name?: string | null
           venue_postal_code?: string | null
@@ -8288,9 +8368,16 @@ export type Database = {
           event_id?: string | null
           event_type?: Database["public"]["Enums"]["ticketed_event_type"]
           id?: string
+          is_home?: boolean | null
+          opponent?: string | null
           org_id?: string
+          program_id?: string | null
+          program_name_cached?: string | null
+          sale_status?: Database["public"]["Enums"]["ticket_sale_status"] | null
           sales_end_at?: string | null
           sales_start_at?: string | null
+          search_vector?: unknown
+          season_id?: string | null
           starts_at?: string
           status?: Database["public"]["Enums"]["ticketed_event_status"]
           team_id?: string | null
@@ -8302,6 +8389,7 @@ export type Database = {
           venue_address_line2?: string | null
           venue_city?: string | null
           venue_country?: string | null
+          venue_id?: string | null
           venue_is_virtual?: boolean | null
           venue_name?: string | null
           venue_postal_code?: string | null
@@ -8345,6 +8433,34 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ticketed_events_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticketed_events_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["season_id"]
+          },
+          {
+            foreignKeyName: "ticketed_events_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticketed_events_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
+          },
+          {
             foreignKeyName: "ticketed_events_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -8356,6 +8472,13 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticketed_events_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
             referencedColumns: ["id"]
           },
         ]
@@ -9563,6 +9686,7 @@ export type Database = {
           email: string | null
           family_id: string | null
           first_name: string
+          home_location: Json | null
           home_zipcode: string | null
           id: string
           last_name: string
@@ -9580,6 +9704,7 @@ export type Database = {
           email?: string | null
           family_id?: string | null
           first_name?: string
+          home_location?: Json | null
           home_zipcode?: string | null
           id: string
           last_name?: string
@@ -9597,6 +9722,7 @@ export type Database = {
           email?: string | null
           family_id?: string | null
           first_name?: string
+          home_location?: Json | null
           home_zipcode?: string | null
           id?: string
           last_name?: string
@@ -9801,6 +9927,42 @@ export type Database = {
           raw_places_json?: Json | null
           updated_at?: string | null
           venue_key?: string
+        }
+        Relationships: []
+      }
+      venues: {
+        Row: {
+          address: string | null
+          capacity: number | null
+          city: string | null
+          created_at: string | null
+          id: string
+          name: string
+          org_id: string
+          state: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          capacity?: number | null
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          org_id: string
+          state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          capacity?: number | null
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          org_id?: string
+          state?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -11629,6 +11791,16 @@ export type Database = {
         Args: { p_quantity: number; p_ticket_type_id: string }
         Returns: undefined
       }
+      ensure_entity_gallery: {
+        Args: {
+          p_entity_id: string
+          p_entity_type: Database["public"]["Enums"]["gallery_type"]
+          p_name?: string
+          p_org_id?: string
+          p_user_id?: string
+        }
+        Returns: string
+      }
       extract_gallery_id_from_path: {
         Args: { storage_path: string }
         Returns: string
@@ -11812,10 +11984,20 @@ export type Database = {
           valid: boolean
         }[]
       }
+      get_or_create_static_gallery: {
+        Args: {
+          p_entity_id: string
+          p_entity_type: Database["public"]["Enums"]["gallery_type"]
+          p_org_id: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       get_org_photo_storage_limit_bytes: {
         Args: { p_org_id: string }
         Returns: number
       }
+      get_org_slug_by_id: { Args: { p_org_id: string }; Returns: string }
       get_organization_users: {
         Args: { target_org_id: string }
         Returns: {
@@ -11872,6 +12054,16 @@ export type Database = {
         Returns: Database["public"]["Enums"]["platform_admin_role"]
       }
       get_public_org_theme: { Args: { org_id_input: string }; Returns: string }
+      get_related_galleries: {
+        Args: { p_entity_id: string; p_entity_type: string }
+        Returns: Database["public"]["CompositeTypes"]["related_gallery_item"][]
+        SetofOptions: {
+          from: "*"
+          to: "related_gallery_item"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_schema_columns: {
         Args: never
         Returns: {
@@ -12136,6 +12328,7 @@ export type Database = {
         Args: { p_event_id: string; p_is_travel: boolean; p_reason?: string }
         Returns: undefined
       }
+      slugify: { Args: { input: string }; Returns: string }
       staff_can_access_team: {
         Args: { check_team_id: string; check_user_id: string }
         Returns: boolean
@@ -12375,7 +12568,15 @@ export type Database = {
         | "fundraiser"
         | "misc"
       fee_visibility: "all_parents" | "assigned_only"
-      gallery_type: "org" | "team" | "athlete" | "event" | "travel"
+      gallery_type:
+        | "org"
+        | "team"
+        | "athlete"
+        | "event"
+        | "travel"
+        | "program"
+        | "season"
+      gallery_visibility: "public" | "team" | "private"
       general_rsvp_status: "going" | "not_going" | "maybe"
       guardian_attachment_request_status: "pending" | "approved" | "denied"
       installment_frequency: "weekly" | "biweekly" | "monthly"
@@ -12599,6 +12800,7 @@ export type Database = {
         | "TEAM_INVITE_SENT"
         | "TEAM_INVITE_ACCEPTED"
       ticket_order_status: "pending_payment" | "paid" | "refunded" | "cancelled"
+      ticket_sale_status: "off" | "scheduled" | "on_sale" | "ended" | "sold_out"
       ticket_scan_result:
         | "valid"
         | "already_used"
@@ -12687,7 +12889,13 @@ export type Database = {
       video_visibility: "private" | "team" | "organization" | "guardians"
     }
     CompositeTypes: {
-      [_ in never]: never
+      related_gallery_item: {
+        relationship_type: string | null
+        gallery_id: string | null
+        gallery_name: string | null
+        photo_count: number | null
+        cover_url: string | null
+      }
     }
   }
 }
@@ -12950,7 +13158,16 @@ export const Constants = {
         "misc",
       ],
       fee_visibility: ["all_parents", "assigned_only"],
-      gallery_type: ["org", "team", "athlete", "event", "travel"],
+      gallery_type: [
+        "org",
+        "team",
+        "athlete",
+        "event",
+        "travel",
+        "program",
+        "season",
+      ],
+      gallery_visibility: ["public", "team", "private"],
       general_rsvp_status: ["going", "not_going", "maybe"],
       guardian_attachment_request_status: ["pending", "approved", "denied"],
       installment_frequency: ["weekly", "biweekly", "monthly"],
@@ -13189,6 +13406,7 @@ export const Constants = {
         "TEAM_INVITE_ACCEPTED",
       ],
       ticket_order_status: ["pending_payment", "paid", "refunded", "cancelled"],
+      ticket_sale_status: ["off", "scheduled", "on_sale", "ended", "sold_out"],
       ticket_scan_result: [
         "valid",
         "already_used",

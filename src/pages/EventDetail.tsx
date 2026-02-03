@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
+import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { getEventDetails, updateRSVP, getAthletes, deleteEvent } from '../data/services'
+import { useOrganization } from '../contexts/OrganizationContext'
 import type { RSVPStatus } from '../types/calendar'
-import { getSportFromEvent, type SportInfo } from '../utils/sportContext'
+import { getSportFromEvent } from '../utils/sportContext'
+import { getDisplayLocation } from '../utils/homeLocation'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
@@ -12,8 +15,13 @@ import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
-import { GalleryLink } from '../components/gallery/GalleryLink'
+import { PhotoSection } from '../components/galleries/PhotoSection'
 import { useT } from '../i18n/useI18n'
+import { getLink, RouteKeys } from '@/utils/routes'
+import BookmarkButton from '../components/fan/BookmarkButton'
+import { useQuery } from '@tanstack/react-query'
+import { getBookmarkedEvents } from '../data/services/fanService'
+import type { FanEventBookmark } from '../types/staffAndFan'
 
 interface Event {
   id: string
@@ -50,6 +58,35 @@ interface Attendance {
   athlete_id: string
   status: RSVPStatus
   note: string | null
+}
+
+// Helper function to build full address from EventLocation fields
+function buildVenueAddress(location: { venue_name?: string | null; venue_address?: string | null; address_line1?: string | null; address_line2?: string | null; city?: string | null; state?: string | null; postal_code?: string | null } | null): string {
+  if (!location) return ''
+
+  // If venue_address is provided directly, use it
+  if (location.venue_address) {
+    return location.venue_address
+  }
+
+  const parts: string[] = []
+
+  if (location.venue_name) {
+    parts.push(location.venue_name)
+  }
+
+  const streetParts: string[] = []
+  if (location.address_line1) streetParts.push(location.address_line1)
+  if (location.address_line2) streetParts.push(location.address_line2)
+  if (streetParts.length > 0) parts.push(streetParts.join(' '))
+
+  const cityParts: string[] = []
+  if (location.city) cityParts.push(location.city)
+  if (location.state) cityParts.push(location.state)
+  if (location.postal_code) cityParts.push(location.postal_code)
+  if (cityParts.length > 0) parts.push(cityParts.join(' '))
+
+  return parts.filter(Boolean).join(', ')
 }
 
 // Helper functions for links and integrations
@@ -167,15 +204,49 @@ async function copyToClipboard(text: string): Promise<{ success: boolean; error?
 export default function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>()
   const t = useT()
+  const { profile } = useAuth()
+  const { currentOrganization } = useOrganization()
   const [event, setEvent] = useState<Event | null>(null)
   const [children, setChildren] = useState<Child[]>([])
   const [attendance, setAttendance] = useState<Record<string, Attendance>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
-  const [eventSport, setEventSport] = useState<SportInfo | null>(null)
   const [copiedText, setCopiedText] = useState<string | null>(null)
   const [copyError, setCopyError] = useState<string | null>(null)
   const [orgSlug, setOrgSlug] = useState<string | null>(null)
+  const [commuteStartLocation, setCommuteStartLocation] = useState<string>(() => {
+    const saved = localStorage.getItem('commuteStartLocation')
+    return saved || ''
+  })
+  const [isEditingCommute, setIsEditingCommute] = useState(false)
+  const [commuteInputValue, setCommuteInputValue] = useState(commuteStartLocation)
+  const [commuteSummary, setCommuteSummary] = useState<{
+    distance: string
+    duration: string
+    durationInTraffic?: string
+  } | null>(null)
+  const [loadingCommute, setLoadingCommute] = useState(false)
+  const [weatherData, setWeatherData] = useState<{
+    temperature: number
+    feelsLike: number
+    condition: string
+    description: string
+    humidity: number
+    windSpeed: number
+    precipitation: number
+  } | null>(null)
+  const [loadingWeather, setLoadingWeather] = useState(false)
+
+  const { data: bookmarkedEventsData } = useQuery({
+    queryKey: ['bookmarked-events'],
+    queryFn: async () => {
+      const { data, error } = await getBookmarkedEvents()
+      if (error) return [] as FanEventBookmark[]
+      return (data ?? []) as FanEventBookmark[]
+    },
+  })
+  const bookmarkedEventIds = (bookmarkedEventsData ?? []).map((b) => b.event_id)
+  const isBookmarked = Boolean(eventId && bookmarkedEventIds.includes(eventId))
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
@@ -189,6 +260,128 @@ export default function EventDetail() {
     }
   }, [])
 
+  // Default commute start location to user's home address if not already set
+  useEffect(() => {
+    if (!commuteStartLocation && profile) {
+      const homeLocation = getDisplayLocation(profile)
+      if (homeLocation) {
+        setCommuteStartLocation(homeLocation)
+        setCommuteInputValue(homeLocation)
+        localStorage.setItem('commuteStartLocation', homeLocation)
+      }
+    }
+  }, [profile, commuteStartLocation])
+
+  // Fetch commute summary when we have both start and destination
+  useEffect(() => {
+    const fetchCommuteSummary = async () => {
+      if (!commuteStartLocation || !event?.location) {
+        setCommuteSummary(null)
+        return
+      }
+      
+      setLoadingCommute(true)
+      setCommuteSummary(null)
+      
+      try {
+        const origins = encodeURIComponent(commuteStartLocation)
+        const destinations = encodeURIComponent(event.location)
+        
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/distance-matrix?origins=${origins}&destinations=${destinations}`
+        const { data } = await supabase.auth.getSession()
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${data.session?.access_token}`,
+          },
+        })
+        
+        if (!response.ok) {
+          console.error('Distance matrix API error:', response.status, response.statusText)
+          setLoadingCommute(false)
+          return
+        }
+        
+        const result = await response.json()
+        console.log('Distance matrix response:', result)
+        
+        if (result?.status === 'OK' && result.rows?.[0]?.elements?.[0]?.status === 'OK') {
+          const element = result.rows[0].elements[0]
+          setCommuteSummary({
+            distance: element.distance?.text || '',
+            duration: element.duration?.text || '',
+            durationInTraffic: element.duration_in_traffic?.text,
+          })
+        } else {
+          console.error('Distance matrix failed:', result?.status, result?.rows?.[0]?.elements?.[0])
+        }
+      } catch (err) {
+        console.error('Error fetching commute summary:', err)
+      } finally {
+        setLoadingCommute(false)
+      }
+    }
+    
+    fetchCommuteSummary()
+  }, [commuteStartLocation, event?.location])
+
+  // Fetch weather forecast for event date
+  useEffect(() => {
+    const fetchWeather = async () => {
+      if (!event?.location || !event?.start_time) {
+        setWeatherData(null)
+        return
+      }
+      
+      setLoadingWeather(true)
+      setWeatherData(null)
+      
+      try {
+        const location = encodeURIComponent(event.location)
+        const date = encodeURIComponent(event.start_time)
+        
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/weather?location=${location}&date=${date}`
+        const { data } = await supabase.auth.getSession()
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${data.session?.access_token}`,
+          },
+        })
+        
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error('Weather API error:', response.status, response.statusText, errorText)
+          setLoadingWeather(false)
+          return
+        }
+        
+        const result = await response.json()
+        console.log('Weather response:', result)
+        
+        if (result.temperature !== undefined) {
+          setWeatherData({
+            temperature: result.temperature,
+            feelsLike: result.feelsLike,
+            condition: result.condition,
+            description: result.description,
+            humidity: result.humidity,
+            windSpeed: result.windSpeed,
+            precipitation: result.precipitation,
+          })
+        } else {
+          console.error('Weather data incomplete:', result)
+        }
+      } catch (err) {
+        console.error('Error fetching weather:', err)
+      } finally {
+        setLoadingWeather(false)
+      }
+    }
+    
+    fetchWeather()
+  }, [event?.location, event?.start_time])
+
   const fetchData = useCallback(async () => {
     if (!isReady || !eventId) return
     
@@ -197,6 +390,19 @@ export default function EventDetail() {
     try {
       // Fetch event details
       const { data: eventData, error: eventError } = await getEventDetails(context, eventId)
+
+      // If event_location is missing due to RLS, try to fetch it directly
+      if (eventData && !eventData.event_location) {
+        const { data: locationData, error: locationError } = await supabase
+          .from('event_locations')
+          .select('*')
+          .eq('event_id', eventId)
+          .maybeSingle()
+
+        if (!locationError && locationData && isMountedRef.current) {
+          ;(eventData as any).event_location = locationData
+        }
+      }
 
       if (!isMountedRef.current) return
 
@@ -217,16 +423,16 @@ export default function EventDetail() {
         start_time: eventData.start_time,
         end_time: eventData.end_time,
         arrival_time: eventData.arrival_time,
-        location: eventData.event_location?.venue_name ?? null,
+        location: buildVenueAddress(eventData.event_location || null),
         notes: eventData.notes,
-        team: { 
+        team: {
           name: eventData.team?.name ?? 'Team',
           id: eventData.team?.id ?? ''
         },
         event_location: eventData.event_location ? {
           place_id: eventData.event_location.place_id,
           venue_name: eventData.event_location.venue_name,
-          venue_address: (eventData.event_location as any).venue_address ?? null,
+          venue_address: buildVenueAddress(eventData.event_location),
           latitude: eventData.event_location.latitude ?? null,
           longitude: eventData.event_location.longitude ?? null,
         } : null,
@@ -235,6 +441,12 @@ export default function EventDetail() {
           status: eventData.ticketed_event.status,
           ticket_types: eventData.ticketed_event.ticket_types || []
         } : null,
+      })
+
+      console.log('[EventDetail] Set event state:', {
+        hasTicketedEvent: !!eventData.ticketed_event,
+        ticketedEventId: eventData.ticketed_event?.id,
+        ticketedEventData: eventData.ticketed_event
       })
 
       // Fetch children
@@ -263,12 +475,8 @@ export default function EventDetail() {
         }
       }
 
-      // Load sport for event
       if (eventId) {
-        const sport = await getSportFromEvent(context, eventId)
-        if (isMountedRef.current && sport) {
-          setEventSport(sport)
-        }
+        await getSportFromEvent(context, eventId)
       }
     } catch (err) {
       console.error('Error fetching event details:', err)
@@ -288,14 +496,10 @@ export default function EventDetail() {
     let cancelled = false
 
     const loadOrgSlug = async () => {
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('slug')
-        .eq('id', context.orgId)
-        .maybeSingle()
+      const { data, error } = await supabase.rpc('get_org_slug_by_id' as any, { p_org_id: context.orgId })
 
-      if (!cancelled && !error) {
-        setOrgSlug(data?.slug ?? null)
+      if (!cancelled && !error && data) {
+        setOrgSlug(data as string)
       }
     }
 
@@ -342,7 +546,7 @@ export default function EventDetail() {
     if (!eventId || !window.confirm('Are you sure you want to delete this event? This cannot be undone.')) return
     
     setLoading(true)
-    const { error } = await deleteEvent(eventId)
+    const { error } = await deleteEvent(context, eventId, currentOrganization)
     if (error) {
       alert(error.message)
       setLoading(false)
@@ -369,6 +573,20 @@ export default function EventDetail() {
     }
   }
 
+  function handleSaveCommuteLocation() {
+    const trimmed = commuteInputValue.trim()
+    setCommuteStartLocation(trimmed)
+    localStorage.setItem('commuteStartLocation', trimmed)
+    setIsEditingCommute(false)
+  }
+
+  function getCommuteDirectionsUrl(): string | null {
+    if (!commuteStartLocation || !venueAddress) return null
+    const origin = encodeURIComponent(commuteStartLocation.trim())
+    const dest = encodeURIComponent(venueAddress.trim())
+    return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&traffic=1`
+  }
+
   const canManage = context?.roles.includes('org_admin') || context?.roles.includes('coach')
 
   const statusStyles: Record<RSVPStatus, string> = {
@@ -386,7 +604,7 @@ export default function EventDetail() {
         breadcrumbs={[
           { label: 'Home', path: '/portal/dashboard' },
           { label: 'Calendar', path: '/portal/calendar' },
-          { label: 'Loading...' },
+          { label: t('common.loading') },
         ]}
       >
         <div className="flex justify-center py-12">
@@ -426,87 +644,113 @@ export default function EventDetail() {
               {event.team.name}
             </p>
           </div>
-          {canManage && (
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => navigate(`/portal/calendar/events/${eventId}/edit`)}>
-                <Icon name="edit" />
-              </Button>
-              <Button variant="secondary" onClick={handleDelete}>
-                <Icon name="delete" />
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            {eventId && (
+              <BookmarkButton
+                eventId={eventId}
+                isBookmarked={isBookmarked}
+                variant="icon-only"
+              />
+            )}
+            {canManage && (
+              <>
+                <Button variant="secondary" onClick={() => navigate(`/portal/calendar/events/${eventId}/edit`)}>
+                  <Icon name="edit" />
+                </Button>
+                <Button variant="secondary" onClick={handleDelete}>
+                  <Icon name="delete" />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Quick Summary Banner */}
         <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-slate-50 dark:to-slate-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Event Type</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.eventType')}</p>
               <p className="text-lg font-black text-slate-900 dark:text-white capitalize">{event.type}</p>
             </div>
             {event.arrival_time && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Arrive By</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time) })}</p>
                 <p className="text-lg font-black text-slate-900 dark:text-white">{formatTime(event.arrival_time)}</p>
               </div>
             )}
             {venueAddress && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Location</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.location')}</p>
                 <p className="text-lg font-black text-slate-900 dark:text-white truncate">{venueAddress.split(',')[0]}</p>
               </div>
             )}
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.weather')}</p>
+              {loadingWeather ? (
+                <p className="text-lg font-black text-slate-900 dark:text-white">{t('calendar.event.loading')}</p>
+              ) : weatherData ? (
+                <div>
+                  <p className="text-lg font-black text-slate-900 dark:text-white">{weatherData.temperature}°F • <span className="capitalize">{weatherData.description}</span></p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{weatherData.precipitation}% precip • {weatherData.windSpeed} mph wind</p>
+                </div>
+              ) : (
+                <p className="text-lg font-black text-slate-500 dark:text-slate-400">{t('calendar.event.unavailable')}</p>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.entry')}</p>
+              {event.ticketed_event ? (
+                <Button
+                  onClick={() => {
+                  if (orgSlug && event.ticketed_event?.id) {
+                    navigate(
+                      getLink(RouteKeys.PORTAL_ORG_TICKET_EVENT, {
+                        orgSlug,
+                        eventId: event.ticketed_event.id,
+                      })
+                    )
+                  }
+                  }}
+                  disabled={!orgSlug || !event.ticketed_event?.id}
+                  className="w-full"
+                >
+                  {t('calendar.event.getTickets')}
+                </Button>
+              ) : (
+                <p className="text-lg font-black text-slate-900 dark:text-white">{t('calendar.event.freeEntry')}</p>
+              )}
+            </div>
           </div>
         </Card>
       </div>
-
-      {/* Tickets Required Banner */}
-      {event.ticketed_event && (
-        <Card className="mb-6 border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-900/20">
-          <div className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h3 className="text-lg font-black uppercase text-slate-900 dark:text-white flex items-center gap-2">
-                <Icon name="confirmation_number" />
-                Tickets Required
-              </h3>
-              <p className="text-slate-600 dark:text-slate-300">
-                {event.ticketed_event.ticket_types.length > 0 && 
-                  `Starting from $${(Math.min(...event.ticketed_event.ticket_types.map(t => t.price_cents)) / 100).toFixed(2)}`
-                }
-              </p>
-            </div>
-            <Button
-              onClick={() => {
-                if (orgSlug) {
-                  navigate(`/o/${orgSlug}/tickets/events/${event.ticketed_event?.id}`)
-                }
-              }}
-              disabled={!orgSlug}
-            >
-              Get Tickets
-            </Button>
-          </div>
-        </Card>
-      )}
 
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Left Column - Main Info */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* Venue Location */}
-          {venueAddress && (
-            <Card className="p-6 relative">
+          {venueAddress ? (
+            <Card className="p-6 relative rounded-tl-none">
               <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
                 <Icon name="location_on" size="text-2xl" />
-                Venue Location
+                {t('calendar.event.venueLocation')}
               </div>
               <div className="pt-12">
-                <CardTitle className="text-xl mb-2">{venueAddress.split(',')[0].trim()}</CardTitle>
-                {venueAddress.includes(',') && (
-                  <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4">{venueAddress}</p>
+                {event.event_location?.venue_name && (
+                  <CardTitle className="text-xl mb-4">{event.event_location.venue_name}</CardTitle>
                 )}
+                <div className="mb-4 text-slate-700 dark:text-slate-300">
+                  {(event.event_location as any)?.address_line1 && (
+                    <p className="text-base">{(event.event_location as any).address_line1}</p>
+                  )}
+                  {(event.event_location as any)?.address_line2 && (
+                    <p className="text-base">{(event.event_location as any).address_line2}</p>
+                  )}
+                  <p className="text-base">
+                    {[(event.event_location as any)?.city, (event.event_location as any)?.state, (event.event_location as any)?.postal_code].filter(Boolean).join(', ')}
+                  </p>
+                </div>
 
                 {/* Smart Map Links */}
                 <div className="mb-4">
@@ -599,6 +843,32 @@ export default function EventDetail() {
                 </div>
               </div>
             </Card>
+          ) : (
+            <Card className="p-6 relative rounded-tl-none">
+              <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                <Icon name="location_off" size="text-2xl" />
+                {t('calendar.event.noLocationInfo')}
+              </div>
+              <div className="pt-12">
+                <p className="text-slate-600 dark:text-slate-300">
+                  This event doesn't have a venue location set yet.
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                  {canManage ? (
+                    <Button
+                      variant="primary"
+                      className="mt-4"
+                      onClick={() => navigate(`/portal/calendar/events/${eventId}/edit`)}
+                    >
+                      <Icon name="edit" size="text-sm" className="mr-2" />
+                      Add Location
+                    </Button>
+                  ) : (
+                    'Contact your team administrator to update the event location.'
+                  )}
+                </p>
+              </div>
+            </Card>
           )}
 
           {/* Venue Insights */}
@@ -608,10 +878,10 @@ export default function EventDetail() {
 
           {/* Event Notes */}
           {event.notes && (
-            <Card className="p-6 relative">
+            <Card className="p-6 relative rounded-tl-none">
               <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
                 <Icon name="notes" size="text-2xl" />
-                Event Notes
+                {t('calendar.event.eventNotes')}
               </div>
               <div className="pt-12">
                 <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-800/50 p-4 rounded">
@@ -622,10 +892,10 @@ export default function EventDetail() {
           )}
 
           {/* RSVP Section */}
-          <Card className="p-6 relative">
+          <Card className="p-6 relative rounded-tl-none">
             <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
               <Icon name="how_to_reg" size="text-2xl" />
-              RSVP
+              {t('calendar.rsvp.title')}
             </div>
             <div className="pt-12">
               {children.length === 0 ? (
@@ -644,7 +914,7 @@ export default function EventDetail() {
                         <div className="flex items-center justify-between mb-3">
                           <CardTitle className="text-lg">{child.first_name} {child.last_name}</CardTitle>
                           {saving === child.id && (
-                            <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Saving...</span>
+                            <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('calendar.rsvp.saving')}</span>
                           )}
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2">
@@ -659,7 +929,7 @@ export default function EventDetail() {
                                   : statusInactiveStyles
                               }`}
                             >
-                              {status === 'going' ? 'Going' : status === 'late' ? 'Running Late' : 'Not Going'}
+                              {status === 'going' ? t('calendar.rsvp.going') : status === 'late' ? t('calendar.rsvp.late') : t('calendar.rsvp.notGoing')}
                             </button>
                           ))}
                         </div>
@@ -678,37 +948,25 @@ export default function EventDetail() {
           
           {/* Event Photos */}
           {eventId && (
-            <Card className="p-6">
-              <CardTitle className="text-lg mb-3 flex items-center gap-2">
-                <Icon name="photo_library" />
-                Event Photos
-              </CardTitle>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                View and share photos from this event
-              </p>
-              <GalleryLink
-                galleryType="event"
-                entityId={eventId}
-                entityName={event.title}
-                variant="button"
-                className="w-full"
-              />
-            </Card>
+            <PhotoSection
+              entityType="event"
+              entityId={eventId}
+              title={t('calendar.event.eventPhotos')}
+            />
           )}
 
           {/* Add to Calendar */}
-          <Card className="p-6">
-            <CardTitle className="text-lg mb-3 flex items-center gap-2">
-              <Icon name="calendar_today" />
-              Add to Calendar
-            </CardTitle>
-            <div className="space-y-2">
+          <Card className="p-6 relative rounded-tl-none">
+            <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+              <Icon name="event" size="text-2xl" />
+              {t('calendar.event.addToCalendar')}
+            </div>
+            <div className="pt-12">
               {googleCalendarLink({
                 title: event.title,
                 startTime: event.start_time,
                 endTime: event.end_time,
                 location: venueAddress || '',
-                notes: event.notes || '',
               }) ? (
                 <a
                   href={googleCalendarLink({
@@ -716,7 +974,6 @@ export default function EventDetail() {
                     startTime: event.start_time,
                     endTime: event.end_time,
                     location: venueAddress || '',
-                    notes: event.notes || '',
                   })!}
                   target="_blank"
                   rel="noreferrer"
@@ -724,13 +981,13 @@ export default function EventDetail() {
                 >
                   <Button variant="primary" className="w-full">
                     <Icon name="event" size="text-sm" className="mr-2" />
-                    Google Calendar
+                    {t('calendar.event.googleCalendar')}
                   </Button>
                 </a>
               ) : (
                 <Button variant="primary" className="w-full" disabled>
                   <Icon name="event" size="text-sm" className="mr-2" />
-                  Google Calendar
+                  {t('calendar.event.googleCalendar')}
                 </Button>
               )}
               {appleCalendarLink({
@@ -738,7 +995,6 @@ export default function EventDetail() {
                 startTime: event.start_time,
                 endTime: event.end_time,
                 location: venueAddress || '',
-                notes: event.notes || '',
               }) ? (
                 <a
                   href={appleCalendarLink({
@@ -746,57 +1002,188 @@ export default function EventDetail() {
                     startTime: event.start_time,
                     endTime: event.end_time,
                     location: venueAddress || '',
-                    notes: event.notes || '',
                   })!}
                   download={`${event.title}.ics`}
-                  className="block"
+                  className="block mt-4"
                 >
-                  <Button variant="secondary" className="w-full">
-                    <Icon name="apple" size="text-sm" className="mr-2" />
-                    Apple Calendar (.ics)
+                  <Button variant="primary" className="w-full">
+                    <Icon name="event" size="text-sm" className="mr-2" />
+                    {t('calendar.event.appleCalendar')}
                   </Button>
                 </a>
               ) : (
-                <Button variant="secondary" className="w-full" disabled>
-                  <Icon name="apple" size="text-sm" className="mr-2" />
-                  Apple Calendar (.ics)
+                <Button variant="primary" className="w-full mt-4" disabled>
+                  <Icon name="event" size="text-sm" className="mr-2" />
+                  {t('calendar.event.appleCalendar')}
                 </Button>
               )}
             </div>
           </Card>
 
+          {/* Commute Info */}
+          {venueAddress && (
+            <Card className="p-6 relative rounded-tl-none">
+              <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                <Icon name="directions_car" size="text-2xl" />
+                {t('calendar.event.commuteInfo')}
+              </div>
+              <div className="pt-12">
+                {!isEditingCommute ? (
+                  <div className="space-y-4">
+                    {commuteStartLocation ? (
+                      <>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Your Starting Point</p>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">{commuteStartLocation}</p>
+                          </div>
+                          <Button
+                            variant="secondary"
+                            className="text-xs px-3 py-1"
+                            onClick={() => {
+                              setIsEditingCommute(true)
+                              setCommuteInputValue(commuteStartLocation)
+                            }}
+                          >
+                            <Icon name="edit" size="text-sm" className="mr-1" />
+                            Edit
+                          </Button>
+                        </div>
+                        
+                        {loadingCommute ? (
+                          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-slate-900 dark:border-white mr-3"></div>
+                            <span className="text-sm text-slate-600 dark:text-slate-300">Calculating route...</span>
+                          </div>
+                        ) : commuteSummary ? (
+                          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Distance</p>
+                                <p className="text-lg font-black text-slate-900 dark:text-white">{commuteSummary.distance}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
+                                  {commuteSummary.durationInTraffic ? 'With Traffic' : 'Duration'}
+                                </p>
+                                <p className="text-lg font-black text-slate-900 dark:text-white">
+                                  {commuteSummary.durationInTraffic || commuteSummary.duration}
+                                </p>
+                              </div>
+                            </div>
+                            {/* Need to Leave By */}
+                            {(() => {
+                              const targetTime = event.arrival_time || event.start_time
+                              const durationText = commuteSummary.durationInTraffic || commuteSummary.duration
+                              // Parse duration like "45 mins" or "1 hour 20 mins"
+                              const hoursMatch = durationText.match(/(\d+)\s*hour/)
+                              const minsMatch = durationText.match(/(\d+)\s*min/)
+                              const hours = hoursMatch ? parseInt(hoursMatch[1]) : 0
+                              const mins = minsMatch ? parseInt(minsMatch[1]) : 0
+                              const totalMinutes = hours * 60 + mins
+                              
+                              if (totalMinutes > 0) {
+                                const targetDate = new Date(targetTime)
+                                const leaveByDate = new Date(targetDate.getTime() - totalMinutes * 60 * 1000)
+                                const leaveByTime = leaveByDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                                
+                                return (
+                                  <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Need to Leave By</p>
+                                    <p className="text-xl font-black text-[var(--org-btn-primary-bg,#137fec)]">{leaveByTime}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                      To arrive by {new Date(targetTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                      {event.arrival_time ? ' (arrival time)' : ' (start time)'}
+                                    </p>
+                                  </div>
+                                )
+                              }
+                              return null
+                            })()}
+                          </div>
+                        ) : null}
+                        
+                        {getCommuteDirectionsUrl() && (
+                          <a
+                            href={getCommuteDirectionsUrl()!}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block"
+                          >
+                            <Button variant="primary" className="w-full">
+                              <Icon name="navigation" size="text-sm" className="mr-2" />
+                              Get Directions with Traffic
+                            </Button>
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Set Your Starting Location</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                          Save your home, work, or any starting point to quickly get directions with current traffic conditions.
+                        </p>
+                        <Button
+                          variant="primary"
+                          onClick={() => setIsEditingCommute(true)}
+                          className="w-full"
+                        >
+                          <Icon name="add_location" size="text-sm" className="mr-2" />
+                          Set Starting Location
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Enter Your Starting Location</p>
+                    <input
+                      type="text"
+                      value={commuteInputValue}
+                      onChange={(e) => setCommuteInputValue(e.target.value)}
+                      placeholder="e.g., 123 Main St, City, State"
+                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)]"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="primary"
+                        onClick={handleSaveCommuteLocation}
+                        disabled={!commuteInputValue.trim()}
+                        className="flex-1"
+                      >
+                        <Icon name="check" size="text-sm" className="mr-1" />
+                        Save
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setIsEditingCommute(false)
+                          setCommuteInputValue(commuteStartLocation)
+                        }}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
           {/* Nearby Amenities */}
+          {/* placeId (Google Place ID) is preferred over lat/lng for more accurate results */}
           <NearbyAmenities
+            placeId={event.event_location?.place_id}
             latitude={event.event_location?.latitude}
             longitude={event.event_location?.longitude}
-            placeId={event.event_location?.place_id}
             eventType={event.type}
             eventStartTime={event.start_time}
             variant="event"
           />
 
-          {/* Weather */}
-          {venueAddress && (
-            <Card className="p-6">
-              <CardTitle className="text-lg mb-3 flex items-center gap-2">
-                <Icon name="wb_sunny" />
-                Weather Forecast
-              </CardTitle>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                Check the weather for event day
-              </p>
-              <a
-                href={`https://www.google.com/search?q=weather+${encodeURIComponent(venueAddress)}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Button variant="secondary" className="w-full">
-                  <Icon name="cloud" size="text-sm" className="mr-2" />
-                  View Forecast
-                </Button>
-              </a>
-            </Card>
-          )}
+
 
         </div>
       </div>

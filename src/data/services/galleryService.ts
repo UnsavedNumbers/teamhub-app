@@ -18,7 +18,28 @@ const supabaseAny = supabase as any
 // Type Definitions
 // ============================================================================
 
-export type GalleryType = 'org' | 'team' | 'athlete' | 'event' | 'travel'
+export type GalleryType = 'org' | 'team' | 'athlete' | 'event' | 'travel' | 'program' | 'season'
+
+// Friendly alias used by UI for clarity
+export type GalleryEntityType =
+  | 'organization'
+  | 'team'
+  | 'athlete'
+  | 'event'
+  | 'travel_plan'
+  | 'program'
+  | 'season'
+
+export function mapEntityToGalleryType(entityType: GalleryEntityType): GalleryType {
+  switch (entityType) {
+    case 'organization':
+      return 'org'
+    case 'travel_plan':
+      return 'travel'
+    default:
+      return entityType as GalleryType
+  }
+}
 
 export type PhotoStatus = 'pending' | 'approved' | 'rejected'
 
@@ -28,13 +49,19 @@ export interface Gallery {
   gallery_type: GalleryType
   entity_id: string | null
   name: string
+  description?: string | null
+  visibility?: 'public' | 'team' | 'private'
+  cover_photo_id?: string | null
+  created_by_user_id?: string | null
   allow_contributions: boolean
   require_approval: boolean
+  is_system_generated?: boolean
   created_at: string
   updated_at: string
   // Computed fields (from queries)
   photo_count?: number
   pending_count?: number
+  cover_url?: string | null
 }
 
 export interface GalleryAlbum {
@@ -51,6 +78,11 @@ export interface GalleryPhoto {
   album_id: string | null
   storage_path: string
   thumbnail_path: string | null
+  url?: string
+  thumbnail_url?: string | null
+  filename?: string | null
+  size_bytes?: number | null
+  sort_order?: number | null
   status: PhotoStatus
   uploaded_by_user_id: string
   taken_at: string | null
@@ -122,6 +154,20 @@ export function getGalleryPhotoThumbnailUrl(thumbnailPath: string | null, fallba
   return getGalleryPhotoUrl(fallbackPath)
 }
 
+function mapPhotoRecord(photo: any): GalleryPhoto {
+  const taggedAthletes =
+    photo.gallery_photo_tags
+      ?.map((tag: any) => tag.athlete)
+      .filter((athlete: any) => athlete !== null) || []
+
+  return {
+    ...photo,
+    url: getGalleryPhotoUrl(photo.storage_path),
+    thumbnail_url: getGalleryPhotoThumbnailUrl(photo.thumbnail_path, photo.storage_path),
+    tagged_athletes: taggedAthletes,
+  } as GalleryPhoto
+}
+
 // ============================================================================
 // Gallery Queries
 // ============================================================================
@@ -142,7 +188,7 @@ export async function getGalleriesForUser(
   try {
     let query = supabase
       .from('galleries')
-      .select('*')
+      .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
       .order('created_at', { ascending: false })
 
     // Filter by gallery type
@@ -166,7 +212,10 @@ export async function getGalleriesForUser(
 
     if (error) throw error
 
-    const galleryList = (galleries || []) as Gallery[]
+    const galleryList = (galleries || []).map((g: any) => ({
+      ...g,
+      cover_url: g.cover ? getGalleryPhotoThumbnailUrl(g.cover.thumbnail_path, g.cover.storage_path) : null,
+    })) as Gallery[]
 
     // Get photo counts for all galleries
     if (galleryList.length > 0) {
@@ -231,14 +280,14 @@ export async function getGalleryById(
 
     const { data, error } = await supabase
       .from('galleries')
-      .select('*')
+      .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
       .eq('id', galleryId)
       .maybeSingle()
 
     if (error) throw error
 
     return {
-      data: data as Gallery | null,
+      data: data ? { ...(data as any), cover_url: data.cover ? getGalleryPhotoThumbnailUrl(data.cover.thumbnail_path, data.cover.storage_path) : null } as Gallery : null,
       error: null,
     }
   } catch (err) {
@@ -284,6 +333,254 @@ export async function getGalleryByEntity(
     }
   } catch (err) {
     console.error('[galleryService] Error getting gallery by entity:', err)
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
+ * Get the direct (system) gallery for an auto-gallery entity.
+ * For athlete, team, event, travel_plan, program: returns the system-generated gallery.
+ * These entities always have exactly one gallery after triggers + backfill.
+ * Returns null if gallery not found (should not happen after migration).
+ *
+ * @deprecated For org/season, use getGalleriesForUser instead (they have multiple user-created galleries).
+ */
+export async function getEntityGallery(
+  _context: UserContext,
+  entityType: GalleryEntityType,
+  entityId: string
+): Promise<{ data: Gallery | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: null, error: null }
+  }
+
+  try {
+    if (!isValidUUID(entityId)) {
+      return { data: null, error: new Error('Invalid entity ID') }
+    }
+
+    const galleryType = mapEntityToGalleryType(entityType)
+
+    // Validate that this is an auto-gallery entity type
+    const autoGalleryTypes: GalleryType[] = ['athlete', 'team', 'event', 'travel', 'program']
+    if (!autoGalleryTypes.includes(galleryType)) {
+      return {
+        data: null,
+        error: new Error(`${entityType} is not an auto-gallery entity type. Use getGalleriesForUser for org/season.`)
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('galleries')
+      .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
+      .eq('gallery_type', galleryType)
+      .eq('entity_id', entityId)
+      .eq('is_system_generated', true)
+      .maybeSingle()
+
+    if (error) throw error
+
+    return {
+      data: data ? { ...(data as any), cover_url: data.cover ? getGalleryPhotoThumbnailUrl(data.cover.thumbnail_path, data.cover.storage_path) : null } as Gallery : null,
+      error: null,
+    }
+  } catch (err) {
+    console.error('[galleryService] Error getting entity gallery:', err)
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
+ * Related gallery interface for inheritance results
+ */
+export interface RelatedGallery {
+  relationshipType: string
+  galleryId: string
+  galleryName: string
+  photoCount: number
+}
+
+/**
+ * Get related galleries for an entity based on its relationships.
+ * Returns grouped galleries by relationship type (team, event, travel, season, program, athlete, org).
+ * Uses the get_related_galleries RPC which respects RLS.
+ */
+export async function getRelatedGalleries(
+  _context: UserContext,
+  entityType: GalleryEntityType,
+  entityId: string
+): Promise<{ data: RelatedGallery[]; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: [], error: null }
+  }
+
+  try {
+    if (!isValidUUID(entityId)) {
+      return { data: [], error: new Error('Invalid entity ID') }
+    }
+
+    const { data, error } = await supabase.rpc('get_related_galleries', {
+      p_entity_type: entityType,
+      p_entity_id: entityId,
+    })
+
+    if (error) throw error
+
+    // Transform the result to match our interface
+    const relatedGalleries: RelatedGallery[] = (data || []).map((item: any) => ({
+      relationshipType: item.relationship_type,
+      galleryId: item.gallery_id,
+      galleryName: item.gallery_name,
+      photoCount: Number(item.photo_count || 0),
+    }))
+
+    return {
+      data: relatedGalleries,
+      error: null,
+    }
+  } catch (err) {
+    console.error('[galleryService] Error getting related galleries:', err)
+    return {
+      data: [],
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
+ * Ensure an entity gallery exists for auto-gallery entities.
+ * Creates the system-generated gallery if it doesn't exist.
+ * Uses the elevated ensure_entity_gallery RPC which bypasses RLS.
+ *
+ * @param context User context
+ * @param entityType Entity type (athlete, team, event, travel_plan, program)
+ * @param entityId Entity ID
+ * @param name Optional custom gallery name
+ * @returns Gallery data or null
+ */
+export async function ensureEntityGallery(
+  context: UserContext,
+  entityType: GalleryEntityType,
+  entityId: string,
+  name?: string | null
+): Promise<{ data: Gallery | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: null, error: null }
+  }
+
+  try {
+    if (!isValidUUID(entityId)) {
+      return { data: null, error: new Error('Invalid entity ID') }
+    }
+
+    const galleryType = mapEntityToGalleryType(entityType)
+
+    // Validate that this is an auto-gallery entity type
+    const autoGalleryTypes: GalleryType[] = ['athlete', 'team', 'event', 'travel', 'program']
+    if (!autoGalleryTypes.includes(galleryType)) {
+      return {
+        data: null,
+        error: new Error(`${entityType} is not an auto-gallery entity type. Use getGalleriesForUser for org/season.`)
+      }
+    }
+
+    // Call the elevated RPC to ensure gallery exists
+    const { data: galleryId, error: rpcError } = await supabase.rpc('ensure_entity_gallery', {
+      p_entity_type: galleryType,
+      p_entity_id: entityId,
+      p_org_id: context.orgId,
+      p_user_id: context.userId,
+      p_name: name || undefined,
+    })
+
+    if (rpcError) throw rpcError
+
+    if (!galleryId) {
+      return {
+        data: null,
+        error: new Error('Failed to ensure gallery exists'),
+      }
+    }
+
+    // Now fetch the full gallery data
+    const { data: gallery, error: fetchError } = await supabase
+      .from('galleries')
+      .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
+      .eq('id', galleryId)
+      .maybeSingle()
+
+    if (fetchError) throw fetchError
+
+    return {
+      data: gallery ? { ...(gallery as any), cover_url: gallery.cover ? getGalleryPhotoThumbnailUrl(gallery.cover.thumbnail_path, gallery.cover.storage_path) : null } as Gallery : null,
+      error: null,
+    }
+  } catch (err) {
+    console.error('[galleryService] Error ensuring entity gallery:', err)
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
+ * Upload a photo directly to an entity's gallery.
+ * Resolves the entity's gallery via getEntityGallery and uploads to it.
+ * Only works for auto-gallery entity types (athlete, team, event, travel_plan, program).
+ */
+export async function uploadPhotoToEntityGallery(
+  context: UserContext,
+  entityType: GalleryEntityType,
+  entityId: string,
+  file: File,
+  albumId?: string | null,
+  status: PhotoStatus = 'approved'
+): Promise<{ data: GalleryPhoto | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: null, error: null }
+  }
+
+  try {
+    // Get the entity's gallery
+    const galleryResult = await ensureEntityGallery(context, entityType, entityId)
+
+    if (galleryResult.error) {
+      return {
+        data: null,
+        error: galleryResult.error,
+      }
+    }
+
+    if (!galleryResult.data) {
+      return {
+        data: null,
+        error: new Error(`Gallery not found for ${entityType} ${entityId}. The entity may not exist or the gallery has not been created yet.`),
+      }
+    }
+
+    // Upload to the gallery
+    const uploadResult = await uploadPhotoToGallery(
+      context,
+      galleryResult.data.id,
+      file,
+      albumId,
+      status
+    )
+
+    return uploadResult
+  } catch (err) {
+    console.error('[galleryService] Error uploading photo to entity gallery:', err)
     return {
       data: null,
       error: err instanceof Error ? err : new Error('Unknown error'),
@@ -348,9 +645,13 @@ export async function getPhotosForGallery(
     }
 
     // Ordering
-    const orderBy = params.order_by || 'created_at'
-    const orderDirection = params.order_direction || 'desc'
-    query = query.order(orderBy, { ascending: orderDirection === 'asc' })
+    const orderBy = params.order_by || 'sort_order'
+    const orderDirection = params.order_direction || 'asc'
+    if (orderBy === 'sort_order') {
+      query = query.order('sort_order', { ascending: true }).order('created_at', { ascending: false })
+    } else {
+      query = query.order(orderBy, { ascending: orderDirection === 'asc' })
+    }
 
     // Pagination
     if (params.limit) {
@@ -364,17 +665,7 @@ export async function getPhotosForGallery(
 
     if (error) throw error
 
-    // Transform the data to flatten tagged athletes
-    const photos: GalleryPhoto[] = (data || []).map((photo: any) => {
-      const taggedAthletes = photo.gallery_photo_tags
-        ?.map((tag: any) => tag.athlete)
-        .filter((athlete: any) => athlete !== null) || []
-
-      return {
-        ...photo,
-        tagged_athletes: taggedAthletes,
-      } as GalleryPhoto
-    })
+    const photos: GalleryPhoto[] = (data || []).map(mapPhotoRecord)
 
     return {
       data: photos,
@@ -540,7 +831,10 @@ export async function createGalleryForEntity(
   entityId: string,
   name: string,
   allowContributions: boolean = false,
-  requireApproval: boolean = true
+  requireApproval: boolean = true,
+  description?: string | null,
+  visibility: 'public' | 'team' | 'private' = 'team',
+  isSystemGenerated: boolean = false
 ): Promise<{ data: Gallery | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
     await simulateDelay()
@@ -570,8 +864,12 @@ export async function createGalleryForEntity(
         gallery_type: galleryType,
         entity_id: entityId,
         name,
+        description: description || null,
+        visibility,
         allow_contributions: allowContributions,
         require_approval: requireApproval,
+        is_system_generated: isSystemGenerated,
+        created_by_user_id: context.userId,
       })
       .select()
       .single()
@@ -588,6 +886,37 @@ export async function createGalleryForEntity(
       data: null,
       error: err instanceof Error ? err : new Error('Unknown error'),
     }
+  }
+}
+
+/**
+ * Get or create a static gallery for an entity (org/team/athlete/season/program)
+ * Returns the gallery id.
+ */
+export async function getOrCreateStaticGallery(
+  context: UserContext,
+  galleryType: GalleryType,
+  entityId: string,
+  _name: string = 'Photos'
+): Promise<{ id: string | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { id: null, error: null }
+  }
+
+  try {
+    if (!context.orgId) return { id: null, error: new Error('Organization context required') }
+    const { data, error } = await supabase.rpc('get_or_create_static_gallery', {
+      p_org_id: context.orgId,
+      p_entity_type: galleryType,
+      p_entity_id: entityId,
+      p_user_id: context.userId,
+    })
+    if (error) throw error
+    return { id: data as string, error: null }
+  } catch (err) {
+    console.error('[galleryService] Error get_or_create_static_gallery:', err)
+    return { id: null, error: err as Error }
   }
 }
 
@@ -728,7 +1057,23 @@ export async function checkStorageCap(
 }
 
 /**
- * Update org storage usage after upload/delete
+ * Detect if the error means the RPC function does not exist (404 / PGRST204).
+ */
+function isRpcNotFoundError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  const code = (error as { code?: string }).code
+  const msg = (error as { message?: string }).message ?? ''
+  return (
+    code === 'PGRST204' ||
+    (msg.includes('function') && msg.includes('does not exist')) ||
+    msg.includes('404') ||
+    msg.includes('Could not find the function')
+  )
+}
+
+/**
+ * Update org storage usage after upload/delete.
+ * Tries RPC first; if the RPC does not exist (e.g. migration not run), falls back to direct upsert.
  */
 export async function updateStorageUsage(
   context: UserContext,
@@ -753,8 +1098,7 @@ export async function updateStorageUsage(
       p_bytes_delta: bytesDelta,
     })
 
-    // If RPC doesn't exist, fall back to manual update
-    if (error && error.message?.includes('function') && error.message?.includes('does not exist')) {
+    if (isRpcNotFoundError(error as { code?: string; message?: string })) {
       const { data: current } = await supabase
         .from('org_storage_usage')
         .select('bytes_used')
@@ -762,16 +1106,19 @@ export async function updateStorageUsage(
         .eq('bucket_id', 'public-media')
         .maybeSingle()
 
-      const newBytes = Math.max(0, (current?.bytes_used || 0) + bytesDelta)
+      const newBytes = Math.max(0, (current?.bytes_used ?? 0) + bytesDelta)
 
       const { error: upsertError } = await supabase
         .from('org_storage_usage')
-        .upsert({
-          org_id: context.orgId,
-          bucket_id: 'public-media',
-          bytes_used: newBytes,
-          updated_at: new Date().toISOString(),
-        })
+        .upsert(
+          {
+            org_id: context.orgId,
+            bucket_id: 'public-media',
+            bytes_used: newBytes,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'org_id' }
+        )
 
       if (upsertError) throw upsertError
     } else if (error) {
@@ -845,6 +1192,9 @@ export async function uploadPhotoToGallery(
         gallery_id: galleryId,
         album_id: albumId || null,
         storage_path: storagePath,
+        filename: file.name,
+        size_bytes: file.size,
+        sort_order: Date.now(),
         status,
         uploaded_by_user_id: context.userId,
       })
@@ -897,5 +1247,210 @@ export async function moderatePhotos(
     return {
       error: err instanceof Error ? err : new Error('Unknown error'),
     }
+  }
+}
+
+// ============================================================================
+// Admin Management Helpers (org admins & coaches)
+// ============================================================================
+
+export interface UpdateGalleryInput {
+  name?: string
+  description?: string | null
+  visibility?: 'public' | 'team' | 'private'
+  cover_photo_id?: string | null
+}
+
+export async function updateGallery(
+  _context: UserContext,
+  galleryId: string,
+  payload: UpdateGalleryInput
+): Promise<{ data: Gallery | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: null, error: null }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('galleries')
+      .update({
+        ...payload,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', galleryId)
+      .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
+      .maybeSingle()
+
+    if (error) throw error
+
+    return {
+      data: data ? ({ ...(data as any), cover_url: data.cover ? getGalleryPhotoThumbnailUrl(data.cover.thumbnail_path, data.cover.storage_path) : null } as Gallery) : null,
+      error: null,
+    }
+  } catch (err) {
+    console.error('[galleryService] Error updating gallery:', err)
+    return { data: null, error: err as Error }
+  }
+}
+
+export async function setGalleryCover(
+  context: UserContext,
+  galleryId: string,
+  photoId: string | null
+): Promise<{ error: Error | null }> {
+  const { error } = await updateGallery(context, galleryId, { cover_photo_id: photoId })
+  return { error }
+}
+
+export async function deletePhotos(
+  context: UserContext,
+  galleryId: string,
+  photoIds: string[]
+): Promise<{ error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { error: null }
+  }
+
+  try {
+    if (photoIds.length === 0) return { error: null }
+
+    const { data: photos, error: fetchError } = await supabase
+      .from('gallery_photos')
+      .select('id, storage_path, thumbnail_path, size_bytes')
+      .eq('gallery_id', galleryId)
+      .in('id', photoIds)
+
+    if (fetchError) throw fetchError
+
+    const pathsToDelete: string[] = []
+    let reclaimedBytes = 0
+    ;(photos || []).forEach((p: any) => {
+      if (p.storage_path) pathsToDelete.push(p.storage_path)
+      if (p.thumbnail_path) pathsToDelete.push(p.thumbnail_path)
+      reclaimedBytes += Number(p.size_bytes || 0)
+    })
+
+    if (pathsToDelete.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from('public-media')
+        .remove(pathsToDelete)
+      if (storageError) console.warn('[galleryService] Storage delete warning:', storageError)
+    }
+
+    const { error: deleteRowsError } = await supabase
+      .from('gallery_photos')
+      .delete()
+      .eq('gallery_id', galleryId)
+      .in('id', photoIds)
+
+    if (deleteRowsError) throw deleteRowsError
+
+    if (reclaimedBytes > 0) {
+      await updateStorageUsage(context, -reclaimedBytes)
+    }
+
+    return { error: null }
+  } catch (err) {
+    console.error('[galleryService] Error deleting photos:', err)
+    return { error: err as Error }
+  }
+}
+
+export async function deleteGallery(
+  context: UserContext,
+  galleryId: string
+): Promise<{ error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { error: null }
+  }
+
+  try {
+    // Check if this is a system-generated gallery - block deletion
+    const { data: gallery, error: galleryError } = await supabase
+      .from('galleries')
+      .select('id, is_system_generated')
+      .eq('id', galleryId)
+      .maybeSingle()
+
+    if (galleryError) throw galleryError
+
+    if (gallery?.is_system_generated) {
+      return {
+        error: new Error('Cannot delete system-generated gallery. Galleries are automatically managed for athletes, teams, events, travel plans, and programs.'),
+      }
+    }
+
+    const { data: photos, error: photosError } = await supabase
+      .from('gallery_photos')
+      .select('id, storage_path, thumbnail_path, size_bytes')
+      .eq('gallery_id', galleryId)
+
+    if (photosError) throw photosError
+
+    const paths: string[] = []
+    let reclaimedBytes = 0
+    ;(photos || []).forEach((p: any) => {
+      if (p.storage_path) paths.push(p.storage_path)
+      if (p.thumbnail_path) paths.push(p.thumbnail_path)
+      reclaimedBytes += Number(p.size_bytes || 0)
+    })
+
+    if (paths.length > 0) {
+      const { error: storageError } = await supabase.storage.from('public-media').remove(paths)
+      if (storageError) console.warn('[galleryService] Storage delete warning:', storageError)
+    }
+
+    const { error: deletePhotosError } = await supabase
+      .from('gallery_photos')
+      .delete()
+      .eq('gallery_id', galleryId)
+    if (deletePhotosError) throw deletePhotosError
+
+    const { error: deleteGalleryError } = await supabase
+      .from('galleries')
+      .delete()
+      .eq('id', galleryId)
+    if (deleteGalleryError) throw deleteGalleryError
+
+    if (reclaimedBytes > 0) {
+      await updateStorageUsage(context, -reclaimedBytes)
+    }
+
+    return { error: null }
+  } catch (err) {
+    console.error('[galleryService] Error deleting gallery:', err)
+    return { error: err as Error }
+  }
+}
+
+export async function reorderGalleryPhotos(
+  _context: UserContext,
+  galleryId: string,
+  photoIds: string[]
+): Promise<{ error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { error: null }
+  }
+
+  try {
+    const updates = photoIds.map((id, index) => ({
+      id,
+      sort_order: index + 1,
+      gallery_id: galleryId,
+    }))
+
+    const { error } = await supabase
+      .from('gallery_photos')
+      .upsert(updates as any, { onConflict: 'id' })
+
+    if (error) throw error
+    return { error: null }
+  } catch (err) {
+    console.error('[galleryService] Error reordering photos:', err)
+    return { error: err as Error }
   }
 }

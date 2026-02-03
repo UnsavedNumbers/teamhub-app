@@ -10,13 +10,21 @@ export default defineConfig({
     },
   },
   server: {
-    host: '127.0.0.1',      // avoid VPN-altered hostname resolution
+    host: '0.0.0.0',      // allow network access from other devices
     port: 5173,
     strictPort: true,      // prevents silent port changes
+    allowedHosts: ['conceptacular-supereminently-kamala.ngrok-free.dev'],
     hmr: {
       protocol: 'ws',
-      host: '127.0.0.1',
+      host: 'localhost',
       port: 5173,
+    },
+    proxy: {
+      '/ngrok': {
+        target: 'conceptacular-supereminently-kamala.ngrok-free.dev',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ngrok/, ''),
+      },
     },
   },
 })

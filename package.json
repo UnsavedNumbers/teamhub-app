@@ -32,6 +32,7 @@
     "@tanstack/react-query": "^5.90.20",
     "@types/papaparse": "^5.5.2",
     "colord": "^2.9.3",
+    "html5-qrcode": "^2.3.8",
     "jspdf": "^4.0.0",
     "lucide-react": "^0.562.0",
     "papaparse": "^5.5.3",

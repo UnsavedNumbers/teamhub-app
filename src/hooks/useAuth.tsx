@@ -11,6 +11,8 @@ import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { useOrganization, Organization } from '../contexts/OrganizationContext'
 import type { PlatformAdminRole } from '../types/platformAdmin.types'
+import type { HomeLocation } from '../types/location'
+import { geocodeZipToHomeLocation } from '../utils/homeLocation'
 
 // Role types - now per organization
 type OrgMemberRole = 'parent' | 'coach' | 'org_admin'
@@ -23,6 +25,7 @@ interface UserProfile {
   first_name: string
   last_name: string
   display_name: string | null
+  home_location?: HomeLocation | null
   home_zipcode?: string
   // Legacy fields (deprecated, use organizations instead)
   role?: LegacyUserRole
@@ -88,17 +91,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         /* ---- user table ---- */
-        // Try to select with home_zipcode first (if migration has been applied)
+        // Try to select with home_zipcode/home_location first (if migration has been applied)
         let { data: userData, error: userError } = await supabase
           .from('users')
           .select(
-            'id, email, phone, display_name, home_zipcode, role, family_id, org_id, requires_org_setup'
+            'id, email, phone, display_name, home_zipcode, home_location, role, family_id, org_id, requires_org_setup'
           )
           .eq('id', userId)
           .single()
 
         // If column doesn't exist yet (migration not applied), retry without it
-        if (userError?.code === '42703' && userError?.message?.includes('home_zipcode')) {
+        if (userError?.code === '42703') {
           const retryResult = await supabase
             .from('users')
             .select(
@@ -127,12 +130,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Type assertion: userData is now confirmed to be the correct type
-        // home_zipcode may not exist if migration hasn't been applied yet
+        // home_zipcode/home_location may not exist if migration hasn't been applied yet
         const validUserData = userData as unknown as {
           id: string
           email: string | null
           phone: string | null
           display_name: string | null
+          home_location?: HomeLocation | null
           home_zipcode?: string | null
           role: string | null
           family_id: string | null
@@ -228,6 +232,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           first_name: '', // first_name and last_name not in users table, derived from display_name if needed
           last_name: '',
           display_name: validUserData.display_name,
+          home_location: (validUserData.home_location as HomeLocation | null) ?? null,
           home_zipcode: validUserData.home_zipcode ?? undefined,
           role: (validUserData.role === 'parent' || validUserData.role === 'coach' || validUserData.role === 'admin') 
             ? (validUserData.role as LegacyUserRole) 
@@ -392,8 +397,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Import getBaseUrl to get current origin (supports localhost and production)
     const { getBaseUrl } = await import('../utils/host')
     const baseUrl = getBaseUrl()
+    const trimmedZip = zipcode.trim()
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -404,7 +410,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           phone: phone.trim(),
-          home_zipcode: zipcode.trim() || undefined, // Only include if not empty
+          home_zipcode: trimmedZip || undefined, // Only include if not empty
           // Derive display_name from first+last for backward compatibility
           display_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
           // Pass requires_org_setup to metadata - the database trigger will read this
@@ -412,6 +418,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       },
     })
+
+    if (!error && data?.session?.user && trimmedZip) {
+      try {
+        const homeLocation = await geocodeZipToHomeLocation(trimmedZip)
+        if (homeLocation) {
+          await supabase
+            .from('users')
+            .update({ home_location: homeLocation as any, home_zipcode: trimmedZip })
+            .eq('id', data.session.user.id)
+        }
+      } catch (err) {
+        console.error('Failed to save home_location after signup', err)
+      }
+    }
+
     return { error }
   }
 

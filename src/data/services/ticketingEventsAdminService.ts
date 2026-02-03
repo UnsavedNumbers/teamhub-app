@@ -14,7 +14,6 @@ import {
 } from '../fake/fakeTicketingEvents'
 import type {
   TicketedEvent,
-  TicketSaleStatus,
   TicketingProgram,
   TicketingSeason,
   TicketingVenue,

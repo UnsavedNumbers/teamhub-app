@@ -58,7 +58,9 @@ import TicketEventDetail from './pages/ticketing/TicketEventDetail'
 import TicketOrderSuccess from './pages/ticketing/TicketOrderSuccess'
 import MyTickets from './pages/ticketing/MyTickets'
 import TicketAccess from './pages/ticketing/TicketAccess'
+import TicketAccessPage from './pages/ticketing/TicketAccessPage'
 import TicketScanner from './pages/ticketing/TicketScanner'
+import ResendTicketsPage from './pages/orders/ResendTicketsPage'
 // Org-scoped public ticketing routes
 import OrgScopedTicketEventList from './pages/ticketing/OrgScopedTicketEventList'
 import OrgScopedTicketEventDetail from './pages/ticketing/OrgScopedTicketEventDetail'
@@ -72,6 +74,8 @@ const EditAthletePortal = lazy(() => import('./pages/EditAthletePortal'))
 const RequestAthleteAttachment = lazy(() => import('./pages/RequestAthleteAttachment').then(m => ({ default: m.default })))
 const PortalCreateEvent = lazy(() => import('./pages/portal/PortalCreateEvent'))
 const PortalEditEvent = lazy(() => import('./pages/portal/PortalEditEvent'))
+const FollowedOrgs = lazy(() => import('./pages/portal/FollowedOrgs'))
+const BookmarkedEvents = lazy(() => import('./pages/portal/BookmarkedEvents'))
 
 // Video Pages - Lazy loaded
 const GuardianVideos = lazy(() => import('./pages/GuardianVideos'))
@@ -155,6 +159,8 @@ const TicketingOrderDetail = lazy(() => import('./pages/admin/TicketingOrderDeta
 const CreateTicketedEvent = lazy(() => import('./pages/admin/CreateTicketedEvent'))
 const CreateTicketType = lazy(() => import('./pages/admin/CreateTicketType'))
 const TicketedEventDetail = lazy(() => import('./pages/admin/TicketedEventDetail'))
+const CompTicketsPage = lazy(() => import('./pages/admin/CompTicketsPage'))
+const ValidationDashboard = lazy(() => import('./pages/admin/ValidationDashboard'))
 const CreateFee = lazy(() => import('./pages/admin/CreateFee'))
 const UniformOrders = lazy(() => import('./pages/admin/UniformOrders'))
 const CreateUniform = lazy(() => import('./pages/admin/CreateUniform'))
@@ -166,6 +172,7 @@ const AdminTryouts = lazy(() => import('./pages/admin/AdminTryouts'))
 const AdminTryoutDetail = lazy(() => import('./pages/admin/AdminTryoutDetail'))
 const CreateTryout = lazy(() => import('./pages/admin/CreateTryout'))
 const AdminPhotos = lazy(() => import('./pages/admin/Photos'))
+const AdminGalleryDetail = lazy(() => import('./pages/admin/GalleryDetail'))
 const OrganizationSettings = lazy(() => import('./pages/admin/OrganizationSettings'))
 const OrganizationStructureForms = lazy(() => import('./pages/admin/OrganizationStructureForms'))
 const OrganizationUsers = lazy(() => import('./pages/admin/OrganizationUsers'))
@@ -183,7 +190,7 @@ const CreateChild = lazy(() => import('./pages/admin/CreateChild'))
 const CreateAthlete = lazy(() => import('./pages/admin/CreateAthlete'))
 const AthleteDetail = lazy(() => import('./pages/admin/AthleteDetail'))
 const EditAthlete = lazy(() => import('./pages/admin/EditAthlete'))
-const AdminChildren = lazy(() => import('./pages/admin/AdminChildren'))
+const AdminAthletes = lazy(() => import('./pages/admin/AdminAthletes'))
 const ImportAthletes = lazy(() => import('./pages/admin/ImportAthletes'))
 const GuardianAttachmentRequests = lazy(() => import('./pages/admin/GuardianAttachmentRequests').then(m => ({ default: m.default })))
 const AdminSportSettings = lazy(() => import('./pages/admin/AdminSportSettings'))
@@ -283,13 +290,16 @@ function AppWithTheme() {
           <Route path="/o/:orgSlug/tickets" element={<OrgScopedTicketEventList />} />
           <Route path="/o/:orgSlug/tickets/events/:eventId" element={<OrgScopedTicketEventDetail />} />
           <Route path="/o/:orgSlug/tickets/order/:orderId" element={<OrgScopedTicketOrderSuccess />} />
+          <Route path="/o/:orgSlug/tickets/access" element={<TicketAccessPage />} />
           <Route path="/o/:orgSlug/tickets/access/:token" element={<OrgScopedTicketAccess />} />
           
           {/* Legacy Public Ticketing Routes (deprecated - will be removed) */}
           <Route path="/tickets" element={<TicketEventList />} />
           <Route path="/tickets/events/:eventId" element={<TicketEventDetail />} />
           <Route path="/tickets/order/:orderId" element={<TicketOrderSuccess />} />
+          <Route path="/tickets/access" element={<TicketAccessPage />} />
           <Route path="/tickets/access/:token" element={<TicketAccess />} />
+          <Route path="/tickets/resend" element={<ResendTicketsPage />} />
           <Route path="/tickets/validate/:token" element={<TicketScanner />} />
           
           {/* Redirect /accept-invite to /portal/accept-invite for old email links */}
@@ -345,6 +355,8 @@ function AppWithTheme() {
             <Route path="videos/:id" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><GuardianVideoDetail /></Suspense></ProtectedRoute>} />
             
             <Route path="account/tickets" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.myTickets"><MyTickets /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="follows" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FollowedOrgs /></Suspense></ProtectedRoute>} />
+            <Route path="bookmarks" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><BookmarkedEvents /></Suspense></ProtectedRoute>} />
             
             {/* Redirect root portal to dashboard */}
             <Route path="notifications" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Suspense fallback={<AdminLoadingSpinner />}><Notifications /></Suspense></FeatureGateRoute></ProtectedRoute>} />
@@ -421,7 +433,7 @@ function AppWithTheme() {
               <Route path="athletes/:id" element={<AthleteDetail />} />
               <Route path="athletes/new" element={<CreateAthlete />} />
               <Route path="athletes/import" element={<FeatureGateRoute routeKey="admin.athletes.import"><ImportAthletes /></FeatureGateRoute>} />
-              <Route path="athletes" element={<AdminChildren />} />
+              <Route path="athletes" element={<AdminAthletes />} />
               <Route path="guardians/:familyId/athletes/new" element={<CreateChild />} />
               <Route path="guardians/new" element={<CreateFamily />} />
               <Route path="guardians/:id" element={<FamilyDetail />} />
@@ -474,6 +486,8 @@ function AppWithTheme() {
               <Route path="ticketing/events/new" element={<FeatureGateRoute routeKey="admin.ticketingEvents.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateTicketedEvent /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/:id/ticket-types/new" element={<FeatureGateRoute routeKey="admin.ticketingEvents.ticketTypes.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateTicketType /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/:id" element={<FeatureGateRoute routeKey="admin.ticketingEvents.detail"><Suspense fallback={<AdminLoadingSpinner />}><TicketedEventDetail /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/events/:id/dashboard" element={<FeatureGateRoute routeKey="admin.ticketingEvents.detail"><Suspense fallback={<AdminLoadingSpinner />}><ValidationDashboard /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/comp-tickets" element={<FeatureGateRoute routeKey="admin.ticketingEvents.create"><Suspense fallback={<AdminLoadingSpinner />}><CompTicketsPage /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/orders" element={<FeatureGateRoute routeKey="admin.ticketingOrders"><Suspense fallback={<AdminLoadingSpinner />}><TicketingOrders /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/orders/:orderId" element={<FeatureGateRoute routeKey="admin.ticketingOrders"><Suspense fallback={<AdminLoadingSpinner />}><TicketingOrderDetail /></Suspense></FeatureGateRoute>} />
             
@@ -495,6 +509,7 @@ function AppWithTheme() {
             
               {/* Photos */}
               <Route path="photos" element={<FeatureGateRoute routeKey="admin.photos.list"><Suspense fallback={<AdminLoadingSpinner />}><AdminPhotos /></Suspense></FeatureGateRoute>} />
+              <Route path="photos/:id" element={<FeatureGateRoute routeKey="admin.photos.list"><Suspense fallback={<AdminLoadingSpinner />}><AdminGalleryDetail /></Suspense></FeatureGateRoute>} />
             
               {/* Videos */}
               <Route path="videos" element={<Suspense fallback={<AdminLoadingSpinner />}><CoachVideoLibrary /></Suspense>} />

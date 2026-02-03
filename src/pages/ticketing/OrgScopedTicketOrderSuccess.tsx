@@ -5,33 +5,62 @@
  * Must be wrapped in OrgScopedRoute
  */
 
+import { useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getTicketOrderById, getTicketsForOrder } from '@/data/services'
 import TicketCard from '@/components/ticketing/TicketCard'
 import type { OrgContext } from '@/utils/orgResolution'
 import { OrgScopedRoute } from '@/components/OrgScopedRoute'
+import type { TicketOrder, TicketOrderItem, TicketType, TicketedEvent, Ticket } from '@/types/ticketing'
+import { getLink, RouteKeys } from '@/utils/routes'
+
+type TicketOrderWithRelations = TicketOrder & {
+  ticket_order_items?: Array<TicketOrderItem & {
+    ticket_types: Pick<TicketType, 'name' | 'description'>
+  }>
+  ticketed_events?: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'> | null
+}
+
+type TicketWithRelations = Ticket & {
+  ticket_types: Pick<TicketType, 'name' | 'description'>
+  ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'> | null
+  ticket_orders?: { purchaser_email: string }
+}
 
 function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
   const { orderId, orgSlug } = useParams<{ orderId: string; orgSlug: string }>()
+  const scrollToTicket = useCallback((ticketId: string) => {
+    const target = document.getElementById(`ticket-${ticketId}`)
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [])
 
-  const { data: orderResponse } = useQuery({
+  const orderQuery = useQuery<TicketOrderWithRelations, Error>({
     queryKey: ['ticket-order', orderId, org.id],
     queryFn: () => getTicketOrderById(orderId!, org.id),
     enabled: !!orderId && !!org.id,
   })
 
-  const { data: ticketsResponse } = useQuery({
+  const ticketsQuery = useQuery<TicketWithRelations[], Error>({
     queryKey: ['tickets', orderId],
-    queryFn: () => getTicketsForOrder(orderId!),
+    queryFn: async () => {
+      const data = await getTicketsForOrder(orderId!)
+      return (data as TicketWithRelations[]) || []
+    },
     enabled: !!orderId,
   })
 
-  const order = (orderResponse as any)?.data ?? orderResponse ?? null
-  const ticketsResponseAny = ticketsResponse as any
-  const tickets = Array.isArray(ticketsResponseAny) ? ticketsResponseAny : ticketsResponseAny?.data || []
+  if (!orderId) {
+    return (
+      <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] flex items-center justify-center">
+        <p className="text-gray-500">Order not found.</p>
+      </div>
+    )
+  }
 
-  if (!order) {
+  if (orderQuery.isLoading) {
     return (
       <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] flex items-center justify-center">
         <div className="text-center">
@@ -41,7 +70,27 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
     )
   }
 
-  const event = order.ticketed_events
+  if (orderQuery.isError || !orderQuery.data) {
+    return (
+      <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 dark:text-red-400 text-lg mb-4">
+            {orderQuery.error?.message || 'Order not found'}
+          </p>
+          <button
+            onClick={() => orderQuery.refetch()}
+            className="px-4 py-2 bg-[#137fec] text-white rounded-lg"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const order = orderQuery.data
+  const event = order.ticketed_events || undefined
+  const tickets: TicketWithRelations[] = ticketsQuery.data ?? []
   const orderRef = `YS-${order.id.slice(-5).toUpperCase()}`
 
   return (
@@ -84,10 +133,17 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
           </div>
 
           {/* Tickets */}
-          {tickets.map((ticket: any, idx: number) => {
+          {ticketsQuery.isLoading && (
+            <div className="text-center text-gray-500">Loading tickets...</div>
+          )}
+          {ticketsQuery.isError && (
+            <div className="text-center text-red-500">{ticketsQuery.error?.message || 'Unable to load tickets.'}</div>
+          )}
+          {tickets.map((ticket, idx) => {
+            const nextTicket = tickets[idx + 1]
             const ticketEvent = ticket.ticketed_events || event
             return (
-              <div key={ticket.id}>
+              <div key={ticket.id} id={`ticket-${ticket.id}`}>
                 <TicketCard
                   ticket={ticket}
                   event={ticketEvent}
@@ -106,7 +162,13 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
                           <p className="text-xs text-gray-500">{ticket.ticket_types?.name || 'General Admission'}</p>
                         </div>
                       </div>
-                      <button className="text-[#137fec] font-bold text-sm">VIEW</button>
+                      <button
+                        className="text-[#137fec] font-bold text-sm"
+                        type="button"
+                        onClick={() => scrollToTicket(nextTicket?.id || ticket.id)}
+                      >
+                        VIEW
+                      </button>
                     </div>
                   </div>
                 )}
@@ -119,7 +181,7 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
             {/* For guest users, link back to org tickets page */}
             {!order.purchaser_user_id && (
               <Link
-                to={`/o/${orgSlug}/tickets`}
+                to={getLink(RouteKeys.PORTAL_ORG_TICKETS, { orgSlug: orgSlug || '' })}
                 className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
               >
                 <span className="material-symbols-outlined">confirmation_number</span>
@@ -129,7 +191,7 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
             {/* For logged-in users, link to portal */}
             {order.purchaser_user_id && (
               <Link
-                to="/portal/my-tickets"
+                to={getLink(RouteKeys.PORTAL_MY_TICKETS)}
                 className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
               >
                 <span className="material-symbols-outlined">confirmation_number</span>
@@ -141,7 +203,7 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
           {/* Footer Support */}
           <div className="text-center pb-12">
             <p className="text-gray-500 text-sm mb-2">Need help with your entry?</p>
-            <a className="text-[#137fec] font-bold text-sm underline" href="#">
+            <a className="text-[#137fec] font-bold text-sm underline" href="mailto:support@youthsports.team">
               Contact Event Support
             </a>
           </div>

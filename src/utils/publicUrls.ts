@@ -1,3 +1,5 @@
+import { getLink, RouteKeys } from '@/utils/routes'
+
 /**
  * Public URL Utilities
  * 
@@ -26,15 +28,15 @@ export function getPublicBaseUrl(slug: string, path?: string): string {
   }
 
   const origin = window.location.origin
-  
-  // Normalize path: strip leading/trailing slashes, avoid double slashes
+  const basePath = getLink(RouteKeys.PORTAL_ORG_LANDING, { orgSlug: slug })
+
   if (!path || path.trim() === '') {
-    return `${origin}/o/${slug}`
+    return `${origin}${basePath}`
   }
 
   const normalizedPath = path
     .replace(/^\//, '') // Remove leading slash
     .replace(/\/$/, '') // Remove trailing slash
-  
-  return `${origin}/o/${slug}/${normalizedPath}`
+
+  return `${origin}${basePath}/${normalizedPath}`
 }

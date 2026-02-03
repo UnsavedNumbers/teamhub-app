@@ -19,6 +19,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest
@@ -26,6 +27,11 @@ jobs:
       - name: Link project
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
 
-      - name: Push migrations
-        run: |
-          yes | supabase db push --linked
+      - name: Migration dry-run
+        run: supabase db push --linked --dry-run
+
+      - name: Push migrations (non-interactive)
+        run: yes | supabase db push --linked
+
+      - name: Deploy edge functions
+        run: supabase functions deploy

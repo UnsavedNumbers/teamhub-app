@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -10,6 +10,12 @@ import {
   upsertDefaultContact, 
   upsertCategoryContact 
 } from '../../../data/services/organizationContactsService'
+import { useUserContext } from '../../../hooks/useUserContext'
+import { 
+  getOrganizationTravelContacts,
+  upsertOrganizationTravelContact,
+} from '../../../data/services/organizationTravelContactsService'
+import { type TravelContactCategoryOrg } from '../../../types/travelContacts'
 import { 
   CONTACT_CATEGORIES, 
   type ContactCategory,
@@ -17,6 +23,20 @@ import {
 } from '../../../types/organizationContacts'
 
 // Schema for a single category row in the form
+const subContactSchema = z.object({
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  phone: z.string().optional().nullable(),
+})
+
+const travelContactsSchema = z.object({
+  transportation: subContactSchema.optional(),
+  lodging: subContactSchema.optional(),
+  venue: subContactSchema.optional(),
+  emergency: subContactSchema.optional(),
+}).optional()
+
 const categoryRowSchema = z.object({
   category: z.enum(CONTACT_CATEGORIES),
   is_custom: z.boolean(),
@@ -24,6 +44,7 @@ const categoryRowSchema = z.object({
   last_name: z.string().optional(),
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional().nullable(),
+  travel_contacts: travelContactsSchema,
 })
 
 // Schema for the entire form
@@ -59,6 +80,12 @@ export default function ContactSection({ orgId }: { orgId: string }) {
           last_name: '',
           email: '',
           phone: '',
+          travel_contacts: c === 'travel' ? {
+            transportation: { first_name: '', last_name: '', email: '', phone: '' },
+            lodging: { first_name: '', last_name: '', email: '', phone: '' },
+            venue: { first_name: '', last_name: '', email: '', phone: '' },
+            emergency: { first_name: '', last_name: '', email: '', phone: '' },
+          } : undefined,
         })),
     }
   })
@@ -72,6 +99,8 @@ export default function ContactSection({ orgId }: { orgId: string }) {
     control,
     name: 'categories',
   })
+
+  const { context } = useUserContext()
 
   useEffect(() => {
     loadData()
@@ -87,6 +116,17 @@ export default function ContactSection({ orgId }: { orgId: string }) {
       const categoryContacts = data?.filter(c => c.category !== 'default') || []
       
       // Map to form shape
+      // Load travel contacts separately
+      let travelData: Record<string, any> | null = null
+      try {
+        if (context) {
+          const t = await getOrganizationTravelContacts(context)
+          if (!t.error) travelData = t.data
+        }
+      } catch (err) {
+        // ignore
+      }
+
       const formData: ContactFormData = {
         defaultContact: {
             first_name: defaultContact?.first_name || '',
@@ -99,7 +139,7 @@ export default function ContactSection({ orgId }: { orgId: string }) {
           .filter(c => c !== 'default')
           .map(cat => {
             const existing = categoryContacts.find(c => c.category === cat)
-            return {
+            const base = {
               category: cat,
               is_custom: existing?.is_custom ?? false, // Default to false if no row
               first_name: existing?.first_name || '',
@@ -107,6 +147,40 @@ export default function ContactSection({ orgId }: { orgId: string }) {
               email: existing?.email || '',
               phone: existing?.phone || '',
             }
+
+            if (cat === 'travel') {
+              return {
+                ...base,
+                travel_contacts: {
+                  transportation: travelData?.transportation ? {
+                    first_name: travelData.transportation.first_name || '',
+                    last_name: travelData.transportation.last_name || '',
+                    email: travelData.transportation.email || '',
+                    phone: travelData.transportation.phone || '',
+                  } : { first_name: '', last_name: '', email: '', phone: '' },
+                  lodging: travelData?.lodging ? {
+                    first_name: travelData.lodging.first_name || '',
+                    last_name: travelData.lodging.last_name || '',
+                    email: travelData.lodging.email || '',
+                    phone: travelData.lodging.phone || '',
+                  } : { first_name: '', last_name: '', email: '', phone: '' },
+                  venue: travelData?.venue ? {
+                    first_name: travelData.venue.first_name || '',
+                    last_name: travelData.venue.last_name || '',
+                    email: travelData.venue.email || '',
+                    phone: travelData.venue.phone || '',
+                  } : { first_name: '', last_name: '', email: '', phone: '' },
+                  emergency: travelData?.emergency ? {
+                    first_name: travelData.emergency.first_name || '',
+                    last_name: travelData.emergency.last_name || '',
+                    email: travelData.emergency.email || '',
+                    phone: travelData.emergency.phone || '',
+                  } : { first_name: '', last_name: '', email: '', phone: '' },
+                }
+              }
+            }
+
+            return base
           })
       }
       
@@ -139,13 +213,34 @@ export default function ContactSection({ orgId }: { orgId: string }) {
              }
           }
 
-          return upsertCategoryContact(orgId, catRow.category as ContactCategory, {
+          const res = await upsertCategoryContact(orgId, catRow.category as ContactCategory, {
               is_custom: catRow.is_custom,
               first_name: catRow.first_name || '',
               last_name: catRow.last_name || '',
               email: catRow.email || '',
               phone: catRow.phone || null,
           })
+
+          // If travel category, also upsert travel subcontacts
+          if (catRow.category === 'travel' && context && catRow.travel_contacts) {
+            // Validate subcontacts: if name provided, email required
+            for (const sub of ['transportation','lodging','venue','emergency'] as const) {
+              const sc = (catRow.travel_contacts as any)[sub]
+              const hasName = sc?.first_name || sc?.last_name
+              const email = sc?.email || ''
+              if (hasName && !email) {
+                throw new Error(`Email is required for ${sub} travel contact if a name is provided.`)
+              }
+              await upsertOrganizationTravelContact(context, sub as TravelContactCategoryOrg, {
+                first_name: sc?.first_name || '',
+                last_name: sc?.last_name || '',
+                email: sc?.email || '',
+                phone: sc?.phone || null,
+              })
+            }
+          }
+
+          return res
       }))
 
       showSuccess('Contacts updated successfully')
@@ -261,6 +356,31 @@ export default function ContactSection({ orgId }: { orgId: string }) {
                                         <Input {...inputField} value={inputField.value || ''} label="Phone" type="tel" />
                                     )}
                                 />
+                                {field.category === 'travel' && (
+                                  <>
+                                    <div className="pa-w-full pa-text-sm pa-text-muted pa-mb-2">Specify contacts for travel-related coordination. Leave empty to use the main Travel contact above.</div>
+                                    {['transportation','lodging','venue','emergency'].map((sub, subIdx) => (
+                                      <Fragment key={sub}>
+                                        {subIdx > 0 && <hr className="pa-border-t pa-my-4" />}
+                                        
+                                        <div className="oa-contact-form-grid">
+                                          <h4 className="oa-category-title">{sub.charAt(0).toUpperCase() + sub.slice(1)}</h4>
+                                          <div className="pa-text-xs pa-text-muted pa-text-right">
+                                            {sub === 'transportation' && 'Bus, flight, or excessive travel coordination.'}
+                                            {sub === 'lodging' && 'Hotel and room block management.'}
+                                            {sub === 'venue' && 'Contact at the venue (e.g. facility manager).'}
+                                            {sub === 'emergency' && 'Urgent issues during the trip.'}
+                                          </div>
+                                          
+                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.first_name` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label="First Name" />} />
+                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.last_name` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label="Last Name" />} />
+                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.email` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label="Email" type="email" />} />
+                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.phone` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label="Phone" type="tel" />} />
+                                        </div>
+                                      </Fragment>
+                                    ))}
+                                  </>
+                                )}
                             </div>
                         ) : (
                             <div className="oa-default-preview">

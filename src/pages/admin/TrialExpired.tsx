@@ -8,6 +8,7 @@ import { useTheme } from '../../hooks/useTheme'
 import { hasAnyRole } from '../../utils/roleHelpers'
 import { LicensePlan } from '../../utils/licenseUtils'
 import { t } from '../../i18n'
+import { getLink, RouteKeys } from '../../utils/routes'
 
 interface PlanCard {
   id: LicensePlan
@@ -86,10 +87,13 @@ export default function TrialExpired() {
     setLogoVersion(prev => prev + 1)
   }, [resolvedTheme])
 
+  const successUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS)}`
+  const cancelUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL)}`
+
   const { loadingPlan, error: checkoutError, handleSelect } = useCheckoutSession({
     organizationId: orgId || '',
-    successUrl: `${window.location.origin}/admin/organization/billing/checkout/success`,
-    cancelUrl: `${window.location.origin}/admin/organization/billing/checkout/cancel`,
+    successUrl,
+    cancelUrl,
   })
 
   const canUpgrade = (isAdmin || isPlatformAdmin) && orgId

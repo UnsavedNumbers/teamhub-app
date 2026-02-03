@@ -166,7 +166,7 @@ export default function TravelPlans() {
             const { data, error } = await publishTravelPlan(context, plan.id)
             if (error) throw error
             if (data) {
-                showSuccess('Travel plan published successfully!')
+                showSuccess(t('travelPlans.publishSuccess'))
                 await fetchPlans()
             }
         } catch (err) {
@@ -187,7 +187,7 @@ export default function TravelPlans() {
             const { data, error } = await cancelTravelPlan(context, planId)
             if (error) throw error
             if (data) {
-                showSuccess('Travel plan cancelled successfully!')
+                showSuccess(t('travelPlans.cancelSuccess'))
                 setCancelDialog({ open: false, plan: null })
                 setSearchParams({})
                 await fetchPlans()
@@ -247,9 +247,9 @@ export default function TravelPlans() {
             {filteredPlans.length === 0 && !loading ? (
                 <EmptyState
                     icon="flight_takeoff"
-                    title="NO TRAVEL PLANS"
-                    description="No travel plans match your current filters."
-                    action={{ label: 'Create Plan', onClick: () => navigate('/admin/travel/new') }}
+                    title={t('travelPlans.noPlans')}
+                    description={t('travelPlans.noPlansDesc')}
+                    action={{ label: t('travelPlans.createPlan'), onClick: () => navigate('/admin/travel/new') }}
                 />
             ) : (
                 <>
@@ -311,9 +311,9 @@ export default function TravelPlans() {
 
             <ConfirmDialog
                 open={cancelDialog.open}
-                title="Cancel Travel Plan"
-                description={cancelDialog.plan ? `Are you sure you want to cancel "${cancelDialog.plan.title}"? This will mark the plan as cancelled and notify participants.` : ''}
-                confirmLabel="Cancel Plan"
+                title={t('travelPlans.cancelDialogTitle')}
+                description={cancelDialog.plan ? t('travelPlans.cancelDialogDesc', { title: cancelDialog.plan.title }) : ''}
+                confirmLabel={t('travelPlans.cancelConfirmLabel')}
                 variant="warning"
                 requireReason
                 loading={cancelLoading !== null}
