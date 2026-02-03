@@ -215,6 +215,7 @@ export interface CreateCheckoutRequest {
   }>
   purchaser_email: string
   org_slug?: string // Optional org slug for URL construction in checkout
+  return_base_url?: string // Optional base URL for redirects (e.g. window.location.origin)
 }
 
 export interface CreateCheckoutResponse {

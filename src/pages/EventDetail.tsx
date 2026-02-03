@@ -425,6 +425,12 @@ export default function EventDetail() {
         } : null,
       })
 
+      console.log('[EventDetail] Set event state:', {
+        hasTicketedEvent: !!eventData.ticketed_event,
+        ticketedEventId: eventData.ticketed_event?.id,
+        ticketedEventData: eventData.ticketed_event
+      })
+
       // Fetch children
       const { data: childData } = await getAthletes(context)
       if (isMountedRef.current) {
@@ -472,14 +478,10 @@ export default function EventDetail() {
     let cancelled = false
 
     const loadOrgSlug = async () => {
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('slug')
-        .eq('id', context.orgId)
-        .maybeSingle()
+      const { data, error } = await supabase.rpc('get_org_slug_by_id' as any, { p_org_id: context.orgId })
 
-      if (!cancelled && !error) {
-        setOrgSlug(data?.slug ?? null)
+      if (!cancelled && !error && data) {
+        setOrgSlug(data as string)
       }
     }
 
@@ -673,11 +675,11 @@ export default function EventDetail() {
               {event.ticketed_event ? (
                 <Button
                   onClick={() => {
-                    if (orgSlug) {
-                      navigate(`/o/${orgSlug}/tickets/events/${event.ticketed_event?.id}`)
+                    if (orgSlug && event.ticketed_event?.id) {
+                      navigate(`/o/${orgSlug}/tickets/events/${event.ticketed_event.id}`)
                     }
                   }}
-                  disabled={!orgSlug}
+                  disabled={!orgSlug || !event.ticketed_event?.id}
                   className="w-full"
                 >
                   {t('calendar.event.getTickets')}

@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
 import { crypto } from "https://deno.land/std@0.208.0/crypto/mod.ts"
+import { qrcode } from "https://deno.land/x/qrcode/mod.ts"
 
 // CORS helpers
 function buildCorsHeaders(req: Request) {
@@ -55,14 +56,9 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")
   const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-  const resendApiKey = Deno.env.get("RESEND_API_KEY")
 
   if (!supabaseUrl || !supabaseServiceRoleKey) {
     return json(req, { error: "Server misconfigured" }, 500)
-  }
-
-  if (!resendApiKey) {
-    return json(req, { error: "Resend not configured" }, 500)
   }
 
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
@@ -82,7 +78,7 @@ serve(async (req) => {
   }
 
   try {
-    // Load order with event, org, and items
+    // Load order with event, org, and items (T4: check status and idempotency)
     const { data: order, error: orderError } = await supabase
       .from("ticket_orders")
       .select(
@@ -91,6 +87,9 @@ serve(async (req) => {
         org_id,
         purchaser_email,
         purchaser_name,
+        purchaser_user_id,
+        status,
+        receipt_email_sent_at,
         total_cents,
         ticketed_events (
           id,
@@ -112,6 +111,27 @@ serve(async (req) => {
       return json(req, { error: "Order not found" }, 404)
     }
 
+    // Guard: order must be paid and tickets must exist (T4)
+    if (order.status !== "paid") {
+      return json(req, { error: "Order is not paid" }, 400)
+    }
+
+    // Check idempotency: if receipt already sent, return success (T4)
+    if (order.receipt_email_sent_at) {
+      return json(req, { success: true, email_sent: true, skipped: true })
+    }
+
+    // Load tickets to verify they exist and get entry_code for QR
+    const { data: tickets, error: ticketsError } = await supabase
+      .from("tickets")
+      .select("id, entry_code")
+      .eq("order_id", orderId)
+      .limit(1)
+
+    if (ticketsError || !tickets || tickets.length === 0) {
+      return json(req, { error: "No tickets found for order" }, 400)
+    }
+
     // Load order items
     const { data: orderItems } = await supabase
       .from("ticket_order_items")
@@ -127,32 +147,58 @@ serve(async (req) => {
       )
       .eq("order_id", orderId)
 
-    // Create magic link token for guest access
-    const token = generateToken()
-    const tokenHash = await hashToken(token)
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 30) // 30 days
+    // Create magic link token for guest access (T10: handle conflict)
+    let token: string | null = null
+    const { data: existingLink } = await supabase
+      .from("ticket_access_links")
+      .select("id")
+      .eq("order_id", orderId)
+      .eq("email", order.purchaser_email)
+      .single()
 
-    const { error: linkError } = await supabase.from("ticket_access_links").insert({
-      order_id: orderId,
-      email: order.purchaser_email,
-      token_hash: tokenHash,
-      expires_at: expiresAt.toISOString(),
-    })
+    if (!existingLink) {
+      // Create new access link
+      token = generateToken()
+      const tokenHash = await hashToken(token)
+      const expiresAt = new Date()
+      expiresAt.setDate(expiresAt.getDate() + 30) // 30 days
 
-    if (linkError) {
-      console.error("Failed to create access link:", linkError)
+      const { error: linkError } = await supabase.from("ticket_access_links").insert({
+        order_id: orderId,
+        email: order.purchaser_email,
+        token_hash: tokenHash,
+        expires_at: expiresAt.toISOString(),
+      })
+
+      if (linkError) {
+        // Conflict or other error - link may have been created concurrently
+        console.error("Failed to create access link (may already exist):", linkError)
+        // Continue - if link exists, user can access via other means
+      }
+    } else {
+      // Link already exists (T10: idempotent) - we can't get the raw token from hash
+      // For guest users, we'll use a generic message or they can request access
+      console.log("Access link already exists for this order")
     }
 
-    // Build email content
-    const baseUrl = Deno.env.get("SITE_URL") || "http://localhost:3000"
+    // Build ticket URL
+    const baseUrl = Deno.env.get("SITE_URL") || "https://platform.youthsports.team"
     const orgSlug = (order.organizations as any)?.slug
     // Use org-scoped URL if slug exists, otherwise fall back to legacy pattern
-    const ticketUrl = order.purchaser_name
-      ? `${baseUrl}/account/tickets` // Logged-in user
-      : orgSlug
-        ? `${baseUrl}/o/${orgSlug}/tickets/access/${token}` // Guest magic link with org context
-        : `${baseUrl}/tickets/access/${token}` // Legacy guest magic link
+    // For guest users, if token is null (link already exists), use org tickets page
+    let ticketUrl: string
+    if (order.purchaser_user_id) {
+      ticketUrl = `${baseUrl}/account/tickets` // Logged-in user
+    } else if (token && orgSlug) {
+      ticketUrl = `${baseUrl}/o/${orgSlug}/tickets/access/${token}` // Guest magic link with org context
+    } else if (token) {
+      ticketUrl = `${baseUrl}/tickets/access/${token}` // Legacy guest magic link
+    } else if (orgSlug) {
+      // Link already exists, direct to org tickets page
+      ticketUrl = `${baseUrl}/o/${orgSlug}/tickets`
+    } else {
+      ticketUrl = `${baseUrl}/tickets`
+    }
 
     const event = order.ticketed_events as any
     const eventDate = event?.starts_at ? new Date(event.starts_at).toLocaleDateString() : "TBD"
@@ -160,98 +206,94 @@ serve(async (req) => {
       ? `${event.venue_name}, ${event.venue_city || ""} ${event.venue_state || ""}`.trim()
       : "Location TBD"
 
+    // Build items_html (pre-rendered HTML for template)
     const itemsHtml = (orderItems || [])
       .map(
         (item: any) =>
           `<tr>
-            <td>${item.ticket_types?.name || "Ticket"}</td>
-            <td>${item.quantity}</td>
-            <td>$${(item.unit_price_cents / 100).toFixed(2)}</td>
-            <td>$${(item.line_total_cents / 100).toFixed(2)}</td>
+            <td style="padding: 10px; border: 1px solid #d1d5db;">${item.ticket_types?.name || "Ticket"}</td>
+            <td style="padding: 10px; text-align: center; border: 1px solid #d1d5db;">${item.quantity}</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #d1d5db;">$${(item.unit_price_cents / 100).toFixed(2)}</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #d1d5db;">$${(item.line_total_cents / 100).toFixed(2)}</td>
           </tr>`,
       )
       .join("")
 
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Your Tickets</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #2563eb;">Your Tickets</h1>
-          
-          <p>Thank you for your purchase!</p>
-          
-          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h2 style="margin-top: 0;">${event?.title || "Event"}</h2>
-            <p><strong>Date:</strong> ${eventDate}</p>
-            <p><strong>Location:</strong> ${eventLocation}</p>
-          </div>
-          
-          <h3>Order Summary</h3>
-          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-            <thead>
-              <tr style="background: #e5e7eb;">
-                <th style="padding: 10px; text-align: left; border: 1px solid #d1d5db;">Ticket Type</th>
-                <th style="padding: 10px; text-align: center; border: 1px solid #d1d5db;">Qty</th>
-                <th style="padding: 10px; text-align: right; border: 1px solid #d1d5db;">Price</th>
-                <th style="padding: 10px; text-align: right; border: 1px solid #d1d5db;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsHtml}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="3" style="padding: 10px; text-align: right; border: 1px solid #d1d5db;"><strong>Total:</strong></td>
-                <td style="padding: 10px; text-align: right; border: 1px solid #d1d5db;"><strong>$${(order.total_cents / 100).toFixed(2)}</strong></td>
-              </tr>
-            </tfoot>
-          </table>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${ticketUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Open Your Tickets</a>
-          </div>
-          
-          <p style="color: #6b7280; font-size: 14px;">Your tickets are ready! Click the button above to view and download them.</p>
-          
-          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-          <p style="color: #6b7280; font-size: 12px;">This is an automated email. Please do not reply.</p>
-        </body>
-      </html>
-    `
-
-    // Send email via Resend
-    const resendResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${resendApiKey}`,
-      },
-      body: JSON.stringify({
-        from: "YouthSports.team <noreply@youthsports.team>",
-        to: order.purchaser_email,
-        subject: `Your Tickets: ${event?.title || "Event"}`,
-        html: emailHtml,
-      }),
-    })
-
-    if (!resendResponse.ok) {
-      const errorText = await resendResponse.text()
-      console.error("Resend error:", errorText)
-      return json(req, { error: "Failed to send email" }, 500)
+    // Generate QR code from first ticket's entry_code (T7: exact entry_code, no transformation)
+    let qrImageDataUrl = ""
+    const firstTicket = tickets[0]
+    if (firstTicket?.entry_code) {
+      try {
+        // Generate QR code as base64 (T7: encode exactly entry_code)
+        const qrBase64 = await qrcode(firstTicket.entry_code, { size: 250 })
+        qrImageDataUrl = `data:image/png;base64,${qrBase64}`
+      } catch (qrError) {
+        console.error("Failed to generate QR code:", qrError)
+        // Continue without QR - email will still send with link only
+      }
     }
 
-    // Update order receipt sent timestamp
+    // Build payload for notification_jobs
+    const notificationPayload = {
+      ticket_url: ticketUrl,
+      event_title: event?.title || "Event",
+      event_date: eventDate,
+      event_location: eventLocation,
+      items_html: itemsHtml,
+      total: `$${(order.total_cents / 100).toFixed(2)}`,
+      qr_image_data_url: qrImageDataUrl,
+    }
+
+    // Insert notification job
+    const { data: notificationJob, error: jobError } = await supabase
+      .from("notification_jobs")
+      .insert({
+        org_id: order.org_id,
+        email: order.purchaser_email,
+        user_id: order.purchaser_user_id || null,
+        type: "ticket_receipt",
+        payload: notificationPayload,
+        status: "queued",
+      })
+      .select("id")
+      .single()
+
+    if (jobError || !notificationJob) {
+      console.error("Failed to create notification job:", jobError)
+      return json(req, { error: "Failed to enqueue receipt email" }, 500)
+    }
+
+    // Invoke notification-worker with job_id (T5: handle failure gracefully)
+    const functionsUrl = supabaseUrl.replace("/rest/v1", "")
+    try {
+      const workerResponse = await fetch(`${functionsUrl}/functions/v1/notification-worker`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${supabaseServiceRoleKey}`,
+        },
+        body: JSON.stringify({
+          job_ids: [notificationJob.id],
+        }),
+      })
+
+      if (!workerResponse.ok) {
+        const errorText = await workerResponse.text()
+        console.error("Failed to invoke notification-worker:", errorText)
+        // Don't fail - job is queued and will be processed later
+      }
+    } catch (invokeError) {
+      console.error("Error invoking notification-worker:", invokeError)
+      // Don't fail - job is queued and will be processed later (T5)
+    }
+
+    // Update order receipt sent timestamp (set after worker is invoked)
     await supabase
       .from("ticket_orders")
       .update({ receipt_email_sent_at: new Date().toISOString() })
       .eq("id", orderId)
 
-    return json(req, { success: true, email_sent: true })
+    return json(req, { success: true, email_sent: true, job_id: notificationJob.id })
   } catch (error: any) {
     console.error("Error sending receipt:", error)
     return json(req, { error: error.message || "Internal server error" }, 500)
