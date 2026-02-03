@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Navigate, useLocation } from 'react-router-dom'
 import { resolveOrgFromSlug, type OrgContext } from '../utils/orgResolution'
 import { usePublicOrgTheme } from '../hooks/usePublicOrgTheme'
+import { getLink, RouteKeys } from '@/utils/routes'
 
 interface OrgScopedRouteProps {
   children: (org: OrgContext) => React.ReactNode
@@ -57,8 +58,10 @@ export function OrgScopedRoute({ children, fallback }: OrgScopedRouteProps) {
   }, [orgSlug])
 
   // Handle redirects (old slug -> new slug)
-  if (redirectToSlug) {
-    const newPath = location.pathname.replace(`/o/${orgSlug}`, `/o/${redirectToSlug}`)
+  if (redirectToSlug && orgSlug) {
+    const oldBase = getLink(RouteKeys.PORTAL_ORG_LANDING, { orgSlug })
+    const newBase = getLink(RouteKeys.PORTAL_ORG_LANDING, { orgSlug: redirectToSlug })
+    const newPath = location.pathname.replace(oldBase, newBase)
     return <Navigate to={newPath + location.search} replace />
   }
 

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { SUPABASE_FUNCTIONS, ENV_VAR_NAMES } from '../constants/api'
+import { getLink } from '../utils/routes'
 
 export interface CreateFeeParams {
     org_id: string
@@ -76,8 +77,8 @@ export async function createFee(params: CreateFeeParams) {
             body: {
                 organization_id: params.org_id,
                 requested_plan: 'starter',
-                success_url: import.meta.env[ENV_VAR_NAMES.FEES_TEST_SUCCESS_URL] || 'http://localhost:5173/test',
-                cancel_url: import.meta.env[ENV_VAR_NAMES.FEES_TEST_CANCEL_URL] || 'http://localhost:5173/test'
+                success_url: import.meta.env[ENV_VAR_NAMES.FEES_TEST_SUCCESS_URL] || `${window.location.origin}${getLink('portal.paymentSuccess')}`,
+                cancel_url: import.meta.env[ENV_VAR_NAMES.FEES_TEST_CANCEL_URL] || `${window.location.origin}${getLink('portal.paymentCancel')}`
             }
         })
         console.log('[createFee] Billing function test result:', {
