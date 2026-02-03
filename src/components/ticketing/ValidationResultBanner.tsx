@@ -10,6 +10,7 @@ import { CheckCircle, XCircle, AlertTriangle, AlertCircle, Loader2 } from 'lucid
 import type { ValidateScanResponse } from '@/types/ticketing'
 import { playSound } from '@/utils/audio'
 import { triggerHaptic } from '@/utils/haptics'
+import { useT } from '@/i18n/useI18n'
 
 interface ValidationResultBannerProps {
   result: ValidateScanResponse | { status: 'validating'; code?: string }

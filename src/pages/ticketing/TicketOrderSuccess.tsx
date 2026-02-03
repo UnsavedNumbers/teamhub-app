@@ -1,28 +1,25 @@
 /**
  * Ticket Order Success Page
- * 
+ *
  * Shown after successful Stripe checkout
+ * Works for both authenticated users and guests
  * Design: ticket_mobile_entry (success banner)
  */
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getPublicTicketOrderById, getTicketsForOrder } from '@/data/services'
+import { getPublicOrderWithTickets, resendTickets, type PublicOrderResponse } from '@/data/services'
 import { useRouteLink } from '@/utils/routes'
 import TicketCard from '@/components/ticketing/TicketCard'
-import type { TicketOrder, TicketOrderItem, TicketType, TicketedEvent, Ticket } from '@/types/ticketing'
-
-type TicketOrderWithRelations = TicketOrder & {
-  ticket_order_items?: Array<TicketOrderItem & {
-    ticket_types: Pick<TicketType, 'name' | 'description'>
-  }>
-  ticketed_events?: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'> | null
-}
+import type { TicketType, TicketedEvent } from '@/types/ticketing'
 
 export default function TicketOrderSuccess() {
   const { orderId } = useParams<{ orderId: string }>()
   const myTicketsLink = useRouteLink('portal.myTickets')
+  const [isResending, setIsResending] = useState(false)
+  const [resendMessage, setResendMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
   const scrollToTicket = useCallback((ticketId: string) => {
     const target = document.getElementById(`ticket-${ticketId}`)
     if (target) {
@@ -30,18 +27,36 @@ export default function TicketOrderSuccess() {
     }
   }, [])
 
-  const orderQuery = useQuery<TicketOrderWithRelations, Error>({
-    queryKey: ['ticket-order', orderId],
-    queryFn: () => getPublicTicketOrderById(orderId!),
-    enabled: !!orderId,
-  })
+  const handleResendTickets = async () => {
+    if (!orderId || !data?.order?.purchaser_email) return
 
-  const ticketsQuery = useQuery<Array<Ticket & {
-    ticket_types: Pick<TicketType, 'name' | 'description'>
-    ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
-  }>, Error>({
-    queryKey: ['tickets', orderId],
-    queryFn: () => getTicketsForOrder(orderId!),
+    setIsResending(true)
+    setResendMessage(null)
+
+    try {
+      const { data: result, error } = await resendTickets({
+        order_id: orderId,
+        email: data.order.purchaser_email,
+      })
+
+      if (error || !result) {
+        setResendMessage({ type: 'error', text: error?.message || 'Failed to resend tickets' })
+      } else {
+        setResendMessage({ type: 'success', text: result.message || 'Tickets resent successfully!' })
+        // Auto-clear success message after 5 seconds
+        setTimeout(() => setResendMessage(null), 5000)
+      }
+    } catch {
+      setResendMessage({ type: 'error', text: 'Failed to resend tickets' })
+    } finally {
+      setIsResending(false)
+    }
+  }
+
+  // Use public endpoint that works without authentication
+  const { data, isLoading, isError, error, refetch } = useQuery<PublicOrderResponse, Error>({
+    queryKey: ['public-ticket-order', orderId],
+    queryFn: () => getPublicOrderWithTickets(orderId!),
     enabled: !!orderId,
   })
 
@@ -53,7 +68,7 @@ export default function TicketOrderSuccess() {
     )
   }
 
-  if (orderQuery.isLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] flex items-center justify-center">
         <div className="text-center">
@@ -63,15 +78,15 @@ export default function TicketOrderSuccess() {
     )
   }
 
-  if (orderQuery.isError || !orderQuery.data) {
+  if (isError || !data) {
     return (
       <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 dark:text-red-400 text-lg mb-4">
-            {orderQuery.error?.message || 'Order not found'}
+            {error?.message || 'Order not found'}
           </p>
           <button
-            onClick={() => orderQuery.refetch()}
+            onClick={() => refetch()}
             className="px-4 py-2 bg-[#137fec] text-white rounded-lg"
           >
             Retry
@@ -81,10 +96,10 @@ export default function TicketOrderSuccess() {
     )
   }
 
-  const order = orderQuery.data
-  const event = order.ticketed_events || undefined
+  const order = data.order
+  const event = order.event || undefined
   const orderRef = `YS-${order.id.slice(-5).toUpperCase()}`
-  const tickets = ticketsQuery.data ?? []
+  const tickets = data.tickets ?? []
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white">
@@ -126,12 +141,6 @@ export default function TicketOrderSuccess() {
           </div>
 
           {/* Tickets */}
-          {ticketsQuery.isLoading && (
-            <div className="text-center text-gray-500">Loading tickets...</div>
-          )}
-          {ticketsQuery.isError && (
-            <div className="text-center text-red-500">{ticketsQuery.error?.message || 'Unable to load tickets.'}</div>
-          )}
           {tickets.map((ticket, idx) => {
             const nextTicket = tickets[idx + 1]
             const ticketEvent = ticket.ticketed_events || event
@@ -178,6 +187,31 @@ export default function TicketOrderSuccess() {
               <span className="material-symbols-outlined">confirmation_number</span>
               <span className="truncate uppercase">View All My Tickets</span>
             </Link>
+
+            {/* Resend Tickets Button */}
+            <button
+              onClick={handleResendTickets}
+              disabled={isResending}
+              className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-12 px-5 bg-white dark:bg-gray-900 text-[#111418] dark:text-white border-2 border-gray-300 dark:border-gray-700 text-base font-bold leading-normal tracking-[0.015em] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="material-symbols-outlined text-lg">
+                {isResending ? 'hourglass_empty' : 'forward_to_inbox'}
+              </span>
+              <span className="truncate uppercase">
+                {isResending ? 'Sending...' : 'Resend Email'}
+              </span>
+            </button>
+
+            {/* Resend Message */}
+            {resendMessage && (
+              <div className={`rounded-lg px-4 py-3 text-sm font-medium ${
+                resendMessage.type === 'success'
+                  ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
+                  : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+              }`}>
+                {resendMessage.text}
+              </div>
+            )}
           </div>
 
           {/* Footer Support */}

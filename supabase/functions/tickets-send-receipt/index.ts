@@ -145,6 +145,12 @@ serve(async (req) => {
   }
 
   const orderId = payload?.order_id as string | undefined
+  const ticketsWithTokens = payload?.tickets_with_tokens as Array<{
+    id?: string
+    qr_token_raw: string
+    entry_code: string
+    ticket_type_id: string
+  }> | undefined
 
   if (!orderId) {
     return json(req, { error: "Missing order_id" }, 400)
@@ -305,6 +311,43 @@ serve(async (req) => {
           </tr>`,
       )
       .join("")
+
+    // Build ticket type lookup from order items
+    const ticketTypeNames = new Map<string, string>()
+    for (const item of (orderItems || [])) {
+      ticketTypeNames.set(item.ticket_types?.id || "", item.ticket_types?.name || "Ticket")
+    }
+
+    // Build ticket links with QR tokens and access links
+    const ticketLinks: Array<{
+      ticket_id: string
+      ticket_type_name: string
+      entry_code: string
+      qr_token_raw: string
+      access_link: string
+    }> = []
+
+    // Map tickets to links with QR tokens
+    for (const ticket of ticketsForEmail) {
+      // Get ticket type name from lookup map
+      const ticketTypeName = ticketTypeNames.get(ticket.ticket_type_id) || "Ticket"
+
+      // Generate encrypted access link for this ticket
+      const accessLink = await generateAccessLink(
+        ticket.id!,
+        ticket.qr_token_raw || ticket.entry_code,
+        baseUrl,
+        orgSlug
+      )
+
+      ticketLinks.push({
+        ticket_id: ticket.id!,
+        ticket_type_name: ticketTypeName,
+        entry_code: ticket.entry_code,
+        qr_token_raw: ticket.qr_token_raw,
+        access_link: accessLink,
+      })
+    }
 
     // Generate QR codes for tickets (prefer QR token, fallback to entry_code)
     const ticketQRCodes: Array<{ ticket_id: string; qr_data_url: string }> = []

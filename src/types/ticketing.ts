@@ -168,6 +168,8 @@ export interface Ticket {
   used_by_user_id: string | null
   created_at: string
   updated_at: string
+  // Relations (populated by select)
+  ticket_orders?: { purchaser_email: string }
 }
 
 export interface TicketScan {
