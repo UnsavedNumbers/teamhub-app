@@ -368,7 +368,7 @@ export default function AdminAthletes() {
 
     return (
         <div>
-            <AdminPageHeader title={t('admin.athletes.title') || 'Athletes'} subtitle={t('admin.athletes.subtitle') || 'Manage your organization\'s athletes'} />
+            <AdminPageHeader title={t('admin.athletes.title' as any) || 'Athletes'} subtitle={t('admin.athletes.subtitle' as any) || 'Manage your organization\'s athletes'} />
 
             <AthletesHeader
                 statusContext="all"

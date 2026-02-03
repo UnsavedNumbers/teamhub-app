@@ -26,6 +26,8 @@ export interface RouteDefinition {
     deprecated?: boolean
     /** Route key to use instead if deprecated */
     deprecatedInFavorOf?: string
+    /** Nested route definitions under this route */
+    routes?: Record<string, RouteDefinition>
 }
 
 /**

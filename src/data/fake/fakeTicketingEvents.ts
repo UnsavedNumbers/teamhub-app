@@ -253,7 +253,7 @@ const fakeOrdersByEvent: Record<string, { ticketsSold: number; revenueCents: num
   'evt-6': { ticketsSold: 0, revenueCents: 0 },
 }
 
-function mapTicketType(event: TicketingEventWithDerived, type: TicketingEventWithDerived['ticket_types'][number], index: number): TicketType {
+function mapTicketType(event: TicketingEventWithDerived, type: NonNullable<TicketingEventWithDerived['ticket_types']>[number], index: number): TicketType {
   return {
     id: type.id,
     org_id: event.org_id,

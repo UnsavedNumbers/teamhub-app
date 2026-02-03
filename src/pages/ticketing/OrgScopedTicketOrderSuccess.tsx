@@ -22,6 +22,12 @@ type TicketOrderWithRelations = TicketOrder & {
   ticketed_events?: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'> | null
 }
 
+type TicketWithRelations = Ticket & {
+  ticket_types: Pick<TicketType, 'name' | 'description'>
+  ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'> | null
+  ticket_orders?: { purchaser_email: string }
+}
+
 function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
   const { orderId, orgSlug } = useParams<{ orderId: string; orgSlug: string }>()
   const scrollToTicket = useCallback((ticketId: string) => {
@@ -37,12 +43,12 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
     enabled: !!orderId && !!org.id,
   })
 
-  const ticketsQuery = useQuery<Array<Ticket & {
-    ticket_types: Pick<TicketType, 'name' | 'description'>
-    ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
-  }>, Error>({
+  const ticketsQuery = useQuery<TicketWithRelations[], Error>({
     queryKey: ['tickets', orderId],
-    queryFn: () => getTicketsForOrder(orderId!),
+    queryFn: async () => {
+      const data = await getTicketsForOrder(orderId!)
+      return (data as TicketWithRelations[]) || []
+    },
     enabled: !!orderId,
   })
 
@@ -84,7 +90,7 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
 
   const order = orderQuery.data
   const event = order.ticketed_events || undefined
-  const tickets = ticketsQuery.data ?? []
+  const tickets: TicketWithRelations[] = ticketsQuery.data ?? []
   const orderRef = `YS-${order.id.slice(-5).toUpperCase()}`
 
   return (

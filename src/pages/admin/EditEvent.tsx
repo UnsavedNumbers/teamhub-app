@@ -34,6 +34,8 @@ import {
     RecurringEditMode,
 } from '../../types/calendar'
 import { uploadTicketBanner } from '../../data/services/organizationService'
+import { validateDeleteEvent, validateCancelEvent, validateUpdateEvent, EVENT_ERRORS } from '../../utils/eventValidation'
+import { useOrganization } from '../../contexts/OrganizationContext'
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string; team_id: string }
@@ -71,6 +73,7 @@ export default function EditEvent() {
   const [isPastEvent, setIsPastEvent] = useState(false)
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { allowed: ticketingAllowed, loading: ticketingGateLoading } = useFeatureGate('ticketing')
   const navigate = useNavigate()
   const t = useT()
@@ -494,6 +497,30 @@ export default function EditEvent() {
             return
           }
           throw configError
+        }
+      }
+
+      // Validate update permissions
+      const { data: currentEventData } = await supabase
+        .from('events')
+        .select('id, start_time, is_cancelled, status, type, org_id, team_id')
+        .eq('id', eventId)
+        .single()
+
+      if (currentEventData) {
+        const isMajorUpdate = !!(data.start_time || data.location.venue_name)
+        const validation = await validateUpdateEvent(
+          context,
+          currentEventData,
+          currentOrganization,
+          {
+            start_time: data.start_time,
+            venue_name: data.location.venue_name,
+          },
+          false
+        )
+        if (!validation.allowed) {
+          throw new Error(validation.error || EVENT_ERRORS.PERMISSION_DENIED)
         }
       }
 
@@ -1600,6 +1627,21 @@ export default function EditEvent() {
           setActionError(null)
           
           try {
+            const { data: eventData } = await supabase
+              .from('events')
+              .select('id, start_time, is_cancelled, status, type, created_at, org_id, team_id, parent_tournament_id, is_recurring')
+              .eq('id', eventId)
+              .single()
+
+            if (!eventData) {
+              throw new Error('Event not found')
+            }
+
+            const validation = await validateDeleteEvent(context, eventData, currentOrganization, false)
+            if (!validation.allowed) {
+              throw new Error(validation.error || EVENT_ERRORS.DELETE_BLOCKED_PERMISSION)
+            }
+
             const { error } = await supabase
               .from('events')
               .delete()
@@ -1639,6 +1681,21 @@ export default function EditEvent() {
           setActionError(null)
           
           try {
+            const { data: eventData } = await supabase
+              .from('events')
+              .select('id, start_time, is_cancelled, status, type, org_id, team_id')
+              .eq('id', eventId)
+              .single()
+
+            if (!eventData) {
+              throw new Error('Event not found')
+            }
+
+            const validation = await validateCancelEvent(context, eventData, currentOrganization, false)
+            if (!validation.allowed) {
+              throw new Error(validation.error || EVENT_ERRORS.CANCEL_BLOCKED_PERMISSION)
+            }
+
             const { error } = await supabase
               .from('events')
               .update({
@@ -1653,15 +1710,15 @@ export default function EditEvent() {
             
              // Distribute notifications for cancellation
              const { distributeEventCancelNotifications } = await import('../../data/services/notificationDistribution')
-             const { data: eventData } = await supabaseAny.from('events').select('title, team_id, org_id, start_time').eq('id', eventId).single()
+             const { data: eventDataForNotification } = await supabaseAny.from('events').select('title, team_id, org_id, start_time').eq('id', eventId).single()
              
-             if (eventData) {
+             if (eventDataForNotification) {
                distributeEventCancelNotifications({
                  id: eventId,
-                 team_id: eventData.team_id,
-                 org_id: eventData.org_id,
-                 title: eventData.title,
-                 start_time: eventData.start_time,
+                 team_id: eventDataForNotification.team_id,
+                 org_id: eventDataForNotification.org_id,
+                 title: eventDataForNotification.title,
+                 start_time: eventDataForNotification.start_time,
                  created_by_user_id: context.userId
                }).catch(err => console.error('Failed to distribute event cancel notifications:', err))
              }

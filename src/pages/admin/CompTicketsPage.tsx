@@ -110,16 +110,13 @@ export default function CompTicketsPage() {
     generateMutation.mutate()
   }
 
-  const selectedEvent = events.find((e: TicketedEvent) => e.id === selectedEventId)
-  const selectedTicketType = ticketTypes.find((tt) => tt.id === ticketTypeId)
-
   return (
     <div className="pa-page-container">
       <AdminPageHeader
         title={t('ticketing.compTickets.title')}
         breadcrumbs={[
-          { label: 'Home', href: '/admin' },
-          { label: 'Ticketing', href: '/admin/ticketing/events' },
+          { label: 'Home', path: '/admin' },
+          { label: 'Ticketing', path: '/admin/ticketing/events' },
           { label: t('ticketing.compTickets.title') },
         ]}
       />

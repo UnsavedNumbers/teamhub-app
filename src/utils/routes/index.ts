@@ -154,7 +154,10 @@ export const RouteKeys = {
     ADMIN_ORGANIZATION_SPORT_DETAIL: 'admin.organization.sportDetail',
     ADMIN_ORGANIZATION_PROGRAMS: 'admin.organization.programs',
     ADMIN_ORGANIZATION_BILLING: 'admin.organization.billing',
+    ADMIN_ORGANIZATION_BILLING_PLAN_SELECTION: 'admin.organization.billing.planSelection',
     ADMIN_ORGANIZATION_USERS: 'admin.organization.users',
+    ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS: 'admin.organization.billing.checkoutSuccess',
+    ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL: 'admin.organization.billing.checkoutCancel',
     ADMIN_TRIAL_EXPIRED: 'admin.organization.trialExpired',
     ADMIN_ONBOARDING: 'admin.onboarding',
     // Standardized entity routes

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import EmptyState from '@/components/platformAdmin/EmptyState'
@@ -46,10 +46,15 @@ const VIEW_STORAGE_KEY = 'admin.ticketingOrders.view'
 
 function parseFilters(params: URLSearchParams): Filters {
   const viewParam = (params.get('view') as ViewMode | null) || (typeof window !== 'undefined' ? (localStorage.getItem(VIEW_STORAGE_KEY) as ViewMode | null) : null)
+  const statusParam = params.get('status')
+  const status: Filters['status'] =
+    statusParam === 'paid' || statusParam === 'pending_payment' || statusParam === 'refunded' || statusParam === 'cancelled'
+      ? statusParam
+      : null
   return {
     search: params.get('search') || '',
     eventIds: params.getAll('event_id'),
-    status: params.get('status') || null,
+    status,
     dateFrom: params.get('date_from'),
     dateTo: params.get('date_to'),
     datePreset: params.get('date_preset'),
@@ -267,7 +272,18 @@ function FilterDrawer({
             <select
               className="pa-input"
               value={draft.status || ''}
-              onChange={(e) => setDraft((prev) => ({ ...prev, status: e.target.value || null }))}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  status:
+                    e.target.value === 'paid' ||
+                    e.target.value === 'pending_payment' ||
+                    e.target.value === 'refunded' ||
+                    e.target.value === 'cancelled'
+                      ? (e.target.value as Filters['status'])
+                      : null,
+                }))
+              }
             >
               <option value="">All</option>
               {ORDER_STATUS_OPTIONS.map((opt) => (
@@ -322,7 +338,7 @@ function ListView({
                 {order.event?.title && ` · ${order.event.title}`}
               </div>
               <div className="oa-ticket-list__meta oa-ticket-list__meta--sub">
-                {new Date(order.created_at).toLocaleString()}
+                {order.created_at ? new Date(order.created_at).toLocaleString() : ''}
                 {order.ticket_count !== undefined && ` · ${order.ticket_count} ticket${order.ticket_count !== 1 ? 's' : ''}`}
               </div>
             </div>
@@ -382,7 +398,7 @@ function TableView({
               <td>
                 <Badge variant={statusVariant[order.status] || 'neutral'}>{order.status}</Badge>
               </td>
-              <td>{new Date(order.created_at).toLocaleDateString()}</td>
+              <td>{order.created_at ? new Date(order.created_at).toLocaleDateString() : ''}</td>
               <td onClick={(e) => e.stopPropagation()}>
                 <div className="pa-flex pa-gap-2">
                   <Button variant="secondary" size="dense" onClick={() => onView(order.id)} icon="visibility" />
@@ -414,7 +430,7 @@ export default function TicketingOrders() {
   const filters = parseFilters(searchParams)
 
   useEffect(() => {
-    setSearchInput(filters.search)
+    setSearchInput(filters.search || '')
   }, [filters.search])
 
   useEffect(() => {
