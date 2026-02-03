@@ -50,11 +50,7 @@ export default function TicketScanner() {
   // Memory monitoring
   const { showWarning, heapSize, dismissWarning } = useMemoryMonitor(500)
 
-  // Responsive layout detection
-  const isMobile = useMemo(() => {
-    if (typeof window === 'undefined') return false
-    return window.innerWidth < 768
-  }, [])
+  // No need for runtime detection - use CSS for responsive design
 
   // Load staff link session if token provided
   useEffect(() => {
@@ -430,20 +426,20 @@ export default function TicketScanner() {
     : eventList.find((e: any) => e.id === selectedEventId)
 
   return (
-    <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white p-4">
+    <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white p-3 sm:p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-black text-[#111418] dark:text-white mb-2 uppercase tracking-tight">
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#111418] dark:text-white mb-2 uppercase tracking-tight">
             {t('ticketing.scanner.title')}
           </h1>
           {isOffline && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-4">
-              <p className="text-yellow-800 dark:text-yellow-200">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 sm:p-4 mb-3 md:mb-4">
+              <p className="text-sm sm:text-base text-yellow-800 dark:text-yellow-200">
                 <strong>{t('ticketing.scanner.connectionLost')}</strong> {t('ticketing.scanner.connectionLostDesc')}
               </p>
               {pendingCount > 0 && (
-                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                <p className="text-xs sm:text-sm text-yellow-700 dark:text-yellow-300 mt-1">
                   {pendingCount} validation{pendingCount !== 1 ? 's' : ''} queued for sync
                 </p>
               )}
@@ -451,13 +447,13 @@ export default function TicketScanner() {
           )}
           
           {showWarning && heapSize !== null && (
-            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mb-4 flex items-center justify-between">
-              <p className="text-orange-800 dark:text-orange-200">
+            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 sm:p-4 mb-3 md:mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <p className="text-sm sm:text-base text-orange-800 dark:text-orange-200">
                 <strong>High memory usage:</strong> {heapSize}MB used. Consider refreshing the page.
               </p>
               <button
                 onClick={dismissWarning}
-                className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-200"
+                className="text-sm sm:text-base px-3 py-1.5 sm:px-0 sm:py-0 text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-200 whitespace-nowrap"
               >
                 Dismiss
               </button>
@@ -467,14 +463,14 @@ export default function TicketScanner() {
 
         {/* Event Selector (admin route only) */}
         {!token && eventList.length > 0 && (
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-[#111418] dark:text-white mb-2">
+          <div className="mb-4 md:mb-6">
+            <label className="block text-sm sm:text-base font-medium text-[#111418] dark:text-white mb-2">
               {t('ticketing.scanner.selectEvent')}
             </label>
             <select
               value={selectedEventId || ''}
               onChange={(e) => setSelectedEventId(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-[#111418] dark:text-white focus:ring-2 focus:ring-[#137fec] focus:border-[#137fec]"
+              className="w-full px-3 sm:px-4 py-3 sm:py-2.5 text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-[#111418] dark:text-white focus:ring-2 focus:ring-[#137fec] focus:border-[#137fec]"
             >
               <option value="">{t('ticketing.scanner.chooseEvent')}</option>
               {eventList.map((event: any) => (
@@ -488,24 +484,24 @@ export default function TicketScanner() {
 
         {/* Fixed Event Display (staff link) */}
         {token && currentEvent && (
-          <div className="mb-6 bg-[#137fec]/10 border border-[#137fec]/20 rounded-lg p-4">
-            <p className="text-sm text-[#137fec] font-medium">{t('ticketing.scanner.validatingFor')}</p>
-            <p className="text-lg font-bold text-[#111418] dark:text-white">{currentEvent.title}</p>
+          <div className="mb-4 md:mb-6 bg-[#137fec]/10 border border-[#137fec]/20 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-[#137fec] font-medium">{t('ticketing.scanner.validatingFor')}</p>
+            <p className="text-base sm:text-lg font-bold text-[#111418] dark:text-white">{currentEvent.title}</p>
           </div>
         )}
 
         {!selectedEventId && !token && (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-8 sm:py-12 text-sm sm:text-base text-gray-500">
             {t('ticketing.scanner.selectEventPrompt')}
           </div>
         )}
 
         {(selectedEventId || token) && (
           <>
-            {/* Main scanner area - responsive layout */}
-            <div className={`mb-6 ${isMobile ? 'flex flex-col gap-4' : 'grid grid-cols-2 gap-6'}`}>
+            {/* Main scanner area - mobile-first responsive layout */}
+            <div className="mb-4 md:mb-6 flex flex-col lg:grid lg:grid-cols-2 gap-4 md:gap-6">
               {/* Camera section */}
-              <section className={isMobile ? 'order-1' : ''}>
+              <section className="order-1">
                 <div className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm overflow-hidden">
                   <QRCodeScanner
                     ref={scannerRef}
@@ -519,19 +515,19 @@ export default function TicketScanner() {
               </section>
 
               {/* Manual entry section */}
-              <section className={isMobile ? 'order-2' : ''}>
-                <form onSubmit={handleManualSubmit} className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm p-6">
-                  <label className="block text-sm font-medium text-[#111418] dark:text-white mb-2">
+              <section className="order-2">
+                <form onSubmit={handleManualSubmit} className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm p-4 sm:p-5 md:p-6">
+                  <label className="block text-sm sm:text-base font-medium text-[#111418] dark:text-white mb-3">
                     Manual Entry
                   </label>
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <input
                       ref={inputRef}
                       type="text"
                       value={entryCode}
                       onChange={(e) => handleCodeChange(e.target.value)}
                       placeholder="XXXX-XXXX-XXXX"
-                      className="flex-1 text-2xl font-mono text-center px-4 py-4 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-[#111418] dark:text-white focus:ring-2 focus:ring-[#137fec] focus:border-[#137fec] uppercase tracking-wider"
+                      className="flex-1 text-xl sm:text-2xl font-mono text-center px-3 sm:px-4 py-4 sm:py-4 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-[#111418] dark:text-white focus:ring-2 focus:ring-[#137fec] focus:border-[#137fec] uppercase tracking-wider min-h-[56px]"
                       maxLength={14} // XXXX-XXXX-XXXX
                       disabled={!selectedEventId || isValidating || isOffline}
                       autoComplete="off"
@@ -540,13 +536,13 @@ export default function TicketScanner() {
                     <button
                       type="submit"
                       disabled={!selectedEventId || !entryCode.trim() || isValidating || isOffline}
-                      className="px-8 py-4 bg-[#137fec] text-white font-black rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors uppercase tracking-wider shadow-[0_8px_15px_-3px_rgba(19,127,236,0.3),0_4px_6px_-2px_rgba(19,127,236,0.05)]"
+                      className="w-full sm:w-auto px-6 sm:px-8 py-4 bg-[#137fec] text-white font-black text-base sm:text-lg rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors uppercase tracking-wider shadow-[0_8px_15px_-3px_rgba(19,127,236,0.3),0_4px_6px_-2px_rgba(19,127,236,0.05)] min-h-[56px]"
                     >
                       {isValidating ? 'Validating...' : 'Validate'}
                     </button>
                   </div>
                   {pendingValidation && (
-                    <p className="mt-2 text-sm text-yellow-600 dark:text-yellow-400">
+                    <p className="mt-2 text-xs sm:text-sm text-yellow-600 dark:text-yellow-400">
                       Queued for validation when connection is restored...
                     </p>
                   )}
@@ -575,30 +571,30 @@ export default function TicketScanner() {
             )}
 
             {/* Session Counts */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm p-4">
-                <p className="text-sm text-[#617589] dark:text-gray-400">{t('ticketing.scanner.validatedThisSession')}</p>
-                <p className="text-3xl font-black text-[#111418] dark:text-white">{sessionCounts.validated}</p>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 md:mb-6">
+              <div className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm p-3 sm:p-4">
+                <p className="text-xs sm:text-sm text-[#617589] dark:text-gray-400">{t('ticketing.scanner.validatedThisSession')}</p>
+                <p className="text-2xl sm:text-3xl font-black text-[#111418] dark:text-white">{sessionCounts.validated}</p>
               </div>
               {sessionCounts.remainingCapacity !== null && (
-                <div className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm p-4">
-                  <p className="text-sm text-[#617589] dark:text-gray-400">{t('ticketing.scanner.remainingCapacity')}</p>
-                  <p className="text-3xl font-black text-[#111418] dark:text-white">{sessionCounts.remainingCapacity}</p>
+                <div className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm p-3 sm:p-4">
+                  <p className="text-xs sm:text-sm text-[#617589] dark:text-gray-400">{t('ticketing.scanner.remainingCapacity')}</p>
+                  <p className="text-2xl sm:text-3xl font-black text-[#111418] dark:text-white">{sessionCounts.remainingCapacity}</p>
                 </div>
               )}
             </div>
 
             {/* Validation History */}
             {validationHistory.length > 0 && (
-              <div className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm p-4">
-                <h3 className="text-lg font-black text-[#111418] dark:text-white mb-3 uppercase tracking-tight">
+              <div className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm p-3 sm:p-4">
+                <h3 className="text-base sm:text-lg font-black text-[#111418] dark:text-white mb-3 uppercase tracking-tight">
                   {t('ticketing.scanner.recentScans')}
                 </h3>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
+                <div className="space-y-2 max-h-64 sm:max-h-80 overflow-y-auto">
                   {validationHistory.map((result, idx) => (
                     <div
                       key={idx}
-                      className={`flex items-center justify-between p-2 rounded-lg ${
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3 p-2.5 sm:p-2 rounded-lg ${
                         result.result === 'valid'
                           ? 'bg-[#10b981]/10'
                           : result.result === 'already_used'
@@ -606,13 +602,13 @@ export default function TicketScanner() {
                           : 'bg-red-50 dark:bg-red-900/20'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono text-sm font-bold text-[#111418] dark:text-white">{result.code}</span>
-                        <span className="text-sm text-[#617589] dark:text-gray-400">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <span className="font-mono text-sm sm:text-base font-bold text-[#111418] dark:text-white">{result.code}</span>
+                        <span className="text-xs sm:text-sm text-[#617589] dark:text-gray-400">
                           {result.ticketTypeName && `(${result.ticketTypeName})`}
                         </span>
                       </div>
-                      <div className="text-xs text-[#617589] dark:text-gray-500">
+                      <div className="text-xs text-[#617589] dark:text-gray-500 sm:text-right">
                         {result.timestamp.toLocaleTimeString()}
                       </div>
                     </div>
