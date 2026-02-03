@@ -258,6 +258,14 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
           ],
         },
         {
+          label: 'Fan Features',
+          items: [
+            { routeKey: 'portal.followedOrgs', text: 'Followed Organizations', icon: 'favorite', path: '/portal/follows', description: 'Organizations you follow' },
+            { routeKey: 'portal.bookmarkedEvents', text: 'Bookmarked Events', icon: 'bookmark', path: '/portal/bookmarks', description: 'Events you\'ve saved' },
+            { routeKey: 'portal.myTickets', text: 'My Tickets', icon: 'confirmation_number', path: '/account/tickets', description: 'Your event tickets' },
+          ],
+        },
+        {
           label: 'Additional',
           items: [
             { routeKey: 'portal.uniforms', text: 'Uniforms', icon: 'checkroom', path: '/portal/uniforms', description: 'Uniform orders' },

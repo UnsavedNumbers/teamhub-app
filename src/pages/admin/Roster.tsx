@@ -6,7 +6,6 @@ import { useTeamParams } from '../../hooks/useRouteParams'
 import { getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
-import { getLink as getLinkHelper } from '../../utils/routes/helpers'
 import { 
   AdminPageHeader,
   Card, 
@@ -281,7 +280,7 @@ export default function Roster() {
     breadcrumbs.push({
       label: teamInfo.sport.name,
       path: teamInfo.sport.id 
-        ? getLinkHelper('admin.sports.detail', { sport_slug: teamInfo.sport.slug ?? teamInfo.sport.id })
+        ? getLink('admin.sports.detail', { sport_slug: teamInfo.sport.slug ?? teamInfo.sport.id })
         : getLink('admin.sports.list'),
     })
   }
@@ -289,7 +288,7 @@ export default function Roster() {
     breadcrumbs.push({
       label: teamInfo.program.name,
       path: teamInfo.program.id
-        ? getLinkHelper('admin.programs.detail', { id: teamInfo.program.id })
+        ? getLink('admin.programs.detail', { id: teamInfo.program.id })
         : getLink('admin.programs.list'),
     })
   }
@@ -297,14 +296,14 @@ export default function Roster() {
     breadcrumbs.push({
       label: teamInfo.level.name,
       path: teamInfo.level.id
-        ? getLinkHelper('admin.levels.detail', { id: teamInfo.level.id })
+        ? getLink('admin.levels.detail', { id: teamInfo.level.id })
         : undefined,
     })
   }
   if (teamInfo?.name) {
     breadcrumbs.push({
       label: teamInfo.name,
-      path: teamId ? getLinkHelper('admin.teams.detail', { id: teamId }) : undefined,
+      path: teamId ? getLink('admin.teams.detail', { id: teamId }) : undefined,
     })
   }
   breadcrumbs.push({ label: 'Team Roster' })

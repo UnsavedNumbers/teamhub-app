@@ -61,10 +61,12 @@ import { supabase } from '../../lib/supabase'
 
 import { type OrganizationSettings as OrgSettingsType } from '@/types/organizationSettings'
 import ContactSection from './organizationSettings/ContactSection'
+import StaffSection from './organizationSettings/StaffSection'
 
 import type { Organization } from '../../types/domain/Organization'
 
 export default function OrganizationSettings() {
+  const { t } = useI18n()
   const { currentOrganization } = useOrganization()
   const { context, isReady } = useUserContext()
   const { summary: licenseSummary } = useLicense(currentOrganization?.id)
@@ -88,7 +90,7 @@ export default function OrganizationSettings() {
 
   // Valid tab values for URL parameter
   const validTabs = useMemo(() => {
-    const baseTabs = ['overview', 'contact', 'general', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'advanced']
+    const baseTabs = ['overview', 'contact', 'general', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'staff', 'advanced']
     if (hasPaymentAccess) {
       baseTabs.push('payments')
     }
@@ -332,6 +334,7 @@ export default function OrganizationSettings() {
           <TabsTrigger value="registration">Registration</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
+          <TabsTrigger value="staff">{t('admin.organizationSettings.organizationStaff')}</TabsTrigger>
           {hasPaymentAccess && <TabsTrigger value="payments">Payments</TabsTrigger>}
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
         </TabsList>
@@ -399,6 +402,10 @@ export default function OrganizationSettings() {
 
         <TabsContent value="permissions">
            {settings && <PermissionsForm settings={settings.visibility} onSave={(d) => handleSaveSettings('visibility', d)} loading={saving} />}
+        </TabsContent>
+
+        <TabsContent value="staff">
+          {currentOrganization && <StaffSection organizationId={currentOrganization.id} />}
         </TabsContent>
 
         {hasPaymentAccess && (
