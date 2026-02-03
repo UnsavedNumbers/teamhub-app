@@ -4,6 +4,7 @@ import { useUserContext } from '../hooks/useUserContext'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { getEventDetails, updateRSVP, getAthletes, deleteEvent } from '../data/services'
+import { useOrganization } from '../contexts/OrganizationContext'
 import type { RSVPStatus } from '../types/calendar'
 import { getSportFromEvent } from '../utils/sportContext'
 import { getDisplayLocation } from '../utils/homeLocation'
@@ -529,7 +530,7 @@ export default function EventDetail() {
     if (!eventId || !window.confirm('Are you sure you want to delete this event? This cannot be undone.')) return
     
     setLoading(true)
-    const { error } = await deleteEvent(eventId)
+    const { error } = await deleteEvent(context, eventId, currentOrganization)
     if (error) {
       alert(error.message)
       setLoading(false)

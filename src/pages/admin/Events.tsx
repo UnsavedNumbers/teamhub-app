@@ -7,6 +7,8 @@ import { getLink } from '../../utils/routes'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
 import { showSuccess, showError } from '../../utils/toast'
+import { validateCancelEvent, EVENT_ERRORS } from '../../utils/eventValidation'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { ConfirmDialog, AdminPageHeader, EmptyState } from '../../components/platformAdmin'
 import EventsHeader from '../../components/admin/EventsHeader'
 import EventsFilters from '../../components/admin/EventsFilters'
@@ -239,6 +241,21 @@ export default function Events() {
         setActionError(null)
 
         try {
+            const { data: eventData } = await supabase
+                .from('events')
+                .select('id, start_time, is_cancelled, status, type, org_id, team_id')
+                .eq('id', cancelDialog.event.id)
+                .single()
+
+            if (!eventData) {
+                throw new Error('Event not found')
+            }
+
+            const validation = await validateCancelEvent(context, eventData, currentOrganization, false)
+            if (!validation.allowed) {
+                throw new Error(validation.error || EVENT_ERRORS.CANCEL_BLOCKED_PERMISSION)
+            }
+
             const { error } = await supabase
                 .from('events')
                 .update({

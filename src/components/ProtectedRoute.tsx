@@ -172,8 +172,8 @@ export function ProtectedRoute({
   if (isAdminRoute && !profile.isPlatformAdmin) {
     const trialExpiredPath = getPath(RouteKeys.ADMIN_TRIAL_EXPIRED)
     const billingPath = getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING)
-    const checkoutSuccessPath = '/admin/organization/billing/checkout/success'
-    const checkoutCancelPath = '/admin/organization/billing/checkout/cancel'
+    const checkoutSuccessPath = getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS)
+    const checkoutCancelPath = getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL)
     
     const isPaywallAllowedRoute = 
       location.pathname === trialExpiredPath ||

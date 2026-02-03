@@ -257,6 +257,71 @@ async function handleEventsCreate(orgId: string, body: any, client: any) {
 }
 
 async function handleEventsUpdate(orgId: string, id: string, body: any, client: any) {
+  const { data: currentEvent, error: fetchError } = await client
+    .from("ticketed_events")
+    .select("id, status, starts_at, org_id")
+    .eq("id", id)
+    .eq("org_id", orgId)
+    .single()
+  
+  if (fetchError) throw fetchError
+  if (!currentEvent) throw new Error("Event not found")
+
+  if (currentEvent.status === "completed") {
+    throw new Error("Cannot update event: event is completed")
+  }
+
+  const now = new Date()
+  const eventDate = new Date(currentEvent.starts_at)
+  const hoursUntilEvent = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+  const daysUntilEvent = hoursUntilEvent / 24
+
+  const isMajorUpdate = !!(body.starts_at || body.venue_name || body.price_cents !== undefined || body.capacity_total !== undefined)
+
+  if (isMajorUpdate) {
+    if (hoursUntilEvent < 48) {
+      throw new Error("Cannot make major changes: less than 48 hours until event")
+    }
+
+    const { data: orders, error: ordersError } = await client
+      .from("ticket_orders")
+      .select("ticket_order_items(quantity)")
+      .eq("ticketed_event_id", id)
+      .in("status", ["paid", "pending_payment"])
+
+    if (ordersError) throw ordersError
+
+    let ticketCount = 0
+    for (const order of orders ?? []) {
+      const items = (order.ticket_order_items ?? []) as any[]
+      const qty = items.reduce((sum: number, item: any) => sum + (item?.quantity ?? 0), 0)
+      ticketCount += qty
+    }
+
+    if (ticketCount > 0) {
+      if (body.price_cents !== undefined) {
+        throw new Error("Cannot increase price after tickets have been sold")
+      }
+
+      if (body.capacity_total !== undefined) {
+        const { data: ticketTypes } = await client
+          .from("ticket_types")
+          .select("capacity_total")
+          .eq("ticketed_event_id", id)
+          .limit(1)
+
+        const currentCapacity = ticketTypes?.[0]?.capacity_total ?? null
+        if (currentCapacity !== null && body.capacity_total < ticketCount) {
+          throw new Error("Cannot decrease capacity below tickets already sold")
+        }
+      }
+
+      if (daysUntilEvent < 7) {
+        throw new Error("Cannot make major changes: less than 7 days until event")
+      }
+    }
+  }
+
   const payload = { ...body }
   const { data, error } = await client
     .from("ticketed_events")
@@ -270,6 +335,48 @@ async function handleEventsUpdate(orgId: string, id: string, body: any, client: 
 }
 
 async function handleEventsDelete(orgId: string, id: string, client: any) {
+  const { data: eventData, error: fetchError } = await client
+    .from("ticketed_events")
+    .select("id, status, starts_at, org_id")
+    .eq("id", id)
+    .eq("org_id", orgId)
+    .single()
+  
+  if (fetchError) throw fetchError
+  if (!eventData) throw new Error("Event not found")
+
+  const now = new Date()
+  const eventDate = new Date(eventData.starts_at)
+  const isDraft = eventData.status === "draft"
+  const isPublished = eventData.status === "published"
+
+  if (eventDate <= now) {
+    throw new Error("Cannot delete event: event has already started")
+  }
+
+  if (isPublished) {
+    throw new Error("Cannot delete event: event has been published")
+  }
+
+  const { data: orders, error: ordersError } = await client
+    .from("ticket_orders")
+    .select("ticket_order_items(quantity)")
+    .eq("ticketed_event_id", id)
+    .in("status", ["paid", "pending_payment"])
+
+  if (ordersError) throw ordersError
+
+  let ticketCount = 0
+  for (const order of orders ?? []) {
+    const items = (order.ticket_order_items ?? []) as any[]
+    const qty = items.reduce((sum: number, item: any) => sum + (item?.quantity ?? 0), 0)
+    ticketCount += qty
+  }
+
+  if (ticketCount > 0) {
+    throw new Error("Cannot delete event: tickets have been sold")
+  }
+
   const { error } = await client.from("ticketed_events").delete().eq("id", id).eq("org_id", orgId)
   if (error) throw error
   return { deleted: true }
@@ -351,8 +458,9 @@ async function handleEventsBulk(orgId: string, body: any, client: any) {
   if (!ids.length || !action) throw new Error("event_ids and action are required")
 
   if (action === "delete") {
-    const { error } = await client.from("ticketed_events").delete().in("id", ids).eq("org_id", orgId)
-    if (error) throw error
+    for (const id of ids) {
+      await handleEventsDelete(orgId, id, client)
+    }
     return { deleted: ids.length }
   }
 
@@ -367,9 +475,53 @@ async function handleEventsBulk(orgId: string, body: any, client: any) {
 
   if (action === "update") {
     const updates: any = body?.updates ?? {}
-    const { error } = await client.from("ticketed_events").update(updates).in("id", ids).eq("org_id", orgId)
-    if (error) throw error
+    for (const id of ids) {
+      await handleEventsUpdate(orgId, id, updates, client)
+    }
     return { updated: ids.length }
+  }
+
+  if (action === "cancel") {
+    for (const id of ids) {
+      const { data: eventData, error: fetchError } = await client
+        .from("ticketed_events")
+        .select("id, status, starts_at, org_id, event_type")
+        .eq("id", id)
+        .eq("org_id", orgId)
+        .single()
+      
+      if (fetchError) throw fetchError
+      if (!eventData) throw new Error(`Event ${id} not found`)
+
+      const now = new Date()
+      const eventDate = new Date(eventData.starts_at)
+      const hoursUntilEvent = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+
+      if (eventDate <= now) {
+        throw new Error(`Cannot cancel event ${id}: event has already started`)
+      }
+
+      if (eventData.status === "cancelled") {
+        throw new Error(`Cannot cancel event ${id}: event is already cancelled`)
+      }
+
+      if (eventData.status === "completed") {
+        throw new Error(`Cannot cancel event ${id}: event is already completed`)
+      }
+
+      if (eventData.event_type === "championship" || eventData.event_type === "playoff") {
+        throw new Error(`Cannot cancel event ${id}: championship/playoff games cannot be cancelled`)
+      }
+
+      const { error: updateError } = await client
+        .from("ticketed_events")
+        .update({ status: "cancelled" })
+        .eq("id", id)
+        .eq("org_id", orgId)
+      
+      if (updateError) throw updateError
+    }
+    return { cancelled: ids.length }
   }
 
   if (action === "duplicate") {

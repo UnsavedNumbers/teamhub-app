@@ -26,12 +26,16 @@ function buildRegistry(
     for (const [key, value] of Object.entries(obj)) {
         const fullKey = prefix ? `${prefix}.${key}` : key
 
-        if (value && typeof value === 'object' && 'path' in value) {
-            // This is a route definition
-            registry.set(fullKey, value as RouteDefinition)
-        } else if (value && typeof value === 'object') {
-            // This is a nested group
-            buildRegistry(value as Record<string, unknown>, fullKey, registry)
+        if (value && typeof value === 'object') {
+            if ('path' in value) {
+                registry.set(fullKey, value as RouteDefinition)
+            }
+
+            if ('routes' in value && value.routes && typeof value.routes === 'object') {
+                buildRegistry(value.routes as Record<string, unknown>, fullKey, registry)
+            } else if (!('path' in value)) {
+                buildRegistry(value as Record<string, unknown>, fullKey, registry)
+            }
         }
     }
 

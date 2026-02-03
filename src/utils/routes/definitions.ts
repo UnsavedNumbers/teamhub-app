@@ -416,24 +416,26 @@ const admin = {
             icon: 'credit_card',
             description: 'Plan and billing',
             requiresOrg: false,
-        },
-        planSelection: {
-            path: '/admin/organization/billing/plan-selection',
-            label: 'Plan Selection',
-            icon: 'workspace_premium',
-            requiresOrg: false,
-        },
-        checkoutSuccess: {
-            path: '/admin/organization/billing/checkout/success',
-            label: 'Checkout Success',
-            icon: 'check_circle',
-            requiresOrg: false,
-        },
-        checkoutCancel: {
-            path: '/admin/organization/billing/checkout/cancel',
-            label: 'Checkout Cancelled',
-            icon: 'cancel',
-            requiresOrg: false,
+            routes: {
+                planSelection: {
+                    path: '/admin/organization/billing/plan-selection',
+                    label: 'Plan Selection',
+                    icon: 'workspace_premium',
+                    requiresOrg: false,
+                },
+                checkoutSuccess: {
+                    path: '/admin/organization/billing/checkout/success',
+                    label: 'Checkout Success',
+                    icon: 'check_circle',
+                    requiresOrg: false,
+                },
+                checkoutCancel: {
+                    path: '/admin/organization/billing/checkout/cancel',
+                    label: 'Checkout Cancelled',
+                    icon: 'cancel',
+                    requiresOrg: false,
+                },
+            },
         },
         trialExpired: {
             path: '/admin/organization/trial-expired',

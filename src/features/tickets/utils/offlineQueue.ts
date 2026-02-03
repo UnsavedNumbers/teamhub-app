@@ -66,8 +66,14 @@ export async function queueValidation(params: QueueValidationParams): Promise<st
     timestamp: Date.now(),
     attempts: 0,
   }
-  
-  await database.put('pendingValidations', entry)
+
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction([STORE_NAME], 'readwrite')
+    const store = transaction.objectStore(STORE_NAME)
+    const request = store.put(entry)
+    request.onsuccess = () => resolve()
+    request.onerror = () => reject(new Error('Failed to queue validation'))
+  })
   return entry.id
 }
 

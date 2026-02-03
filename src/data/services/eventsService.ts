@@ -29,6 +29,7 @@ import { t } from '@/i18n'
 import { buildEventQuery } from './queryHelpers'
 import { normalizeSupabaseResponse, createServiceResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
+import { validateDeleteEvent, validateUpdateEvent, EVENT_ERRORS } from '../../utils/eventValidation'
 
 // ============================================================================
 // Helper Functions
@@ -1082,13 +1083,30 @@ export async function updateEvent(
  * Delete an event
  */
 export async function deleteEvent(
-    eventId: string
+    context: UserContext,
+    eventId: string,
+    organization: { id: string; roles: string[] } | null
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {
         return { error: new Error('Cannot delete events in demo mode') }
     }
 
     try {
+        const { data: eventData } = await supabase
+            .from('events')
+            .select('id, start_time, is_cancelled, status, type, created_at, org_id, team_id, parent_tournament_id')
+            .eq('id', eventId)
+            .single()
+
+        if (!eventData) {
+            return { error: new Error('Event not found') }
+        }
+
+        const validation = await validateDeleteEvent(context, eventData, organization as any, false)
+        if (!validation.allowed) {
+            return { error: new Error(validation.error || EVENT_ERRORS.DELETE_BLOCKED_PERMISSION) }
+        }
+
         const { error } = await supabase
             .from('events')
             .delete()

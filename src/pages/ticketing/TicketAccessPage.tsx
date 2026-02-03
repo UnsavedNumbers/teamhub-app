@@ -16,7 +16,7 @@ import { Sun, AlertCircle, Loader2 } from 'lucide-react'
 
 export default function TicketAccessPage() {
   const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
+  const t = useT()
   const encryptedPayload = searchParams.get('t')
   
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null)

@@ -23,7 +23,6 @@ export function TicketQRCode({ token, size = 200 }: TicketQRCodeProps) {
           value={token}
           size={size}
           level="M"           // Medium error correction (15%)
-          marginSize={4}      // 4-module quiet zone
           bgColor="#FFFFFF"
           fgColor="#000000"
         />

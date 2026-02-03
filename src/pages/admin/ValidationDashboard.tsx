@@ -114,7 +114,7 @@ export default function ValidationDashboard() {
         }
         breakdown[typeName].total++
         if (t.status === 'active' || t.status === 'used' || t.status === 'refunded') {
-          breakdown[typeName][t.status]++
+          breakdown[typeName][t.status as 'active' | 'used' | 'refunded']++
         }
       })
 
@@ -160,8 +160,12 @@ export default function ValidationDashboard() {
         .limit(20)
 
       if (error) throw error
-      setRecentScans((data || []) as RecentScan[])
-      return data || []
+      const normalized = (data || []).map((item: any) => ({
+        ...item,
+        validated_at: item.used_at,
+      })) as RecentScan[]
+      setRecentScans(normalized)
+      return normalized
     },
     enabled: !!eventId,
     refetchInterval: 3000, // Refresh every 3 seconds
@@ -214,8 +218,8 @@ export default function ValidationDashboard() {
       <AdminPageHeader
         title={t('ticketing.dashboard.title')}
         breadcrumbs={[
-          { label: 'Home', href: '/admin' },
-          { label: 'Ticketing', href: '/admin/ticketing/events' },
+          { label: 'Home', path: '/admin' },
+          { label: 'Ticketing', path: '/admin/ticketing/events' },
           { label: event?.title || 'Event' },
           { label: t('ticketing.dashboard.title') },
         ]}

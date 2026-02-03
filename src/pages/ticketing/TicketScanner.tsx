@@ -6,9 +6,9 @@
  * Supports both admin (logged-in) and staff link (no login) access.
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { getTicketedEvents, validateTicketScan, exchangeStaffLink } from '@/data/services'
 import { useOffline } from '@/hooks/useOffline'
 import { useT } from '@/i18n/useI18n'
@@ -16,7 +16,7 @@ import type { ValidateScanResponse, TicketScanResult, OrderContext } from '@/typ
 import { QRCodeScanner, type QRCodeScannerHandle } from '@/components/ticketing/QRCodeScanner'
 import { ValidationResultBanner } from '@/components/ticketing/ValidationResultBanner'
 import { OrderContextPanel } from '@/components/ticketing/OrderContextPanel'
-import { queueValidation, syncPendingValidations, getPendingCount } from '@/features/tickets/utils/offlineQueue'
+import { queueValidation } from '@/features/tickets/utils/offlineQueue'
 import { useMemoryMonitor } from '@/features/tickets/hooks/useMemoryMonitor'
 
 interface ValidationResult {
@@ -42,7 +42,7 @@ export default function TicketScanner() {
   const [staffLinkSession, setStaffLinkSession] = useState<any>(null)
   const [orderContext, setOrderContext] = useState<OrderContext | null>(null)
   const [isValidating, setIsValidating] = useState(false)
-  const [pendingCount, setPendingCount] = useState(0)
+  const [pendingCount] = useState(0)
   
   const inputRef = useRef<HTMLInputElement>(null)
   const scannerRef = useRef<QRCodeScannerHandle>(null)
@@ -106,7 +106,7 @@ export default function TicketScanner() {
     }
 
     if (isOffline) {
-      await queueValidation({ qr_token: qrToken })
+      await queueValidation({ qr_token: qrToken, selected_event_id: selectedEventId })
       setPendingValidation({ code: qrToken, eventId: selectedEventId })
       return
     }
@@ -203,9 +203,10 @@ export default function TicketScanner() {
     e?.preventDefault()
     
     if (!selectedEventId || !entryCode.trim() || isValidating) return
-    
+    const cleanCode = entryCode.replace(/[\s-]/g, '').toUpperCase()
+
     if (isOffline) {
-      await queueValidation({ entry_code: entryCode.replace(/[\s-]/g, '').toUpperCase() })
+      await queueValidation({ entry_code: cleanCode, selected_event_id: selectedEventId })
       setPendingValidation({ code: entryCode, eventId: selectedEventId })
       return
     }
@@ -314,8 +315,6 @@ export default function TicketScanner() {
         {
           ticketed_event_id: selectedEventId!,
           qr_token_raw: qrToken,
-          force_validate: true,
-          cross_event_admission: true,
         },
         token,
       )

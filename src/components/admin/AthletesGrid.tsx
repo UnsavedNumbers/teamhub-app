@@ -11,8 +11,8 @@ export interface AthleteCardData {
     gender?: string | null
     photo_url?: string | null
     has_profile_photo?: boolean | null
-    primary_sport?: { name: string } | null
-    primary_team?: { name: string } | null
+    primary_sport?: { id?: string; name: string } | null
+    primary_team?: { id?: string; name: string } | null
 }
 
 interface AthletesGridProps {

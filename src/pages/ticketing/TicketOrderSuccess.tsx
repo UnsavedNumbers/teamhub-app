@@ -12,7 +12,6 @@ import { useQuery } from '@tanstack/react-query'
 import { getPublicOrderWithTickets, resendTickets, type PublicOrderResponse } from '@/data/services'
 import { useRouteLink } from '@/utils/routes'
 import TicketCard from '@/components/ticketing/TicketCard'
-import type { TicketType, TicketedEvent } from '@/types/ticketing'
 
 export default function TicketOrderSuccess() {
   const { orderId } = useParams<{ orderId: string }>()
@@ -100,6 +99,16 @@ export default function TicketOrderSuccess() {
   const event = order.event || undefined
   const orderRef = `YS-${order.id.slice(-5).toUpperCase()}`
   const tickets = data.tickets ?? []
+  const normalizedTickets = tickets.map((ticket) => ({
+    ...ticket,
+    ticket_types: ticket.ticket_type,
+    ticketed_events: ticket.event,
+  })) as unknown as Array<
+    PublicOrderResponse['tickets'][number] & {
+      ticket_types?: { name: string; description: string | null }
+      ticketed_events?: PublicOrderResponse['tickets'][number]['event'] | null
+    }
+  >
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white">
@@ -141,18 +150,18 @@ export default function TicketOrderSuccess() {
           </div>
 
           {/* Tickets */}
-          {tickets.map((ticket, idx) => {
-            const nextTicket = tickets[idx + 1]
+          {normalizedTickets.map((ticket, idx) => {
+            const nextTicket = normalizedTickets[idx + 1]
             const ticketEvent = ticket.ticketed_events || event
             return (
               <div key={ticket.id} id={`ticket-${ticket.id}`}>
                 <TicketCard
-                  ticket={ticket}
+                  ticket={ticket as any}
                   event={ticketEvent}
                   orderId={order.id}
                   showQR={true}
                 />
-                {idx < tickets.length - 1 && (
+                {idx < normalizedTickets.length - 1 && (
                   <div className="mt-6 bg-white dark:bg-gray-900 rounded-xl shadow-md overflow-hidden border border-gray-100 dark:border-gray-800 opacity-60">
                     <div className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-4">
@@ -160,7 +169,7 @@ export default function TicketOrderSuccess() {
                           <span className="material-symbols-outlined text-gray-400">qr_code_2</span>
                         </div>
                         <div>
-                          <h3 className="font-bold text-[#111418] dark:text-white">Ticket {idx + 2} of {tickets.length}</h3>
+                          <h3 className="font-bold text-[#111418] dark:text-white">Ticket {idx + 2} of {normalizedTickets.length}</h3>
                           <p className="text-xs text-gray-500">{ticket.ticket_types?.name || 'General Admission'}</p>
                         </div>
                       </div>
