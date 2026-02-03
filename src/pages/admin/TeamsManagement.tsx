@@ -490,7 +490,7 @@ export default function TeamsManagement() {
       )}
 
       {/* Filter Bar */}
-      <Card className="pa-mb-6 pa-filter-section">
+      <Card className="pa-mb-6 pa-filter-section pa-w-full">
         <div className="pa-filter-row">
           <div className="pa-filter-control">
             <Select
