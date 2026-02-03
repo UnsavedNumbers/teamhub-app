@@ -1057,7 +1057,23 @@ export async function checkStorageCap(
 }
 
 /**
- * Update org storage usage after upload/delete
+ * Detect if the error means the RPC function does not exist (404 / PGRST204).
+ */
+function isRpcNotFoundError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  const code = (error as { code?: string }).code
+  const msg = (error as { message?: string }).message ?? ''
+  return (
+    code === 'PGRST204' ||
+    (msg.includes('function') && msg.includes('does not exist')) ||
+    msg.includes('404') ||
+    msg.includes('Could not find the function')
+  )
+}
+
+/**
+ * Update org storage usage after upload/delete.
+ * Tries RPC first; if the RPC does not exist (e.g. migration not run), falls back to direct upsert.
  */
 export async function updateStorageUsage(
   context: UserContext,
@@ -1082,8 +1098,7 @@ export async function updateStorageUsage(
       p_bytes_delta: bytesDelta,
     })
 
-    // If RPC doesn't exist, fall back to manual update
-    if (error && error.message?.includes('function') && error.message?.includes('does not exist')) {
+    if (isRpcNotFoundError(error as { code?: string; message?: string })) {
       const { data: current } = await supabase
         .from('org_storage_usage')
         .select('bytes_used')
@@ -1091,16 +1106,19 @@ export async function updateStorageUsage(
         .eq('bucket_id', 'public-media')
         .maybeSingle()
 
-      const newBytes = Math.max(0, (current?.bytes_used || 0) + bytesDelta)
+      const newBytes = Math.max(0, (current?.bytes_used ?? 0) + bytesDelta)
 
       const { error: upsertError } = await supabase
         .from('org_storage_usage')
-        .upsert({
-          org_id: context.orgId,
-          bucket_id: 'public-media',
-          bytes_used: newBytes,
-          updated_at: new Date().toISOString(),
-        })
+        .upsert(
+          {
+            org_id: context.orgId,
+            bucket_id: 'public-media',
+            bytes_used: newBytes,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'org_id' }
+        )
 
       if (upsertError) throw upsertError
     } else if (error) {
