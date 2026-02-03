@@ -23,7 +23,6 @@ import {
 import type { StaffMember, StaffPermissions } from '../../../types/staffAndFan'
 import { showSuccess, showError } from '../../../utils/toast'
 import { formatDate } from '../../../utils/dateFormatters'
-import { DEFAULT_STAFF_PERMISSIONS } from '../../../constants/permissions'
 import AddStaffModal from '../../../components/admin/staff/AddStaffModal'
 import StaffPermissionEditor from '../../../components/admin/staff/StaffPermissionEditor'
 import StaffAuditLog from '../../../components/admin/staff/StaffAuditLog'
@@ -34,7 +33,7 @@ interface StaffSectionProps {
 }
 
 export default function StaffSection({ organizationId }: StaffSectionProps) {
-  const { t } = useI18n()
+  const { t } = useI18n() as any
   const { context, isReady } = useUserContext()
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -75,7 +74,7 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
     if (!context) return
 
     try {
-      const { data, error: addError } = await addStaffMember(context, {
+      const { error: addError } = await addStaffMember(context, {
         user_id: userId,
         org_id: organizationId,
         permissions,
@@ -98,7 +97,7 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
     if (!context) return
 
     try {
-      const { data, error: updateError } = await updateStaffPermissions(
+      const { error: updateError } = await updateStaffPermissions(
         context,
         organizationId,
         userId,
@@ -123,7 +122,7 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
     if (!confirm(t('admin.staff.revokeConfirm'))) return
 
     try {
-      const { data, error: revokeError } = await revokeStaffAccess(
+      const { error: revokeError } = await revokeStaffAccess(
         context,
         organizationId,
         userId,

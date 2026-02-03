@@ -6,6 +6,7 @@
  */
 
 import type { EventVisibility } from '../constants/permissions'
+import type { Ticket } from './ticketing'
 
 // ============================================
 // STAFF TYPES

@@ -93,6 +93,16 @@ export default function Calendar() {
     setError(null)
     
     try {
+      if (fanView) {
+        const { data: fanData, error: fanError } = await getFanCalendar()
+        if (fanError) {
+          console.error('Error fetching fan calendar:', fanError)
+          setFanEvents([])
+        } else {
+          setFanEvents((fanData?.events || []) as FanCalendarEvent[])
+        }
+      }
+
       // Determine date range based on view
       let start = new Date(currentDate)
       let end = new Date(currentDate)
@@ -515,8 +525,8 @@ export default function Calendar() {
                   </Card>
                 ) : (
                     <CalendarGrid 
-                        events={fanView ? fanEvents.map(fe => ({
-                          id: fe.event_id,
+                        events={fanView ? fanEvents.map((fe: any) => ({
+                          id: fe.id,
                           title: fe.title,
                           start_time: fe.start_time,
                           end_time: fe.end_time,
@@ -525,7 +535,7 @@ export default function Calendar() {
                           description: fe.event?.description || null,
                           rsvps: [],
                           event_location: null,
-                        })) as CalendarEvent[] : events}
+                        })) as unknown as CalendarEvent[] : events}
                         eventSports={eventSports}
                         viewMode={viewMode}
                         currentDate={currentDate}

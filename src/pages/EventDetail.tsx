@@ -205,6 +205,7 @@ export default function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>()
   const t = useT()
   const { profile } = useAuth()
+  const { currentOrganization } = useOrganization()
   const [event, setEvent] = useState<Event | null>(null)
   const [children, setChildren] = useState<Child[]>([])
   const [attendance, setAttendance] = useState<Record<string, Attendance>>({})
