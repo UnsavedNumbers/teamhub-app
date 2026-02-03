@@ -395,6 +395,62 @@ export async function getPublicTicketOrderById(orderId: string) {
 }
 
 /**
+ * Public order access response type
+ */
+export interface PublicOrderResponse {
+  order: {
+    id: string
+    status: string
+    total_cents: number
+    purchaser_name: string
+    purchaser_email: string
+    created_at: string
+    items: Array<{
+      id: string
+      quantity: number
+      unit_price_cents: number
+      subtotal_cents: number
+      ticket_types: Pick<TicketType, 'id' | 'name' | 'description'>
+    }>
+    event: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
+  }
+  tickets: Array<{
+    id: string
+    entry_code: string
+    status: string
+    used_at: string | null
+    ticket_type: Pick<TicketType, 'id' | 'name' | 'description'>
+    event: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
+  }>
+}
+
+/**
+ * Get ticket order by ID (public - via edge function, no auth required)
+ * Uses order ID as implicit authentication (UUID is unguessable)
+ * Expires day after the event
+ */
+export async function getPublicOrderWithTickets(orderId: string, orgId?: string): Promise<PublicOrderResponse> {
+  try {
+    const response = await fetch(`${FUNCTIONS_URL}/tickets-get-order-public`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ order_id: orderId, org_id: orgId }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || 'Failed to fetch order')
+    }
+
+    return await response.json()
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to fetch order')
+  }
+}
+
+/**
  * Get ticket order by ID (admin/internal use)
  */
 export async function getTicketOrderByIdAdmin(orderId: string) {
@@ -499,6 +555,9 @@ export async function getTicketsForOrder(orderId: string) {
           venue_name,
           venue_city,
           venue_state
+        ),
+        ticket_orders (
+          purchaser_email
         )
       `)
       .eq('order_id', orderId)
@@ -509,9 +568,11 @@ export async function getTicketsForOrder(orderId: string) {
     return normalizeSupabaseResponse<Array<Ticket & {
       ticket_types: Pick<TicketType, 'name' | 'description'>
       ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
+      ticket_orders: { purchaser_email: string }
     }>>(data as unknown as Array<Ticket & {
       ticket_types: Pick<TicketType, 'name' | 'description'>
       ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
+      ticket_orders: { purchaser_email: string }
     }>, true)
   } catch (error) {
     throw classifySupabaseError(error, 'Tickets')

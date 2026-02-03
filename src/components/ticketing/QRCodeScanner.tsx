@@ -31,6 +31,7 @@ interface QRCodeScannerProps {
  */
 export const QRCodeScanner = forwardRef<QRCodeScannerHandle, QRCodeScannerProps>(
   ({ onScan, onError, isEnabled }, ref) => {
+    const t = useT()
     const scannerRef = useRef<Html5Qrcode | null>(null)
     const containerIdRef = useRef(`qr-scanner-${Date.now()}-${Math.random().toString(36).slice(2)}`)
     
@@ -39,6 +40,11 @@ export const QRCodeScanner = forwardRef<QRCodeScannerHandle, QRCodeScannerProps>
     const [fps, setFps] = useState(10)
     const [showManualPrompt, setShowManualPrompt] = useState(false)
     const [lastScanTime, setLastScanTime] = useState(0)
+    
+    // Refs to prevent double-start issues (React Strict Mode, effect re-runs)
+    const isStartingRef = useRef(false)
+    const isStoppingRef = useRef(false)
+    const mountedRef = useRef(true)
     
     // Detect iOS for special handling
     const isIOS = useMemo(() => {
@@ -54,19 +60,18 @@ export const QRCodeScanner = forwardRef<QRCodeScannerHandle, QRCodeScannerProps>
     
     // Start camera function
     const startCamera = useCallback(async () => {
-      if (cameraState === 'active' || cameraState === 'starting') {
+      // Guard against double-start (Strict Mode, effect re-runs, race conditions)
+      if (isStartingRef.current || isStoppingRef.current || scannerRef.current) {
         return
       }
       
+      isStartingRef.current = true
       setCameraState('starting')
       
       try {
-        // Create scanner instance if needed
-        if (!scannerRef.current) {
-          scannerRef.current = new Html5Qrcode(containerIdRef.current)
-        }
-        
-        const scanner = scannerRef.current
+        // Create scanner instance
+        const scanner = new Html5Qrcode(containerIdRef.current)
+        scannerRef.current = scanner
         
         // Configuration
         const config = {
@@ -132,28 +137,42 @@ export const QRCodeScanner = forwardRef<QRCodeScannerHandle, QRCodeScannerProps>
           onScanError
         )
         
-        setCameraState('active')
-        setLastScanTime(Date.now())
-        
-      } catch (error: any) {
-        setCameraState('error')
-        
-        // Parse error for user-friendly message
-        let errorMessage = 'Camera unavailable'
-        if (error?.message?.includes('Permission') || error?.message?.includes('permission')) {
-          errorMessage = 'Camera permission denied'
-        } else if (error?.message?.includes('NotFound') || error?.message?.includes('not found')) {
-          errorMessage = 'No camera found'
-        } else if (error?.message?.includes('NotReadable') || error?.message?.includes('in use')) {
-          errorMessage = 'Camera in use by another app'
+        // Only update state if still mounted
+        if (mountedRef.current) {
+          setCameraState('active')
+          setLastScanTime(Date.now())
         }
         
-        onError?.(errorMessage)
+      } catch (error: any) {
+        if (mountedRef.current) {
+          setCameraState('error')
+          
+          // Parse error for user-friendly message
+          let errorMessage = 'Camera unavailable'
+          if (error?.message?.includes('Permission') || error?.message?.includes('permission')) {
+            errorMessage = 'Camera permission denied'
+          } else if (error?.message?.includes('NotFound') || error?.message?.includes('not found')) {
+            errorMessage = 'No camera found'
+          } else if (error?.message?.includes('NotReadable') || error?.message?.includes('in use')) {
+            errorMessage = 'Camera in use by another app'
+          }
+          
+          onError?.(errorMessage)
+        }
+      } finally {
+        isStartingRef.current = false
       }
-    }, [cameraState, facingMode, fps, onScan, onError])
+    }, [facingMode, fps, onScan, onError])
     
     // Stop camera function
     const stopCamera = useCallback(async () => {
+      // Guard against concurrent stop calls
+      if (isStoppingRef.current) {
+        return
+      }
+      
+      isStoppingRef.current = true
+      
       const scanner = scannerRef.current
       if (scanner) {
         try {
@@ -169,7 +188,11 @@ export const QRCodeScanner = forwardRef<QRCodeScannerHandle, QRCodeScannerProps>
         }
       }
       
-      setCameraState('idle')
+      if (mountedRef.current) {
+        setCameraState('idle')
+      }
+      
+      isStoppingRef.current = false
     }, [])
     
     // Resume scanner (called after validation completes)
@@ -209,26 +232,27 @@ export const QRCodeScanner = forwardRef<QRCodeScannerHandle, QRCodeScannerProps>
       return () => clearInterval(timer)
     }, [cameraState, lastScanTime, showManualPrompt])
     
-    // Start/stop camera based on isEnabled
+    // Track mounted state for cleanup
     useEffect(() => {
-      if (isEnabled && cameraState === 'idle') {
-        // On iOS, don't auto-start - require user gesture
-        if (!isIOS) {
+      mountedRef.current = true
+      return () => {
+        mountedRef.current = false
+      }
+    }, [])
+    
+    // Start/stop camera based on isEnabled and facingMode
+    // Using refs in guards means we don't need startCamera/stopCamera in deps
+    useEffect(() => {
+      if (isEnabled && !isIOS) {
+        // Only start if idle and not already starting/stopping
+        if (cameraState === 'idle' && !isStartingRef.current && !isStoppingRef.current) {
           startCamera()
         }
       } else if (!isEnabled && cameraState === 'active') {
         stopCamera()
       }
-    }, [isEnabled, cameraState, isIOS, startCamera, stopCamera])
-    
-    // Restart camera when facing mode changes
-    useEffect(() => {
-      if (isEnabled && cameraState === 'idle' && facingMode) {
-        if (!isIOS) {
-          startCamera()
-        }
-      }
-    }, [facingMode, isEnabled, cameraState, isIOS, startCamera])
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isEnabled, facingMode, isIOS, cameraState])
     
     // Visibility change handler
     useEffect(() => {
@@ -259,19 +283,35 @@ export const QRCodeScanner = forwardRef<QRCodeScannerHandle, QRCodeScannerProps>
     // Beforeunload cleanup
     useEffect(() => {
       const handleBeforeUnload = () => {
-        stopCamera()
+        // Synchronous - just clear the ref, browser will release camera
+        scannerRef.current = null
       }
       
       window.addEventListener('beforeunload', handleBeforeUnload)
       return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-    }, [stopCamera])
+    }, [])
     
     // Component unmount cleanup
     useEffect(() => {
       return () => {
-        stopCamera()
+        // Mark as unmounted first to prevent state updates
+        mountedRef.current = false
+        // Then stop camera
+        const scanner = scannerRef.current
+        if (scanner) {
+          try {
+            const state = scanner.getState()
+            if (state === Html5QrcodeScannerState.SCANNING || 
+                state === Html5QrcodeScannerState.PAUSED) {
+              scanner.stop().catch(() => {})
+            }
+          } catch {
+            // Ignore errors during cleanup
+          }
+          scannerRef.current = null
+        }
       }
-    }, [stopCamera])
+    }, [])
     
     return (
       <div className="qr-scanner-wrapper relative w-full">

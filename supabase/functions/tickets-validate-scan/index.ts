@@ -104,19 +104,53 @@ serve(async (req) => {
       return json(req, { error: "Unauthorized" }, 401)
     }
 
-    // Check if user is admin/coach for this org
+    // Get user data
     const { data: userData } = await supabase
       .from("users")
       .select("id, org_id, role")
       .eq("id", user.id)
       .single()
 
-    if (!userData || userData.role !== "admin") {
-      return json(req, { error: "Unauthorized: admin access required" }, 403)
+    if (!userData) {
+      return json(req, { error: "User not found" }, 404)
+    }
+
+    // Get the event to find its org_id
+    const { data: eventData } = await supabase
+      .from("ticketed_events")
+      .select("org_id")
+      .eq("id", ticketedEventId)
+      .single()
+
+    if (!eventData) {
+      return json(req, { error: "Event not found" }, 404)
+    }
+
+    const eventOrgId = eventData.org_id
+
+    // Check users.role first (platform-level roles)
+    const allowedUserRoles = ["admin", "org_admin", "coach", "platform_admin"]
+    let hasAccess = userData.role && allowedUserRoles.includes(userData.role)
+
+    // If no access via users.role, check organization_members table for the EVENT's org
+    if (!hasAccess) {
+      const { data: orgMember } = await supabase
+        .from("organization_members")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("org_id", eventOrgId)
+        .single()
+
+      const allowedOrgRoles = ["org_admin", "coach"]
+      hasAccess = orgMember?.role && allowedOrgRoles.includes(orgMember.role)
+    }
+
+    if (!hasAccess) {
+      return json(req, { error: "Unauthorized: staff access required" }, 403)
     }
 
     scannerUserId = user.id
-    orgId = userData.org_id
+    orgId = eventOrgId
   } else if (staffLinkToken) {
     // Staff link token
     const tokenHash = await hashToken(staffLinkToken)
@@ -190,13 +224,33 @@ serve(async (req) => {
     const { data } = await query.single()
     ticket = data
   } else if (qrTokenRaw) {
+    // First try to find by qr_token_hash
     const qrTokenHash = await hashToken(qrTokenRaw)
-    const { data } = await supabase
+    const { data: tokenMatch } = await supabase
       .from("tickets")
       .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
       .eq("qr_token_hash", qrTokenHash)
       .single()
-    ticket = data
+    
+    if (tokenMatch) {
+      ticket = tokenMatch
+    } else {
+      // QR code might contain entry_code instead of qr_token (common for displayed QR codes)
+      // Normalize and try entry_code lookup
+      const normalizedFromQr = normalizeEntryCode(qrTokenRaw)
+      let query = supabase
+        .from("tickets")
+        .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
+        .eq("entry_code", normalizedFromQr)
+      
+      // Scope to event if provided and not forcing
+      if (ticketedEventId && !forceValidate) {
+        query = query.eq("ticketed_event_id", ticketedEventId)
+      }
+      
+      const { data: entryCodeMatch } = await query.single()
+      ticket = entryCodeMatch
+    }
   }
 
   if (!ticket) {

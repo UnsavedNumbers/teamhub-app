@@ -116,12 +116,6 @@ serve(async (req) => {
       return json(req, { error: "Invalid payload structure" }, 400)
     }
 
-    // Optional: Check if link is expired (e.g., 30 days)
-    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
-    if (decrypted.issued_at < thirtyDaysAgo) {
-      return json(req, { error: "Link expired" }, 410)
-    }
-
     // Fetch ticket details from DB
     const { data: ticket, error: ticketError } = await supabase
       .from("tickets")
@@ -136,6 +130,7 @@ serve(async (req) => {
           id,
           title,
           starts_at,
+          ends_at,
           venue_name,
           venue_city,
           venue_state
@@ -150,6 +145,20 @@ serve(async (req) => {
 
     if (ticketError || !ticket) {
       return json(req, { error: "Ticket not found" }, 404)
+    }
+
+    // Check if link is expired (day after event ends)
+    const event = ticket.ticketed_events as any
+    if (event?.ends_at || event?.starts_at) {
+      const eventEndDate = new Date(event.ends_at || event.starts_at)
+      // Set expiration to end of day after event
+      const expirationDate = new Date(eventEndDate)
+      expirationDate.setDate(expirationDate.getDate() + 1)
+      expirationDate.setHours(23, 59, 59, 999)
+      
+      if (Date.now() > expirationDate.getTime()) {
+        return json(req, { error: "Link expired - event has passed" }, 410)
+      }
     }
 
     // Verify token hash matches (security check)
