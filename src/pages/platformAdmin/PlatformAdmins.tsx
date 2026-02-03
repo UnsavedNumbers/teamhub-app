@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { useT } from '../../i18n/useI18n'
 import { PageHeader, Badge, Card, PlatformDataTable, ConfirmDialog, type ColumnConfig, OfflineBanner } from '../../components/platformAdmin'
 import { canPerformAction, ROLE_LABELS, ROLE_DESCRIPTIONS } from '../../utils/platformAdminPermissions'
 import { isAdminRpcResponse } from '../../utils/typeAdapters'
@@ -41,6 +42,7 @@ function validateAddAdminParams(email: string, role: PlatformAdminRole, reason: 
 
 export default function PlatformAdmins() {
   const { profile, refreshProfile } = useAuth()
+  const t = useT()
   const adminRole = profile?.platformAdminRole ?? null // Bug Prevention #1, Technical Bug #4
 
   const [admins, setAdmins] = useState<PlatformAdminWithUser[]>([])
@@ -333,7 +335,7 @@ export default function PlatformAdmins() {
         columns={columns}
         rows={admins}
         loading={loading}
-        emptyMessage="No platform admins found. Add your first platform admin to get started."
+        emptyMessage={t('platformAdmin.platformAdmins.noAdmins')}
         page={page}
         rowsPerPage={rowsPerPage}
         totalCount={totalCount}
@@ -363,7 +365,7 @@ export default function PlatformAdmins() {
             style={{ width: '100%', maxWidth: '480px' }}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
-            <h2 className="pa-h2 pa-mb-4">Add Platform Admin</h2>
+            <h2 className="pa-h2 pa-mb-4">{t('platformAdmin.platformAdmins.addDialogTitle')}</h2>
             
             {addError && (
               <div
@@ -375,20 +377,20 @@ export default function PlatformAdmins() {
             )}
             
             <div className="pa-form-group">
-              <label className="pa-label pa-label--required">Email</label>
+              <label className="pa-label pa-label--required">{t('platformAdmin.platformAdmins.emailLabel')}</label>
               <input
                 type="email"
                 className="pa-input"
                 value={addEmail}
                 onChange={(e) => setAddEmail(e.target.value)}
-                placeholder="user@example.com"
+                placeholder={t('platformAdmin.platformAdmins.emailPlaceholder')}
                 disabled={addLoading}
               />
-              <div className="pa-helper">User must already exist in the system</div>
+              <div className="pa-helper">{t('platformAdmin.platformAdmins.emailHelp')}</div>
             </div>
             
             <div className="pa-form-group">
-              <label className="pa-label pa-label--required">Role</label>
+              <label className="pa-label pa-label--required">{t('platformAdmin.platformAdmins.roleLabel')}</label>
               <select
                 className="pa-input pa-select"
                 value={addRole}
@@ -404,12 +406,12 @@ export default function PlatformAdmins() {
             </div>
             
             <div className="pa-form-group">
-              <label className="pa-label pa-label--required">Reason</label>
+              <label className="pa-label pa-label--required">{t('platformAdmin.platformAdmins.reasonLabel')}</label>
               <textarea
                 className="pa-input pa-textarea"
                 value={addReason}
                 onChange={(e) => setAddReason(e.target.value)}
-                placeholder="Why is this user being granted admin access?"
+                placeholder={t('platformAdmin.platformAdmins.reasonPlaceholder')}
                 rows={2}
                 disabled={addLoading}
               />
@@ -421,14 +423,14 @@ export default function PlatformAdmins() {
                 onClick={() => setAddDialog(false)}
                 disabled={addLoading}
               >
-                Cancel
+                {t('platformAdmin.platformAdmins.cancelButton')}
               </button>
               <button
                 className="pa-btn pa-btn--primary"
                 onClick={handleAddAdmin}
                 disabled={addLoading || !addEmail.trim() || !addReason.trim()}
               >
-                {addLoading ? 'Adding...' : 'Add Admin'}
+                {addLoading ? t('platformAdmin.platformAdmins.addingButton') : t('platformAdmin.platformAdmins.addButton')}
               </button>
             </div>
           </Card>
@@ -438,9 +440,9 @@ export default function PlatformAdmins() {
       {/* Remove Admin Dialog */}
       <ConfirmDialog
         open={removeDialog.open}
-        title="Remove Platform Admin"
-        description={`Are you sure you want to remove "${removeDialog.admin?.email}" from platform admins? They will lose all administrative access.`}
-        confirmLabel="Remove"
+        title={t('platformAdmin.platformAdmins.removeDialog.title')}
+        description={t('platformAdmin.platformAdmins.removeDialog.description', { email: removeDialog.admin?.email ?? '' })}
+        confirmLabel={t('platformAdmin.platformAdmins.removeDialog.confirmButton')}
         variant="danger"
         requireReason
         loading={removeLoading}

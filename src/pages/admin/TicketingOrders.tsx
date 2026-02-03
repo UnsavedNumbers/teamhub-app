@@ -6,6 +6,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { useT } from '@/i18n/useI18n'
 import { supabase } from '@/lib/supabase'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import { formatCurrency } from '@/types/ticketing'
@@ -15,6 +16,7 @@ import { Button } from '@/components/platformAdmin'
 
 export default function TicketingOrders() {
   const navigate = useNavigate()
+  const t = useT()
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
 
@@ -51,8 +53,8 @@ export default function TicketingOrders() {
       {currentOrganization?.id && (
         <PublicUrlBanner
           orgId={currentOrganization.id}
-          title="Direct guests here"
-          description="Guests purchase at your public ticket page. Confirmation emails include a link for them to view their tickets."
+          title={t('ticketing.orders.directGuests')}
+          description={t('ticketing.orders.publicPageDescription')}
           path="tickets"
         />
       )}
@@ -60,18 +62,18 @@ export default function TicketingOrders() {
       {isLoading ? (
         <div className="pa-empty-state">
           <div className="pa-spinner" style={{ width: '32px', height: '32px', borderWidth: '3px', margin: '0 auto' }} />
-          <p className="pa-mt-4">Loading orders...</p>
+          <p className="pa-mt-4">{t('ticketing.orders.loading')}</p>
         </div>
       ) : error ? (
         <div className="pa-empty-state">
-          <p className="pa-text-danger pa-mb-4">{getErrorMessage(error as any) || 'Failed to load orders'}</p>
+          <p className="pa-text-danger pa-mb-4">{getErrorMessage(error as any) || t('ticketing.orders.error')}</p>
           <Button onClick={() => refetch()} variant="primary">
-            Retry
+            {t('ticketing.orders.retry')}
           </Button>
         </div>
       ) : orders.length === 0 ? (
         <div className="pa-empty-state">
-          <p>No orders yet.</p>
+          <p>{t('ticketing.orders.noOrders')}</p>
         </div>
       ) : (
         <div className="pa-table-container">

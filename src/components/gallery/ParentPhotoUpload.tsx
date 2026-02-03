@@ -7,6 +7,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useT } from '../../i18n/useI18n'
 import Icon from '../portal/Icon'
 import Card from '../portal/Card'
 import Button from '../portal/Button'
@@ -31,6 +32,7 @@ interface UploadFile {
 
 export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUploadProps) {
   const { context } = useUserContext()
+  const t = useT()
   const [files, setFiles] = useState<UploadFile[]>([])
   const [agreedToGuidelines, setAgreedToGuidelines] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -40,11 +42,11 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
     const maxSize = 50 * 1024 * 1024 // 50MB
 
     if (!allowedTypes.includes(file.type)) {
-      return 'Invalid file type. Please upload JPG, PNG, or HEIC images.'
+      return t('gallery.parentPhotoUpload.fileValidationError')
     }
 
     if (file.size > maxSize) {
-      return `File size exceeds 50MB limit. File is ${(file.size / 1024 / 1024).toFixed(2)}MB.`
+      return t('gallery.parentPhotoUpload.fileSizeError', { size: (file.size / 1024 / 1024).toFixed(2) })
     }
 
     return null
@@ -236,7 +238,7 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
               className="mt-1"
             />
             <label htmlFor="guidelines-agreement" className="text-sm text-slate-700 dark:text-slate-300">
-              I understand and agree to the team's media guidelines. All photos will be reviewed before being added to the gallery.
+              {t('gallery.parentPhotoUpload.guidelines')}
             </label>
           </div>
         </Card>

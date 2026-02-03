@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useUserContext } from '../hooks/useUserContext'
+import { useT } from '../i18n/useI18n'
 import { getFeeAssignmentsForUser, validateDiscountCode } from '../data/services/paymentsService'
 import { createParentCheckoutSession, createParentPartialCheckoutSession } from '../api/payments'
 import { supabase } from '../lib/supabase'
@@ -41,6 +42,7 @@ const statusLabels: Record<FeeAssignmentStatus, string> = {
 }
 
 export default function MyPayments() {
+  const t = useT()
   const [assignments, setAssignments] = useState<FeeAssignment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -449,7 +451,7 @@ export default function MyPayments() {
                 disabled={loading || unpaidAssignments.length === 0}
                 className="w-full sm:w-auto text-sm px-6 py-2.5"
               >
-                {selectedIds.length === unpaidAssignments.length && unpaidAssignments.length > 0 ? 'Clear Selection' : 'Select All Due'}
+                {selectedIds.length === unpaidAssignments.length && unpaidAssignments.length > 0 ? t('portal.payments.clearSelection') : t('portal.payments.selectAllDue')}
               </Button>
             </div>
           </div>
@@ -461,7 +463,7 @@ export default function MyPayments() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
               <input
                 className="flex-1 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
-                placeholder="Discount code"
+                placeholder={t('portal.payments.discountCode')}
                 value={discountCode}
                 onChange={(e) => {
                   setDiscountCode(e.target.value)

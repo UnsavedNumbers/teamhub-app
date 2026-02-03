@@ -20,6 +20,7 @@ import 'stream-chat-react/dist/css/v2/index.css'
 
 import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
+import { useT } from '../i18n/useI18n'
 import { getStreamToken } from '../data/services/huddlesService'
 import {
   getStreamClient,
@@ -53,6 +54,7 @@ type Tab = 'announcements' | 'huddles'
 export default function Huddles() {
   const { user, profile } = useAuth()
   const { context, isReady } = useUserContext()
+  const t = useT()
 
   // Stream Chat state
   const [streamClient, setStreamClient] = useState<StreamChat | null>(null)
@@ -305,7 +307,7 @@ export default function Huddles() {
     return (
       <PortalLayout
         breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
+          { label: t('common.home'), path: '/portal/dashboard' },
           { label: 'Huddles' },
         ]}
       >
@@ -413,7 +415,7 @@ export default function Huddles() {
               {tab === 'huddles' && !streamConnected && (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto mb-2"></div>
-                  <p className="text-xs text-slate-500">Connecting to chat...</p>
+                  <p className="text-xs text-slate-500">{t('portal.huddles.connectingToChat')}</p>
                 </div>
               )}
             </div>
@@ -517,7 +519,7 @@ export default function Huddles() {
                 <div className="text-center">
                   <Icon name="forum" size="text-6xl" className="text-slate-300 mb-4" />
                   <p className="text-slate-500">
-                    {!streamConnected ? 'Connecting to chat...' : 'Select a channel to start chatting'}
+                    {!streamConnected ? t('portal.huddles.connectingToChat') : t('portal.huddles.selectChannelToChat')}
                   </p>
                 </div>
               </div>
