@@ -4,7 +4,6 @@
  * Lists all organizations the user is following.
  */
 
-import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getFollowedOrgs, unfollowOrg } from '../../data/services/fanService'
 import { showSuccess, showError } from '../../utils/toast'

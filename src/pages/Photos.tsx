@@ -165,34 +165,8 @@ export default function Photos() {
     )
   }
 
-  // No athletes linked
-  if (athletes.length === 0) {
-    return (
-      <PortalLayout
-        breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Photos' },
-        ]}
-      >
-        <div className="mb-8">
-          <PageTitle>Photos</PageTitle>
-        </div>
-
-        <Card className="text-center py-12">
-          <Icon name="photo_library" size="text-4xl" className="text-slate-400 mb-4" />
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-            No Athletes Linked
-          </h3>
-          <p className="text-slate-500 mb-4">
-            Link an athlete to your account to view their photos.
-          </p>
-          <Button as={Link} to="/portal/athletes">
-            View My Athletes
-          </Button>
-        </Card>
-      </PortalLayout>
-    )
-  }
+  // Even if no athletes linked, org members can still view event/org galleries
+  // So we don't block access to the photos page
 
   return (
     <PortalLayout

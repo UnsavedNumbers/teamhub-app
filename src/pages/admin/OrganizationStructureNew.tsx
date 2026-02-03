@@ -47,14 +47,15 @@ export default function OrganizationStructureNew() {
           getOrganizationUsers(context),
         ])
 
+      // Check for critical errors (sports, programs, levels, teams, seasons, children)
+      // Users error is non-critical - we can still show the page
       if (
         sportsResult.error ||
         programsResult.error ||
         levelsResult.error ||
         teamsResult.error ||
         seasonsResult.error ||
-        childrenResult.error ||
-        usersResult.error
+        childrenResult.error
       ) {
         throw (
           sportsResult.error ||
@@ -63,9 +64,13 @@ export default function OrganizationStructureNew() {
           teamsResult.error ||
           seasonsResult.error ||
           childrenResult.error ||
-          usersResult.error ||
           new Error('Failed to load organization data')
         )
+      }
+
+      // Log users error but don't throw
+      if (usersResult.error) {
+        console.warn('[OrganizationStructureNew] Failed to load users, setting coach count to 0:', usersResult.error)
       }
 
       setSports(Array.isArray(sportsResult.data) ? sportsResult.data : [])

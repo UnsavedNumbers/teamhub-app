@@ -4,7 +4,7 @@
  * Type guards and validation utilities for staff-related types.
  */
 
-import type { StaffMember, StaffPermissions, StaffMemberInput } from '../types/staffAndFan'
+import type { StaffMember, StaffPermissions } from '../types/staffAndFan'
 
 /**
  * Type guard to check if an object is a StaffMember
