@@ -335,6 +335,19 @@ export default function Login() {
             </div>
             <div>
               <p className="text-center text-sm text-slate-500 dark:text-slate-400 mb-2">
+                JUST A FAN?
+              </p>
+              <Link 
+                to="/portal/signup" 
+                state={{ signupAs: 'fan' } as { signupAs: 'fan' }}
+                tabIndex={8}
+                className="block text-center font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors"
+              >
+                SIGN UP AS FAN
+              </Link>
+            </div>
+            <div>
+              <p className="text-center text-sm text-slate-500 dark:text-slate-400 mb-2">
                 SETTING UP YOUR TEAM(S)?
               </p>
               <button

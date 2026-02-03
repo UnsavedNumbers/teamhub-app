@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query'
 import { QRCodeCanvas } from 'qrcode.react'
 import { supabase } from '@/lib/supabase'
 import { QUERY_KEY_ORG_SLUG } from '@/components/admin/PublicUrlBanner'
+import { getLink, RouteKeys } from '@/utils/routes'
 
 interface PublicUrlShareProps {
   orgId: string
@@ -45,12 +46,15 @@ export default function PublicUrlShare({ orgId, path, title = 'Public Link', des
   })
 
   useEffect(() => {
-    if (orgData) {
-      const baseUrl = window.location.origin
-      setPublicUrl(`${baseUrl}/o/${orgData}/${path}`)
-    } else {
-      setPublicUrl(null)
-    }
+      if (orgData) {
+        const baseUrl = window.location.origin
+        const normalizedPath = path.replace(/^\/+/, '')
+        const basePath = getLink(RouteKeys.PORTAL_ORG_LANDING, { orgSlug: orgData })
+        const fullPath = normalizedPath ? `${basePath}/${normalizedPath}` : basePath
+        setPublicUrl(`${baseUrl}${fullPath}`)
+      } else {
+        setPublicUrl(null)
+      }
   }, [orgData, path])
 
   const handleCopy = async () => {

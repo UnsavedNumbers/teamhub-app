@@ -1,4 +1,4 @@
-import { TicketSaleStatus, TicketedEvent, TicketingProgram, TicketingSeason, TicketingVenue } from '@/types/ticketing'
+import { TicketSaleStatus, TicketedEvent, TicketType, TicketingProgram, TicketingSeason, TicketingVenue } from '@/types/ticketing'
 import { DEMO_ORG_A_ID } from '../config'
 
 type TicketingEventWithDerived = TicketedEvent & {
@@ -50,6 +50,11 @@ let events: TicketingEventWithDerived[] = [
     venue_city: 'Austin',
     venue_state: 'TX',
     venue_postal_code: '78701',
+    venue_address_line1: null,
+    venue_address_line2: null,
+    venue_country: 'US',
+    venue_is_virtual: false,
+    venue_virtual_link: null,
     sales_start_at: '2026-02-15T12:00:00Z',
     sales_end_at: '2026-03-15T18:30:00Z',
     cover_image_path: null,
@@ -81,6 +86,11 @@ let events: TicketingEventWithDerived[] = [
     venue_city: 'Dallas',
     venue_state: 'TX',
     venue_postal_code: '75201',
+    venue_address_line1: null,
+    venue_address_line2: null,
+    venue_country: 'US',
+    venue_is_virtual: false,
+    venue_virtual_link: null,
     sales_start_at: '2026-03-10T12:00:00Z',
     sales_end_at: '2026-04-20T00:00:00Z',
     cover_image_path: null,
@@ -112,6 +122,11 @@ let events: TicketingEventWithDerived[] = [
     venue_city: 'Round Rock',
     venue_state: 'TX',
     venue_postal_code: '78664',
+    venue_address_line1: null,
+    venue_address_line2: null,
+    venue_country: 'US',
+    venue_is_virtual: false,
+    venue_virtual_link: null,
     sales_start_at: '2026-05-15T12:00:00Z',
     sales_end_at: '2026-07-10T17:00:00Z',
     cover_image_path: null,
@@ -142,6 +157,11 @@ let events: TicketingEventWithDerived[] = [
     venue_city: 'Austin',
     venue_state: 'TX',
     venue_postal_code: '78701',
+    venue_address_line1: null,
+    venue_address_line2: null,
+    venue_country: 'US',
+    venue_is_virtual: false,
+    venue_virtual_link: null,
     sales_start_at: '2026-08-01T12:00:00Z',
     sales_end_at: '2026-09-12T21:30:00Z',
     cover_image_path: null,
@@ -172,6 +192,11 @@ let events: TicketingEventWithDerived[] = [
     venue_city: 'Dallas',
     venue_state: 'TX',
     venue_postal_code: '75201',
+    venue_address_line1: null,
+    venue_address_line2: null,
+    venue_country: 'US',
+    venue_is_virtual: false,
+    venue_virtual_link: null,
     sales_start_at: '2026-05-01T12:00:00Z',
     sales_end_at: '2026-06-05T17:30:00Z',
     cover_image_path: null,
@@ -192,7 +217,7 @@ let events: TicketingEventWithDerived[] = [
     venue_id: 'ven-3',
     opponent: null,
     is_home: true,
-    event_type: 'practice',
+    event_type: 'other',
     title: 'Open Training Session',
     description: 'Free entry open practice with fan Q&A.',
     event_description: null,
@@ -203,6 +228,11 @@ let events: TicketingEventWithDerived[] = [
     venue_city: 'Round Rock',
     venue_state: 'TX',
     venue_postal_code: '78664',
+    venue_address_line1: null,
+    venue_address_line2: null,
+    venue_country: 'US',
+    venue_is_virtual: false,
+    venue_virtual_link: null,
     sales_start_at: null,
     sales_end_at: null,
     cover_image_path: null,
@@ -221,6 +251,26 @@ const fakeOrdersByEvent: Record<string, { ticketsSold: number; revenueCents: num
   'evt-4': { ticketsSold: 0, revenueCents: 0 },
   'evt-5': { ticketsSold: 4950, revenueCents: 19050000 },
   'evt-6': { ticketsSold: 0, revenueCents: 0 },
+}
+
+function mapTicketType(event: TicketingEventWithDerived, type: NonNullable<TicketingEventWithDerived['ticket_types']>[number], index: number): TicketType {
+  return {
+    id: type.id,
+    org_id: event.org_id,
+    ticketed_event_id: event.id,
+    name: type.name,
+    description: null,
+    price_cents: type.price_cents,
+    currency: 'USD',
+    capacity_total: type.capacity_total ?? null,
+    capacity_remaining: type.capacity_remaining ?? null,
+    sales_start_at: event.sales_start_at ?? null,
+    sales_end_at: event.sales_end_at ?? null,
+    sort_order: index,
+    is_active: true,
+    created_at: event.created_at,
+    updated_at: event.updated_at,
+  }
 }
 
 function computeSaleStatus(event: TicketingEventWithDerived, ticketsSold: number, capacity: number | null): TicketSaleStatus {
@@ -384,6 +434,11 @@ export function createFakeTicketingEvent(orgId: string, payload: Partial<Tickete
     venue_city: payload.venue_city || null,
     venue_state: payload.venue_state || null,
     venue_postal_code: payload.venue_postal_code || null,
+    venue_address_line1: payload.venue_address_line1 || null,
+    venue_address_line2: payload.venue_address_line2 || null,
+    venue_country: payload.venue_country || 'US',
+    venue_is_virtual: payload.venue_is_virtual ?? false,
+    venue_virtual_link: payload.venue_virtual_link || null,
     sales_start_at: payload.sales_start_at || null,
     sales_end_at: payload.sales_end_at || null,
     cover_image_path: payload.cover_image_path || null,
@@ -420,7 +475,7 @@ export function deleteFakeTicketingEvent(orgId: string, id: string) {
 export function duplicateFakeTicketingEvent(orgId: string, id: string) {
   const source = events.find(e => e.id === id && e.org_id === orgId)
   if (!source) return null
-  const clone = { ...source, id: `evt-${events.length + 1}`, title: `${source.title} (Copy)`, status: 'draft' }
+  const clone: TicketingEventWithDerived = { ...source, id: `evt-${events.length + 1}`, title: `${source.title} (Copy)`, status: 'draft' }
   events = [clone, ...events]
   return deriveEvent(clone)
 }
@@ -447,4 +502,31 @@ export function bulkFakeTicketingEvents(orgId: string, ids: string[], action: st
     return { duplicated: created.length, new_ids: created }
   }
   return { handled: false }
+}
+
+export function getFakeTicketedEventById(eventId: string, orgId?: string | null): TicketedEvent | null {
+  const match = events.find(event => event.id === eventId && (!orgId || event.org_id === orgId))
+  return match ? deriveEvent(match) : null
+}
+
+export function getFakeTicketTypesForEvent(eventId: string, orgId?: string | null): TicketType[] {
+  const match = events.find(event => event.id === eventId && (!orgId || event.org_id === orgId))
+  if (!match || !match.ticket_types) return []
+  return match.ticket_types.map((type, index) => mapTicketType(match, type, index))
+}
+
+export function adjustFakeTicketTypeCapacity(eventId: string, ticketTypeId: string, delta: number): boolean {
+  const eventIndex = events.findIndex(event => event.id === eventId)
+  if (eventIndex === -1) return false
+  const event = events[eventIndex]
+  if (!event.ticket_types) return false
+  const ticketType = event.ticket_types.find(type => type.id === ticketTypeId)
+  if (!ticketType) return false
+  if (ticketType.capacity_remaining === null || ticketType.capacity_remaining === undefined) {
+    return true
+  }
+  const nextRemaining = ticketType.capacity_remaining + delta
+  if (nextRemaining < 0) return false
+  ticketType.capacity_remaining = nextRemaining
+  return true
 }

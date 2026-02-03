@@ -12,6 +12,8 @@ export function getHostAppContext(hostname: string = window.location.hostname): 
   return 'unknown'
 }
 
+import { EXTERNAL_URLS } from '../constants/api'
+
 /**
  * Get the current base URL for email redirects and links
  * Uses window.location.origin to support localhost development
@@ -22,6 +24,6 @@ export function getBaseUrl(): string {
     return window.location.origin
   }
   // Fallback for SSR (shouldn't happen in this app, but safe default)
-  return 'https://platform.youthsports.team'
+  return EXTERNAL_URLS.PLATFORM
 }
 

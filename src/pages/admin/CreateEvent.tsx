@@ -13,11 +13,11 @@ import { getTeams } from '../../data/services/teamsService'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { useFeatureGate } from '../../lib/featureGate'
-import { 
-  AdminPageHeader, 
-  Card, 
-  Button, 
-  Input, 
+import {
+  AdminPageHeader,
+  Card,
+  Button,
+  Input,
   Select,
   DatePicker,
   TimePicker,
@@ -27,14 +27,16 @@ import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import type { StructuredAddress } from '../../types/location'
 import { startTransition } from 'react'
-import { 
-    EventFormData, 
-    EVENT_TYPE_LABELS, 
+import {
+    EventFormData,
+    EVENT_TYPE_LABELS,
     EventType,
 } from '../../types/calendar'
+import { API_TIMEOUT_MS } from '../../constants/api'
+import { STORAGE_KEYS, STORAGE_EXPIRY } from '../../constants/storage'
 
-const STORAGE_KEY = 'createEvent_formData'
-const DRAFT_TTL_MS = 2 * 60 * 60 * 1000 // 2 hours
+const STORAGE_KEY = STORAGE_KEYS.FORM_AUTOSAVE
+const DRAFT_TTL_MS = STORAGE_EXPIRY.FORM_AUTOSAVE
 
 const validateCoordinate = (value: number | string | null | undefined): number | null => {
   if (value === null || value === undefined) return null
@@ -254,7 +256,7 @@ export default function CreateEvent() {
     window.addEventListener('beforeunload', handleBeforeUnload)
     
     // Also save periodically (every 30 seconds) while user is working
-    const autoSaveInterval = setInterval(saveFormData, 30000)
+    const autoSaveInterval = setInterval(saveFormData, API_TIMEOUT_MS)
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
@@ -1088,7 +1090,7 @@ export default function CreateEvent() {
                             name="ticketing.sales_start_at"
                             control={control}
                             rules={{
-                              validate: (value) => {
+                              validate: (_value) => {
                                 if (watchTicketSalesImmediate) return true
                                 return true
                               }

@@ -34,6 +34,8 @@ import {
     RecurringEditMode,
 } from '../../types/calendar'
 import { uploadTicketBanner } from '../../data/services/organizationService'
+import { validateDeleteEvent, validateCancelEvent, validateUpdateEvent, EVENT_ERRORS } from '../../utils/eventValidation'
+import { useOrganization } from '../../contexts/OrganizationContext'
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string; team_id: string }
@@ -68,8 +70,10 @@ export default function EditEvent() {
   const [hasPaidOrders, setHasPaidOrders] = useState(false)
   const [ticketedEventId, setTicketedEventId] = useState<string | null>(null)
   const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [isPastEvent, setIsPastEvent] = useState(false)
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { allowed: ticketingAllowed, loading: ticketingGateLoading } = useFeatureGate('ticketing')
   const navigate = useNavigate()
   const t = useT()
@@ -252,6 +256,7 @@ export default function EditEvent() {
       // Populate form with safe defaults
       const startDate = event.start_time ? new Date(event.start_time) : new Date()
       const endDate = event.end_time ? new Date(event.end_time) : new Date()
+      setIsPastEvent(endDate < new Date())
       
       setValue('title', event.title || '')
       setValue('type', (event.type as any) || 'practice')
@@ -492,6 +497,29 @@ export default function EditEvent() {
             return
           }
           throw configError
+        }
+      }
+
+      // Validate update permissions
+      const { data: currentEventData } = await supabaseAny
+        .from('events')
+        .select('id, start_time, is_cancelled, status, type, org_id, team_id')
+        .eq('id', eventId)
+        .single()
+
+      if (currentEventData) {
+        const validation = await validateUpdateEvent(
+          context,
+          currentEventData,
+          currentOrganization,
+          {
+            start_time: data.start_time,
+            venue_name: data.location.venue_name,
+          },
+          false
+        )
+        if (!validation.allowed) {
+          throw new Error(validation.error || EVENT_ERRORS.PERMISSION_DENIED)
         }
       }
 
@@ -901,6 +929,7 @@ export default function EditEvent() {
 
         <Card>
           <form onSubmit={handleSubmit(onSubmit)}>
+            <fieldset disabled={isPastEvent}>
             {error && (
               <div className="oa-alert oa-alert--error pa-mb-4">
                 <div>{error}</div>
@@ -1194,7 +1223,6 @@ export default function EditEvent() {
                                 }
                               }}
                               label="Immediately"
-                              helper="Allow tickets to go on sale right away. Turn off to schedule a sales window."
                               disabled={hasPaidOrders}
                             />
                           )}
@@ -1538,45 +1566,48 @@ export default function EditEvent() {
             </div>
           )}
 
-          {/* SECTION 6: ACTIONS */}
-          <div className="pa-mb-4">
-            <div className="pa-flex pa-flex-col sm:pa-flex-row pa-justify-between pa-items-stretch sm:pa-items-center pa-gap-3 pa-mb-4">
-              <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => setCancelDialog(true)}
-                  disabled={saving || actionLoading}
-                  className="w-full sm:w-auto min-h-[44px] pa-text-warning"
+            {/* SECTION 6: ACTIONS */}
+            <div className="pa-mb-4">
+              {!isPastEvent && (
+                <div className="pa-flex pa-flex-col sm:pa-flex-row pa-justify-between pa-items-stretch sm:pa-items-center pa-gap-3 pa-mb-4">
+                  <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setCancelDialog(true)}
+                      disabled={saving || actionLoading}
+                      className="w-full sm:w-auto min-h-[44px] pa-text-warning"
+                    >
+                      <span className="material-symbols-outlined oa-action-icon">cancel</span>
+                      Cancel Event
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setDeleteDialog(true)}
+                      disabled={saving || actionLoading}
+                      className="w-full sm:w-auto min-h-[44px] pa-text-danger"
+                    >
+                      <span className="material-symbols-outlined oa-action-icon">delete</span>
+                      Delete Event
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <div className="pa-form-actions">
+                <OrgAdminButton variant="primary" onClick={() => navigate(getLink('admin.events.list'))} disabled={saving || actionLoading} className="w-full sm:w-auto">Cancel</OrgAdminButton>
+                <Button 
+                  type="submit" 
+                  loading={saving}
+                  disabled={isPastEvent || isOffline || USE_FAKE_DATA || saving || actionLoading}
+                  title={isPastEvent ? 'Past events cannot be edited' : isOffline ? 'Cannot save while offline' : USE_FAKE_DATA ? 'Demo mode: changes not saved' : undefined}
+                  className="pa-form-submit-btn w-full sm:w-auto"
                 >
-                  <span className="material-symbols-outlined oa-action-icon">cancel</span>
-                  Cancel Event
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setDeleteDialog(true)}
-                  disabled={saving || actionLoading}
-                  className="w-full sm:w-auto min-h-[44px] pa-text-danger"
-                >
-                  <span className="material-symbols-outlined oa-action-icon">delete</span>
-                  Delete Event
+                  Update Event
                 </Button>
               </div>
             </div>
-            <div className="pa-form-actions">
-              <OrgAdminButton variant="primary" onClick={() => navigate(getLink('admin.events.list'))} disabled={saving || actionLoading} className="w-full sm:w-auto">Cancel</OrgAdminButton>
-              <Button 
-                type="submit" 
-                loading={saving}
-                disabled={isOffline || USE_FAKE_DATA || saving || actionLoading}
-                title={isOffline ? 'Cannot save while offline' : USE_FAKE_DATA ? 'Demo mode: changes not saved' : undefined}
-                className="pa-form-submit-btn w-full sm:w-auto"
-              >
-                Update Event
-              </Button>
-            </div>
-          </div>
-        </form>
-      </Card>
+            </fieldset>
+          </form>
+        </Card>
       </div>
 
       {/* Delete Confirmation Dialog */}
@@ -1595,6 +1626,21 @@ export default function EditEvent() {
           setActionError(null)
           
           try {
+            const { data: eventData } = await supabaseAny
+              .from('events')
+              .select('id, start_time, is_cancelled, status, type, created_at, org_id, team_id, parent_tournament_id, is_recurring')
+              .eq('id', eventId)
+              .single()
+
+            if (!eventData) {
+              throw new Error('Event not found')
+            }
+
+            const validation = await validateDeleteEvent(context, eventData, currentOrganization, false)
+            if (!validation.allowed) {
+              throw new Error(validation.error || EVENT_ERRORS.DELETE_BLOCKED_PERMISSION)
+            }
+
             const { error } = await supabase
               .from('events')
               .delete()
@@ -1634,6 +1680,21 @@ export default function EditEvent() {
           setActionError(null)
           
           try {
+            const { data: eventData } = await supabaseAny
+              .from('events')
+              .select('id, start_time, is_cancelled, status, type, org_id, team_id')
+              .eq('id', eventId)
+              .single()
+
+            if (!eventData) {
+              throw new Error('Event not found')
+            }
+
+            const validation = await validateCancelEvent(context, eventData, currentOrganization, false)
+            if (!validation.allowed) {
+              throw new Error(validation.error || EVENT_ERRORS.CANCEL_BLOCKED_PERMISSION)
+            }
+
             const { error } = await supabase
               .from('events')
               .update({
@@ -1648,15 +1709,15 @@ export default function EditEvent() {
             
              // Distribute notifications for cancellation
              const { distributeEventCancelNotifications } = await import('../../data/services/notificationDistribution')
-             const { data: eventData } = await supabaseAny.from('events').select('title, team_id, org_id, start_time').eq('id', eventId).single()
+             const { data: eventDataForNotification } = await supabaseAny.from('events').select('title, team_id, org_id, start_time').eq('id', eventId).single()
              
-             if (eventData) {
+             if (eventDataForNotification) {
                distributeEventCancelNotifications({
                  id: eventId,
-                 team_id: eventData.team_id,
-                 org_id: eventData.org_id,
-                 title: eventData.title,
-                 start_time: eventData.start_time,
+                 team_id: eventDataForNotification.team_id,
+                 org_id: eventDataForNotification.org_id,
+                 title: eventDataForNotification.title,
+                 start_time: eventDataForNotification.start_time,
                  created_by_user_id: context.userId
                }).catch(err => console.error('Failed to distribute event cancel notifications:', err))
              }

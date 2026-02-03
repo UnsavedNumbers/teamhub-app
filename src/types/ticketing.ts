@@ -168,6 +168,8 @@ export interface Ticket {
   used_by_user_id: string | null
   created_at: string
   updated_at: string
+  // Relations (populated by select)
+  ticket_orders?: { purchaser_email: string }
 }
 
 export interface TicketScan {
@@ -215,6 +217,7 @@ export interface CreateCheckoutRequest {
   }>
   purchaser_email: string
   org_slug?: string // Optional org slug for URL construction in checkout
+  return_base_url?: string // Optional base URL for redirects (e.g. window.location.origin)
 }
 
 export interface CreateCheckoutResponse {
@@ -229,6 +232,23 @@ export interface ValidateScanRequest {
   client_device_id?: string
 }
 
+export interface OrderContext {
+  order_id: string
+  total_tickets: number
+  active_count: number
+  used_count: number
+  refunded_count: number
+  remaining_active: number
+  next_ticket_id: string | null
+  next_ticket_type: string | null
+  tickets_by_type: Record<string, {
+    total: number
+    active: number
+    used: number
+    refunded: number
+  }>
+}
+
 export interface ValidateScanResponse {
   result: TicketScanResult
   reason?: 'not_found' | 'wrong_event' | 'refunded' | 'voided' | 'invalid_status'
@@ -240,6 +260,16 @@ export interface ValidateScanResponse {
   original_device_id?: string | null
   validated_count?: number
   remaining_capacity?: number | null
+  purchaser_name?: string | null
+  // Event mismatch handling
+  event_mismatch?: boolean
+  ticket_event_id?: string
+  ticket_event_name?: string
+  selected_event_id?: string
+  selected_event_name?: string
+  qr_token_raw?: string // Passed back for force_validate
+  // Order context for multi-ticket orders
+  order_context?: OrderContext
 }
 
 export interface StaffLinkExchangeRequest {

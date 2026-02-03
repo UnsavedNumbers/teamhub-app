@@ -5,14 +5,16 @@
  * Must be wrapped in OrgScopedRoute
  */
 
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { useParams } from 'react-router-dom'
-import { useQuery, useMutation } from '@tanstack/react-query'
-import { getTicketedEventById, getTicketTypesForEvent, createCheckoutSession } from '@/data/services'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { createCheckoutSession, getTicketedEventById, getTicketTypesForEvent } from '@/data/services'
 import { formatCurrency } from '@/types/ticketing'
-import type { TicketType } from '@/types/ticketing'
+import type { TicketType, TicketedEvent } from '@/types/ticketing'
 import type { OrgContext } from '@/utils/orgResolution'
 import { OrgScopedRoute } from '@/components/OrgScopedRoute'
+import { showError } from '@/utils/toast'
+import { useOffline } from '@/hooks/useOffline'
 
 interface CartItem {
   ticket_type_id: string
@@ -20,81 +22,190 @@ interface CartItem {
   ticketType: TicketType
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 function TicketEventDetailContent({ org }: { org: OrgContext }) {
   const { eventId, orgSlug } = useParams<{ eventId: string; orgSlug: string }>()
+  const { isOffline } = useOffline()
   const [cart, setCart] = useState<CartItem[]>([])
   const [purchaserEmail, setPurchaserEmail] = useState('')
+  const [emailTouched, setEmailTouched] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [expandedTicketType, setExpandedTicketType] = useState<TicketType | null>(null)
 
-  const { data: eventResponse } = useQuery({
+  const eventQuery = useQuery<TicketedEvent, Error>({
     queryKey: ['ticketed-event', eventId, org.id],
     queryFn: () => getTicketedEventById(eventId!, org.id),
     enabled: !!eventId && !!org.id,
   })
 
-  const { data: ticketTypesResponse } = useQuery({
+  const ticketTypesQuery = useQuery<TicketType[], Error>({
     queryKey: ['ticket-types', eventId, org.id],
     queryFn: () => getTicketTypesForEvent(eventId!, org.id),
     enabled: !!eventId && !!org.id,
   })
 
-  const event = (eventResponse as any)?.data ?? eventResponse ?? null
-  const ticketTypes = ((ticketTypesResponse as any)?.data ?? ticketTypesResponse ?? []) as TicketType[]
+  const event = eventQuery.data ?? null
+  const ticketTypes = useMemo(() => ticketTypesQuery.data ?? [], [ticketTypesQuery.data])
+
+  useEffect(() => {
+    if (!expandedTicketType) return
+    const handleKeyDown = (eventKey: KeyboardEvent) => {
+      if (eventKey.key === 'Escape') {
+        setExpandedTicketType(null)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [expandedTicketType])
+
+  useEffect(() => {
+    setCart((prev) =>
+      prev
+        .map((item) => {
+          const latest = ticketTypes.find((type) => type.id === item.ticket_type_id)
+          if (!latest) return null
+          const available = latest.capacity_remaining ?? item.quantity
+          const nextQuantity = Math.min(item.quantity, available)
+          if (nextQuantity <= 0) return null
+          return { ...item, quantity: nextQuantity, ticketType: latest }
+        })
+        .filter((item): item is CartItem => Boolean(item))
+    )
+  }, [ticketTypes])
+
+  const updateQuantity = useCallback(
+    (ticketTypeId: string, delta: number) => {
+      setCart((prev) => {
+        const ticketType = ticketTypes.find((type) => type.id === ticketTypeId)
+        if (!ticketType) return prev
+
+        const existing = prev.find((item) => item.ticket_type_id === ticketTypeId)
+        const available = ticketType.capacity_remaining ?? Infinity
+        const currentQuantity = existing?.quantity ?? 0
+        const newQuantity = currentQuantity + delta
+
+        if (newQuantity <= 0) {
+          return prev.filter((item) => item.ticket_type_id !== ticketTypeId)
+        }
+        if (newQuantity > available) {
+          return prev
+        }
+
+        if (existing) {
+          return prev.map((item) =>
+            item.ticket_type_id === ticketTypeId ? { ...item, quantity: newQuantity, ticketType } : item,
+          )
+        }
+        return [...prev, { ticket_type_id: ticketTypeId, quantity: newQuantity, ticketType }]
+      })
+    },
+    [ticketTypes],
+  )
+
+  const totalCents = useMemo(
+    () => cart.reduce((sum, item) => sum + item.ticketType.price_cents * item.quantity, 0),
+    [cart],
+  )
+
+  const salesStatus = useMemo(() => {
+    if (!event) return { isOnSale: false, message: 'Event not available.' }
+    const now = new Date()
+    const starts = event.sales_start_at ? new Date(event.sales_start_at) : null
+    const ends = event.sales_end_at ? new Date(event.sales_end_at) : null
+
+    if (event.status !== 'published') {
+      return { isOnSale: false, message: 'Ticket sales are not currently open.' }
+    }
+    if (starts && starts > now) {
+      return { isOnSale: false, message: 'Ticket sales have not started yet.' }
+    }
+    if (ends && ends < now) {
+      return { isOnSale: false, message: 'Ticket sales have ended.' }
+    }
+    return { isOnSale: true, message: '' }
+  }, [event])
+
+  const hasAvailableTickets = useMemo(
+    () => ticketTypes.some((type) => type.capacity_remaining === null || type.capacity_remaining > 0),
+    [ticketTypes],
+  )
+
+  const emailIsValid = EMAIL_REGEX.test(purchaserEmail.trim())
+  const emailError = emailTouched && !emailIsValid ? 'Enter a valid email address.' : null
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
-      // We need to pass org_slug to the checkout function
-      // For now, we'll update the checkout function to accept it
+      setSubmitError(null)
+
+      if (!eventId) throw new Error('Missing event')
+      if (isOffline) throw new Error('You are offline. Please reconnect to checkout.')
+      if (!salesStatus.isOnSale) throw new Error(salesStatus.message)
+      if (!hasAvailableTickets) throw new Error('Tickets are sold out.')
+
+      const trimmedEmail = purchaserEmail.trim()
+      if (!EMAIL_REGEX.test(trimmedEmail)) throw new Error('Enter a valid email address.')
+      if (cart.length === 0) throw new Error('Select at least one ticket.')
+
       const response = await createCheckoutSession({
-        ticketed_event_id: eventId!,
+        ticketed_event_id: eventId,
         items: cart.map((item) => ({
           ticket_type_id: item.ticket_type_id,
           quantity: item.quantity,
         })),
-        purchaser_email: purchaserEmail,
-        org_slug: orgSlug!, // Pass org slug for URL construction
+        purchaser_email: trimmedEmail,
+        org_slug: orgSlug,
       })
-      return response
-    },
-    onSuccess: ({ data, error }) => {
-      if (data && !error && data.checkout_url) {
-        window.location.href = data.checkout_url
+
+      if (response.error) {
+        throw response.error
       }
+      if (!response.data?.checkout_url) {
+        throw new Error('Checkout could not be started.')
+      }
+
+      return response.data
+    },
+    onSuccess: (data) => {
+      window.location.assign(data.checkout_url)
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Checkout failed.'
+      setSubmitError(message)
+      showError(message)
     },
   })
 
-  const updateQuantity = (ticketTypeId: string, delta: number) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.ticket_type_id === ticketTypeId)
-      const ticketType = ticketTypes.find((t) => t.id === ticketTypeId)!
-      const available = ticketType.capacity_remaining ?? Infinity
-      const newQuantity = existing ? existing.quantity + delta : delta
-
-      if (newQuantity <= 0) {
-        return prev.filter((item) => item.ticket_type_id !== ticketTypeId)
-      }
-      if (newQuantity > available) {
-        return prev
-      }
-
-      if (existing) {
-        return prev.map((item) =>
-          item.ticket_type_id === ticketTypeId ? { ...item, quantity: newQuantity } : item,
-        )
-      }
-      return [...prev, { ticket_type_id: ticketTypeId, quantity: newQuantity, ticketType }]
-    })
+  if (!eventId) {
+    return (
+      <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500">Event not found.</p>
+        </div>
+      </div>
+    )
   }
 
-  const totalCents = cart.reduce(
-    (sum, item) => sum + item.ticketType.price_cents * item.quantity,
-    0,
-  )
-
-  if (!event) {
+  if (eventQuery.isLoading) {
     return (
       <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] flex items-center justify-center">
         <p className="text-gray-500">Loading event...</p>
+      </div>
+    )
+  }
+
+  if (eventQuery.isError || !event) {
+    return (
+      <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500">{eventQuery.error?.message || 'Event not found.'}</p>
+          <button
+            onClick={() => eventQuery.refetch()}
+            className="mt-4 px-4 py-2 bg-[var(--org-btn-primary-bg)] text-[var(--org-btn-primary-text)] rounded-lg"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     )
   }
@@ -105,6 +216,14 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
     : 'Location TBD'
   const dateFormatted = eventDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
   const timeFormatted = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+
+  const checkoutDisabled =
+    checkoutMutation.isPending ||
+    isOffline ||
+    !salesStatus.isOnSale ||
+    !hasAvailableTickets ||
+    cart.length === 0 ||
+    !emailIsValid
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white">
@@ -180,10 +299,28 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
               </div>
 
               <div className="bg-white dark:bg-gray-900 rounded-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] overflow-hidden border border-[#f0f2f4] dark:border-gray-800">
+                {ticketTypesQuery.isLoading && (
+                  <div className="p-6 text-center text-gray-500">Loading ticket options...</div>
+                )}
+                {ticketTypesQuery.isError && (
+                  <div className="p-6 text-center">
+                    <p className="text-red-500">{ticketTypesQuery.error?.message || 'Unable to load ticket options.'}</p>
+                    <button
+                      onClick={() => ticketTypesQuery.refetch()}
+                      className="mt-3 px-4 py-2 bg-[var(--org-btn-primary-bg)] text-[var(--org-btn-primary-text)] rounded-lg"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+                {!ticketTypesQuery.isLoading && !ticketTypesQuery.isError && ticketTypes.length === 0 && (
+                  <div className="p-6 text-center text-gray-500">Tickets are not available for this event.</div>
+                )}
                 {ticketTypes.map((ticketType, idx) => {
                   const cartItem = cart.find((item) => item.ticket_type_id === ticketType.id)
                   const quantity = cartItem?.quantity || 0
                   const available = ticketType.capacity_remaining ?? Infinity
+                  const isSoldOut = available <= 0
 
                   return (
                     <div
@@ -194,29 +331,35 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
                     >
                       <div className="mb-4 md:mb-0">
                         <div className="flex items-center gap-2">
-                            <h3 className="text-xl font-bold text-[var(--org-text-primary)]">{ticketType.name}</h3>
-                            {ticketType.description && (
-                                <button
-                                    onClick={() => setExpandedTicketType(ticketType)}
-                                    className="text-[var(--org-btn-primary-bg)] hover:opacity-80"
-                                    style={{ color: 'var(--org-btn-primary-bg)' }}
-                                    aria-label="More info"
-                                    type="button"
-                                >
-                                    <span className="material-symbols-outlined text-xl align-middle">info</span>
-                                </button>
-                            )}
+                          <h3 className="text-xl font-bold text-[var(--org-text-primary)]">{ticketType.name}</h3>
+                          {ticketType.description && (
+                            <button
+                              onClick={() => setExpandedTicketType(ticketType)}
+                              className="text-[var(--org-btn-primary-bg)] hover:opacity-80"
+                              style={{ color: 'var(--org-btn-primary-bg)' }}
+                              aria-label="More info"
+                              type="button"
+                            >
+                              <span className="material-symbols-outlined text-xl align-middle">info</span>
+                            </button>
+                          )}
                         </div>
                         <div className="mt-2 text-[var(--org-text-accent)] font-bold text-lg" style={{ color: 'var(--org-link-color)' }}>
                           {formatCurrency(ticketType.price_cents)}{' '}
                           <span className="text-xs font-normal text-[var(--org-text-secondary)] uppercase">per ticket</span>
                         </div>
+                        {ticketType.capacity_remaining !== null && (
+                          <p className="text-xs text-[var(--org-text-secondary)] mt-1">
+                            {isSoldOut ? 'Sold out' : `${ticketType.capacity_remaining} left`}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => updateQuantity(ticketType.id, -1)}
-                          disabled={quantity === 0}
+                          disabled={quantity === 0 || checkoutMutation.isPending}
                           className="bg-[var(--org-btn-primary-bg)] hover:opacity-90 disabled:bg-[var(--org-btn-disabled-bg)] disabled:text-[var(--org-btn-disabled-text)] disabled:cursor-not-allowed text-[var(--org-btn-primary-text)] size-12 flex items-center justify-center rounded-lg transition-colors"
+                          type="button"
                         >
                           <span className="material-symbols-outlined">remove</span>
                         </button>
@@ -225,8 +368,9 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
                         </div>
                         <button
                           onClick={() => updateQuantity(ticketType.id, 1)}
-                          disabled={available <= quantity}
+                          disabled={available <= quantity || isSoldOut || checkoutMutation.isPending}
                           className="bg-[var(--org-btn-primary-bg)] hover:opacity-90 disabled:bg-[var(--org-btn-disabled-bg)] disabled:text-[var(--org-btn-disabled-text)] disabled:cursor-not-allowed text-[var(--org-btn-primary-text)] size-12 flex items-center justify-center rounded-lg transition-colors"
+                          type="button"
                         >
                           <span className="material-symbols-outlined">add</span>
                         </button>
@@ -261,28 +405,56 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
                       </div>
                     </div>
 
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-[#111418] dark:text-white mb-2">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        value={purchaserEmail}
-                        onChange={(e) => setPurchaserEmail(e.target.value)}
-                        placeholder="your@email.com"
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[#111418] dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
-                        style={{ '--tw-ring-color': 'var(--org-btn-primary-bg)' } as React.CSSProperties}
-                        required
-                      />
-                    </div>
+                    {isOffline && (
+                      <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
+                        You are offline. Checkout is unavailable until you reconnect.
+                      </div>
+                    )}
+                    {!salesStatus.isOnSale && (
+                      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                        {salesStatus.message}
+                      </div>
+                    )}
+                    {!hasAvailableTickets && (
+                      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                        Tickets are sold out for this event.
+                      </div>
+                    )}
 
-                    <button
-                      onClick={() => checkoutMutation.mutate()}
-                      disabled={cart.length === 0 || !purchaserEmail || checkoutMutation.isPending}
-                      className="w-full bg-[var(--org-btn-primary-bg)] hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed text-[var(--org-btn-primary-text)] font-black py-4 rounded-lg shadow-[0_8px_0px_0px_rgba(0,0,0,0.2)] transition-all active:translate-y-1 active:shadow-none uppercase tracking-widest mb-6"
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        setEmailTouched(true)
+                        checkoutMutation.mutate()
+                      }}
                     >
-                      {checkoutMutation.isPending ? 'Processing...' : 'Checkout Now'}
-                    </button>
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-[#111418] dark:text-white mb-2">
+                          Email
+                        </label>
+                        <input
+                          type="email"
+                          value={purchaserEmail}
+                          onChange={(e) => setPurchaserEmail(e.target.value)}
+                          onBlur={() => setEmailTouched(true)}
+                          placeholder="your@email.com"
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[#111418] dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
+                          style={{ '--tw-ring-color': 'var(--org-btn-primary-bg)' } as CSSProperties}
+                          required
+                        />
+                        {emailError && <p className="mt-1 text-xs text-red-500">{emailError}</p>}
+                      </div>
+
+                      {submitError && <p className="mb-4 text-xs text-red-500">{submitError}</p>}
+
+                      <button
+                        type="submit"
+                        disabled={checkoutDisabled}
+                        className="w-full bg-[var(--org-btn-primary-bg)] hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed text-[var(--org-btn-primary-text)] font-black py-4 rounded-lg shadow-[0_8px_0px_0px_rgba(0,0,0,0.2)] transition-all active:translate-y-1 active:shadow-none uppercase tracking-widest mb-6"
+                      >
+                        {checkoutMutation.isPending ? 'Processing...' : 'Checkout Now'}
+                      </button>
+                    </form>
 
                     <div className="space-y-3">
                       <div className="flex items-start gap-3 text-xs text-[#617589] dark:text-gray-500">
@@ -311,6 +483,7 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
               <button 
                 onClick={() => setExpandedTicketType(null)} 
                 className="text-[var(--org-text-muted)] hover:text-[var(--org-text-primary)]"
+                type="button"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -324,6 +497,7 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
                <button 
                 onClick={() => setExpandedTicketType(null)} 
                 className="px-4 py-2 border border-[var(--org-border-default)] bg-[var(--org-surface-card)] text-[var(--org-text-primary)] rounded-lg font-medium hover:bg-[var(--org-surface-hover)] transition-colors"
+                type="button"
                >
                  Close
                </button>

@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabase'
 import type { SportFieldDefinition } from '../../types/athleteSportProfiles'
 import type { SportCode, FieldGroup } from '../../types/sports'
 import { getSportFieldCatalog, SPORT_FIELD_CATALOG, type FieldCatalogEntry } from '../../constants/sportFieldCatalog'
+import { CACHE_TTL } from '../../constants/api'
 
 const isMissingTableError = (err: any) =>
     err?.code === 'PGRST205' ||
@@ -29,7 +30,7 @@ const supabaseAny = supabase as any
  * Cache is cleared on page reload, which is acceptable for this use case
  */
 const fieldDefinitionsCache = new Map<string, SportFieldDefinition[]>()
-const CACHE_DURATION_MS = 1000 * 60 * 60 // 1 hour
+const CACHE_DURATION_MS = CACHE_TTL.FIELD_DEFINITIONS_MS
 const cacheTimestamps = new Map<string, number>()
 
 /**

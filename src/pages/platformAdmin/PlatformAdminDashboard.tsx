@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useT } from '../../i18n/useI18n'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { StatCard, PageHeader, Card, Badge, EmptyState, OfflineBanner } from '../../components/platformAdmin'
@@ -29,6 +30,7 @@ export default function PlatformAdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { profile } = useAuth()
+  const t = useT()
   const navigate = useNavigate()
 
   const fetchDashboardData = useCallback(async () => {
@@ -150,8 +152,8 @@ export default function PlatformAdminDashboard() {
     <div>
       <OfflineBanner />
       <PageHeader
-        title="Dashboard"
-        subtitle={`Signed in as ${profile?.email ?? 'unknown'}`}
+        title={t('platformAdmin.dashboard.title')}
+        subtitle={t('platformAdmin.dashboard.subtitle', { email: profile?.email ?? 'unknown' })}
       />
 
       {error && (
@@ -170,7 +172,7 @@ export default function PlatformAdminDashboard() {
             >
               warning
             </span>
-            <span className="pa-body-m">{error}. The platform admin views may not be set up yet.</span>
+            <span className="pa-body-m">{error}. {t('platformAdmin.dashboard.setupWarning')}</span>
           </div>
         </div>
       )}
@@ -178,23 +180,23 @@ export default function PlatformAdminDashboard() {
       {/* Stats Row 1: Organizations & Users */}
       <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4">
         <StatCard
-          label="Active Organizations"
+          label={t('platformAdmin.dashboard.activeOrganizations')}
           value={health?.active_organizations ?? 0}
           icon="apartment"
           onClick={() => navigate('/platform-admin/organizations')}
         />
         <StatCard
-          label="Trial Organizations"
+          label={t('platformAdmin.dashboard.trialOrganizations')}
           value={health?.trial_organizations ?? 0}
           icon="schedule"
-          meta={`${health?.suspended_organizations ?? 0} suspended`}
+          meta={t('platformAdmin.dashboard.suspendedOrganizations', { count: health?.suspended_organizations ?? 0 })}
           onClick={() => navigate('/platform-admin/organizations')}
         />
         <StatCard
-          label="Total Users"
+          label={t('platformAdmin.dashboard.totalUsers')}
           value={health?.total_users ?? 0}
           icon="group"
-          meta={`${health?.platform_admin_count ?? 0} platform admins`}
+          meta={t('platformAdmin.dashboard.platformAdmins', { count: health?.platform_admin_count ?? 0 })}
           onClick={() => navigate('/platform-admin/users')}
         />
         <StatCard

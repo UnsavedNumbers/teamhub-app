@@ -30,6 +30,7 @@ import { showError, showSuccess, showInfo } from '../utils/toast'
 import { supabase } from '../lib/supabase'
 import { getAthletes } from '../data/services/familyService'
 import { useT } from '../i18n/useI18n'
+import { QUERY_CONFIG } from '../constants/api'
 
 interface UserNotification {
   id: string
@@ -229,7 +230,7 @@ export default function Dashboard() {
     queryKey: ['athletes', context.orgId],
     queryFn: () => getAthletes(context),
     enabled: isReady,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: QUERY_CONFIG.STALE_TIME_MS,
   })
 
   useEffect(() => {

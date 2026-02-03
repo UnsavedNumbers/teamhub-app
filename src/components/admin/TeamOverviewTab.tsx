@@ -7,7 +7,7 @@
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
-import { getLink } from '../../utils/routes/helpers'
+import { getLink } from '../../utils/routes'
 import { Button } from '../platformAdmin'
 
 interface TeamOverviewTabProps {

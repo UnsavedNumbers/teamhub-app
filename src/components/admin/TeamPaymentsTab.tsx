@@ -202,28 +202,206 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
     const balance = parseInt(p.balance.replace(/[^0-9]/g, ''), 10) || 0
     return sum + balance
   }, 0)
+  const paidCount = payments.filter(p => p.status === 'paid').length
+  const partialCount = payments.filter(p => p.status === 'partial').length
+  const overdueCount = payments.filter(p => p.status === 'overdue').length
+
+  // Calculate total amounts
+  const totalAmountDue = payments.reduce((sum, p) => {
+    const amount = parseInt(p.amount_due.replace(/[^0-9]/g, ''), 10) || 0
+    return sum + amount
+  }, 0)
+  const totalAmountPaid = payments.reduce((sum, p) => {
+    const amount = parseInt(p.amount_paid.replace(/[^0-9]/g, ''), 10) || 0
+    return sum + amount
+  }, 0)
+
+  // Determine overall status
+  let overallStatus: 'active' | 'warning' | 'error' = 'active'
+  if (overdueCount > 0) {
+    overallStatus = 'error'
+  } else if (unpaidCount > 0 || partialCount > 0) {
+    overallStatus = 'warning'
+  }
 
   return (
     <div>
       {/* Top row with title and org-level link */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--pa-space-4)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--pa-space-6)' }}>
         <div>
           <h3 className="pa-h3" style={{ margin: 0 }}>
             Payments
           </h3>
-          {unpaidCount > 0 ? (
-            <p className="pa-body-s" style={{ color: 'var(--pa-danger)', margin: 'var(--pa-space-1) 0 0 0' }}>
-              {unpaidCount} unpaid • {formatCurrency(totalOutstanding)} outstanding
-            </p>
-          ) : (
-            <p className="pa-body-s dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 'var(--pa-space-1) 0 0 0' }}>
-              {payments.length} fee assignment{payments.length !== 1 ? 's' : ''}
-            </p>
-          )}
+          <p className="pa-body-s dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 'var(--pa-space-1) 0 0 0' }}>
+            {teamName}
+          </p>
         </div>
         <Button variant="secondary" size="small" onClick={handleViewOrganizationPayments}>
           View organization payments
         </Button>
+      </div>
+
+      {/* Summary card grid */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: 'var(--pa-space-4)',
+          marginBottom: 'var(--pa-space-6)',
+        }}
+      >
+        {/* Overall Status Card */}
+        <div 
+          className="pa-card" 
+          style={{ 
+            padding: 'var(--pa-space-5)',
+            background: overallStatus === 'error' 
+              ? 'color-mix(in srgb, rgb(239, 68, 68) 8%, transparent)'
+              : overallStatus === 'warning'
+              ? 'color-mix(in srgb, rgb(251, 191, 36) 8%, transparent)'
+              : 'color-mix(in srgb, rgb(16, 185, 129) 8%, transparent)',
+            border: overallStatus === 'error'
+              ? '1px solid color-mix(in srgb, rgb(239, 68, 68) 20%, transparent)'
+              : overallStatus === 'warning'
+              ? '1px solid color-mix(in srgb, rgb(251, 191, 36) 20%, transparent)'
+              : '1px solid color-mix(in srgb, rgb(16, 185, 129) 20%, transparent)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
+            <span 
+              className="pa-label dark:text-slate-400" 
+              style={{ 
+                color: overallStatus === 'error'
+                  ? 'rgb(239, 68, 68)'
+                  : overallStatus === 'warning'
+                  ? 'rgb(251, 191, 36)'
+                  : 'rgb(16, 185, 129)',
+                margin: 0,
+                fontWeight: 700,
+                textTransform: 'uppercase',
+              }}
+            >
+              Status
+            </span>
+          </div>
+          <div 
+            style={{ 
+              fontSize: '20px', 
+              fontWeight: 900,
+              color: overallStatus === 'error'
+                ? 'rgb(239, 68, 68)'
+                : overallStatus === 'warning'
+                ? 'rgb(251, 191, 36)'
+                : 'rgb(16, 185, 129)'
+            }}
+          >
+            {overallStatus === 'error' ? 'Overdue' : overallStatus === 'warning' ? 'Pending' : 'All Paid'}
+          </div>
+        </div>
+
+        {/* Total Due Card */}
+        <div className="pa-card" style={{ padding: 'var(--pa-space-5)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
+            <span className="pa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
+              Total Due
+            </span>
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--pa-n900)' }} className="dark:text-white">
+            {formatCurrency(totalAmountDue)}
+          </div>
+        </div>
+
+        {/* Total Paid Card */}
+        <div className="pa-card" style={{ padding: 'var(--pa-space-5)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
+            <span className="pa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
+              Total Paid
+            </span>
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: 900, color: 'rgb(16, 185, 129)' }}>
+            {formatCurrency(totalAmountPaid)}
+          </div>
+        </div>
+
+        {/* Outstanding Balance Card */}
+        <div className="pa-card" style={{ padding: 'var(--pa-space-5)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
+            <span className="pa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
+              Outstanding
+            </span>
+          </div>
+          <div 
+            style={{ 
+              fontSize: '20px', 
+              fontWeight: 900,
+              color: totalOutstanding > 0 ? 'rgb(239, 68, 68)' : 'var(--pa-n900)'
+            }}
+            className={totalOutstanding === 0 ? 'dark:text-white' : ''}
+          >
+            {formatCurrency(totalOutstanding)}
+          </div>
+        </div>
+
+        {/* Paid Count Card */}
+        <div 
+          className="pa-card" 
+          style={{ 
+            padding: 'var(--pa-space-5)',
+            background: 'color-mix(in srgb, rgb(16, 185, 129) 8%, transparent)',
+            border: '1px solid color-mix(in srgb, rgb(16, 185, 129) 20%, transparent)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
+            <span className="pa-label dark:text-slate-400" style={{ color: 'rgb(16, 185, 129)', margin: 0, fontWeight: 700 }}>
+              Paid
+            </span>
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: 900, color: 'rgb(16, 185, 129)' }}>
+            {paidCount}
+          </div>
+        </div>
+
+        {/* Partial Count Card */}
+        {partialCount > 0 && (
+          <div 
+            className="pa-card" 
+            style={{ 
+              padding: 'var(--pa-space-5)',
+              background: 'color-mix(in srgb, rgb(251, 191, 36) 8%, transparent)',
+              border: '1px solid color-mix(in srgb, rgb(251, 191, 36) 20%, transparent)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
+              <span className="pa-label dark:text-slate-400" style={{ color: 'rgb(251, 191, 36)', margin: 0, fontWeight: 700 }}>
+                Partial
+              </span>
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: 900, color: 'rgb(251, 191, 36)' }}>
+              {partialCount}
+            </div>
+          </div>
+        )}
+
+        {/* Overdue Count Card */}
+        {overdueCount > 0 && (
+          <div 
+            className="pa-card" 
+            style={{ 
+              padding: 'var(--pa-space-5)',
+              background: 'color-mix(in srgb, rgb(239, 68, 68) 8%, transparent)',
+              border: '1px solid color-mix(in srgb, rgb(239, 68, 68) 20%, transparent)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
+              <span className="pa-label dark:text-slate-400" style={{ color: 'rgb(239, 68, 68)', margin: 0, fontWeight: 700 }}>
+                Overdue
+              </span>
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: 900, color: 'rgb(239, 68, 68)' }}>
+              {overdueCount}
+            </div>
+          </div>
+        )}
       </div>
 
       <div

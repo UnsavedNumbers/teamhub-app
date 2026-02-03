@@ -73,6 +73,8 @@ export default function TravelDetailSlideOver({
 
     if (!planId) return null
 
+    const isPast = plan ? new Date(plan.end_date) < new Date() : false
+
     return (
         <div
             style={{
@@ -257,25 +259,41 @@ export default function TravelDetailSlideOver({
 
                 {!loading && !error && plan && (
                     <div className="oa-slideout-footer">
-                        <button
-                            className="oa-action-primary-lg"
-                            onClick={() => {
-                                if (onEdit) onEdit(plan.id)
-                                else navigate(getLink('admin.travel.edit', { id: plan.id }))
-                            }}
-                        >
-                            Edit Plan
-                        </button>
-                        <div className="oa-action-group">
-                            {plan.status !== 'published' && plan.status !== 'cancelled' && (
-                                <button className="oa-icon-btn-lg" onClick={() => onPublish && onPublish(plan.id)} title="Publish">
-                                    <span className="material-symbols-outlined">publish</span>
+                        <div className="oa-footer-stack">
+                            <button
+                                className="oa-btn oa-btn--primary"
+                                onClick={() => {
+                                    navigate(getLink('admin.travel.edit', { id: plan.id }))
+                                }}
+                            >
+                                View Travel Page
+                            </button>
+                            {!isPast && (
+                                <button
+                                    className="oa-btn oa-btn--primary"
+                                    onClick={() => {
+                                        if (onEdit) onEdit(plan.id)
+                                        else navigate(getLink('admin.travel.edit', { id: plan.id }))
+                                    }}
+                                >
+                                    Edit Plan
                                 </button>
                             )}
-                            <button className="oa-icon-btn-lg" onClick={() => onCancel && onCancel(plan.id)} title="Cancel plan">
-                                <span className="material-symbols-outlined">cancel</span>
-                            </button>
                         </div>
+                        {!isPast && (
+                            <div className="oa-footer-stack">
+                                {plan.status !== 'published' && plan.status !== 'cancelled' && (
+                                    <button className="oa-btn oa-btn--primary" onClick={() => onPublish && onPublish(plan.id)} title="Publish">
+                                        <span className="material-symbols-outlined" style={{ marginRight: 6 }}>publish</span>
+                                        Publish
+                                    </button>
+                                )}
+                                <button className="oa-btn oa-btn--primary" onClick={() => onCancel && onCancel(plan.id)} title="Cancel plan">
+                                    <span className="material-symbols-outlined" style={{ marginRight: 6 }}>cancel</span>
+                                    Cancel
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

@@ -34,6 +34,9 @@ export * from './preferencesService'
 // RSVP Services
 export * from './rsvpService'
 
+// Fan Services
+export * from './fanService'
+
 // Organization Settings Services
 export * from './organizationSettingsService'
 export * from './organizationService'

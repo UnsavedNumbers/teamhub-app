@@ -127,6 +127,18 @@ const portal = {
         icon: 'confirmation_number',
         description: 'Your event tickets',
     },
+    followedOrgs: {
+        path: '/portal/follows',
+        label: 'Followed Organizations',
+        icon: 'favorite',
+        description: 'Organizations you follow',
+    },
+    bookmarkedEvents: {
+        path: '/portal/bookmarks',
+        label: 'Bookmarked Events',
+        icon: 'bookmark',
+        description: 'Events you\'ve saved',
+    },
 
     // Athletes/Teams
     athletes: {
@@ -209,6 +221,44 @@ const portal = {
         path: '/portal/role-selection',
         label: 'Role Selection',
         icon: 'switch_account',
+    },
+
+    // Org-Scoped Public Routes
+    orgLanding: {
+        path: '/o/:orgSlug',
+        params: ['orgSlug'] as const,
+        label: 'Organization Landing',
+        icon: 'apartment',
+    },
+    orgTickets: {
+        path: '/o/:orgSlug/tickets',
+        params: ['orgSlug'] as const,
+        label: 'Organization Tickets',
+        icon: 'confirmation_number',
+    },
+    orgTicketEvent: {
+        path: '/o/:orgSlug/tickets/events/:eventId',
+        params: ['orgSlug', 'eventId'] as const,
+        label: 'Ticketed Event',
+        icon: 'event',
+    },
+    orgTicketOrder: {
+        path: '/o/:orgSlug/tickets/order/:orderId',
+        params: ['orgSlug', 'orderId'] as const,
+        label: 'Ticket Order',
+        icon: 'receipt_long',
+    },
+    orgTicketAccessLanding: {
+        path: '/o/:orgSlug/tickets/access',
+        params: ['orgSlug'] as const,
+        label: 'Ticket Access',
+        icon: 'qr_code_scanner',
+    },
+    orgTicketAccess: {
+        path: '/o/:orgSlug/tickets/access/:token',
+        params: ['orgSlug', 'token'] as const,
+        label: 'Ticket Access',
+        icon: 'qr_code_scanner',
     },
 } as const satisfies Record<string, RouteDefinition>
 
@@ -378,24 +428,26 @@ const admin = {
             icon: 'credit_card',
             description: 'Plan and billing',
             requiresOrg: false,
-        },
-        planSelection: {
-            path: '/admin/organization/billing/plan-selection',
-            label: 'Plan Selection',
-            icon: 'workspace_premium',
-            requiresOrg: false,
-        },
-        checkoutSuccess: {
-            path: '/admin/organization/billing/checkout/success',
-            label: 'Checkout Success',
-            icon: 'check_circle',
-            requiresOrg: false,
-        },
-        checkoutCancel: {
-            path: '/admin/organization/billing/checkout/cancel',
-            label: 'Checkout Cancelled',
-            icon: 'cancel',
-            requiresOrg: false,
+            routes: {
+                planSelection: {
+                    path: '/admin/organization/billing/plan-selection',
+                    label: 'Plan Selection',
+                    icon: 'workspace_premium',
+                    requiresOrg: false,
+                },
+                checkoutSuccess: {
+                    path: '/admin/organization/billing/checkout/success',
+                    label: 'Checkout Success',
+                    icon: 'check_circle',
+                    requiresOrg: false,
+                },
+                checkoutCancel: {
+                    path: '/admin/organization/billing/checkout/cancel',
+                    label: 'Checkout Cancelled',
+                    icon: 'cancel',
+                    requiresOrg: false,
+                },
+            },
         },
         trialExpired: {
             path: '/admin/organization/trial-expired',
@@ -896,6 +948,13 @@ const admin = {
             label: 'Photos',
             icon: 'photo_library',
             description: 'Photo galleries',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/photos/:id',
+            params: ['id'] as const,
+            label: 'Gallery',
+            icon: 'collections',
             requiresOrg: true,
         },
     },

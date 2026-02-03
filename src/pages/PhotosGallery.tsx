@@ -5,9 +5,10 @@
  * Supports both masonry (feed) and grid layouts.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import PhotoAlbum from 'react-photo-album'
+import 'react-photo-album/styles.css'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import { useUserContext } from '../hooks/useUserContext'
@@ -97,6 +98,30 @@ export default function PhotosGallery() {
 
     loadGallery()
   }, [context, isReady, id, filterAthleteId])
+
+  const albumPhotos: Photo[] = useMemo(
+    () =>
+      photos.map((photo, index) => {
+        const photoUrl = getGalleryPhotoUrl(photo.storage_path)
+        return {
+          src: photoUrl,
+          width: 800,
+          height: 600,
+          key: photo.id,
+          alt: `Photo ${index + 1}`,
+        } as Photo
+      }),
+    [photos]
+  )
+
+  const handlePhotoClick = ({ index }: { index: number }) => {
+    if (isManageMode && canModerate) {
+      const photo = photos[index]
+      setTaggingPhoto(photo)
+    } else {
+      setLightboxIndex(index)
+    }
+  }
 
   if (loading) {
     return (
@@ -372,31 +397,27 @@ export default function PhotosGallery() {
             </div>
           )}
 
-          {/* Photo grid */}
-          <PhotoAlbum
-            photos={photos.map((photo, index) => {
-              const photoUrl = getGalleryPhotoUrl(photo.storage_path)
-              return {
-                src: photoUrl,
-                width: 800,
-                height: 600,
-                key: photo.id,
-                alt: `Photo ${index + 1}`,
-              } as Photo
-            })}
-            layout={layout}
-            onClick={({ index }) => {
-              if (isManageMode && canModerate) {
-                // In manage mode, allow selection or tagging
-                const photo = photos[index]
-                setTaggingPhoto(photo)
-              } else {
-                setLightboxIndex(index)
-              }
-            }}
-            spacing={8}
-            padding={0}
-          />
+          {/* Photo grid: masonry (feed) or rows (grid) with layout-specific props */}
+          {layout === 'masonry' ? (
+            <PhotoAlbum
+              photos={albumPhotos}
+              layout="masonry"
+              columns={1}
+              onClick={handlePhotoClick}
+              spacing={8}
+              padding={0}
+            />
+          ) : (
+            <PhotoAlbum
+              photos={albumPhotos}
+              layout="rows"
+              targetRowHeight={(containerWidth) => (containerWidth >= 1200 ? 320 : containerWidth >= 600 ? 280 : containerWidth >= 300 ? 240 : 200)}
+              rowConstraints={{ maxPhotos: 2, minPhotos: 1 }}
+              onClick={handlePhotoClick}
+              spacing={8}
+              padding={0}
+            />
+          )}
 
           {/* Lightbox */}
           <Lightbox

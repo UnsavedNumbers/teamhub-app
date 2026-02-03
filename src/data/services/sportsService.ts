@@ -994,7 +994,7 @@ export async function getPrograms(
         const { data, error } = await query
 
         if (error) throw error
-        return { data: data as Program[], error: null }
+        return { data: data as unknown as Program[], error: null }
     } catch (err) {
         console.error('[sportsService] Error getting programs:', err)
         return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1023,7 +1023,7 @@ export async function getProgram(
             .single()
 
         if (error) throw error
-        return { data: data as Program, error: null }
+        return { data: data as unknown as Program, error: null }
     } catch (err) {
         console.error('[sportsService] Error getting program:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1104,7 +1104,7 @@ export async function updateProgram(
             .single()
 
         if (error) throw error
-        return { data: data as Program, error: null }
+        return { data: data as unknown as Program, error: null }
     } catch (err) {
         console.error('[sportsService] Error updating program:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }

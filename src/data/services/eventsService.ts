@@ -29,6 +29,7 @@ import { t } from '@/i18n'
 import { buildEventQuery } from './queryHelpers'
 import { normalizeSupabaseResponse, createServiceResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
+import { validateDeleteEvent, validateUpdateEvent, EVENT_ERRORS } from '../../utils/eventValidation'
 
 // ============================================================================
 // Helper Functions
@@ -79,36 +80,42 @@ function mapSupabaseEventToCalendarEvent(event: any): CalendarEvent {
         rsvps,
         general_rsvps: generalRsvps,
         ticketed_event: event.ticketed_event
-            ? {
-                id: event.ticketed_event.id,
-                org_id: event.ticketed_event.org_id,
-                team_id: event.ticketed_event.team_id,
-                event_type: event.ticketed_event.event_type,
-                title: event.ticketed_event.title,
-                description: event.ticketed_event.description,
-                starts_at: event.ticketed_event.starts_at,
-                ends_at: event.ticketed_event.ends_at,
-                timezone: event.ticketed_event.timezone,
-                venue_name: event.ticketed_event.venue_name,
-                venue_city: event.ticketed_event.venue_city,
-                venue_state: event.ticketed_event.venue_state,
-                venue_postal_code: event.ticketed_event.venue_postal_code,
-                sales_start_at: event.ticketed_event.sales_start_at,
-                sales_end_at: event.ticketed_event.sales_end_at,
-                status: event.ticketed_event.status,
-                ticket_types: Array.isArray(event.ticketed_event.ticket_types)
-                    ? event.ticketed_event.ticket_types.map((tt: any) => ({
-                        id: tt.id,
-                        name: tt.name,
-                        price_cents: tt.price_cents ?? 0,
-                        currency: tt.currency ?? 'USD',
-                        capacity_total: tt.capacity_total ?? null,
-                        capacity_remaining: tt.capacity_remaining ?? null,
-                        sort_order: tt.sort_order ?? null,
-                        is_active: tt.is_active ?? null,
-                    }))
-                    : [],
-            }
+            ? (() => {
+                const ticketedData = Array.isArray(event.ticketed_event) 
+                    ? event.ticketed_event[0] 
+                    : event.ticketed_event
+                
+                return ticketedData ? {
+                    id: ticketedData.id,
+                    org_id: ticketedData.org_id,
+                    team_id: ticketedData.team_id,
+                    event_type: ticketedData.event_type,
+                    title: ticketedData.title,
+                    description: ticketedData.description,
+                    starts_at: ticketedData.starts_at,
+                    ends_at: ticketedData.ends_at,
+                    timezone: ticketedData.timezone,
+                    venue_name: ticketedData.venue_name,
+                    venue_city: ticketedData.venue_city,
+                    venue_state: ticketedData.venue_state,
+                    venue_postal_code: ticketedData.venue_postal_code,
+                    sales_start_at: ticketedData.sales_start_at,
+                    sales_end_at: ticketedData.sales_end_at,
+                    status: ticketedData.status,
+                    ticket_types: Array.isArray(ticketedData.ticket_types)
+                        ? ticketedData.ticket_types.map((tt: any) => ({
+                            id: tt.id,
+                            name: tt.name,
+                            price_cents: tt.price_cents ?? 0,
+                            currency: tt.currency ?? 'USD',
+                            capacity_total: tt.capacity_total ?? null,
+                            capacity_remaining: tt.capacity_remaining ?? null,
+                            sort_order: tt.sort_order ?? null,
+                            is_active: tt.is_active ?? null,
+                        }))
+                        : [],
+                } : null
+            })()
             : null,
     } as CalendarEvent
 }
@@ -491,8 +498,26 @@ export async function getEventDetails(
 
         if (error) throw error
 
+        // Debug: Log raw Supabase response
+        console.log('[eventsService] Raw Supabase response:', {
+            eventId,
+            hasData: !!data,
+            dataKeys: data ? Object.keys(data) : [],
+            hasEventLocation: !!data?.event_location,
+            eventLocation: data?.event_location,
+            hasTicketedEvent: !!data?.ticketed_event,
+            ticketedEvent: data?.ticketed_event,
+            fullData: data,
+        })
+
         // Normalize and map response
         const normalizedData = normalizeSupabaseResponse(data, false)
+        console.log('[eventsService] Normalized data:', {
+            hasNormalized: !!normalizedData,
+            normalizedKeys: normalizedData ? Object.keys(normalizedData) : [],
+            hasEventLocation: !!normalizedData?.event_location,
+            eventLocation: normalizedData?.event_location,
+        })
         if (!normalizedData) {
             return { data: null, error: null }
         }
@@ -1058,13 +1083,30 @@ export async function updateEvent(
  * Delete an event
  */
 export async function deleteEvent(
-    eventId: string
+    context: UserContext,
+    eventId: string,
+    organization: { id: string; roles: string[] } | null
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {
         return { error: new Error('Cannot delete events in demo mode') }
     }
 
     try {
+        const { data: eventData } = await supabase
+            .from('events')
+            .select('id, start_time, is_cancelled, status, type, created_at, org_id, team_id, parent_tournament_id')
+            .eq('id', eventId)
+            .single()
+
+        if (!eventData) {
+            return { error: new Error('Event not found') }
+        }
+
+        const validation = await validateDeleteEvent(context, eventData, organization as any, false)
+        if (!validation.allowed) {
+            return { error: new Error(validation.error || EVENT_ERRORS.DELETE_BLOCKED_PERMISSION) }
+        }
+
         const { error } = await supabase
             .from('events')
             .delete()

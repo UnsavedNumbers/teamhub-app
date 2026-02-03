@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getTicketedEvents } from '@/data/services'
 import type { OrgContext } from '@/utils/orgResolution'
 import { OrgScopedRoute } from '@/components/OrgScopedRoute'
+import { getLink, RouteKeys } from '@/utils/routes'
 
 function OrgLandingContent({ org }: { org: OrgContext }) {
   const orgSlug = org.slug
@@ -56,7 +57,7 @@ function OrgLandingContent({ org }: { org: OrgContext }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {hasTicketing && (
             <Link
-              to={`/o/${orgSlug}/tickets`}
+              to={getLink(RouteKeys.PORTAL_ORG_TICKETS, { orgSlug })}
               className="flex flex-col items-center justify-center p-8 bg-white dark:bg-[#1c2630] rounded-xl shadow-sm hover:shadow-md transition-shadow border border-[#f0f2f4] dark:border-gray-800 group"
             >
               <div className="size-16 bg-[#137fec]/10 rounded-full flex items-center justify-center mb-4 group-hover:bg-[#137fec]/20 transition-colors">
@@ -97,7 +98,7 @@ function OrgLandingContent({ org }: { org: OrgContext }) {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-3xl font-black tracking-tight">Upcoming Events</h2>
               <Link
-                to={`/o/${orgSlug}/tickets`}
+                to={getLink(RouteKeys.PORTAL_ORG_TICKETS, { orgSlug })}
                 className="text-[#137fec] font-bold hover:underline"
               >
                 View All →
@@ -105,11 +106,11 @@ function OrgLandingContent({ org }: { org: OrgContext }) {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {previewEvents.map((event: any) => (
-                <Link
-                  key={event.id}
-                  to={`/o/${orgSlug}/tickets/events/${event.id}`}
-                  className="flex flex-col bg-white dark:bg-[#1c2630] rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group"
-                >
+                  <Link
+                    key={event.id}
+                    to={getLink(RouteKeys.PORTAL_ORG_TICKET_EVENT, { orgSlug, eventId: event.id })}
+                    className="flex flex-col bg-white dark:bg-[#1c2630] rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group"
+                  >
                   {event.cover_image_path && (
                     <div className="w-full aspect-video bg-cover bg-center" style={{ backgroundImage: `url(${event.cover_image_path})` }} />
                   )}
