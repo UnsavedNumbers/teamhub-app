@@ -18,5 +18,12 @@ export default defineConfig({
       host: '127.0.0.1',
       port: 5173,
     },
+    proxy: {
+      '/ngrok': {
+        target: 'https://conceptacular-supereminently-kamala.ngrok-free.dev',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ngrok/, ''),
+      },
+    },
   },
 })
