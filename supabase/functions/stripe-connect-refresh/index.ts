@@ -162,11 +162,29 @@ serve(async (req) => {
     }
 
     const dashboardUrl = `https://dashboard.stripe.com/connect/accounts/${org.payout_account_id}`
+    
+    // Map to proper StripeConnectStatus format
+    const requirementsDueArray = Array.isArray(snapshot.requirements_due?.currently_due) 
+      ? snapshot.requirements_due.currently_due 
+      : []
+    const requirementsPendingArray = Array.isArray(snapshot.requirements_due?.pending_verification)
+      ? snapshot.requirements_due.pending_verification
+      : []
+    
     return json(req, {
       status: {
+        connected: true,
         payoutAccountId: org.payout_account_id,
+        payoutsEnabled: snapshot.payouts_enabled,
+        onboardingStatus: snapshot.payout_onboarding_status,
+        payoutDescriptor: null, // Not available in snapshot, would need to query org table
         dashboardUrl,
-        ...snapshot,
+        disabledReason: snapshot.disabled_reason,
+        requirementsDue: requirementsDueArray,
+        requirementsPending: requirementsPendingArray,
+        requirementsErrors: snapshot.requirements_errors,
+        requirementsDeadline: snapshot.requirements_deadline,
+        lastStatusUpdated: snapshot.stripe_status_updated_at,
       },
     })
   } catch (err: any) {
