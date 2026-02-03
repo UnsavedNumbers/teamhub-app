@@ -7,6 +7,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useT } from '../../i18n/useI18n'
 import { supabase } from '../../lib/supabase'
 import Icon from '../portal/Icon'
 import Card from '../portal/Card'
@@ -40,6 +41,7 @@ export function PhotoUploader({
   status = 'approved',
 }: PhotoUploaderProps) {
   const { context } = useUserContext()
+  const t = useT()
   const [files, setFiles] = useState<UploadFile[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -49,7 +51,7 @@ export function PhotoUploader({
     const maxSize = 50 * 1024 * 1024 // 50MB
 
     if (!allowedTypes.includes(file.type)) {
-      return 'Invalid file type. Please upload JPG, PNG, or HEIC images.'
+      return t('gallery.photoUploader.dragDropSubtitle')
     }
 
     if (file.size > maxSize) {
@@ -206,15 +208,15 @@ export function PhotoUploader({
       >
         <div className="text-center py-12">
           <Icon name="cloud_upload" size="text-6xl" className="text-slate-400 mb-4 mx-auto" />
-          <p className="text-lg font-semibold mb-2">Drag and drop photos here</p>
+          <p className="text-lg font-semibold mb-2">{t('gallery.photoUploader.dragDropTitle')}</p>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-            JPG, PNG, or HEIC up to 50MB
+            {t('gallery.photoUploader.dragDropSubtitle')}
           </p>
           <Button
             variant="secondary"
             onClick={() => fileInputRef.current?.click()}
           >
-            SELECT FILES
+            {t('gallery.photoUploader.selectFiles')}
           </Button>
           <input
             ref={fileInputRef}
@@ -230,7 +232,7 @@ export function PhotoUploader({
       {/* Upload queue */}
       {files.length > 0 && (
         <Card>
-          <h3 className="font-semibold mb-4">Upload Queue</h3>
+          <h3 className="font-semibold mb-4">{t('gallery.photoUploader.uploadQueue')}</h3>
           <div className="space-y-3">
             {files.map((uploadFile) => (
               <div key={uploadFile.id} className="flex items-center gap-4">
