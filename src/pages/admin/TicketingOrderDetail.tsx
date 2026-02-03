@@ -1,7 +1,8 @@
 /**
  * Admin Ticket Order Detail Page
- * 
+ *
  * Admin page to view ticket order details and process refunds
+ * Design: /designs/tickets/order_detail
  */
 
 import { useState } from 'react'
@@ -12,12 +13,10 @@ import { getTicketOrderByIdAdmin, processTicketOrderRefund, manuallyCompleteTick
 import { formatCurrency } from '@/types/ticketing'
 import { showSuccess, showError } from '@/utils/toast'
 import { getErrorMessage } from '@/utils/errorUtils'
-import {
-  AdminPageHeader,
-  Card,
-  Button,
-  Badge,
-} from '@/components/platformAdmin'
+import { AdminPageHeader } from '@/components/platformAdmin'
+import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
+import { t } from '@/i18n'
+import '../../styles/orgAdmin.css'
 
 export default function TicketingOrderDetail() {
   const navigate = useNavigate()
@@ -41,12 +40,12 @@ export default function TicketingOrderDetail() {
     return (
       <div className="pa-root">
         <AdminPageHeader title="Order Not Found" />
-        <Card>
+        <div className="oa-card">
           <p className="pa-text-danger">This order does not belong to your organization.</p>
-          <Button onClick={() => navigate('/admin/ticketing/orders')} variant="primary">
-            Back to Orders
-          </Button>
-        </Card>
+          <OrgAdminButton onClick={() => navigate('/admin/ticketing/orders')} className="pa-mt-4">
+            {t('ticketing.orderDetail.backToOrders')}
+          </OrgAdminButton>
+        </div>
       </div>
     )
   }
@@ -54,7 +53,7 @@ export default function TicketingOrderDetail() {
   const handleRefund = async () => {
     if (!orderId || !order) return
 
-    if (!confirm('Are you sure you want to refund this order? This action cannot be undone.')) {
+    if (!confirm(t('ticketing.orderDetail.refundConfirm'))) {
       return
     }
 
@@ -66,10 +65,10 @@ export default function TicketingOrderDetail() {
       }
 
       showSuccess(result.data?.message || 'Refund processed successfully')
-      
+
       // Invalidate and refetch order to get updated status
       await queryClient.invalidateQueries({ queryKey: ['ticket-order-admin', orderId] })
-      
+
       // Poll once after a short delay to check if webhook has updated status
       setTimeout(async () => {
         await queryClient.refetchQueries({ queryKey: ['ticket-order-admin', orderId] })
@@ -84,7 +83,7 @@ export default function TicketingOrderDetail() {
   const handleCompleteOrder = async () => {
     if (!orderId || !order) return
 
-    if (!confirm('This will manually complete the order and generate tickets. This should only be used if the Stripe payment succeeded but the webhook failed. Continue?')) {
+    if (!confirm(t('ticketing.orderDetail.stuckOrderWarning') + '. ' + t('ticketing.orderDetail.stuckOrderDescription') + ' Continue?')) {
       return
     }
 
@@ -96,7 +95,7 @@ export default function TicketingOrderDetail() {
       }
 
       showSuccess(result.data?.message || 'Order completed successfully')
-      
+
       // Invalidate and refetch order to get updated status
       await queryClient.invalidateQueries({ queryKey: ['ticket-order-admin', orderId] })
       await queryClient.refetchQueries({ queryKey: ['ticket-order-admin', orderId] })
@@ -112,12 +111,12 @@ export default function TicketingOrderDetail() {
     return (
       <div className="pa-root">
         <AdminPageHeader title="Invalid Order ID" />
-        <Card>
+        <div className="oa-card">
           <p className="pa-text-danger">The order ID format is invalid.</p>
-          <Button onClick={() => navigate('/admin/ticketing/orders')} variant="primary">
-            Back to Orders
-          </Button>
-        </Card>
+          <OrgAdminButton onClick={() => navigate('/admin/ticketing/orders')} className="pa-mt-4">
+            {t('ticketing.orderDetail.backToOrders')}
+          </OrgAdminButton>
+        </div>
       </div>
     )
   }
@@ -126,12 +125,12 @@ export default function TicketingOrderDetail() {
     return (
       <div className="pa-root">
         <AdminPageHeader title="Loading Order..." />
-        <Card>
+        <div className="oa-card">
           <div className="pa-text-center pa-py-8">
             <div className="pa-spinner" style={{ width: '32px', height: '32px', borderWidth: '3px', margin: '0 auto' }} />
-            <p className="pa-mt-4">Loading order details...</p>
+            <p className="pa-mt-4">{t('common.loading')}</p>
           </div>
-        </Card>
+        </div>
       </div>
     )
   }
@@ -140,17 +139,17 @@ export default function TicketingOrderDetail() {
     return (
       <div className="pa-root">
         <AdminPageHeader title="Order Not Found" />
-        <Card>
+        <div className="oa-card">
           <p className="pa-text-danger pa-mb-4">{getErrorMessage(error) || 'Order not found'}</p>
           <div className="pa-flex pa-gap-2">
-            <Button onClick={() => refetch()} variant="secondary">
-              Retry
-            </Button>
-            <Button onClick={() => navigate('/admin/ticketing/orders')} variant="primary">
-              Back to Orders
-            </Button>
+            <OrgAdminButton onClick={() => refetch()} variant="secondary">
+              {t('common.retry')}
+            </OrgAdminButton>
+            <OrgAdminButton onClick={() => navigate('/admin/ticketing/orders')}>
+              {t('ticketing.orderDetail.backToOrders')}
+            </OrgAdminButton>
           </div>
-        </Card>
+        </div>
       </div>
     )
   }
@@ -160,178 +159,229 @@ export default function TicketingOrderDetail() {
   const canRefund = order.status === 'paid' && order.stripe_charge_id !== null
   const isStuckOrder = order.status === 'pending_payment' && order.stripe_checkout_session_id !== null
 
+  // Format processed date
+  const processedDate = order.processed_at
+    ? new Date(order.processed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null
+
+  // Format short order ID (last 8 chars)
+  const shortOrderId = order.id.slice(-8).toUpperCase()
+
+  // Get status text
+  const getStatusText = () => {
+    switch (order.status) {
+      case 'paid': return t('ticketing.orderDetail.status.paid')
+      case 'refunded': return t('ticketing.orderDetail.status.refunded')
+      case 'pending_payment': return t('ticketing.orderDetail.status.pending')
+      case 'cancelled': return t('ticketing.orderDetail.status.canceled')
+      default: return order.status
+    }
+  }
+
   return (
     <div className="pa-root">
-      <AdminPageHeader title={`Order ${order.id.slice(-8).toUpperCase()}`} />
-      
-      <div className="pa-flex pa-gap-4 pa-mb-4">
-        <Button variant="ghost" onClick={() => navigate('/admin/ticketing/orders')}>
-          ← Back to Orders
-        </Button>
-      </div>
+      <div className="oa-order-detail">
 
-      <div className="pa-grid pa-grid-cols-1 md:pa-grid-cols-2 pa-gap-6">
-        {/* Order Information */}
-        <Card>
-          <h3 className="pa-h3 pa-mb-4">Order Information</h3>
-          <div className="pa-space-y-3">
-            <div>
-              <p className="pa-body-xs pa-text-slate-500 pa-mb-1">Order ID</p>
-              <p className="pa-body-s pa-font-mono">{order.id}</p>
-            </div>
-            <div>
-              <p className="pa-body-xs pa-text-slate-500 pa-mb-1">Status</p>
-              <Badge variant={order.status === 'paid' ? 'success' : order.status === 'refunded' ? 'danger' : undefined}>
-                {order.status}
-              </Badge>
-            </div>
-            <div>
-              <p className="pa-body-xs pa-text-slate-500 pa-mb-1">Purchaser</p>
-              <p className="pa-body-s">{order.purchaser_email}</p>
-              {order.purchaser_name && (
-                <p className="pa-body-xs pa-text-slate-400">{order.purchaser_name}</p>
-              )}
-            </div>
-            <div>
-              <p className="pa-body-xs pa-text-slate-500 pa-mb-1">Created</p>
-              <p className="pa-body-s">{order.created_at ? new Date(order.created_at).toLocaleString() : '—'}</p>
-            </div>
-            {order.processed_at && (
-              <div>
-                <p className="pa-body-xs pa-text-slate-500 pa-mb-1">Processed</p>
-                <p className="pa-body-s">{new Date(order.processed_at).toLocaleString()}</p>
-              </div>
-            )}
-          </div>
-        </Card>
+        {/* Back Navigation */}
+        <div className="pa-mb-6">
+          <OrgAdminButton
+            variant="secondary"
+            icon="arrow_back"
+            onClick={() => navigate('/admin/ticketing/orders')}
+          >
+            {t('ticketing.orderDetail.backToOrders')}
+          </OrgAdminButton>
+        </div>
 
-        {/* Event Information */}
-        {event && (
-          <Card>
-            <h3 className="pa-h3 pa-mb-4">Event</h3>
-            <div className="pa-space-y-3">
-              <div>
-                <p className="pa-body-xs pa-text-slate-500 pa-mb-1">Title</p>
-                <p className="pa-body-s pa-font-semibold">{event.title}</p>
-              </div>
-              {event.starts_at && (
-                <div>
-                  <p className="pa-body-xs pa-text-slate-500 pa-mb-1">Date</p>
-                  <p className="pa-body-s">{new Date(event.starts_at).toLocaleString()}</p>
-                </div>
-              )}
-              {event.venue_name && (
-                <div>
-                  <p className="pa-body-xs pa-text-slate-500 pa-mb-1">Venue</p>
-                  <p className="pa-body-s">
-                    {event.venue_name}
-                    {event.venue_city && event.venue_state && (
-                      <span className="pa-text-slate-400">, {event.venue_city}, {event.venue_state}</span>
-                    )}
+        {/* Stuck Order Warning */}
+        {isStuckOrder && (
+          <div className="oa-card pa-mb-6" style={{ background: 'var(--pa-warning-bg)' }}>
+            <div className="pa-flex pa-items-start pa-gap-3">
+              <span className="material-symbols-outlined" style={{ color: 'var(--pa-warning)', fontSize: '20px', flexShrink: 0 }}>
+                warning
+              </span>
+              <div className="pa-flex pa-items-center pa-justify-between pa-w-full pa-gap-4">
+                <div className="pa-body-m pa-font-medium">
+                  <p className="pa-font-semibold pa-mb-1">{t('ticketing.orderDetail.stuckOrderDetected')}</p>
+                  <p className="pa-body-s pa-text-slate-600">
+                    {t('ticketing.orderDetail.stuckOrderDescription')}
+                  </p>
+                  <p className="pa-body-xs pa-text-orange-600 pa-mt-2 pa-font-semibold">
+                    {t('ticketing.orderDetail.stuckOrderWarning')}
                   </p>
                 </div>
-              )}
+                <button
+                  onClick={handleCompleteOrder}
+                  disabled={isCompleting}
+                  className="pa-btn pa-btn--primary pa-shrink-0"
+                >
+                  {isCompleting ? t('ticketing.orderDetail.processing') : t('ticketing.orderDetail.completeOrder')}
+                </button>
+              </div>
             </div>
-          </Card>
+          </div>
         )}
 
-        {/* Financial Details */}
-        <Card>
-          <h3 className="pa-h3 pa-mb-4">Financial Details</h3>
-          <div className="pa-space-y-3">
-            <div className="pa-flex pa-justify-between pa-items-center pa-pb-3 pa-border-b pa-border-slate-200">
-              <span className="pa-body-s pa-text-slate-600">Total</span>
-              <span className="pa-body-s pa-font-semibold">{formatCurrency(order.total_cents)}</span>
+        {/* Main Card */}
+        <div className="oa-card oa-order-detail__card pa-mb-6">
+          {/* Header */}
+          <div className="oa-order-detail__header">
+            <div className="oa-order-detail__header-left">
+              <span className="oa-order-detail__label">{t('ticketing.orderDetail.orderConfirmation')}</span>
+              <h1 className="oa-order-detail__order-id">{shortOrderId}</h1>
             </div>
-            {order.platform_fee_cents !== null && (
+            <div className="oa-order-detail__header-right">
+              <div className={`oa-order-detail__status-badge oa-order-detail__status-badge--${order.status === 'paid' ? 'paid' : order.status === 'refunded' ? 'refunded' : 'pending'}`}>
+                {getStatusText()}
+              </div>
+              {processedDate && (
+                <p className="oa-order-detail__processed-date">
+                  {t('ticketing.orderDetail.processed')} {processedDate}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Two Column Grid */}
+          <div className="oa-order-detail__grid">
+            {/* Left Column - Order Metadata */}
+            <div className="oa-order-detail__column oa-order-detail__column--left">
+              {/* Order Details Section */}
+              <section className="pa-mb-10">
+                <h3 className="oa-order-detail__section-title">{t('ticketing.orderDetail.orderDetails')}</h3>
+                <div className="oa-order-detail__meta-item">
+                  <span className="oa-order-detail__meta-label">{t('ticketing.orderDetail.purchaser')}</span>
+                  <span className="oa-order-detail__meta-value">{order.purchaser_email}</span>
+                  {order.purchaser_name && (
+                    <span className="oa-order-detail__meta-sub">{order.purchaser_name}</span>
+                  )}
+                </div>
+                {event && (
+                  <div className="oa-order-detail__meta-item">
+                    <span className="oa-order-detail__meta-label">{t('ticketing.orderDetail.event')}</span>
+                    <span className="oa-order-detail__meta-value">{event.title}</span>
+                    {event.starts_at && (
+                      <span className="oa-order-detail__meta-sub">
+                        {new Date(event.starts_at).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </section>
+
+              {/* Payment Summary Section */}
+              <section>
+                <h3 className="oa-order-detail__section-title">{t('ticketing.orderDetail.paymentSummary')}</h3>
+                <div className="oa-order-detail__ledger">
+                  <div className="oa-order-detail__ledger-row">
+                    <span className="oa-order-detail__ledger-label">{t('ticketing.orderDetail.subtotal')}</span>
+                    <span className="oa-order-detail__ledger-value">{formatCurrency(order.total_cents)}</span>
+                  </div>
+                  {order.platform_fee_cents !== null && (
+                    <>
+                      <div className="oa-order-detail__ledger-row">
+                        <span className="oa-order-detail__ledger-label">{t('ticketing.orderDetail.platformFee')}</span>
+                        <span className="oa-order-detail__ledger-value oa-order-detail__ledger-value--fee">
+                          -{formatCurrency(order.platform_fee_cents)}
+                        </span>
+                      </div>
+                      <div className="oa-order-detail__ledger-divider">
+                        <div className="oa-order-detail__ledger-row">
+                          <span className="oa-order-detail__ledger-net-label">{t('ticketing.orderDetail.netRevenue')}</span>
+                          <span className="oa-order-detail__ledger-net-value">
+                            {order.org_revenue_cents !== null ? formatCurrency(order.org_revenue_cents) : formatCurrency(order.total_cents - (order.platform_fee_cents || 0))}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </section>
+            </div>
+
+            {/* Right Column - Ticket Items */}
+            <div className="oa-order-detail__column oa-order-detail__column--right">
+              <h3 className="oa-order-detail__section-title">{t('ticketing.orderDetail.ticketItems')}</h3>
+              <div className="oa-order-detail__tickets">
+                {orderItems.length === 0 ? (
+                  <div className="oa-order-detail__empty">
+                    <span className="material-symbols-outlined oa-order-detail__empty-icon">add_circle</span>
+                    <p className="oa-order-detail__empty-text">{t('ticketing.orderDetail.noAdditionalItems')}</p>
+                  </div>
+                ) : (
+                  orderItems.map((item: any) => (
+                    <div key={item.id} className="oa-order-detail__ticket-card">
+                      <div className="oa-order-detail__ticket-icon">
+                        <span className="material-symbols-outlined">confirmation_number</span>
+                      </div>
+                      <div className="oa-order-detail__ticket-info">
+                        <p className="oa-order-detail__ticket-type">{item.ticket_types?.name || 'Standard Entry'}</p>
+                        <h4 className="oa-order-detail__ticket-name">{item.ticket_types?.description || 'General Admission'}</h4>
+                        <p className="oa-order-detail__ticket-qty">
+                          {t('ticketing.orderDetail.quantity')}: {item.quantity} {item.quantity > 1 ? t('ticketing.orderDetail.tickets') : t('ticketing.orderDetail.ticket')}
+                        </p>
+                      </div>
+                      <div className="oa-order-detail__ticket-price">
+                        {formatCurrency(item.line_total_cents)}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="oa-order-detail__footer">
+          <div className="oa-order-detail__footer-left">
+            {order.stripe_connect_account_id && (
               <>
-                <div className="pa-flex pa-justify-between pa-items-center pa-pb-3 pa-border-b pa-border-slate-200">
-                  <span className="pa-body-s pa-text-slate-600">Gross</span>
-                  <span className="pa-body-s">{formatCurrency(order.total_cents)}</span>
-                </div>
-                <div className="pa-flex pa-justify-between pa-items-center pa-pb-3 pa-border-b pa-border-slate-200">
-                  <span className="pa-body-s pa-text-slate-600">Platform Fee</span>
-                  <span className="pa-body-s pa-text-slate-500">-{formatCurrency(order.platform_fee_cents)}</span>
-                </div>
-                <div className="pa-flex pa-justify-between pa-items-center pa-pt-2">
-                  <span className="pa-body-s pa-font-semibold pa-text-slate-700">Your Revenue</span>
-                  <span className="pa-body-s pa-font-semibold pa-text-green-600">
-                    {order.org_revenue_cents !== null ? formatCurrency(order.org_revenue_cents) : '—'}
+                <div className="oa-order-detail__stripe-indicator">
+                  <span className="oa-order-detail__stripe-dot"></span>
+                  <span className="oa-order-detail__stripe-text">
+                    {t('ticketing.orderDetail.stripeConnect')}: {order.stripe_connect_account_id.slice(-4)}
                   </span>
                 </div>
+                <div className="oa-order-detail__divider"></div>
               </>
             )}
-            {order.stripe_connect_account_id && (
-              <div className="pa-mt-4 pa-pt-4 pa-border-t pa-border-slate-200">
-                <p className="pa-body-xs pa-text-slate-500 pa-mb-1">Connect Account</p>
-                <p className="pa-body-xs pa-font-mono">{order.stripe_connect_account_id.slice(-4)}</p>
-              </div>
+            <span className="oa-order-detail__ref">{t('ticketing.orderDetail.reference')}: {order.id.slice(0, 8)}</span>
+          </div>
+          <div className="oa-order-detail__actions">
+            {canRefund && (
+              <button
+                onClick={handleRefund}
+                disabled={isRefunding}
+                className="pa-btn pa-btn--danger"
+              >
+                {isRefunding ? t('ticketing.orderDetail.processing') : t('ticketing.orderDetail.refundOrder')}
+              </button>
             )}
           </div>
-        </Card>
+        </div>
 
-        {/* Ticket Items */}
-        <Card>
-          <h3 className="pa-h3 pa-mb-4">Ticket Items</h3>
-          {orderItems.length === 0 ? (
-            <p className="pa-body-s pa-text-slate-500">No items found</p>
-          ) : (
-            <div className="pa-space-y-3">
-              {orderItems.map((item: any) => (
-                <div key={item.id} className="pa-pb-3 pa-border-b pa-border-slate-200 last:pa-border-0">
-                  <div className="pa-flex pa-justify-between pa-items-start">
-                    <div>
-                      <p className="pa-body-s pa-font-semibold">{item.ticket_types?.name || 'Ticket'}</p>
-                      {item.ticket_types?.description && (
-                        <p className="pa-body-xs pa-text-slate-500">{item.ticket_types.description}</p>
-                      )}
-                      <p className="pa-body-xs pa-text-slate-400 pa-mt-1">Quantity: {item.quantity}</p>
-                    </div>
-                    <p className="pa-body-s pa-font-semibold">{formatCurrency(item.line_total_cents)}</p>
-                  </div>
-                </div>
-              ))}
+        {/* Refund Info */}
+        {!canRefund && order.status !== 'pending_payment' && (
+          <div className="oa-card" style={{ background: 'var(--pa-info-bg)' }}>
+            <div className="pa-flex pa-items-start pa-gap-3">
+              <span className="material-symbols-outlined" style={{ color: 'var(--pa-info)', fontSize: '20px', flexShrink: 0 }}>
+                info
+              </span>
+              <div className="pa-body-m pa-font-medium">
+                {order.status === 'refunded'
+                  ? t('ticketing.orderDetail.refundedMessage')
+                  : t('ticketing.orderDetail.cannotRefundMessage')}
+              </div>
             </div>
-          )}
-        </Card>
+          </div>
+        )}
       </div>
-
-      {/* Complete Stuck Order */}
-      {isStuckOrder && (
-        <Card className="pa-mt-6">
-          <div className="pa-flex pa-items-center pa-justify-between">
-            <div>
-              <h3 className="pa-h3 pa-mb-2">⚠️ Stuck Order Detected</h3>
-              <p className="pa-body-xs pa-text-slate-500">
-                This order is stuck in pending_payment status. If the Stripe payment succeeded but the webhook failed, you can manually complete this order to generate tickets.
-              </p>
-              <p className="pa-body-xs pa-text-orange-600 pa-mt-2 pa-font-semibold">
-                ⚠️ Only use this if you've verified the payment succeeded in Stripe!
-              </p>
-            </div>
-            <Button variant="primary" onClick={handleCompleteOrder} disabled={isCompleting}>
-              {isCompleting ? 'Processing...' : 'Complete Order'}
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {/* Refund Action */}
-      {canRefund && (
-        <Card className="pa-mt-6">
-          <div className="pa-flex pa-items-center pa-justify-between">
-            <div>
-              <h3 className="pa-h3 pa-mb-2">Refund Order</h3>
-              <p className="pa-body-xs pa-text-slate-500">
-                Process a full refund for this order. The refund will be processed through Stripe and the order status will be updated automatically.
-              </p>
-            </div>
-            <Button variant="danger" onClick={handleRefund} disabled={isRefunding}>
-              {isRefunding ? 'Processing...' : 'Refund Order'}
-            </Button>
-          </div>
-        </Card>
-      )}
     </div>
   )
 }
