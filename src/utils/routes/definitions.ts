@@ -127,6 +127,18 @@ const portal = {
         icon: 'confirmation_number',
         description: 'Your event tickets',
     },
+    followedOrgs: {
+        path: '/portal/follows',
+        label: 'Followed Organizations',
+        icon: 'favorite',
+        description: 'Organizations you follow',
+    },
+    bookmarkedEvents: {
+        path: '/portal/bookmarks',
+        label: 'Bookmarked Events',
+        icon: 'bookmark',
+        description: 'Events you\'ve saved',
+    },
 
     // Athletes/Teams
     athletes: {

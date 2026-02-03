@@ -11,6 +11,12 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import { t } from '../../i18n'
+import type {
+  StaffMember,
+  StaffMemberInput,
+  StaffMemberUpdate,
+} from '../../types/staffAndFan'
 
 // ============================================================================
 // Types
@@ -107,4 +113,168 @@ export async function getOrganizationUsers(
     } catch (err) {
         return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch organization users') }
     }
+}
+
+// ============================================================================
+// Staff Management Functions
+// ============================================================================
+
+/**
+ * Add staff member to organization
+ */
+export async function addStaffMember(
+  context: UserContext,
+  input: StaffMemberInput
+): Promise<{ data: StaffMember | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    return {
+      data: null,
+      error: new Error(t('admin.staff.errors.staffManagementNotAvailable')),
+    }
+  }
+
+  try {
+    const { error } = await supabase.rpc('add_org_role_with_permissions', {
+      p_user_id: input.user_id,
+      p_org_id: input.org_id,
+      p_role: 'staff',
+      p_permissions: input.permissions || null,
+    })
+
+    if (error) throw error
+
+    // Fetch the created staff member
+    return getStaffMember(context, input.org_id, input.user_id)
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(t('admin.staff.errors.addStaffMemberFailed')),
+    }
+  }
+}
+
+/**
+ * Get staff member by org and user ID
+ */
+export async function getStaffMember(
+  context: UserContext,
+  orgId: string,
+  userId: string
+): Promise<{ data: StaffMember | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase
+      .from('organization_members')
+      .select(
+        `
+        id,
+        user_id,
+        org_id,
+        role,
+        permissions,
+        is_active,
+        created_at,
+        updated_at,
+        ended_at,
+        ended_reason,
+        revoked_by,
+        user:users(id, email, display_name, first_name, last_name)
+        `
+      )
+      .eq('org_id', orgId)
+      .eq('user_id', userId)
+      .eq('role', 'staff')
+      .single()
+
+    if (error) throw error
+
+    return {
+      data: data as StaffMember,
+      error: null,
+    }
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(t('admin.staff.errors.getStaffMemberFailed')),
+    }
+  }
+}
+
+/**
+ * List all staff for an organization
+ */
+export async function getOrgStaff(
+  context: UserContext,
+  orgId: string
+): Promise<{ data: StaffMember[]; error: Error | null }> {
+  try {
+    const { data, error } = await supabase.rpc('get_org_staff', {
+      p_org_id: orgId,
+    })
+
+    if (error) throw error
+
+    return {
+      data: (data || []) as StaffMember[],
+      error: null,
+    }
+  } catch (err) {
+    return {
+      data: [],
+      error: err instanceof Error ? err : new Error(t('admin.staff.errors.getOrgStaffFailed')),
+    }
+  }
+}
+
+/**
+ * Update staff permissions
+ */
+export async function updateStaffPermissions(
+  context: UserContext,
+  orgId: string,
+  userId: string,
+  permissions: StaffMemberUpdate['permissions']
+): Promise<{ data: StaffMember | null; error: Error | null }> {
+  try {
+    const { error } = await supabase.rpc('update_staff_permissions', {
+      p_org_id: orgId,
+      p_user_id: userId,
+      p_permissions: permissions || {},
+    })
+
+    if (error) throw error
+
+    return getStaffMember(context, orgId, userId)
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(t('admin.staff.errors.updateStaffPermissionsFailed')),
+    }
+  }
+}
+
+/**
+ * Revoke staff access
+ */
+export async function revokeStaffAccess(
+  context: UserContext,
+  orgId: string,
+  userId: string,
+  reason?: string
+): Promise<{ data: boolean; error: Error | null }> {
+  try {
+    const { error } = await supabase.rpc('revoke_staff_access', {
+      p_org_id: orgId,
+      p_user_id: userId,
+      p_reason: reason || null,
+    })
+
+    if (error) throw error
+
+    return { data: true, error: null }
+  } catch (err) {
+    return {
+      data: false,
+      error: err instanceof Error ? err : new Error(t('admin.staff.errors.revokeStaffAccessFailed')),
+    }
+  }
 }

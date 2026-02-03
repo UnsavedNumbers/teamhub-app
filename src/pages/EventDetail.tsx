@@ -18,6 +18,10 @@ import NearbyAmenities from '../components/portal/NearbyAmenities'
 import { PhotoSection } from '../components/galleries/PhotoSection'
 import { useT } from '../i18n/useI18n'
 import { getLink, RouteKeys } from '@/utils/routes'
+import BookmarkButton from '../components/fan/BookmarkButton'
+import { useQuery } from '@tanstack/react-query'
+import { getBookmarkedEvents } from '../data/services/fanService'
+import type { FanEventBookmark } from '../types/staffAndFan'
 
 interface Event {
   id: string
@@ -231,6 +235,17 @@ export default function EventDetail() {
     precipitation: number
   } | null>(null)
   const [loadingWeather, setLoadingWeather] = useState(false)
+
+  const { data: bookmarkedEventsData } = useQuery({
+    queryKey: ['bookmarked-events'],
+    queryFn: async () => {
+      const { data, error } = await getBookmarkedEvents()
+      if (error) return [] as FanEventBookmark[]
+      return (data ?? []) as FanEventBookmark[]
+    },
+  })
+  const bookmarkedEventIds = (bookmarkedEventsData ?? []).map((b) => b.event_id)
+  const isBookmarked = Boolean(eventId && bookmarkedEventIds.includes(eventId))
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
@@ -628,16 +643,25 @@ export default function EventDetail() {
               {event.team.name}
             </p>
           </div>
-          {canManage && (
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => navigate(`/portal/calendar/events/${eventId}/edit`)}>
-                <Icon name="edit" />
-              </Button>
-              <Button variant="secondary" onClick={handleDelete}>
-                <Icon name="delete" />
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            {eventId && (
+              <BookmarkButton
+                eventId={eventId}
+                isBookmarked={isBookmarked}
+                variant="icon-only"
+              />
+            )}
+            {canManage && (
+              <>
+                <Button variant="secondary" onClick={() => navigate(`/portal/calendar/events/${eventId}/edit`)}>
+                  <Icon name="edit" />
+                </Button>
+                <Button variant="secondary" onClick={handleDelete}>
+                  <Icon name="delete" />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Quick Summary Banner */}

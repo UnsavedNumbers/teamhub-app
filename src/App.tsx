@@ -74,6 +74,8 @@ const EditAthletePortal = lazy(() => import('./pages/EditAthletePortal'))
 const RequestAthleteAttachment = lazy(() => import('./pages/RequestAthleteAttachment').then(m => ({ default: m.default })))
 const PortalCreateEvent = lazy(() => import('./pages/portal/PortalCreateEvent'))
 const PortalEditEvent = lazy(() => import('./pages/portal/PortalEditEvent'))
+const FollowedOrgs = lazy(() => import('./pages/portal/FollowedOrgs'))
+const BookmarkedEvents = lazy(() => import('./pages/portal/BookmarkedEvents'))
 
 // Video Pages - Lazy loaded
 const GuardianVideos = lazy(() => import('./pages/GuardianVideos'))
@@ -353,6 +355,8 @@ function AppWithTheme() {
             <Route path="videos/:id" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><GuardianVideoDetail /></Suspense></ProtectedRoute>} />
             
             <Route path="account/tickets" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.myTickets"><MyTickets /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="follows" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FollowedOrgs /></Suspense></ProtectedRoute>} />
+            <Route path="bookmarks" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><BookmarkedEvents /></Suspense></ProtectedRoute>} />
             
             {/* Redirect root portal to dashboard */}
             <Route path="notifications" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Suspense fallback={<AdminLoadingSpinner />}><Notifications /></Suspense></FeatureGateRoute></ProtectedRoute>} />

@@ -1,4 +1,4 @@
-import { routes } from '../routes/definitions';
+import { routes } from '../routes';
 import { normalizeFeatureKey, formatDisplayName } from './normalizer';
 import type { DiscoveredFeature } from './types';
 

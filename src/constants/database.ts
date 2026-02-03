@@ -31,6 +31,12 @@ export const TABLE_NAMES = {
   FEATURE_FLAG_PLATFORM_DEFAULTS: 'feature_flag_platform_defaults',
   FEATURE_FLAG_ORG_OVERRIDES: 'feature_flag_org_overrides',
   FEATURE_FLAG_USER_OVERRIDES: 'feature_flag_user_overrides',
+  FAN_ORG_FOLLOWS: 'fan_org_follows',
+  FAN_EVENT_BOOKMARKS: 'fan_event_bookmarks',
+  PURCHASES: 'purchases',
+  TICKET_RESERVATIONS: 'ticket_reservations',
+  FAN_CALENDAR_CACHE: 'fan_calendar_cache',
+  ORG_USER_AUDIT_LOG: 'org_user_audit_log',
 } as const
 
 // Entity types
@@ -53,13 +59,14 @@ export const ENTITY_TYPES = {
 export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES]
 
 // Role names
+// NOTE: FAN is NOT a role - it's a baseline capability for all authenticated users
 export const ROLES = {
   ORG_ADMIN: 'org_admin',
   COACH: 'coach',
   TEAM_MANAGER: 'team_manager',
   ATHLETE: 'athlete',
   PARENT: 'parent',
-  FAN: 'fan',
+  STAFF: 'staff',
   PLATFORM_ADMIN: 'platform_admin',
 } as const
 
@@ -105,3 +112,14 @@ export const EVENT_TYPES = {
 } as const
 
 export type EventType = typeof EVENT_TYPES[keyof typeof EVENT_TYPES]
+
+// Event visibility levels
+export const EVENT_VISIBILITY = {
+  PUBLIC: 'public',
+  UNLISTED: 'unlisted',
+  MEMBERS: 'members',
+  TICKET_HOLDERS: 'ticket_holders',
+  PRIVATE: 'private',
+} as const
+
+export type EventVisibility = typeof EVENT_VISIBILITY[keyof typeof EVENT_VISIBILITY]

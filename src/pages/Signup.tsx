@@ -30,6 +30,9 @@ export default function Signup() {
   const [heroImage, setHeroImage] = useState<string>('')
   const [inviteEmail, setInviteEmail] = useState<string | null>(null)
   const [isFromInvite, setIsFromInvite] = useState(false)
+  const [signupMode, setSignupMode] = useState<'fan' | 'parent'>(() =>
+    locationState?.signupAs === 'fan' ? 'fan' : 'parent'
+  )
 
   const { signUp } = useAuth()
   const { resolvedTheme } = useTheme()
@@ -44,6 +47,7 @@ export default function Signup() {
     setupOrganization?: boolean
     inviteEmail?: string
     athleteId?: string
+    signupAs?: 'fan' | 'parent'
   } | null
 
   // Determine if this is an organization setup flow
@@ -291,6 +295,43 @@ export default function Signup() {
                 : 'Join YouthSports to manage your youth sports experience.'}
             </p>
           </div>
+
+          {/* Fan / Parent segment control (only when not in org setup or invite flow) */}
+          {!isOrgSetupFlow && !isFromInvite && (
+            <div className="mb-6">
+              <p className="block text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-3 font-impact">
+                I AM A
+              </p>
+              <div
+                role="group"
+                aria-label="Sign up as Fan or Parent"
+                className="inline-flex w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 p-1"
+              >
+                <button
+                  type="button"
+                  onClick={() => setSignupMode('fan')}
+                  className={`flex-1 py-2.5 px-4 text-sm font-bold uppercase tracking-wide rounded-md transition-colors ${
+                    signupMode === 'fan'
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Fan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSignupMode('parent')}
+                  className={`flex-1 py-2.5 px-4 text-sm font-bold uppercase tracking-wide rounded-md transition-colors ${
+                    signupMode === 'parent'
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Parent
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Organization Setup Banner (visible when in setup flow) */}
           {isOrgSetupFlow && (

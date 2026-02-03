@@ -3,13 +3,14 @@
  */
 
 // Role names (matching database values)
+// NOTE: FAN is NOT a role - it's a baseline capability for all authenticated users
 export const ROLES = {
   ORG_ADMIN: 'org_admin',
   COACH: 'coach',
   TEAM_MANAGER: 'team_manager',
   ATHLETE: 'athlete',
   PARENT: 'parent',
-  FAN: 'fan',
+  STAFF: 'staff',
   PLATFORM_ADMIN: 'platform_admin',
 } as const
 
@@ -22,7 +23,7 @@ export const ROLE_DISPLAY_NAMES = {
   [ROLES.TEAM_MANAGER]: 'Team Manager',
   [ROLES.ATHLETE]: 'Athlete',
   [ROLES.PARENT]: 'Parent/Guardian',
-  [ROLES.FAN]: 'Fan',
+  [ROLES.STAFF]: 'Staff',
   [ROLES.PLATFORM_ADMIN]: 'Platform Admin',
 } as const
 
@@ -88,6 +89,15 @@ export const PERMISSIONS = {
   PLATFORM_VIEW_AUDIT: 'platform:view_audit',
   PLATFORM_MANAGE_PHOTOS: 'platform:manage_photos',
   PLATFORM_MANAGE_TICKETING: 'platform:manage_ticketing',
+  
+  // Staff permissions (per-org configurable)
+  STAFF_SCAN_TICKETS: 'can_scan_tickets',
+  STAFF_VIEW_ATTENDEES: 'can_view_attendees',
+  STAFF_MANAGE_EVENTS: 'can_manage_events',
+  STAFF_VIEW_FINANCIALS: 'can_view_financials',
+  STAFF_MANAGE_ROSTER: 'can_manage_roster',
+  STAFF_SEND_NOTIFICATIONS: 'can_send_notifications',
+  STAFF_MANAGE_STAFF: 'can_manage_staff',
 } as const
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS]
@@ -102,3 +112,25 @@ export const MESSAGE_PERMISSIONS = {
 
 // Message edit time limit (5 minutes in milliseconds)
 export const MESSAGE_EDIT_TIME_LIMIT_MS = 5 * 60 * 1000
+
+// Event visibility levels
+export const EVENT_VISIBILITY = {
+  PUBLIC: 'public',
+  UNLISTED: 'unlisted',
+  MEMBERS: 'members',
+  TICKET_HOLDERS: 'ticket_holders',
+  PRIVATE: 'private',
+} as const
+
+export type EventVisibility = typeof EVENT_VISIBILITY[keyof typeof EVENT_VISIBILITY]
+
+// Default staff permissions (can be overridden per org)
+export const DEFAULT_STAFF_PERMISSIONS = {
+  [PERMISSIONS.STAFF_SCAN_TICKETS]: true,
+  [PERMISSIONS.STAFF_VIEW_ATTENDEES]: true,
+  [PERMISSIONS.STAFF_MANAGE_EVENTS]: false,
+  [PERMISSIONS.STAFF_VIEW_FINANCIALS]: false,
+  [PERMISSIONS.STAFF_MANAGE_ROSTER]: false,
+  [PERMISSIONS.STAFF_SEND_NOTIFICATIONS]: false,
+  [PERMISSIONS.STAFF_MANAGE_STAFF]: false,
+} as const
