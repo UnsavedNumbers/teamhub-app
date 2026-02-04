@@ -139,6 +139,9 @@ export function mapOrganization(row: OrganizationRow): Organization {
     city: 'city' in row ? (row.city as string | null) : null,
     state: 'state' in row ? (row.state as string | null) : null,
     zip: 'zip' in row ? (row.zip as string | null) : null,
+    place_id: 'place_id' in row ? (row.place_id as string | null) : null,
+    latitude: 'latitude' in row ? (row.latitude as number | null) : null,
+    longitude: 'longitude' in row ? (row.longitude as number | null) : null,
   }
 }
 

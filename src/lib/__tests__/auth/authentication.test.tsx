@@ -6,11 +6,11 @@
  */
 
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
-import { supabase } from '../../lib/supabase'
-import { geocodeZipToHomeLocation } from '../../utils/homeLocation'
+import { supabase } from '../../supabase'
+import { geocodeZipToHomeLocation } from '../../../utils/homeLocation'
 
 // Mock dependencies
-vi.mock('../../lib/supabase', () => ({
+vi.mock('../../supabase', () => ({
   supabase: {
     auth: {
       signInWithPassword: vi.fn(),
@@ -38,16 +38,16 @@ vi.mock('../../lib/supabase', () => ({
   },
 }))
 
-vi.mock('../../utils/homeLocation', () => ({
+vi.mock('../../../utils/homeLocation', () => ({
   geocodeZipToHomeLocation: vi.fn(),
 }))
 
-vi.mock('../../utils/host', () => ({
+vi.mock('../../../utils/host', () => ({
   getBaseUrl: vi.fn(() => 'http://localhost:3000'),
 }))
 
 // Mock the useOrganization context
-vi.mock('../../contexts/OrganizationContext', () => ({
+vi.mock('../../../contexts/OrganizationContext', () => ({
   useOrganization: () => ({
     setOrganizations: vi.fn(),
     currentOrganization: null,
@@ -55,9 +55,11 @@ vi.mock('../../contexts/OrganizationContext', () => ({
 }))
 
 // Import after mocks
-import { AuthProvider, useAuth } from '../useAuth'
+import { AuthProvider, useAuth } from '../../../hooks/useAuth'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { ReactNode } from 'react'
+
+type AuthResult = { error: { message?: string } | null }
 
 // Test wrapper component
 const TestWrapper = ({ children }: { children: ReactNode }) => (
@@ -86,7 +88,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let signInResult
+      let signInResult: AuthResult | undefined
       await act(async () => {
         signInResult = await result.current.signInWithEmail('test@example.com', 'password123')
       })
@@ -108,7 +110,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let signInResult
+      let signInResult: AuthResult | undefined
       await act(async () => {
         signInResult = await result.current.signInWithEmail('wrong@example.com', 'wrongpass')
       })
@@ -123,7 +125,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let signInResult
+      let signInResult: AuthResult | undefined
       await act(async () => {
         signInResult = await result.current.signInWithEmail('test@example.com', 'password123')
       })
@@ -140,7 +142,7 @@ describe('Authentication Flow', () => {
         error: { message: 'Invalid email' },
       })
 
-      let signInResult
+      let signInResult: AuthResult | undefined
       await act(async () => {
         signInResult = await result.current.signInWithEmail('invalid-email', 'password123')
       })
@@ -156,7 +158,7 @@ describe('Authentication Flow', () => {
         error: { message: 'Email and password are required' },
       })
 
-      let signInResult
+      let signInResult: AuthResult | undefined
       await act(async () => {
         signInResult = await result.current.signInWithEmail('', '')
       })
@@ -174,7 +176,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let signInResult
+      let signInResult: AuthResult | undefined
       await act(async () => {
         signInResult = await result.current.signInWithGoogle()
       })
@@ -198,7 +200,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let signInResult
+      let signInResult: AuthResult | undefined
       await act(async () => {
         signInResult = await result.current.signInWithGoogle()
       })
@@ -227,7 +229,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let signUpResult
+      let signUpResult: AuthResult | undefined
       await act(async () => {
         signUpResult = await result.current.signUp(
           'newuser@example.com',
@@ -268,7 +270,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let signUpResult
+      let signUpResult: AuthResult | undefined
       await act(async () => {
         signUpResult = await result.current.signUp(
           'existing@example.com',
@@ -291,7 +293,7 @@ describe('Authentication Flow', () => {
         error: { message: 'Email is required' },
       })
 
-      let signUpResult
+      let signUpResult: AuthResult | undefined
       await act(async () => {
         signUpResult = await result.current.signUp('', 'password123', 'John', 'Doe', '555-0123', '10001')
       })
@@ -348,7 +350,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let signUpResult
+      let signUpResult: AuthResult | undefined
       await act(async () => {
         signUpResult = await result.current.signUp(
           'test@example.com',
@@ -403,7 +405,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let resetResult
+      let resetResult: AuthResult | undefined
       await act(async () => {
         resetResult = await result.current.resetPassword('user@example.com')
       })
@@ -421,7 +423,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let resetResult
+      let resetResult: AuthResult | undefined
       await act(async () => {
         resetResult = await result.current.resetPassword('invalid-email')
       })
@@ -434,7 +436,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let resetResult
+      let resetResult: AuthResult | undefined
       await act(async () => {
         resetResult = await result.current.resetPassword('nonexistent@example.com')
       })
@@ -452,7 +454,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let updateResult
+      let updateResult: AuthResult | undefined
       await act(async () => {
         updateResult = await result.current.updatePassword('newpassword123')
       })
@@ -471,7 +473,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let updateResult
+      let updateResult: AuthResult | undefined
       await act(async () => {
         updateResult = await result.current.updatePassword('123')
       })
@@ -489,7 +491,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let updateResult
+      let updateResult: AuthResult | undefined
       await act(async () => {
         updateResult = await result.current.updatePassword('')
       })
@@ -509,7 +511,7 @@ describe('Authentication Flow', () => {
       })
 
       // Mock profile fetch
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: [{
           org_id: 'org-123',
           org_name: 'Test Org',
@@ -692,8 +694,6 @@ describe('Authentication Flow', () => {
 
   describe('Profile Management', () => {
     test('fetches and caches user profile', async () => {
-      const mockUser = { id: 'user-123' }
-
       vi.mocked(supabase.from).mockReturnValue({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
@@ -717,7 +717,7 @@ describe('Authentication Flow', () => {
         }),
       } as any)
 
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: [{
           org_id: 'org-123',
           org_name: 'Test Org',
@@ -763,7 +763,6 @@ describe('Authentication Flow', () => {
     })
 
     test('prevents duplicate profile fetches', async () => {
-      const mockUser = { id: 'user-123' }
       const mockQuery = vi.fn().mockResolvedValue({
         data: {
           id: 'user-123',
@@ -809,7 +808,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let signUpResult
+      let signUpResult: AuthResult | undefined
       await act(async () => {
         signUpResult = await result.current.signUp(
           'invalid-email-format',
@@ -842,7 +841,7 @@ describe('Authentication Flow', () => {
 
       // All should complete without interference
       expect(results).toHaveLength(3)
-      expect(results.every(r => r?.error === null)).toBe(true)
+      expect(results.every((r: AuthResult | null | undefined) => r?.error === null)).toBe(true)
     })
 
     test('clears sensitive data on sign out', async () => {
@@ -886,7 +885,7 @@ describe('Authentication Flow', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper: TestWrapper })
 
-      let signInResult
+      let signInResult: AuthResult | undefined
       await act(async () => {
         signInResult = await result.current.signInWithEmail('test@example.com', 'password123')
       })

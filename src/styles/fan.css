@@ -1662,6 +1662,12 @@
 
 /* Content Grid */
 .fan-org-profile-content {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  background-color: var(--color-background);
+}
+
+.fan-org-profile-content-inner {
   max-width: var(--container-max-width);
   margin: 0 auto;
   padding: var(--spacing-12) var(--spacing-6);
@@ -2003,4 +2009,547 @@
 
 .fan-private-badge .material-symbols-outlined {
   font-size: 1rem;
+}
+
+/* ----------------------------------------------------------------------------
+   FAN PROFILE PAGE
+   ---------------------------------------------------------------------------- */
+
+/* Profile Header */
+.fan-profile-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-6);
+  padding: var(--spacing-8) 0;
+  border-bottom: 1px solid var(--color-zinc-100);
+  margin-bottom: var(--spacing-8);
+}
+
+.fan-profile-info {
+  flex: 1;
+}
+
+.fan-profile-name {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-light);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-zinc-900);
+  margin: 0 0 var(--spacing-1) 0;
+}
+
+.fan-profile-email {
+  font-size: var(--font-size-sm);
+  color: var(--color-zinc-500);
+  margin: 0 0 var(--spacing-1) 0;
+}
+
+.fan-profile-joined {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-zinc-400);
+  margin: 0;
+}
+
+/* Settings Menu */
+.fan-settings-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+}
+
+.fan-settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.fan-settings-section-title {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--tracking-extreme);
+  text-transform: uppercase;
+  color: var(--color-zinc-400);
+  margin: 0 0 var(--spacing-2) 0;
+}
+
+.fan-settings-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+  background: var(--color-zinc-50);
+  border: 1px solid var(--color-zinc-100);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+  width: 100%;
+}
+
+.fan-settings-item:hover:not(.disabled) {
+  background: var(--color-background);
+  border-color: var(--color-zinc-200);
+}
+
+.fan-settings-item.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.fan-settings-item-icon {
+  font-size: 1.5rem;
+  color: var(--color-zinc-400);
+  flex-shrink: 0;
+}
+
+.fan-settings-item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.fan-settings-item-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-zinc-900);
+}
+
+.fan-settings-item-subtitle {
+  font-size: var(--font-size-xs);
+  color: var(--color-zinc-500);
+}
+
+.fan-settings-item-arrow {
+  font-size: 1.25rem;
+  color: var(--color-zinc-300);
+  flex-shrink: 0;
+}
+
+.fan-settings-signout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-4);
+  background: transparent;
+  border: 1px solid var(--color-zinc-200);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-zinc-600);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  width: 100%;
+}
+
+.fan-settings-signout:hover {
+  background: var(--color-zinc-50);
+  border-color: var(--color-zinc-300);
+}
+
+.fan-settings-version {
+  text-align: center;
+  padding: var(--spacing-6) 0;
+}
+
+.fan-settings-version p {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-zinc-400);
+  margin: var(--spacing-1) 0;
+}
+
+/* Settings Form */
+.fan-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.fan-settings-card {
+  background: var(--color-zinc-50);
+  border: 1px solid var(--color-zinc-100);
+  padding: var(--spacing-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.fan-settings-card-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-zinc-900);
+  margin: 0 0 var(--spacing-2) 0;
+}
+
+/* Toggle Row */
+.fan-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  padding: var(--spacing-3) 0;
+  border-bottom: 1px solid var(--color-zinc-100);
+}
+
+.fan-toggle-row:last-child {
+  border-bottom: none;
+}
+
+.fan-toggle-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.fan-toggle-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-zinc-900);
+}
+
+.fan-toggle-description {
+  font-size: var(--font-size-xs);
+  color: var(--color-zinc-500);
+}
+
+.fan-toggle {
+  position: relative;
+  width: 3rem;
+  height: 1.5rem;
+  background: var(--color-zinc-200);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.fan-toggle.active {
+  background: var(--color-primary);
+}
+
+.fan-toggle-track {
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: white;
+  border-radius: var(--radius-full);
+  transition: transform var(--transition-fast);
+}
+
+.fan-toggle.active .fan-toggle-track {
+  transform: translateX(1.5rem);
+}
+
+/* Notification Type Row */
+.fan-notification-type-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  padding: var(--spacing-3) 0;
+  border-bottom: 1px solid var(--color-zinc-100);
+}
+
+.fan-notification-type-row:last-child {
+  border-bottom: none;
+}
+
+.fan-notification-type-row.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.fan-notification-type-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.fan-notification-type-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-zinc-900);
+}
+
+.fan-notification-type-description {
+  font-size: var(--font-size-xs);
+  color: var(--color-zinc-500);
+}
+
+.fan-notification-type-select {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  padding: var(--spacing-2) var(--spacing-3);
+  background: white;
+  border: 1px solid var(--color-zinc-200);
+  color: var(--color-zinc-700);
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.fan-notification-type-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+/* Quiet Hours */
+.fan-quiet-hours-times {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-4);
+  padding-top: var(--spacing-4);
+}
+
+/* Form Elements */
+.fan-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.fan-form-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-6) 0;
+  border-bottom: 1px solid var(--color-zinc-100);
+}
+
+.fan-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.fan-form-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-zinc-600);
+}
+
+.fan-form-input {
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: var(--color-zinc-50);
+  border: 1px solid var(--color-zinc-200);
+  color: var(--color-zinc-900);
+  transition: all var(--transition-fast);
+  font-family: var(--font-family-primary);
+}
+
+.fan-form-input:focus {
+  outline: none;
+  background: white;
+  border-color: var(--color-primary);
+}
+
+.fan-form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fan-form-helper {
+  font-size: var(--font-size-xs);
+  color: var(--color-zinc-500);
+  margin: 0;
+}
+
+/* Info Banner */
+.fan-info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
+  background: var(--color-zinc-50);
+  border: 1px solid var(--color-zinc-100);
+  margin-bottom: var(--spacing-6);
+}
+
+.fan-info-banner .material-symbols-outlined {
+  color: var(--color-zinc-400);
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.fan-info-banner p {
+  font-size: var(--font-size-sm);
+  color: var(--color-zinc-600);
+  line-height: var(--line-height-relaxed);
+  margin: 0;
+}
+
+/* Linked Athletes */
+.fan-linked-athletes-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-6);
+}
+
+.fan-linked-athlete-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+  background: var(--color-zinc-50);
+  border: 1px solid var(--color-zinc-100);
+}
+
+.fan-linked-athlete-avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-full);
+  background: var(--color-zinc-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.fan-linked-athlete-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fan-linked-athlete-avatar .material-symbols-outlined {
+  color: var(--color-zinc-400);
+  font-size: 1.5rem;
+}
+
+.fan-linked-athlete-info {
+  flex: 1;
+}
+
+.fan-linked-athlete-info h3 {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-zinc-900);
+  margin: 0 0 var(--spacing-1) 0;
+}
+
+.fan-linked-athlete-info p {
+  font-size: var(--font-size-xs);
+  color: var(--color-zinc-500);
+  margin: 0 0 var(--spacing-1) 0;
+}
+
+.fan-linked-athlete-status {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-zinc-400);
+}
+
+.fan-linked-athlete-remove {
+  background: transparent;
+  border: none;
+  color: var(--color-zinc-400);
+  cursor: pointer;
+  padding: var(--spacing-2);
+  transition: color var(--transition-fast);
+}
+
+.fan-linked-athlete-remove:hover {
+  color: var(--color-zinc-900);
+}
+
+.fan-linked-athlete-remove .material-symbols-outlined {
+  font-size: 1.25rem;
+}
+
+/* Modal */
+.fan-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: var(--spacing-6);
+}
+
+.fan-modal {
+  background: white;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.fan-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-6);
+  border-bottom: 1px solid var(--color-zinc-100);
+}
+
+.fan-modal-header h2 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-light);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-zinc-900);
+  margin: 0;
+}
+
+.fan-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--color-zinc-400);
+  cursor: pointer;
+  padding: var(--spacing-2);
+  transition: color var(--transition-fast);
+}
+
+.fan-modal-close:hover {
+  color: var(--color-zinc-900);
+}
+
+.fan-modal-close .material-symbols-outlined {
+  font-size: 1.5rem;
+}
+
+.fan-modal-body {
+  padding: var(--spacing-6);
+  flex: 1;
+}
+
+.fan-modal-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-zinc-600);
+  line-height: var(--line-height-relaxed);
+  margin: 0 0 var(--spacing-6) 0;
+}
+
+.fan-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-4);
+  padding: var(--spacing-6);
+  border-top: 1px solid var(--color-zinc-100);
 }

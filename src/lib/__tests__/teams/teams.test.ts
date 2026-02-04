@@ -6,8 +6,7 @@
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { supabase } from '../../supabase'
-import { teamsService } from '../../data/services/teamsService'
+import { teamsService } from '../../../data/services/teamsService'
 
 // Mock dependencies
 vi.mock('../../supabase', () => ({
@@ -36,7 +35,7 @@ vi.mock('../../supabase', () => ({
           select: vi.fn(() => ({
             single: vi.fn(),
           })),
-        }),
+        })),
       })),
       delete: vi.fn(() => ({
         eq: vi.fn(),
@@ -46,7 +45,7 @@ vi.mock('../../supabase', () => ({
   },
 }))
 
-vi.mock('../../data/services/teamsService', () => ({
+vi.mock('../../../data/services/teamsService', () => ({
   teamsService: {
     getTeams: vi.fn(),
     getTeamDetails: vi.fn(),
@@ -741,7 +740,7 @@ describe('Team Management', () => {
       const result = await teamsService.getTeamRoster('team-1', { status: 'active' })
 
       expect(result.error).toBeNull()
-      expect(result.data?.every(player => player.status === 'active')).toBe(true)
+      expect(result.data?.every((player: { status?: string }) => player.status === 'active')).toBe(true)
     })
 
     test('includes player statistics', async () => {

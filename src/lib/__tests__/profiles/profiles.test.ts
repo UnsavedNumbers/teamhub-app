@@ -7,7 +7,7 @@
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 import { supabase } from '../../supabase'
-import { usersService } from '../../data/services/usersService'
+import { usersService } from '../../../data/services/usersService'
 
 // Mock dependencies
 vi.mock('../../supabase', () => ({
@@ -27,7 +27,7 @@ vi.mock('../../supabase', () => ({
           select: vi.fn(() => ({
             single: vi.fn(),
           })),
-        }),
+        })),
       })),
       delete: vi.fn(() => ({
         eq: vi.fn(),
@@ -46,7 +46,7 @@ vi.mock('../../supabase', () => ({
   },
 }))
 
-vi.mock('../../data/services/usersService', () => ({
+vi.mock('../../../data/services/usersService', () => ({
   usersService: {
     getUserProfile: vi.fn(),
     updateUserProfile: vi.fn(),
@@ -738,7 +738,7 @@ async function mockUploadProfilePhoto(userId: string, file: File, existingPath?:
     const fileName = `${Date.now()}.${fileExt}`
     const filePath = `profiles/${userId}/${fileName}`
 
-    const { data, error } = await supabase.storage.from('profiles').upload(filePath, file)
+    const { error } = await supabase.storage.from('profiles').upload(filePath, file)
     if (error) throw error
 
     const { data: urlData } = supabase.storage.from('profiles').getPublicUrl(filePath)

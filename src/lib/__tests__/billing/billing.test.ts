@@ -7,8 +7,8 @@
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 import { supabase } from '../../supabase'
-import { paymentsService } from '../../data/services/paymentsService'
-import { feesService } from '../../data/services/feesService'
+import { paymentsService } from '../../../data/services/paymentsService'
+import { feesService } from '../../../data/services/feesService'
 
 // Mock dependencies
 vi.mock('../../supabase', () => ({
@@ -37,14 +37,14 @@ vi.mock('../../supabase', () => ({
           select: vi.fn(() => ({
             single: vi.fn(),
           })),
-        }),
+        })),
       })),
     })),
     rpc: vi.fn(),
   },
 }))
 
-vi.mock('../../data/services/paymentsService', () => ({
+vi.mock('../../../data/services/paymentsService', () => ({
   paymentsService: {
     processPayment: vi.fn(),
     refundPayment: vi.fn(),
@@ -55,7 +55,7 @@ vi.mock('../../data/services/paymentsService', () => ({
   },
 }))
 
-vi.mock('../../data/services/feesService', () => ({
+vi.mock('../../../data/services/feesService', () => ({
   feesService: {
     createFee: vi.fn(),
     updateFee: vi.fn(),
@@ -415,7 +415,7 @@ describe('Financial/Billing', () => {
           status: 'failed',
         })
 
-        expect(result.data?.every(p => p.status === 'failed')).toBe(true)
+        expect(result.data?.every((p: { status?: string }) => p.status === 'failed')).toBe(true)
       })
 
       test('paginates payment history', async () => {
@@ -685,7 +685,7 @@ describe('Financial/Billing', () => {
       }
 
       // Mock the subscription creation
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: mockSubscription,
         error: null,
       })
@@ -711,7 +711,7 @@ describe('Financial/Billing', () => {
         proration_amount: 13267, // Prorated difference
       }
 
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: mockUpgrade,
         error: null,
       })
@@ -735,7 +735,7 @@ describe('Financial/Billing', () => {
         current_period_end: '2024-02-15T00:00:00Z',
       }
 
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: mockCancellation,
         error: null,
       })
@@ -752,7 +752,7 @@ describe('Financial/Billing', () => {
         new_plan_id: 'plan-basic',
       }
 
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: null,
         error: { message: 'Cannot change plans during trial period' },
       })
@@ -789,7 +789,7 @@ describe('Financial/Billing', () => {
         ],
       }
 
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: mockReport,
         error: null,
       })
@@ -817,7 +817,7 @@ describe('Financial/Billing', () => {
         discrepancies: [],
       }
 
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: mockReconciliation,
         error: null,
       })
@@ -835,7 +835,7 @@ describe('Financial/Billing', () => {
         end_date: '2024-01-01', // End before start
       }
 
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: null,
         error: { message: 'End date must be after start date' },
       })
@@ -849,14 +849,6 @@ describe('Financial/Billing', () => {
 
   describe('Security and Compliance', () => {
     test('masks sensitive payment data', async () => {
-      const mockPayment = {
-        id: 'payment-123',
-        card_number: '4111111111111111', // Should be masked
-        expiry_month: 12,
-        expiry_year: 2025,
-        cvc: '123', // Should be masked
-      }
-
       const maskedPayment = {
         id: 'payment-123',
         card_number: '**** **** **** 1111',
@@ -992,32 +984,26 @@ describe('Financial/Billing', () => {
 })
 
 // Mock helper functions for testing
-async function mockCreateSubscription(data: any) {
-  const result = await supabase.rpc('create_subscription', data)
-  return result
+async function mockCreateSubscription(data: any): Promise<any> {
+  return (supabase.rpc as any)('create_subscription', data)
 }
 
-async function mockUpgradeSubscription(data: any) {
-  const result = await supabase.rpc('upgrade_subscription', data)
-  return result
+async function mockUpgradeSubscription(data: any): Promise<any> {
+  return (supabase.rpc as any)('upgrade_subscription', data)
 }
 
-async function mockCancelSubscription(data: any) {
-  const result = await supabase.rpc('cancel_subscription', data)
-  return result
+async function mockCancelSubscription(data: any): Promise<any> {
+  return (supabase.rpc as any)('cancel_subscription', data)
 }
 
-async function mockChangeSubscriptionPlan(data: any) {
-  const result = await supabase.rpc('change_subscription_plan', data)
-  return result
+async function mockChangeSubscriptionPlan(data: any): Promise<any> {
+  return (supabase.rpc as any)('change_subscription_plan', data)
 }
 
-async function mockGenerateRevenueReport(params: any) {
-  const result = await supabase.rpc('generate_revenue_report', params)
-  return result
+async function mockGenerateRevenueReport(params: any): Promise<any> {
+  return (supabase.rpc as any)('generate_revenue_report', params)
 }
 
-async function mockGenerateReconciliationReport(data: any) {
-  const result = await supabase.rpc('generate_reconciliation_report', data)
-  return result
+async function mockGenerateReconciliationReport(data: any): Promise<any> {
+  return (supabase.rpc as any)('generate_reconciliation_report', data)
 }

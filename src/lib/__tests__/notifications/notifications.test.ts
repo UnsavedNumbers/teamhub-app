@@ -7,8 +7,7 @@
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 import { supabase } from '../../supabase'
-import { notificationService } from '../../data/services/notificationService'
-import { userPreferencesService } from '../../data/services/userPreferencesService'
+import { notificationService } from '../../../data/services/notificationService'
 
 // Mock dependencies
 vi.mock('../../supabase', () => ({
@@ -25,7 +24,7 @@ vi.mock('../../supabase', () => ({
   },
 }))
 
-vi.mock('../../data/services/notificationService', () => ({
+vi.mock('../../../data/services/notificationService', () => ({
   notificationService: {
     sendNotification: vi.fn(),
     getNotifications: vi.fn(),
@@ -37,13 +36,6 @@ vi.mock('../../data/services/notificationService', () => ({
     sendBulkNotification: vi.fn(),
     subscribeToNotifications: vi.fn(),
     unsubscribeFromNotifications: vi.fn(),
-  },
-}))
-
-vi.mock('../../data/services/userPreferencesService', () => ({
-  userPreferencesService: {
-    getUserPreferences: vi.fn(),
-    updateUserPreferences: vi.fn(),
   },
 }))
 
@@ -399,7 +391,7 @@ describe('Notification System', () => {
           is_read: false,
         })
 
-        expect(result.data?.every(n => n.is_read === false)).toBe(true)
+        expect(result.data?.every((n: { is_read?: boolean }) => n.is_read === false)).toBe(true)
       })
 
       test('filters notifications by type', async () => {
@@ -425,7 +417,7 @@ describe('Notification System', () => {
           type: 'event',
         })
 
-        expect(result.data?.every(n => n.type.startsWith('event'))).toBe(true)
+        expect(result.data?.every((n: { type?: string }) => n.type?.startsWith('event'))).toBe(true)
       })
 
       test('returns notification count', async () => {
@@ -805,7 +797,7 @@ describe('Notification System', () => {
       }
 
       // Mock the analytics retrieval
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: mockMetrics,
         error: null,
       })
@@ -842,7 +834,7 @@ describe('Notification System', () => {
         },
       }
 
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: mockEngagementReport,
         error: null,
       })
@@ -855,7 +847,7 @@ describe('Notification System', () => {
     })
 
     test('handles analytics date range validation', async () => {
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: null,
         error: { message: 'Date range cannot exceed 90 days' },
       })
@@ -962,7 +954,7 @@ describe('Notification System', () => {
         deleted_at: '2024-01-15T10:00:00Z',
       }
 
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: mockDeletionResult,
         error: null,
       })
@@ -1071,16 +1063,16 @@ describe('Notification System', () => {
 
 // Mock helper functions for testing
 async function mockGetNotificationAnalytics(params: any) {
-  const result = await supabase.rpc('get_notification_analytics', params)
+  const result = await (supabase.rpc as any)('get_notification_analytics', params)
   return result
 }
 
 async function mockGetUserEngagementReport(userId: string) {
-  const result = await supabase.rpc('get_user_engagement_report', { user_id: userId })
+  const result = await (supabase.rpc as any)('get_user_engagement_report', { user_id: userId })
   return result
 }
 
 async function mockDeleteUserNotificationData(userId: string) {
-  const result = await supabase.rpc('delete_user_notification_data', { user_id: userId })
+  const result = await (supabase.rpc as any)('delete_user_notification_data', { user_id: userId })
   return result
 }

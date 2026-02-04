@@ -71,8 +71,11 @@ export default function FanLayout() {
         <div className="fan-header-inner">
           <div className="fan-header-left">
             <div className="fan-logo" onClick={() => navigate(getLink(RouteKeys.FAN_HOME))} style={{ cursor: 'pointer' }}>
-              <div className="fan-logo-mark"></div>
-              <h1 className="fan-logo-text">FanConnect</h1>
+              <img 
+                src="/images/logo-light.png" 
+                alt="FanConnect" 
+                style={{ height: '2rem', objectFit: 'contain' }}
+              />
             </div>
             <nav className="fan-nav fan-nav-desktop">
               {navItems.slice(0, 5).map((item) => (
