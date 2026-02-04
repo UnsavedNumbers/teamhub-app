@@ -6,10 +6,9 @@
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { supabase } from '../../supabase'
-import { eventsService } from '../../data/services/eventsService'
-import { gamesService } from '../../data/services/gamesService'
-import { registrationService } from '../../data/services/registrationService'
+import { eventsService } from '../../../data/services/eventsService'
+import { gamesService } from '../../../data/services/gamesService'
+import { registrationService } from '../../../data/services/registrationService'
 
 // Mock dependencies
 vi.mock('../../supabase', () => ({
@@ -19,7 +18,7 @@ vi.mock('../../supabase', () => ({
   },
 }))
 
-vi.mock('../../data/services/eventsService', () => ({
+vi.mock('../../../data/services/eventsService', () => ({
   eventsService: {
     createEvent: vi.fn(),
     updateEvent: vi.fn(),
@@ -32,7 +31,7 @@ vi.mock('../../data/services/eventsService', () => ({
   },
 }))
 
-vi.mock('../../data/services/gamesService', () => ({
+vi.mock('../../../data/services/gamesService', () => ({
   gamesService: {
     createGame: vi.fn(),
     updateGame: vi.fn(),
@@ -42,7 +41,7 @@ vi.mock('../../data/services/gamesService', () => ({
   },
 }))
 
-vi.mock('../../data/services/registrationService', () => ({
+vi.mock('../../../data/services/registrationService', () => ({
   registrationService: {
     registerForEvent: vi.fn(),
     unregisterFromEvent: vi.fn(),
@@ -1104,7 +1103,7 @@ describe('Event/Game Management', () => {
 
         expect(result.error).toBeNull()
         expect(result.data).toHaveLength(2)
-        expect(result.data?.every(e => e.event_type === 'tournament')).toBe(true)
+        expect(result.data?.every((e: { event_type?: string }) => e.event_type === 'tournament')).toBe(true)
       })
 
       test('paginates event results', async () => {
@@ -1207,7 +1206,7 @@ describe('Event/Game Management', () => {
           status: 'pending_approval',
         })
 
-        expect(result.data?.every(r => r.status === 'pending_approval')).toBe(true)
+        expect(result.data?.every((r: { status?: string }) => r.status === 'pending_approval')).toBe(true)
       })
     })
   })

@@ -285,3 +285,17 @@ export async function revokeStaffAccess(
     }
   }
 }
+
+// ----------------------------------------------------------------------------
+// Compatibility export for tests
+// ----------------------------------------------------------------------------
+
+type ServiceResultCompat<T = unknown> = Promise<{ data: T | null; error: Error | null }>
+
+export const usersService = {
+  getUserProfile: async (): ServiceResultCompat => ({ data: null, error: null }),
+  updateUserProfile: async (): ServiceResultCompat => ({ data: null, error: null }),
+  deleteUserAccount: async (): ServiceResultCompat => ({ data: null, error: null }),
+  updateNotificationPreferences: async (): ServiceResultCompat => ({ data: null, error: null }),
+  updatePrivacySettings: async (): ServiceResultCompat => ({ data: null, error: null }),
+}

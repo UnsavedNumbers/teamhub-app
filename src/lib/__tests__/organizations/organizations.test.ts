@@ -15,7 +15,7 @@ import {
   uploadOrganizationLogo,
   uploadTicketBanner,
   type OrganizationUpdateDTO,
-} from '../../data/services/organizationService'
+} from '../../../data/services/organizationService'
 
 // Mock dependencies
 vi.mock('../../supabase', () => ({
@@ -33,7 +33,7 @@ vi.mock('../../supabase', () => ({
           select: vi.fn(() => ({
             single: vi.fn(),
           })),
-        }),
+        })),
       })),
       rpc: vi.fn(),
     })),
@@ -46,11 +46,11 @@ vi.mock('../../supabase', () => ({
   },
 }))
 
-vi.mock('../../data/config', () => ({
+vi.mock('../../../data/config', () => ({
   USE_FAKE_DATA: false,
 }))
 
-vi.mock('../../data/fake/organizationFakeService', () => ({
+vi.mock('../../../data/fake/organizationFakeService', () => ({
   getOrganizationDetails: vi.fn(),
   updateOrganizationDetails: vi.fn(),
   uploadOrganizationLogo: vi.fn(),
@@ -454,7 +454,7 @@ describe('Organization Management', () => {
 
   describe('updateOrganizationSlug', () => {
     test('successfully updates organization slug', async () => {
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: null,
         error: null,
       })
@@ -467,7 +467,7 @@ describe('Organization Management', () => {
     test('handles slug update conflicts', async () => {
       const mockError = { message: 'Slug already exists' }
 
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: null,
         error: mockError,
       })
@@ -479,7 +479,7 @@ describe('Organization Management', () => {
 
     test('validates slug format', async () => {
       // Test with invalid characters
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc as any).mockResolvedValue({
         data: null,
         error: { message: 'Invalid slug format' },
       })
@@ -490,10 +490,10 @@ describe('Organization Management', () => {
     })
 
     test('handles empty slug', async () => {
-      const result = await updateOrganizationSlug('org-123', '')
+      await updateOrganizationSlug('org-123', '')
 
       // Should still attempt the RPC call, let database handle validation
-      expect(vi.mocked(supabase.rpc)).toHaveBeenCalled()
+      expect(vi.mocked(supabase.rpc as any)).toHaveBeenCalled()
     })
   })
 

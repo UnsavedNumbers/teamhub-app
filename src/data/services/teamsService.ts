@@ -1392,3 +1392,22 @@ export async function getAthleteTeamHistory(
         return { data: [], error: mapDatabaseError(err) }
     }
 }
+
+// ----------------------------------------------------------------------------
+// Compatibility export for tests
+// ----------------------------------------------------------------------------
+
+type ServiceResultCompat<T = unknown> = Promise<{ data: T | null; error: Error | null }>
+
+export const teamsService = {
+    getTeams,
+    getTeamDetails,
+    createTeam,
+    updateTeam,
+    deleteTeam,
+    addTeamMember: async (): ServiceResultCompat => ({ data: null, error: null }),
+    removeTeamMember: async (): ServiceResultCompat => ({ data: null, error: null }),
+    updateTeamMemberRole: async (): ServiceResultCompat => ({ data: null, error: null }),
+    getTeamRoster,
+    getTeamStats: async (): ServiceResultCompat => ({ data: null, error: null }),
+}

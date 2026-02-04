@@ -1,6 +1,5 @@
--- Migration: Add get_gallery_photo_counts function
--- This function returns photo counts for multiple galleries at once,
--- respecting RLS policies by checking what photos the user can see.
+-- Migration: Fix get_gallery_photo_counts function
+-- Corrects the table reference from user_org_roles to organization_members
 
 CREATE OR REPLACE FUNCTION public.get_gallery_photo_counts(p_gallery_ids uuid[])
 RETURNS TABLE (
@@ -35,9 +34,3 @@ BEGIN
   GROUP BY gp.gallery_id;
 END;
 $$;
-
--- Grant execute permission to authenticated users
-GRANT EXECUTE ON FUNCTION public.get_gallery_photo_counts(uuid[]) TO authenticated;
-
-COMMENT ON FUNCTION public.get_gallery_photo_counts(uuid[]) IS 
-'Returns photo counts (total and pending) for multiple galleries. Respects visibility rules - non-admins only see approved photo counts.';

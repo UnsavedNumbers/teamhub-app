@@ -341,6 +341,11 @@ export function TaggingSlideout({
       showSuccess(t('gallery.tagging.saveSuccess'), 4000, { position: 'top-center' })
       setHasUnsavedChanges(false)
       onSave({ advanceToNext })
+      
+      // Close slideout after regular save (not Save & Next)
+      if (!advanceToNext) {
+        onClose()
+      }
     } catch (err) {
       showError(t('gallery.tagging.saveError', {
         error: err instanceof Error ? err.message : 'Unknown error',

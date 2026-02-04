@@ -247,9 +247,10 @@ export default function FanOrgProfile() {
 
       {/* Main Content */}
       <div className="fan-org-profile-content">
-        <div className="fan-org-profile-grid">
-          {/* Feed Section */}
-          <section className="fan-org-profile-feed">
+        <div className="fan-org-profile-content-inner">
+          <div className="fan-org-profile-grid">
+            {/* Feed Section */}
+            <section className="fan-org-profile-feed">
             <div className="fan-org-profile-feed-header">
               <h3 className="fan-org-profile-feed-title">{t('portal.fan.orgProfile.teamFeed')}</h3>
               <div className="fan-org-profile-feed-filters">
@@ -339,6 +340,7 @@ export default function FanOrgProfile() {
               <button className="fan-org-profile-promo-btn">{t('portal.fan.orgProfile.joinTheClub')}</button>
             </div>
           </aside>
+          </div>
         </div>
       </div>
     </div>

@@ -5,7 +5,8 @@
  * Tests platform admin permissions, organization-level permissions, and security boundaries.
  */
 
-import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { describe, test, expect, vi } from 'vitest'
+import { renderHook } from '@testing-library/react'
 import {
   canPerformAction,
   getAllowedActions,
@@ -15,22 +16,26 @@ import {
   PERMISSION_MATRIX,
   ROLE_LABELS,
   ROLE_DESCRIPTIONS,
+  type NavItem,
   type PlatformAdminAction,
   type PlatformAdminRole,
-} from '../../utils/platformAdminPermissions'
-import { useRolePermissions } from '../../hooks/useRolePermissions'
+} from '../../../utils/platformAdminPermissions'
+import { useRolePermissions } from '../../../hooks/useRolePermissions'
+import { useAuth } from '../../../hooks/useAuth'
 
 // Mock the useAuth hook
-vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({
+vi.mock('../../../hooks/useAuth', () => ({
+  useAuth: vi.fn(() => ({
     profile: {
       id: 'user-123',
       platformAdminRole: 'super_admin', // Default for tests
       isPlatformAdmin: true,
       organizations: [],
     },
-  }),
+  })),
 }))
+
+const useAuthMock = vi.mocked(useAuth)
 
 describe('Permission Checks', () => {
   describe('canPerformAction', () => {
@@ -87,8 +92,7 @@ describe('Permission Checks', () => {
     })
 
     test('handles unknown actions gracefully', () => {
-      // @ts-expect-error Testing invalid action
-      expect(canPerformAction('super_admin', 'unknown_action')).toBe(false)
+      expect(canPerformAction('super_admin', 'unknown_action' as any)).toBe(false)
     })
 
     test('validates role types', () => {
@@ -172,7 +176,7 @@ describe('Permission Checks', () => {
       const navItems = getNavItemsForRole('super_admin')
 
       expect(navItems).toHaveLength(9) // All navigation items
-      expect(navItems.map(item => item.text)).toEqual([
+      expect(navItems.map((item: NavItem) => item.text)).toEqual([
         'Dashboard',
         'Organizations',
         'Users',
@@ -189,7 +193,7 @@ describe('Permission Checks', () => {
       const navItems = getNavItemsForRole('support_admin')
 
       // Support admin can see all view pages but not Platform Admins
-      expect(navItems.map(item => item.text)).toEqual([
+      expect(navItems.map((item: NavItem) => item.text)).toEqual([
         'Dashboard',
         'Organizations',
         'Users',
@@ -207,7 +211,7 @@ describe('Permission Checks', () => {
     test('filters navigation for finance_admin', () => {
       const navItems = getNavItemsForRole('finance_admin')
 
-      expect(navItems.map(item => item.text)).toEqual([
+      expect(navItems.map((item: NavItem) => item.text)).toEqual([
         'Dashboard',
         'Organizations',
         'Users',
@@ -222,7 +226,7 @@ describe('Permission Checks', () => {
     test('filters navigation for ops_admin', () => {
       const navItems = getNavItemsForRole('ops_admin')
 
-      expect(navItems.map(item => item.text)).toEqual([
+      expect(navItems.map((item: NavItem) => item.text)).toEqual([
         'Dashboard',
         'Organizations',
         'Users',
@@ -243,7 +247,7 @@ describe('Permission Checks', () => {
   describe('useRolePermissions Hook', () => {
     test('returns correct permissions for super_admin', () => {
       // Mock super_admin role
-      vi.mocked(vi.importMock('../../hooks/useAuth')).useAuth.mockReturnValue({
+      useAuthMock.mockReturnValue({
         profile: {
           id: 'user-123',
           platformAdminRole: 'super_admin',
@@ -262,7 +266,7 @@ describe('Permission Checks', () => {
     })
 
     test('returns correct permissions for support_admin', () => {
-      vi.mocked(vi.importMock('../../hooks/useAuth')).useAuth.mockReturnValue({
+      useAuthMock.mockReturnValue({
         profile: {
           id: 'user-123',
           platformAdminRole: 'support_admin',
@@ -282,7 +286,7 @@ describe('Permission Checks', () => {
     })
 
     test('returns correct permissions for finance_admin', () => {
-      vi.mocked(vi.importMock('../../hooks/useAuth')).useAuth.mockReturnValue({
+      useAuthMock.mockReturnValue({
         profile: {
           id: 'user-123',
           platformAdminRole: 'finance_admin',
@@ -302,7 +306,7 @@ describe('Permission Checks', () => {
     })
 
     test('returns correct permissions for ops_admin', () => {
-      vi.mocked(vi.importMock('../../hooks/useAuth')).useAuth.mockReturnValue({
+      useAuthMock.mockReturnValue({
         profile: {
           id: 'user-123',
           platformAdminRole: 'ops_admin',
@@ -322,7 +326,7 @@ describe('Permission Checks', () => {
     })
 
     test('returns all false for non-platform-admin users', () => {
-      vi.mocked(vi.importMock('../../hooks/useAuth')).useAuth.mockReturnValue({
+      useAuthMock.mockReturnValue({
         profile: {
           id: 'user-123',
           platformAdminRole: null,
@@ -340,7 +344,7 @@ describe('Permission Checks', () => {
     })
 
     test('handles null profile gracefully', () => {
-      vi.mocked(vi.importMock('../../hooks/useAuth')).useAuth.mockReturnValue({
+      useAuthMock.mockReturnValue({
         profile: null,
       })
 
@@ -360,7 +364,7 @@ describe('Permission Checks', () => {
       actions.forEach(action => {
         const allowedRoles = PERMISSION_MATRIX[action]
         expect(allowedRoles.length).toBeGreaterThan(0)
-        expect(allowedRoles.every(role => ['super_admin', 'support_admin', 'finance_admin', 'ops_admin'].includes(role))).toBe(true)
+        expect(allowedRoles.every((role: PlatformAdminRole) => ['super_admin', 'support_admin', 'finance_admin', 'ops_admin'].includes(role))).toBe(true)
       })
     })
 
@@ -369,7 +373,7 @@ describe('Permission Checks', () => {
 
       actions.forEach(action => {
         const allowedRoles = PERMISSION_MATRIX[action]
-        allowedRoles.forEach(role => {
+        allowedRoles.forEach((role: PlatformAdminRole) => {
           expect(['super_admin', 'support_admin', 'finance_admin', 'ops_admin']).toContain(role)
         })
       })
@@ -390,9 +394,9 @@ describe('Permission Checks', () => {
     })
 
     test('navigation items have valid required actions', () => {
-      const { PLATFORM_ADMIN_NAV_ITEMS } = require('../../utils/platformAdminPermissions')
+      const { PLATFORM_ADMIN_NAV_ITEMS } = require('../../../utils/platformAdminPermissions')
 
-      PLATFORM_ADMIN_NAV_ITEMS.forEach(item => {
+      PLATFORM_ADMIN_NAV_ITEMS.forEach((item: NavItem) => {
         expect(PERMISSION_MATRIX[item.requiredAction]).toBeDefined()
         expect(PERMISSION_MATRIX[item.requiredAction].length).toBeGreaterThan(0)
       })
@@ -466,7 +470,7 @@ describe('Permission Checks', () => {
       const opsActions = getAllowedActions('ops_admin')
       const supportActions = getAllowedActions('support_admin')
 
-      const opsOnlyActions = opsActions.filter(action => !supportActions.includes(action))
+      const opsOnlyActions = opsActions.filter((action: PlatformAdminAction) => !supportActions.includes(action))
       expect(opsOnlyActions.length).toBeGreaterThan(0)
     })
 
@@ -474,8 +478,8 @@ describe('Permission Checks', () => {
       const financeActions = getAllowedActions('finance_admin')
       const otherRoles = ['super_admin', 'support_admin', 'ops_admin'] as PlatformAdminRole[]
 
-      const uniqueFinanceActions = financeActions.filter(action => {
-        return otherRoles.every(role => !getAllowedActions(role).includes(action))
+      const uniqueFinanceActions = financeActions.filter((action: PlatformAdminAction) => {
+        return otherRoles.every((role: PlatformAdminRole) => !getAllowedActions(role).includes(action))
       })
 
       expect(uniqueFinanceActions.length).toBeGreaterThan(0)
@@ -487,8 +491,8 @@ describe('Permission Checks', () => {
       const supportActions = getAllowedActions('support_admin')
       const otherRoles = ['super_admin', 'finance_admin', 'ops_admin'] as PlatformAdminRole[]
 
-      const uniqueSupportActions = supportActions.filter(action => {
-        return otherRoles.every(role => !getAllowedActions(role).includes(action))
+      const uniqueSupportActions = supportActions.filter((action: PlatformAdminAction) => {
+        return otherRoles.every((role: PlatformAdminRole) => !getAllowedActions(role).includes(action))
       })
 
       expect(uniqueSupportActions.length).toBeGreaterThan(0)
@@ -512,8 +516,7 @@ describe('Permission Checks', () => {
     test('requiredRoleLabel handles edge cases', () => {
       // Mock an action with no allowed roles (shouldn't happen in practice)
       const originalMatrix = { ...PERMISSION_MATRIX }
-      // @ts-expect-error Testing invalid state
-      PERMISSION_MATRIX['test_action'] = []
+      ;(PERMISSION_MATRIX as Record<string, PlatformAdminRole[]>)['test_action'] = []
 
       expect(requiredRoleLabel('test_action' as any)).toBe('Any platform admin') // Fallback
 
