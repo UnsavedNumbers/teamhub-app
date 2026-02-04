@@ -25,6 +25,7 @@ export default function MyTickets() {
     queryKey: ['my-ticket-orders'],
     queryFn: async () => {
       const response = await getMyTicketOrders()
+      if (Array.isArray(response)) return response
       if (response.error) throw response.error
       return response.data || []
     },
@@ -135,15 +136,14 @@ function OrderTickets({ order }: { order: TicketOrder }) {
     queryKey: ['tickets', order.id],
     queryFn: async () => {
       const response = await getTicketsForOrder(order.id)
-      if (response.error) throw response.error
-      return response.data || []
+      return response
     },
   })
 
   // Extract event details safely from the first ticket if available
   // Note: TicketOrder usually doesn't have event details directly nested unless joined, 
   // but getTicketsForOrder returns tickets with nested event data.
-  const event = tickets?.[0]?.ticketed_events
+  const event = (tickets?.[0] as any)?.ticketed_events
   const orderDate = new Date(order.created_at).toLocaleDateString('en-US', { 
     month: 'short', 
     day: 'numeric', 

@@ -17,7 +17,6 @@ import {
 import {
   getSuggestedPeopleForGallery,
   searchPeopleForGallery,
-  addTag,
   type GalleryContext,
   type SuggestedPerson,
 } from '../../data/services/taggingService'
@@ -260,7 +259,9 @@ export function BulkTaggingModal({
           photoPlural: photos.length !== 1 ? 's' : '',
           personCount: personIds.length,
           personPlural: personIds.length !== 1 ? 's' : '',
-        })
+        }),
+        4000,
+        { position: 'top-center' }
       )
       onComplete()
       onClose()

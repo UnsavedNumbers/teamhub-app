@@ -20,6 +20,7 @@ import { FanEventBookmark } from '../../types/staffAndFan'
 
 export default function BookmarkedEvents() {
   const { t } = useI18n()
+  const tAny = t as any
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   
@@ -64,7 +65,7 @@ export default function BookmarkedEvents() {
               {error instanceof Error ? error.message : t('errors.unknownError')}
             </p>
             <Button variant="primary" onClick={handleRetry}>
-              {t('common.actions.retry')}
+              {tAny('common.actions.retry')}
             </Button>
           </Card>
         </div>
