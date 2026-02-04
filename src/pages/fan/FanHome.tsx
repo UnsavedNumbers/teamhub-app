@@ -217,10 +217,12 @@ export default function FanHome() {
 
   return (
     <div className="fan-page">
-      <main className="fan-main">
-        <div className="fan-container">
-          {/* Search Section */}
-          <section className="fan-search-section">
+      {/* Hero Section with Search */}
+      <section className="fan-hero-section">
+        <div className="fan-hero-background"></div>
+        <div className="fan-hero-overlay"></div>
+        <div className="fan-hero-content">
+          <div className="fan-container">
             <div className="fan-search-wrapper">
               <span className="material-symbols-outlined fan-search-icon">search</span>
               <form onSubmit={handleSearchSubmit}>
@@ -228,7 +230,7 @@ export default function FanHome() {
                   type="text"
                   value={searchQuery}
                   onChange={handleSearchChange}
-                  className="fan-search-input"
+                  className="fan-search-input fan-search-input-hero"
                   placeholder="Search athletes, teams, or moments..."
                 />
               </form>
@@ -241,7 +243,7 @@ export default function FanHome() {
             
             {/* Search Results Dropdown */}
             {searchResults.length > 0 && (
-              <div className="fan-following-list" style={{ marginTop: '0.5rem', padding: '1rem', background: 'var(--color-zinc-50)', border: '1px solid var(--color-border)' }}>
+              <div className="fan-following-list" style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(255, 255, 255, 0.95)', border: '1px solid var(--color-border)', backdropFilter: 'blur(8px)' }}>
                 {searchResults.map((result) => (
                   <button
                     key={`${result.entity_type}-${result.id}`}
@@ -280,7 +282,12 @@ export default function FanHome() {
                 MVP Race
               </button>
             </div>
-          </section>
+          </div>
+        </div>
+      </section>
+
+      <main className="fan-main">
+        <div className="fan-container">
 
           {/* Upcoming Events Section */}
           <section className="fan-events-section">
@@ -478,6 +485,7 @@ export default function FanHome() {
                     </button>
                   </nav>
                 </div>
+
 
                 {/* Following */}
                 <div className="fan-sidebar-section">

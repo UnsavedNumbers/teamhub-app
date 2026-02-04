@@ -18,6 +18,7 @@ import { showError, showSuccess } from '../../utils/toast'
 import { QRCodeSVG } from 'qrcode.react'
 import { getLink, RouteKeys } from '../../utils/routes'
 import '../../styles/fan.css'
+import '../../styles/fan-layouts.css'
 import type { TicketOrder } from '../../types/ticketing'
 
 type TicketTab = 'upcoming' | 'past'
@@ -184,6 +185,11 @@ export default function FanTickets() {
     navigate(`/fan/tickets/${ticket.ticket_id}`)
   }
 
+  // Count tickets for wallet display
+  const totalActiveTickets = tickets.filter(t => 
+    new Date(t.event_start_time) >= new Date() && t.status === 'valid'
+  ).length
+
   if (loading) {
     return (
       <div className="fan-loading-page">
@@ -193,73 +199,112 @@ export default function FanTickets() {
   }
 
   return (
-    <>
-      {/* Page Header */}
-      <div className="fan-page-header">
-        <h1 className="fan-page-title">My Tickets</h1>
-        <p className="fan-page-subtitle">View and manage your event tickets</p>
+    <div className="fan-tickets-page">
+      {/* Page Header - Matching Design */}
+      <div className="fan-tickets-header">
+        <span className="fan-tickets-label">Account Access</span>
+        <h1 className="fan-tickets-title">My Tickets</h1>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="fan-tabs">
-        <button 
-          className={`fan-tab ${activeTab === 'upcoming' ? 'active' : ''}`}
-          onClick={() => setActiveTab('upcoming')}
-        >
-          Upcoming
-          {tickets.filter(t => new Date(t.event_start_time) >= new Date()).length > 0 && (
-            <span className="fan-tab-badge">
-              {tickets.filter(t => new Date(t.event_start_time) >= new Date()).length}
-            </span>
-          )}
-        </button>
-        <button 
-          className={`fan-tab ${activeTab === 'past' ? 'active' : ''}`}
-          onClick={() => setActiveTab('past')}
-        >
-          Past
-        </button>
+      {/* Search + Filters Row */}
+      <div className="fan-tickets-controls">
+        <div className="fan-tickets-search">
+          <span className="material-symbols-outlined">search</span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by event or venue..."
+            className="fan-tickets-search-input"
+          />
+        </div>
+        <div className="fan-tickets-tabs">
+          <button 
+            className={`fan-tickets-tab ${activeTab === 'upcoming' ? 'active' : ''}`}
+            onClick={() => setActiveTab('upcoming')}
+          >
+            Upcoming
+          </button>
+          <button 
+            className={`fan-tickets-tab ${activeTab === 'past' ? 'active' : ''}`}
+            onClick={() => setActiveTab('past')}
+          >
+            Past
+          </button>
+          <button className="fan-tickets-tab">
+            Transferred
+          </button>
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="fan-search-bar">
-        <span className="material-symbols-outlined">search</span>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search tickets by event or confirmation code..."
-          className="fan-search-input"
-        />
-      </div>
-
-      {/* Tickets List */}
-      <div className="fan-tickets-list">
-        {filteredTickets.length === 0 ? (
-          <div className="fan-empty-state">
-            <span className="material-symbols-outlined">
-              {searchQuery ? 'search_off' : 'confirmation_number'}
-            </span>
-            <h3>{searchQuery ? 'No tickets found' : activeTab === 'upcoming' ? 'No upcoming tickets' : 'No past tickets'}</h3>
-            <p>
-              {searchQuery 
-                ? 'Try adjusting your search' 
-                : activeTab === 'upcoming' 
+      {/* Two Column Layout */}
+      <div className="fan-tickets-layout">
+        {/* Main Content - Ticket List */}
+        <div className="fan-tickets-main">
+          {filteredTickets.length === 0 ? (
+            <div className="fan-tickets-empty">
+              <div className="fan-tickets-empty-icon">
+                <span className="material-symbols-outlined">confirmation_number</span>
+              </div>
+              <h3 className="fan-tickets-empty-title">
+                {activeTab === 'upcoming' ? 'No upcoming tickets' : 'No past tickets'}
+              </h3>
+              <p className="fan-tickets-empty-text">
+                {activeTab === 'upcoming' 
                   ? 'When you purchase tickets, they will appear here'
                   : 'Your past event tickets will be shown here'
-              }
-            </p>
+                }
+              </p>
+            </div>
+          ) : (
+            <div className="fan-tickets-list">
+              {filteredTickets.map((ticket) => (
+                <TicketCard
+                  key={ticket.ticket_id}
+                  ticket={ticket}
+                  onClick={() => handleTicketClick(ticket)}
+                  onTransfer={() => openTransferModal(ticket)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right Sidebar - Ticket Wallet */}
+        <aside className="fan-tickets-sidebar">
+          {/* Ticket Wallet Card */}
+          <div className="fan-ticket-wallet">
+            <h2 className="fan-wallet-title">Ticket Wallet</h2>
+            <div className="fan-wallet-stats">
+              <span className="fan-wallet-label">Total Active</span>
+              <div className="fan-wallet-count">
+                <span className="fan-wallet-number">{totalActiveTickets.toString().padStart(2, '0')}</span>
+                <span className="fan-wallet-unit">Tickets</span>
+              </div>
+            </div>
+            <div className="fan-wallet-actions">
+              <button className="fan-wallet-action">
+                <span className="material-symbols-outlined">move_up</span>
+                <span>Transfer Ticket</span>
+                <span className="material-symbols-outlined fan-wallet-arrow">east</span>
+              </button>
+              <button className="fan-wallet-action">
+                <span className="material-symbols-outlined">redeem</span>
+                <span>Send as Gift</span>
+                <span className="material-symbols-outlined fan-wallet-arrow">east</span>
+              </button>
+            </div>
           </div>
-        ) : (
-          filteredTickets.map((ticket) => (
-            <TicketCard
-              key={ticket.ticket_id}
-              ticket={ticket}
-              onClick={() => handleTicketClick(ticket)}
-              onTransfer={() => openTransferModal(ticket)}
-            />
-          ))
-        )}
+
+          {/* Help Card */}
+          <div className="fan-ticket-help">
+            <h3 className="fan-help-title">Need Help?</h3>
+            <p className="fan-help-text">
+              Having trouble with your mobile tickets? Contact our stadium support team for immediate assistance.
+            </p>
+            <button className="fan-help-button">Support Center</button>
+          </div>
+        </aside>
       </div>
 
       {/* Transfer Modal */}
@@ -270,7 +315,7 @@ export default function FanTickets() {
           onTransfer={handleTransfer}
         />
       )}
-    </>
+    </div>
   )
 }
 
@@ -342,75 +387,48 @@ function TicketCard({ ticket, onClick, onTransfer }: TicketCardProps) {
   const qrPayload = generateQRPayload(ticket.ticket_id, qrTimestamp)
 
   return (
-    <div className="fan-ticket-card">
+    <div className="fan-ticket-card-horizontal">
+      <div className="fan-ticket-date-sidebar" onClick={onClick}>
+        <span className="fan-ticket-month">{formatMonth(ticket.event_start_time)}</span>
+        <span className="fan-ticket-day">{formatDay(ticket.event_start_time)}</span>
+        <span className="fan-ticket-weekday">{formatWeekday(ticket.event_start_time)}</span>
+      </div>
+      
       <div className="fan-ticket-card-content" onClick={onClick}>
         <div className="fan-ticket-card-main">
           {/* Event Info */}
           <div className="fan-ticket-info">
+            <p className="fan-ticket-category">{ticket.ticket_type_name}</p>
             <h3 className="fan-ticket-event-name">{ticket.event_name}</h3>
             <div className="fan-ticket-details">
-              <span className="fan-ticket-detail">
-                <span className="material-symbols-outlined">event</span>
-                {formatDateTime(ticket.event_start_time)}
-              </span>
               {ticket.event_location && (
                 <span className="fan-ticket-detail">
                   <span className="material-symbols-outlined">location_on</span>
                   {ticket.event_location}
                 </span>
               )}
-            </div>
-            <div className="fan-ticket-meta">
-              <span className="fan-ticket-type">{ticket.ticket_type_name}</span>
               {ticket.seat_info && (
-                <span className="fan-ticket-seat">{ticket.seat_info}</span>
+                <span className="fan-ticket-detail">
+                  <span className="material-symbols-outlined">event_seat</span>
+                  {ticket.seat_info}
+                </span>
               )}
-              {getStatusBadge()}
             </div>
-          </div>
-
-          {/* QR Preview */}
-          <div className="fan-ticket-qr-preview">
-            <span className="material-symbols-outlined">qr_code_2</span>
           </div>
         </div>
+      </div>
 
-        {/* Confirmation Code */}
-        {ticket.order_confirmation_code && (
-          <div className="fan-ticket-confirmation">
-            <span className="fan-ticket-confirmation-label">Confirmation</span>
-            <span className="fan-ticket-confirmation-code">{ticket.order_confirmation_code}</span>
-          </div>
-        )}
+      <div className="fan-ticket-card-actions">
+        <button 
+          className="fan-btn fan-btn-primary"
+          onClick={(e) => { e.stopPropagation(); setShowQR(!showQR); }}
+        >
+          <span className="material-symbols-outlined">qr_code_2</span>
+          View QR Code
+        </button>
       </div>
 
       {/* Expandable QR Section */}
-      <div className="fan-ticket-actions">
-        <button 
-          className="fan-ticket-action-btn"
-          onClick={(e) => { e.stopPropagation(); setShowQR(!showQR); }}
-        >
-          <span className="material-symbols-outlined">qr_code</span>
-          {showQR ? 'Hide QR' : 'Show QR'}
-        </button>
-        
-        {ticket.status === 'valid' && (
-          <button 
-            className="fan-ticket-action-btn"
-            onClick={(e) => { e.stopPropagation(); onTransfer(); }}
-          >
-            <span className="material-symbols-outlined">send</span>
-            Transfer
-          </button>
-        )}
-        
-        <button className="fan-ticket-action-btn">
-          <span className="material-symbols-outlined">add_to_photos</span>
-          Add to Wallet
-        </button>
-      </div>
-
-      {/* QR Code Display */}
       {showQR && (
         <div className="fan-ticket-qr-expanded">
           <div className="fan-qr-container">
@@ -434,6 +452,18 @@ function TicketCard({ ticket, onClick, onTransfer }: TicketCardProps) {
       )}
     </div>
   )
+}
+
+const formatMonth = (dateStr: string) => {
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short' })
+}
+
+const formatDay = (dateStr: string) => {
+  return new Date(dateStr).getDate().toString()
+}
+
+const formatWeekday = (dateStr: string) => {
+  return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long' })
 }
 
 /**

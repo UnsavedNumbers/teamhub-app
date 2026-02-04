@@ -17,7 +17,7 @@
   --color-background: #ffffff;
   --color-surface: #fafafa;
   --color-surface-hover: #f4f4f5;
-  
+
   /* Zinc Scale (matching Tailwind) */
   --color-zinc-50: #fafafa;
   --color-zinc-100: #f4f4f5;
@@ -29,31 +29,39 @@
   --color-zinc-700: #3f3f46;
   --color-zinc-800: #27272a;
   --color-zinc-900: #18181b;
-  
+
   /* Text Colors */
   --color-text-primary: #18181b;
   --color-text-secondary: #52525b;
   --color-text-muted: #a1a1aa;
   --color-text-light: #d4d4d8;
-  
+
   /* Border Colors */
   --color-border: #f4f4f5;
   --color-border-light: rgba(0, 0, 0, 0.05);
-  
+
   /* Typography */
   --font-family-primary: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-family-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  
+
   /* Font Sizes */
-  --font-size-2xs: 0.625rem;   /* 10px */
-  --font-size-xs: 0.75rem;      /* 12px */
-  --font-size-sm: 0.875rem;     /* 14px */
-  --font-size-base: 1rem;       /* 16px */
-  --font-size-lg: 1.125rem;     /* 18px */
-  --font-size-xl: 1.25rem;      /* 20px */
-  --font-size-2xl: 1.5rem;      /* 24px */
-  --font-size-3xl: 1.875rem;    /* 30px */
-  
+  --font-size-2xs: 0.625rem;
+  /* 10px */
+  --font-size-xs: 0.75rem;
+  /* 12px */
+  --font-size-sm: 0.875rem;
+  /* 14px */
+  --font-size-base: 1rem;
+  /* 16px */
+  --font-size-lg: 1.125rem;
+  /* 18px */
+  --font-size-xl: 1.25rem;
+  /* 20px */
+  --font-size-2xl: 1.5rem;
+  /* 24px */
+  --font-size-3xl: 1.875rem;
+  /* 30px */
+
   /* Font Weights */
   --font-weight-light: 300;
   --font-weight-normal: 400;
@@ -62,12 +70,12 @@
   --font-weight-bold: 700;
   --font-weight-extrabold: 800;
   --font-weight-black: 900;
-  
+
   /* Line Heights */
   --line-height-tight: 1.25;
   --line-height-normal: 1.5;
   --line-height-relaxed: 1.75;
-  
+
   /* Letter Spacing */
   --tracking-tight: -0.025em;
   --tracking-normal: 0;
@@ -76,7 +84,7 @@
   --tracking-widest: 0.15em;
   --tracking-ultra: 0.2em;
   --tracking-extreme: 0.25em;
-  
+
   /* Spacing Scale */
   --spacing-0: 0;
   --spacing-0-5: 0.125rem;
@@ -94,7 +102,7 @@
   --spacing-16: 4rem;
   --spacing-20: 5rem;
   --spacing-24: 6rem;
-  
+
   /* Border Radius - Minimal/Sharp */
   --radius-none: 0;
   --radius-sm: 0.125rem;
@@ -102,7 +110,7 @@
   --radius-lg: 0.25rem;
   --radius-xl: 0.5rem;
   --radius-full: 9999px;
-  
+
   /* Shadows */
   --shadow-none: none;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -110,18 +118,22 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
   --shadow-hover: 0 25px 50px -12px rgb(244 244 245 / 1);
-  
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
   --transition-slow: 350ms ease;
   --transition-colors: color 250ms ease, background-color 250ms ease, border-color 250ms ease;
-  
+
   /* Layout */
-  --container-max-width: 80rem;    /* 1280px */
-  --content-max-width: 64rem;      /* 1024px */
-  --header-height: 5rem;           /* 80px */
-  --sidebar-width: 15rem;          /* 240px */
+  --container-max-width: 80rem;
+  /* 1280px */
+  --content-max-width: 64rem;
+  /* 1024px */
+  --header-height: 5rem;
+  /* 80px */
+  --sidebar-width: 15rem;
+  /* 240px */
 }
 
 /* ----------------------------------------------------------------------------
@@ -189,11 +201,11 @@
    3. TYPOGRAPHY
    ---------------------------------------------------------------------------- */
 
-.fan-page h1, 
-.fan-page h2, 
-.fan-page h3, 
-.fan-page h4, 
-.fan-page h5, 
+.fan-page h1,
+.fan-page h2,
+.fan-page h3,
+.fan-page h4,
+.fan-page h5,
 .fan-page h6 {
   font-family: var(--font-family-display);
   font-weight: var(--font-weight-bold);
@@ -362,7 +374,58 @@
 }
 
 /* ----------------------------------------------------------------------------
-   6. SEARCH SECTION
+   6. HERO SECTION
+   ---------------------------------------------------------------------------- */
+
+.fan-hero-section {
+  position: relative;
+  width: 100%;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-16);
+  overflow: hidden;
+}
+
+.fan-hero-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/fan_hero_background.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 1;
+}
+
+.fan-hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.1));
+  z-index: 2;
+}
+
+.fan-hero-content {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  padding: var(--spacing-16) 0;
+}
+
+@media (min-width: 768px) {
+  .fan-hero-section {
+    min-height: 500px;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   7. SEARCH SECTION
    ---------------------------------------------------------------------------- */
 
 .fan-search-section {
@@ -415,6 +478,49 @@
   outline: none;
   background-color: var(--color-background);
   border-bottom-color: var(--color-zinc-200);
+}
+
+/* Hero Search Input - Transparent variant */
+.fan-search-input-hero {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.fan-search-input-hero::placeholder {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.fan-search-input-hero:focus {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+}
+
+.fan-hero-section .fan-search-icon {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.fan-hero-section .fan-search-wrapper:focus-within .fan-search-icon {
+  color: var(--color-primary);
+}
+
+.fan-hero-section .fan-trending-label {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.fan-hero-section .fan-trending-link {
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: all var(--transition-normal);
+}
+
+.fan-hero-section .fan-trending-link:hover {
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 .fan-trending {
@@ -1304,6 +1410,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -1314,6 +1421,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
