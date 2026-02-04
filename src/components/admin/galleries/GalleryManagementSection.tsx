@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Badge, Button, Card, EmptyState } from '@/components/platformAdmin'
+import { Badge, Button, Card, EmptyState, Modal } from '@/components/platformAdmin'
 import {
   deleteGallery,
   getGalleriesForUser,
@@ -9,6 +9,8 @@ import {
   type GalleryEntityType,
 } from '@/data/services/galleryService'
 import { useUserContext } from '@/hooks/useUserContext'
+import { useI18n } from '@/i18n/useI18n'
+import { USE_FAKE_DATA } from '@/data/config'
 import { showError, showSuccess } from '@/utils/toast'
 import { GalleryCreateModal } from './GalleryCreateModal'
 import { GalleryEditModal } from './GalleryEditModal'
@@ -30,10 +32,12 @@ export function GalleryManagementSection({
   allowCreate = true,
 }: Props) {
   const { context } = useUserContext()
+  const { t } = useI18n()
   const [galleries, setGalleries] = useState<Gallery[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [editing, setEditing] = useState<Gallery | null>(null)
+  const [showDemoModal, setShowDemoModal] = useState(false)
   const navigate = useNavigate()
 
   const galleryTypeFilter = useMemo(() => (entityType ? mapEntityToGalleryType(entityType) : undefined), [entityType])
@@ -61,16 +65,38 @@ export function GalleryManagementSection({
   }, [entityId, entityType, orgId])
 
   const handleDelete = async (galleryId: string) => {
+    if (USE_FAKE_DATA) {
+      setShowDemoModal(true)
+      return
+    }
+
     if (!context) return
-    const confirm = window.confirm('Delete this gallery and all photos?')
+    const confirm = window.confirm(t('photos.confirmDeletePhotos', { count: 1 }))
     if (!confirm) return
     const { error } = await deleteGallery(context, galleryId)
     if (error) {
       showError(error.message)
       return
     }
-    showSuccess('Gallery deleted')
+    showSuccess(t('photos.success.galleryDeleted'))
     load()
+  }
+
+  const handleCreateClick = () => {
+    if (USE_FAKE_DATA) {
+      setShowDemoModal(true)
+      return
+    }
+    // Navigate to create page instead of showing modal
+    navigate(getLink('admin.photos.create'))
+  }
+
+  const handleEditClick = (gallery: Gallery) => {
+    if (USE_FAKE_DATA) {
+      setShowDemoModal(true)
+      return
+    }
+    setEditing(gallery)
   }
 
   const renderGalleryCard = (gallery: Gallery) => (
@@ -92,22 +118,23 @@ export function GalleryManagementSection({
             {gallery.visibility && <Badge variant="info">{gallery.visibility}</Badge>}
           </div>
           <p className="pa-text-sm pa-text-muted pa-m-0">
-            {gallery.photo_count ?? 0} photos • {new Date(gallery.created_at).toLocaleDateString()}
+            {t('photos.stats.photosCount', { count: gallery.photo_count ?? 0 })} • {new Date(gallery.created_at).toLocaleDateString()}
           </p>
           <p className="pa-text-xs pa-text-muted pa-m-0">
-            {gallery.gallery_type}{gallery.entity_id ? ` • ${gallery.entity_id.slice(0, 8)}` : ''}
+            {t(`photos.galleryType.${gallery.gallery_type}` as any)}
+            {gallery.entity_id ? ` • ${gallery.entity_id.slice(0, 8)}` : ''}
           </p>
         </div>
       </div>
       <div className="pa-flex pa-gap-2">
         <Button variant="secondary" onClick={() => navigate(getLink('admin.photos.detail', { id: gallery.id }))}>
-          View
+          {t('photos.viewGallery')}
         </Button>
-        <Button variant="ghost" onClick={() => setEditing(gallery)}>
-          Edit
+        <Button variant="ghost" onClick={() => handleEditClick(gallery)}>
+          {t('common.edit')}
         </Button>
         <Button variant="danger" onClick={() => handleDelete(gallery.id)}>
-          Delete
+          {t('common.delete')}
         </Button>
       </div>
     </Card>
@@ -119,12 +146,14 @@ export function GalleryManagementSection({
         <div>
           <h3 className="pa-text-lg pa-font-semibold">{title}</h3>
           <p className="pa-text-sm pa-text-muted">
-            {entityType ? `Photos for this ${entityType.replace('_', ' ')}` : 'All galleries in this organization'}
+            {entityType 
+              ? `${t('photos.title')} ${t('photos.linkedTo')} ${t(`photos.galleryType.${entityType}` as any).toLowerCase()}`
+              : t('photos.subtitle')}
           </p>
         </div>
         {allowCreate && (
-          <Button variant="primary" onClick={() => setShowCreate(true)}>
-            Create Gallery
+          <Button variant="primary" onClick={handleCreateClick}>
+            {t('photos.createGallery')}
           </Button>
         )}
       </div>
@@ -133,9 +162,12 @@ export function GalleryManagementSection({
         <Card className="pa-card pa-h-32 pa-animate-pulse" />
       ) : galleries.length === 0 ? (
         <EmptyState
-          title="No galleries yet"
-          description="Create a gallery to start uploading photos."
-          action={allowCreate ? { label: 'Create Gallery', onClick: () => setShowCreate(true) } : undefined}
+          title={t('photos.empty.title')}
+          description={t('photos.empty.message')}
+          action={allowCreate ? { 
+            label: t('photos.createGallery'), 
+            onClick: handleCreateClick 
+          } : undefined}
         />
       ) : (
         <div className="pa-space-y-3">{galleries.map(renderGalleryCard)}</div>
@@ -147,7 +179,7 @@ export function GalleryManagementSection({
           onClose={() => setShowCreate(false)}
           defaultEntityId={entityId}
           defaultEntityType={entityType}
-          entityLabel={entityType ? `Creating gallery for ${entityType}` : 'Choose the entity this gallery belongs to.'}
+          entityLabel={entityType ? `${t('photos.createGallerySubtitle')} ${t(`photos.galleryType.${entityType}` as any)}` : t('photos.createGallerySubtitle')}
           onCreated={() => load()}
         />
       )}
@@ -168,6 +200,22 @@ export function GalleryManagementSection({
           }}
         />
       )}
+
+      {/* Demo Mode Modal */}
+      <Modal
+        open={showDemoModal}
+        onClose={() => setShowDemoModal(false)}
+        title={t('photos.demoMode.title')}
+      >
+        <p className="pa-text-sm pa-text-muted pa-mb-4">
+          {t('photos.demoMode.message')}
+        </p>
+        <div className="pa-flex pa-justify-end">
+          <Button variant="primary" onClick={() => setShowDemoModal(false)}>
+            {t('common.ok')}
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }

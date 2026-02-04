@@ -26,20 +26,24 @@ export const en = {
         cancel: 'Cancel',
         dontCancel: 'Don\'t Cancel',
         close: 'Close',
+        back: 'Back',
         goBack: 'Go Back',
         viewDetails: 'View Details',
         edit: 'Edit',
         remove: 'Remove',
+        delete: 'Delete',
         add: 'Add',
         invite: 'Invite',
         change: 'Change',
         manage: 'Manage',
+        sort: 'Sort',
         download: 'Download',
         connecting: 'Connecting...',
         connecting_to_chat: 'Connecting to chat...',
         select: 'Select',
         clearSelection: 'Clear Selection',
         selectAll: 'Select All Due',
+        selectedCount: '{{count}} selected',
         note: 'NOTE',
         notes: 'NOTES',
         home: 'Home',
@@ -53,7 +57,18 @@ export const en = {
         search: 'Search',
         adding: 'Adding...',
         saving: 'Saving...',
+        success: 'Success',
+        pending: 'Pending',
+        mostRecent: 'Most recent',
+        modified: 'Modified',
+        ok: 'OK',
+        approved: 'Approved',
+        remaining: 'Remaining',
+        backToList: 'Back to list',
         unknown: 'Unknown',
+    },
+    nav: {
+        photos: 'Photos',
     },
     license: {
         statusLabel: 'License Status',
@@ -1748,6 +1763,8 @@ export const en = {
             remove: 'Remove',
             successIcon: 'success',
             errorIcon: 'error',
+            uploadSuccess: 'Uploaded {{fileName}}',
+            uploadError: 'Failed to upload {{fileName}}: {{error}}',
         },
         parentPhotoUpload: {
             title: 'Share Your Highlights',
@@ -1763,6 +1780,11 @@ export const en = {
             uploadProgress: '{{progress}}%',
             uploadSuccess: 'Photos uploaded successfully',
             uploadError: 'Failed to upload photos',
+            orgContextRequired: 'Organization context required',
+            agreeToGuidelines: 'Please agree to the media guidelines before uploading',
+            uploadPendingReview: 'Uploaded {{fileName}}. Your photo is pending review.',
+            uploadErrorSingle: 'Failed to upload {{fileName}}: {{error}}',
+            agreeToGuidelinesSubmit: 'Please agree to the media guidelines',
         },
         moderationQueue: {
             title: 'Moderation Queue',
@@ -1772,6 +1794,40 @@ export const en = {
             rejectSuccess: 'Photos rejected successfully',
             approveError: 'Failed to approve photos',
             rejectError: 'Failed to reject photos',
+            selectedPhotos: '{{count}} photo{{plural}} selected',
+            approve: 'Approve',
+            reject: 'Reject',
+            clear: 'Clear',
+        },
+        athleteTagging: {
+            title: 'Tag Athletes',
+            photoAlt: 'Photo to tag',
+            searchPlaceholder: 'Search roster...',
+            selectedAthletes: 'Selected Athletes',
+            suggestedAthletes: 'Suggested Athletes',
+            noAthletesFound: 'No athletes found',
+            athletesTagged: '{{count}} athlete{{plural}} tagged',
+            cancel: 'Cancel',
+            saving: 'Saving...',
+            saveAndNext: 'Save & Next',
+            saveSuccess: 'Tags saved successfully',
+            saveError: 'Failed to save tags: {{error}}',
+        },
+        bulkTagging: {
+            title: 'Currently Tagging ({{count}} Selected)',
+            subtitle: 'Tags added here will be applied to all selected items.',
+            photoAlt: 'Photo {{id}}',
+            searchPlaceholder: 'Search roster...',
+            appliedToBatch: 'Applied to Batch',
+            saved: 'SAVED',
+            frequentAthletes: 'Frequent Athletes',
+            noAthletesFound: 'No athletes found',
+            cancel: 'Cancel',
+            saving: 'Saving...',
+            finishTagging: 'Finish Tagging {{count}} Photo{{plural}}',
+            selectAthleteError: 'Please select at least one athlete',
+            saveSuccess: 'Tagged {{photoCount}} photo{{photoPlural}} with {{athleteCount}} athlete{{athletePlural}}',
+            saveError: 'Failed to save tags: {{error}}',
         },
         adminPhotoUpload: {
             title: 'Upload Photos',
@@ -2050,6 +2106,176 @@ export const en = {
         error: 'Error',
         completed: 'Completed',
     },
+    
+    // Photo Gallery Features
+    photos: {
+        title: 'Photos',
+        subtitle: 'Manage photo galleries for teams, athletes, and events',
+        allGalleries: 'All Galleries',
+        createGallery: 'Create Gallery',
+        createGallerySubtitle: 'Create a new photo gallery',
+        editGallery: 'Edit Gallery',
+        viewGallery: 'View Gallery',
+        deleteGallery: 'Delete Gallery',
+        uploadPhotos: 'Upload Photos',
+        
+        // Gallery types
+        galleryType: {
+            organization: 'Organization',
+            season: 'Season',
+            team: 'Team',
+            athlete: 'Athlete',
+            event: 'Event',
+            program: 'Program',
+            travel: 'Travel',
+            travel_plan: 'Travel Plan',
+            org: 'Organization',
+        },
+        
+        // Entity relationships
+        linkedTo: 'Linked to',
+        linkedEntities: 'Linked Entities',
+        noEntity: 'Organization Only',
+        
+        // Demo mode
+        demoMode: {
+            title: 'Demo Mode',
+            message: 'This feature is not available in demo mode.',
+            createBlocked: 'Creating galleries is not available in demo mode.',
+            editBlocked: 'Editing galleries is not available in demo mode.',
+            deleteBlocked: 'Deleting galleries is not available in demo mode.',
+            uploadBlocked: 'Uploading photos is not available in demo mode.',
+        },
+        
+        // Photo limits
+        photoLimit: {
+            reached: 'Photo limit reached',
+            reachedMessage: 'This gallery has reached the maximum of {{limit}} photos.',
+            remaining: '{{remaining}} of {{limit}} photos remaining',
+            canUpload: 'You can upload {{count}} more photo(s)',
+        },
+        
+        // Pending approval
+        pendingApproval: {
+            badge: 'Pending',
+            message: 'Your photos are pending approval',
+            adminMessage: '{{count}} photo(s) pending approval',
+            waitingMessage: 'Photos uploaded by parents require approval before they appear in the gallery.',
+        },
+        
+        // Auto-approval
+        autoApproved: 'Auto-approved',
+        approvedByCoach: 'Approved by coach',
+        
+        // Photo actions
+        setCoverPhoto: 'Set as Cover Photo',
+        coverPhoto: 'Cover Photo',
+        deletePhoto: 'Delete Photo',
+        deletePhotos: 'Delete {{count}} Photos',
+        confirmDeletePhotos: 'Are you sure you want to delete {{count}} photo(s)?',
+        viewPhoto: 'View Photo',
+        downloadPhoto: 'Download Photo',
+        
+        // Upload
+        upload: {
+            title: 'Upload Photos',
+            dragDrop: 'Drag and drop photos here',
+            orBrowse: 'or browse files',
+            selectFiles: 'Select Files',
+            uploading: 'Uploading {{current}} of {{total}}',
+            uploadComplete: 'Upload complete',
+            uploadFailed: 'Upload failed',
+            validTypes: 'Accepted: JPG, PNG, GIF, WEBP',
+            maxSize: 'Max size: {{size}}MB per file',
+        },
+        
+        // Gallery form
+        form: {
+            title: 'Gallery Title',
+            titlePlaceholder: 'Enter gallery title',
+            titleRequired: 'Title is required',
+            description: 'Description',
+            descriptionPlaceholder: 'Optional description',
+            requireApproval: 'Require approval for parent uploads',
+            requireApprovalHelp: 'Photos uploaded by parents will need approval before appearing in the gallery',
+            entityType: 'Link to Entity',
+            entityTypeHelp: 'Choose which entity this gallery belongs to',
+            selectEntity: 'Select {{type}}',
+            entityRequired: 'Please select a {{type}}',
+            seasonIdPlaceholder: 'Enter the UUID of the season this gallery belongs to',
+        },
+        
+        // Photo details page
+        photoDetails: {
+            status: 'Status',
+            details: 'Details',
+            actions: 'Actions',
+            fileName: 'File name',
+            size: 'Size',
+            uploaded: 'Uploaded',
+            backToGallery: 'Back to Gallery',
+        },
+        
+        // Gallery view page
+        galleryView: {
+            moderationRequired: 'Moderation Required',
+            manage: 'Manage',
+            addYourPhotos: 'Add Your Photos',
+            backToGallery: 'Back to Gallery',
+            shareHighlights: 'Share Your Highlights',
+        },
+        
+        // Filters
+        filters: {
+            all: 'All Galleries',
+            byType: 'By Type',
+            search: 'Search galleries...',
+            noResults: 'No galleries found',
+            clearFilters: 'Clear Filters',
+        },
+        
+        // Stats
+        stats: {
+            totalGalleries: 'Total Galleries',
+            totalPhotos: 'Total Photos',
+            photosCount: '{{count}} photo(s)',
+            emptyGallery: 'No photos yet',
+        },
+        
+        // Empty states
+        empty: {
+            title: 'No galleries yet',
+            message: 'Create your first photo gallery to get started',
+            createButton: 'Create Gallery',
+        },
+        
+        // Errors
+        errors: {
+            loadGalleries: 'Failed to load galleries',
+            loadGallery: 'Failed to load gallery',
+            loadPhotos: 'Failed to load photos',
+            createGallery: 'Failed to create gallery',
+            updateGallery: 'Failed to update gallery',
+            deleteGallery: 'Failed to delete gallery',
+            uploadPhoto: 'Failed to upload photo',
+            deletePhoto: 'Failed to delete photo',
+            setCoverPhoto: 'Failed to set cover photo',
+            permissionDenied: 'You do not have permission to perform this action',
+            retry: 'Retry',
+        },
+        
+        // Success messages
+        success: {
+            galleryCreated: 'Gallery created successfully',
+            galleryUpdated: 'Gallery updated successfully',
+            galleryDeleted: 'Gallery deleted successfully',
+            photoUploaded: 'Photo uploaded successfully',
+            photosUploaded: '{{count}} photos uploaded successfully',
+            photoDeleted: 'Photo deleted successfully',
+            photosDeleted: '{{count}} photos deleted successfully',
+            coverPhotoSet: 'Cover photo updated',
+        },
+    },
 
     // Platform Admin Features
     platformAdmin: {
@@ -2219,20 +2445,24 @@ export const es = {
         cancel: 'Cancelar',
         dontCancel: 'No cancelar',
         close: 'Cerrar',
+        back: 'Volver',
         goBack: 'Volver',
         viewDetails: 'Ver Detalles',
         edit: 'Editar',
         remove: 'Eliminar',
+        delete: 'Eliminar',
         add: 'Agregar',
         invite: 'Invitar',
         change: 'Cambiar',
         manage: 'Administrar',
+        sort: 'Ordenar',
         download: 'Descargar',
         connecting: 'Conectando...',
         connecting_to_chat: 'Conectando al chat...',
         select: 'Seleccionar',
         clearSelection: 'Limpiar Selección',
         selectAll: 'Seleccionar Todo Vencido',
+        selectedCount: '{{count}} seleccionados',
         note: 'NOTA',
         notes: 'NOTAS',
         home: 'Inicio',
@@ -2242,6 +2472,22 @@ export const es = {
         homePlaceholder: 'Inicio',
         athletesPlaceholder: 'Atletas',
         photosPlaceholder: 'Fotos',
+        searching: 'Buscando...',
+        search: 'Buscar',
+        adding: 'Agregando...',
+        saving: 'Guardando...',
+        success: 'Éxito',
+        pending: 'Pendiente',
+        mostRecent: 'Mas reciente',
+        modified: 'Modificado',
+        ok: 'OK',
+        approved: 'Aprobado',
+        remaining: 'Restante',
+        backToList: 'Volver a la lista',
+        unknown: 'Desconocido',
+    },
+    nav: {
+        photos: 'Fotos',
     },
     license: {
         statusLabel: 'Estado de Licencia',
@@ -3883,6 +4129,8 @@ export const es = {
             remove: 'Eliminar',
             successIcon: 'éxito',
             errorIcon: 'error',
+            uploadSuccess: 'Subido {{fileName}}',
+            uploadError: 'Error al subir {{fileName}}: {{error}}',
         },
         parentPhotoUpload: {
             title: 'Comparte Tus Momentos Destacados',
@@ -3898,6 +4146,11 @@ export const es = {
             uploadProgress: '{{progress}}%',
             uploadSuccess: 'Fotos cargadas exitosamente',
             uploadError: 'Error al cargar fotos',
+            orgContextRequired: 'Contexto de organización requerido',
+            agreeToGuidelines: 'Por favor acepta las pautas de medios antes de cargar',
+            uploadPendingReview: 'Subido {{fileName}}. Tu foto está pendiente de revisión.',
+            uploadErrorSingle: 'Error al subir {{fileName}}: {{error}}',
+            agreeToGuidelinesSubmit: 'Por favor acepta las pautas de medios',
         },
         moderationQueue: {
             title: 'Cola de Moderación',
@@ -3907,6 +4160,40 @@ export const es = {
             rejectSuccess: 'Fotos rechazadas exitosamente',
             approveError: 'Error al aprobar fotos',
             rejectError: 'Error al rechazar fotos',
+            selectedPhotos: '{{count}} foto{{plural}} seleccionada{{plural}}',
+            approve: 'Aprobar',
+            reject: 'Rechazar',
+            clear: 'Limpiar',
+        },
+        athleteTagging: {
+            title: 'Etiquetar Atletas',
+            photoAlt: 'Foto para etiquetar',
+            searchPlaceholder: 'Buscar roster...',
+            selectedAthletes: 'Atletas Seleccionados',
+            suggestedAthletes: 'Atletas Sugeridos',
+            noAthletesFound: 'No se encontraron atletas',
+            athletesTagged: '{{count}} atleta{{plural}} etiquetado{{plural}}',
+            cancel: 'Cancelar',
+            saving: 'Guardando...',
+            saveAndNext: 'Guardar y Siguiente',
+            saveSuccess: 'Etiquetas guardadas exitosamente',
+            saveError: 'Error al guardar etiquetas: {{error}}',
+        },
+        bulkTagging: {
+            title: 'Etiquetando Actualmente ({{count}} Seleccionados)',
+            subtitle: 'Las etiquetas agregadas aquí se aplicarán a todos los elementos seleccionados.',
+            photoAlt: 'Foto {{id}}',
+            searchPlaceholder: 'Buscar roster...',
+            appliedToBatch: 'Aplicado al Lote',
+            saved: 'GUARDADO',
+            frequentAthletes: 'Atletas Frecuentes',
+            noAthletesFound: 'No se encontraron atletas',
+            cancel: 'Cancelar',
+            saving: 'Guardando...',
+            finishTagging: 'Finalizar Etiquetado {{count}} Foto{{plural}}',
+            selectAthleteError: 'Por favor selecciona al menos un atleta',
+            saveSuccess: 'Etiquetado {{photoCount}} foto{{photoPlural}} con {{athleteCount}} atleta{{athletePlural}}',
+            saveError: 'Error al guardar etiquetas: {{error}}',
         },
         adminPhotoUpload: {
             title: 'Cargar Fotos',
@@ -4150,6 +4437,176 @@ export const es = {
         success: 'Éxito',
         error: 'Error',
         completed: 'Completado',
+    },
+    
+    // Características de Galería de Fotos
+    photos: {
+        title: 'Fotos',
+        subtitle: 'Administrar galerías de fotos para equipos, atletas y eventos',
+        allGalleries: 'Todas las Galerías',
+        createGallery: 'Crear Galería',
+        createGallerySubtitle: 'Crear una nueva galería de fotos',
+        editGallery: 'Editar Galería',
+        viewGallery: 'Ver Galería',
+        deleteGallery: 'Eliminar Galería',
+        uploadPhotos: 'Subir Fotos',
+        
+        // Tipos de galería
+        galleryType: {
+            organization: 'Organización',
+            season: 'Temporada',
+            team: 'Equipo',
+            athlete: 'Atleta',
+            event: 'Evento',
+            program: 'Programa',
+            travel: 'Viaje',
+            travel_plan: 'Plan de viaje',
+            org: 'Organización',
+        },
+        
+        // Relaciones de entidad
+        linkedTo: 'Vinculado a',
+        linkedEntities: 'Entidades Vinculadas',
+        noEntity: 'Solo Organización',
+        
+        // Modo demo
+        demoMode: {
+            title: 'Modo Demo',
+            message: 'Esta función no está disponible en modo demo.',
+            createBlocked: 'Crear galerías no está disponible en modo demo.',
+            editBlocked: 'Editar galerías no está disponible en modo demo.',
+            deleteBlocked: 'Eliminar galerías no está disponible en modo demo.',
+            uploadBlocked: 'Subir fotos no está disponible en modo demo.',
+        },
+        
+        // Límites de fotos
+        photoLimit: {
+            reached: 'Límite de fotos alcanzado',
+            reachedMessage: 'Esta galería ha alcanzado el máximo de {{limit}} fotos.',
+            remaining: '{{remaining}} de {{limit}} fotos restantes',
+            canUpload: 'Puedes subir {{count}} foto(s) más',
+        },
+        
+        // Aprobación pendiente
+        pendingApproval: {
+            badge: 'Pendiente',
+            message: 'Tus fotos están pendientes de aprobación',
+            adminMessage: '{{count}} foto(s) pendientes de aprobación',
+            waitingMessage: 'Las fotos subidas por padres requieren aprobación antes de aparecer en la galería.',
+        },
+        
+        // Auto-aprobación
+        autoApproved: 'Auto-aprobado',
+        approvedByCoach: 'Aprobado por entrenador',
+        
+        // Acciones de fotos
+        setCoverPhoto: 'Establecer como Foto de Portada',
+        coverPhoto: 'Foto de Portada',
+        deletePhoto: 'Eliminar Foto',
+        deletePhotos: 'Eliminar {{count}} Fotos',
+        confirmDeletePhotos: '¿Estás seguro de que quieres eliminar {{count}} foto(s)?',
+        viewPhoto: 'Ver Foto',
+        downloadPhoto: 'Descargar Foto',
+        
+        // Subir
+        upload: {
+            title: 'Subir Fotos',
+            dragDrop: 'Arrastra y suelta fotos aquí',
+            orBrowse: 'o busca archivos',
+            selectFiles: 'Seleccionar Archivos',
+            uploading: 'Subiendo {{current}} de {{total}}',
+            uploadComplete: 'Subida completa',
+            uploadFailed: 'Subida fallida',
+            validTypes: 'Aceptados: JPG, PNG, GIF, WEBP',
+            maxSize: 'Tamaño máx: {{size}}MB por archivo',
+        },
+        
+        // Formulario de galería
+        form: {
+            title: 'Título de Galería',
+            titlePlaceholder: 'Ingresa el título de la galería',
+            titleRequired: 'El título es requerido',
+            description: 'Descripción',
+            descriptionPlaceholder: 'Descripción opcional',
+            requireApproval: 'Requerir aprobación para subidas de padres',
+            requireApprovalHelp: 'Las fotos subidas por padres necesitarán aprobación antes de aparecer en la galería',
+            entityType: 'Vincular a Entidad',
+            entityTypeHelp: 'Elige a qué entidad pertenece esta galería',
+            selectEntity: 'Seleccionar {{type}}',
+            entityRequired: 'Por favor selecciona un {{type}}',
+            seasonIdPlaceholder: 'Ingresa el UUID de la temporada a la que pertenece esta galería',
+        },
+        
+        // Página de detalles de foto
+        photoDetails: {
+            status: 'Estado',
+            details: 'Detalles',
+            actions: 'Acciones',
+            fileName: 'Nombre del archivo',
+            size: 'Tamaño',
+            uploaded: 'Subido',
+            backToGallery: 'Volver a la Galería',
+        },
+        
+        // Página de vista de galería
+        galleryView: {
+            moderationRequired: 'Moderación Requerida',
+            manage: 'Administrar',
+            addYourPhotos: 'Agregar Tus Fotos',
+            backToGallery: 'Volver a la Galería',
+            shareHighlights: 'Comparte Tus Momentos Destacados',
+        },
+        
+        // Filtros
+        filters: {
+            all: 'Todas las Galerías',
+            byType: 'Por Tipo',
+            search: 'Buscar galerías...',
+            noResults: 'No se encontraron galerías',
+            clearFilters: 'Limpiar Filtros',
+        },
+        
+        // Estadísticas
+        stats: {
+            totalGalleries: 'Total de Galerías',
+            totalPhotos: 'Total de Fotos',
+            photosCount: '{{count}} foto(s)',
+            emptyGallery: 'Aún no hay fotos',
+        },
+        
+        // Estados vacíos
+        empty: {
+            title: 'Aún no hay galerías',
+            message: 'Crea tu primera galería de fotos para comenzar',
+            createButton: 'Crear Galería',
+        },
+        
+        // Errores
+        errors: {
+            loadGalleries: 'Error al cargar galerías',
+            loadGallery: 'Error al cargar galería',
+            loadPhotos: 'Error al cargar fotos',
+            createGallery: 'Error al crear galería',
+            updateGallery: 'Error al actualizar galería',
+            deleteGallery: 'Error al eliminar galería',
+            uploadPhoto: 'Error al subir foto',
+            deletePhoto: 'Error al eliminar foto',
+            setCoverPhoto: 'Error al establecer foto de portada',
+            permissionDenied: 'No tienes permiso para realizar esta acción',
+            retry: 'Reintentar',
+        },
+        
+        // Mensajes de éxito
+        success: {
+            galleryCreated: 'Galería creada exitosamente',
+            galleryUpdated: 'Galería actualizada exitosamente',
+            galleryDeleted: 'Galería eliminada exitosamente',
+            photoUploaded: 'Foto subida exitosamente',
+            photosUploaded: '{{count}} fotos subidas exitosamente',
+            photoDeleted: 'Foto eliminada exitosamente',
+            photosDeleted: '{{count}} fotos eliminadas exitosamente',
+            coverPhotoSet: 'Foto de portada actualizada',
+        },
     },
 
     // Características del Administrador de Plataforma

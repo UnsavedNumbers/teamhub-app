@@ -5,7 +5,7 @@ import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
 import { getLink, RouteKeys } from '@/utils/routes'
 import { formatRoleName, hasRole } from '@/utils/roleHelpers'
-import { isDemoMode } from '@/utils/demoMode'
+import { USE_FAKE_DATA } from '@/data/config'
 import { useOffline } from '@/hooks/useOffline'
 import { useMobile } from '@/hooks/useMobile'
 import MobileBottomSheet from './MobileBottomSheet'
@@ -82,7 +82,7 @@ export default function UserContextDropdown() {
     }
 
     // Check demo mode
-    if (isDemoMode()) {
+    if (USE_FAKE_DATA) {
       console.error('Demo mode: Role selection is not available')
       return
     }

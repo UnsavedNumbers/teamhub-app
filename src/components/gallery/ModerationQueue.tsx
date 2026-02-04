@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useT } from '../../i18n/useI18n'
 import { supabase } from '../../lib/supabase'
 import {
   getPhotosForGallery,
@@ -25,6 +26,7 @@ interface ModerationQueueProps {
 
 export function ModerationQueue({ galleryId, onModerationComplete }: ModerationQueueProps) {
   const { context, isReady } = useUserContext()
+  const t = useT()
   const [pendingPhotos, setPendingPhotos] = useState<GalleryPhoto[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
@@ -41,7 +43,7 @@ export function ModerationQueue({ galleryId, onModerationComplete }: ModerationQ
       })
 
       if (error) {
-        showError(`Failed to load pending photos: ${error.message}`)
+        showError(t('gallery.moderationQueue.loadingError', { message: error.message }))
         setLoading(false)
         return
       }
@@ -94,7 +96,7 @@ export function ModerationQueue({ galleryId, onModerationComplete }: ModerationQ
         }
       }
 
-      showSuccess(`${action === 'approve' ? 'Approved' : 'Rejected'} ${selectedPhotos.size} photo(s)`)
+      showSuccess(t(`gallery.moderationQueue.${action}Success`))
       setSelectedPhotos(new Set())
       
       // Reload pending photos
@@ -106,7 +108,7 @@ export function ModerationQueue({ galleryId, onModerationComplete }: ModerationQ
       
       onModerationComplete?.()
     } catch (err) {
-      showError(`Failed to ${action} photos: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      showError(t(`gallery.moderationQueue.${action}Error`))
     } finally {
       setModerating(false)
     }
@@ -144,7 +146,10 @@ export function ModerationQueue({ galleryId, onModerationComplete }: ModerationQ
         <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
           <div className="flex items-center justify-between">
             <span className="font-semibold">
-              {selectedPhotos.size} photo{selectedPhotos.size !== 1 ? 's' : ''} selected
+              {t('gallery.moderationQueue.selectedPhotos', { 
+                count: selectedPhotos.size, 
+                plural: selectedPhotos.size !== 1 ? 's' : '' 
+              })}
             </span>
             <div className="flex gap-2">
               <Button
@@ -153,7 +158,7 @@ export function ModerationQueue({ galleryId, onModerationComplete }: ModerationQ
                 disabled={moderating}
               >
                 <Icon name="check" size="text-sm" className="mr-2" />
-                Approve
+                {t('gallery.moderationQueue.approve')}
               </Button>
               <Button
                 variant="primary"
@@ -161,13 +166,13 @@ export function ModerationQueue({ galleryId, onModerationComplete }: ModerationQ
                 disabled={moderating}
               >
                 <Icon name="close" size="text-sm" className="mr-2" />
-                Reject
+                {t('gallery.moderationQueue.reject')}
               </Button>
               <Button
                 variant="secondary"
                 onClick={() => setSelectedPhotos(new Set())}
               >
-                Clear
+                {t('gallery.moderationQueue.clear')}
               </Button>
             </div>
           </div>
