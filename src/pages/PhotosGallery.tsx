@@ -7,7 +7,6 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
-import PhotoAlbum from 'react-photo-album'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import { useUserContext } from '../hooks/useUserContext'
@@ -15,13 +14,13 @@ import {
   getGalleryById,
   getPhotosForGallery,
   getGalleryPhotoUrl,
+  getGalleryPhotoThumbnailUrl,
   checkCanModerateGallery,
   checkCanUploadToGallery,
   type Gallery,
   type GalleryPhoto,
 } from '../data/services/galleryService'
 import PortalLayout from '../components/portal/PortalLayout'
-import { PageTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Icon from '../components/portal/Icon'
 import Button from '../components/portal/Button'
@@ -32,7 +31,6 @@ import { AthleteTaggingSlideout } from '../components/gallery/AthleteTaggingSlid
 import { BulkTaggingModal } from '../components/gallery/BulkTaggingModal'
 import { getLink } from '../utils/routes'
 import { useI18n } from '../i18n/useI18n'
-import type { Photo } from 'react-photo-album'
 
 export default function PhotosGallery() {
   const { id } = useParams<{ id: string }>()
@@ -45,7 +43,6 @@ export default function PhotosGallery() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lightboxIndex, setLightboxIndex] = useState(-1)
-  const [layout, setLayout] = useState<'masonry' | 'rows'>('masonry')
   const [canModerate, setCanModerate] = useState(false)
   const [canUpload, setCanUpload] = useState(false)
   const [showParentUpload, setShowParentUpload] = useState(false)
@@ -147,43 +144,59 @@ export default function PhotosGallery() {
         { label: gallery.name },
       ]}
     >
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <PageTitle>{gallery.name}</PageTitle>
-          <div className="flex items-center gap-3">
-            {gallery.require_approval && (
-              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
-                {t('photos.galleryView.moderationRequired')}
-              </span>
-            )}
-            {!isManageMode && canModerate && (
-              <Link to={getLink('portal.photosGalleryManage', { id: gallery.id })}>
-                <Button variant="secondary">
-                  <Icon name="edit" size="text-sm" className="mr-2" />
-                  {t('photos.galleryView.manage')}
-                </Button>
-              </Link>
-            )}
-            {!isManageMode && gallery.allow_contributions && canUpload && (
-              <Button
-                variant="primary"
-                onClick={() => setShowParentUpload(!showParentUpload)}
-              >
-                <Icon name="add" size="text-sm" className="mr-2" />
-                {t('photos.galleryView.addYourPhotos')}
-              </Button>
-            )}
-            {isManageMode && (
-              <Link to={getLink('portal.photosGallery', { id: gallery.id })}>
-                <Button variant="secondary">
-                  <Icon name="arrow_back" size="text-sm" className="mr-2" />
-                  {t('photos.galleryView.backToGallery')}
-                </Button>
-              </Link>
-            )}
+      {/* Header Section */}
+      <section className="mb-16">
+        <div className="flex flex-col gap-4">
+          <h1 className="text-6xl md:text-7xl font-[900] tracking-tighter text-slate-900 dark:text-white leading-none">
+            {gallery.name}
+          </h1>
+          
+          <div className="flex items-center justify-between mt-8 pt-8 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-8">
+              {/* Athlete filter */}
+              {photos.some((p) => p.tagged_athletes && p.tagged_athletes.length > 0) && (
+                <button
+                  onClick={() => setFilterAthleteId(null)}
+                  className="group flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black dark:hover:text-white transition-colors"
+                >
+                  {!filterAthleteId ? 'All Athletes' : 'Change Filter'}
+                  <span className="material-symbols-outlined text-sm group-hover:rotate-180 transition-transform">
+                    expand_more
+                  </span>
+                </button>
+              )}
+              
+              {/* Action buttons */}
+              {gallery.require_approval && (
+                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
+                  {t('photos.galleryView.moderationRequired')}
+                </span>
+              )}
+              {!isManageMode && canModerate && (
+                <Link to={getLink('portal.photosGalleryManage', { id: gallery.id })}>
+                  <button className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black dark:hover:text-white transition-colors">
+                    <Icon name="edit" size="text-sm" />
+                    {t('photos.galleryView.manage')}
+                  </button>
+                </Link>
+              )}
+              {!isManageMode && gallery.allow_contributions && canUpload && (
+                <button
+                  onClick={() => setShowParentUpload(!showParentUpload)}
+                  className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black dark:hover:text-white transition-colors"
+                >
+                  <Icon name="add" size="text-sm" />
+                  {t('photos.galleryView.addYourPhotos')}
+                </button>
+              )}
+            </div>
+            
+            <div className="text-sm font-medium text-slate-400 italic">
+              Showing {photos.length} {photos.length === 1 ? 'photo' : 'photos'}
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Parent upload (shown in view mode when allow_contributions is true) */}
       {!isManageMode && showParentUpload && gallery && gallery.allow_contributions && (
@@ -268,137 +281,119 @@ export default function PhotosGallery() {
         </Card>
       ) : (
         <>
-          {/* Filters and layout toggle */}
-          <div className="mb-4 flex items-center justify-between flex-wrap gap-4">
-            {/* Athlete filter chips */}
-            {photos.some((p) => p.tagged_athletes && p.tagged_athletes.length > 0) && (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setFilterAthleteId(null)}
-                  className={`px-3 py-1 text-sm rounded ${
-                    !filterAthleteId
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                  }`}
+          {/* Photo Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12 mb-32">
+            {photos.map((photo, index) => {
+              const isSelected = selectedPhotos.has(photo.id)
+              const thumbnailUrl = getGalleryPhotoThumbnailUrl(photo.thumbnail_path, photo.storage_path)
+              const taggedNames = photo.tagged_athletes
+                ?.map((a) => a.first_name)
+                .join(' • ') || ''
+              
+              return (
+                <div
+                  key={photo.id}
+                  className="group relative flex flex-col gap-4 cursor-pointer"
                 >
-                  All Athletes
-                </button>
-                {Array.from(
-                  new Set(
-                    photos.flatMap((p) => p.tagged_athletes || []).map((a) => a.id)
-                  )
-                )
-                  .slice(0, 5)
-                  .map((athleteId) => {
-                    const athlete = photos
-                      .flatMap((p) => p.tagged_athletes || [])
-                      .find((a) => a.id === athleteId)
-                    if (!athlete) return null
-                    return (
-                      <button
-                        key={athleteId}
-                        onClick={() => setFilterAthleteId(athleteId)}
-                        className={`px-3 py-1 text-sm rounded ${
-                          filterAthleteId === athleteId
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        {athlete.first_name} {athlete.last_name}
-                      </button>
-                    )
-                  })}
-              </div>
-            )}
-
-            {/* Layout toggle */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setLayout('masonry')}
-                className={`px-3 py-1 text-sm rounded ${
-                  layout === 'masonry'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                Masonry
-              </button>
-              <button
-                onClick={() => setLayout('rows')}
-                className={`px-3 py-1 text-sm rounded ${
-                  layout === 'rows'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                Grid
-              </button>
-            </div>
-          </div>
-
-          {/* Selection mode controls */}
-          {isManageMode && canModerate && (
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex gap-2">
-                {selectedPhotos.size > 0 ? (
-                  <>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        const selected = photos.filter((p) => selectedPhotos.has(p.id))
-                        setBulkTaggingPhotos(selected)
+                  {/* Photo Container */}
+                  <div
+                    className="aspect-[4/5] w-full rounded-2xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-200/50 dark:ring-slate-700/50 group-hover:shadow-2xl group-hover:-translate-y-1 transition-all duration-500"
+                    style={
+                      isSelected
+                        ? {
+                            boxShadow: '0 20px 25px -5px rgba(59, 130, 246, 0.1), 0 8px 10px -6px rgba(59, 130, 246, 0.1)',
+                            transform: 'translateY(-4px)',
+                            ringColor: 'rgb(59 130 246)',
+                            ringWidth: '4px',
+                            ringOffsetWidth: '4px',
+                          }
+                        : {}
+                    }
+                    onClick={() => setLightboxIndex(index)}
+                  >
+                    <img
+                      alt={photo.caption || `Photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      src={thumbnailUrl}
+                    />
+                    
+                    {/* Checkbox Overlay - Top Right */}
+                    <div
+                      className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedPhotos((prev) => {
+                          const next = new Set(prev)
+                          if (next.has(photo.id)) {
+                            next.delete(photo.id)
+                          } else {
+                            next.add(photo.id)
+                          }
+                          return next
+                        })
                       }}
                     >
-                      <Icon name="label" size="text-sm" className="mr-2" />
-                      Tag {selectedPhotos.size} Photo{selectedPhotos.size !== 1 ? 's' : ''}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => setSelectedPhotos(new Set())}
-                    >
-                      Clear Selection
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      // Enable selection mode
-                    }}
+                      {isSelected ? (
+                        <div className="size-6 rounded-full bg-primary border-2 border-white flex items-center justify-center shadow-lg">
+                          <span className="material-symbols-outlined text-white text-base font-bold">
+                            check
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="size-6 rounded-full border-2 border-white flex items-center justify-center bg-white/20 backdrop-blur-md"></div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Photo Details */}
+                  <div className="px-2">
+                    <h4 className="text-sm font-bold text-black dark:text-white">
+                      {photo.caption || `Photo ${index + 1}`}
+                    </h4>
+                    {taggedNames && (
+                      <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-semibold">
+                        {taggedNames}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Bottom Action Bar - Fixed when photos are selected */}
+          {selectedPhotos.size > 0 && (
+            <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[60]">
+              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl px-8 py-4 rounded-full shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)] border border-slate-200 dark:border-slate-700 flex items-center gap-10">
+                <div className="flex items-center gap-4 border-r border-slate-200 dark:border-slate-700 pr-10">
+                  <span className="text-black dark:text-white font-black text-sm">
+                    {selectedPhotos.size} {selectedPhotos.size === 1 ? 'PHOTO' : 'PHOTOS'} SELECTED
+                  </span>
+                  <button
+                    onClick={() => setSelectedPhotos(new Set())}
+                    className="text-slate-400 hover:text-red-500 transition-colors"
                   >
-                    <Icon name="select_all" size="text-sm" className="mr-2" />
-                    Select Photos
-                  </Button>
-                )}
+                    <span className="material-symbols-outlined text-xl">close</span>
+                  </button>
+                </div>
+                
+                <div className="flex items-center gap-6">
+                  <button className="flex items-center gap-2 text-sm font-bold hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-xl">ios_share</span>
+                    Share
+                  </button>
+                  <button className="flex items-center gap-2 text-sm font-bold hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-xl">favorite</span>
+                    Favorite
+                  </button>
+                  <button className="bg-black dark:bg-primary text-white px-8 py-3 rounded-full text-sm font-black hover:bg-slate-800 dark:hover:bg-blue-600 transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-black/10">
+                    <span className="material-symbols-outlined text-xl">download</span>
+                    Download Selected
+                  </button>
+                </div>
               </div>
             </div>
           )}
-
-          {/* Photo grid */}
-          <PhotoAlbum
-            photos={photos.map((photo, index) => {
-              const photoUrl = getGalleryPhotoUrl(photo.storage_path)
-              return {
-                src: photoUrl,
-                width: 800,
-                height: 600,
-                key: photo.id,
-                alt: `Photo ${index + 1}`,
-              } as Photo
-            })}
-            layout={layout}
-            onClick={({ index }) => {
-              if (isManageMode && canModerate) {
-                // In manage mode, allow selection or tagging
-                const photo = photos[index]
-                setTaggingPhoto(photo)
-              } else {
-                setLightboxIndex(index)
-              }
-            }}
-            spacing={8}
-            padding={0}
-          />
 
           {/* Lightbox */}
           <Lightbox
@@ -407,7 +402,7 @@ export default function PhotosGallery() {
             index={lightboxIndex}
             slides={photos.map((photo) => ({
               src: getGalleryPhotoUrl(photo.storage_path),
-              alt: `Gallery photo`,
+              alt: photo.caption || 'Gallery photo',
             }))}
           />
         </>

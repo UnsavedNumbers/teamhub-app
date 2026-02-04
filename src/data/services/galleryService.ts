@@ -393,11 +393,11 @@ export async function getEntityGallery(
     const galleryType = mapEntityToGalleryType(entityType)
 
     // Validate that this is an auto-gallery entity type
-    const autoGalleryTypes: GalleryType[] = ['athlete', 'team', 'event', 'travel', 'program']
+    const autoGalleryTypes: GalleryType[] = ['athlete', 'team', 'event', 'travel', 'travel_plan', 'program', 'season', 'org']
     if (!autoGalleryTypes.includes(galleryType)) {
       return {
         data: null,
-        error: new Error(`${entityType} is not an auto-gallery entity type. Use getGalleriesForUser for org/season.`)
+        error: new Error(`${entityType} is not an auto-gallery entity type.`)
       }
     }
 
@@ -512,11 +512,11 @@ export async function ensureEntityGallery(
     const galleryType = mapEntityToGalleryType(entityType)
 
     // Validate that this is an auto-gallery entity type
-    const autoGalleryTypes: GalleryType[] = ['athlete', 'team', 'event', 'travel', 'program']
+    const autoGalleryTypes: GalleryType[] = ['athlete', 'team', 'event', 'travel', 'program', 'season', 'org']
     if (!autoGalleryTypes.includes(galleryType)) {
       return {
         data: null,
-        error: new Error(`${entityType} is not an auto-gallery entity type. Use getGalleriesForUser for org/season.`)
+        error: new Error(`${entityType} is not an auto-gallery entity type.`)
       }
     }
 
