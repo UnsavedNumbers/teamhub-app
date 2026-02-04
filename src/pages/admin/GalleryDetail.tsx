@@ -140,7 +140,7 @@ export default function GalleryDetail() {
           title={gallery?.name || t('photos.viewGallery')}
           description={gallery?.description || t('photos.subtitle')}
           breadcrumbs={[
-            { label: t('nav.photos'), href: getLink('admin.photos.list') },
+            { label: t('nav.photos'), path: getLink('admin.photos.list') },
             { label: gallery?.name || t('photos.viewGallery') },
           ]}
           actions={

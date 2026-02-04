@@ -21,7 +21,6 @@ import { getGuardianAthletes } from '../data/services/guardianService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
-import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import { getLink } from '../utils/routes'
 import type { Athlete } from '../types/family'
@@ -37,7 +36,7 @@ export default function Photos() {
     season: [],
     org: [],
   })
-  const [athletes, setAthletes] = useState<Athlete[]>([])
+  const [_athletes, setAthletes] = useState<Athlete[]>([])
   const [loading, setLoading] = useState(true)
   const [isLoadingAthletes, setIsLoadingAthletes] = useState(true)
 
@@ -190,3 +189,4 @@ export default function Photos() {
     </PortalLayout>
   )
 }
+
