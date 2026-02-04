@@ -49,8 +49,9 @@ export interface Gallery {
   gallery_type: GalleryType
   entity_id: string | null
   name: string
+  title?: string
   description?: string | null
-  visibility?: 'public' | 'team' | 'private'
+  visibility?: 'public' | 'team' | 'private' | null
   cover_photo_id?: string | null
   created_by_user_id?: string | null
   allow_contributions: boolean
@@ -84,7 +85,10 @@ export interface GalleryPhoto {
   size_bytes?: number | null
   sort_order?: number | null
   status: PhotoStatus
+  approval_status?: PhotoStatus
   uploaded_by_user_id: string
+  uploaded_by?: string | null
+  caption?: string | null
   taken_at: string | null
   created_at: string
   updated_at: string
@@ -186,6 +190,27 @@ export async function getGalleriesForUser(
   }
 
   try {
+    console.log('[galleryService] getGalleriesForUser params:', params, 'context.orgId:', context.orgId)
+    
+    // Debug: check org admin status
+    const { data: debugResult } = await supabase.rpc('is_org_admin', { 
+      org_id_param: context.orgId 
+    })
+    console.log('[galleryService] is_org_admin check:', debugResult)
+    
+    // Debug: check user's organization memberships
+    const { data: memberships, error: memError } = await supabase
+      .from('organization_members')
+      .select('organization_id, role, user_id')
+    console.log('[galleryService] User memberships:', memberships, memError)
+    
+    // Debug: check what galleries exist (without RLS)
+    const { data: allGalleries, error: debugError } = await supabase
+      .from('galleries')
+      .select('id, name, gallery_type, org_id')
+      .limit(5)
+    console.log('[galleryService] Sample galleries (with RLS):', allGalleries, debugError)
+    
     let query = supabase
       .from('galleries')
       .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
@@ -209,6 +234,8 @@ export async function getGalleriesForUser(
     }
 
     const { data: galleries, error } = await query
+    
+    console.log('[galleryService] Query result:', { count: galleries?.length, error, galleries })
 
     if (error) throw error
 

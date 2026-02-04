@@ -32,6 +32,7 @@ import { ModerationQueue } from '../components/gallery/ModerationQueue'
 import { AthleteTaggingSlideout } from '../components/gallery/AthleteTaggingSlideout'
 import { BulkTaggingModal } from '../components/gallery/BulkTaggingModal'
 import { getLink } from '../utils/routes'
+import { useI18n } from '../i18n/useI18n'
 import type { Photo } from 'react-photo-album'
 
 export default function PhotosGallery() {
@@ -39,6 +40,7 @@ export default function PhotosGallery() {
   const location = useLocation()
   const isManageMode = location.pathname.includes('/manage')
   const { context, isReady } = useUserContext()
+  const { t } = useI18n()
   const [gallery, setGallery] = useState<Gallery | null>(null)
   const [photos, setPhotos] = useState<GalleryPhoto[]>([])
   const [loading, setLoading] = useState(true)
@@ -176,14 +178,14 @@ export default function PhotosGallery() {
           <div className="flex items-center gap-3">
             {gallery.require_approval && (
               <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
-                Moderation Required
+                {t('photos.galleryView.moderationRequired')}
               </span>
             )}
             {!isManageMode && canModerate && (
               <Link to={getLink('portal.photosGalleryManage', { id: gallery.id })}>
                 <Button variant="secondary">
                   <Icon name="edit" size="text-sm" className="mr-2" />
-                  Manage
+                  {t('photos.galleryView.manage')}
                 </Button>
               </Link>
             )}
@@ -193,14 +195,14 @@ export default function PhotosGallery() {
                 onClick={() => setShowParentUpload(!showParentUpload)}
               >
                 <Icon name="add" size="text-sm" className="mr-2" />
-                Add Your Photos
+                {t('photos.galleryView.addYourPhotos')}
               </Button>
             )}
             {isManageMode && (
               <Link to={getLink('portal.photosGallery', { id: gallery.id })}>
                 <Button variant="secondary">
                   <Icon name="arrow_back" size="text-sm" className="mr-2" />
-                  Back to Gallery
+                  {t('photos.galleryView.backToGallery')}
                 </Button>
               </Link>
             )}
@@ -212,7 +214,7 @@ export default function PhotosGallery() {
       {!isManageMode && showParentUpload && gallery && gallery.allow_contributions && (
         <Card className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Share Your Highlights</h2>
+            <h2 className="text-xl font-bold">{t('photos.galleryView.shareHighlights')}</h2>
             <Button
               variant="secondary"
               onClick={() => setShowParentUpload(false)}
