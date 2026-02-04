@@ -1614,3 +1614,641 @@
     border-color: #111111;
     color: #ffffff;
 }
+/* ============================================================================
+   ORGANIZATION PROFILE PAGE
+   ============================================================================ */
+
+/* Page Container */
+.fan-org-profile-page {
+    width: 100%;
+}
+
+/* Hero Section */
+.fan-org-hero {
+    width: 100%;
+    background-color: #fafafa;
+    padding: 4rem 0 0;
+    border-bottom: 1px solid #f4f4f5;
+}
+
+.fan-org-hero-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+.fan-org-hero-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    margin-bottom: 4rem;
+}
+
+.fan-org-hero-left {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+/* Logo */
+.fan-org-logo-large {
+    width: 10rem;
+    height: 10rem;
+    background-color: #ffffff;
+    border: 1px solid #f4f4f5;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    flex-shrink: 0;
+}
+
+.fan-org-logo-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.fan-org-logo-large .material-symbols-outlined {
+    font-size: 4rem;
+    color: #d4d4d8;
+}
+
+/* Info */
+.fan-org-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.fan-org-badge {
+    display: inline-block;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #3b82f6;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    background-color: rgba(59, 130, 246, 0.05);
+    width: fit-content;
+}
+
+.fan-org-title {
+    font-size: 3rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: #111111;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    text-transform: none;
+}
+
+.fan-org-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #a1a1aa;
+}
+
+.fan-org-meta span:not(:last-child)::after {
+    content: '';
+    margin-left: 1rem;
+}
+
+/* Actions */
+.fan-org-actions {
+    display: flex;
+    gap: 1rem;
+    padding-bottom: 0.5rem;
+}
+
+.fan-org-follow-btn {
+    padding: 0.75rem 2rem;
+    background-color: #111111;
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.fan-org-follow-btn:hover {
+    background-color: #27272a;
+}
+
+.fan-org-follow-btn.following {
+    background-color: #ffffff;
+    color: #111111;
+    border: 1px solid #e4e4e7;
+}
+
+.fan-org-follow-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.fan-org-more-btn {
+    padding: 0.75rem;
+    border: 1px solid #e4e4e7;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.fan-org-more-btn:hover {
+    background-color: #fafafa;
+}
+
+.fan-org-more-btn .material-symbols-outlined {
+    font-size: 1.25rem;
+    color: #71717a;
+}
+
+/* Tabs */
+.fan-org-tabs {
+    display: flex;
+    gap: 2.5rem;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.fan-org-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.fan-org-tab {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #a1a1aa;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0 0 1rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.25s ease;
+}
+
+.fan-org-tab:hover {
+    color: #111111;
+}
+
+.fan-org-tab.active {
+    color: #111111;
+    border-bottom-color: #111111;
+}
+
+/* Content Layout */
+.fan-org-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+}
+
+.fan-org-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 4rem;
+}
+
+/* Feed Section */
+.fan-org-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+}
+
+.fan-org-feed-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f4f4f5;
+}
+
+.fan-org-feed-title {
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: #111111;
+    margin: 0;
+}
+
+.fan-org-feed-filters {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.fan-org-feed-filter {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #a1a1aa;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.25s ease;
+}
+
+.fan-org-feed-filter:hover,
+.fan-org-feed-filter.active {
+    color: #111111;
+}
+
+.fan-org-feed-posts {
+    display: flex;
+    flex-direction: column;
+    gap: 4rem;
+}
+
+.fan-org-feed-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.fan-org-feed-empty .material-symbols-outlined {
+    font-size: 3rem;
+    color: #d4d4d8;
+    margin-bottom: 1rem;
+}
+
+.fan-org-feed-empty p {
+    font-size: 0.875rem;
+    color: #a1a1aa;
+    margin: 0;
+}
+
+/* Post */
+.fan-org-post {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.fan-org-post:not(:last-child) {
+    padding-bottom: 3rem;
+    border-bottom: 1px solid #f4f4f5;
+}
+
+.fan-org-post-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.fan-org-post-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: #3b82f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.fan-org-post-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.fan-org-post-initials {
+    font-size: 0.625rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.2em;
+}
+
+.fan-org-post-author {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #111111;
+    margin: 0;
+}
+
+.fan-org-post-time {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #a1a1aa;
+    margin: 0.25rem 0 0;
+}
+
+.fan-org-post-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.fan-org-post-title {
+    font-size: 1.5rem;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    color: #18181b;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    text-transform: none;
+}
+
+.fan-org-post-text {
+    font-size: 1.125rem;
+    font-weight: 300;
+    line-height: 1.6;
+    color: #71717a;
+    margin: 0;
+}
+
+.fan-org-post-actions {
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+    padding-top: 1rem;
+}
+
+.fan-org-post-action {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: none;
+    color: #a1a1aa;
+    cursor: pointer;
+    transition: color 0.25s ease;
+}
+
+.fan-org-post-action:hover {
+    color: #111111;
+}
+
+.fan-org-post-action.ml-auto {
+    margin-left: auto;
+}
+
+.fan-org-post-action .material-symbols-outlined {
+    font-size: 1.25rem;
+}
+
+.fan-org-post-action span:last-child {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+}
+
+/* Sidebar */
+.fan-org-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+}
+
+.fan-org-sidebar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.fan-org-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.fan-org-sidebar-title {
+    font-size: 0.625rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: #a1a1aa;
+    margin: 0;
+}
+
+/* Next Game */
+.fan-org-next-game {
+    background-color: #fafafa;
+    border: 1px solid #f4f4f5;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.fan-org-next-game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.fan-org-next-game-time {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #a1a1aa;
+}
+
+.fan-org-next-game-live {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background-color: #3b82f6;
+}
+
+.fan-org-next-game-teams {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.fan-org-next-game-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.fan-org-next-game-logo {
+    width: 2.5rem;
+    height: 2.5rem;
+    background-color: #ffffff;
+    border: 1px solid #f4f4f5;
+}
+
+.fan-org-next-game-team span {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #18181b;
+}
+
+.fan-org-next-game-vs {
+    font-size: 0.75rem;
+    font-weight: 300;
+    color: #d4d4d8;
+}
+
+.fan-org-next-game-venue {
+    font-size: 0.625rem;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-weight: 500;
+    color: #71717a;
+    margin: 0;
+}
+
+.fan-org-next-game-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #111111;
+    color: #ffffff;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.fan-org-next-game-btn:hover {
+    background-color: #27272a;
+}
+
+/* Stats List */
+.fan-org-stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.fan-org-stat-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f4f4f5;
+}
+
+.fan-org-stat-item:last-child {
+    border-bottom: none;
+}
+
+.fan-org-stat-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.fan-org-stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #71717a;
+}
+
+.fan-org-stat-value {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #18181b;
+}
+
+/* Contact */
+.fan-org-contact {
+    padding-top: 1.5rem;
+    border-top: 1px solid #f4f4f5;
+}
+
+.fan-org-contact-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.fan-org-contact-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #18181b;
+    text-decoration: none;
+    transition: color 0.25s ease;
+}
+
+.fan-org-contact-link:hover {
+    color: #3b82f6;
+}
+
+.fan-org-contact-link .material-symbols-outlined {
+    font-size: 1.25rem;
+    color: #a1a1aa;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .fan-org-layout {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+    }
+
+    .fan-org-sidebar {
+        order: -1;
+    }
+}
+
+@media (max-width: 768px) {
+    .fan-org-hero-main {
+        gap: 1.5rem;
+    }
+
+    .fan-org-hero-left {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .fan-org-logo-large {
+        width: 8rem;
+        height: 8rem;
+    }
+
+    .fan-org-title {
+        font-size: 2rem;
+    }
+
+    .fan-org-actions {
+        width: 100%;
+    }
+
+    .fan-org-follow-btn {
+        flex: 1;
+    }
+
+    .fan-org-content {
+        padding: 2rem 1rem;
+    }
+}

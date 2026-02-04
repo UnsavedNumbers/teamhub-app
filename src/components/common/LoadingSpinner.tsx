@@ -1,8 +1,12 @@
-export default function LoadingSpinner({ size = 'medium' }: { size?: 'small' | 'medium' | 'large' }) {
+type SpinnerSize = 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg'
+
+export default function LoadingSpinner({ size = 'medium' }: { size?: SpinnerSize }) {
+  const normalizedSize: 'small' | 'medium' | 'large' =
+    size === 'sm' ? 'small' : size === 'md' ? 'medium' : size === 'lg' ? 'large' : size
   const sizeClass =
-    size === 'small'
+    normalizedSize === 'small'
       ? 'h-4 w-4'
-      : size === 'large'
+      : normalizedSize === 'large'
       ? 'h-10 w-10'
       : 'h-6 w-6'
 

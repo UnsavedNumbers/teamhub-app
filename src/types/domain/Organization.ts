@@ -38,6 +38,9 @@ export interface Organization {
   city: string | null
   state: string | null
   zip: string | null
+  place_id?: string | null
+  latitude: number | null
+  longitude: number | null
 }
 
 export type OrganizationStatus = 'trial' | 'active' | 'suspended' | 'expired'

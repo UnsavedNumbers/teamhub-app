@@ -10,6 +10,8 @@ import type { UserContext } from '../fake/userContext'
 
 export interface FanGallery extends Gallery {
     fans_can_see: boolean
+    org_name?: string
+    team_name?: string
 }
 
 /**
