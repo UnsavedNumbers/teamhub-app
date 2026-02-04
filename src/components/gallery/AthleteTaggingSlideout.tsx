@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useT } from '../../i18n/useI18n'
 import { supabase } from '../../lib/supabase'
 import { getGalleryPhotoUrl, type GalleryPhoto } from '../../data/services/galleryService'
 import Button from '../portal/Button'
@@ -34,6 +35,7 @@ export function AthleteTaggingSlideout({
   onSave,
 }: AthleteTaggingSlideoutProps) {
   const { context, isReady } = useUserContext()
+  const t = useT()
   const [athletes, setAthletes] = useState<Athlete[]>([])
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
@@ -180,11 +182,11 @@ export function AthleteTaggingSlideout({
         if (deleteError) throw deleteError
       }
 
-      showSuccess('Tags saved successfully')
+      showSuccess(t('gallery.athleteTagging.saveSuccess'))
       onSave()
       onClose()
     } catch (err) {
-      showError(`Failed to save tags: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      showError(t('gallery.athleteTagging.saveError', { error: err instanceof Error ? err.message : 'Unknown error' }))
     } finally {
       setSaving(false)
     }
@@ -197,7 +199,7 @@ export function AthleteTaggingSlideout({
       <div className="bg-white dark:bg-slate-900 w-full sm:w-[600px] max-h-[90vh] flex flex-col shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-          <h2 className="text-xl font-bold">Tag Athletes</h2>
+          <h2 className="text-xl font-bold">{t('gallery.athleteTagging.title')}</h2>
           <Button variant="secondary" onClick={onClose}>
             <Icon name="close" size="text-lg" />
           </Button>
@@ -209,7 +211,7 @@ export function AthleteTaggingSlideout({
           <div className="aspect-[4/3] rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800">
             <img
               src={getGalleryPhotoUrl(photo.storage_path)}
-              alt="Photo to tag"
+              alt={t('gallery.athleteTagging.photoAlt')}
               className="w-full h-full object-cover"
             />
           </div>
@@ -218,7 +220,7 @@ export function AthleteTaggingSlideout({
           <div>
             <input
               type="text"
-              placeholder="Search roster..."
+              placeholder={t('gallery.athleteTagging.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800"
@@ -228,7 +230,7 @@ export function AthleteTaggingSlideout({
           {/* Selected athletes */}
           {selectedAthletes.size > 0 && (
             <div>
-              <h3 className="text-sm font-semibold mb-2">Selected Athletes</h3>
+              <h3 className="text-sm font-semibold mb-2">{t('gallery.athleteTagging.selectedAthletes')}</h3>
               <div className="flex flex-wrap gap-2">
                 {Array.from(selectedAthletes).map((athleteId) => {
                   const athlete = athletes.find((a) => a.id === athleteId)
@@ -254,14 +256,14 @@ export function AthleteTaggingSlideout({
 
           {/* Athlete list */}
           <div>
-            <h3 className="text-sm font-semibold mb-2">Suggested Athletes</h3>
+            <h3 className="text-sm font-semibold mb-2">{t('gallery.athleteTagging.suggestedAthletes')}</h3>
             {loading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
               </div>
             ) : filteredAthletes.length === 0 ? (
               <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
-                No athletes found
+                {t('gallery.athleteTagging.noAthletesFound')}
               </p>
             ) : (
               <div className="grid grid-cols-2 gap-2">
@@ -301,14 +303,17 @@ export function AthleteTaggingSlideout({
         {/* Footer */}
         <div className="flex items-center justify-between p-4 border-t border-slate-200 dark:border-slate-700">
           <span className="text-sm text-slate-500 dark:text-slate-400">
-            {selectedAthletes.size} athlete{selectedAthletes.size !== 1 ? 's' : ''} tagged
+            {t('gallery.athleteTagging.athletesTagged', { 
+              count: selectedAthletes.size, 
+              plural: selectedAthletes.size !== 1 ? 's' : '' 
+            })}
           </span>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={onClose} disabled={saving}>
-              Cancel
+              {t('gallery.athleteTagging.cancel')}
             </Button>
             <Button variant="primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save & Next'}
+              {saving ? t('gallery.athleteTagging.saving') : t('gallery.athleteTagging.saveAndNext')}
             </Button>
           </div>
         </div>

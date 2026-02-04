@@ -1,8 +1,10 @@
 import { useCallback, useRef, useState } from 'react'
 import { uploadPhotoToGallery, type GalleryPhoto, type PhotoStatus } from '@/data/services/galleryService'
 import { useUserContext } from '@/hooks/useUserContext'
+import { useI18n } from '@/i18n/useI18n'
+import { USE_FAKE_DATA } from '@/data/config'
 import { showError, showSuccess } from '@/utils/toast'
-import { Button, Card, ProgressBar } from '@/components/platformAdmin'
+import { Button, Card, ProgressBar, InlineNotice } from '@/components/platformAdmin'
 
 type UploadState = 'pending' | 'uploading' | 'success' | 'error' | 'canceled'
 
@@ -18,7 +20,8 @@ interface PhotoUploadZoneProps {
   galleryId: string
   maxFiles?: number
   maxSizeMB?: number
-  status?: PhotoStatus
+  maxPhotos?: number // Max photos remaining in gallery
+  requireApproval?: boolean // If true, parent uploads need approval
   onComplete?: (uploaded: GalleryPhoto[]) => void
 }
 
@@ -26,32 +29,68 @@ export function PhotoUploadZone({
   galleryId,
   maxFiles = 50,
   maxSizeMB = 10,
-  status = 'approved',
+  maxPhotos,
+  requireApproval = false,
   onComplete,
 }: PhotoUploadZoneProps) {
-  const { context } = useUserContext()
+  const { context, userRoles } = useUserContext()
+  const { t } = useI18n()
   const [items, setItems] = useState<UploadItem[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
 
+  // Determine approval status based on user role
+  const getApprovalStatus = (): PhotoStatus => {
+    if (!requireApproval) return 'approved'
+    
+    // Coaches and org admins: auto-approve
+    const isCoach = userRoles?.includes('coach')
+    const isOrgAdmin = userRoles?.includes('org_admin')
+    
+    if (isCoach || isOrgAdmin) {
+      return 'approved'
+    }
+    
+    // Parents: pending approval
+    return 'pending'
+  }
+
   const validateFile = (file: File): string | null => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'image/gif']
     if (!allowedTypes.includes(file.type)) {
-      return 'Unsupported format. Use JPEG, PNG, WebP, or HEIC.'
+      return t('photos.upload.validTypes')
     }
     const maxBytes = maxSizeMB * 1024 * 1024
     if (file.size > maxBytes) {
-      return `File too large. Max ${maxSizeMB}MB`
+      return t('photos.upload.maxSize', { size: maxSizeMB })
     }
     return null
   }
 
   const queueFiles = useCallback(
     (fileList: FileList | null) => {
+      if (USE_FAKE_DATA) {
+        showError(t('photos.demoMode.uploadBlocked'))
+        return
+      }
+
       if (!fileList) return
+
+      // Check max photos limit
+      if (maxPhotos !== undefined && items.length >= maxPhotos) {
+        showError(t('photos.photoLimit.reached'))
+        return
+      }
+
+      const remaining = maxPhotos !== undefined ? maxPhotos - items.length : maxFiles
+      const totalAllowed = Math.min(remaining, fileList.length)
+
+      if (fileList.length > totalAllowed) {
+        showError(t('photos.photoLimit.canUpload', { count: totalAllowed }))
+      }
+
       const next: UploadItem[] = []
-      const totalAllowed = Math.min(maxFiles - items.length, fileList.length)
       for (let i = 0; i < totalAllowed; i++) {
         const file = fileList[i]
         const error = validateFile(file)
@@ -67,26 +106,35 @@ export function PhotoUploadZone({
       // kick off uploads
       next.filter((f) => f.state === 'pending').forEach((f) => void uploadSingle(f))
     },
-    [items.length, maxFiles, maxSizeMB]
+    [items.length, maxFiles, maxSizeMB, maxPhotos, USE_FAKE_DATA, t]
   )
 
   const uploadSingle = async (item: UploadItem) => {
     if (!context) return
     setIsUploading(true)
     setItems((prev) => prev.map((p) => (p.id === item.id ? { ...p, state: 'uploading', progress: 10 } : p)))
+    
     try {
-      const { data, error } = await uploadPhotoToGallery(context, galleryId, item.file, null, status)
-      if (error || !data) throw error || new Error('Upload failed')
+      const approvalStatus = getApprovalStatus()
+      const { data, error } = await uploadPhotoToGallery(context, galleryId, item.file, null, approvalStatus)
+      if (error || !data) throw error || new Error(t('photos.errors.uploadPhoto'))
+      
       setItems((prev) => prev.map((p) => (p.id === item.id ? { ...p, state: 'success', progress: 100 } : p)))
       onComplete?.([data])
-      showSuccess(`${item.file.name} uploaded`)
+      
+      // Show appropriate success message based on approval status
+      if (approvalStatus === 'pending') {
+        showSuccess(t('photos.pendingApproval.message'))
+      } else {
+        showSuccess(t('photos.success.photoUploaded'))
+      }
     } catch (err: any) {
       setItems((prev) =>
         prev.map((p) =>
-          p.id === item.id ? { ...p, state: 'error', progress: 0, error: err?.message || 'Upload failed' } : p
+          p.id === item.id ? { ...p, state: 'error', progress: 0, error: err?.message || t('photos.errors.uploadPhoto') } : p
         )
       )
-      showError(err?.message || 'Upload failed')
+      showError(err?.message || t('photos.errors.uploadPhoto'))
     } finally {
       setIsUploading(false)
     }
@@ -111,39 +159,67 @@ export function PhotoUploadZone({
     )
   }
 
+  const isLimitReached = maxPhotos !== undefined && maxPhotos <= 0
+
   return (
     <div className="pa-space-y-4">
+      {/* Approval Notice */}
+      {requireApproval && getApprovalStatus() === 'pending' && (
+        <InlineNotice
+          tone="info"
+          title={t('photos.pendingApproval.message')}
+          message={t('photos.pendingApproval.waitingMessage')}
+        />
+      )}
+
+      {requireApproval && getApprovalStatus() === 'approved' && (
+        <InlineNotice
+          tone="success"
+          title={t('photos.autoApproved')}
+          message={t('photos.approvedByCoach')}
+        />
+      )}
+
       <Card
-        className={`pa-card ${isDragging ? 'pa-border-brand' : ''}`}
+        className={`pa-card ${isDragging ? 'pa-border-brand' : ''} ${isLimitReached ? 'pa-opacity-50' : ''}`}
         onDragOver={(e) => {
           e.preventDefault()
-          setIsDragging(true)
+          if (!isLimitReached) setIsDragging(true)
         }}
         onDragLeave={(e) => {
           e.preventDefault()
           setIsDragging(false)
         }}
-        onDrop={onDrop}
+        onDrop={isLimitReached ? undefined : onDrop}
         style={{ borderStyle: 'dashed' }}
       >
         <div style={{ textAlign: 'center', padding: '24px' }}>
-          <p className="pa-text-lg pa-font-semibold">Upload photos</p>
-          <p className="pa-text-sm pa-text-muted">JPEG, PNG, WebP, HEIC • Up to {maxSizeMB}MB each • {maxFiles} files</p>
+          <p className="pa-text-lg pa-font-semibold">{t('photos.upload.title')}</p>
+          <p className="pa-text-sm pa-text-muted">
+            {t('photos.upload.validTypes')} • {t('photos.upload.maxSize', { size: maxSizeMB })}
+          </p>
+          {maxPhotos !== undefined && (
+            <p className="pa-text-xs pa-text-muted pa-mt-1">
+              {t('photos.photoLimit.remaining', { remaining: maxPhotos, limit: maxPhotos + items.length })}
+            </p>
+          )}
           <div className="pa-flex pa-justify-center pa-gap-2 pa-mt-3">
-            <Button variant="primary" onClick={() => inputRef.current?.click()} disabled={isUploading}>
-              Select files
-            </Button>
-            <Button variant="ghost" onClick={() => inputRef.current?.click()} disabled={isUploading}>
-              Browse
+            <Button 
+              variant="primary" 
+              onClick={() => inputRef.current?.click()} 
+              disabled={isUploading || isLimitReached}
+            >
+              {t('photos.upload.selectFiles')}
             </Button>
           </div>
           <input
             ref={inputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
             multiple
-            className="hidden"
+            className="pa-hidden"
             onChange={onFileChange}
+            disabled={isLimitReached}
           />
         </div>
       </Card>
@@ -151,9 +227,9 @@ export function PhotoUploadZone({
       {items.length > 0 && (
         <Card className="pa-card">
           <div className="pa-flex pa-justify-between pa-items-center pa-mb-3">
-            <h4 className="pa-text-base pa-font-semibold">Upload queue</h4>
-            <Button variant="ghost" size="small" onClick={cancelQueue} disabled={isUploading === false}>
-              Cancel pending
+            <h4 className="pa-text-base pa-font-semibold">{t('photos.upload.title')}</h4>
+            <Button variant="ghost" size="small" onClick={cancelQueue} disabled={!isUploading}>
+              {t('common.cancel')}
             </Button>
           </div>
           <div className="pa-space-y-3">
@@ -164,9 +240,9 @@ export function PhotoUploadZone({
                     <span className="pa-text-sm">{item.file.name}</span>
                     <span className="pa-text-xs pa-text-muted">
                       {item.state === 'uploading' && `${item.progress}%`}
-                      {item.state === 'success' && 'Done'}
-                      {item.state === 'error' && 'Failed'}
-                      {item.state === 'pending' && 'Queued'}
+                      {item.state === 'success' && t('common.success')}
+                      {item.state === 'error' && t('common.error')}
+                      {item.state === 'pending' && t('common.pending')}
                     </span>
                   </div>
                   <ProgressBar value={item.state === 'success' ? 100 : item.progress} />
@@ -180,3 +256,4 @@ export function PhotoUploadZone({
     </div>
   )
 }
+

@@ -147,7 +147,7 @@ export function PhotoUploader({
         )
       )
 
-      showSuccess(`Uploaded ${uploadFile.file.name}`)
+      showSuccess(t('gallery.photoUploader.uploadSuccess', { fileName: uploadFile.file.name }))
       onUploadComplete?.()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Upload failed'
@@ -158,7 +158,7 @@ export function PhotoUploader({
             : f
         )
       )
-      showError(`Failed to upload ${uploadFile.file.name}: ${errorMessage}`)
+      showError(t('gallery.photoUploader.uploadError', { fileName: uploadFile.file.name, error: errorMessage }))
     }
   }
 
