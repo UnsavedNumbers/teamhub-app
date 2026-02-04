@@ -267,3 +267,10 @@ export function getAdminRoutes(): [string, RouteDefinition][] {
 export function getPlatformAdminRoutes(): [string, RouteDefinition][] {
     return getRoutesWhere((_, key) => key.startsWith('platformAdmin.'))
 }
+
+/**
+ * Get all fan routes
+ */
+export function getFanRoutes(): [string, RouteDefinition][] {
+    return getRoutesWhere((_, key) => key.startsWith('fan.'))
+}

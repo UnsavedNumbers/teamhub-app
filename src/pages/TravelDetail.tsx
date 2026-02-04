@@ -358,7 +358,7 @@ export default function TravelDetail() {
           if (!isMountedRef.current) return
 
           if (!coachError && coachData?.user) {
-            const user = coachData.user as { display_name: string | null; phone: string | null }
+            const user = coachData.user as unknown as { display_name: string | null; phone: string | null }
             if (user.phone) {
               setEmergencyContact({
                 name: user.display_name || 'Coach',

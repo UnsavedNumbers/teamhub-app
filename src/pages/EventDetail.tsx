@@ -619,6 +619,12 @@ export default function EventDetail() {
   const searchParams = new URLSearchParams(location.search)
   const venueAddress = (event.event_location as any)?.venue_address || event.location
   
+  // Check if event ended more than 24 hours ago
+  const eventEndDate = new Date(event.end_time)
+  const now = new Date()
+  const hoursSinceEventEnded = (now.getTime() - eventEndDate.getTime()) / (1000 * 60 * 60)
+  const isEventOver24HoursAgo = hoursSinceEventEnded > 24
+  
   return (
     <PortalLayout
       breadcrumbs={[
@@ -697,29 +703,31 @@ export default function EventDetail() {
                 <p className="text-lg font-black text-slate-500 dark:text-slate-400">{t('calendar.event.unavailable')}</p>
               )}
             </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.entry')}</p>
-              {event.ticketed_event ? (
-                <Button
-                  onClick={() => {
-                  if (orgSlug && event.ticketed_event?.id) {
-                    navigate(
-                      getLink(RouteKeys.PORTAL_ORG_TICKET_EVENT, {
-                        orgSlug,
-                        eventId: event.ticketed_event.id,
-                      })
-                    )
-                  }
-                  }}
-                  disabled={!orgSlug || !event.ticketed_event?.id}
-                  className="w-full"
-                >
-                  {t('calendar.event.getTickets')}
-                </Button>
-              ) : (
-                <p className="text-lg font-black text-slate-900 dark:text-white">{t('calendar.event.freeEntry')}</p>
-              )}
-            </div>
+            {!isEventOver24HoursAgo && (
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.entry')}</p>
+                {event.ticketed_event ? (
+                  <Button
+                    onClick={() => {
+                    if (orgSlug && event.ticketed_event?.id) {
+                      navigate(
+                        getLink(RouteKeys.PORTAL_ORG_TICKET_EVENT, {
+                          orgSlug,
+                          eventId: event.ticketed_event.id,
+                        })
+                      )
+                    }
+                    }}
+                    disabled={!orgSlug || !event.ticketed_event?.id}
+                    className="w-full"
+                  >
+                    {t('calendar.event.getTickets')}
+                  </Button>
+                ) : (
+                  <p className="text-lg font-black text-slate-900 dark:text-white">{t('calendar.event.freeEntry')}</p>
+                )}
+              </div>
+            )}
           </div>
         </Card>
       </div>
@@ -810,37 +818,39 @@ export default function EventDetail() {
                 </div>
 
                 {/* Ride-Share Shortcuts */}
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Need a Ride?</p>
-                  <div className="flex flex-wrap gap-2">
-                    {uberLink(venueAddress) ? (
-                      <a href={uberLink(venueAddress)!} target="_blank" rel="noreferrer">
-                        <Button variant="secondary" className="text-sm px-4 py-2">
+                {!isEventOver24HoursAgo && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Need a Ride?</p>
+                    <div className="flex flex-wrap gap-2">
+                      {uberLink(venueAddress) ? (
+                        <a href={uberLink(venueAddress)!} target="_blank" rel="noreferrer">
+                          <Button variant="secondary" className="text-sm px-4 py-2">
+                            <Icon name="local_taxi" size="text-sm" className="mr-2" />
+                            Uber
+                          </Button>
+                        </a>
+                      ) : (
+                        <Button variant="secondary" className="text-sm px-4 py-2" disabled>
                           <Icon name="local_taxi" size="text-sm" className="mr-2" />
                           Uber
                         </Button>
-                      </a>
-                    ) : (
-                      <Button variant="secondary" className="text-sm px-4 py-2" disabled>
-                        <Icon name="local_taxi" size="text-sm" className="mr-2" />
-                        Uber
-                      </Button>
-                    )}
-                    {lyftLink(venueAddress) ? (
-                      <a href={lyftLink(venueAddress)!} target="_blank" rel="noreferrer">
-                        <Button variant="secondary" className="text-sm px-4 py-2">
+                      )}
+                      {lyftLink(venueAddress) ? (
+                        <a href={lyftLink(venueAddress)!} target="_blank" rel="noreferrer">
+                          <Button variant="secondary" className="text-sm px-4 py-2">
+                            <Icon name="local_taxi" size="text-sm" className="mr-2" />
+                            Lyft
+                          </Button>
+                        </a>
+                      ) : (
+                        <Button variant="secondary" className="text-sm px-4 py-2" disabled>
                           <Icon name="local_taxi" size="text-sm" className="mr-2" />
                           Lyft
                         </Button>
-                      </a>
-                    ) : (
-                      <Button variant="secondary" className="text-sm px-4 py-2" disabled>
-                        <Icon name="local_taxi" size="text-sm" className="mr-2" />
-                        Lyft
-                      </Button>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </Card>
           ) : (
@@ -892,54 +902,56 @@ export default function EventDetail() {
           )}
 
           {/* RSVP Section */}
-          <Card className="p-6 relative rounded-tl-none">
-            <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
-              <Icon name="how_to_reg" size="text-2xl" />
-              {t('calendar.rsvp.title')}
-            </div>
-            <div className="pt-12">
-              {children.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-slate-500 dark:text-slate-400 mb-4">{t('portal.events.noChildren')}</p>
-                  <Button variant="primary" onClick={() => navigate('/portal/athletes')}>
-                    {t('portal.events.add')}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {children.map((child) => {
-                    const att = attendance[child.id]
-                    return (
-                      <div key={child.id} className="border-b border-slate-200 dark:border-slate-700 pb-4 last:border-b-0 last:pb-0">
-                        <div className="flex items-center justify-between mb-3">
-                          <CardTitle className="text-lg">{child.first_name} {child.last_name}</CardTitle>
-                          {saving === child.id && (
-                            <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('calendar.rsvp.saving')}</span>
-                          )}
+          {!isEventOver24HoursAgo && (
+            <Card className="p-6 relative rounded-tl-none">
+              <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                <Icon name="how_to_reg" size="text-2xl" />
+                {t('calendar.rsvp.title')}
+              </div>
+              <div className="pt-12">
+                {children.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-slate-500 dark:text-slate-400 mb-4">{t('portal.events.noChildren')}</p>
+                    <Button variant="primary" onClick={() => navigate('/portal/athletes')}>
+                      {t('portal.events.add')}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {children.map((child) => {
+                      const att = attendance[child.id]
+                      return (
+                        <div key={child.id} className="border-b border-slate-200 dark:border-slate-700 pb-4 last:border-b-0 last:pb-0">
+                          <div className="flex items-center justify-between mb-3">
+                            <CardTitle className="text-lg">{child.first_name} {child.last_name}</CardTitle>
+                            {saving === child.id && (
+                              <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('calendar.rsvp.saving')}</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            {(['going', 'late', 'not_going'] as const).map((status) => (
+                              <button
+                                key={status}
+                                onClick={() => handleRsvp(child.id, status)}
+                                disabled={saving === child.id}
+                                className={`flex-1 py-3 px-4 rounded font-bold text-sm uppercase tracking-wide transition-colors min-h-[44px] ${
+                                  att?.status === status
+                                    ? statusStyles[status]
+                                    : statusInactiveStyles
+                                }`}
+                              >
+                                {status === 'going' ? t('calendar.rsvp.going') : status === 'late' ? t('calendar.rsvp.late') : t('calendar.rsvp.notGoing')}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          {(['going', 'late', 'not_going'] as const).map((status) => (
-                            <button
-                              key={status}
-                              onClick={() => handleRsvp(child.id, status)}
-                              disabled={saving === child.id}
-                              className={`flex-1 py-3 px-4 rounded font-bold text-sm uppercase tracking-wide transition-colors min-h-[44px] ${
-                                att?.status === status
-                                  ? statusStyles[status]
-                                  : statusInactiveStyles
-                              }`}
-                            >
-                              {status === 'going' ? t('calendar.rsvp.going') : status === 'late' ? t('calendar.rsvp.late') : t('calendar.rsvp.notGoing')}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </Card>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
 
         </div>
 
@@ -954,74 +966,74 @@ export default function EventDetail() {
               title={t('calendar.event.eventPhotos')}
             />
           )}
-
-          {/* Add to Calendar */}
-          <Card className="p-6 relative rounded-tl-none">
-            <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
-              <Icon name="event" size="text-2xl" />
-              {t('calendar.event.addToCalendar')}
-            </div>
-            <div className="pt-12">
-              {googleCalendarLink({
-                title: event.title,
-                startTime: event.start_time,
-                endTime: event.end_time,
-                location: venueAddress || '',
-              }) ? (
-                <a
-                  href={googleCalendarLink({
-                    title: event.title,
-                    startTime: event.start_time,
-                    endTime: event.end_time,
-                    location: venueAddress || '',
-                  })!}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block"
-                >
-                  <Button variant="primary" className="w-full">
+{!isEventOver24HoursAgo && (
+            <Card className="p-6 relative rounded-tl-none">
+              <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                <Icon name="event" size="text-2xl" />
+                {t('calendar.event.addToCalendar')}
+              </div>
+              <div className="pt-12">
+                {googleCalendarLink({
+                  title: event.title,
+                  startTime: event.start_time,
+                  endTime: event.end_time,
+                  location: venueAddress || '',
+                }) ? (
+                  <a
+                    href={googleCalendarLink({
+                      title: event.title,
+                      startTime: event.start_time,
+                      endTime: event.end_time,
+                      location: venueAddress || '',
+                    })!}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block"
+                  >
+                    <Button variant="primary" className="w-full">
+                      <Icon name="event" size="text-sm" className="mr-2" />
+                      {t('calendar.event.googleCalendar')}
+                    </Button>
+                  </a>
+                ) : (
+                  <Button variant="primary" className="w-full" disabled>
                     <Icon name="event" size="text-sm" className="mr-2" />
                     {t('calendar.event.googleCalendar')}
                   </Button>
-                </a>
-              ) : (
-                <Button variant="primary" className="w-full" disabled>
-                  <Icon name="event" size="text-sm" className="mr-2" />
-                  {t('calendar.event.googleCalendar')}
-                </Button>
-              )}
-              {appleCalendarLink({
-                title: event.title,
-                startTime: event.start_time,
-                endTime: event.end_time,
-                location: venueAddress || '',
-              }) ? (
-                <a
-                  href={appleCalendarLink({
-                    title: event.title,
-                    startTime: event.start_time,
-                    endTime: event.end_time,
-                    location: venueAddress || '',
-                  })!}
-                  download={`${event.title}.ics`}
-                  className="block mt-4"
-                >
-                  <Button variant="primary" className="w-full">
+                )}
+                {appleCalendarLink({
+                  title: event.title,
+                  startTime: event.start_time,
+                  endTime: event.end_time,
+                  location: venueAddress || '',
+                }) ? (
+                  <a
+                    href={appleCalendarLink({
+                      title: event.title,
+                      startTime: event.start_time,
+                      endTime: event.end_time,
+                      location: venueAddress || '',
+                    })!}
+                    download={`${event.title}.ics`}
+                    className="block mt-4"
+                  >
+                    <Button variant="primary" className="w-full">
+                      <Icon name="event" size="text-sm" className="mr-2" />
+                      {t('calendar.event.appleCalendar')}
+                    </Button>
+                  </a>
+                ) : (
+                  <Button variant="primary" className="w-full mt-4" disabled>
                     <Icon name="event" size="text-sm" className="mr-2" />
                     {t('calendar.event.appleCalendar')}
                   </Button>
-                </a>
-              ) : (
-                <Button variant="primary" className="w-full mt-4" disabled>
-                  <Icon name="event" size="text-sm" className="mr-2" />
-                  {t('calendar.event.appleCalendar')}
-                </Button>
-              )}
-            </div>
-          </Card>
+                )}
+              </div>
+            </Card>
+          )}
 
           {/* Commute Info */}
-          {venueAddress && (
+          {venueAddress && !isEventOver24HoursAgo && (
             <Card className="p-6 relative rounded-tl-none">
               <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
                 <Icon name="directions_car" size="text-2xl" />

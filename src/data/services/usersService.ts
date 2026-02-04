@@ -95,7 +95,7 @@ export async function getOrganizationUsers(
 
         const byUser = new Map<string, OrgUser>()
 
-        for (const row of (data as OrgMemberWithUser[]) ?? []) {
+        for (const row of (data as unknown as OrgMemberWithUser[]) ?? []) {
             if (!row.user) continue
             const existing = byUser.get(row.user.id)
             if (existing) {
@@ -164,7 +164,7 @@ export async function addStaffMember(
  * Get staff member by org and user ID
  */
 export async function getStaffMember(
-  context: UserContext,
+  _context: UserContext,
   orgId: string,
   userId: string
 ): Promise<{ data: StaffMember | null; error: Error | null }> {

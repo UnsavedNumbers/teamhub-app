@@ -254,3 +254,21 @@ export async function createFakeCheckoutSession(
 
   return createServiceResponse({ checkout_url: checkoutUrl, order_id: orderId }, null)
 }
+
+export async function resendFakeTickets(
+  orderId: string,
+  email: string
+): Promise<{ success: boolean; message: string; tickets_resent: number }> {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 800))
+
+  if (!orderId || !email) {
+    throw new Error('Missing order ID or email')
+  }
+
+  return {
+    success: true,
+    message: 'Tickets resent successfully (DEMO)',
+    tickets_resent: 1
+  }
+}

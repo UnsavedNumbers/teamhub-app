@@ -22,6 +22,7 @@ interface PhotoUploadZoneProps {
   maxSizeMB?: number
   maxPhotos?: number // Max photos remaining in gallery
   requireApproval?: boolean // If true, parent uploads need approval
+  hideButton?: boolean // If true, hide the "Choose Files" button
   onComplete?: (uploaded: GalleryPhoto[]) => void
 }
 
@@ -31,9 +32,10 @@ export function PhotoUploadZone({
   maxSizeMB = 10,
   maxPhotos,
   requireApproval = false,
+  hideButton = false,
   onComplete,
 }: PhotoUploadZoneProps) {
-  const { context, userRoles } = useUserContext()
+  const { context } = useUserContext()
   const { t } = useI18n()
   const [items, setItems] = useState<UploadItem[]>([])
   const [isDragging, setIsDragging] = useState(false)
@@ -45,8 +47,8 @@ export function PhotoUploadZone({
     if (!requireApproval) return 'approved'
     
     // Coaches and org admins: auto-approve
-    const isCoach = userRoles?.includes('coach')
-    const isOrgAdmin = userRoles?.includes('org_admin')
+    const isCoach = context?.roles?.includes('coach')
+    const isOrgAdmin = context?.roles?.includes('org_admin')
     
     if (isCoach || isOrgAdmin) {
       return 'approved'
@@ -194,7 +196,8 @@ export function PhotoUploadZone({
         style={{ borderStyle: 'dashed' }}
       >
         <div style={{ textAlign: 'center', padding: '24px' }}>
-          <p className="pa-text-lg pa-font-semibold">{t('photos.upload.title')}</p>
+          <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-text-muted)', marginBottom: '12px', display: 'block' }}>cloud_upload</span>
+          <p className="pa-text-lg pa-font-semibold">{t('photos.upload.dragDrop')}</p>
           <p className="pa-text-sm pa-text-muted">
             {t('photos.upload.validTypes')} • {t('photos.upload.maxSize', { size: maxSizeMB })}
           </p>
@@ -203,21 +206,23 @@ export function PhotoUploadZone({
               {t('photos.photoLimit.remaining', { remaining: maxPhotos, limit: maxPhotos + items.length })}
             </p>
           )}
-          <div className="pa-flex pa-justify-center pa-gap-2 pa-mt-3">
-            <Button 
-              variant="primary" 
-              onClick={() => inputRef.current?.click()} 
-              disabled={isUploading || isLimitReached}
-            >
-              {t('photos.upload.selectFiles')}
-            </Button>
-          </div>
+          {!hideButton && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
+              <Button 
+                variant="primary" 
+                onClick={() => inputRef.current?.click()} 
+                disabled={isUploading || isLimitReached}
+              >
+                {t('photos.upload.selectFiles')}
+              </Button>
+            </div>
+          )}
           <input
             ref={inputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
             multiple
-            className="pa-hidden"
+            style={{ display: 'none' }}
             onChange={onFileChange}
             disabled={isLimitReached}
           />

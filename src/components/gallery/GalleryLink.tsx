@@ -29,7 +29,7 @@ interface GalleryLinkProps {
 }
 
 // Auto-gallery entity types that have system-generated galleries
-const AUTO_GALLERY_TYPES: Set<GalleryType> = new Set(['athlete', 'team', 'event', 'travel', 'program'])
+const AUTO_GALLERY_TYPES: Set<GalleryType> = new Set(['athlete', 'team', 'event', 'travel', 'program', 'season', 'org'])
 
 export function GalleryLink({
   galleryType,

@@ -4,7 +4,7 @@
  * Lists all events the user has bookmarked.
  */
 
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { getBookmarkedEvents, removeBookmark } from '../../data/services/fanService'
 import { showSuccess, showError } from '../../utils/toast'
 import PortalLayout from '../../components/portal/PortalLayout'
@@ -15,12 +15,16 @@ import Icon from '../../components/portal/Icon'
 import { formatEventDate, formatEventTimeRange } from '../../types/calendar'
 import { useNavigate } from 'react-router-dom'
 import { useI18n } from '../../i18n/useI18n'
+import { getLink, RouteKeys } from '../../utils/routes'
+import { FanEventBookmark } from '../../types/staffAndFan'
 
 export default function BookmarkedEvents() {
   const { t } = useI18n()
+  const tAny = t as any
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { data: bookmarks, isLoading } = useQuery({
+  
+  const { data: bookmarks, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['bookmarked-events'],
     queryFn: async () => {
       const { data, error } = await getBookmarkedEvents()
@@ -29,15 +33,44 @@ export default function BookmarkedEvents() {
     },
   })
 
-  const handleRemoveBookmark = async (eventId: string) => {
-    const { error } = await removeBookmark(eventId)
-    if (error) {
-      showError(error.message || t('portal.fan.bookmarkedEvents.removeFailed'))
-      return
-    }
+  const { mutate: deleteBookmark, isPending: isDeleting } = useMutation({
+    mutationFn: async (eventId: string) => {
+      const { error } = await removeBookmark(eventId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      showSuccess(t('portal.fan.bookmarkedEvents.removeSuccess'))
+      queryClient.invalidateQueries({ queryKey: ['bookmarked-events'] })
+    },
+    onError: (error) => {
+      showError(error instanceof Error ? error.message : t('portal.fan.bookmarkedEvents.removeFailed'))
+    },
+  })
 
-    showSuccess(t('portal.fan.bookmarkedEvents.removeSuccess'))
-    queryClient.invalidateQueries({ queryKey: ['bookmarked-events'] })
+  const handleRetry = () => {
+    refetch()
+  }
+
+  if (isError) {
+    return (
+      <PortalLayout>
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <PageTitle>{t('portal.fan.bookmarkedEvents.title')}</PageTitle>
+          <Card className="p-8 text-center border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800">
+            <Icon name="error_outline" className="text-4xl text-red-500 mb-4" />
+            <h3 className="text-lg font-bold text-red-700 dark:text-red-400 mb-2">
+              {t('toast.error.loadFailed')}
+            </h3>
+            <p className="text-red-600 dark:text-red-300 mb-6">
+              {error instanceof Error ? error.message : t('errors.unknownError')}
+            </p>
+            <Button variant="primary" onClick={handleRetry}>
+              {tAny('common.actions.retry')}
+            </Button>
+          </Card>
+        </div>
+      </PortalLayout>
+    )
   }
 
   return (
@@ -59,7 +92,7 @@ export default function BookmarkedEvents() {
           </div>
         ) : bookmarks && bookmarks.length > 0 ? (
           <div className="space-y-4">
-            {bookmarks.map((bookmark) => {
+            {bookmarks.map((bookmark: FanEventBookmark) => {
               const event = bookmark.event
               if (!event) return null
 
@@ -73,11 +106,11 @@ export default function BookmarkedEvents() {
                       <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                         <div className="flex items-center gap-2">
                           <Icon name="calendar_today" className="text-base" />
-                          {formatEventDate(event.start_time, (event as any).timezone || 'UTC')}
+                          {formatEventDate(event.start_time, event.timezone || 'UTC')}
                         </div>
                         <div className="flex items-center gap-2">
                           <Icon name="schedule" className="text-base" />
-                          {formatEventTimeRange(event.start_time, event.end_time, (event as any).timezone || 'UTC')}
+                          {formatEventTimeRange(event.start_time, event.end_time, event.timezone || 'UTC')}
                         </div>
                         {event.location && (
                           <div className="flex items-center gap-2">
@@ -90,13 +123,14 @@ export default function BookmarkedEvents() {
                     <div className="flex gap-2 ml-4">
                       <Button
                         variant="primary"
-                        onClick={() => navigate(`/portal/calendar/events/${event.id}`)}
+                        onClick={() => navigate(getLink(RouteKeys.PORTAL_EVENT_DETAIL, { eventId: event.id }))}
                       >
                         View Details
                       </Button>
                       <Button
                         variant="secondary"
-                        onClick={() => handleRemoveBookmark(bookmark.event_id)}
+                        disabled={isDeleting}
+                        onClick={() => deleteBookmark(bookmark.event_id)}
                       >
                         <Icon name="bookmark" />
                       </Button>
@@ -117,7 +151,7 @@ export default function BookmarkedEvents() {
             </p>
             <Button
               variant="primary"
-              onClick={() => navigate('/portal/calendar')}
+              onClick={() => navigate(getLink(RouteKeys.PORTAL_CALENDAR))}
             >
               {t('portal.fan.bookmarkedEvents.viewCalendar')}
             </Button>
