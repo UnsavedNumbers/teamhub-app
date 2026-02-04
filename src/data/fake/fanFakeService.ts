@@ -120,7 +120,7 @@ export async function getBookmarkedEvents(): Promise<{ data: FanEventBookmark[];
 // ============================================
 
 export async function getFanCalendar(
-    request: GetCalendarRequest = {}
+    _request: GetCalendarRequest = {}
 ): Promise<{ data: GetCalendarResponse | null; error: Error | null }> {
     // Return some fake events mixed from fakeEvents
     return {

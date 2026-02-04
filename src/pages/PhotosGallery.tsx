@@ -5,7 +5,7 @@
  * Supports both masonry (feed) and grid layouts.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
@@ -29,6 +29,7 @@ import { ParentPhotoUpload } from '../components/gallery/ParentPhotoUpload'
 import { ModerationQueue } from '../components/gallery/ModerationQueue'
 import { TaggingSlideout } from '../components/gallery/TaggingSlideout'
 import { BulkTaggingModal } from '../components/gallery/BulkTaggingModal'
+import { GalleryEditModal } from '../components/admin/galleries/GalleryEditModal'
 import { getLink } from '../utils/routes'
 import { useI18n } from '../i18n/useI18n'
 
@@ -46,11 +47,48 @@ export default function PhotosGallery() {
   const [canModerate, setCanModerate] = useState(false)
   const [canUpload, setCanUpload] = useState(false)
   const [showParentUpload, setShowParentUpload] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [taggingPhoto, setTaggingPhoto] = useState<GalleryPhoto | null>(null)
   const [taggingPhotoIndex, setTaggingPhotoIndex] = useState<number>(-1)
   const [bulkTaggingPhotos, setBulkTaggingPhotos] = useState<GalleryPhoto[]>([])
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
-  const [filterAthleteId, setFilterAthleteId] = useState<string | null>(null)
+  const [selectedAthleteIds, setSelectedAthleteIds] = useState<Set<string>>(new Set())
+  const [showAthleteDropdown, setShowAthleteDropdown] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowAthleteDropdown(false)
+      }
+    }
+
+    if (showAthleteDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showAthleteDropdown])
+
+  // Extract unique athletes from all photos
+  const taggedAthletes = photos.reduce((acc, photo) => {
+    if (photo.tagged_athletes) {
+      photo.tagged_athletes.forEach(athlete => {
+        if (!acc.find(a => a.id === athlete.id)) {
+          acc.push(athlete)
+        }
+      })
+    }
+    return acc
+  }, [] as Array<{ id: string; first_name: string; last_name: string }>)
+
+  // Get the currently selected athletes
+  const selectedAthletes = selectedAthleteIds.size > 0
+    ? taggedAthletes.filter(a => selectedAthleteIds.has(a.id))
+    : []
 
   useEffect(() => {
     if (!isReady || !id) return
@@ -63,7 +101,7 @@ export default function PhotosGallery() {
         getGalleryById(context, id),
         getPhotosForGallery(context, {
           gallery_id: id,
-          athlete_id: filterAthleteId || undefined,
+          athlete_id: selectedAthleteIds.size > 0 ? Array.from(selectedAthleteIds).join(',') : undefined,
         }),
       ])
 
@@ -96,7 +134,7 @@ export default function PhotosGallery() {
     }
 
     loadGallery()
-  }, [context, isReady, id, filterAthleteId])
+  }, [context, isReady, id, selectedAthleteIds])
 
   if (loading) {
     return (
@@ -154,17 +192,70 @@ export default function PhotosGallery() {
           
           <div className="flex items-center justify-between mt-8 pt-8 border-t border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-8">
-              {/* Athlete filter */}
-              {photos.some((p) => p.tagged_athletes && p.tagged_athletes.length > 0) && (
-                <button
-                  onClick={() => setFilterAthleteId(null)}
-                  className="group flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black dark:hover:text-white transition-colors"
-                >
-                  {!filterAthleteId ? 'All Athletes' : 'Change Filter'}
-                  <span className="material-symbols-outlined text-sm group-hover:rotate-180 transition-transform">
-                    expand_more
-                  </span>
-                </button>
+              {/* Athlete filter dropdown */}
+              {taggedAthletes.length > 0 && (
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setShowAthleteDropdown(!showAthleteDropdown)}
+                    className="group flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black dark:hover:text-white transition-colors"
+                  >
+                    {selectedAthletes.length === 0 ? 'All Athletes' : `${selectedAthletes.length} Athlete${selectedAthletes.length > 1 ? 's' : ''}`}
+                    <span className={`material-symbols-outlined text-sm transition-transform ${showAthleteDropdown ? 'rotate-180' : ''}`}>
+                      expand_more
+                    </span>
+                  </button>
+
+                  {/* Dropdown menu */}
+                  {showAthleteDropdown && (
+                    <div className="absolute top-full left-0 mt-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 min-w-[200px] z-50">
+                      <button
+                        onClick={() => setSelectedAthleteIds(new Set())}
+                        className="w-full text-left px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                      >
+                        Clear All
+                      </button>
+                      {taggedAthletes.map((athlete) => {
+                        const isSelected = selectedAthleteIds.has(athlete.id)
+                        return (
+                          <button
+                            key={athlete.id}
+                            onClick={() => {
+                              setSelectedAthleteIds((prev) => {
+                                const next = new Set(prev)
+                                if (next.has(athlete.id)) {
+                                  next.delete(athlete.id)
+                                } else {
+                                  next.add(athlete.id)
+                                }
+                                return next
+                              })
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700"
+                          >
+                            <span className={isSelected ? 'font-semibold text-black dark:text-white' : 'text-slate-600 dark:text-slate-300'}>
+                              {athlete.first_name}
+                            </span>
+                            {isSelected && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedAthleteIds((prev) => {
+                                    const next = new Set(prev)
+                                    next.delete(athlete.id)
+                                    return next
+                                  })
+                                }}
+                                className="text-slate-400 hover:text-red-500 transition-colors"
+                              >
+                                <span className="material-symbols-outlined text-sm">close</span>
+                              </button>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
               )}
               
               {/* Action buttons */}
@@ -188,6 +279,15 @@ export default function PhotosGallery() {
                 >
                   <Icon name="add" size="text-sm" />
                   {t('photos.galleryView.addYourPhotos')}
+                </button>
+              )}
+              {canModerate && (
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black dark:hover:text-white transition-colors"
+                >
+                  <Icon name="edit" size="text-sm" />
+                  Update Album
                 </button>
               )}
             </div>
@@ -304,9 +404,6 @@ export default function PhotosGallery() {
                         ? {
                             boxShadow: '0 20px 25px -5px rgba(59, 130, 246, 0.1), 0 8px 10px -6px rgba(59, 130, 246, 0.1)',
                             transform: 'translateY(-4px)',
-                            ringColor: 'rgb(59 130 246)',
-                            ringWidth: '4px',
-                            ringOffsetWidth: '4px',
                           }
                         : {}
                     }
@@ -408,26 +505,6 @@ export default function PhotosGallery() {
               src: getGalleryPhotoUrl(photo.storage_path),
               alt: photo.caption || 'Gallery photo',
             }))}
-            render={{
-              toolbar: ({ state }) => (
-                <div className="yarl__toolbar">
-                  {canModerate && (
-                    <button
-                      className="yarl__button"
-                      onClick={() => {
-                        const currentIndex = state.currentIndex;
-                        setTaggingPhoto(photos[currentIndex]);
-                        setTaggingPhotoIndex(currentIndex);
-                        setLightboxIndex(-1);
-                      }}
-                      aria-label="Tag people"
-                    >
-                      <Icon name="tag" size="text-xl" />
-                    </button>
-                  )}
-                </div>
-              ),
-            }}
           />
         </>
       )}
@@ -489,6 +566,20 @@ export default function PhotosGallery() {
                 }
               })
             }
+          }}
+        />
+      )}
+
+      {/* Gallery Edit Modal */}
+      {gallery && (
+        <GalleryEditModal
+          open={showEditModal}
+          gallery={gallery}
+          photos={photos}
+          onClose={() => setShowEditModal(false)}
+          onSaved={(updatedGallery) => {
+            setGallery(updatedGallery)
+            setShowEditModal(false)
           }}
         />
       )}

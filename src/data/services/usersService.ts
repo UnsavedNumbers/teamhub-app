@@ -95,7 +95,7 @@ export async function getOrganizationUsers(
 
         const byUser = new Map<string, OrgUser>()
 
-        for (const row of (data as OrgMemberWithUser[]) ?? []) {
+        for (const row of (data as unknown as OrgMemberWithUser[]) ?? []) {
             if (!row.user) continue
             const existing = byUser.get(row.user.id)
             if (existing) {

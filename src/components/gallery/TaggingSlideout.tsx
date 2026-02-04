@@ -14,7 +14,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
-import { supabase } from '../../lib/supabase'
 import {
   getGalleryPhotoUrl,
   type GalleryPhoto,
@@ -124,7 +123,6 @@ export function TaggingSlideout({
 
   // State
   const [taggedPeople, setTaggedPeople] = useState<TaggedPerson[]>([])
-  const [initialTaggedIds, setInitialTaggedIds] = useState<Set<string>>(new Set())
   const [suggestions, setSuggestions] = useState<SuggestedPerson[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SuggestedPerson[]>([])
@@ -204,7 +202,6 @@ export function TaggingSlideout({
     }))
 
     setTaggedPeople(newTaggedPeople)
-    setInitialTaggedIds(new Set(newTaggedPeople.map((p) => p.id)))
     setHasUnsavedChanges(false)
   }, [photo.tagged_athletes, photo.id, isOpen])
 
@@ -341,7 +338,7 @@ export function TaggingSlideout({
         throw result.error
       }
 
-      showSuccess(t('gallery.tagging.saveSuccess'))
+      showSuccess(t('gallery.tagging.saveSuccess'), 4000, { position: 'top-center' })
       setHasUnsavedChanges(false)
       onSave({ advanceToNext })
     } catch (err) {

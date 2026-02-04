@@ -51,13 +51,6 @@ function isValidUUID(uuid: string): boolean {
   return uuidRegex.test(uuid)
 }
 
-/**
- * Build display name from person
- */
-function buildDisplayName(person: SuggestedPerson): string {
-  return `${person.first_name} ${person.last_name}`
-}
-
 // ============================================================================
 // Public API
 // ============================================================================
@@ -200,7 +193,6 @@ export async function searchPeopleForGallery(
       throw new Error('Organization context required')
     }
 
-    const { galleryType, entityId, orgId } = galleryContext
     const searchTerm = query.trim().toLowerCase()
 
     // Get all suggestions for this gallery type, then filter by name
@@ -618,7 +610,7 @@ async function getTravelSuggestions(
  * Get program suggestions
  */
 async function getProgramSuggestions(
-  programId: string,
+  _programId: string,
   orgId: string,
   excludeIds: string[],
   limit: number

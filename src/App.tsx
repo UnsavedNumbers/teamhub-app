@@ -77,6 +77,26 @@ const PortalEditEvent = lazy(() => import('./pages/portal/PortalEditEvent'))
 const FollowedOrgs = lazy(() => import('./pages/portal/FollowedOrgs'))
 const BookmarkedEvents = lazy(() => import('./pages/portal/BookmarkedEvents'))
 
+// Fan Pages - Lazy loaded
+const FanHome = lazy(() => import('./pages/fan/FanHome'))
+const FanFollowing = lazy(() => import('./pages/fan/FanFollowing'))
+const FanOrgProfile = lazy(() => import('./pages/fan/FanOrgProfile'))
+const FanPhotos = lazy(() => import('./pages/fan/FanPhotos'))
+const FanGalleryDetail = lazy(() => import('./pages/fan/FanPhotos').then(m => ({ default: m.FanGalleryDetail })))
+const FanAthletePhotos = lazy(() => import('./pages/fan/FanPhotos').then(m => ({ default: m.FanAthletePhotos })))
+const FanSchedule = lazy(() => import('./pages/fan/FanSchedule'))
+const FanTickets = lazy(() => import('./pages/fan/FanTickets'))
+const FanTicketDetail = lazy(() => import('./pages/fan/FanTickets').then(m => ({ default: m.FanTicketDetail })))
+const FanProfile = lazy(() => import('./pages/fan/FanProfile'))
+const FanProfileEdit = lazy(() => import('./pages/fan/FanProfile').then(m => ({ default: m.FanProfileEdit })))
+const FanProfileNotifications = lazy(() => import('./pages/fan/FanProfile').then(m => ({ default: m.FanProfileNotifications })))
+const FanProfileLinkedAthletes = lazy(() => import('./pages/fan/FanProfile').then(m => ({ default: m.FanProfileLinkedAthletes })))
+const FanProfilePrivacy = lazy(() => import('./pages/fan/FanProfile').then(m => ({ default: m.FanProfilePrivacy })))
+const FanTeamProfile = lazy(() => import('./pages/fan/FanTeamProfile'))
+const FanAthleteProfile = lazy(() => import('./pages/fan/FanAthleteProfile'))
+const FanLayout = lazy(() => import('./components/fan/FanLayout'))
+
+
 // Video Pages - Lazy loaded
 const GuardianVideos = lazy(() => import('./pages/GuardianVideos'))
 const GuardianVideoDetail = lazy(() => import('./pages/GuardianVideoDetail'))
@@ -367,6 +387,34 @@ function AppWithTheme() {
             {/* Catch-all to prevent blank/"blue" screens on unknown portal routes */}
             {/* Use replace: false to preserve browser history for back button navigation */}
             <Route path="*" element={<Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace={false} />} />
+          </Route>
+
+          {/* Fan Routes - Public fan experience */}
+          <Route path="/fan" element={<Suspense fallback={<AdminLoadingSpinner />}><FanLayout /></Suspense>}>
+            {/* Public routes - accessible without auth for browsing */}
+            <Route path="org/:slug" element={<Suspense fallback={<AdminLoadingSpinner />}><FanOrgProfile /></Suspense>} />
+            <Route path="team/:id" element={<Suspense fallback={<AdminLoadingSpinner />}><FanTeamProfile /></Suspense>} />
+            <Route path="athlete/:id" element={<Suspense fallback={<AdminLoadingSpinner />}><FanAthleteProfile /></Suspense>} />
+            
+            {/* Protected fan routes - require authentication */}
+            <Route index element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanHome /></Suspense></ProtectedRoute>} />
+            <Route path="home" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanHome /></Suspense></ProtectedRoute>} />
+            <Route path="schedule" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanSchedule /></Suspense></ProtectedRoute>} />
+            <Route path="photos" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanPhotos /></Suspense></ProtectedRoute>} />
+            <Route path="photos/gallery/:id" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanGalleryDetail /></Suspense></ProtectedRoute>} />
+            <Route path="photos/athlete/:athleteId" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanAthletePhotos /></Suspense></ProtectedRoute>} />
+            <Route path="tickets" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanTickets /></Suspense></ProtectedRoute>} />
+            <Route path="tickets/:ticketId" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanTicketDetail /></Suspense></ProtectedRoute>} />
+            <Route path="following" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanFollowing /></Suspense></ProtectedRoute>} />
+            <Route path="discover" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanFollowing /></Suspense></ProtectedRoute>} />
+            <Route path="profile" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanProfile /></Suspense></ProtectedRoute>} />
+            <Route path="profile/edit" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanProfileEdit /></Suspense></ProtectedRoute>} />
+            <Route path="profile/notifications" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanProfileNotifications /></Suspense></ProtectedRoute>} />
+            <Route path="profile/linked-athletes" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanProfileLinkedAthletes /></Suspense></ProtectedRoute>} />
+            <Route path="profile/privacy" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanProfilePrivacy /></Suspense></ProtectedRoute>} />
+            
+            {/* Catch-all for unknown fan routes */}
+            <Route path="*" element={<Navigate to="/fan" replace={false} />} />
           </Route>
 
           {/* Organization Onboarding - Standalone route outside AdminLayout */}

@@ -105,7 +105,7 @@ export default function Login() {
             const roles = Array.isArray(org.roles)
               ? org.roles.filter(
                   (r: unknown): r is OrgMemberRole =>
-                    r === 'parent' || r === 'coach' || r === 'org_admin'
+                    r === 'parent' || r === 'coach' || r === 'org_admin' || r === 'staff'
                 )
               : []
             

@@ -15,7 +15,7 @@ import type { HomeLocation } from '../types/location'
 import { geocodeZipToHomeLocation } from '../utils/homeLocation'
 
 // Role types - now per organization
-type OrgMemberRole = 'parent' | 'coach' | 'org_admin'
+type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff'
 type LegacyUserRole = 'parent' | 'coach' | 'admin'
 
 interface UserProfile {
@@ -45,7 +45,7 @@ interface AuthContextType {
   loading: boolean
   signInWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signInWithGoogle: () => Promise<{ error: AuthError | null }>
-  signUp: (email: string, password: string, firstName: string, lastName: string, phone: string, zipcode: string, requiresOrgSetup?: boolean) => Promise<{ error: AuthError | null }>
+  signUp: (email: string, password: string, firstName: string, lastName: string, phone: string, zipcode: string, requiresOrgSetup?: boolean, signupMode?: 'fan' | 'parent') => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>
@@ -154,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const result = await supabase.rpc('get_user_organizations', {
             check_user_id: userId,
           })
-          data = result.data
+          data = result.data as any
           orgError = result.error
 
           // Log RPC errors for debugging (this is likely the "profit data" / "profile data" error)
@@ -175,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const roles = Array.isArray(o.roles)
                 ? o.roles.filter(
                   (r: unknown): r is OrgMemberRole =>
-                    r === 'parent' || r === 'coach' || r === 'org_admin'
+                    r === 'parent' || r === 'coach' || r === 'org_admin' || r === 'staff'
                 )
                 : []
 
@@ -393,7 +393,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error }
   }
 
-  async function signUp(email: string, password: string, firstName: string, lastName: string, phone: string, zipcode: string, requiresOrgSetup?: boolean) {
+  async function signUp(email: string, password: string, firstName: string, lastName: string, phone: string, zipcode: string, requiresOrgSetup?: boolean, signupMode?: 'fan' | 'parent') {
     // Import getBaseUrl to get current origin (supports localhost and production)
     const { getBaseUrl } = await import('../utils/host')
     const baseUrl = getBaseUrl()
@@ -415,6 +415,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           display_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
           // Pass requires_org_setup to metadata - the database trigger will read this
           requires_org_setup: requiresOrgSetup ?? false,
+          // Pass signup_mode to metadata for tracking user intent
+          signup_mode: signupMode || 'parent',
         },
       },
     })

@@ -20,6 +20,7 @@ import type { FanOrgFollow } from '../../types/staffAndFan'
 
 export default function FollowedOrgs() {
   const { t } = useI18n()
+  const tAny = t as any
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -107,7 +108,7 @@ export default function FollowedOrgs() {
                         to={getLink('portal.orgLanding', { slug: follow.org.slug })}
                         className="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium"
                       >
-                        {t('View public page') || 'View public page'} <Icon name="arrow_forward" className="ml-1 text-base" />
+                        {tAny('View public page') || 'View public page'} <Icon name="arrow_forward" className="ml-1 text-base" />
                       </Link>
                     )}
                   </div>

@@ -317,7 +317,7 @@ const VALID_EVENT_TYPES = [
 
 const VALID_RSVP_STATUSES = ['going', 'late', 'not_going', 'unknown'] as const
 
-const VALID_ORG_MEMBER_ROLES = ['parent', 'coach', 'org_admin'] as const
+const VALID_ORG_MEMBER_ROLES = ['parent', 'coach', 'org_admin', 'staff'] as const
 
 const VALID_ORG_TYPES = ['school', 'club', 'league', 'academy', 'aau'] as const
 
