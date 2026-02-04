@@ -22,30 +22,10 @@ import './Photos.css'
 
 // Cache for galleries (5 minutes)
 const CACHE_KEY = 'admin_photos_galleries'
-const CACHE_DURATION = 5 * 60 * 1000
 
 interface CachedData {
   galleries: Gallery[]
   timestamp: number
-}
-
-function getCachedGalleries(): Gallery[] | null {
-  try {
-    const cached = localStorage.getItem(CACHE_KEY)
-    if (!cached) return null
-    
-    const data: CachedData = JSON.parse(cached)
-    const now = Date.now()
-    
-    if (now - data.timestamp > CACHE_DURATION) {
-      localStorage.removeItem(CACHE_KEY)
-      return null
-    }
-    
-    return data.galleries
-  } catch {
-    return null
-  }
 }
 
 function setCachedGalleries(galleries: Gallery[]) {
@@ -79,7 +59,7 @@ export default function AdminPhotos() {
   const [search, setSearch] = useState('')
   const [activeType, setActiveType] = useState<'all' | Gallery['gallery_type']>('all')
   const [sortBy, setSortBy] = useState<'recent' | 'az' | 'photos'>('recent')
-  const [showManagement, setShowManagement] = useState(false)
+  const [showManagement] = useState(false)
   const [showDemoModal, setShowDemoModal] = useState(false)
 
   useEffect(() => {

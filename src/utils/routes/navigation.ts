@@ -595,3 +595,97 @@ export const userDropdownRoleLinks = [
     { role: 'coach', label: 'My Athletes', routeKey: 'portal.athletes', icon: 'sports_soccer' },
     { role: 'org_admin', label: 'Organization Settings', routeKey: 'admin.organization.base', icon: 'admin_panel_settings' },
 ] as const
+
+// ============================================================================
+// FAN NAVIGATION - Used by FanNav.tsx
+// ============================================================================
+
+/**
+ * Fan navigation sections for main fan navigation
+ */
+export const fanNavSections: NavigationSection[] = [
+    {
+        label: 'Home',
+        route: '/fan',
+        groups: [
+            {
+                label: '',
+                items: [
+                    { routeKey: 'fan.home', text: 'Home', icon: 'home', description: 'Your personalized feed' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'Schedule',
+        route: '/fan/schedule',
+        groups: [
+            {
+                label: '',
+                items: [
+                    { routeKey: 'fan.schedule', text: 'Schedule', icon: 'calendar_month', description: 'Upcoming events' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'Photos',
+        route: '/fan/photos',
+        groups: [
+            {
+                label: '',
+                items: [
+                    { routeKey: 'fan.photos.list', text: 'Photos & Videos', icon: 'photo_library', description: 'Browse galleries' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'Tickets',
+        route: '/fan/tickets',
+        groups: [
+            {
+                label: '',
+                items: [
+                    { routeKey: 'fan.tickets.list', text: 'My Tickets', icon: 'confirmation_number', description: 'Your event tickets' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'Following',
+        route: '/fan/following',
+        groups: [
+            {
+                label: '',
+                items: [
+                    { routeKey: 'fan.following.base', text: 'Following', icon: 'favorite', description: 'Teams and athletes' },
+                    { routeKey: 'fan.following.discover', text: 'Discover', icon: 'explore', description: 'Find teams to follow' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'Profile',
+        route: '/fan/profile',
+        groups: [
+            {
+                label: 'Account',
+                items: [
+                    { routeKey: 'fan.profile.base', text: 'Profile', icon: 'account_circle', description: 'Your account' },
+                    { routeKey: 'fan.profile.notifications', text: 'Notifications', icon: 'notifications', description: 'Manage notifications' },
+                    { routeKey: 'fan.profile.privacy', text: 'Privacy', icon: 'privacy_tip', description: 'Privacy settings' },
+                ],
+            },
+        ],
+    },
+]
+
+/**
+ * Fan user dropdown quick links
+ */
+export const fanUserDropdownLinks = [
+    { label: 'My Tickets', routeKey: 'fan.tickets.list', icon: 'confirmation_number' },
+    { label: 'Following', routeKey: 'fan.following.base', icon: 'favorite' },
+    { label: 'Profile', routeKey: 'fan.profile.base', icon: 'account_circle' },
+] as const

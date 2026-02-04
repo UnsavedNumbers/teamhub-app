@@ -63,6 +63,14 @@ export interface Gallery {
   photo_count?: number
   pending_count?: number
   cover_url?: string | null
+  cover_thumbnails?: {
+    thumb_small?: { webp: string; jpg: string };
+    thumb_medium?: { webp: string; jpg: string };
+    thumb_large?: { webp: string; jpg: string };
+    thumb_wide?: { webp: string; jpg: string };
+  } | null
+  cover_generated_at?: string | null
+  cover_generation_status?: 'pending' | 'processing' | 'completed' | 'failed'
 }
 
 export interface GalleryAlbum {
@@ -110,7 +118,7 @@ export interface GetPhotosParams {
   gallery_id: string
   album_id?: string | null
   status?: PhotoStatus
-  athlete_id?: string // Filter by tagged athlete
+  athlete_id?: string | string[] // Filter by tagged athletes (comma-separated for multiple)
   limit?: number
   offset?: number
   order_by?: 'created_at' | 'taken_at'
@@ -136,15 +144,39 @@ function isValidUUID(uuid: string): boolean {
 }
 
 /**
+ * Trigger gallery cover generation
+ */
+export async function generateGalleryCover(
+  galleryId: string,
+  sourcePhotoId?: string,
+  forceRegenerate: boolean = false
+): Promise<{ error: Error | null }> {
+  try {
+    const { error } = await supabase.functions.invoke('generate-gallery-cover', {
+      body: { gallery_id: galleryId, source_photo_id: sourcePhotoId, force_regenerate: forceRegenerate }
+    })
+
+    if (error) {
+      console.error('[galleryService] Triggered generation failed:', error);
+      // We don't throw here to avoid failing the parent operation (like upload)
+    }
+    return { error: null }
+  } catch (err) {
+    console.error('[galleryService] Error invoking generate-gallery-cover:', err)
+    return { error: err as Error }
+  }
+}
+
+/**
  * Build public URL for a gallery photo from storage_path
  */
 export function getGalleryPhotoUrl(storagePath: string): string {
   if (!storagePath) return ''
-  
+
   const { data } = supabase.storage
     .from('public-media')
     .getPublicUrl(storagePath)
-  
+
   return data.publicUrl
 }
 
@@ -191,26 +223,26 @@ export async function getGalleriesForUser(
 
   try {
     console.log('[galleryService] getGalleriesForUser params:', params, 'context.orgId:', context.orgId)
-    
+
     // Debug: check org admin status
-    const { data: debugResult } = await supabase.rpc('is_org_admin', { 
-      org_id_param: context.orgId 
+    const { data: debugResult } = await supabase.rpc('is_org_admin', {
+      org_id_param: context.orgId
     })
     console.log('[galleryService] is_org_admin check:', debugResult)
-    
+
     // Debug: check user's organization memberships
     const { data: memberships, error: memError } = await supabase
       .from('organization_members')
       .select('organization_id, role, user_id')
     console.log('[galleryService] User memberships:', memberships, memError)
-    
+
     // Debug: check what galleries exist (without RLS)
     const { data: allGalleries, error: debugError } = await supabase
       .from('galleries')
       .select('id, name, gallery_type, org_id')
       .limit(5)
     console.log('[galleryService] Sample galleries (with RLS):', allGalleries, debugError)
-    
+
     let query = supabase
       .from('galleries')
       .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
@@ -234,7 +266,7 @@ export async function getGalleriesForUser(
     }
 
     const { data: galleries, error } = await query
-    
+
     console.log('[galleryService] Query result:', { count: galleries?.length, error, galleries })
 
     if (error) throw error
@@ -244,7 +276,7 @@ export async function getGalleriesForUser(
       cover_url: g.cover ? getGalleryPhotoThumbnailUrl(g.cover.thumbnail_path, g.cover.storage_path) : null,
     })) as Gallery[]
 
-    // Get photo counts for all galleries
+    // Get photo counts for all galleries using direct query (RPC function may not exist)
     if (galleryList.length > 0) {
       const galleryIds = galleryList.map((g) => g.id)
       const { data: counts, error: countsError } = await supabaseAny.rpc(
@@ -272,6 +304,22 @@ export async function getGalleriesForUser(
             gallery.pending_count = 0
           }
         })
+      } else if (countsError) {
+        // Fallback: count photos individually if RPC fails
+        console.warn('[galleryService] get_gallery_photo_counts RPC failed, using fallback:', countsError)
+        for (const gallery of galleryList) {
+          const { count: totalCount } = await supabase
+            .from('gallery_photos')
+            .select('*', { count: 'exact', head: true })
+            .eq('gallery_id', gallery.id)
+          const { count: pendingCount } = await supabase
+            .from('gallery_photos')
+            .select('*', { count: 'exact', head: true })
+            .eq('gallery_id', gallery.id)
+            .eq('status', 'pending')
+          gallery.photo_count = totalCount || 0
+          gallery.pending_count = pendingCount || 0
+        }
       }
     }
 
@@ -393,11 +441,11 @@ export async function getEntityGallery(
     const galleryType = mapEntityToGalleryType(entityType)
 
     // Validate that this is an auto-gallery entity type
-    const autoGalleryTypes: GalleryType[] = ['athlete', 'team', 'event', 'travel', 'program']
+    const autoGalleryTypes: GalleryType[] = ['athlete', 'team', 'event', 'travel', 'program', 'season', 'org']
     if (!autoGalleryTypes.includes(galleryType)) {
       return {
         data: null,
-        error: new Error(`${entityType} is not an auto-gallery entity type. Use getGalleriesForUser for org/season.`)
+        error: new Error(`${entityType} is not an auto-gallery entity type.`)
       }
     }
 
@@ -512,11 +560,11 @@ export async function ensureEntityGallery(
     const galleryType = mapEntityToGalleryType(entityType)
 
     // Validate that this is an auto-gallery entity type
-    const autoGalleryTypes: GalleryType[] = ['athlete', 'team', 'event', 'travel', 'program']
+    const autoGalleryTypes: GalleryType[] = ['athlete', 'team', 'event', 'travel', 'program', 'season', 'org']
     if (!autoGalleryTypes.includes(galleryType)) {
       return {
         data: null,
-        error: new Error(`${entityType} is not an auto-gallery entity type. Use getGalleriesForUser for org/season.`)
+        error: new Error(`${entityType} is not an auto-gallery entity type.`)
       }
     }
 
@@ -642,8 +690,8 @@ export async function getPhotosForGallery(
       .from('gallery_photos')
       .select(`
         *,
-        gallery_photo_tags:gallery_photo_tags(
-          athlete:athletes(
+        gallery_photo_tags (
+          athlete:athletes (
             id,
             first_name,
             last_name
@@ -664,11 +712,6 @@ export async function getPhotosForGallery(
     // Filter by status (RLS will also filter, but we can be explicit)
     if (params.status) {
       query = query.eq('status', params.status)
-    }
-
-    // Filter by tagged athlete
-    if (params.athlete_id) {
-      query = query.contains('gallery_photo_tags', [{ athlete_id: params.athlete_id }])
     }
 
     // Ordering
@@ -692,7 +735,17 @@ export async function getPhotosForGallery(
 
     if (error) throw error
 
-    const photos: GalleryPhoto[] = (data || []).map(mapPhotoRecord)
+    let photos: GalleryPhoto[] = (data || []).map(mapPhotoRecord)
+
+    // Filter by tagged athletes (client-side filter)
+    if (params.athlete_id) {
+      const athleteIds = typeof params.athlete_id === 'string'
+        ? params.athlete_id.split(',').map(id => id.trim())
+        : params.athlete_id
+      photos = photos.filter((photo) =>
+        photo.tagged_athletes?.some((athlete) => athleteIds.includes(athlete.id))
+      )
+    }
 
     return {
       data: photos,
@@ -728,8 +781,8 @@ export async function getPhotoById(
       .from('gallery_photos')
       .select(`
         *,
-        gallery_photo_tags:gallery_photo_tags(
-          athlete:athletes(
+        gallery_photo_tags (
+          athlete:athletes (
             id,
             first_name,
             last_name
@@ -1069,8 +1122,8 @@ export async function checkStorageCap(
       error: allowed
         ? null
         : new Error(
-            'Photo storage limit reached for your plan. Upgrade or delete existing photos to add more.'
-          ),
+          'Photo storage limit reached for your plan. Upgrade or delete existing photos to add more.'
+        ),
       currentUsage: currentBytes,
       limit: limitBytes > 0 ? limitBytes : undefined,
     }
@@ -1232,6 +1285,16 @@ export async function uploadPhotoToGallery(
       throw insertError
     }
 
+    // Trigger cover generation if this is the first photo or gallery has no cover
+    try {
+      const { data: gallery } = await supabase.from('galleries').select('cover_photo_id').eq('id', galleryId).maybeSingle();
+      if (gallery && !gallery.cover_photo_id) {
+        generateGalleryCover(galleryId, (data as GalleryPhoto).id).catch(console.error);
+      }
+    } catch (e) {
+      console.warn('Failed to check/trigger cover generation', e);
+    }
+
     return {
       data: data as GalleryPhoto,
       error: null,
@@ -1260,7 +1323,7 @@ export async function moderatePhotos(
 
   try {
     const status = action === 'approve' ? 'approved' : 'rejected'
-    
+
     const { error } = await supabase
       .from('gallery_photos')
       .update({ status })
@@ -1327,6 +1390,12 @@ export async function setGalleryCover(
   photoId: string | null
 ): Promise<{ error: Error | null }> {
   const { error } = await updateGallery(context, galleryId, { cover_photo_id: photoId })
+
+  if (!error) {
+    // Trigger generation
+    generateGalleryCover(galleryId, photoId || undefined, true).catch(console.error)
+  }
+
   return { error }
 }
 
@@ -1353,11 +1422,11 @@ export async function deletePhotos(
 
     const pathsToDelete: string[] = []
     let reclaimedBytes = 0
-    ;(photos || []).forEach((p: any) => {
-      if (p.storage_path) pathsToDelete.push(p.storage_path)
-      if (p.thumbnail_path) pathsToDelete.push(p.thumbnail_path)
-      reclaimedBytes += Number(p.size_bytes || 0)
-    })
+      ; (photos || []).forEach((p: any) => {
+        if (p.storage_path) pathsToDelete.push(p.storage_path)
+        if (p.thumbnail_path) pathsToDelete.push(p.thumbnail_path)
+        reclaimedBytes += Number(p.size_bytes || 0)
+      })
 
     if (pathsToDelete.length > 0) {
       const { error: storageError } = await supabase.storage
@@ -1376,6 +1445,26 @@ export async function deletePhotos(
 
     if (reclaimedBytes > 0) {
       await updateStorageUsage(context, -reclaimedBytes)
+    }
+
+    if (reclaimedBytes > 0) {
+      await updateStorageUsage(context, -reclaimedBytes)
+    }
+
+    // Trigger regeneration if cover photo is missing (ON DELETE SET NULL in DB will handle the column, but we need to generate new thumbs)
+    try {
+      const { data: gallery } = await supabase
+        .from('galleries')
+        .select('cover_photo_id')
+        .eq('id', galleryId)
+        .maybeSingle();
+
+      if (gallery && !gallery.cover_photo_id) {
+        // Pick next available
+        generateGalleryCover(galleryId).catch(console.error);
+      }
+    } catch (e) {
+      console.warn('Failed to check/trigger cover regeneration after delete', e);
     }
 
     return { error: null }
@@ -1419,11 +1508,11 @@ export async function deleteGallery(
 
     const paths: string[] = []
     let reclaimedBytes = 0
-    ;(photos || []).forEach((p: any) => {
-      if (p.storage_path) paths.push(p.storage_path)
-      if (p.thumbnail_path) paths.push(p.thumbnail_path)
-      reclaimedBytes += Number(p.size_bytes || 0)
-    })
+      ; (photos || []).forEach((p: any) => {
+        if (p.storage_path) paths.push(p.storage_path)
+        if (p.thumbnail_path) paths.push(p.thumbnail_path)
+        reclaimedBytes += Number(p.size_bytes || 0)
+      })
 
     if (paths.length > 0) {
       const { error: storageError } = await supabase.storage.from('public-media').remove(paths)

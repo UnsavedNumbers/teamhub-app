@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button, Input } from '@/components/platformAdmin'
-import { updateGallery, type Gallery, type GalleryPhoto } from '@/data/services/galleryService'
+import { generateGalleryCover, updateGallery, type Gallery, type GalleryPhoto } from '@/data/services/galleryService'
 import { useUserContext } from '@/hooks/useUserContext'
 import { showError, showSuccess } from '@/utils/toast'
 
@@ -46,7 +46,24 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
         cover_photo_id: coverPhotoId || null,
       })
       if (error || !data) throw error || new Error('Failed to update gallery')
-      showSuccess('Gallery updated')
+      
+      // Check if cover changed and trigger regeneration
+      const oldCover = gallery.cover_photo_id || ''
+      const newCover = coverPhotoId || ''
+      
+      if (oldCover !== newCover) {
+         if (newCover) {
+             generateGalleryCover(gallery.id, newCover, true).catch(console.error)
+             showSuccess('Gallery updated. Cover thumbnails processing.')
+         } else {
+             // Cover removed, fall back to auto-selection
+             generateGalleryCover(gallery.id, undefined, true).catch(console.error)
+             showSuccess('Gallery updated. Cover reset to automatic.')
+         }
+      } else {
+         showSuccess('Gallery updated')
+      }
+      
       onSaved?.(data)
       onClose()
     } catch (err: any) {

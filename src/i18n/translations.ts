@@ -635,9 +635,241 @@ export const en = {
             noChannels: 'No channels available',
         },
         fan: {
+            // Home Page
+            home: {
+                title: 'Home',
+                welcomeBack: 'Welcome back, {{name}}',
+                followingStats: 'Following {{orgs}} organizations, {{teams}} teams, {{athletes}} athletes',
+                upcomingEvents: 'Upcoming Events',
+                recentAnnouncements: 'Recent Announcements',
+                recentPhotos: 'Recent Photos',
+                recentResults: 'Recent Results',
+                viewAll: 'View All',
+                noUpcomingEvents: 'No upcoming events',
+                noAnnouncements: 'No recent announcements',
+                noPhotos: 'No recent photos',
+                noResults: 'No recent results',
+                emptyState: {
+                    title: 'Start following teams and athletes',
+                    description: 'Discover organizations, teams, and athletes to follow and stay updated',
+                    discoverButton: 'Discover',
+                },
+            },
+            // Schedule Page
+            schedule: {
+                title: 'Schedule',
+                viewToggle: {
+                    month: 'Month',
+                    week: 'Week',
+                    agenda: 'Agenda',
+                },
+                filters: {
+                    title: 'Filters',
+                    all: 'All',
+                    allEntities: 'All',
+                    allTypes: 'All Event Types',
+                    clearAll: 'Clear All',
+                },
+                today: 'Today',
+                noEvents: 'No events',
+                noEventsFiltered: 'No events match your filters',
+            },
+            // Photos Page
+            photos: {
+                title: 'Photos & Videos',
+                searchPlaceholder: 'Search gallery names, tags...',
+                filterBy: 'Filter by',
+                filterEntity: 'All',
+                filterType: {
+                    all: 'All',
+                    photos: 'Photos',
+                    videos: 'Videos',
+                },
+                photosOf: 'Photos of {{name}}',
+                recentGalleries: 'Recent Galleries',
+                browseByEntity: 'Browse by Entity',
+                photoCount: '{{count}} photo',
+                photoCount_plural: '{{count}} photos',
+                videoCount: '{{count}} video',
+                videoCount_plural: '{{count}} videos',
+                downloadAll: 'Download All',
+                shareGallery: 'Share Gallery',
+                noGalleries: 'No galleries available',
+                noPhotosOfAthlete: 'No photos of {{name}} yet',
+                accessDenied: 'You don\'t have access to this gallery',
+            },
+            // Tickets Page
+            tickets: {
+                title: 'My Tickets',
+                searchPlaceholder: 'Search by event name or order number...',
+                filterUpcoming: 'Upcoming',
+                filterPast: 'Past',
+                filterAll: 'All',
+                emptyTitle: 'No tickets yet',
+                emptyDescription: 'Your purchased tickets will appear here',
+                showQR: 'Show QR Code',
+                hideQR: 'Hide QR Code',
+                qrInstructions: 'Present this QR code at the event entrance',
+                statusScanned: 'Scanned',
+                statusExpired: 'Expired',
+                upcoming: 'Upcoming',
+                past: 'Past',
+                noUpcomingTickets: 'No upcoming tickets',
+                noPastTickets: 'No past tickets',
+                ticketStatus: {
+                    valid: 'Valid',
+                    transferred: 'Transferred',
+                    pending: 'Pending',
+                    used: 'Used',
+                    expired: 'Expired',
+                    refunded: 'Refunded',
+                },
+                ticketDetail: {
+                    qrRefreshIn: 'Refreshes in {{seconds}}s',
+                    addToWallet: 'Add to Wallet',
+                    eventName: 'Event',
+                    eventDateTime: 'Date & Time',
+                    doorsOpen: 'Doors Open',
+                    venue: 'Venue',
+                    ticketType: 'Ticket Type',
+                    seatInfo: 'Seat/Section',
+                    ticketHolder: 'Ticket Holder',
+                    orderNumber: 'Order Number',
+                    transferTicket: 'Transfer Ticket',
+                    viewReceipt: 'View Receipt',
+                    transferredTo: 'Transferred to {{name}}',
+                },
+                transfer: {
+                    title: 'Transfer Ticket',
+                    recipientEmail: 'Recipient Email',
+                    recipientName: 'Recipient Name (Optional)',
+                    confirm: 'Confirm Transfer',
+                    cancel: 'Cancel',
+                    success: 'Ticket transferred successfully',
+                    failed: 'Failed to transfer ticket',
+                },
+            },
+            // Following Page
+            following: {
+                title: 'Following',
+                myFollowing: 'My Following',
+                discover: 'Discover',
+                summaryStats: 'Following {{count}} organization',
+                summaryStats_plural: 'Following {{count}} organizations',
+                organizations: 'Organizations ({{count}})',
+                teams: 'Teams ({{count}})',
+                athletes: 'Athletes ({{count}})',
+                noOrganizations: 'Not following any organizations',
+                noTeams: 'Not following any teams',
+                noAthletes: 'Not following any athletes',
+                relationshipBadge: {
+                    parent: 'Parent',
+                    guardian: 'Guardian',
+                    family: 'Family',
+                },
+                alsoFollow: 'Also follow {{name}}?',
+                // Discovery
+                searchPlaceholder: 'Search organizations, teams, athletes...',
+                topResults: 'Top Results',
+                browseBySport: 'Browse by Sport',
+                nearbyOrganizations: 'Nearby Organizations',
+                suggestedForYou: 'Suggested for You',
+                becauseYouFollow: 'Because you follow {{name}}, you might like...',
+                noResults: 'No results found',
+                // Entity card
+                viewProfile: 'View Profile',
+                followButton: 'Follow',
+                followingButton: 'Following',
+                unfollowButton: 'Unfollow',
+            },
+            // Profile Page
+            profile: {
+                title: 'Profile',
+                editProfile: 'Edit Profile',
+                changePassword: 'Change Password',
+                emailAndPhone: 'Email & Phone',
+                linkedAthletes: 'Linked Athletes',
+                linkAthlete: 'Link an Athlete',
+                notificationPreferences: 'Notification Preferences',
+                privacySettings: 'Privacy Settings',
+                helpCenter: 'Help Center',
+                contactSupport: 'Contact Support',
+                termsOfService: 'Terms of Service',
+                privacyPolicy: 'Privacy Policy',
+                logOut: 'Log Out',
+                // Notification Preferences
+                notifications: {
+                    title: 'Notification Preferences',
+                    masterToggle: 'Enable Notifications',
+                    channels: {
+                        realTime: 'Real-time',
+                        dailyDigest: 'Daily Digest',
+                        off: 'Off',
+                    },
+                    types: {
+                        scheduleChanges: 'Schedule Changes',
+                        ticketUpdates: 'Ticket Updates',
+                        gameResults: 'Game Results',
+                        photosAdded: 'New Photos',
+                        announcements: 'Announcements',
+                    },
+                    perEntity: 'Per-Entity Settings',
+                    muteEntity: 'Mute',
+                    unmuteEntity: 'Unmute',
+                    quietHours: 'Quiet Hours',
+                    quietHoursStart: 'Start Time',
+                    quietHoursEnd: 'End Time',
+                },
+                // Linked Athletes
+                linkAthleteFlow: {
+                    title: 'Link an Athlete',
+                    description: 'Enter the invite code provided by the athlete or their existing guardian',
+                    inviteCode: 'Invite Code',
+                    submit: 'Link Athlete',
+                    success: 'Athlete linked successfully',
+                    failed: 'Failed to link athlete',
+                    invalidCode: 'Invalid or expired invite code',
+                },
+            },
+            // Entity Profiles
+            entityProfile: {
+                about: 'About',
+                teams: 'Teams',
+                upcomingEvents: 'Upcoming Events',
+                photos: 'Photos',
+                announcements: 'Announcements',
+                viewFullSchedule: 'View Full Schedule',
+                viewAllPhotos: 'View All Photos',
+                viewAllTeams: 'View All Teams',
+                // Org Profile
+                website: 'Website',
+                contactInfo: 'Contact Info',
+                location: 'Location',
+                // Team Profile
+                roster: 'Roster',
+                schedule: 'Schedule',
+                standings: 'Standings',
+                coaches: 'Coaches & Staff',
+                sport: 'Sport',
+                season: 'Season',
+                parentOrg: 'Organization',
+                // Athlete Profile
+                jerseyNumber: 'Jersey Number',
+                position: 'Position',
+                currentTeams: 'Current Teams',
+                stats: 'Stats',
+                // Privacy
+                privateEntity: 'This {{type}} is private',
+                unlistedEntity: 'This {{type}} is not publicly listed',
+            },
+            // Error Messages
             errors: {
                 followOrgFailed: 'Failed to follow organization',
                 unfollowOrgFailed: 'Failed to unfollow organization',
+                followTeamFailed: 'Failed to follow team',
+                unfollowTeamFailed: 'Failed to unfollow team',
+                followAthleteFailed: 'Failed to follow athlete',
+                unfollowAthleteFailed: 'Failed to unfollow athlete',
                 getFollowedOrgsFailed: 'Failed to get followed organizations',
                 bookmarkNotAvailable: 'Bookmarking events is not available in demo mode. Sign in to bookmark events.',
                 bookmarkEventFailed: 'Failed to bookmark event',
@@ -645,10 +877,16 @@ export const en = {
                 getBookmarkedEventsFailed: 'Failed to get bookmarked events',
                 authenticationRequired: 'Authentication required',
                 getFanCalendarFailed: 'Failed to get fan calendar',
+                getFanFeedFailed: 'Failed to get fan feed',
                 transferTicketFailed: 'Failed to transfer ticket',
                 reserveTicketsFailed: 'Failed to reserve tickets',
                 getPurchasesFailed: 'Failed to get purchases',
+                searchFailed: 'Search failed',
+                getEntityProfileFailed: 'Failed to get entity profile',
+                updateNotificationPreferencesFailed: 'Failed to update notification preferences',
+                linkAthleteFailed: 'Failed to link athlete',
             },
+            // Legacy keys (keep for backwards compatibility)
             followedOrgs: {
                 title: 'Followed Organizations',
                 description: 'Organizations you\'re following. You\'ll see their public events in your calendar.',
@@ -1799,34 +2037,41 @@ export const en = {
             reject: 'Reject',
             clear: 'Clear',
         },
-        athleteTagging: {
-            title: 'Tag Athletes',
+        tagging: {
+            title: 'Tag People',
             photoAlt: 'Photo to tag',
-            searchPlaceholder: 'Search roster...',
-            selectedAthletes: 'Selected Athletes',
-            suggestedAthletes: 'Suggested Athletes',
-            noAthletesFound: 'No athletes found',
-            athletesTagged: '{{count}} athlete{{plural}} tagged',
+            searchPlaceholder: 'Search...',
+            enterToAdd: 'ENTER TO ADD',
+            suggested: 'Suggested',
+            searchResults: 'Search results',
+            noResults: 'No people found',
+            peopleTagged: '{{count}} person{{plural}} tagged',
             cancel: 'Cancel',
-            saving: 'Saving...',
             saveAndNext: 'Save & Next',
+            save: 'Save',
+            next: 'Next',
+            saving: 'Saving...',
+            searching: 'Searching...',
             saveSuccess: 'Tags saved successfully',
             saveError: 'Failed to save tags: {{error}}',
+            unsavedChanges: 'You have unsaved changes',
+            removeButtonLabel: 'Remove {{name}}',
+            addToTagged: 'Add {{name}} to tagged',
         },
         bulkTagging: {
-            title: 'Currently Tagging ({{count}} Selected)',
+            title: 'Tag {{count}} Photo{{plural}}',
             subtitle: 'Tags added here will be applied to all selected items.',
             photoAlt: 'Photo {{id}}',
-            searchPlaceholder: 'Search roster...',
+            searchPlaceholder: 'Search...',
             appliedToBatch: 'Applied to Batch',
             saved: 'SAVED',
-            frequentAthletes: 'Frequent Athletes',
-            noAthletesFound: 'No athletes found',
+            suggested: 'Suggested People',
+            noResults: 'No people found',
             cancel: 'Cancel',
             saving: 'Saving...',
-            finishTagging: 'Finish Tagging {{count}} Photo{{plural}}',
-            selectAthleteError: 'Please select at least one athlete',
-            saveSuccess: 'Tagged {{photoCount}} photo{{photoPlural}} with {{athleteCount}} athlete{{athletePlural}}',
+            finishTagging: 'Tag {{count}} Photo{{plural}}',
+            selectPersonError: 'Please select at least one person',
+            saveSuccess: 'Tagged {{photoCount}} photo{{photoPlural}} with {{personCount}} person{{personPlural}}',
             saveError: 'Failed to save tags: {{error}}',
         },
         adminPhotoUpload: {
@@ -2106,7 +2351,7 @@ export const en = {
         error: 'Error',
         completed: 'Completed',
     },
-    
+
     // Photo Gallery Features
     photos: {
         title: 'Photos',
@@ -2118,7 +2363,7 @@ export const en = {
         viewGallery: 'View Gallery',
         deleteGallery: 'Delete Gallery',
         uploadPhotos: 'Upload Photos',
-        
+
         // Gallery types
         galleryType: {
             organization: 'Organization',
@@ -2131,12 +2376,12 @@ export const en = {
             travel_plan: 'Travel Plan',
             org: 'Organization',
         },
-        
+
         // Entity relationships
         linkedTo: 'Linked to',
         linkedEntities: 'Linked Entities',
         noEntity: 'Organization Only',
-        
+
         // Demo mode
         demoMode: {
             title: 'Demo Mode',
@@ -2146,7 +2391,7 @@ export const en = {
             deleteBlocked: 'Deleting galleries is not available in demo mode.',
             uploadBlocked: 'Uploading photos is not available in demo mode.',
         },
-        
+
         // Photo limits
         photoLimit: {
             reached: 'Photo limit reached',
@@ -2154,7 +2399,7 @@ export const en = {
             remaining: '{{remaining}} of {{limit}} photos remaining',
             canUpload: 'You can upload {{count}} more photo(s)',
         },
-        
+
         // Pending approval
         pendingApproval: {
             badge: 'Pending',
@@ -2162,20 +2407,23 @@ export const en = {
             adminMessage: '{{count}} photo(s) pending approval',
             waitingMessage: 'Photos uploaded by parents require approval before they appear in the gallery.',
         },
-        
+
         // Auto-approval
         autoApproved: 'Auto-approved',
         approvedByCoach: 'Approved by coach',
-        
+
         // Photo actions
         setCoverPhoto: 'Set as Cover Photo',
+        setCover: 'Cover',
         coverPhoto: 'Cover Photo',
         deletePhoto: 'Delete Photo',
         deletePhotos: 'Delete {{count}} Photos',
         confirmDeletePhotos: 'Are you sure you want to delete {{count}} photo(s)?',
         viewPhoto: 'View Photo',
         downloadPhoto: 'Download Photo',
-        
+        approve: 'Approve',
+        reject: 'Reject',
+
         // Upload
         upload: {
             title: 'Upload Photos',
@@ -2188,7 +2436,7 @@ export const en = {
             validTypes: 'Accepted: JPG, PNG, GIF, WEBP',
             maxSize: 'Max size: {{size}}MB per file',
         },
-        
+
         // Gallery form
         form: {
             title: 'Gallery Title',
@@ -2204,7 +2452,7 @@ export const en = {
             entityRequired: 'Please select a {{type}}',
             seasonIdPlaceholder: 'Enter the UUID of the season this gallery belongs to',
         },
-        
+
         // Photo details page
         photoDetails: {
             status: 'Status',
@@ -2215,7 +2463,7 @@ export const en = {
             uploaded: 'Uploaded',
             backToGallery: 'Back to Gallery',
         },
-        
+
         // Gallery view page
         galleryView: {
             moderationRequired: 'Moderation Required',
@@ -2224,7 +2472,7 @@ export const en = {
             backToGallery: 'Back to Gallery',
             shareHighlights: 'Share Your Highlights',
         },
-        
+
         // Filters
         filters: {
             all: 'All Galleries',
@@ -2233,22 +2481,23 @@ export const en = {
             noResults: 'No galleries found',
             clearFilters: 'Clear Filters',
         },
-        
+
         // Stats
         stats: {
             totalGalleries: 'Total Galleries',
             totalPhotos: 'Total Photos',
             photosCount: '{{count}} photo(s)',
             emptyGallery: 'No photos yet',
+            flagged: 'Flagged',
         },
-        
+
         // Empty states
         empty: {
             title: 'No galleries yet',
             message: 'Create your first photo gallery to get started',
             createButton: 'Create Gallery',
         },
-        
+
         // Errors
         errors: {
             loadGalleries: 'Failed to load galleries',
@@ -2263,7 +2512,7 @@ export const en = {
             permissionDenied: 'You do not have permission to perform this action',
             retry: 'Retry',
         },
-        
+
         // Success messages
         success: {
             galleryCreated: 'Gallery created successfully',
@@ -2274,7 +2523,17 @@ export const en = {
             photoDeleted: 'Photo deleted successfully',
             photosDeleted: '{{count}} photos deleted successfully',
             coverPhotoSet: 'Cover photo updated',
+            photosApproved: 'Photos approved successfully',
+            photosRejected: 'Photos rejected successfully',
         },
+
+        // Additional actions
+        updateAlbumInfo: 'Update Album Info',
+        approveAll: 'Approve All',
+        approveAllConfirm: 'Approve all pending photos in this gallery?',
+        noPendingPhotos: 'No pending photos to approve',
+        photoFeed: 'Photo Feed',
+        loadMore: 'Load More Architectural Grid',
     },
 
     // Platform Admin Features
@@ -4165,34 +4424,41 @@ export const es = {
             reject: 'Rechazar',
             clear: 'Limpiar',
         },
-        athleteTagging: {
-            title: 'Etiquetar Atletas',
+        tagging: {
+            title: 'Etiquetar Personas',
             photoAlt: 'Foto para etiquetar',
-            searchPlaceholder: 'Buscar roster...',
-            selectedAthletes: 'Atletas Seleccionados',
-            suggestedAthletes: 'Atletas Sugeridos',
-            noAthletesFound: 'No se encontraron atletas',
-            athletesTagged: '{{count}} atleta{{plural}} etiquetado{{plural}}',
+            searchPlaceholder: 'Buscar...',
+            enterToAdd: 'ENTER PARA AGREGAR',
+            suggested: 'Sugeridas',
+            searchResults: 'Resultados de búsqueda',
+            noResults: 'No se encontraron personas',
+            peopleTagged: '{{count}} persona{{plural}} etiquetada{{plural}}',
             cancel: 'Cancelar',
-            saving: 'Guardando...',
             saveAndNext: 'Guardar y Siguiente',
+            save: 'Guardar',
+            next: 'Siguiente',
+            saving: 'Guardando...',
+            searching: 'Buscando...',
             saveSuccess: 'Etiquetas guardadas exitosamente',
             saveError: 'Error al guardar etiquetas: {{error}}',
+            unsavedChanges: 'Tienes cambios sin guardar',
+            removeButtonLabel: 'Eliminar a {{name}}',
+            addToTagged: 'Agregar a {{name}} a etiquetados',
         },
         bulkTagging: {
-            title: 'Etiquetando Actualmente ({{count}} Seleccionados)',
+            title: 'Etiquetar {{count}} Foto{{plural}}',
             subtitle: 'Las etiquetas agregadas aquí se aplicarán a todos los elementos seleccionados.',
             photoAlt: 'Foto {{id}}',
-            searchPlaceholder: 'Buscar roster...',
+            searchPlaceholder: 'Buscar...',
             appliedToBatch: 'Aplicado al Lote',
             saved: 'GUARDADO',
-            frequentAthletes: 'Atletas Frecuentes',
-            noAthletesFound: 'No se encontraron atletas',
+            suggested: 'Personas Sugeridas',
+            noResults: 'No se encontraron personas',
             cancel: 'Cancelar',
             saving: 'Guardando...',
-            finishTagging: 'Finalizar Etiquetado {{count}} Foto{{plural}}',
-            selectAthleteError: 'Por favor selecciona al menos un atleta',
-            saveSuccess: 'Etiquetado {{photoCount}} foto{{photoPlural}} con {{athleteCount}} atleta{{athletePlural}}',
+            finishTagging: 'Etiquetar {{count}} Foto{{plural}}',
+            selectPersonError: 'Por favor selecciona al menos una persona',
+            saveSuccess: 'Etiquetado {{photoCount}} foto{{photoPlural}} con {{personCount}} persona{{personPlural}}',
             saveError: 'Error al guardar etiquetas: {{error}}',
         },
         adminPhotoUpload: {
@@ -4438,7 +4704,7 @@ export const es = {
         error: 'Error',
         completed: 'Completado',
     },
-    
+
     // Características de Galería de Fotos
     photos: {
         title: 'Fotos',
@@ -4450,7 +4716,7 @@ export const es = {
         viewGallery: 'Ver Galería',
         deleteGallery: 'Eliminar Galería',
         uploadPhotos: 'Subir Fotos',
-        
+
         // Tipos de galería
         galleryType: {
             organization: 'Organización',
@@ -4463,12 +4729,12 @@ export const es = {
             travel_plan: 'Plan de viaje',
             org: 'Organización',
         },
-        
+
         // Relaciones de entidad
         linkedTo: 'Vinculado a',
         linkedEntities: 'Entidades Vinculadas',
         noEntity: 'Solo Organización',
-        
+
         // Modo demo
         demoMode: {
             title: 'Modo Demo',
@@ -4478,7 +4744,7 @@ export const es = {
             deleteBlocked: 'Eliminar galerías no está disponible en modo demo.',
             uploadBlocked: 'Subir fotos no está disponible en modo demo.',
         },
-        
+
         // Límites de fotos
         photoLimit: {
             reached: 'Límite de fotos alcanzado',
@@ -4486,7 +4752,7 @@ export const es = {
             remaining: '{{remaining}} de {{limit}} fotos restantes',
             canUpload: 'Puedes subir {{count}} foto(s) más',
         },
-        
+
         // Aprobación pendiente
         pendingApproval: {
             badge: 'Pendiente',
@@ -4494,20 +4760,23 @@ export const es = {
             adminMessage: '{{count}} foto(s) pendientes de aprobación',
             waitingMessage: 'Las fotos subidas por padres requieren aprobación antes de aparecer en la galería.',
         },
-        
+
         // Auto-aprobación
         autoApproved: 'Auto-aprobado',
         approvedByCoach: 'Aprobado por entrenador',
-        
+
         // Acciones de fotos
         setCoverPhoto: 'Establecer como Foto de Portada',
+        setCover: 'Portada',
         coverPhoto: 'Foto de Portada',
         deletePhoto: 'Eliminar Foto',
         deletePhotos: 'Eliminar {{count}} Fotos',
         confirmDeletePhotos: '¿Estás seguro de que quieres eliminar {{count}} foto(s)?',
         viewPhoto: 'Ver Foto',
         downloadPhoto: 'Descargar Foto',
-        
+        approve: 'Aprobar',
+        reject: 'Rechazar',
+
         // Subir
         upload: {
             title: 'Subir Fotos',
@@ -4520,7 +4789,7 @@ export const es = {
             validTypes: 'Aceptados: JPG, PNG, GIF, WEBP',
             maxSize: 'Tamaño máx: {{size}}MB por archivo',
         },
-        
+
         // Formulario de galería
         form: {
             title: 'Título de Galería',
@@ -4536,7 +4805,7 @@ export const es = {
             entityRequired: 'Por favor selecciona un {{type}}',
             seasonIdPlaceholder: 'Ingresa el UUID de la temporada a la que pertenece esta galería',
         },
-        
+
         // Página de detalles de foto
         photoDetails: {
             status: 'Estado',
@@ -4547,7 +4816,7 @@ export const es = {
             uploaded: 'Subido',
             backToGallery: 'Volver a la Galería',
         },
-        
+
         // Página de vista de galería
         galleryView: {
             moderationRequired: 'Moderación Requerida',
@@ -4556,7 +4825,7 @@ export const es = {
             backToGallery: 'Volver a la Galería',
             shareHighlights: 'Comparte Tus Momentos Destacados',
         },
-        
+
         // Filtros
         filters: {
             all: 'Todas las Galerías',
@@ -4565,22 +4834,23 @@ export const es = {
             noResults: 'No se encontraron galerías',
             clearFilters: 'Limpiar Filtros',
         },
-        
+
         // Estadísticas
         stats: {
             totalGalleries: 'Total de Galerías',
             totalPhotos: 'Total de Fotos',
             photosCount: '{{count}} foto(s)',
             emptyGallery: 'Aún no hay fotos',
+            flagged: 'Marcadas',
         },
-        
+
         // Estados vacíos
         empty: {
             title: 'Aún no hay galerías',
             message: 'Crea tu primera galería de fotos para comenzar',
             createButton: 'Crear Galería',
         },
-        
+
         // Errores
         errors: {
             loadGalleries: 'Error al cargar galerías',
@@ -4595,7 +4865,7 @@ export const es = {
             permissionDenied: 'No tienes permiso para realizar esta acción',
             retry: 'Reintentar',
         },
-        
+
         // Mensajes de éxito
         success: {
             galleryCreated: 'Galería creada exitosamente',
@@ -4606,7 +4876,17 @@ export const es = {
             photoDeleted: 'Foto eliminada exitosamente',
             photosDeleted: '{{count}} fotos eliminadas exitosamente',
             coverPhotoSet: 'Foto de portada actualizada',
+            photosApproved: 'Fotos aprobadas exitosamente',
+            photosRejected: 'Fotos rechazadas exitosamente',
         },
+
+        // Acciones adicionales
+        updateAlbumInfo: 'Actualizar Información del Álbum',
+        approveAll: 'Aprobar Todo',
+        approveAllConfirm: '¿Aprobar todas las fotos pendientes en esta galería?',
+        noPendingPhotos: 'No hay fotos pendientes para aprobar',
+        photoFeed: 'Feed de Fotos',
+        loadMore: 'Cargar Más Cuadrícula Arquitectónica',
     },
 
     // Características del Administrador de Plataforma

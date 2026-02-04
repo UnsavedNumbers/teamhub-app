@@ -104,6 +104,7 @@ export interface FanEventBookmark {
     start_time: string
     end_time: string
     location: string | null
+    timezone?: string
   }
 }
 

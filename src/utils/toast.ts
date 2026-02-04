@@ -1,4 +1,4 @@
-import toast, { type Renderable } from 'react-hot-toast'
+import toast, { type Renderable, type ToastPosition } from 'react-hot-toast'
 
 /**
  * Toast utility functions with themed styling
@@ -8,10 +8,11 @@ import toast, { type Renderable } from 'react-hot-toast'
 /**
  * Show a success toast
  */
-export const showSuccess = (message: string, duration?: number) => {
+export const showSuccess = (message: string, duration?: number, options?: { position?: ToastPosition }) => {
   return toast.success(message, {
     duration: duration || 4000,
     icon: '✓',
+    ...options,
   })
 }
 

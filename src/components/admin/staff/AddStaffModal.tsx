@@ -6,7 +6,7 @@
 
 import { useState } from 'react'
 import { supabase } from '../../../lib/supabase'
-import { 
+import {
   Button,
   Input,
   InlineNotice
@@ -24,16 +24,17 @@ interface AddStaffModalProps {
 
 export default function AddStaffModal({ organizationId: _organizationId, onClose, onAdd }: AddStaffModalProps) {
   const { t } = useI18n()
+  const tAny = t as any
   const [email, setEmail] = useState('')
   const [searching, setSearching] = useState(false)
-  const [user, setUser] = useState<{ id: string; email: string; display_name: string | null } | null>(null)
+  const [user, setUser] = useState<{ id: string; email: string | null; display_name: string | null } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [permissions, setPermissions] = useState<StaffPermissions>(DEFAULT_STAFF_PERMISSIONS)
   const [adding, setAdding] = useState(false)
 
   const handleSearch = async () => {
     if (!email.trim()) {
-      setError(t('formFields.emailRequired'))
+      setError(tAny('formFields.emailRequired'))
       return
     }
 
@@ -50,13 +51,13 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
         .single()
 
       if (searchError || !data) {
-        setError(t('admin.staff.userNotFound', 'User not found. Please check the email address.'))
+        setError(tAny('admin.staff.userNotFound') || 'User not found. Please check the email address.')
         return
       }
 
       setUser(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('admin.staff.searchFailed'))
+      setError(err instanceof Error ? err.message : tAny('admin.staff.searchFailed'))
     } finally {
       setSearching(false)
     }
@@ -72,7 +73,7 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
       await onAdd(user.id, permissions)
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('admin.staff.errors.addStaffMemberFailed'))
+      setError(err instanceof Error ? err.message : tAny('admin.staff.errors.addStaffMemberFailed'))
     } finally {
       setAdding(false)
     }
@@ -89,7 +90,7 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
     <Modal
       open={true}
       onClose={onClose}
-      title={t('admin.staff.addStaffMember')}
+      title={tAny('admin.staff.addStaffMember')}
       size="large"
     >
       <div className="pa-space-y-4">
@@ -100,30 +101,30 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
                 <div className="pa-flex-1">
                   <Input
                     type="email"
-                    label={t('formFields.email')}
+                    label={tAny('formFields.email')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder={t('formFields.emailPlaceholder')}
+                    placeholder={tAny('formFields.emailPlaceholder')}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleSearch()
                     }}
                   />
                 </div>
                 <div className="pa-flex pa-items-end">
-                <Button
-                  variant="primary"
-                  onClick={handleSearch}
-                  disabled={searching || !email.trim()}
-                >
-                  {searching ? (
-                    <>
-                      <span className="material-symbols-outlined animate-spin inline-block mr-1">hourglass_empty</span>
-                      {t('common.searching')}
-                    </>
-                  ) : (
-                    t('common.search')
-                  )}
-                </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleSearch}
+                    disabled={searching || !email.trim()}
+                  >
+                    {searching ? (
+                      <>
+                        <span className="material-symbols-outlined animate-spin inline-block mr-1">hourglass_empty</span>
+                        {tAny('common.searching')}
+                      </>
+                    ) : (
+                      tAny('common.search')
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>
@@ -136,13 +137,13 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
           <>
             <InlineNotice
               tone="success"
-              title={t('admin.staff.userFound', { name: user.display_name || user.email })}
+              title={tAny('admin.staff.userFound', { name: user.display_name || user.email })}
             />
 
             <div>
-              <label className="pa-label pa-mb-2">{t('admin.staff.permissions')}</label>
+              <label className="pa-label pa-mb-2">{tAny('admin.staff.permissions')}</label>
               <div className="pa-space-y-2">
-                {Object.entries(DEFAULT_STAFF_PERMISSIONS).map(([key, defaultValue]) => (
+                {Object.entries(DEFAULT_STAFF_PERMISSIONS).map(([key, _defaultValue]) => (
                   <label
                     key={key}
                     className="pa-flex pa-items-center pa-gap-2"
@@ -168,16 +169,16 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
 
             <div className="pa-flex pa-gap-2 pa-justify-end">
               <Button variant="ghost" onClick={() => { setUser(null); setEmail(''); setError(null) }}>
-                {t('common.goBack')}
+                {tAny('common.goBack')}
               </Button>
               <Button variant="primary" onClick={handleAdd} disabled={adding}>
                 {adding ? (
                   <>
                     <span className="material-symbols-outlined animate-spin inline-block mr-1">hourglass_empty</span>
-                    {t('common.adding')}
+                    {tAny('common.adding')}
                   </>
                 ) : (
-                  t('admin.staff.addStaffMember')
+                  tAny('admin.staff.addStaffMember')
                 )}
               </Button>
             </div>
@@ -187,3 +188,4 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
     </Modal>
   )
 }
+

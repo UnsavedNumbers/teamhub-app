@@ -55,7 +55,8 @@ export function hasCoachRole(organizations: Organization[]): boolean {
  * 2. Users with multiple roles -> /portal/role-selection
  * 3. Users with admin role -> /admin
  * 4. Users with coach role -> /admin
- * 5. Otherwise -> /portal/dashboard
+ * 5. Users with no organizations (fans) -> /fan/home
+ * 6. Otherwise -> /portal/dashboard (parents)
  */
 export function getLoginRedirect(
   isPlatformAdmin: boolean,
@@ -79,6 +80,11 @@ export function getLoginRedirect(
   // Priority 4: Coach role -> admin section
   if (hasCoachRole(organizations)) {
     return getLink(RouteKeys.ADMIN_DASHBOARD)
+  }
+
+  // Priority 5: Fans (no organization memberships) -> fan home
+  if (organizations.length === 0) {
+    return getLink(RouteKeys.FAN_HOME)
   }
 
   // Default: Parent dashboard

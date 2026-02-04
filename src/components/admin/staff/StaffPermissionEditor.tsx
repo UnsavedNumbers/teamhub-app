@@ -25,6 +25,8 @@ export default function StaffPermissionEditor({
   onClose, 
   onSave 
 }: StaffPermissionEditorProps) {
+  const { t } = useI18n()
+  const tAny = t as any
   const [permissions, setPermissions] = useState<StaffPermissions>(
     staffMember.permissions || DEFAULT_STAFF_PERMISSIONS
   )
@@ -50,7 +52,7 @@ export default function StaffPermissionEditor({
       await onSave(permissions)
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('admin.staff.errors.updateStaffPermissionsFailed'))
+      setError(err instanceof Error ? err.message : tAny('admin.staff.errors.updateStaffPermissionsFailed'))
     } finally {
       setSaving(false)
     }
@@ -60,16 +62,16 @@ export default function StaffPermissionEditor({
     <Modal
       open={true}
       onClose={onClose}
-      title={t('admin.staff.editPermissionsTitle', { 
-        name: staffMember.user?.display_name || staffMember.user?.email || t('admin.staff.staffMember')
+      title={tAny('admin.staff.editPermissionsTitle', { 
+        name: staffMember.user?.display_name || staffMember.user?.email || tAny('admin.staff.staffMember')
       })}
       size="medium"
     >
       <div className="pa-space-y-4">
         <div>
-          <label className="pa-label pa-mb-2">{t('admin.staff.permissions')}</label>
+          <label className="pa-label pa-mb-2">{tAny('admin.staff.permissions')}</label>
           <div className="pa-space-y-2">
-            {Object.entries(DEFAULT_STAFF_PERMISSIONS).map(([key, defaultValue]) => (
+            {Object.entries(DEFAULT_STAFF_PERMISSIONS).map(([key, _defaultValue]) => (
               <label
                 key={key}
                 className="pa-flex pa-items-center pa-gap-2"
@@ -95,16 +97,16 @@ export default function StaffPermissionEditor({
 
         <div className="pa-flex pa-gap-2 pa-justify-end">
           <Button variant="ghost" onClick={onClose} disabled={saving}>
-            {t('common.cancel')}
+            {tAny('common.cancel')}
           </Button>
           <Button variant="primary" onClick={handleSave} disabled={saving}>
             {saving ? (
               <>
                 <span className="material-symbols-outlined animate-spin inline-block mr-1">hourglass_empty</span>
-                {t('common.saving')}
+                {tAny('common.saving')}
               </>
             ) : (
-              t('admin.staff.savePermissions')
+              tAny('admin.staff.savePermissions')
             )}
           </Button>
         </div>
@@ -112,3 +114,4 @@ export default function StaffPermissionEditor({
     </Modal>
   )
 }
+
