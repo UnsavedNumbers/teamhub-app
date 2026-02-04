@@ -123,24 +123,7 @@ export default function FanLayout() {
         <Outlet />
       </main>
 
-      {/* Mobile Bottom Tab Bar */}
-      <nav className="fan-tab-bar">
-        {navItems.map((item) => (
-          <button
-            key={item.key}
-            className={`fan-tab-item ${activeKey === item.key ? 'active' : ''}`}
-            onClick={() => handleNavClick(item)}
-          >
-            <span className="material-symbols-outlined">
-              {activeKey === item.key ? item.iconFilled : item.icon}
-            </span>
-            <span className="fan-tab-label">{item.label}</span>
-            {item.badge && item.badge > 0 && (
-              <span className="fan-tab-badge">{item.badge > 9 ? '9+' : item.badge}</span>
-            )}
-          </button>
-        ))}
-      </nav>
+
 
       {/* Footer - Desktop only */}
       <footer className="fan-footer fan-footer-desktop">

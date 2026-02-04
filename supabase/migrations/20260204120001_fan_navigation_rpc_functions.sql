@@ -142,29 +142,28 @@ BEGIN
   END IF;
 
   WITH search_orgs AS (
-    SELECT 
+    SELECT
       'org'::VARCHAR as entity_type,
       o.id,
       o.name,
       o.slug,
-      o.location_city,
-      o.location_state,
+      o.primary_city as location_city,
+      o.primary_state as location_state,
       NULL::VARCHAR as parent_org_name,
       NULL::VARCHAR as sport,
       -- Relevance scoring
-      CASE 
+      CASE
         WHEN LOWER(o.name) = v_search_terms THEN 100
         WHEN LOWER(o.name) LIKE v_search_terms || '%' THEN 90
         WHEN LOWER(o.name) LIKE '%' || v_search_terms || '%' THEN 70
         ELSE 50
       END as relevance_score
     FROM public.organizations o
-    WHERE o.privacy_level = 'public'
-      AND 'org' = ANY(p_entity_types)
+    WHERE 'org' = ANY(p_entity_types)
       AND (
         LOWER(o.name) LIKE '%' || v_search_terms || '%' OR
-        LOWER(o.location_city) LIKE '%' || v_search_terms || '%' OR
-        LOWER(o.location_state) LIKE '%' || v_search_terms || '%'
+        LOWER(o.primary_city) LIKE '%' || v_search_terms || '%' OR
+        LOWER(o.primary_state) LIKE '%' || v_search_terms || '%'
       )
     ORDER BY relevance_score DESC, o.name
     LIMIT p_limit
@@ -362,10 +361,10 @@ BEGIN
     'name', o.name,
     'slug', o.slug,
     'description', o.description,
-    'location_city', o.location_city,
-    'location_state', o.location_state,
+    'location_city', o.primary_city,
+    'location_state', o.primary_state,
     'website', o.website,
-    'privacy_level', o.privacy_level,
+    'privacy_level', COALESCE(o.privacy_level, 'public'::varchar),
     'is_following', v_is_following,
     'created_at', o.created_at
   ) INTO v_result

@@ -18,6 +18,7 @@ import BookmarkButton from '../../components/fan/BookmarkButton'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { showError } from '../../utils/toast'
 import '../../styles/fan.css'
+import '../../styles/fan-layouts.css'
 
 type ViewMode = 'month' | 'week' | 'agenda'
 type EventTypeFilter = 'all' | 'game' | 'practice' | 'event' | 'meeting'
@@ -206,130 +207,70 @@ export default function FanSchedule() {
   }
 
   return (
-    <>
-      {/* Page Header */}
-      <div className="fan-page-header">
-        <h1 className="fan-page-title">Schedule</h1>
-        <p className="fan-page-subtitle">Events from teams you follow</p>
-      </div>
-
-      {/* View Toggle */}
-      <div className="fan-controls-bar">
-        <div className="fan-controls-left">
-          {/* Navigation */}
-          {viewMode !== 'agenda' && (
-            <div className="fan-nav-controls">
-              <button
-                onClick={handlePrevious}
-                className="fan-nav-btn"
-                aria-label="Previous"
-              >
-                <span className="material-symbols-outlined">chevron_left</span>
-              </button>
-              <button
-                onClick={handleToday}
-                className="fan-btn fan-btn-secondary"
-              >
-                Today
-              </button>
-              <button
-                onClick={handleNext}
-                className="fan-nav-btn"
-                aria-label="Next"
-              >
-                <span className="material-symbols-outlined">chevron_right</span>
-              </button>
-            </div>
-          )}
-          
-          <h2 className="fan-view-title">{getViewTitle()}</h2>
-        </div>
-
-        <div className="fan-controls-right">
-          {/* View Toggle */}
-          <div className="fan-view-toggle">
-            <button
-              onClick={() => setViewMode('month')}
-              className={`fan-view-btn ${viewMode === 'month' ? 'active' : ''}`}
-            >
-              Month
-            </button>
-            <button
-              onClick={() => setViewMode('week')}
-              className={`fan-view-btn ${viewMode === 'week' ? 'active' : ''}`}
-            >
-              Week
-            </button>
-            <button
-              onClick={() => setViewMode('agenda')}
-              className={`fan-view-btn ${viewMode === 'agenda' ? 'active' : ''}`}
-            >
-              Agenda
-            </button>
+    <div className="fan-schedule-page">
+      {/* Page Header - Matching Design */}
+      <div className="fan-schedule-header">
+        <div className="fan-schedule-header-left">
+          <span className="fan-schedule-label">Global Schedule</span>
+          <div className="fan-schedule-nav">
+            <h1 className="fan-schedule-title">{getViewTitle()}</h1>
+            {viewMode !== 'agenda' && (
+              <div className="fan-schedule-nav-btns">
+                <button
+                  onClick={handlePrevious}
+                  className="fan-schedule-nav-btn"
+                  aria-label="Previous"
+                >
+                  <span className="material-symbols-outlined">west</span>
+                </button>
+                <button
+                  onClick={handleNext}
+                  className="fan-schedule-nav-btn"
+                  aria-label="Next"
+                >
+                  <span className="material-symbols-outlined">east</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Filter Bar */}
-      <div className="fan-filter-bar">
-        <div className="fan-filter-group">
-          <select
-            value={entityFilter}
-            onChange={(e) => handleEntityFilterChange(e.target.value)}
-            className="fan-filter-select"
+        {/* View Mode Toggle */}
+        <div className="fan-schedule-views">
+          <button
+            onClick={() => setViewMode('agenda')}
+            className={`fan-schedule-view-btn ${viewMode === 'agenda' ? 'active' : ''}`}
           >
-            <option value="all">All Organizations</option>
-            {followedOrgs.map((follow) => (
-              <option key={follow.id} value={follow.org_id}>
-                {(follow.org as any)?.name || 'Organization'}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={typeFilter}
-            onChange={(e) => handleTypeFilterChange(e.target.value as EventTypeFilter)}
-            className="fan-filter-select"
+            Agenda
+          </button>
+          <button
+            onClick={() => setViewMode('week')}
+            className={`fan-schedule-view-btn ${viewMode === 'week' ? 'active' : ''}`}
           >
-            <option value="all">All Types</option>
-            <option value="game">Games</option>
-            <option value="practice">Practices</option>
-            <option value="event">Events</option>
-            <option value="meeting">Meetings</option>
-          </select>
+            Week
+          </button>
+          <button
+            onClick={() => setViewMode('month')}
+            className={`fan-schedule-view-btn ${viewMode === 'month' ? 'active' : ''}`}
+          >
+            Calendar
+          </button>
         </div>
-
-        {/* Active Filters */}
-        {activeFilters.length > 0 && (
-          <div className="fan-active-filters">
-            {activeFilters.map((filter) => {
-              const [category, value] = filter.split(':')
-              let displayValue = value
-              if (category === 'entity') {
-                const org = followedOrgs.find(f => f.org_id === value)
-                displayValue = (org?.org as any)?.name || value
-              }
-              return (
-                <span key={filter} className="fan-filter-chip">
-                  {displayValue}
-                  <button onClick={() => removeFilter(filter)}>
-                    <span className="material-symbols-outlined">close</span>
-                  </button>
-                </span>
-              )
-            })}
-            <button className="fan-clear-filters" onClick={clearAllFilters}>
-              Clear All
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Calendar Content */}
-      <div className="fan-calendar-content">
+      <div className="fan-schedule-content">
         {loading ? (
-          <div className="fan-loading-state">
+          <div className="fan-schedule-loading">
             <LoadingSpinner size="lg" />
+          </div>
+        ) : events.length === 0 ? (
+          <div className="fan-schedule-empty">
+            <div className="fan-schedule-empty-icon">
+              <span className="material-symbols-outlined">event_busy</span>
+            </div>
+            <h3 className="fan-schedule-empty-title">No Upcoming Events</h3>
+            <p className="fan-schedule-empty-text">Check back later or adjust your filters</p>
           </div>
         ) : viewMode === 'agenda' ? (
           <AgendaView 
@@ -352,7 +293,35 @@ export default function FanSchedule() {
           />
         )}
       </div>
-    </>
+
+      {/* Legend & Actions */}
+      <div className="fan-schedule-legend">
+        <div className="fan-schedule-legend-items">
+          <div className="fan-schedule-legend-item">
+            <span className="fan-schedule-legend-dot home"></span>
+            <span className="fan-schedule-legend-label">Home Games</span>
+          </div>
+          <div className="fan-schedule-legend-item">
+            <span className="fan-schedule-legend-dot away"></span>
+            <span className="fan-schedule-legend-label">Away</span>
+          </div>
+          <div className="fan-schedule-legend-item">
+            <span className="fan-schedule-legend-dot community"></span>
+            <span className="fan-schedule-legend-label">Community</span>
+          </div>
+        </div>
+        <div className="fan-schedule-actions">
+          <button className="fan-schedule-action-btn">
+            <span className="material-symbols-outlined">filter_list</span>
+            Filter Teams
+          </button>
+          <button className="fan-schedule-action-btn primary">
+            <span className="material-symbols-outlined">download</span>
+            Export
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -584,48 +553,53 @@ function WeekView({ events, currentDate, onEventClick }: WeekViewProps) {
   }
 
   return (
-    <div className="fan-week-view">
-      <div className="fan-week-grid">
-        {weekDays.map((date) => {
-          const dayEvents = getEventsForDay(date)
-          
-          return (
-            <div key={date.toISOString()} className={`fan-week-day ${isToday(date) ? 'today' : ''}`}>
-              <div className="fan-week-day-header">
-                <span className="fan-week-day-name">
-                  {date.toLocaleDateString('en-US', { weekday: 'short' })}
-                </span>
-                <span className={`fan-week-day-number ${isToday(date) ? 'today' : ''}`}>
-                  {date.getDate()}
-                </span>
-              </div>
-              <div className="fan-week-day-events">
-                {dayEvents.length === 0 ? (
-                  <span className="fan-week-no-events">No events</span>
-                ) : (
-                  dayEvents.map((event) => (
-                    <div 
-                      key={event.id}
-                      className="fan-week-event"
-                      onClick={() => onEventClick(event.id)}
-                    >
-                      <span className="fan-week-event-time">
-                        {new Date(event.start_time).toLocaleTimeString('en-US', { 
-                          hour: 'numeric', 
-                          minute: '2-digit' 
-                        })}
-                      </span>
-                      <span className="fan-week-event-title">{event.title}</span>
-                    </div>
-                  ))
-                )}
-              </div>
+    <div className="fan-week-calendar-grid">
+      {weekDays.map((date) => {
+        const dayEvents = getEventsForDay(date)
+        
+        return (
+          <div key={date.toISOString()} className={`fan-week-calendar-column ${isToday(date) ? 'today' : ''}`}>
+            <div className="fan-week-calendar-header">
+              <span className="fan-week-calendar-day-name">
+                {date.toLocaleDateString('en-US', { weekday: 'short' })}
+              </span>
+              <span className="fan-week-calendar-day-number">
+                {date.getDate()}
+              </span>
             </div>
-          )
-        })}
-      </div>
+            <div className="fan-week-calendar-events">
+              {dayEvents.map((event) => (
+                <div 
+                  key={event.id}
+                  className="fan-week-calendar-event"
+                  onClick={() => onEventClick(event.id)}
+                >
+                  <div className="fan-week-event-header">
+                    <div className="fan-week-event-icon">
+                      {getEventInitial(event.title)}
+                    </div>
+                    <span className="fan-week-event-time">
+                      {new Date(event.start_time).toLocaleTimeString('en-US', { 
+                        hour: 'numeric', 
+                        minute: '2-digit',
+                        hour12: false
+                      })}
+                    </span>
+                  </div>
+                  <h4 className="fan-week-event-title">{event.title}</h4>
+                  <p className="fan-week-event-location">{event.location || 'TBD'}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
+}
+
+const getEventInitial = (title: string) => {
+  return title.charAt(0).toUpperCase()
 }
 
 /**

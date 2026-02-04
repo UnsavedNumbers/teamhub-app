@@ -19,6 +19,7 @@ import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { showError } from '../../utils/toast'
 import '../../styles/fan.css'
+import '../../styles/fan-layouts.css'
 
 type FilterType = 'all' | 'photos' | 'videos'
 type FilterEntity = 'all' | string
@@ -140,108 +141,45 @@ export default function FanPhotos() {
   }
 
   return (
-    <>
-      {/* Page Header */}
-      <div className="fan-page-header">
-        <h1 className="fan-page-title">Photos & Videos</h1>
-        <p className="fan-page-subtitle">Browse galleries from teams you follow</p>
-      </div>
+    <div className="fan-photos-page">
+      {/* Page Header - Matching Design */}
+      <div className="fan-photos-header">
+        <div>
+          <span className="fan-photos-label">Official Gallery</span>
+          <h1 className="fan-photos-title">Media Gallery</h1>
+        </div>
 
-      {/* Search Bar */}
-      <div className="fan-search-bar">
-        <span className="material-symbols-outlined">search</span>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search gallery names, tags..."
-          className="fan-search-input"
-        />
-      </div>
-
-      {/* Filter Bar */}
-      <div className="fan-filter-bar">
-        <div className="fan-filter-group">
-          {/* Entity Filter */}
-          <select
-            value={filterEntity}
-            onChange={(e) => setFilterEntity(e.target.value)}
-            className="fan-filter-select"
+        {/* Photos/Videos Toggle */}
+        <div className="fan-photos-toggle">
+          <button 
+            className={`fan-photos-toggle-btn ${filterType === 'photos' || filterType === 'all' ? 'active' : ''}`}
+            onClick={() => setFilterType('photos')}
           >
-            <option value="all">All Organizations</option>
-            {followedOrgs.map((follow) => (
-              <option key={follow.id} value={follow.org_id}>
-                {(follow.org as any)?.name || 'Organization'}
-              </option>
-            ))}
-          </select>
-
-          {/* Type Filter */}
-          <div className="fan-filter-tabs">
-            <button 
-              className={`fan-filter-tab ${filterType === 'all' ? 'active' : ''}`}
-              onClick={() => setFilterType('all')}
-            >
-              All
-            </button>
-            <button 
-              className={`fan-filter-tab ${filterType === 'photos' ? 'active' : ''}`}
-              onClick={() => setFilterType('photos')}
-            >
-              <span className="material-symbols-outlined">photo</span>
-              Photos
-            </button>
-            <button 
-              className={`fan-filter-tab ${filterType === 'videos' ? 'active' : ''}`}
-              onClick={() => setFilterType('videos')}
-            >
-              <span className="material-symbols-outlined">videocam</span>
-              Videos
-            </button>
-          </div>
+            Photos
+          </button>
+          <button 
+            className={`fan-photos-toggle-btn ${filterType === 'videos' ? 'active' : ''}`}
+            onClick={() => setFilterType('videos')}
+          >
+            Videos
+          </button>
         </div>
       </div>
 
-      {/* Tagged Athlete Photos Sections */}
-      {taggedAthletePhotos.length > 0 && (
-        <section className="fan-athlete-photos-section">
-          {taggedAthletePhotos.map(({ athleteId, athleteName, photos }) => (
-            <div key={athleteId} className="fan-athlete-photos">
-              <div className="fan-section-header">
-                <h2>Photos of {athleteName}</h2>
-                <button 
-                  className="fan-link-btn"
-                  onClick={() => navigate(getLink(RouteKeys.FAN_PHOTOS_ATHLETE, { athleteId }))}
-                >
-                  View All
-                </button>
-              </div>
-              <div className="fan-athlete-photos-scroll">
-                {photos.slice(0, 8).map((photo, index) => (
-                  <div key={index} className="fan-athlete-photo-thumb">
-                    {photo.url ? (
-                      <img src={photo.url} alt="" loading="lazy" />
-                    ) : (
-                      <div className="fan-photo-placeholder">
-                        <span className="material-symbols-outlined">image</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </section>
-      )}
-
       {/* Gallery Grid */}
       {filteredGalleries.length === 0 ? (
-        <div className="fan-empty-state">
-          <span className="material-symbols-outlined">
-            {searchQuery ? 'search_off' : 'photo_library'}
-          </span>
-          <h3>{searchQuery ? 'No galleries found' : 'No galleries available'}</h3>
-          <p>{searchQuery ? 'Try adjusting your search' : 'Check back later for new photos'}</p>
+        <div className="fan-photos-empty">
+          <div className="fan-photos-empty-icon">
+            <span className="material-symbols-outlined">
+              {searchQuery ? 'search_off' : 'photo_library'}
+            </span>
+          </div>
+          <h3 className="fan-photos-empty-title">
+            {searchQuery ? 'No galleries found' : 'No galleries available'}
+          </h3>
+          <p className="fan-photos-empty-text">
+            {searchQuery ? 'Try adjusting your search' : 'Check back later for new photos'}
+          </p>
         </div>
       ) : (
         <>
@@ -255,15 +193,21 @@ export default function FanPhotos() {
             ))}
           </div>
 
-          {/* Load More Trigger */}
+          {/* Load More Button */}
           {hasMore && (
-            <div ref={loadMoreRef} className="fan-load-more">
-              {loading && <LoadingSpinner size="sm" />}
+            <div className="fan-photos-load-more">
+              <button 
+                className="fan-load-more-btn"
+                onClick={loadMoreGalleries}
+                disabled={loading}
+              >
+                {loading ? 'Loading...' : 'Load More Content'}
+              </button>
             </div>
           )}
         </>
       )}
-    </>
+    </div>
   )
 }
 
@@ -285,8 +229,8 @@ function GalleryCard({ gallery, onClick }: GalleryCardProps) {
   }
 
   return (
-    <div className="fan-gallery-card" onClick={onClick}>
-      <div className="fan-gallery-cover">
+    <div className="fan-gallery-card-masonry" onClick={onClick}>
+      <div className="fan-gallery-cover-masonry">
         {gallery.cover_url ? (
           <img src={gallery.cover_url} alt={gallery.name} loading="lazy" />
         ) : (
@@ -294,15 +238,11 @@ function GalleryCard({ gallery, onClick }: GalleryCardProps) {
             <span className="material-symbols-outlined">photo_library</span>
           </div>
         )}
-        <div className="fan-gallery-count">
-          <span className="material-symbols-outlined">photo</span>
-          {gallery.photo_count || 0}
+        <div className="fan-gallery-overlay">
+          <p className="fan-gallery-category">{gallery.org_name || gallery.team_name || 'Gallery'}</p>
+          <h3 className="fan-gallery-name-overlay">{gallery.name}</h3>
+          <p className="fan-gallery-date-overlay">{formatDate(gallery.created_at)}</p>
         </div>
-      </div>
-      <div className="fan-gallery-info">
-        <h3 className="fan-gallery-name">{gallery.name}</h3>
-        <p className="fan-gallery-entity">{gallery.org_name || gallery.team_name || 'Gallery'}</p>
-        <p className="fan-gallery-date">{formatDate(gallery.created_at)}</p>
       </div>
     </div>
   )

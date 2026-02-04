@@ -24,6 +24,7 @@ import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { showError, showSuccess } from '../../utils/toast'
 import '../../styles/fan.css'
+import '../../styles/fan-layouts.css'
 
 type TabType = 'following' | 'discover'
 type EntityType = 'org' | 'team' | 'athlete'
@@ -51,28 +52,26 @@ export default function FanFollowing() {
   }
 
   return (
-    <>
-      {/* Page Header */}
-      <div className="fan-page-header">
-        <h1 className="fan-page-title">Following</h1>
-        <p className="fan-page-subtitle">Manage your followed organizations, teams, and athletes</p>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="fan-tabs">
-        <button
-          className={`fan-tab ${activeTab === 'following' ? 'active' : ''}`}
-          onClick={() => handleTabChange('following')}
-        >
-          My Following
-        </button>
-        <button
-          className={`fan-tab ${activeTab === 'discover' ? 'active' : ''}`}
-          onClick={() => handleTabChange('discover')}
-        >
-          <span className="material-symbols-outlined">explore</span>
-          Discover
-        </button>
+    <div className="fan-following-page">
+      {/* Page Header - Matching Design */}
+      <div className="fan-following-header">
+        <div className="fan-following-header-row">
+          <div>
+            <span className="fan-following-label">Community Hub</span>
+            <h1 className="fan-following-title">Following</h1>
+            <p className="fan-following-subtitle">Manage your followed organizations, teams, and athletes</p>
+          </div>
+          
+          {/* Search */}
+          <div className="fan-following-search">
+            <span className="material-symbols-outlined">search</span>
+            <input
+              type="text"
+              placeholder="Search teams, organizations..."
+              className="fan-following-search-input"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Tab Content */}
@@ -83,7 +82,7 @@ export default function FanFollowing() {
           <DiscoverTab />
         )}
       </div>
-    </>
+    </div>
   )
 }
 
@@ -186,58 +185,15 @@ function MyFollowingTab({ onSwitchToDiscover }: MyFollowingTabProps) {
 
   return (
     <div className="fan-following-content">
-      {/* Summary Stats */}
-      <div className="fan-following-stats">
-        <div className="fan-stat-item">
-          <span className="fan-stat-value">{totalCount}</span>
-          <span className="fan-stat-label">Total Following</span>
-        </div>
-        <div className="fan-stat-item">
-          <span className="fan-stat-value">{organizations.length}</span>
-          <span className="fan-stat-label">Organizations</span>
-        </div>
-        <div className="fan-stat-item">
-          <span className="fan-stat-value">{teams.length}</span>
-          <span className="fan-stat-label">Teams</span>
-        </div>
-        <div className="fan-stat-item">
-          <span className="fan-stat-value">{athletes.length}</span>
-          <span className="fan-stat-label">Athletes</span>
-        </div>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="fan-filter-tabs">
-        <button 
-          className={`fan-filter-tab ${filterType === 'all' ? 'active' : ''}`}
-          onClick={() => setFilterType('all')}
-        >
-          All ({totalCount})
-        </button>
-        <button 
-          className={`fan-filter-tab ${filterType === 'org' ? 'active' : ''}`}
-          onClick={() => setFilterType('org')}
-        >
-          Organizations ({organizations.length})
-        </button>
-        <button 
-          className={`fan-filter-tab ${filterType === 'team' ? 'active' : ''}`}
-          onClick={() => setFilterType('team')}
-        >
-          Teams ({teams.length})
-        </button>
-        <button 
-          className={`fan-filter-tab ${filterType === 'athlete' ? 'active' : ''}`}
-          onClick={() => setFilterType('athlete')}
-        >
-          Athletes ({athletes.length})
-        </button>
-      </div>
-
       {/* Organizations Section */}
       {(filterType === 'all' || filterType === 'org') && organizations.length > 0 && (
         <section className="fan-following-section">
-          <h2 className="fan-following-section-title">Organizations</h2>
+          <div className="fan-section-header">
+            <div className="fan-section-header-left">
+              <h2 className="fan-section-title">Followed Organizations</h2>
+              <span className="fan-count-badge">{organizations.length} Total</span>
+            </div>
+          </div>
           <div className="fan-following-grid">
             {organizations.map((follow) => {
               const org = follow.org as any
@@ -264,7 +220,12 @@ function MyFollowingTab({ onSwitchToDiscover }: MyFollowingTabProps) {
       {/* Teams Section */}
       {(filterType === 'all' || filterType === 'team') && teams.length > 0 && (
         <section className="fan-following-section">
-          <h2 className="fan-following-section-title">Teams</h2>
+          <div className="fan-section-header">
+            <div className="fan-section-header-left">
+              <h2 className="fan-section-title">Followed Teams</h2>
+              <span className="fan-count-badge">{teams.length} Total</span>
+            </div>
+          </div>
           <div className="fan-following-grid">
             {teams.map((team) => (
               <FollowingCard
@@ -293,7 +254,12 @@ function MyFollowingTab({ onSwitchToDiscover }: MyFollowingTabProps) {
       {/* Athletes Section */}
       {(filterType === 'all' || filterType === 'athlete') && athletes.length > 0 && (
         <section className="fan-following-section">
-          <h2 className="fan-following-section-title">Athletes</h2>
+          <div className="fan-section-header">
+            <div className="fan-section-header-left">
+              <h2 className="fan-section-title">Followed Athletes</h2>
+              <span className="fan-count-badge">{athletes.length} Total</span>
+            </div>
+          </div>
           <div className="fan-following-grid">
             {athletes.map((athlete) => (
               <FollowingCard
