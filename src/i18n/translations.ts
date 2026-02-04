@@ -2169,12 +2169,15 @@ export const en = {
         
         // Photo actions
         setCoverPhoto: 'Set as Cover Photo',
+        setCover: 'Cover',
         coverPhoto: 'Cover Photo',
         deletePhoto: 'Delete Photo',
         deletePhotos: 'Delete {{count}} Photos',
         confirmDeletePhotos: 'Are you sure you want to delete {{count}} photo(s)?',
         viewPhoto: 'View Photo',
         downloadPhoto: 'Download Photo',
+        approve: 'Approve',
+        reject: 'Reject',
         
         // Upload
         upload: {
@@ -2240,6 +2243,7 @@ export const en = {
             totalPhotos: 'Total Photos',
             photosCount: '{{count}} photo(s)',
             emptyGallery: 'No photos yet',
+            flagged: 'Flagged',
         },
         
         // Empty states
@@ -2274,7 +2278,17 @@ export const en = {
             photoDeleted: 'Photo deleted successfully',
             photosDeleted: '{{count}} photos deleted successfully',
             coverPhotoSet: 'Cover photo updated',
+            photosApproved: 'Photos approved successfully',
+            photosRejected: 'Photos rejected successfully',
         },
+
+        // Additional actions
+        updateAlbumInfo: 'Update Album Info',
+        approveAll: 'Approve All',
+        approveAllConfirm: 'Approve all pending photos in this gallery?',
+        noPendingPhotos: 'No pending photos to approve',
+        photoFeed: 'Photo Feed',
+        loadMore: 'Load More Architectural Grid',
     },
 
     // Platform Admin Features
@@ -4501,12 +4515,15 @@ export const es = {
         
         // Acciones de fotos
         setCoverPhoto: 'Establecer como Foto de Portada',
+        setCover: 'Portada',
         coverPhoto: 'Foto de Portada',
         deletePhoto: 'Eliminar Foto',
         deletePhotos: 'Eliminar {{count}} Fotos',
         confirmDeletePhotos: '¿Estás seguro de que quieres eliminar {{count}} foto(s)?',
         viewPhoto: 'Ver Foto',
         downloadPhoto: 'Descargar Foto',
+        approve: 'Aprobar',
+        reject: 'Rechazar',
         
         // Subir
         upload: {
@@ -4572,6 +4589,7 @@ export const es = {
             totalPhotos: 'Total de Fotos',
             photosCount: '{{count}} foto(s)',
             emptyGallery: 'Aún no hay fotos',
+            flagged: 'Marcadas',
         },
         
         // Estados vacíos
@@ -4606,7 +4624,17 @@ export const es = {
             photoDeleted: 'Foto eliminada exitosamente',
             photosDeleted: '{{count}} fotos eliminadas exitosamente',
             coverPhotoSet: 'Foto de portada actualizada',
+            photosApproved: 'Fotos aprobadas exitosamente',
+            photosRejected: 'Fotos rechazadas exitosamente',
         },
+
+        // Acciones adicionales
+        updateAlbumInfo: 'Actualizar Información del Álbum',
+        approveAll: 'Aprobar Todo',
+        approveAllConfirm: '¿Aprobar todas las fotos pendientes en esta galería?',
+        noPendingPhotos: 'No hay fotos pendientes para aprobar',
+        photoFeed: 'Feed de Fotos',
+        loadMore: 'Cargar Más Cuadrícula Arquitectónica',
     },
 
     // Características del Administrador de Plataforma

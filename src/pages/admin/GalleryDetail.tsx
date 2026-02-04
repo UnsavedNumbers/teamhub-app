@@ -1,12 +1,13 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Button, Card, PageHeader, StatCard, Badge, InlineNotice } from '@/components/platformAdmin'
+import { Button, Card, InlineNotice } from '@/components/platformAdmin'
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import {
   deleteGallery,
   deletePhotos,
   getGalleryById,
   getPhotosForGallery,
-  setGalleryCover,
+  moderatePhotos,
   type Gallery,
   type GalleryPhoto,
 } from '@/data/services/galleryService'
@@ -21,17 +22,22 @@ import { GalleryEditModal } from '@/components/admin/galleries/GalleryEditModal'
 import { getLink } from '@/utils/routes'
 
 const MAX_PHOTOS_PER_GALLERY = 25
+const PHOTOS_PER_PAGE = 12
 
 export default function GalleryDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { context } = useUserContext()
   const { t } = useI18n()
+  const tAny = t as any
 
   const [gallery, setGallery] = useState<Gallery | null>(null)
   const [photos, setPhotos] = useState<GalleryPhoto[]>([])
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
+  const [entityInfo, setEntityInfo] = useState<any>(null)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [visibleCount, setVisibleCount] = useState(PHOTOS_PER_PAGE)
 
   const load = async () => {
     if (!id || !context) return
@@ -55,6 +61,23 @@ export default function GalleryDetail() {
     if (pRes.error) showError(pRes.error.message)
     setGallery(gRes.data || null)
     setPhotos(pRes.data || [])
+    
+    // TODO: Load entity info for breadcrumbs if gallery has entity_id
+    // For now, mock the structure
+    if (gRes.data?.entity_id) {
+      setEntityInfo({
+        sport: 'Soccer',
+        program: 'Travel',
+        level: 'U12 Boys',
+        season: 'Fall 2025',
+        team: 'U12 Eagles',
+        venue: 'Starlight Complex',
+        city: 'Austin',
+        state: 'TX',
+        date: gRes.data.created_at
+      })
+    }
+    
     setLoading(false)
   }
 
@@ -66,11 +89,12 @@ export default function GalleryDetail() {
   const photoStats = useMemo(() => {
     const approved = photos.filter((p) => p.approval_status === 'approved').length
     const pending = photos.filter((p) => p.approval_status === 'pending').length
+    const flagged = photos.filter((p) => p.approval_status === 'rejected').length
     const total = photos.length
     const remaining = Math.max(0, MAX_PHOTOS_PER_GALLERY - total)
     const limitReached = total >= MAX_PHOTOS_PER_GALLERY
 
-    return { approved, pending, total, remaining, limitReached }
+    return { approved, pending, flagged, total, remaining, limitReached }
   }, [photos])
 
   const handleDeleteGallery = async () => {
@@ -107,22 +131,6 @@ export default function GalleryDetail() {
     load()
   }
 
-  const handleSetCover = async (photoId: string) => {
-    if (USE_FAKE_DATA) {
-      showError(t('photos.demoMode.editBlocked'))
-      return
-    }
-
-    if (!context || !gallery) return
-    const { error } = await setGalleryCover(context, gallery.id, photoId)
-    if (error) {
-      showError(error.message)
-      return
-    }
-    showSuccess(t('photos.success.coverPhotoSet'))
-    load()
-  }
-
   const handleEdit = () => {
     if (USE_FAKE_DATA) {
       showError(t('photos.demoMode.editBlocked'))
@@ -133,45 +141,98 @@ export default function GalleryDetail() {
 
   if (!id) return null
 
+  const handleApproveAll = async () => {
+    if (USE_FAKE_DATA) {
+      showError(t('photos.demoMode.deleteBlocked'))
+      return
+    }
+    const pendingIds = photos.filter((p) => p.approval_status === 'pending').map((p) => p.id)
+    if (pendingIds.length === 0) {
+      showError(t('photos.noPendingPhotos'))
+      return
+    }
+    const confirm = window.confirm(t('photos.approveAllConfirm'))
+    if (!confirm) return
+    const { error } = await moderatePhotos(context, pendingIds, 'approve')
+    if (error) {
+      showError(tAny('photos.moderation.approveError'))
+    } else {
+      showSuccess(t('photos.success.photosApproved'))
+      load()
+    }
+  }
+
+  // Get subtitle based on gallery type
+  const getGallerySubtitle = () => {
+    if (!gallery) return undefined
+    switch (gallery.gallery_type) {
+      case 'event':
+        return entityInfo ? `${entityInfo.venue || 'Event'} — ${entityInfo.city || ''}, ${entityInfo.state || ''}` : 'Event Album'
+      case 'team':
+        return entityInfo?.team || 'Team Album'
+      case 'org':
+        return 'Organization Album'
+      case 'athlete':
+        return 'Athlete Album'
+      case 'program':
+        return entityInfo?.program || 'Program Album'
+      case 'season':
+        return entityInfo?.season || 'Season Album'
+      case 'travel':
+        return 'Travel Album'
+      default:
+        return undefined
+    }
+  }
+
   return (
-    <div className="pa-root">
-      <div className="pa-container pa-space-y-4">
-        <PageHeader
-          title={gallery?.name || t('photos.viewGallery')}
-          description={gallery?.description || t('photos.subtitle')}
-          breadcrumbs={[
-            { label: t('nav.photos'), path: getLink('admin.photos.list') },
-            { label: gallery?.name || t('photos.viewGallery') },
-          ]}
-          actions={
-            <>
-              <Button variant="secondary" onClick={() => navigate(getLink('admin.photos.list'))}>
-                {t('common.backToList')}
-              </Button>
-              <Button variant="ghost" onClick={handleEdit}>
-                {t('common.edit')}
-              </Button>
-              <Button variant="danger" onClick={handleDeleteGallery}>
-                {t('common.delete')}
-              </Button>
-            </>
-          }
-        />
+    <div className="org-structure-page">
+      <AdminPageHeader
+        title={gallery?.name || t('photos.viewGallery')}
+        subtitle={getGallerySubtitle()}
+        breadcrumbs={[
+          { label: 'Photos', path: getLink('admin.photos.list') },
+          { label: gallery?.name || 'Gallery' },
+        ]}
+        actions={
+          <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
+            <Button variant="secondary" onClick={handleEdit}>
+              {t('photos.updateAlbumInfo')}
+            </Button>
+            <Button variant="primary" onClick={handleApproveAll}>
+              {t('photos.approveAll')}
+            </Button>
+          </div>
+        }
+      />
+
+      <div className="pa-space-y-6">
 
         {loading ? (
           <Card className="pa-card pa-h-40 pa-animate-pulse" />
         ) : (
           <>
             {/* Stats */}
-            <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-4 pa-gap-3">
-              <StatCard label={t('photos.stats.totalPhotos')} value={photoStats.total} />
-              <StatCard label={t('common.approved')} value={photoStats.approved} />
-              <StatCard label={t('photos.pendingApproval.badge')} value={photoStats.pending} />
-              <StatCard 
-                label={t('common.remaining')} 
-                value={`${photoStats.remaining}/${MAX_PHOTOS_PER_GALLERY}`} 
-              />
-            </div>
+            <section className="org-stats-section">
+              <div className="org-stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                <div className="org-stat-box">
+                  <span className="org-stat-label">{t('photos.stats.totalPhotos')}</span>
+                  <span className="org-stat-value">{String(photoStats.total).padStart(2, '0')}</span>
+                </div>
+                <div className="org-stat-box">
+                  <span className="org-stat-label">{t('photos.pendingApproval.badge')}</span>
+                  <span className="org-stat-value" style={{ color: 'var(--pa-theme-action-primary)' }}>{String(photoStats.pending).padStart(2, '0')}</span>
+                </div>
+                <div className="org-stat-box">
+                  <span className="org-stat-label">{t('common.approved')}</span>
+                  <span className="org-stat-value" style={{ color: 'var(--pa-success)' }}>{String(photoStats.approved).padStart(2, '0')}</span>
+                </div>
+                <div className="org-stat-box">
+                  <span className="org-stat-label">{t('photos.stats.flagged')}</span>
+                  <span className="org-stat-value" style={{ color: 'var(--pa-danger)' }}>{String(photoStats.flagged).padStart(2, '0')}</span>
+                </div>
+              </div>
+            </section>
 
             {/* Photo Limit Warning */}
             {photoStats.limitReached && (
@@ -193,47 +254,95 @@ export default function GalleryDetail() {
 
             {/* Upload Zone */}
             {!photoStats.limitReached && (
-              <Card className="pa-card">
-                <div className="pa-flex pa-items-center pa-justify-between pa-mb-3">
-                  <h4 className="pa-text-base pa-font-semibold">{t('photos.uploadPhotos')}</h4>
-                  {photoStats.remaining > 0 && photoStats.remaining < 5 && (
-                    <Badge variant="warning">
-                      {t('photos.photoLimit.canUpload', { count: photoStats.remaining })}
-                    </Badge>
-                  )}
+              <Card title={t('photos.upload.title')} className="oa-card oa-card--no-padding">
+                <div style={{ padding: 'var(--pa-space-6)' }}>
+                  <PhotoUploadZone 
+                    galleryId={id} 
+                    onComplete={() => load()} 
+                    maxPhotos={photoStats.remaining}
+                    requireApproval={gallery?.require_approval || false}
+                  />
                 </div>
-                <PhotoUploadZone 
-                  galleryId={id} 
-                  onComplete={() => load()} 
-                  maxPhotos={photoStats.remaining}
-                  requireApproval={gallery?.require_approval || false}
-                />
               </Card>
             )}
 
-            {/* Photos Grid */}
-            <Card className="pa-card pa-space-y-3">
-              <div className="pa-flex pa-justify-between pa-items-center">
-                <h4 className="pa-text-base pa-font-semibold">{t('photos.title')}</h4>
-                <span className="pa-text-sm pa-text-muted">
-                  {t('photos.stats.photosCount', { count: photos.length })}
-                </span>
-              </div>
-              
-              {photos.length === 0 ? (
-                <div className="pa-text-center pa-py-12 pa-text-muted">
-                  <p>{t('photos.stats.emptyGallery')}</p>
-                  <p className="pa-text-sm pa-mt-1">{t('photos.upload.title')}</p>
+            {/* Photo Feed Section */}
+            <Card 
+              title={t('photos.photoFeed')}
+              className="oa-card oa-card--no-padding"
+              actions={
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    onClick={() => setViewMode('grid')}
+                    style={{ 
+                      padding: '8px', 
+                      color: viewMode === 'grid' ? 'var(--pa-theme-action-primary)' : 'var(--pa-text-muted)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <span className="material-symbols-outlined">grid_view</span>
+                  </button>
+                  <button 
+                    onClick={() => setViewMode('list')}
+                    style={{ 
+                      padding: '8px', 
+                      color: viewMode === 'list' ? 'var(--pa-theme-action-primary)' : 'var(--pa-text-muted)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <span className="material-symbols-outlined">list</span>
+                  </button>
                 </div>
-              ) : (
-                <PhotoGalleryGrid
-                  photos={photos}
-                  coverPhotoId={gallery?.cover_photo_id || undefined}
-                  onDelete={handleDeletePhotos}
-                  onSetCover={handleSetCover}
-                  showPendingBadge={gallery?.require_approval || false}
-                />
-              )}
+              }
+            >
+              <div style={{ padding: 'var(--pa-space-6)' }}>
+                {photos.length === 0 ? (
+                  <div className="pa-text-center pa-py-12 pa-text-muted">
+                    <p>{t('photos.stats.emptyGallery')}</p>
+                    <p className="pa-text-sm pa-mt-1">{t('photos.upload.title')}</p>
+                  </div>
+                ) : (
+                  <>
+                    <PhotoGalleryGrid
+                    photos={photos.slice(0, visibleCount)}
+                    coverPhotoId={gallery?.cover_photo_id || undefined}
+                    onDelete={handleDeletePhotos}
+                    showPendingBadge={gallery?.require_approval || false}
+                    viewMode={viewMode}
+                    onModerate={async (ids, action) => {
+                      if (!context || !gallery) return
+                      if (USE_FAKE_DATA) {
+                        showError(t('photos.demoMode.deleteBlocked'))
+                        return
+                      }
+                      const { error } = await moderatePhotos(context, ids, action)
+                      if (error) {
+                        showError(tAny('photos.moderation.' + (action === 'approve' ? 'approveError' : 'rejectError')))
+                        return
+                      }
+                      showSuccess(t('photos.success.photosApproved'))
+                      load()
+                    }}
+                  />
+                  
+                    {/* Load More Button - only show when there are more photos */}
+                    {visibleCount < photos.length && (
+                      <div style={{ marginTop: '48px', display: 'flex', justifyContent: 'center' }}>
+                        <Button 
+                          variant="secondary" 
+                          onClick={() => setVisibleCount((prev) => prev + PHOTOS_PER_PAGE)}
+                        >
+                          {t('photos.loadMore')}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </Card>
           </>
         )}
@@ -255,4 +364,3 @@ export default function GalleryDetail() {
     </div>
   )
 }
-
