@@ -10,20 +10,28 @@
  */
 
 /* =====================================================================
-   BACKDROP
+   BACKDROP - Full viewport coverage (responsive)
    ===================================================================== */
 
 .mm-backdrop {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   background: rgba(0, 0, 0, 0.4);
   z-index: 9998;
   opacity: 0;
   visibility: hidden;
-  transition: 
+  transition:
     opacity 250ms cubic-bezier(0.32, 0.72, 0, 1),
     visibility 250ms cubic-bezier(0.32, 0.72, 0, 1);
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .mm-backdrop--visible {
@@ -32,7 +40,7 @@
 }
 
 /* =====================================================================
-   DRAWER
+   DRAWER - Full-height, responsive width
    ===================================================================== */
 
 .mm-drawer {
@@ -42,6 +50,9 @@
   bottom: 0;
   width: min(320px, 85vw);
   max-width: 380px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100%;
   background: var(--pa-surface, #ffffff);
   z-index: 9999;
   transform: translateX(-100%);
@@ -49,14 +60,31 @@
   will-change: transform;
   display: flex;
   flex-direction: column;
-  box-shadow: 
+  box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.05),
     0 25px 50px -12px rgba(0, 0, 0, 0.25);
   overflow: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mm-drawer--open {
   transform: translateX(0);
+}
+
+/* Full-width drawer on small phones for fully responsive feel */
+@media (max-width: 480px) {
+  .mm-drawer {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Tablet: slightly wider drawer, still leaves backdrop visible for tap-to-close */
+@media (min-width: 481px) and (max-width: 1024px) {
+  .mm-drawer {
+    width: min(360px, 88vw);
+    max-width: 380px;
+  }
 }
 
 /* Dark mode support */
@@ -88,7 +116,7 @@
 
 .mm-brand {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 12px;
 }
 
@@ -117,6 +145,7 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  min-width: 0;
 }
 
 .mm-brand-name {
@@ -125,6 +154,16 @@
   color: var(--pa-n900, #111827);
   letter-spacing: -0.02em;
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 360px) {
+  .mm-brand-name {
+    white-space: normal;
+    word-break: break-word;
+  }
 }
 
 :root[data-theme="dark"] .mm-brand-name,
@@ -147,6 +186,8 @@
 .mm-close {
   width: 44px;
   height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -157,6 +198,8 @@
   cursor: pointer;
   transition: all 150ms ease;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  flex-shrink: 0;
 }
 
 .mm-close:hover {
@@ -363,11 +406,6 @@
    ===================================================================== */
 
 @media (min-width: 600px) and (max-width: 1024px) {
-  .mm-drawer {
-    width: 340px;
-    max-width: 380px;
-  }
-
   .mm-header {
     padding: 24px 20px 20px;
   }
@@ -414,7 +452,7 @@
 }
 
 /* =====================================================================
-   SAFE AREA INSETS (for notched devices)
+   SAFE AREA INSETS (for notched devices, full responsive)
    ===================================================================== */
 
 @supports (padding-top: env(safe-area-inset-top)) {
@@ -424,5 +462,11 @@
 
   .mm-drawer {
     padding-left: env(safe-area-inset-left);
+    /* Extend drawer into safe area so background covers full screen */
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .mm-nav {
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
   }
 }
