@@ -7,10 +7,9 @@
  * Design: FanConnect Minimalist Light
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { useI18n } from '../../i18n/useI18n'
 import { getLink, RouteKeys } from '../../utils/routes'
 import '../../styles/fan.css'
 
@@ -35,11 +34,9 @@ const navItems: NavItem[] = [
 export default function FanLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { profile, signOut } = useAuth()
-  const { t } = useI18n()
+  const { profile } = useAuth()
   
-  const [showMobileMenu, setShowMobileMenu] = useState(false)
-  const [notificationCount, setNotificationCount] = useState(0)
+  const [notificationCount] = useState(0)
 
   // Determine active nav item
   const getActiveKey = (): string => {
@@ -57,12 +54,6 @@ export default function FanLayout() {
 
   const handleNavClick = (item: NavItem) => {
     navigate(getLink(item.routeKey))
-    setShowMobileMenu(false)
-  }
-
-  const handleLogout = async () => {
-    await signOut()
-    navigate('/portal/login')
   }
 
   // Get user initials for avatar

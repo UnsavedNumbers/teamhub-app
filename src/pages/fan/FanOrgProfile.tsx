@@ -5,21 +5,25 @@
  * Shows: About, upcoming events, teams, photos, announcements
  * 
  * URL/ROUTE: /fan/org/:slug
- * Design: FanConnect Minimalist Light
+ * Design: FanConnect Minimalist Light - organization_profile
  */
 
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useI18n } from '../../i18n/useI18n'
 import { getOrgProfile, followOrg, unfollowOrg, type EntityProfile } from '../../data/services/fanService'
 import { getLink, RouteKeys } from '../../utils/routes'
+import { useT } from '../../i18n/useI18n'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { showError, showSuccess } from '../../utils/toast'
 import '../../styles/fan.css'
+import '../../styles/fan-layouts.css'
+
+type TabType = 'overview' | 'schedule' | 'roster' | 'media' | 'shop'
 
 export default function FanOrgProfile() {
-  const { slug } = useParams<{ slug: string }>()
-  const { t } = useI18n()
+  const t = useT()
+  // Route param is :slug but can be UUID or slug - we use it as orgId
+  const { slug: orgId } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   
   const [profile, setProfile] = useState<EntityProfile | null>(null)
@@ -27,47 +31,41 @@ export default function FanOrgProfile() {
   const [error, setError] = useState<string | null>(null)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
-  
-  // Related content
-  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([])
-  const [teams, setTeams] = useState<any[]>([])
-  const [recentPhotos, setRecentPhotos] = useState<any[]>([])
-  const [announcements, setAnnouncements] = useState<any[]>([])
+  const [activeTab, setActiveTab] = useState<TabType>('overview')
 
   useEffect(() => {
-    if (!slug) {
-      setError('Organization not found')
+    if (!orgId) {
+      setError(t('portal.fan.entityProfile.orgNotFound'))
       setLoading(false)
       return
     }
 
     loadProfile()
-  }, [slug])
+  }, [orgId])
 
   const loadProfile = async () => {
-    if (!slug) return
+    if (!orgId) return
 
     setLoading(true)
     setError(null)
 
-    const { data, error: profileError } = await getOrgProfile(slug)
+    const { data, error: profileError } = await getOrgProfile(orgId)
 
     if (profileError || !data) {
-      setError(profileError?.message || 'Failed to load organization')
+      setError(profileError?.message || t('portal.fan.entityProfile.orgNotFound'))
+      setLoading(false)
+      return
+    }
+
+    // Check if the RPC returned an error object instead of profile data
+    if (data && typeof data === 'object' && 'error' in data) {
+      setError((data as any).message || t('portal.fan.entityProfile.orgNotFound'))
       setLoading(false)
       return
     }
 
     setProfile(data)
     setIsFollowing(data.is_following || false)
-    
-    // Load related content
-    // In production these would be separate API calls
-    setUpcomingEvents([])
-    setTeams([])
-    setRecentPhotos([])
-    setAnnouncements([])
-    
     setLoading(false)
   }
 
@@ -79,28 +77,33 @@ export default function FanOrgProfile() {
     if (isFollowing) {
       const { error } = await unfollowOrg(profile.id)
       if (error) {
-        showError('Failed to unfollow')
+        showError(t('portal.fan.errors.unfollowOrgFailed'))
       } else {
         setIsFollowing(false)
-        showSuccess(`Unfollowed ${profile.name}`)
+        showSuccess(t('portal.fan.followedOrgs.unfollowSuccess'))
       }
     } else {
       const { error } = await followOrg(profile.id)
       if (error) {
-        showError('Failed to follow')
+        showError(t('portal.fan.errors.followOrgFailed'))
       } else {
         setIsFollowing(true)
-        showSuccess(`Now following ${profile.name}`)
+        showSuccess(t('portal.fan.followedOrgs.followSuccess'))
       }
     }
     
     setFollowLoading(false)
   }
 
+  // Get initials from name
+  const getInitials = (name: string) => {
+    return name.split(' ').map(word => word[0]).slice(0, 2).join('').toUpperCase()
+  }
+
   if (loading) {
     return (
       <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="large" />
       </div>
     )
   }
@@ -109,13 +112,13 @@ export default function FanOrgProfile() {
     return (
       <div className="fan-error-page">
         <span className="material-symbols-outlined">error</span>
-        <h2>Organization Not Found</h2>
-        <p>{error || 'This organization may not exist or is not publicly visible.'}</p>
+        <h2>{t('portal.fan.entityProfile.notFound')}</h2>
+        <p>{error || t('portal.fan.entityProfile.orgNotFound')}</p>
         <button 
           className="fan-btn fan-btn-primary"
           onClick={() => navigate(getLink(RouteKeys.FAN_HOME))}
         >
-          Go Home
+          {t('common.goHome')}
         </button>
       </div>
     )
@@ -126,7 +129,7 @@ export default function FanOrgProfile() {
     return (
       <div className="fan-private-page">
         <div className="fan-private-header">
-          <div className="fan-org-logo">
+          <div className="fan-org-profile-logo">
             {profile.logo_url ? (
               <img src={profile.logo_url} alt={profile.name} />
             ) : (
@@ -136,261 +139,208 @@ export default function FanOrgProfile() {
           <h1>{profile.name}</h1>
           <span className="fan-private-badge">
             <span className="material-symbols-outlined">lock</span>
-            Private Organization
+            {t('portal.fan.entityProfile.private')}
           </span>
         </div>
-        <p>This organization's content is only visible to approved followers.</p>
+        <p>{t('portal.fan.orgProfile.privateDescription')}</p>
         <button 
           className="fan-btn fan-btn-primary"
           onClick={handleFollowToggle}
           disabled={followLoading}
         >
-          {followLoading ? <LoadingSpinner size="sm" /> : 'Request to Follow'}
+          {followLoading ? <LoadingSpinner size="small" /> : t('portal.fan.entityProfile.requestToFollow')}
         </button>
       </div>
     )
   }
 
   return (
-    <>
-      {/* Back Button */}
-      <button 
-        className="fan-back-btn"
-        onClick={() => navigate(-1)}
-      >
-        <span className="material-symbols-outlined">arrow_back</span>
-        Back
-      </button>
-
-      {/* Organization Header */}
-      <div className="fan-entity-header">
-        <div className="fan-entity-cover">
-          {profile.cover_url ? (
-            <img src={profile.cover_url} alt="" />
-          ) : (
-            <div className="fan-entity-cover-gradient" />
-          )}
-        </div>
-        
-        <div className="fan-entity-info">
-          <div className="fan-entity-logo">
-            {profile.logo_url ? (
-              <img src={profile.logo_url} alt={profile.name} />
-            ) : (
-              <span className="material-symbols-outlined">business</span>
-            )}
-          </div>
-          
-          <div className="fan-entity-details">
-            <h1 className="fan-entity-name">{profile.name}</h1>
-            {profile.location_city && profile.location_state && (
-              <p className="fan-entity-location">
-                <span className="material-symbols-outlined">location_on</span>
-                {profile.location_city}, {profile.location_state}
-              </p>
-            )}
-            {profile.sport && (
-              <span className="fan-entity-sport">{profile.sport}</span>
-            )}
-          </div>
-          
-          <button 
-            className={`fan-follow-btn ${isFollowing ? 'following' : ''}`}
-            onClick={handleFollowToggle}
-            disabled={followLoading}
-          >
-            {followLoading ? (
-              <LoadingSpinner size="sm" />
-            ) : isFollowing ? (
-              <>
-                <span className="material-symbols-outlined">check</span>
-                Following
-              </>
-            ) : (
-              <>
-                <span className="material-symbols-outlined">add</span>
-                Follow
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Bar */}
-      <div className="fan-entity-stats">
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{profile.follower_count || 0}</span>
-          <span className="fan-entity-stat-label">Followers</span>
-        </div>
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{teams.length}</span>
-          <span className="fan-entity-stat-label">Teams</span>
-        </div>
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{upcomingEvents.length}</span>
-          <span className="fan-entity-stat-label">Upcoming Events</span>
-        </div>
-      </div>
-
-      {/* About Section */}
-      {profile.description && (
-        <section className="fan-entity-section">
-          <h2 className="fan-entity-section-title">About</h2>
-          <p className="fan-entity-description">{profile.description}</p>
-        </section>
-      )}
-
-      {/* Upcoming Events */}
-      <section className="fan-entity-section">
-        <div className="fan-section-header">
-          <h2 className="fan-entity-section-title">Upcoming Events</h2>
-          {upcomingEvents.length > 0 && (
-            <button className="fan-link-btn">View All</button>
-          )}
-        </div>
-        
-        {upcomingEvents.length === 0 ? (
-          <div className="fan-entity-empty">
-            <span className="material-symbols-outlined">event</span>
-            <p>No upcoming events</p>
-          </div>
-        ) : (
-          <div className="fan-events-list">
-            {upcomingEvents.slice(0, 5).map((event) => (
-              <div key={event.id} className="fan-event-card-compact">
-                <div className="fan-event-date">
-                  <span className="fan-event-month">
-                    {new Date(event.start_time).toLocaleDateString('en-US', { month: 'short' })}
-                  </span>
-                  <span className="fan-event-day">
-                    {new Date(event.start_time).getDate()}
-                  </span>
-                </div>
-                <div className="fan-event-info">
-                  <h4>{event.title}</h4>
-                  <p>
-                    {new Date(event.start_time).toLocaleTimeString('en-US', { 
-                      hour: 'numeric', 
-                      minute: '2-digit' 
-                    })}
-                    {event.location && ` • ${event.location}`}
-                  </p>
-                </div>
+    <div className="fan-org-profile">
+      {/* Hero Section */}
+      <section className="fan-org-profile-hero">
+        <div className="fan-org-profile-hero-inner">
+          <div className="fan-org-profile-hero-main">
+            <div className="fan-org-profile-hero-left">
+              {/* Logo */}
+              <div className="fan-org-profile-logo">
+                {profile.logo_url ? (
+                  <img src={profile.logo_url} alt={profile.name} />
+                ) : (
+                  <span className="material-symbols-outlined">business</span>
+                )}
               </div>
-            ))}
-          </div>
-        )}
-      </section>
 
-      {/* Teams */}
-      <section className="fan-entity-section">
-        <div className="fan-section-header">
-          <h2 className="fan-entity-section-title">Teams</h2>
-          {teams.length > 0 && (
-            <button className="fan-link-btn">View All</button>
-          )}
-        </div>
-        
-        {teams.length === 0 ? (
-          <div className="fan-entity-empty">
-            <span className="material-symbols-outlined">groups</span>
-            <p>No public teams</p>
-          </div>
-        ) : (
-          <div className="fan-teams-grid">
-            {teams.slice(0, 6).map((team) => (
-              <div 
-                key={team.id} 
-                className="fan-team-card"
-                onClick={() => navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { id: team.id }))}
+              {/* Info */}
+              <div className="fan-org-profile-info">
+                <span className="fan-org-profile-badge">
+                  {profile.sport || 'Youth Sports Organization'}
+                </span>
+                <h2 className="fan-org-profile-name">{profile.name}</h2>
+                {(profile.location_city || profile.location_state) && (
+                  <div className="fan-org-profile-meta">
+                    {profile.location_city && profile.location_state ? (
+                      <span>{profile.location_city}, {profile.location_state}</span>
+                    ) : (
+                      <span>{profile.location_city || profile.location_state}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="fan-org-profile-actions">
+              <button 
+                className={`fan-org-profile-follow-btn ${isFollowing ? 'following' : ''}`}
+                onClick={handleFollowToggle}
+                disabled={followLoading}
               >
-                <div className="fan-team-logo">
-                  {team.logo_url ? (
-                    <img src={team.logo_url} alt={team.name} />
-                  ) : (
-                    <span className="material-symbols-outlined">groups</span>
-                  )}
-                </div>
-                <h4>{team.name}</h4>
-                <p>{team.sport}</p>
-              </div>
-            ))}
+                {followLoading ? (
+                  <LoadingSpinner size="small" />
+                ) : isFollowing ? (
+                  t('portal.fan.followedOrgs.following')
+                ) : (
+                  t('portal.fan.orgProfile.followTeam')
+                )}
+              </button>
+              <button className="fan-org-profile-more-btn">
+                <span className="material-symbols-outlined">more_horiz</span>
+              </button>
+            </div>
           </div>
-        )}
-      </section>
 
-      {/* Recent Photos */}
-      <section className="fan-entity-section">
-        <div className="fan-section-header">
-          <h2 className="fan-entity-section-title">Recent Photos</h2>
-          {recentPhotos.length > 0 && (
-            <button className="fan-link-btn">View All</button>
-          )}
+          {/* Tab Navigation */}
+          <nav className="fan-org-profile-tabs">
+            <button 
+              className={`fan-org-profile-tab ${activeTab === 'overview' ? 'active' : ''}`}
+              onClick={() => setActiveTab('overview')}
+            >
+              {t('portal.fan.orgProfile.tabs.overview')}
+            </button>
+            <button 
+              className={`fan-org-profile-tab ${activeTab === 'schedule' ? 'active' : ''}`}
+              onClick={() => setActiveTab('schedule')}
+            >
+              {t('portal.fan.orgProfile.tabs.schedule')}
+            </button>
+            <button 
+              className={`fan-org-profile-tab ${activeTab === 'roster' ? 'active' : ''}`}
+              onClick={() => setActiveTab('roster')}
+            >
+              {t('portal.fan.orgProfile.tabs.roster')}
+            </button>
+            <button 
+              className={`fan-org-profile-tab ${activeTab === 'media' ? 'active' : ''}`}
+              onClick={() => setActiveTab('media')}
+            >
+              {t('portal.fan.orgProfile.tabs.media')}
+            </button>
+            <button 
+              className={`fan-org-profile-tab ${activeTab === 'shop' ? 'active' : ''}`}
+              onClick={() => setActiveTab('shop')}
+            >
+              {t('portal.fan.orgProfile.tabs.shop')}
+            </button>
+          </nav>
         </div>
-        
-        {recentPhotos.length === 0 ? (
-          <div className="fan-entity-empty">
-            <span className="material-symbols-outlined">photo_library</span>
-            <p>No photos shared</p>
-          </div>
-        ) : (
-          <div className="fan-photos-preview">
-            {recentPhotos.slice(0, 6).map((photo, index) => (
-              <div key={index} className="fan-photo-thumb">
-                <img src={photo.thumbnail_url || photo.url} alt="" />
-              </div>
-            ))}
-          </div>
-        )}
       </section>
 
-      {/* Announcements */}
-      {announcements.length > 0 && (
-        <section className="fan-entity-section">
-          <h2 className="fan-entity-section-title">Announcements</h2>
-          <div className="fan-announcements-list">
-            {announcements.slice(0, 3).map((announcement) => (
-              <div key={announcement.id} className="fan-announcement-card">
-                <div className="fan-announcement-header">
-                  <span className="material-symbols-outlined">campaign</span>
-                  <span className="fan-announcement-date">
-                    {new Date(announcement.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <h4>{announcement.title}</h4>
-                <p>{announcement.content}</p>
+      {/* Main Content */}
+      <div className="fan-org-profile-content">
+        <div className="fan-org-profile-grid">
+          {/* Feed Section */}
+          <section className="fan-org-profile-feed">
+            <div className="fan-org-profile-feed-header">
+              <h3 className="fan-org-profile-feed-title">{t('portal.fan.orgProfile.teamFeed')}</h3>
+              <div className="fan-org-profile-feed-filters">
+                <button className="fan-org-profile-feed-filter active">{t('portal.fan.orgProfile.recentHighlights')}</button>
+                <button className="fan-org-profile-feed-filter">{t('portal.fan.orgProfile.pressReleases')}</button>
               </div>
-            ))}
-          </div>
-        </section>
-      )}
+            </div>
 
-      {/* Contact Info */}
-      {(profile.website || profile.email || profile.phone) && (
-        <section className="fan-entity-section">
-          <h2 className="fan-entity-section-title">Contact</h2>
-          <div className="fan-contact-info">
-            {profile.website && (
-              <a href={profile.website} target="_blank" rel="noopener noreferrer" className="fan-contact-item">
-                <span className="material-symbols-outlined">language</span>
-                Website
-              </a>
-            )}
-            {profile.email && (
-              <a href={`mailto:${profile.email}`} className="fan-contact-item">
-                <span className="material-symbols-outlined">mail</span>
-                Email
-              </a>
-            )}
-            {profile.phone && (
-              <a href={`tel:${profile.phone}`} className="fan-contact-item">
-                <span className="material-symbols-outlined">phone</span>
-                Call
-              </a>
-            )}
-          </div>
-        </section>
-      )}
-    </>
+            <div className="fan-org-profile-posts">
+              {/* Welcome Post */}
+              <article className="fan-org-profile-post">
+                <div className="fan-org-profile-post-header">
+                  <div className="fan-org-profile-post-avatar">
+                    {profile.logo_url ? (
+                      <img src={profile.logo_url} alt={profile.name} />
+                    ) : (
+                      <span className="fan-org-profile-post-initials">{getInitials(profile.name)}</span>
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="fan-org-profile-post-author">{profile.name}</h4>
+                    <p className="fan-org-profile-post-time">{t('portal.fan.orgProfile.teamNews')}</p>
+                  </div>
+                </div>
+
+                <div className="fan-org-profile-post-body">
+                  <h3 className="fan-org-profile-post-title">
+                    {t('portal.fan.orgProfile.welcomeTo', { name: profile.name })}
+                  </h3>
+                  <p className="fan-org-profile-post-text">
+                    {profile.description || t('portal.fan.orgProfile.stayTuned')}
+                  </p>
+                  
+                  <div className="fan-org-profile-post-actions">
+                    <button className="fan-org-profile-post-action">
+                      <span className="material-symbols-outlined">favorite</span>
+                      <span>0</span>
+                    </button>
+                    <button className="fan-org-profile-post-action">
+                      <span className="material-symbols-outlined">mode_comment</span>
+                      <span>0</span>
+                    </button>
+                    <button className="fan-org-profile-post-action fan-org-profile-post-action-share">
+                      <span className="material-symbols-outlined">ios_share</span>
+                    </button>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          {/* Sidebar */}
+          <aside className="fan-org-profile-sidebar">
+            {/* Next Game - Placeholder */}
+            <div className="fan-org-profile-sidebar-section">
+              <h2 className="fan-org-profile-sidebar-title">{t('portal.fan.orgProfile.nextGame')}</h2>
+              <div className="fan-org-profile-next-game">
+                <div className="fan-org-profile-next-game-empty">
+                  <span>{t('portal.fan.orgProfile.noUpcomingGames')}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="fan-org-profile-sidebar-section">
+              <h2 className="fan-org-profile-sidebar-title">{t('portal.fan.orgProfile.stats')}</h2>
+              <div className="fan-org-profile-stats">
+                <div className="fan-org-profile-stat">
+                  <span className="fan-org-profile-stat-label">{t('portal.fan.entityProfile.followers')}</span>
+                  <span className="fan-org-profile-stat-value">{profile.follower_count || 0}</span>
+                </div>
+                <div className="fan-org-profile-stat">
+                  <span className="fan-org-profile-stat-label">{t('portal.fan.entityProfile.teams')}</span>
+                  <span className="fan-org-profile-stat-value">0</span>
+                </div>
+                <div className="fan-org-profile-stat">
+                  <span className="fan-org-profile-stat-label">{t('portal.fan.entityProfile.upcomingEvents')}</span>
+                  <span className="fan-org-profile-stat-value">0</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Club Member Access CTA */}
+            <div className="fan-org-profile-promo">
+              <h3 className="fan-org-profile-promo-title">{t('portal.fan.orgProfile.clubMemberAccess')}</h3>
+              <p className="fan-org-profile-promo-text">{t('portal.fan.orgProfile.clubMemberDescription')}</p>
+              <button className="fan-org-profile-promo-btn">{t('portal.fan.orgProfile.joinTheClub')}</button>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
   )
 }

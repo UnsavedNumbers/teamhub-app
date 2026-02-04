@@ -9,8 +9,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useI18n } from '../../i18n/useI18n'
+import { useNavigate } from 'react-router-dom'
 import { 
   getNotificationPreferences, 
   updateNotificationPreferences, 
@@ -23,12 +22,10 @@ import { supabase } from '../../lib/supabase'
 import '../../styles/fan.css'
 
 export default function FanProfile() {
-  const { t } = useI18n()
   const navigate = useNavigate()
   
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
 
   useEffect(() => {
     loadUserData()
@@ -55,7 +52,7 @@ export default function FanProfile() {
   if (loading) {
     return (
       <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="large" />
       </div>
     )
   }
@@ -299,7 +296,7 @@ export function FanProfileEdit() {
   if (loading) {
     return (
       <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="large" />
       </div>
     )
   }
@@ -382,7 +379,7 @@ export function FanProfileEdit() {
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? <LoadingSpinner size="sm" /> : 'Save Changes'}
+            {saving ? <LoadingSpinner size="small" /> : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -395,7 +392,6 @@ export function FanProfileEdit() {
  * URL/ROUTE: /fan/profile/notifications
  */
 export function FanProfileNotifications() {
-  const { t } = useI18n()
   const navigate = useNavigate()
   
   const [loading, setLoading] = useState(true)
@@ -461,7 +457,7 @@ export function FanProfileNotifications() {
   if (loading) {
     return (
       <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="large" />
       </div>
     )
   }
@@ -625,7 +621,7 @@ export function FanProfileNotifications() {
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? <LoadingSpinner size="sm" /> : 'Save Preferences'}
+            {saving ? <LoadingSpinner size="small" /> : 'Save Preferences'}
           </button>
         </div>
       </div>
@@ -697,7 +693,7 @@ export function FanProfileLinkedAthletes() {
   if (loading) {
     return (
       <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="large" />
       </div>
     )
   }
@@ -848,7 +844,7 @@ function LinkAthleteModal({ onClose }: LinkAthleteModalProps) {
             onClick={handleSubmit}
             disabled={loading}
           >
-            {loading ? <LoadingSpinner size="sm" /> : 'Link Athlete'}
+            {loading ? <LoadingSpinner size="small" /> : 'Link Athlete'}
           </button>
         </div>
       </div>
@@ -956,7 +952,7 @@ export function FanProfilePrivacy() {
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? <LoadingSpinner size="sm" /> : 'Save Settings'}
+            {saving ? <LoadingSpinner size="small" /> : 'Save Settings'}
           </button>
         </div>
       </div>

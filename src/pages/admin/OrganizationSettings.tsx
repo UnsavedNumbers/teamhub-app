@@ -598,7 +598,9 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
       city: org.city || '',
       state: org.state || '',
       zip: org.zip || '',
-      place_id: (org as any).place_id || '',
+      place_id: org.place_id || '',
+      latitude: org.latitude || null,
+      longitude: org.longitude || null,
     }
   })
   const [logoFile, setLogoFile] = useState<File | undefined>(undefined)
@@ -666,13 +668,17 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
                 <LocationAutocomplete
                   value={field.value || ''}
                   onInputChange={field.onChange}
-                  onChange={(address) => {
+                  onChange={(address, placeResult) => {
                     startTransition(() => {
                       setValue('address', address.address_line1, { shouldValidate: false, shouldDirty: true })
                       setValue('city', address.city, { shouldValidate: false, shouldDirty: true })
                       setValue('state', address.state, { shouldValidate: false, shouldDirty: true })
                       setValue('zip', address.postal_code, { shouldValidate: false, shouldDirty: true })
                       setValue('place_id', address.place_id, { shouldValidate: false, shouldDirty: true })
+                      if (placeResult?.geometry?.location) {
+                        setValue('latitude', placeResult.geometry.location.lat(), { shouldValidate: false, shouldDirty: true })
+                        setValue('longitude', placeResult.geometry.location.lng(), { shouldValidate: false, shouldDirty: true })
+                      }
                       trigger(['address', 'city', 'state', 'zip'])
                     })
                   }}

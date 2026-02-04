@@ -1435,3 +1435,572 @@
 .fan-animate-slideUp {
   animation: fan-slideUp 300ms ease forwards;
 }
+
+/* ----------------------------------------------------------------------------
+   14. ORGANIZATION PROFILE PAGE
+   Based on FanConnect organization_profile design
+   ---------------------------------------------------------------------------- */
+
+.fan-org-profile {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--color-background);
+  font-family: var(--font-family-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hero Section - Full Width Breakout */
+.fan-org-profile-hero {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  background-color: var(--color-zinc-50);
+  padding-top: var(--spacing-16);
+  padding-bottom: 0;
+  border-bottom: 1px solid var(--color-zinc-100);
+}
+
+.fan-org-profile-hero-inner {
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: 0 var(--spacing-6);
+}
+
+.fan-org-profile-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+}
+
+@media (min-width: 768px) {
+  .fan-org-profile-hero-main {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+}
+
+.fan-org-profile-hero-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+/* Logo */
+.fan-org-profile-logo {
+  width: 8rem;
+  height: 8rem;
+  background-color: var(--color-background);
+  border: 1px solid var(--color-zinc-100);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-6);
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .fan-org-profile-logo {
+    width: 10rem;
+    height: 10rem;
+  }
+}
+
+.fan-org-profile-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.fan-org-profile-logo .material-symbols-outlined {
+  font-size: 3rem;
+  color: var(--color-zinc-300);
+}
+
+/* Info */
+.fan-org-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.fan-org-profile-badge {
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #3b82f6;
+  padding: 2px 8px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  background-color: rgba(59, 130, 246, 0.05);
+  width: fit-content;
+  margin-bottom: var(--spacing-2);
+}
+
+.fan-org-profile-name {
+  font-size: 2.25rem;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  color: #111111;
+  text-transform: none;
+  margin: 0;
+  font-family: var(--font-family-display);
+  line-height: 1.1;
+}
+
+@media (min-width: 768px) {
+  .fan-org-profile-name {
+    font-size: 3rem;
+  }
+}
+
+.fan-org-profile-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #a1a1aa;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-top: 4px;
+}
+
+/* Actions */
+.fan-org-profile-actions {
+  display: flex;
+  gap: var(--spacing-4);
+  padding-bottom: var(--spacing-2);
+}
+
+.fan-org-profile-follow-btn {
+  padding: 12px 32px;
+  background-color: #111111;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  border: none;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.fan-org-profile-follow-btn:hover {
+  background-color: #27272a;
+}
+
+.fan-org-profile-follow-btn.following {
+  background-color: #e4e4e7;
+  color: #111111;
+}
+
+.fan-org-profile-follow-btn.following:hover {
+  background-color: #d4d4d8;
+}
+
+.fan-org-profile-more-btn {
+  padding: 12px;
+  border: 1px solid #e4e4e7;
+  background-color: transparent;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fan-org-profile-more-btn:hover {
+  background-color: #ffffff;
+}
+
+.fan-org-profile-more-btn .material-symbols-outlined {
+  font-size: 24px;
+  color: #111111;
+}
+
+/* Tabs */
+.fan-org-profile-tabs {
+  margin-top: 64px;
+  display: flex;
+  gap: 40px;
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.fan-org-profile-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.fan-org-profile-tab {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #a1a1aa;
+  padding-bottom: 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 150ms ease;
+  border-bottom: 2px solid transparent;
+  font-family: var(--font-family-display);
+}
+
+.fan-org-profile-tab:hover {
+  color: #111111;
+}
+
+.fan-org-profile-tab.active {
+  color: #111111;
+  border-bottom-color: #111111;
+}
+
+/* Content Grid */
+.fan-org-profile-content {
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: var(--spacing-12) var(--spacing-6);
+}
+
+.fan-org-profile-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-16);
+}
+
+@media (min-width: 1024px) {
+  .fan-org-profile-grid {
+    grid-template-columns: 1fr 320px;
+  }
+}
+
+/* Feed Section */
+.fan-org-profile-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-12);
+}
+
+.fan-org-profile-feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-zinc-100);
+  padding-bottom: var(--spacing-4);
+}
+
+.fan-org-profile-feed-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--tracking-extreme);
+  color: var(--color-primary);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.fan-org-profile-feed-filters {
+  display: flex;
+  gap: var(--spacing-6);
+}
+
+.fan-org-profile-feed-filter {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-zinc-400);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.fan-org-profile-feed-filter:hover,
+.fan-org-profile-feed-filter.active {
+  color: var(--color-primary);
+}
+
+/* Posts */
+.fan-org-profile-posts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+}
+
+.fan-org-profile-post {
+  display: flex;
+  flex-direction: column;
+}
+
+.fan-org-profile-post-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-6);
+}
+
+.fan-org-profile-post-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.fan-org-profile-post-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fan-org-profile-post-initials {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-background);
+}
+
+.fan-org-profile-post-author {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  margin: 0;
+}
+
+.fan-org-profile-post-time {
+  font-size: var(--font-size-2xs);
+  color: var(--color-zinc-400);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  margin-top: var(--spacing-0-5);
+}
+
+.fan-org-profile-post-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.fan-org-profile-post-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-light);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--line-height-tight);
+  color: var(--color-zinc-900);
+  text-transform: none;
+  margin: 0;
+}
+
+.fan-org-profile-post-text {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-zinc-500);
+}
+
+.fan-org-profile-post-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-10);
+  padding-top: var(--spacing-4);
+}
+
+.fan-org-profile-post-action {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  color: var(--color-zinc-400);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.fan-org-profile-post-action:hover {
+  color: var(--color-primary);
+}
+
+.fan-org-profile-post-action .material-symbols-outlined {
+  font-size: 1.25rem;
+}
+
+.fan-org-profile-post-action span:last-child {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+}
+
+.fan-org-profile-post-action-share {
+  margin-left: auto;
+}
+
+/* Sidebar */
+.fan-org-profile-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-12);
+}
+
+.fan-org-profile-sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.fan-org-profile-sidebar-title {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--tracking-extreme);
+  color: var(--color-zinc-400);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* Next Game */
+.fan-org-profile-next-game {
+  background-color: var(--color-zinc-50);
+  border: 1px solid var(--color-zinc-100);
+  padding: var(--spacing-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.fan-org-profile-next-game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fan-org-profile-next-game-time {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-zinc-400);
+}
+
+.fan-org-profile-next-game-empty {
+  padding: var(--spacing-4);
+  text-align: center;
+}
+
+.fan-org-profile-next-game-empty span {
+  font-size: var(--font-size-xs);
+  color: var(--color-zinc-400);
+}
+
+/* Stats */
+.fan-org-profile-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.fan-org-profile-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-2) 0;
+  border-bottom: 1px solid var(--color-zinc-100);
+}
+
+.fan-org-profile-stat-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-zinc-400);
+}
+
+.fan-org-profile-stat-value {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-zinc-500);
+}
+
+/* Promo Card */
+.fan-org-profile-promo {
+  padding: var(--spacing-6);
+  background-color: var(--color-zinc-900);
+  color: var(--color-background);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.fan-org-profile-promo-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-ultra);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.fan-org-profile-promo-text {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-zinc-400);
+}
+
+.fan-org-profile-promo-btn {
+  width: 100%;
+  padding: var(--spacing-2) 0;
+  background-color: var(--color-background);
+  color: var(--color-primary);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.fan-org-profile-promo-btn:hover {
+  background-color: var(--color-zinc-200);
+}
+
+/* Private Page */
+.fan-private-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: var(--spacing-8);
+  text-align: center;
+  gap: var(--spacing-4);
+}
+
+.fan-private-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.fan-private-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-zinc-500);
+}
+
+.fan-private-badge .material-symbols-outlined {
+  font-size: 1rem;
+}
