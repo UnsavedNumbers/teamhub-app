@@ -4,7 +4,6 @@
  * Handles demo mode detection and blocking of write operations
  */
 
-import { isSupabaseConfigured } from '../lib/supabase'
 import { USE_FAKE_DATA } from '../data/config'
 
 /**
@@ -39,3 +38,4 @@ export function assertNotDemoMode(operation: string = 'perform this action'): vo
     throw new Error(getDemoModeError(operation))
   }
 }
+

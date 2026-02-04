@@ -164,7 +164,7 @@ export async function addStaffMember(
  * Get staff member by org and user ID
  */
 export async function getStaffMember(
-  context: UserContext,
+  _context: UserContext,
   orgId: string,
   userId: string
 ): Promise<{ data: StaffMember | null; error: Error | null }> {

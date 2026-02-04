@@ -29,7 +29,7 @@ import { t } from '@/i18n'
 import { buildEventQuery } from './queryHelpers'
 import { normalizeSupabaseResponse, createServiceResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
-import { validateDeleteEvent, validateUpdateEvent, EVENT_ERRORS } from '../../utils/eventValidation'
+import { validateDeleteEvent, EVENT_ERRORS } from '../../utils/eventValidation'
 
 // ============================================================================
 // Helper Functions
@@ -1102,7 +1102,7 @@ export async function deleteEvent(
             return { error: new Error('Event not found') }
         }
 
-        const validation = await validateDeleteEvent(context, eventData, organization as any, false)
+        const validation = await validateDeleteEvent(context, eventData as any, organization as any, false)
         if (!validation.allowed) {
             return { error: new Error(validation.error || EVENT_ERRORS.DELETE_BLOCKED_PERMISSION) }
         }
@@ -1120,3 +1120,4 @@ export async function deleteEvent(
         return { error: classifiedError }
     }
 }
+

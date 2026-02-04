@@ -15,6 +15,8 @@ import {
 import Modal from '../../../components/platformAdmin/Modal'
 import { formatDate } from '../../../utils/dateFormatters'
 
+const supabaseAny = supabase as any
+
 interface AuditLogEntry {
   id: string
   action: string
@@ -44,8 +46,7 @@ export default function StaffAuditLog({ orgUserId, onClose }: StaffAuditLogProps
       setError(null)
 
       try {
-        const { data, error: fetchError } = await supabase
-          .from('org_user_audit_log')
+        const { data, error: fetchError } = await supabaseAny.from('org_user_audit_log')
           .select(`
             id,
             action,
@@ -166,3 +167,4 @@ export default function StaffAuditLog({ orgUserId, onClose }: StaffAuditLogProps
     </Modal>
   )
 }
+

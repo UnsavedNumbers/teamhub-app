@@ -335,7 +335,7 @@ export default function OrganizationSettings() {
           <TabsTrigger value="registration">Registration</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
-          <TabsTrigger value="staff">{t('admin.organizationSettings.organizationStaff')}</TabsTrigger>
+          <TabsTrigger value="staff">{t('admin.organizationSettings.organizationStaff' as any)}</TabsTrigger>
           {hasPaymentAccess && <TabsTrigger value="payments">Payments</TabsTrigger>}
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
         </TabsList>
@@ -1608,3 +1608,4 @@ function AdvancedForm({ settings, onSave, loading }: { settings: OrgSettingsType
     </Card>
   )
 }
+

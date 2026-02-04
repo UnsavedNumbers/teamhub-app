@@ -33,7 +33,7 @@ export function PhotoUploadZone({
   requireApproval = false,
   onComplete,
 }: PhotoUploadZoneProps) {
-  const { context, userRoles } = useUserContext()
+  const { context } = useUserContext()
   const { t } = useI18n()
   const [items, setItems] = useState<UploadItem[]>([])
   const [isDragging, setIsDragging] = useState(false)
@@ -45,8 +45,8 @@ export function PhotoUploadZone({
     if (!requireApproval) return 'approved'
     
     // Coaches and org admins: auto-approve
-    const isCoach = userRoles?.includes('coach')
-    const isOrgAdmin = userRoles?.includes('org_admin')
+    const isCoach = context?.roles?.includes('coach')
+    const isOrgAdmin = context?.roles?.includes('org_admin')
     
     if (isCoach || isOrgAdmin) {
       return 'approved'

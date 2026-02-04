@@ -25,6 +25,8 @@ import type {
   GetCalendarResponse,
 } from '../../types/staffAndFan'
 
+const supabaseAny = supabase as any
+
 // ============================================
 // FAN FOLLOWS
 // ============================================
@@ -37,7 +39,7 @@ export async function followOrg(
   source: 'manual' | 'post_purchase' | 'import' = 'manual'
 ): Promise<{ data: boolean; error: Error | null }> {
   try {
-    const { error } = await supabase.rpc('follow_org', {
+    const { error } = await supabaseAny.rpc('follow_org', {
       p_org_id: orgId,
       p_source: source,
     })
@@ -58,7 +60,7 @@ export async function followOrg(
  */
 export async function unfollowOrg(orgId: string): Promise<{ data: boolean; error: Error | null }> {
   try {
-    const { error } = await supabase.rpc('unfollow_org', {
+    const { error } = await supabaseAny.rpc('unfollow_org', {
       p_org_id: orgId,
     })
 
@@ -78,8 +80,7 @@ export async function unfollowOrg(orgId: string): Promise<{ data: boolean; error
  */
 export async function getFollowedOrgs(): Promise<{ data: FanOrgFollow[]; error: Error | null }> {
   try {
-    const { data, error } = await supabase
-      .from('fan_org_follows')
+    const { data, error } = await supabaseAny.from('fan_org_follows')
       .select(
         `
         id,
@@ -122,7 +123,7 @@ export async function bookmarkEvent(eventId: string): Promise<{ data: boolean; e
   }
 
   try {
-    const { error } = await supabase.rpc('bookmark_event', {
+    const { error } = await supabaseAny.rpc('bookmark_event', {
       p_event_id: eventId,
     })
 
@@ -142,7 +143,7 @@ export async function bookmarkEvent(eventId: string): Promise<{ data: boolean; e
  */
 export async function removeBookmark(eventId: string): Promise<{ data: boolean; error: Error | null }> {
   try {
-    const { error } = await supabase.rpc('remove_bookmark', {
+    const { error } = await supabaseAny.rpc('remove_bookmark', {
       p_event_id: eventId,
     })
 
@@ -162,8 +163,7 @@ export async function removeBookmark(eventId: string): Promise<{ data: boolean; 
  */
 export async function getBookmarkedEvents(): Promise<{ data: FanEventBookmark[]; error: Error | null }> {
   try {
-    const { data, error } = await supabase
-      .from('fan_event_bookmarks')
+    const { data, error } = await supabaseAny.from('fan_event_bookmarks')
       .select(
         `
         id,
@@ -211,8 +211,7 @@ export async function getFanCalendar(
     }
 
     // Check cache first
-    const { data: cacheData } = await supabase
-      .from('fan_calendar_cache')
+    const { data: cacheData } = await supabaseAny.from('fan_calendar_cache')
       .select('calendar_data, generated_at, expires_at')
       .eq('user_id', userId)
       .gt('expires_at', new Date().toISOString())
@@ -230,7 +229,7 @@ export async function getFanCalendar(
     }
 
     // Fetch live data
-    const { data, error } = await supabase.rpc('get_fan_calendar', {
+    const { data, error } = await supabaseAny.rpc('get_fan_calendar', {
       p_start_date: request.start_date || null,
       p_end_date: request.end_date || null,
       p_org_ids: request.org_ids || null,
@@ -266,7 +265,7 @@ export async function transferTicket(
   request: TicketTransferRequest
 ): Promise<{ data: TransferableTicket | null; error: Error | null }> {
   try {
-    const { error } = await supabase.rpc('transfer_ticket', {
+    const { error } = await supabaseAny.rpc('transfer_ticket', {
       p_ticket_id: request.ticket_id,
       p_holder_email: request.holder_email,
       p_holder_name: request.holder_name || null,
@@ -275,8 +274,7 @@ export async function transferTicket(
     if (error) throw error
 
     // Fetch updated ticket
-    const { data: ticketData, error: ticketError } = await supabase
-      .from('tickets')
+    const { data: ticketData, error: ticketError } = await supabaseAny.from('tickets')
       .select('*')
       .eq('id', request.ticket_id)
       .single()
@@ -309,8 +307,7 @@ export async function reserveTickets(
     const expiresAt = new Date()
     expiresAt.setMinutes(expiresAt.getMinutes() + 10)
 
-    const { data, error } = await supabase
-      .from('ticket_reservations')
+    const { data, error } = await supabaseAny.from('ticket_reservations')
       .insert({
         event_id: request.event_id,
         user_id: (await supabase.auth.getUser()).data.user?.id,
@@ -344,8 +341,7 @@ export async function reserveTickets(
  */
 export async function getUserPurchases(): Promise<{ data: Purchase[]; error: Error | null }> {
   try {
-    const { data, error } = await supabase
-      .from('purchases')
+    const { data, error } = await supabaseAny.from('purchases')
       .select(
         `
         id,
@@ -377,3 +373,6 @@ export async function getUserPurchases(): Promise<{ data: Purchase[]; error: Err
     }
   }
 }
+
+
+
