@@ -24,6 +24,7 @@ import type {
   GetCalendarRequest,
   GetCalendarResponse,
 } from '../../types/staffAndFan'
+import * as fakeService from '../fake/fanFakeService'
 
 const supabaseAny = supabase as any
 
@@ -38,6 +39,8 @@ export async function followOrg(
   orgId: string,
   source: 'manual' | 'post_purchase' | 'import' = 'manual'
 ): Promise<{ data: boolean; error: Error | null }> {
+  if (USE_FAKE_DATA) return fakeService.followOrg(orgId, source)
+
   try {
     const { error } = await supabaseAny.rpc('follow_org', {
       p_org_id: orgId,
@@ -59,6 +62,8 @@ export async function followOrg(
  * Unfollow an organization
  */
 export async function unfollowOrg(orgId: string): Promise<{ data: boolean; error: Error | null }> {
+  if (USE_FAKE_DATA) return fakeService.unfollowOrg(orgId)
+
   try {
     const { error } = await supabaseAny.rpc('unfollow_org', {
       p_org_id: orgId,
@@ -79,6 +84,8 @@ export async function unfollowOrg(orgId: string): Promise<{ data: boolean; error
  * Get followed organizations
  */
 export async function getFollowedOrgs(): Promise<{ data: FanOrgFollow[]; error: Error | null }> {
+  if (USE_FAKE_DATA) return fakeService.getFollowedOrgs()
+
   try {
     const { data, error } = await supabaseAny.from('fan_org_follows')
       .select(
@@ -115,12 +122,7 @@ export async function getFollowedOrgs(): Promise<{ data: FanOrgFollow[]; error: 
  * Bookmark an event
  */
 export async function bookmarkEvent(eventId: string): Promise<{ data: boolean; error: Error | null }> {
-  if (USE_FAKE_DATA) {
-    return {
-      data: false,
-      error: new Error(t('portal.fan.errors.bookmarkNotAvailable')),
-    }
-  }
+  if (USE_FAKE_DATA) return fakeService.bookmarkEvent(eventId)
 
   try {
     const { error } = await supabaseAny.rpc('bookmark_event', {
@@ -142,6 +144,8 @@ export async function bookmarkEvent(eventId: string): Promise<{ data: boolean; e
  * Remove bookmark
  */
 export async function removeBookmark(eventId: string): Promise<{ data: boolean; error: Error | null }> {
+  if (USE_FAKE_DATA) return fakeService.removeBookmark(eventId)
+
   try {
     const { error } = await supabaseAny.rpc('remove_bookmark', {
       p_event_id: eventId,
@@ -162,6 +166,8 @@ export async function removeBookmark(eventId: string): Promise<{ data: boolean; 
  * Get bookmarked events
  */
 export async function getBookmarkedEvents(): Promise<{ data: FanEventBookmark[]; error: Error | null }> {
+  if (USE_FAKE_DATA) return fakeService.getBookmarkedEvents()
+
   try {
     const { data, error } = await supabaseAny.from('fan_event_bookmarks')
       .select(
@@ -170,7 +176,7 @@ export async function getBookmarkedEvents(): Promise<{ data: FanEventBookmark[];
         user_id,
         event_id,
         created_at,
-        event:events(id, title, start_time, end_time, location)
+        event:events(id, title, start_time, end_time, location, timezone)
         `
       )
       .order('created_at', { ascending: false })
@@ -199,6 +205,8 @@ export async function getBookmarkedEvents(): Promise<{ data: FanEventBookmark[];
 export async function getFanCalendar(
   request: GetCalendarRequest = {}
 ): Promise<{ data: GetCalendarResponse | null; error: Error | null }> {
+  if (USE_FAKE_DATA) return fakeService.getFanCalendar(request)
+
   try {
     const { data: userData } = await supabase.auth.getUser()
     const userId = userData.user?.id
@@ -264,6 +272,8 @@ export async function getFanCalendar(
 export async function transferTicket(
   request: TicketTransferRequest
 ): Promise<{ data: TransferableTicket | null; error: Error | null }> {
+  if (USE_FAKE_DATA) return fakeService.transferTicket(request)
+
   try {
     const { error } = await supabaseAny.rpc('transfer_ticket', {
       p_ticket_id: request.ticket_id,
@@ -303,6 +313,8 @@ export async function transferTicket(
 export async function reserveTickets(
   request: ReserveTicketsRequest
 ): Promise<{ data: ReserveTicketsResponse | null; error: Error | null }> {
+  if (USE_FAKE_DATA) return fakeService.reserveTickets(request)
+
   try {
     const expiresAt = new Date()
     expiresAt.setMinutes(expiresAt.getMinutes() + 10)
@@ -340,6 +352,8 @@ export async function reserveTickets(
  * Get user's purchases
  */
 export async function getUserPurchases(): Promise<{ data: Purchase[]; error: Error | null }> {
+  if (USE_FAKE_DATA) return fakeService.getUserPurchases()
+
   try {
     const { data, error } = await supabaseAny.from('purchases')
       .select(

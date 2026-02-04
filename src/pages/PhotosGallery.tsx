@@ -27,7 +27,7 @@ import Button from '../components/portal/Button'
 import { PhotoUploader } from '../components/gallery/PhotoUploader'
 import { ParentPhotoUpload } from '../components/gallery/ParentPhotoUpload'
 import { ModerationQueue } from '../components/gallery/ModerationQueue'
-import { AthleteTaggingSlideout } from '../components/gallery/AthleteTaggingSlideout'
+import { TaggingSlideout } from '../components/gallery/TaggingSlideout'
 import { BulkTaggingModal } from '../components/gallery/BulkTaggingModal'
 import { getLink } from '../utils/routes'
 import { useI18n } from '../i18n/useI18n'
@@ -47,6 +47,7 @@ export default function PhotosGallery() {
   const [canUpload, setCanUpload] = useState(false)
   const [showParentUpload, setShowParentUpload] = useState(false)
   const [taggingPhoto, setTaggingPhoto] = useState<GalleryPhoto | null>(null)
+  const [taggingPhotoIndex, setTaggingPhotoIndex] = useState<number>(-1)
   const [bulkTaggingPhotos, setBulkTaggingPhotos] = useState<GalleryPhoto[]>([])
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
   const [filterAthleteId, setFilterAthleteId] = useState<string | null>(null)
@@ -309,7 +310,10 @@ export default function PhotosGallery() {
                           }
                         : {}
                     }
-                    onClick={() => setLightboxIndex(index)}
+                    onClick={() => {
+                      setTaggingPhoto(photo)
+                      setTaggingPhotoIndex(index)
+                    }}
                   >
                     <img
                       alt={photo.caption || `Photo ${index + 1}`}
@@ -404,24 +408,64 @@ export default function PhotosGallery() {
               src: getGalleryPhotoUrl(photo.storage_path),
               alt: photo.caption || 'Gallery photo',
             }))}
+            render={{
+              toolbar: ({ state }) => (
+                <div className="yarl__toolbar">
+                  {canModerate && (
+                    <button
+                      className="yarl__button"
+                      onClick={() => {
+                        const currentIndex = state.currentIndex;
+                        setTaggingPhoto(photos[currentIndex]);
+                        setTaggingPhotoIndex(currentIndex);
+                        setLightboxIndex(-1);
+                      }}
+                      aria-label="Tag people"
+                    >
+                      <Icon name="tag" size="text-xl" />
+                    </button>
+                  )}
+                </div>
+              ),
+            }}
           />
         </>
       )}
 
       {/* Tagging slideout */}
-      {taggingPhoto && (
-        <AthleteTaggingSlideout
+      {taggingPhoto && gallery && (
+        <TaggingSlideout
           photo={taggingPhoto}
+          gallery={gallery}
           isOpen={!!taggingPhoto}
-          onClose={() => setTaggingPhoto(null)}
-          onSave={() => {
+          onClose={() => {
+            setTaggingPhoto(null)
+            setTaggingPhotoIndex(-1)
+          }}
+          onOpenLightbox={() => {
+            setLightboxIndex(taggingPhotoIndex >= 0 ? taggingPhotoIndex : 0)
+            setTaggingPhoto(null)
+            setTaggingPhotoIndex(-1)
+          }}
+          onSave={async ({ advanceToNext }) => {
             // Reload photos to get updated tags
             if (id) {
-              getPhotosForGallery(context, { gallery_id: id }).then((result) => {
-                if (result.data) {
-                  setPhotos(result.data)
+              const result = await getPhotosForGallery(context, { gallery_id: id })
+              if (result.data) {
+                setPhotos(result.data)
+                // If advancing to next, update tagging photo
+                if (advanceToNext && taggingPhotoIndex >= 0) {
+                  const nextIndex = taggingPhotoIndex + 1
+                  if (nextIndex < result.data.length) {
+                    setTaggingPhoto(result.data[nextIndex])
+                    setTaggingPhotoIndex(nextIndex)
+                  } else {
+                    // No more photos, close slideout
+                    setTaggingPhoto(null)
+                    setTaggingPhotoIndex(-1)
+                  }
                 }
-              })
+              }
             }
           }}
         />

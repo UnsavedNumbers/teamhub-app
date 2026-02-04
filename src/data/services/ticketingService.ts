@@ -737,7 +737,7 @@ export async function createCheckoutSession(
           sessionId: 'debug-session',
           hypothesisId: 'A',
         }),
-      }).catch(() => {})
+      }).catch(() => { })
       // #endregion
       return createServiceResponse<CreateCheckoutResponse>(null, new Error(errorData.error || 'Failed to create checkout'))
     }
@@ -811,6 +811,16 @@ export interface ResendTicketsResponse {
 export async function resendTickets(
   request: ResendTicketsRequest,
 ): Promise<{ data: ResendTicketsResponse | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    try {
+      // Import dynamically to avoid circular dependencies if any, or just use what we have
+      const result = await import('../fake/ticketingFakeService').then(m => m.resendFakeTickets(request.order_id, request.email))
+      return createServiceResponse<ResendTicketsResponse>(result, null)
+    } catch (error: any) {
+      return createServiceResponse<ResendTicketsResponse>(null, error)
+    }
+  }
+
   try {
     const response = await fetch(`${FUNCTIONS_URL}/resend-tickets`, {
       method: 'POST',
