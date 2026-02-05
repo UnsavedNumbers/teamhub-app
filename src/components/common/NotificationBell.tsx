@@ -32,7 +32,7 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
     setError(null)
     const { data, error: fetchError } = await getNotifications(context, 10)
     if (fetchError) {
-      const message = fetchError.message || t('common.error')
+      const message = fetchError.message || t('common.error.label')
       setError(message)
       showError(message)
       setLoading(false)

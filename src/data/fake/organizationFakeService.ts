@@ -7,6 +7,7 @@
 import { FAKE_DATA_DELAY_MS } from '../config'
 import type { Organization } from '../../types/domain/Organization'
 import type { OrganizationUpdateDTO } from '../services/organizationService'
+import { t } from '../../i18n'
 import {
   fakeOrganizations,
   type FakeOrganization,
@@ -180,6 +181,43 @@ export async function updateOrganizationSlug(
     return { error: null }
   } catch (err) {
     return { error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+export async function getOrganizationSlug(
+  orgId: string
+): Promise<{ data: string | null; error: Error | null }> {
+  try {
+    if (!orgId) return { data: null, error: new Error(t('common.error.notFound' as any)) }
+
+    await simulateDelay()
+
+    const org = organizationStore.get(orgId) ?? getOrganizationById(orgId)
+    if (!org) return { data: null, error: new Error(t('common.error.notFound' as any)) }
+
+    return { data: org.slug ?? null, error: null }
+  } catch (err) {
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+export async function checkOrganizationSlugAvailability(
+  slug: string,
+  orgId?: string
+): Promise<{ available: boolean; error: Error | null }> {
+  try {
+    if (!slug) return { available: false, error: new Error(t('formFields.invalidSelection' as any)) }
+
+    await simulateDelay()
+
+    const normalized = slug.toLowerCase().trim()
+    const collision = [...organizationStore.values()].find(
+      (org) => org.slug === normalized && org.id !== orgId
+    )
+
+    return { available: !collision, error: null }
+  } catch (err) {
+    return { available: false, error: err instanceof Error ? err : new Error('Unknown error') }
   }
 }
 

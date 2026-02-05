@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, Button, Input, Select } from '../platformAdmin'
+import { FanVisibilityToggle } from './FanVisibilityToggle'
 import { cn } from '../../utils/cn'
 import { 
   getAnnouncementTypeOptions, 
@@ -24,7 +25,8 @@ interface CreateAnnouncementModalProps {
     priority: 'normal' | 'urgent', 
     teamId: string | null,
     type: AnnouncementType,
-    isOrgWide: boolean
+    isOrgWide: boolean,
+    visibleToFans: boolean
   ) => Promise<void>
   teams: Team[]
   selectedTeamId: string | null
@@ -46,6 +48,7 @@ export default function CreateAnnouncementModal({
   const [type, setType] = useState<AnnouncementType>('general')
   const [isOrgWide, setIsOrgWide] = useState(false)
   const [teamId, setTeamId] = useState(selectedTeamId || (teams.length > 0 ? teams[0].id : ''))
+  const [visibleToFans, setVisibleToFans] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -70,6 +73,7 @@ export default function CreateAnnouncementModal({
       setPriority('normal')
       setType('general')
       setIsOrgWide(false)
+      setVisibleToFans(false)
       setError(null)
     }
   }, [isOpen, selectedTeamId, sortedTeams])
@@ -96,7 +100,8 @@ export default function CreateAnnouncementModal({
         priority, 
         isOrgWide ? null : teamId,
         type,
-        isOrgWide
+        isOrgWide,
+        visibleToFans
       )
       // Reset form only on success (onClose will be called by parent)
       setTitle('')
@@ -104,6 +109,7 @@ export default function CreateAnnouncementModal({
       setPriority('normal')
       setType('general')
       setIsOrgWide(false)
+      setVisibleToFans(false)
       setTeamId(selectedTeamId || (sortedTeams.length > 0 ? sortedTeams[0].id : ''))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create announcement. Please try again.'
@@ -290,6 +296,16 @@ export default function CreateAnnouncementModal({
                     {t('admin.announcements.priorityUrgent')}
                   </button>
                 </div>
+              </div>
+
+              {/* Fan Visibility */}
+              <div className="pa-form-group">
+                <FanVisibilityToggle
+                  checked={visibleToFans}
+                  onChange={setVisibleToFans}
+                  entityType="announcement"
+                  disabled={loading}
+                />
               </div>
 
               <div className="pa-form-actions">

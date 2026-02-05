@@ -11,7 +11,7 @@ import { useI18n } from '../../i18n/useI18n'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
 import { refreshOrganizationTheme } from '../../hooks/useOrganizationTheme'
-import { validateSlugFormat, normalizeSlug, invalidateSlugCache } from '../../utils/orgResolution'
+import { validateSlugFormat, normalizeSlug, invalidateSlugCache, type SlugValidationErrorCode } from '../../utils/orgResolution'
 import PublicUrlBanner, { QUERY_KEY_ORG_SLUG } from '@/components/admin/PublicUrlBanner'
 import { 
   AdminPageHeader, 
@@ -34,6 +34,9 @@ import {
   getOrganizationDetails, 
   updateOrganizationDetails,
   uploadOrganizationLogo,
+  getOrganizationSlug,
+  checkOrganizationSlugAvailability,
+  updateOrganizationSlug,
   type OrganizationUpdateDTO 
 } from '../../data/services/organizationService'
 
@@ -55,10 +58,11 @@ import {
   getStripeConnectStatus,
   refreshStripeConnectStatus,
   createStripeRemediationLink,
+  getOrganizationPaymentPolicy,
+  updateOrganizationPaymentPolicy,
 } from '../../data/services/paymentSettingsService'
 
 import type { StripeConnectStatus } from '../../types/stripeConnect.types'
-import { supabase } from '../../lib/supabase'
 
 import { type OrganizationSettings as OrgSettingsType } from '@/types/organizationSettings'
 import ContactSection from './organizationSettings/ContactSection'
@@ -164,11 +168,11 @@ export default function OrganizationSettings() {
       setSettings(settingsResult.data)
       setThemeSettings(themeResult.data)
     } catch (err) {
-      setError(getErrorMessage(err) || 'Failed to load organization settings')
+      setError(getErrorMessage(err) || t('admin.organizationSettings.messages.loadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [isReady, currentOrganization?.id, context])
+  }, [isReady, currentOrganization?.id, context, t])
 
   useEffect(() => {
     loadData()
@@ -183,7 +187,7 @@ export default function OrganizationSettings() {
 
     try {
       if (!navigator.onLine) {
-        throw new Error('You appear to be offline. Please reconnect and try again.')
+        throw new Error(t('common.error.offline'))
       }
 
       let logoPath: string | undefined
@@ -192,7 +196,7 @@ export default function OrganizationSettings() {
       if (logoFile) {
         const { path, error: uploadError } = await uploadOrganizationLogo(currentOrganization.id, logoFile)
         if (uploadError) throw uploadError
-        if (!path) throw new Error('Failed to upload logo')
+        if (!path) throw new Error(t('admin.organizationSettings.messages.logoUploadFailed'))
         logoPath = path
       }
 
@@ -209,9 +213,9 @@ export default function OrganizationSettings() {
       if (updateError) throw updateError
       
       setOrgDetails(updatedOrg)
-      showSuccess('Organization profile updated successfully')
+      showSuccess(t('admin.organizationSettings.messages.profileUpdated'))
     } catch (err) {
-      const errorMessage = getErrorMessage(err) || 'Failed to update profile'
+      const errorMessage = getErrorMessage(err) || t('admin.organizationSettings.messages.profileUpdateFailed')
       setError(errorMessage)
       showError(errorMessage)
     } finally {
@@ -227,7 +231,7 @@ export default function OrganizationSettings() {
 
     try {
       if (!navigator.onLine) {
-        throw new Error('You appear to be offline. Please reconnect and try again.')
+        throw new Error(t('common.error.offline'))
       }
 
       let result: { error: Error | null } = { error: null }
@@ -255,10 +259,10 @@ export default function OrganizationSettings() {
 
       if (result.error) throw result.error
 
-      showSuccess('Settings updated successfully')
+      showSuccess(t('admin.organizationSettings.messages.settingsUpdated'))
       loadData() // Reload to get fresh timestamps
     } catch (err) {
-      const errorMessage = getErrorMessage(err) || 'Failed to update settings'
+      const errorMessage = getErrorMessage(err) || t('admin.organizationSettings.messages.settingsUpdateFailed')
       setError(errorMessage)
       showError(errorMessage)
     } finally {
@@ -284,14 +288,14 @@ export default function OrganizationSettings() {
 
       if (result.error) throw result.error
 
-      setSuccess('Theme updated successfully')
+      setSuccess(t('admin.organizationSettings.messages.themeUpdated'))
       const refreshedTheme = await getOrganizationThemeSettings(context)
       if (refreshedTheme.error) throw refreshedTheme.error
       setThemeSettings(refreshedTheme.data)
       
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
-      setError(getErrorMessage(err) || 'Failed to update theme')
+      setError(getErrorMessage(err) || t('admin.organizationSettings.messages.themeUpdateFailed'))
       // Revert theme on error by re-fetching
       refreshOrganizationTheme(themeSettings.theme_id)
     } finally {
@@ -303,14 +307,14 @@ export default function OrganizationSettings() {
   if (!isReady || loading) {
     return (
       <div className="pa-page">
-        <div className="pa-page-loading">Loading settings...</div>
+        <div className="pa-page-loading">{t('admin.organizationSettings.loading')}</div>
       </div>
     )
   }
 
   return (
     <div className="pa-root">
-      <AdminPageHeader title="Organization Settings" />
+      <AdminPageHeader title={t('admin.organizationSettings.title')} />
       
       {error && (
         <div className="pa-alert pa-alert-error Pa-mb-4" style={{ background: 'var(--pa-danger-bg)', color: 'var(--pa-danger)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
@@ -326,18 +330,18 @@ export default function OrganizationSettings() {
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="pa-tabs">
         <TabsList className="pa-mb-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="contact">Contact</TabsTrigger>
+          <TabsTrigger value="overview">{t('admin.organizationSettings.tabs.overview')}</TabsTrigger>
+          <TabsTrigger value="contact">{t('admin.organizationSettings.tabs.contact')}</TabsTrigger>
           {/* Travel contacts merged into Contact tab */}
-          <TabsTrigger value="general">Configuration</TabsTrigger>
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
-          <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          <TabsTrigger value="registration">Registration</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="permissions">Permissions</TabsTrigger>
-          <TabsTrigger value="staff">{t('admin.organizationSettings.organizationStaff' as any)}</TabsTrigger>
-          {hasPaymentAccess && <TabsTrigger value="payments">Payments</TabsTrigger>}
-          <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          <TabsTrigger value="general">{t('admin.organizationSettings.tabs.general')}</TabsTrigger>
+          <TabsTrigger value="appearance">{t('admin.organizationSettings.tabs.appearance')}</TabsTrigger>
+          <TabsTrigger value="attendance">{t('admin.organizationSettings.tabs.attendance')}</TabsTrigger>
+          <TabsTrigger value="registration">{t('admin.organizationSettings.tabs.registration')}</TabsTrigger>
+          <TabsTrigger value="notifications">{t('admin.organizationSettings.tabs.notifications')}</TabsTrigger>
+          <TabsTrigger value="permissions">{t('admin.organizationSettings.tabs.permissions')}</TabsTrigger>
+          <TabsTrigger value="staff">{t('admin.organizationSettings.tabs.staff')}</TabsTrigger>
+          {hasPaymentAccess && <TabsTrigger value="payments">{t('admin.organizationSettings.tabs.payments')}</TabsTrigger>}
+          <TabsTrigger value="advanced">{t('admin.organizationSettings.tabs.advanced')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -358,11 +362,11 @@ export default function OrganizationSettings() {
             <div className="mt-6">
               <PublicUrlBanner
                 orgId={currentOrganization.id}
-                title="Where to direct users (public links)"
-                description="Share these links with families and guests. Use the event detail page to share links to specific events."
+                title={t('admin.organizationSettings.publicLinks.title')}
+                description={t('admin.organizationSettings.publicLinks.description')}
                 links={[
-                  { label: 'Landing', path: '' },
-                  { label: 'Tickets', path: 'tickets' },
+                  { label: t('admin.organizationSettings.publicLinks.links.landing'), path: '' },
+                  { label: t('admin.organizationSettings.publicLinks.links.tickets'), path: 'tickets' },
                 ]}
               />
             </div>
@@ -429,18 +433,15 @@ export default function OrganizationSettings() {
 const SLUG_DEBOUNCE_MS = 500
 
 function PublicUrlSlugForm({ orgId, initialSlug }: { orgId: string; initialSlug?: string | null }) {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
-  const { data: currentSlug, isFetched } = useQuery({
+  const { data: currentSlug, isFetched, error: slugLoadError } = useQuery({
     queryKey: [QUERY_KEY_ORG_SLUG, orgId],
-      queryFn: async () => {
-        const { data, error } = await supabase
-          .from('organizations')
-          .select('slug')
-          .eq('id', orgId)
-          .maybeSingle()
-        if (error || !data?.slug) return null
-        return data.slug
-      },
+    queryFn: async () => {
+      const { data, error } = await getOrganizationSlug(orgId)
+      if (error) throw error
+      return data
+    },
     enabled: !!orgId,
     initialData: initialSlug !== undefined ? initialSlug : undefined,
   })
@@ -450,6 +451,7 @@ function PublicUrlSlugForm({ orgId, initialSlug }: { orgId: string; initialSlug?
   const [slugError, setSlugError] = useState<string | null>(null)
   const [slugTaken, setSlugTaken] = useState<boolean>(false)
   const [slugChecking, setSlugChecking] = useState(false)
+  const [slugCheckError, setSlugCheckError] = useState<string | null>(null)
   const lastSyncedSlug = useRef<string | null | undefined>(undefined)
   const resolvedSlug = currentSlug ?? (initialSlug ?? null)
   const canSyncSlug = isFetched || initialSlug !== undefined
@@ -464,26 +466,57 @@ function PublicUrlSlugForm({ orgId, initialSlug }: { orgId: string; initialSlug?
     setInput(serverSlug)
   }, [canSyncSlug, resolvedSlug, input])
 
+  const getValidationMessage = (code?: SlugValidationErrorCode) => {
+    if (!code) return null
+    switch (code) {
+      case 'too_short':
+        return t('admin.organizationSettings.publicSlug.validation.tooShort')
+      case 'too_long':
+        return t('admin.organizationSettings.publicSlug.validation.tooLong')
+      case 'invalid_format':
+        return t('admin.organizationSettings.publicSlug.validation.invalidFormat')
+      case 'reserved':
+        return t('admin.organizationSettings.publicSlug.validation.reserved')
+      default:
+        return t('admin.organizationSettings.publicSlug.validation.invalid')
+    }
+  }
+
   // Debounced uniqueness check
   useEffect(() => {
     const normalized = normalizeSlug(input)
     if (!normalized || normalized.length < 3) {
       setSlugTaken(false)
       setSlugChecking(false)
+      setSlugCheckError(null)
+      return
+    }
+    if (resolvedSlug && normalized === resolvedSlug) {
+      setSlugTaken(false)
+      setSlugChecking(false)
+      setSlugCheckError(null)
+      return
+    }
+    if (!navigator.onLine) {
+      setSlugTaken(false)
+      setSlugChecking(false)
+      setSlugCheckError(t('common.error.offline'))
       return
     }
     setSlugChecking(true)
-    const t = setTimeout(async () => {
-      const { data } = await supabase
-        .from('organizations')
-        .select('id')
-        .eq('slug', normalized)
-        .maybeSingle()
-      setSlugTaken(!!(data && data.id !== orgId))
+    const timer = setTimeout(async () => {
+      const { available, error } = await checkOrganizationSlugAvailability(normalized, orgId)
+      if (error) {
+        setSlugTaken(false)
+        setSlugCheckError(getErrorMessage(error) || t('admin.organizationSettings.publicSlug.checkFailed'))
+      } else {
+        setSlugTaken(!available)
+        setSlugCheckError(null)
+      }
       setSlugChecking(false)
     }, SLUG_DEBOUNCE_MS)
-    return () => clearTimeout(t)
-  }, [input, orgId])
+    return () => clearTimeout(timer)
+  }, [input, orgId, resolvedSlug, t])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -491,33 +524,35 @@ function PublicUrlSlugForm({ orgId, initialSlug }: { orgId: string; initialSlug?
     const normalizedSlug = normalizeSlug(input)
     const formatCheck = validateSlugFormat(normalizedSlug)
     if (!formatCheck.valid) {
-      setSlugError(formatCheck.error ?? 'Invalid slug')
+      setSlugError(getValidationMessage(formatCheck.code) ?? t('admin.organizationSettings.publicSlug.validation.invalid'))
       return
     }
     if (slugTaken) {
-      setSlugError('This URL slug is already taken.')
+      setSlugError(t('admin.organizationSettings.publicSlug.taken'))
+      return
+    }
+    if (slugCheckError) {
+      setSlugError(slugCheckError)
+      return
+    }
+    if (!navigator.onLine) {
+      setSlugError(t('common.error.offline'))
       return
     }
     setSaving(true)
     try {
-      const { error } = await (supabase as any).rpc('update_org_slug', {
-        p_org_id: orgId,
-        p_new_slug: normalizedSlug,
-      })
-      if (error) {
-        setSlugError(error.message)
-        setSaving(false)
-        return
-      }
+      const { error } = await updateOrganizationSlug(orgId, normalizedSlug)
+      if (error) throw error
       const previousSlug = resolvedSlug ?? null
       await queryClient.invalidateQueries({ queryKey: [QUERY_KEY_ORG_SLUG, orgId] })
       await queryClient.refetchQueries({ queryKey: [QUERY_KEY_ORG_SLUG, orgId] })
       if (previousSlug) invalidateSlugCache(previousSlug)
       setInput(normalizedSlug)
-      showSuccess('Public URL slug updated.')
+      showSuccess(t('admin.organizationSettings.publicSlug.updateSuccess'))
     } catch (err) {
-      setSlugError(getErrorMessage(err) ?? 'Failed to update slug')
-      showError(getErrorMessage(err) ?? 'Failed to update slug')
+      const message = getErrorMessage(err) ?? t('admin.organizationSettings.publicSlug.updateFailed')
+      setSlugError(message)
+      showError(message)
     } finally {
       setSaving(false)
     }
@@ -534,29 +569,35 @@ function PublicUrlSlugForm({ orgId, initialSlug }: { orgId: string; initialSlug?
     return !validateSlugFormat(n).valid
   })()
 
-  const canSubmit = !saving && normalizeSlug(input).length >= 3 && !slugTaken && !isInvalidFormat
+  const isUnchanged = normalizeSlug(input) === (resolvedSlug ?? '')
+  const canSubmit = !saving && !slugChecking && normalizeSlug(input).length >= 3 && !slugTaken && !isInvalidFormat && !slugCheckError && !isUnchanged
 
   return (
     <Card>
-      <h3 className="pa-h3 pa-mb-2">Public URL slug</h3>
+      <h3 className="pa-h3 pa-mb-2">{t('admin.organizationSettings.publicSlug.title')}</h3>
       <p className="pa-text-muted pa-mb-4">
-        This slug is used in your public URLs (e.g. youthsports.team/o/{resolvedSlug || '{slug}'}/tickets). It must be unique and URL-friendly.
+        {t('admin.organizationSettings.publicSlug.description', { slug: resolvedSlug || '{slug}' })}
       </p>
+      {slugLoadError && (
+        <p className="pa-text-sm pa-text-danger pa-mb-4" role="alert">
+          {getErrorMessage(slugLoadError) || t('admin.organizationSettings.publicSlug.loadFailed')}
+        </p>
+      )}
       {resolvedSlug ? (
         <p className="pa-text-sm pa-mb-4">
-          Current slug: <strong>{resolvedSlug}</strong>. Changing it will create a redirect from the old URL for 12 months.
+          {t('admin.organizationSettings.publicSlug.currentSlug', { slug: resolvedSlug })}
         </p>
       ) : (
-        <p className="pa-text-sm pa-mb-4">Not set. Set your public URL slug below.</p>
+        <p className="pa-text-sm pa-mb-4">{t('admin.organizationSettings.publicSlug.noneSet')}</p>
       )}
       <form onSubmit={handleSubmit}>
         <div className="pa-form-group pa-mb-4">
           <Input
-            label="Slug"
+            label={t('admin.organizationSettings.publicSlug.label')}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onBlur={handleBlur}
-            placeholder="e.g. my-league"
+            placeholder={t('admin.organizationSettings.publicSlug.placeholder')}
             disabled={saving}
             aria-describedby={slugError ? 'slug-error' : undefined}
           />
@@ -566,20 +607,25 @@ function PublicUrlSlugForm({ orgId, initialSlug }: { orgId: string; initialSlug?
             </p>
           )}
           {slugTaken && (
-            <p className="pa-text-sm pa-text-danger pa-mt-1">This URL slug is already taken.</p>
+            <p className="pa-text-sm pa-text-danger pa-mt-1">{t('admin.organizationSettings.publicSlug.taken')}</p>
+          )}
+          {slugCheckError && !slugError && (
+            <p className="pa-text-sm pa-text-danger pa-mt-1" role="alert">
+              {slugCheckError}
+            </p>
           )}
           {slugChecking && (
-            <p className="pa-text-sm pa-text-muted pa-mt-1">Checking availability…</p>
+            <p className="pa-text-sm pa-text-muted pa-mt-1">{t('admin.organizationSettings.publicSlug.checking')}</p>
           )}
           {isInvalidFormat && input.trim().length > 0 && !slugError && (
             <p className="pa-text-sm pa-text-danger pa-mt-1">
-              {validateSlugFormat(normalizeSlug(input)).error}
+              {getValidationMessage(validateSlugFormat(normalizeSlug(input)).code) ?? t('admin.organizationSettings.publicSlug.validation.invalid')}
             </p>
           )}
         </div>
         <div className="pa-form-actions">
           <Button type="submit" variant="primary" loading={saving} disabled={!canSubmit}>
-            Save slug
+            {t('admin.organizationSettings.publicSlug.save')}
           </Button>
         </div>
       </form>
@@ -588,6 +634,7 @@ function PublicUrlSlugForm({ orgId, initialSlug }: { orgId: string; initialSlug?
 }
 
 function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (data: OrganizationUpdateDTO, file?: File) => void, loading: boolean }) {
+  const { t } = useI18n()
   const { control, handleSubmit, setValue, trigger } = useForm<OrganizationUpdateDTO>({
     defaultValues: {
       name: org.name,
@@ -615,51 +662,51 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
         <div className="pa-form-grid pa-form-grid-2">
           {/* Left Column: Basic Info */}
           <div className="pa-flex pa-flex-col pa-gap-4">
-            <h3 className="pa-h3 pa-mb-2">Basic Info</h3>
+            <h3 className="pa-h3 pa-mb-2">{t('admin.organizationSettings.overview.basicInfo')}</h3>
             <div className="pa-form-group">
-              <Controller name="name" control={control} rules={{required: 'Name is required'}} render={({field}) => (
-                 <Input {...field} label="Organization Name" required />
+              <Controller name="name" control={control} rules={{required: t('formFields.required')}} render={({field}) => (
+                 <Input {...field} label={t('admin.organizationSettings.overview.orgName')} required />
               )} />
             </div>
             
             <div className="pa-form-grid pa-form-grid-2">
               <Controller name="email" control={control} render={({field}) => (
-                <Input {...field} value={field.value || ''} label="Contact Email" type="email" />
+                <Input {...field} value={field.value || ''} label={t('admin.organizationSettings.overview.contactEmail')} type="email" />
               )} />
               <Controller name="phone" control={control} render={({field}) => (
-                <Input {...field} value={field.value || ''} label="Phone" type="tel" />
+                <Input {...field} value={field.value || ''} label={t('admin.organizationSettings.overview.phone')} type="tel" />
               )} />
             </div>
             
             <div className="pa-form-group">
                <Controller name="website" control={control} render={({field}) => (
-                <Input {...field} value={field.value || ''} label="Website" type="url" />
+                <Input {...field} value={field.value || ''} label={t('admin.organizationSettings.overview.website')} type="url" />
               )} />
             </div>
           </div>
           
           {/* Right Column: Logo */}
           <div>
-            <h3 className="pa-h3 pa-mb-2">Logo</h3>
+            <h3 className="pa-h3 pa-mb-2">{t('admin.organizationSettings.overview.logo')}</h3>
             <FileUpload
               accept="image/png,image/jpeg"
               maxSize={2 * 1024 * 1024}
-              helperText="Upload a PNG or JPG logo"
+              helperText={t('admin.organizationSettings.overview.logoHelp')}
               value={logoFile || null}
               onFileSelect={(file) => {
                 setLogoFile(file || undefined)
                 setLogoError(null)
               }}
               disabled={loading}
-              buttonText="Choose file"
-              replaceText="Replace file"
+              buttonText={t('admin.organizationSettings.overview.logoChoose')}
+              replaceText={t('admin.organizationSettings.overview.logoReplace')}
               error={logoError}
             />
           </div>
         </div>
         
         <div className="pa-mt-6">
-          <h3 className="pa-h3 pa-mb-4">Location</h3>
+          <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.overview.location')}</h3>
           <div className="pa-form-group pa-mb-4">
             <Controller
               name="address"
@@ -682,27 +729,27 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
                       trigger(['address', 'city', 'state', 'zip'])
                     })
                   }}
-                  label="Address"
-                  placeholder="Enter organization address"
+                  label={t('admin.organizationSettings.overview.address')}
+                  placeholder={t('admin.organizationSettings.overview.addressPlaceholder')}
                 />
               )}
             />
           </div>
           <div className="pa-form-grid pa-form-grid-3">
              <Controller name="city" control={control} render={({field}) => (
-               <Input {...field} value={field.value || ''} label="City" />
+               <Input {...field} value={field.value || ''} label={t('admin.organizationSettings.overview.city')} />
             )} />
              <Controller name="state" control={control} render={({field}) => (
-               <Input {...field} value={field.value || ''} label="State" />
+               <Input {...field} value={field.value || ''} label={t('admin.organizationSettings.overview.state')} />
             )} />
              <Controller name="zip" control={control} render={({field}) => (
-               <Input {...field} value={field.value || ''} label="Zip Code" />
+               <Input {...field} value={field.value || ''} label={t('admin.organizationSettings.overview.zip')} />
             )} />
           </div>
         </div>
 
         <div className="pa-form-actions">
-          <Button type="submit" loading={loading} variant="primary">Save Profile</Button>
+          <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.overview.save')}</Button>
         </div>
       </form>
     </Card>
@@ -710,6 +757,7 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
 }
 
 function GeneralConfigForm({ settings, onSave, loading }: { settings: OrgSettingsType['general'], onSave: (d: any) => void, loading: boolean }) {
+  const { t } = useI18n()
   const { control, handleSubmit, reset } = useForm({
     defaultValues: {
       organization_name: settings.organization_name,
@@ -727,30 +775,37 @@ function GeneralConfigForm({ settings, onSave, loading }: { settings: OrgSetting
   }, [reset, settings.organization_name, settings.timezone, settings.default_language])
 
   const timezones = [
-    { value: 'America/New_York', label: 'Eastern Time' },
-    { value: 'America/Chicago', label: 'Central Time' },
-    { value: 'America/Denver', label: 'Mountain Time' },
-    { value: 'America/Los_Angeles', label: 'Pacific Time' },
+    { value: 'America/New_York', label: t('admin.organizationSettings.general.timezones.eastern') },
+    { value: 'America/Chicago', label: t('admin.organizationSettings.general.timezones.central') },
+    { value: 'America/Denver', label: t('admin.organizationSettings.general.timezones.mountain') },
+    { value: 'America/Los_Angeles', label: t('admin.organizationSettings.general.timezones.pacific') },
   ]
 
   return (
     <Card>
       <form onSubmit={handleSubmit(onSave)}>
-        <h3 className="pa-h3 pa-mb-4">System Defaults</h3>
+        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.general.title')}</h3>
         <div className="pa-form-grid pa-form-grid-2">
           <div className="pa-form-group">
             <Controller name="timezone" control={control} render={({field}) => (
-               <Select {...field} label="Organization Timezone" options={timezones} />
+               <Select {...field} label={t('admin.organizationSettings.general.timezoneLabel')} options={timezones} />
             )} />
           </div>
            <div className="pa-form-group">
             <Controller name="default_language" control={control} render={({field}) => (
-               <Select {...field} label="Default Language" options={[{value: 'en', label: 'English'}, {value: 'es', label: 'Spanish'}]} />
+               <Select
+                 {...field}
+                 label={t('admin.organizationSettings.general.languageLabel')}
+                 options={[
+                   { value: 'en', label: t('admin.organizationSettings.general.languages.english') },
+                   { value: 'es', label: t('admin.organizationSettings.general.languages.spanish') }
+                 ]}
+               />
             )} />
           </div>
         </div>
         <div className="pa-form-actions">
-          <Button type="submit" loading={loading} variant="primary">Save Configuration</Button>
+          <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.general.save')}</Button>
         </div>
       </form>
     </Card>
@@ -758,6 +813,7 @@ function GeneralConfigForm({ settings, onSave, loading }: { settings: OrgSetting
 }
 
 function AppearanceForm({ settings, onSave, loading }: { settings: OrganizationThemeSettings, onSave: (d: { theme_id: string | null }) => void, loading: boolean }) {
+  const { t } = useI18n()
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(settings.theme_id || null)
   const [savedThemeId, setSavedThemeId] = useState<string | null>(settings.theme_id || null)
 
@@ -780,16 +836,15 @@ function AppearanceForm({ settings, onSave, loading }: { settings: OrganizationT
   return (
     <Card>
       <form onSubmit={handleSubmit}>
-        <h3 className="pa-h3 pa-mb-4">Appearance Settings</h3>
+        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.appearance.title')}</h3>
         <p className="pa-text-muted pa-mb-6">
-          Customize your organization's visual theme and branding colors
+          {t('admin.organizationSettings.appearance.description')}
         </p>
 
         <div className="pa-form-group pa-mb-6">
-          <label className="pa-label pa-mb-3 block">Organization Theme</label>
+          <label className="pa-label pa-mb-3 block">{t('admin.organizationSettings.appearance.themeLabel')}</label>
           <p className="pa-text-muted pa-mb-4">
-            Choose a theme that will be applied across your organization's interface.
-            Themes include primary, secondary, and accent colors that work in both light and dark modes.
+            {t('admin.organizationSettings.appearance.themeHelp')}
           </p>
           <ThemePicker
             selectedThemeId={selectedThemeId}
@@ -802,7 +857,7 @@ function AppearanceForm({ settings, onSave, loading }: { settings: OrganizationT
         </div>
 
         <div className="pa-form-actions">
-          <Button type="submit" loading={loading} variant="primary">Save Appearance Settings</Button>
+          <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.appearance.save')}</Button>
         </div>
       </form>
     </Card>
@@ -810,6 +865,7 @@ function AppearanceForm({ settings, onSave, loading }: { settings: OrganizationT
 }
 
 function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsType['attendance'], onSave: (d: any) => void, loading: boolean }) {
+  const { t } = useI18n()
   const { control, handleSubmit, reset } = useForm({
     defaultValues: { ...settings }
   })
@@ -821,16 +877,16 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
   return (
     <Card>
       <form onSubmit={handleSubmit(onSave)}>
-        <h3 className="pa-h3 pa-mb-4">Attendance Rules</h3>
+        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.attendance.title')}</h3>
         <div className="pa-form-grid pa-form-grid-3 pa-mb-6">
           <Controller name="required_for_game" control={control} render={({field}) => (
-            <Checkbox label="Required for Games" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.attendance.requiredForGames')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
            <Controller name="required_for_practice" control={control} render={({field}) => (
-            <Checkbox label="Required for Practices" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.attendance.requiredForPractices')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
            <Controller name="required_for_meeting" control={control} render={({field}) => (
-            <Checkbox label="Required for Meetings" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.attendance.requiredForMeetings')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
 
@@ -839,7 +895,7 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
              <Input
                {...field}
                type="number"
-               label="Submission Deadline (Hours before event)"
+               label={t('admin.organizationSettings.attendance.submissionDeadline')}
                onChange={e => {
                  const value = e.target.value
                  field.onChange(value === '' ? 0 : parseInt(value, 10))
@@ -848,15 +904,15 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
           )} />
         </div>
 
-        <h3 className="pa-h3 pa-mb-4">Parent Controls</h3>
+        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.attendance.parentControls')}</h3>
          <div className="pa-mb-6">
            <Controller name="parent_visibility.can_submit_attendance" control={control} render={({field}) => (
-            <Checkbox label="Parents can set attendance status" checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.attendance.parentsCanSubmit')} checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
 
          <div className="pa-form-actions">
-          <Button type="submit" loading={loading} variant="primary">Save Attendance Rules</Button>
+          <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.attendance.save')}</Button>
         </div>
       </form>
     </Card>
@@ -865,6 +921,7 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
 
 
 function RegistrationForm({ settings, onSave, loading }: { settings: OrgSettingsType['registration'], onSave: (d: any) => void, loading: boolean }) {
+  const { t } = useI18n()
   const { control, handleSubmit, reset } = useForm({
     defaultValues: { ...settings }
   })
@@ -876,20 +933,20 @@ function RegistrationForm({ settings, onSave, loading }: { settings: OrgSettings
   return (
     <Card>
       <form onSubmit={handleSubmit(onSave)}>
-        <h3 className="pa-h3 pa-mb-4">Registration Policies</h3>
+        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.registration.title')}</h3>
         <div className="pa-flex pa-flex-col pa-gap-4 pa-mb-6">
            <Controller name="allow_guardian_self_invite" control={control} render={({field}) => (
-            <Checkbox label="Allow guardians to invite other guardians" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.registration.allowGuardianInvite')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
            <Controller name="allow_players_without_guardians" control={control} render={({field}) => (
-            <Checkbox label="Allow players without guardians (e.g. Adult leagues)" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.registration.allowPlayersWithoutGuardians')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
            <Controller name="medical_form_required" control={control} render={({field}) => (
-            <Checkbox label="Require Medical Clearance form" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.registration.requireMedicalForm')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
          <div className="pa-form-actions">
-          <Button type="submit" loading={loading} variant="primary">Save Policies</Button>
+          <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.registration.save')}</Button>
         </div>
       </form>
     </Card>
@@ -897,6 +954,7 @@ function RegistrationForm({ settings, onSave, loading }: { settings: OrgSettings
 }
 
 function NotificationsForm({ settings, onSave, loading }: { settings: OrgSettingsType['notifications'], onSave: (d: any) => void, loading: boolean }) {
+  const { t } = useI18n()
    const { control, handleSubmit, reset } = useForm({
     defaultValues: { ...settings }
   })
@@ -908,22 +966,29 @@ function NotificationsForm({ settings, onSave, loading }: { settings: OrgSetting
   return (
     <Card>
       <form onSubmit={handleSubmit(onSave)}>
-        <h3 className="pa-h3 pa-mb-4">Automated Notifications</h3>
+        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.notifications.title')}</h3>
          <div className="pa-flex pa-flex-col pa-gap-4 pa-mb-6">
            <Controller name="attendance_reminders_enabled" control={control} render={({field}) => (
-            <Checkbox label="Send Attendance Reminders to Coaches" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.notifications.attendanceReminders')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
            <Controller name="schedule_change_alerts_enabled" control={control} render={({field}) => (
-            <Checkbox label="Alert Parents on Schedule Changes" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.notifications.scheduleChangeAlerts')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
         <div className="pa-form-group pa-max-w-md pa-mb-6">
           <Controller name="payment_reminder_behavior" control={control} render={({field}) => (
-             <Select {...field} label="Payment Reminders" options={[{value: 'immediate', label: 'Send Immediately'}, {value: 'daily_digest', label: 'Daily Digest'}]} />
+             <Select
+               {...field}
+               label={t('admin.organizationSettings.notifications.paymentReminders')}
+               options={[
+                 { value: 'immediate', label: t('admin.organizationSettings.notifications.paymentReminderOptions.immediate') },
+                 { value: 'daily_digest', label: t('admin.organizationSettings.notifications.paymentReminderOptions.dailyDigest') }
+               ]}
+             />
           )} />
         </div>
         <div className="pa-form-actions">
-          <Button type="submit" loading={loading} variant="primary">Save Notification Settings</Button>
+          <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.notifications.save')}</Button>
         </div>
       </form>
     </Card>
@@ -931,47 +996,133 @@ function NotificationsForm({ settings, onSave, loading }: { settings: OrgSetting
 }
 
 function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsType['visibility'], onSave: (d: any) => void, loading: boolean }) {
-    const { control, handleSubmit, reset } = useForm({
-    defaultValues: { ...settings }
+    const { t } = useI18n()
+    const { control, handleSubmit, reset, watch, setValue } = useForm({
+    defaultValues: { 
+      ...settings,
+      fan_visibility_defaults: settings.fan_visibility_defaults || {}
+    }
   })
 
   useEffect(() => {
-    reset({ ...settings })
+    reset({ 
+      ...settings,
+      fan_visibility_defaults: settings.fan_visibility_defaults || {}
+    })
   }, [reset, settings])
+
+  const eventTypes = [
+    { key: 'practice', label: 'Practice' },
+    { key: 'game', label: 'Game' },
+    { key: 'tournament', label: 'Tournament' },
+    { key: 'meeting', label: 'Meeting' },
+    { key: 'tryout', label: 'Tryout' },
+    { key: 'travel', label: 'Travel' },
+    { key: 'pickup_dropoff', label: 'Pickup/Dropoff' },
+    { key: 'social', label: 'Social' },
+  ]
 
   return (
     <Card>
        <form onSubmit={handleSubmit(onSave)}>
-        <h3 className="pa-h3 pa-mb-4">Role Visibility</h3>
-        <p className="pa-text-sm pa-text-muted pa-mb-4">Configure what different roles can see.</p>
+        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.permissions.title')}</h3>
+        <p className="pa-text-sm pa-text-muted pa-mb-4">{t('admin.organizationSettings.permissions.description')}</p>
         
         {/* Parent Permissions */}
-        <h4 className="pa-h4 pa-mb-2">Parent Role</h4>
+        <h4 className="pa-h4 pa-mb-2">{t('admin.organizationSettings.permissions.parentRole')}</h4>
         <div className="pa-form-grid pa-form-grid-3 pa-mb-6">
            <Controller name="role_permissions.parent.can_view_roster" control={control} render={({field}) => (
-            <Checkbox label="View Team Roster" checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.permissions.parentViewRoster')} checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
             <Controller name="role_permissions.parent.can_view_schedule" control={control} render={({field}) => (
-            <Checkbox label="View Schedule" checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.permissions.parentViewSchedule')} checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
              <Controller name="role_permissions.parent.can_view_payments" control={control} render={({field}) => (
-            <Checkbox label="View Billing" checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.permissions.parentViewBilling')} checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
 
         {/* Coach Permissions */}
-        <h4 className="pa-h4 pa-mb-2">Coach Role</h4>
+        <h4 className="pa-h4 pa-mb-2">{t('admin.organizationSettings.permissions.coachRole')}</h4>
         <div className="pa-form-grid pa-form-grid-2 pa-mb-6">
            <Controller name="role_permissions.coach.can_view_payments" control={control} render={({field}) => (
-            <Checkbox label="View Financials" checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.permissions.coachViewFinancials')} checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
            <Controller name="role_permissions.coach.can_edit" control={control} render={({field}) => (
-            <Checkbox label="Edit Events" checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.permissions.coachEditEvents')} checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
 
+        {/* Fan Visibility Defaults */}
+        <div className="pa-mt-8 pa-mb-6">
+          <h4 className="pa-h4 pa-mb-2">{t('admin.organizationSettings.permissions.fanVisibilityDefaults.title')}</h4>
+          <p className="pa-text-sm pa-text-muted pa-mb-4">{t('admin.organizationSettings.permissions.fanVisibilityDefaults.description')}</p>
+          
+          <div 
+            style={{
+              background: '#f8f9fa',
+              padding: '16px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+            }}
+          >
+            <div className="pa-flex pa-flex-col pa-gap-3">
+              {eventTypes.map((eventType) => (
+                <Controller
+                  key={eventType.key}
+                  name={`fan_visibility_defaults.${eventType.key}` as any}
+                  control={control}
+                  render={({ field }) => (
+                    <div className="pa-flex pa-items-center pa-justify-between">
+                      <label 
+                        htmlFor={`fan-visibility-${eventType.key}`}
+                        style={{ fontSize: '14px', fontWeight: 500 }}
+                      >
+                        {eventType.label}
+                      </label>
+                      <label className="pa-inline-flex pa-items-center pa-gap-2">
+                        <span className="pa-toggle" style={{ width: '52px', height: '28px' }}>
+                          <input
+                            id={`fan-visibility-${eventType.key}`}
+                            type="checkbox"
+                            className="pa-toggle-input"
+                            checked={field.value || false}
+                            onChange={(e) => field.onChange(e.target.checked)}
+                          />
+                          <span className="pa-toggle-track" style={{ borderRadius: '14px' }} />
+                          <span className="pa-toggle-thumb" style={{ borderRadius: '50%' }} />
+                        </span>
+                        <span style={{ fontSize: '13px', color: field.value ? '#059669' : '#6b7280', fontWeight: 500 }}>
+                          {field.value ? t('admin.organizationSettings.permissions.fanVisibilityDefaults.visibleByDefault') : t('admin.organizationSettings.permissions.fanVisibilityDefaults.privateByDefault')}
+                        </span>
+                      </label>
+                    </div>
+                  )}
+                />
+              ))}
+            </div>
+            
+            <div 
+              style={{
+                marginTop: '12px',
+                padding: '8px 12px',
+                background: '#e0f2fe',
+                border: '1px solid #0ea5e9',
+                borderRadius: '6px',
+                fontSize: '13px',
+                color: '#0c4a6e',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: '6px' }}>
+                info
+              </span>
+              {t('admin.organizationSettings.permissions.fanVisibilityDefaults.note')}
+            </div>
+          </div>
+        </div>
+
          <div className="pa-form-actions">
-          <Button type="submit" loading={loading} variant="primary">Update Permissions</Button>
+          <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.permissions.save')}</Button>
         </div>
       </form>
     </Card>
@@ -979,6 +1130,7 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
 }
 
 function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
+  const { t } = useI18n()
   const [connectStatus, setConnectStatus] = useState<StripeConnectStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [onboarding, setOnboarding] = useState(false)
@@ -1011,30 +1163,35 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
     if (!reason) return null
     switch (reason) {
       case 'requirements.past_due':
-        return 'Action required: verification information is overdue.'
+        return t('admin.organizationSettings.payments.disabledReasons.pastDue')
       case 'requirements.pending_verification':
-        return 'Your payment processor is reviewing your submitted information. No action needed yet.'
+        return t('admin.organizationSettings.payments.disabledReasons.pendingVerification')
       case 'under_review':
-        return 'Your account is under review. This usually resolves within 1-2 business days.'
+        return t('admin.organizationSettings.payments.disabledReasons.underReview')
       default:
-        if (reason.startsWith('rejected.')) return 'Payment processor restricted the account. Please contact support.'
-        return `Payment processor reported: ${reason.replace(/_/g, ' ')}`
+        if (reason.startsWith('rejected.')) return t('admin.organizationSettings.payments.disabledReasons.rejected')
+        return t('admin.organizationSettings.payments.disabledReasons.generic', { reason: reason.replace(/_/g, ' ') })
     }
-  }, [connectStatus?.disabledReason])
+  }, [connectStatus?.disabledReason, t])
+
+  const requirementPrefixes = useMemo(() => ({
+    person: t('admin.organizationSettings.payments.requirements.prefix.person'),
+    company: t('admin.organizationSettings.payments.requirements.prefix.company'),
+    business: t('admin.organizationSettings.payments.requirements.prefix.business'),
+    individual: t('admin.organizationSettings.payments.requirements.prefix.individual'),
+  }), [t])
 
   const loadPolicy = useCallback(async () => {
     if (!organizationId) return
     setPolicyLoading(true)
-    const { data, error: policyError } = await supabase
-      .from('org_payment_policies')
-      .select('allow_partial_payments')
-      .eq('org_id', organizationId)
-      .maybeSingle()
-    if (!policyError && data) {
-      setAllowPartialPayments(data.allow_partial_payments ?? true)
+    const { data, error: policyError } = await getOrganizationPaymentPolicy(organizationId)
+    if (policyError) {
+      setError(policyError.message || t('admin.organizationSettings.payments.policyLoadFailed'))
+    } else if (data) {
+      setAllowPartialPayments(data.allowPartialPayments)
     }
     setPolicyLoading(false)
-  }, [organizationId])
+  }, [organizationId, t])
 
   useEffect(() => {
     loadPolicy()
@@ -1044,17 +1201,22 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
     if (!organizationId) return
     setPolicySaving(true)
     setError(null)
-    const { error: upsertError } = await supabase
-      .from('org_payment_policies')
-      .upsert(
-        { org_id: organizationId, allow_partial_payments: checked },
-        { onConflict: 'org_id' }
-      )
+    if (!navigator.onLine) {
+      const message = t('common.error.offline')
+      setError(message)
+      showError(message)
+      setPolicySaving(false)
+      return
+    }
+
+    const { data, error: upsertError } = await updateOrganizationPaymentPolicy(organizationId, checked)
     if (upsertError) {
-      setError(upsertError.message)
-    } else {
-      setAllowPartialPayments(checked)
-      showSuccess('Payment policy saved')
+      const message = upsertError.message || t('admin.organizationSettings.payments.policySaveFailed')
+      setError(message)
+      showError(message)
+    } else if (data) {
+      setAllowPartialPayments(data.allowPartialPayments)
+      showSuccess(t('admin.organizationSettings.payments.policySaved'))
     }
     setPolicySaving(false)
   }
@@ -1065,12 +1227,12 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
     setError(null)
     const { data, error: statusError } = await getStripeConnectStatus(organizationId)
     if (statusError) {
-      setError(statusError.message)
+      setError(statusError.message || t('admin.organizationSettings.payments.statusLoadFailed'))
     } else {
       setConnectStatus(data)
     }
     setLoading(false)
-  }, [organizationId])
+  }, [organizationId, t])
 
   useEffect(() => {
     loadStatus()
@@ -1078,11 +1240,16 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
 
   const handleConnect = async () => {
     if (!organizationId) return
+    if (!navigator.onLine) {
+      setError(t('common.error.offline'))
+      showError(t('common.error.offline'))
+      return
+    }
     setOnboarding(true)
     setError(null)
     const { data, error: onboardError } = await initiateStripeConnectOnboarding(organizationId)
     if (onboardError) {
-      setError(onboardError.message)
+      setError(onboardError.message || t('admin.organizationSettings.payments.onboardingFailed'))
       setOnboarding(false)
     } else if (data?.account_link_url) {
       window.location.href = data.account_link_url
@@ -1091,29 +1258,39 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
 
   const handleRefresh = async () => {
     if (!organizationId) return
+    if (!navigator.onLine) {
+      setError(t('common.error.offline'))
+      showError(t('common.error.offline'))
+      return
+    }
     setRefreshing(true)
     setError(null)
     const { error: refreshError, data: refreshed } = await refreshStripeConnectStatus(organizationId)
     if (refreshError) {
-      setError(refreshError.message)
+      setError(refreshError.message || t('admin.organizationSettings.payments.refreshFailed'))
     } else {
       if (refreshed) {
         setConnectStatus(refreshed)
       } else {
         await loadStatus()
       }
-      showSuccess('Connect status refreshed')
+      showSuccess(t('admin.organizationSettings.payments.statusRefreshed'))
     }
     setRefreshing(false)
   }
 
   const handleRemediationLink = async () => {
     if (!organizationId) return
+    if (!navigator.onLine) {
+      setError(t('common.error.offline'))
+      showError(t('common.error.offline'))
+      return
+    }
     setRemediating(true)
     setError(null)
     const { url, error: linkError } = await createStripeRemediationLink(organizationId)
     if (linkError || !url) {
-      setError(linkError?.message || 'Unable to generate remediation link')
+      setError(linkError?.message || t('admin.organizationSettings.payments.remediationFailed'))
       setRemediating(false)
       return
     }
@@ -1123,7 +1300,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
   if (loading || policyLoading) {
     return (
       <Card>
-        <div className="pa-text-center pa-p-8">Loading payment settings...</div>
+        <div className="pa-text-center pa-p-8">{t('admin.organizationSettings.payments.loading')}</div>
       </Card>
     )
   }
@@ -1133,27 +1310,35 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
     ? (payoutsPaused ? 'error' : connectStatus.payoutsEnabled ? 'success' : 'warning')
     : 'neutral'
   const statusText = connectStatus?.connected
-    ? (payoutsPaused ? 'Payouts Paused' : connectStatus.payoutsEnabled ? 'Active & Receiving Payments' : 'Connected')
-    : 'Not Connected'
+    ? (payoutsPaused
+        ? t('admin.organizationSettings.payments.status.payoutsPaused')
+        : connectStatus.payoutsEnabled
+        ? t('admin.organizationSettings.payments.status.active')
+        : t('admin.organizationSettings.payments.status.connected'))
+    : t('admin.organizationSettings.payments.status.notConnected')
   const statusIcon = connectStatus?.connected
-    ? (payoutsPaused ? '⚠️' : connectStatus.payoutsEnabled ? '✓' : '○')
-    : '○'
+    ? (payoutsPaused
+        ? t('admin.organizationSettings.payments.statusIcons.error')
+        : connectStatus.payoutsEnabled
+        ? t('admin.organizationSettings.payments.statusIcons.success')
+        : t('admin.organizationSettings.payments.statusIcons.neutral'))
+    : t('admin.organizationSettings.payments.statusIcons.neutral')
 
   return (
     <>
     {/* Payment Options Card */}
     <Card className="pa-mb-6">
-      <h3 className="pa-h3 pa-mb-4">Payment Options</h3>
+      <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.payments.optionsTitle')}</h3>
       
       <div className="pa-form-group">
         <Checkbox
-          label="Allow Partial Payments"
+          label={t('admin.organizationSettings.payments.allowPartialPayments')}
           checked={allowPartialPayments}
           onChange={(e) => handleSavePartialPayments(e.target.checked)}
           disabled={policySaving}
         />
         <p className="pa-text-sm pa-text-muted pa-mt-2">
-          When enabled, parents can make partial payments on fees that allow it. Each fee can individually control whether partial payments are allowed.
+          {t('admin.organizationSettings.payments.allowPartialPaymentsHelp')}
         </p>
       </div>
     </Card>
@@ -1168,7 +1353,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           borderRadius: '8px',
           border: '1px solid rgba(239, 68, 68, 0.3)'
         }}>
-          <strong>Error:</strong> {error}
+          {error}
         </div>
       )}
 
@@ -1206,7 +1391,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
         <div className="pa-flex-1">
           <div className="pa-flex pa-items-center pa-gap-3 pa-mb-2">
             <h3 className="pa-h3" style={{ margin: 0 }}>
-              Payment Processing
+              {t('admin.organizationSettings.payments.processingTitle')}
             </h3>
             <Badge variant={statusType === 'success' ? 'success' : statusType === 'error' ? 'danger' : statusType === 'warning' ? 'warning' : 'neutral'}>
               {statusText}
@@ -1216,16 +1401,18 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           <p className="pa-text-muted pa-mb-3">
             {connectStatus?.connected 
               ? payoutsPaused
-                ? 'Your payment account needs attention to resume receiving payouts.'
+                ? t('admin.organizationSettings.payments.statusDescription.payoutsPaused')
                 : connectStatus.payoutsEnabled
-                ? 'Your organization is connected and ready to receive payments from families.'
-                : 'Your payment account is connected but payouts are not fully enabled.'
-              : 'Connect your payment account to start accepting payments from families for fees, tickets, and registrations.'
+                ? t('admin.organizationSettings.payments.statusDescription.active')
+                : t('admin.organizationSettings.payments.statusDescription.connected')
+              : t('admin.organizationSettings.payments.statusDescription.notConnected')
             }
           </p>
 
           {connectStatus?.lastStatusUpdated && (
-            <div className="pa-text-xs pa-text-muted">Last synced: {formatDateTime(connectStatus.lastStatusUpdated)}</div>
+            <div className="pa-text-xs pa-text-muted">
+              {t('admin.organizationSettings.payments.lastSynced', { date: formatDateTime(connectStatus.lastStatusUpdated) })}
+            </div>
           )}
         </div>
 
@@ -1239,7 +1426,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
               loading={onboarding}
               style={{ width: '100%' }}
             >
-              Connect Account
+              {t('admin.organizationSettings.payments.actions.connect')}
             </Button>
           ) : (
             <>
@@ -1251,7 +1438,9 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                   loading={remediating}
                   style={{ width: '100%' }}
                 >
-                  {isActionablePause ? 'Fix Issues' : 'Complete Requirements'}
+                  {isActionablePause
+                    ? t('admin.organizationSettings.payments.actions.fixIssues')
+                    : t('admin.organizationSettings.payments.actions.completeRequirements')}
                 </Button>
               )}
 
@@ -1263,7 +1452,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                   loading={onboarding}
                   style={{ width: '100%' }}
                 >
-                  Complete Setup
+                  {t('admin.organizationSettings.payments.actions.completeSetup')}
                 </Button>
               )}
 
@@ -1275,7 +1464,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                 disabled={refreshing}
                 style={{ width: '100%' }}
               >
-                Refresh Status
+                {t('admin.organizationSettings.payments.actions.refreshStatus')}
               </Button>
 
               {connectStatus.dashboardUrl && (
@@ -1286,7 +1475,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                   onClick={() => window.open(connectStatus.dashboardUrl!, '_blank')}
                   style={{ width: '100%' }}
                 >
-                  Payment Dashboard
+                  {t('admin.organizationSettings.payments.actions.dashboard')}
                 </Button>
               )}
             </>
@@ -1303,13 +1492,13 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           marginBottom: '24px'
         }}>
           <div className="pa-flex pa-items-start pa-gap-3">
-            <span style={{ fontSize: '24px', lineHeight: 1 }}>🚨</span>
+            <span style={{ fontSize: '24px', lineHeight: 1 }}>{t('admin.organizationSettings.payments.statusIcons.error')}</span>
             <div className="pa-flex-1">
               <h4 className="pa-h4 pa-mb-2" style={{ color: 'var(--pa-danger, #ef4444)' }}>
-                Action Required: Payouts Paused
+                {t('admin.organizationSettings.payments.payoutsPaused.title')}
               </h4>
               <p className="pa-text-sm pa-mb-3">
-                {disabledCopy || 'Your payment processor has paused payouts for this account. Please resolve the issues below to resume receiving payments.'}
+                {disabledCopy || t('admin.organizationSettings.payments.payoutsPaused.description')}
               </p>
               {connectStatus.requirementsDeadline && (
                 <div className="pa-text-xs pa-text-muted pa-mb-3" style={{ 
@@ -1318,7 +1507,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                   borderRadius: '6px',
                   display: 'inline-block'
                 }}>
-                  ⏰ Deadline: <strong>{formatDateTime(connectStatus.requirementsDeadline)}</strong>
+                  {t('admin.organizationSettings.payments.requirementsDeadline', { date: formatDateTime(connectStatus.requirementsDeadline) })}
                 </div>
               )}
             </div>
@@ -1335,13 +1524,13 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           marginBottom: '24px'
         }}>
           <div className="pa-flex pa-items-start pa-gap-3">
-            <span style={{ fontSize: '24px', lineHeight: 1 }}>⚡</span>
+            <span style={{ fontSize: '24px', lineHeight: 1 }}>{t('admin.organizationSettings.payments.statusIcons.warning')}</span>
             <div className="pa-flex-1">
               <h4 className="pa-h4 pa-mb-2" style={{ color: 'var(--pa-warning, #fbbf24)' }}>
-                Verification Needed
+                {t('admin.organizationSettings.payments.requirementsDue.title')}
               </h4>
               <p className="pa-text-sm pa-mb-3">
-                Complete the outstanding requirements below to avoid payout interruptions.
+                {t('admin.organizationSettings.payments.requirementsDue.description')}
               </p>
               {connectStatus.requirementsDeadline && (
                 <div className="pa-text-xs pa-text-muted" style={{ 
@@ -1350,7 +1539,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                   borderRadius: '6px',
                   display: 'inline-block'
                 }}>
-                  ⏰ Deadline: <strong>{formatDateTime(connectStatus.requirementsDeadline)}</strong>
+                  {t('admin.organizationSettings.payments.requirementsDeadline', { date: formatDateTime(connectStatus.requirementsDeadline) })}
                 </div>
               )}
             </div>
@@ -1358,7 +1547,6 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
         </div>
       )}
 
-      {/* Connected: Key Info Grid */}
       {connectStatus?.connected && (
         <div className="pa-form-grid pa-form-grid-3 pa-mb-6" style={{ gap: '16px' }}>
           {/* Payout Status */}
@@ -1368,10 +1556,12 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
             borderRadius: '12px',
             padding: '20px',
           }}>
-            <div className="pa-caption pa-text-muted pa-mb-2">Payout Status</div>
+            <div className="pa-caption pa-text-muted pa-mb-2">{t('admin.organizationSettings.payments.info.payoutStatus')}</div>
             <div className="pa-flex pa-items-center pa-gap-2">
               <Badge variant={connectStatus.payoutsEnabled ? 'success' : 'danger'} style={{ fontSize: '14px' }}>
-                {connectStatus.payoutsEnabled ? 'Active' : 'Paused'}
+                {connectStatus.payoutsEnabled
+                  ? t('admin.organizationSettings.payments.info.payoutStatusActive')
+                  : t('admin.organizationSettings.payments.info.payoutStatusPaused')}
               </Badge>
             </div>
           </div>
@@ -1383,7 +1573,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
             borderRadius: '12px',
             padding: '20px',
           }}>
-            <div className="pa-caption pa-text-muted pa-mb-2">Onboarding</div>
+            <div className="pa-caption pa-text-muted pa-mb-2">{t('admin.organizationSettings.payments.info.onboarding')}</div>
             <Badge
               variant={
                 connectStatus.onboardingStatus === 'completed'
@@ -1394,7 +1584,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
               }
               style={{ fontSize: '14px', textTransform: 'capitalize' }}
             >
-              {connectStatus.onboardingStatus}
+              {t(`admin.organizationSettings.payments.onboardingStatus.${connectStatus.onboardingStatus}`)}
             </Badge>
           </div>
 
@@ -1405,9 +1595,11 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
             borderRadius: '12px',
             padding: '20px',
           }}>
-            <div className="pa-caption pa-text-muted pa-mb-2">Account Health</div>
+            <div className="pa-caption pa-text-muted pa-mb-2">{t('admin.organizationSettings.payments.info.accountHealth')}</div>
             <div className="pa-text-sm" style={{ fontWeight: 600 }}>
-              {disabledCopy || (hasPendingReview ? 'Under Review' : 'All Clear')}
+              {disabledCopy || (hasPendingReview
+                ? t('admin.organizationSettings.payments.info.underReview')
+                : t('admin.organizationSettings.payments.info.allClear'))}
             </div>
           </div>
         </div>
@@ -1422,19 +1614,19 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           padding: '20px',
           marginBottom: '24px'
         }}>
-          <h4 className="pa-h4 pa-mb-4">📋 Outstanding Items</h4>
+          <h4 className="pa-h4 pa-mb-4">{t('admin.organizationSettings.payments.requirements.title')}</h4>
           
           {connectStatus.requirementsDue?.length > 0 && (
             <div className="pa-mb-4">
-              <div className="pa-text-sm pa-font-semibold pa-mb-2">Requirements Due:</div>
+              <div className="pa-text-sm pa-font-semibold pa-mb-2">{t('admin.organizationSettings.payments.requirements.due')}</div>
               <div className="pa-flex pa-flex-col pa-gap-2">
                 {connectStatus.requirementsDue.map((req) => {
                   // Convert technical requirement names to human-readable format
                   const humanReadable = req
-                    .replace(/^person_/, 'Person: ')
-                    .replace(/^company_/, 'Company: ')
-                    .replace(/^business_/, 'Business: ')
-                    .replace(/^individual_/, 'Individual: ')
+                    .replace(/^person_/, `${requirementPrefixes.person}: `)
+                    .replace(/^company_/, `${requirementPrefixes.company}: `)
+                    .replace(/^business_/, `${requirementPrefixes.business}: `)
+                    .replace(/^individual_/, `${requirementPrefixes.individual}: `)
                     .replace(/_/g, ' ')
                     .replace(/\./g, ' - ')
                     .replace(/\bid\b/gi, 'ID')
@@ -1451,7 +1643,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                       borderRadius: '8px',
                       border: '1px solid rgba(251, 191, 36, 0.2)'
                     }}>
-                      <span>⚠️</span>
+                      <span>{t('admin.organizationSettings.payments.statusIcons.warning')}</span>
                       <span>{humanReadable}</span>
                     </div>
                   )
@@ -1462,15 +1654,15 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
 
           {connectStatus.requirementsErrors?.length > 0 && (
             <div>
-              <div className="pa-text-sm pa-font-semibold pa-mb-2">Issues Reported:</div>
+              <div className="pa-text-sm pa-font-semibold pa-mb-2">{t('admin.organizationSettings.payments.requirements.issues')}</div>
               <div className="pa-flex pa-flex-col pa-gap-2">
                 {connectStatus.requirementsErrors.map((err, idx) => {
                   // Convert technical field names to human-readable format
                   const humanReadableField = err.requirement
-                    ?.replace(/^person_/, 'Person: ')
-                    ?.replace(/^company_/, 'Company: ')
-                    ?.replace(/^business_/, 'Business: ')
-                    ?.replace(/^individual_/, 'Individual: ')
+                    ?.replace(/^person_/, `${requirementPrefixes.person}: `)
+                    ?.replace(/^company_/, `${requirementPrefixes.company}: `)
+                    ?.replace(/^business_/, `${requirementPrefixes.business}: `)
+                    ?.replace(/^individual_/, `${requirementPrefixes.individual}: `)
                     ?.replace(/_/g, ' ')
                     ?.replace(/\./g, ' - ')
                     ?.replace(/\bid\b/gi, 'ID')
@@ -1487,11 +1679,11 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                       borderRadius: '8px',
                       border: '1px solid rgba(239, 68, 68, 0.2)'
                     }}>
-                      <span style={{ marginTop: '2px' }}>❌</span>
+                      <span style={{ marginTop: '2px' }}>{t('admin.organizationSettings.payments.statusIcons.error')}</span>
                       <div>
-                        <div>{err.reason || err.code || 'Issue detected'}</div>
+                        <div>{err.reason || err.code || t('admin.organizationSettings.payments.requirements.issueDetected')}</div>
                         {humanReadableField && (
-                          <div className="pa-text-xs pa-text-muted pa-mt-1">Field: {humanReadableField}</div>
+                          <div className="pa-text-xs pa-text-muted pa-mt-1">{t('admin.organizationSettings.payments.requirements.field', { field: humanReadableField })}</div>
                         )}
                       </div>
                     </div>
@@ -1513,10 +1705,9 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           marginBottom: '24px'
         }}>
           <div className="pa-flex pa-items-start pa-gap-2 pa-text-sm">
-            <span style={{ fontSize: '18px' }}>ℹ️</span>
+            <span style={{ fontSize: '18px' }}>{t('admin.organizationSettings.payments.statusIcons.info')}</span>
             <div>
-              <strong>Under Review:</strong> Stripe is reviewing your recently submitted documents. 
-              You'll receive an email when the review is complete. No action needed at this time.
+              <strong>{t('admin.organizationSettings.payments.pendingReview.title')}</strong> {t('admin.organizationSettings.payments.pendingReview.description')}
             </div>
           </div>
         </div>
@@ -1540,15 +1731,15 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
               fontWeight: 600
             }}
           >
-            <span style={{ transform: showAdvanced ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>▶</span>
-            Advanced Details
+            <span style={{ transform: showAdvanced ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>{'>'}</span>
+            {t('admin.organizationSettings.payments.advancedDetails')}
           </button>
 
           {showAdvanced && (
             <div className="pa-mt-4 pa-flex pa-flex-col pa-gap-3">
               {connectStatus.payoutDescriptor && (
                 <div>
-                  <div className="pa-caption pa-text-muted">Payout Descriptor</div>
+                  <div className="pa-caption pa-text-muted">{t('admin.organizationSettings.payments.payoutDescriptor')}</div>
                   <div className="pa-text-sm" style={{ 
                     fontFamily: 'monospace',
                     background: 'rgba(0, 0, 0, 0.03)',
@@ -1563,7 +1754,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
               
               {connectStatus.requirementsPending && connectStatus.requirementsPending.length > 0 && (
                 <div>
-                  <div className="pa-caption pa-text-muted">Pending Verification</div>
+                  <div className="pa-caption pa-text-muted">{t('admin.organizationSettings.payments.pendingVerification')}</div>
                   <div className="pa-text-sm pa-text-muted pa-mt-1">
                     {connectStatus.requirementsPending.join(', ')}
                   </div>
@@ -1579,6 +1770,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
 }
 
 function AdvancedForm({ settings, onSave, loading }: { settings: OrgSettingsType['advanced'], onSave: (d: any) => void, loading: boolean }) {
+   const { t } = useI18n()
    const { control, handleSubmit, reset } = useForm({
     defaultValues: { ...settings }
   })
@@ -1590,28 +1782,35 @@ function AdvancedForm({ settings, onSave, loading }: { settings: OrgSettingsType
   return (
     <Card>
       <form onSubmit={handleSubmit(onSave)}>
-        <h3 className="pa-h3 pa-mb-4">Advanced Configuration</h3>
+        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.advanced.title')}</h3>
         <div className="pa-alert pa-alert-warning pa-mb-4">
-           Caution: These settings affect data integrity.
+           {t('admin.organizationSettings.advanced.warning')}
         </div>
         
         <div className="pa-form-group pa-mb-4">
            <Controller name="allow_data_export" control={control} render={({field}) => (
-            <Checkbox label="Allow Data Export (CSV/Excel) for Admins" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.advanced.allowDataExport')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
 
          <div className="pa-form-group pa-mb-6">
            <Controller name="enable_api_access" control={control} render={({field}) => (
-            <Checkbox label="Enable API Access (Requires Enterprise License)" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label={t('admin.organizationSettings.advanced.enableApiAccess')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
 
          <div className="pa-form-actions">
-          <Button type="submit" loading={loading} variant="danger" style={{background: 'var(--pa-secondary-bg)', color: 'var(--pa-text)'}}>Save Advanced Settings</Button>
+          <Button type="submit" loading={loading} variant="danger" style={{background: 'var(--pa-secondary-bg)', color: 'var(--pa-text)'}}>{t('admin.organizationSettings.advanced.save')}</Button>
         </div>
       </form>
     </Card>
   )
 }
+
+
+
+
+
+
+
 

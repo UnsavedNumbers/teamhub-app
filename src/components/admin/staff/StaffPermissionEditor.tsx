@@ -13,6 +13,7 @@ import Modal from '../../../components/platformAdmin/Modal'
 import type { StaffMember, StaffPermissions } from '../../../types/staffAndFan'
 import { DEFAULT_STAFF_PERMISSIONS } from '../../../constants/permissions'
 import { useI18n } from '../../../i18n/useI18n'
+import { STAFF_PERMISSION_KEYS, STAFF_PERMISSION_LABEL_KEYS } from '../../../utils/staffPermissions'
 
 interface StaffPermissionEditorProps {
   staffMember: StaffMember
@@ -26,7 +27,6 @@ export default function StaffPermissionEditor({
   onSave 
 }: StaffPermissionEditorProps) {
   const { t } = useI18n()
-  const tAny = t as any
   const [permissions, setPermissions] = useState<StaffPermissions>(
     staffMember.permissions || DEFAULT_STAFF_PERMISSIONS
   )
@@ -52,7 +52,7 @@ export default function StaffPermissionEditor({
       await onSave(permissions)
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : tAny('admin.staff.errors.updateStaffPermissionsFailed'))
+      setError(err instanceof Error ? err.message : t('admin.staff.errors.updateStaffPermissionsFailed'))
     } finally {
       setSaving(false)
     }
@@ -62,16 +62,16 @@ export default function StaffPermissionEditor({
     <Modal
       open={true}
       onClose={onClose}
-      title={tAny('admin.staff.editPermissionsTitle', { 
-        name: staffMember.user?.display_name || staffMember.user?.email || tAny('admin.staff.staffMember')
+      title={t('admin.staff.editPermissionsTitle', { 
+        name: staffMember.user?.display_name || staffMember.user?.email || t('admin.staff.staffMember')
       })}
       size="medium"
     >
       <div className="pa-space-y-4">
         <div>
-          <label className="pa-label pa-mb-2">{tAny('admin.staff.permissions')}</label>
+          <label className="pa-label pa-mb-2">{t('admin.staff.permissions')}</label>
           <div className="pa-space-y-2">
-            {Object.entries(DEFAULT_STAFF_PERMISSIONS).map(([key, _defaultValue]) => (
+            {STAFF_PERMISSION_KEYS.map((key) => (
               <label
                 key={key}
                 className="pa-flex pa-items-center pa-gap-2"
@@ -79,12 +79,12 @@ export default function StaffPermissionEditor({
               >
                 <input
                   type="checkbox"
-                  checked={permissions[key as keyof StaffPermissions] || false}
-                  onChange={() => togglePermission(key as keyof StaffPermissions)}
+                  checked={permissions[key] || false}
+                  onChange={() => togglePermission(key)}
                   className="pa-checkbox"
                 />
                 <span className="pa-body-m">
-                  {key.replace('can_', '').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                  {t(STAFF_PERMISSION_LABEL_KEYS[key])}
                 </span>
               </label>
             ))}
@@ -97,16 +97,16 @@ export default function StaffPermissionEditor({
 
         <div className="pa-flex pa-gap-2 pa-justify-end">
           <Button variant="ghost" onClick={onClose} disabled={saving}>
-            {tAny('common.cancel')}
+            {t('common.cancel')}
           </Button>
           <Button variant="primary" onClick={handleSave} disabled={saving}>
             {saving ? (
               <>
                 <span className="material-symbols-outlined animate-spin inline-block mr-1">hourglass_empty</span>
-                {tAny('common.saving')}
+                {t('common.saving')}
               </>
             ) : (
-              tAny('admin.staff.savePermissions')
+              t('admin.staff.savePermissions')
             )}
           </Button>
         </div>

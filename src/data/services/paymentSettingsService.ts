@@ -1,6 +1,24 @@
 import { supabase } from '@/lib/supabase'
 import type { StripeConnectStatus, StripeConnectOnboardResponse } from '@/types/stripeConnect.types'
 import { mapOrganizationToConnectStatus } from '@/types/stripeConnect.types'
+import { USE_FAKE_DATA } from '../config'
+import type { OrganizationPaymentPolicy } from '@/types/paymentSettings'
+import {
+  getStripeConnectStatus as getFakeStripeConnectStatus,
+  initiateStripeConnectOnboarding as initiateFakeStripeConnectOnboarding,
+  refreshStripeConnectStatus as refreshFakeStripeConnectStatus,
+  createStripeRemediationLink as createFakeStripeRemediationLink,
+  getOrganizationPaymentPolicy as getFakeOrganizationPaymentPolicy,
+  updateOrganizationPaymentPolicy as updateFakeOrganizationPaymentPolicy,
+} from '../fake/paymentSettingsFakeService'
+import { t } from '@/i18n'
+
+function isRlsError(error: Error): boolean {
+  return (
+    (error as any)?.code === '42501' ||
+    error.message.toLowerCase().includes('row-level security')
+  )
+}
 
 /**
  * Initiates Stripe Connect onboarding for an organization
@@ -9,8 +27,12 @@ export async function initiateStripeConnectOnboarding(
   orgId: string
 ): Promise<{ data: StripeConnectOnboardResponse | null; error: Error | null }> {
   try {
+    if (USE_FAKE_DATA) {
+      return initiateFakeStripeConnectOnboarding(orgId)
+    }
+
     if (!orgId) {
-      return { data: null, error: new Error('Organization ID is required') }
+      return { data: null, error: new Error(t('common.error.notFound' as any)) }
     }
 
     const { data, error } = await supabase.functions.invoke('stripe-connect-onboard', {
@@ -38,8 +60,12 @@ export async function getStripeConnectStatus(
   orgId: string
 ): Promise<{ data: StripeConnectStatus | null; error: Error | null }> {
   try {
+    if (USE_FAKE_DATA) {
+      return getFakeStripeConnectStatus(orgId)
+    }
+
     if (!orgId) {
-      return { data: null, error: new Error('Organization ID is required') }
+      return { data: null, error: new Error(t('common.error.notFound' as any)) }
     }
 
     const { data: org, error } = await supabase
@@ -94,8 +120,12 @@ export async function refreshStripeConnectStatus(
   orgId: string
 ): Promise<{ error: Error | null; data?: StripeConnectStatus | null }> {
   try {
+    if (USE_FAKE_DATA) {
+      return refreshFakeStripeConnectStatus(orgId)
+    }
+
     if (!orgId) {
-      return { error: new Error('Organization ID is required'), data: null }
+      return { error: new Error(t('common.error.notFound' as any)), data: null }
     }
 
     const { data, error } = await supabase.functions.invoke('stripe-connect-refresh', {
@@ -121,8 +151,12 @@ export async function createStripeRemediationLink(
   orgId: string
 ): Promise<{ url: string | null; error: Error | null }> {
   try {
+    if (USE_FAKE_DATA) {
+      return createFakeStripeRemediationLink(orgId)
+    }
+
     if (!orgId) {
-      return { url: null, error: new Error('Organization ID is required') }
+      return { url: null, error: new Error(t('common.error.notFound' as any)) }
     }
 
     const { data, error } = await supabase.functions.invoke('stripe-connect-remediation-link', {
@@ -138,5 +172,98 @@ export async function createStripeRemediationLink(
   } catch (err) {
     console.error('[paymentSettingsService] Error creating remediation link:', err)
     return { url: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+export async function getOrganizationPaymentPolicy(
+  orgId: string
+): Promise<{ data: OrganizationPaymentPolicy | null; error: Error | null }> {
+  try {
+    if (USE_FAKE_DATA) {
+      return getFakeOrganizationPaymentPolicy(orgId)
+    }
+
+    if (!orgId) {
+      return { data: null, error: new Error(t('common.error.notFound' as any)) }
+    }
+
+    const { data, error } = await supabase
+      .from('org_payment_policies')
+      .select('org_id, allow_partial_payments, updated_at')
+      .eq('org_id', orgId)
+      .maybeSingle()
+
+    if (error) throw error
+
+    if (!data) {
+      return {
+        data: {
+          orgId,
+          allowPartialPayments: true,
+          updatedAt: null,
+        },
+        error: null,
+      }
+    }
+
+    return {
+      data: {
+        orgId: data.org_id,
+        allowPartialPayments: data.allow_partial_payments ?? true,
+        updatedAt: data.updated_at ?? null,
+      },
+      error: null,
+    }
+  } catch (err) {
+    console.error('[paymentSettingsService] Error fetching payment policy:', err)
+    if (err instanceof Error && isRlsError(err)) {
+      return { data: null, error: new Error(t('common.error.permissionDenied' as any)) }
+    }
+    return { data: null, error: err instanceof Error ? err : new Error(t('common.error.loadFailed' as any)) }
+  }
+}
+
+export async function updateOrganizationPaymentPolicy(
+  orgId: string,
+  allowPartialPayments: boolean
+): Promise<{ data: OrganizationPaymentPolicy | null; error: Error | null }> {
+  try {
+    if (USE_FAKE_DATA) {
+      return updateFakeOrganizationPaymentPolicy(orgId, allowPartialPayments)
+    }
+
+    if (!orgId) {
+      return { data: null, error: new Error(t('common.error.notFound' as any)) }
+    }
+
+    const { data, error } = await supabase
+      .from('org_payment_policies')
+      .upsert(
+        {
+          org_id: orgId,
+          allow_partial_payments: allowPartialPayments,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'org_id' }
+      )
+      .select('org_id, allow_partial_payments, updated_at')
+      .single()
+
+    if (error) throw error
+
+    return {
+      data: {
+        orgId: data.org_id,
+        allowPartialPayments: data.allow_partial_payments ?? true,
+        updatedAt: data.updated_at ?? null,
+      },
+      error: null,
+    }
+  } catch (err) {
+    console.error('[paymentSettingsService] Error updating payment policy:', err)
+    if (err instanceof Error && isRlsError(err)) {
+      return { data: null, error: new Error(t('common.error.permissionDenied' as any)) }
+    }
+    return { data: null, error: err instanceof Error ? err : new Error(t('common.error.updateFailed' as any)) }
   }
 }

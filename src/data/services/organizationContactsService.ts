@@ -6,8 +6,15 @@ import {
     upsertFakeDefaultContact,
     upsertFakeCategoryContact
 } from '../fake/organizationContactsFakeService'
+import { organizationContactSchema, defaultContactSchema } from '../../types/organizationContacts'
+import { t } from '../../i18n'
 
-const supabaseAny = supabase as any
+function isRlsError(error: Error): boolean {
+    return (
+        (error as any)?.code === '42501' ||
+        error.message.toLowerCase().includes('row-level security')
+    )
+}
 
 export async function getOrganizationContacts(orgId: string): Promise<{ data: OrganizationContact[] | null; error: Error | null }> {
     try {
@@ -15,7 +22,11 @@ export async function getOrganizationContacts(orgId: string): Promise<{ data: Or
             return getFakeOrganizationContacts(orgId)
         }
 
-        const { data, error } = await supabaseAny
+        if (!orgId) {
+            return { data: null, error: new Error(t('common.error.notFound' as any)) }
+        }
+
+        const { data, error } = await supabase
             .from('organization_contacts')
             .select('*')
             .eq('org_id', orgId)
@@ -25,7 +36,10 @@ export async function getOrganizationContacts(orgId: string): Promise<{ data: Or
         return { data: data as OrganizationContact[], error: null }
     } catch (err) {
         console.error('Error fetching organization contacts:', err)
-        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        if (err instanceof Error && isRlsError(err)) {
+            return { data: null, error: new Error(t('common.error.permissionDenied' as any)) }
+        }
+        return { data: null, error: err instanceof Error ? err : new Error(t('common.error.loadFailed' as any)) }
     }
 }
 
@@ -71,16 +85,28 @@ export async function upsertDefaultContact(
             return upsertFakeDefaultContact(orgId, payload)
         }
 
-        const { data, error } = await supabaseAny
+        if (!orgId) {
+            return { data: null, error: new Error(t('common.error.notFound' as any)) }
+        }
+
+        const parsed = defaultContactSchema.parse({
+            first_name: payload.first_name?.trim(),
+            last_name: payload.last_name?.trim(),
+            email: payload.email?.trim(),
+            phone: payload.phone ?? null,
+            is_custom: true,
+        })
+
+        const { data, error } = await supabase
             .from('organization_contacts')
             .upsert({
                 org_id: orgId,
                 category: 'default',
                 is_custom: true,
-                first_name: payload.first_name,
-                last_name: payload.last_name,
-                email: payload.email,
-                phone: payload.phone,
+                first_name: parsed.first_name,
+                last_name: parsed.last_name,
+                email: parsed.email,
+                phone: parsed.phone ?? null,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'org_id, category' })
             .select()
@@ -92,7 +118,10 @@ export async function upsertDefaultContact(
 
     } catch (err) {
         console.error('Error updating default contact:', err)
-        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        if (err instanceof Error && isRlsError(err)) {
+            return { data: null, error: new Error(t('common.error.permissionDenied' as any)) }
+        }
+        return { data: null, error: err instanceof Error ? err : new Error(t('common.error.updateFailed' as any)) }
     }
 }
 
@@ -106,16 +135,37 @@ export async function upsertCategoryContact(
             return upsertFakeCategoryContact(orgId, category, payload)
         }
 
-        const { data, error } = await supabaseAny
+        if (!orgId) {
+            return { data: null, error: new Error(t('common.error.notFound' as any)) }
+        }
+
+        const shouldValidate = payload.is_custom === true
+        const parsed = shouldValidate
+            ? organizationContactSchema.parse({
+                first_name: payload.first_name?.trim(),
+                last_name: payload.last_name?.trim(),
+                email: payload.email?.trim(),
+                phone: payload.phone ?? null,
+                is_custom: payload.is_custom ?? false,
+            })
+            : {
+                first_name: payload.first_name?.trim() ?? '',
+                last_name: payload.last_name?.trim() ?? '',
+                email: payload.email?.trim() ?? '',
+                phone: payload.phone ?? null,
+                is_custom: payload.is_custom ?? false,
+            }
+
+        const { data, error } = await supabase
             .from('organization_contacts')
             .upsert({
                 org_id: orgId,
                 category: category,
-                is_custom: payload.is_custom,
-                first_name: payload.first_name,
-                last_name: payload.last_name,
-                email: payload.email,
-                phone: payload.phone,
+                is_custom: parsed.is_custom,
+                first_name: parsed.first_name,
+                last_name: parsed.last_name,
+                email: parsed.email,
+                phone: parsed.phone ?? null,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'org_id, category' })
             .select()
@@ -127,6 +177,9 @@ export async function upsertCategoryContact(
 
     } catch (err) {
         console.error(`Error updating contact for ${category}:`, err)
-        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        if (err instanceof Error && isRlsError(err)) {
+            return { data: null, error: new Error(t('common.error.permissionDenied' as any)) }
+        }
+        return { data: null, error: err instanceof Error ? err : new Error(t('common.error.updateFailed' as any)) }
     }
 }

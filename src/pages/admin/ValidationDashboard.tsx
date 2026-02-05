@@ -203,7 +203,7 @@ export default function ValidationDashboard() {
       <div className="pa-page-container">
         <AdminPageHeader title={t('ticketing.dashboard.title')} />
         <div className="text-center py-12">
-          <p className="text-gray-500">{t('common.error')}: Event ID required</p>
+          <p className="text-gray-500">{t('common.error.label')}: Event ID required</p>
         </div>
       </div>
     )

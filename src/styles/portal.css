@@ -376,3 +376,168 @@
 .dark .signup-location-autocomplete .pa-input:focus {
   box-shadow: inset 0 0 0 2px var(--org-btn-primary-bg, #137fec);
 }
+
+/* Event Hero Banner */
+.event-hero-banner {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  margin-top: -2rem;
+  margin-bottom: 2rem;
+  min-height: 380px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+@media (min-width: 768px) {
+  .event-hero-banner {
+    min-height: 440px;
+  }
+}
+
+.event-hero-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.8) 100%);
+}
+
+.event-hero-banner-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  text-align: left;
+}
+
+@media (min-width: 640px) {
+  .event-hero-banner-content {
+    padding: 2rem 1.5rem;
+  }
+}
+
+.event-hero-banner .portal-breadcrumbs a,
+.event-hero-banner .portal-breadcrumbs span {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.event-hero-banner .portal-breadcrumbs a:hover {
+  color: #ffffff;
+}
+
+.event-hero-banner .event-hero-title {
+  color: #ffffff;
+  font-size: 2.25rem;
+  font-weight: 800;
+  margin: 0.5rem 0;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  line-height: 1.2;
+}
+
+@media (min-width: 768px) {
+  .event-hero-banner .event-hero-title {
+    font-size: 3rem;
+  }
+}
+
+.event-hero-banner .event-hero-meta {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.125rem;
+  font-weight: 300;
+}
+
+.event-hero-banner .event-hero-meta .meta-separator {
+  display: none;
+}
+
+.event-hero-banner .event-hero-meta .meta-time {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+@media (min-width: 640px) {
+  .event-hero-banner .event-hero-meta .meta-separator {
+    display: inline;
+  }
+  .event-hero-banner .event-hero-meta .meta-time {
+    display: inline;
+    margin-top: 0;
+  }
+}
+
+.event-hero-banner .event-hero-team {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 0.5rem;
+}
+
+.event-hero-banner .event-hero-actions {
+  position: absolute;
+  top: 1rem;
+  right: 1.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.event-hero-banner .event-hero-actions button {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.event-hero-banner .event-hero-actions button:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Quick Info Card inside hero banner */
+.event-hero-banner .event-hero-quick-info {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.75rem;
+  padding: 1rem 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.event-hero-banner .event-hero-quick-info .quick-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .event-hero-banner .event-hero-quick-info .quick-info-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.event-hero-banner .event-hero-quick-info .quick-info-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.25rem;
+}
+
+.event-hero-banner .event-hero-quick-info .quick-info-value {
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.event-hero-banner .event-hero-quick-info .quick-info-subtext {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.625rem;
+}

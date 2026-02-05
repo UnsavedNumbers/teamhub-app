@@ -24,6 +24,7 @@ import {
 } from '../../components/platformAdmin'
 import { ConfirmDialog } from '../../components/platformAdmin/ConfirmDialog'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+import { FanVisibilityToggle } from '../../components/admin/FanVisibilityToggle'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import { FileUpload } from '../../components/common/FileUpload'
 import { 
@@ -71,6 +72,7 @@ export default function EditEvent() {
   const [ticketedEventId, setTicketedEventId] = useState<string | null>(null)
   const [bannerFile, setBannerFile] = useState<File | null>(null)
   const [isPastEvent, setIsPastEvent] = useState(false)
+  const [visibility, setVisibility] = useState<'public' | 'private'>('private')
 
   const { context, isReady } = useUserContext()
   const { currentOrganization } = useOrganization()
@@ -273,6 +275,9 @@ export default function EditEvent() {
       setValue('external_link', event.external_link || '')
       setValue('rsvp_enabled', event.rsvp_enabled ?? false)
       setValue('rsvp_type', (event.rsvp_enabled && event.rsvp_type) ? (event.rsvp_type as any) : null)
+      
+      // Initialize visibility from event data
+      setVisibility((event as any).visibility === 'public' ? 'public' : 'private')
 
       if (event.event_location) {
         setValue('location.venue_name', event.event_location.venue_name || '')
@@ -539,6 +544,7 @@ export default function EditEvent() {
         equipment_notes: data.equipment_notes || null,
         weather_dependent: data.weather_dependent,
         external_link: data.external_link || null,
+        visibility: visibility,
       } satisfies EventUpdate
       const { error: updateError } = await supabase
         .from('events')
@@ -1524,6 +1530,24 @@ export default function EditEvent() {
                     )} />
                   </div>
                 </div>
+              </div>
+            </section>
+
+            {/* SECTION: FAN VISIBILITY */}
+            <section className="oa-form-section" aria-labelledby="event-visibility-heading">
+              <div className="oa-form-section-header">
+                <div>
+                  <h3 id="event-visibility-heading" className="oa-form-section-title">Fan Visibility</h3>
+                  <p className="oa-form-section-subtitle">Control who can see this event in the public fan portal.</p>
+                </div>
+              </div>
+              <div className="oa-form-section-body">
+                <FanVisibilityToggle
+                  checked={visibility === 'public'}
+                  onChange={(checked) => setVisibility(checked ? 'public' : 'private')}
+                  entityType="event"
+                  disabled={saving}
+                />
               </div>
             </section>
 

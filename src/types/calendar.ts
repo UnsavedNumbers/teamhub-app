@@ -290,6 +290,8 @@ export interface EventFormData {
     rsvp_enabled: boolean
     rsvp_type: RSVPType | null
     ticketing?: TicketingFormData
+    /** Fan visibility: 'public' = visible to fans, 'private' = organization only */
+    visibility?: 'public' | 'private'
 }
 
 export interface TicketingFormData {

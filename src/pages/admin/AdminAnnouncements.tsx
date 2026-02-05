@@ -288,7 +288,8 @@ export default function AdminAnnouncements() {
     priority: 'normal' | 'urgent',
     teamId: string | null,
     type: AnnouncementType,
-    isOrgWide: boolean
+    isOrgWide: boolean,
+    visibleToFans: boolean
   ) => {
     if (!user) {
       showError('You must be logged in to create announcements')
@@ -310,7 +311,8 @@ export default function AdminAnnouncements() {
         user.id,
         orgId,
         type,
-        isOrgWide
+        isOrgWide,
+        visibleToFans
       )
 
       if (createError) {
