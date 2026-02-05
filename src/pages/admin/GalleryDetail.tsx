@@ -269,7 +269,7 @@ export default function GalleryDetail() {
             {/* Photo Feed Section */}
             <Card 
               title={t('photos.photoFeed')}
-              className="oa-card oa-card--no-padding"
+              className="oa-card oa-card--no-padding pa-mt-3"
               actions={
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button 

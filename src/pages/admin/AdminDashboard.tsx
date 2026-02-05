@@ -158,33 +158,33 @@ export default function AdminDashboard() {
 
       <div className={cn('pa-grid', 'pa-grid-1', 'pa-gap-6', 'pa-dashboard-grid')}>
         <div className="pa-dashboard-main">
-          <Card>
-            <div className="pa-p-4 sm:pa-p-6">
+          <Card className='pa-mt-6'>
+            <div className="pa-p-4 sm:pa-p-6 pa-min-w-0">
                 <h3 className="pa-overline pa-mb-6 sm:pa-mb-8">QUICK ACTIONS</h3>
                 <div className={cn('pa-grid', 'pa-grid-1', 'pa-gap-3', 'pa-actions-grid')}>
-                  <Button 
-                    className={cn('pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-justify-center', 'pa-gap-3', 'pa-p-6', 'sm:pa-p-8', 'pa-h-auto')}
+                  <Button
+                    className="pa-min-w-0"
                     onClick={() => navigate('/admin/events/new')}
                     variant="secondary"
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>add_circle</span>
-                    <span className="pa-font-bold">New Event</span>
+                    <span className="material-symbols-outlined" aria-hidden>add_circle</span>
+                    <span className="pa-actions-label">New Event</span>
                   </Button>
-                  <Button 
-                    variant="secondary" 
-                    className={cn('pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-justify-center', 'pa-gap-3', 'pa-p-6', 'sm:pa-p-8', 'pa-h-auto')}
+                  <Button
+                    className="pa-min-w-0"
+                    variant="secondary"
                     onClick={() => navigate('/admin/users/new')}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>person_add</span>
-                    <span className="pa-font-bold">Add User</span>
+                    <span className="material-symbols-outlined" aria-hidden>person_add</span>
+                    <span className="pa-actions-label">Add User</span>
                   </Button>
-                  <Button 
-                    variant="secondary" 
-                    className={cn('pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-justify-center', 'pa-gap-3', 'pa-p-6', 'sm:pa-p-8', 'pa-h-auto')}
+                  <Button
+                    className="pa-min-w-0"
+                    variant="secondary"
                     onClick={() => navigate('/admin/fees/new')}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>request_quote</span>
-                    <span className="pa-font-bold">Assign Fee</span>
+                    <span className="material-symbols-outlined" aria-hidden>request_quote</span>
+                    <span className="pa-actions-label">Assign Fee</span>
                   </Button>
                 </div>
             </div>
@@ -192,36 +192,36 @@ export default function AdminDashboard() {
         </div>
 
         <div className="pa-dashboard-sidebar">
-          <Card noPadding>
-            <div className="pa-p-6 pa-border-b pa-border-slate-100">
-                <h3 className="pa-overline">RECENT ACTIVITY</h3>
-            </div>
-            <div className="pa-p-6">
-                {recentActivity.length === 0 ? (
-                  <div className="pa-body-m pa-text-muted pa-text-center pa-py-10">No recent activity</div>
-                ) : (
-                  <div className="pa-flex pa-flex-col pa-gap-6">
-                    {recentActivity.map(a => (
-                      <div key={a.id} className="pa-flex pa-gap-4 pa-items-start">
-                        <div 
-                          className="pa-bg-neutral-light pa-size-10 pa-flex pa-items-center pa-justify-center pa-rounded-full"
-                        >
-                          <span className="material-symbols-outlined pa-text-slate-400 pa-icon-sm">notifications</span>
-                        </div>
-                        <div className="pa-flex-1 pa-pt-1">
-                          <div className="pa-text-sm pa-font-bold pa-text-slate-900 pa-mb-1">{a.message}</div>
-                          <div className="pa-text-[10px] pa-font-black pa-text-slate-400 pa-uppercase pa-tracking-widest">{new Date(a.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
+          <Card>
+            <div className="pa-p-4 sm:pa-p-6 pa-min-w-0">
+              <h3 className="pa-overline pa-mb-6 sm:pa-mb-8">RECENT ACTIVITY</h3>
+              {recentActivity.length === 0 ? (
+                <div className="pa-body-m pa-text-muted pa-text-center pa-py-10">
+                  No recent activity
+                </div>
+              ) : (
+                <div className="pa-flex pa-flex-col pa-gap-4 sm:pa-gap-6">
+                  {recentActivity.map(a => (
+                    <div key={a.id} className="pa-flex pa-gap-3 sm:pa-gap-4 pa-items-start pa-min-w-0">
+                      <div className="pa-bg-neutral-light pa-size-10 pa-flex pa-items-center pa-justify-center pa-rounded-full pa-flex-shrink-0">
+                        <span className="material-symbols-outlined pa-text-slate-400 pa-icon-sm" aria-hidden>notifications</span>
+                      </div>
+                      <div className="pa-flex-1 pa-min-w-0 pa-pt-1">
+                        <div className="pa-text-sm pa-font-bold pa-text-slate-900 pa-mb-1 pa-break-words">{a.message}</div>
+                        <div className="pa-text-[10px] pa-font-black pa-text-slate-400 pa-uppercase pa-tracking-widest">
+                          {new Date(a.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-            </div>
-            {recentActivity.length > 0 && (
-                <div className="pa-p-4 pa-border-t pa-border-slate-100 pa-text-center">
-                    <Button variant="ghost" size="dense">View All Activity</Button>
+                    </div>
+                  ))}
                 </div>
-            )}
+              )}
+              {recentActivity.length > 0 && (
+                <div className="pa-mt-6 sm:pa-mt-8 pa-pt-6 pa-border-t pa-border-slate-200 pa-text-center">
+                  <Button variant="ghost" size="dense">View All Activity</Button>
+                </div>
+              )}
+            </div>
           </Card>
         </div>
       </div>
