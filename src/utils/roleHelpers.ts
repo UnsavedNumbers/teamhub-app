@@ -91,6 +91,8 @@ export function formatRoleName(role: OrgMemberRole): string {
       return 'Parent'
     case 'coach':
       return 'Coach'
+    case 'staff':
+      return 'Staff'
     default:
       // TypeScript exhaustiveness check - this should never happen
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -144,6 +146,8 @@ export function mapDbRoleToFrontendRole(role: DbRole): FrontendRole {
       return 'coach'
     case 'parent':
       return 'parent'
+    case 'staff':
+      return 'admin'
     default:
       // TypeScript exhaustiveness check
       const _exhaustive: never = role

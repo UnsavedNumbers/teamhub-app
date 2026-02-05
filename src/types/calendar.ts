@@ -37,8 +37,8 @@ export type AttendanceStatus = 'going' | 'late' | 'not_going'
 
 export interface CalendarEvent {
     id: string
-    team_id: string
-    season_id: string
+    team_id: string | null
+    season_id: string | null
     title: string
     type: EventType
     start_time: string // ISO 8601
@@ -274,8 +274,8 @@ export interface EventFormData {
     sport_id?: string
     /** UI-only: drives Season dropdown */
     program_id?: string
-    team_id: string
-    season_id: string
+    team_id?: string
+    season_id?: string
     start_time: string // datetime-local format
     end_time: string // datetime-local format
     arrival_time: string // datetime-local format
@@ -290,6 +290,8 @@ export interface EventFormData {
     rsvp_enabled: boolean
     rsvp_type: RSVPType | null
     ticketing?: TicketingFormData
+    /** Fan visibility: 'public' = visible to fans, 'private' = organization only */
+    visibility?: 'public' | 'private'
 }
 
 export interface TicketingFormData {

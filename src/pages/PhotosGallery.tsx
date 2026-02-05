@@ -1,14 +1,12 @@
 /**
  * Gallery View Page
- * 
- * Displays a single gallery with photos using react-photo-album and yet-another-react-lightbox.
- * Supports both masonry (feed) and grid layouts.
+ *
+ * Displays a single gallery with photos in a grid layout, with selection, tagging,
+ * and yet-another-react-lightbox for full-size viewing.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
-import PhotoAlbum from 'react-photo-album'
-import 'react-photo-album/styles.css'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import { useUserContext } from '../hooks/useUserContext'
@@ -16,42 +14,81 @@ import {
   getGalleryById,
   getPhotosForGallery,
   getGalleryPhotoUrl,
+  getGalleryPhotoThumbnailUrl,
   checkCanModerateGallery,
   checkCanUploadToGallery,
   type Gallery,
   type GalleryPhoto,
 } from '../data/services/galleryService'
 import PortalLayout from '../components/portal/PortalLayout'
-import { PageTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Icon from '../components/portal/Icon'
 import Button from '../components/portal/Button'
 import { PhotoUploader } from '../components/gallery/PhotoUploader'
 import { ParentPhotoUpload } from '../components/gallery/ParentPhotoUpload'
 import { ModerationQueue } from '../components/gallery/ModerationQueue'
-import { AthleteTaggingSlideout } from '../components/gallery/AthleteTaggingSlideout'
+import { TaggingSlideout } from '../components/gallery/TaggingSlideout'
 import { BulkTaggingModal } from '../components/gallery/BulkTaggingModal'
+import { GalleryEditModal } from '../components/admin/galleries/GalleryEditModal'
 import { getLink } from '../utils/routes'
-import type { Photo } from 'react-photo-album'
+import { useI18n } from '../i18n/useI18n'
 
 export default function PhotosGallery() {
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
   const isManageMode = location.pathname.includes('/manage')
   const { context, isReady } = useUserContext()
+  const { t } = useI18n()
   const [gallery, setGallery] = useState<Gallery | null>(null)
   const [photos, setPhotos] = useState<GalleryPhoto[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lightboxIndex, setLightboxIndex] = useState(-1)
-  const [layout, setLayout] = useState<'masonry' | 'rows'>('masonry')
   const [canModerate, setCanModerate] = useState(false)
   const [canUpload, setCanUpload] = useState(false)
   const [showParentUpload, setShowParentUpload] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [taggingPhoto, setTaggingPhoto] = useState<GalleryPhoto | null>(null)
+  const [taggingPhotoIndex, setTaggingPhotoIndex] = useState<number>(-1)
   const [bulkTaggingPhotos, setBulkTaggingPhotos] = useState<GalleryPhoto[]>([])
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
-  const [filterAthleteId, setFilterAthleteId] = useState<string | null>(null)
+  const [selectedAthleteIds, setSelectedAthleteIds] = useState<Set<string>>(new Set())
+  const [showAthleteDropdown, setShowAthleteDropdown] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowAthleteDropdown(false)
+      }
+    }
+
+    if (showAthleteDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showAthleteDropdown])
+
+  // Extract unique athletes from all photos
+  const taggedAthletes = photos.reduce((acc, photo) => {
+    if (photo.tagged_athletes) {
+      photo.tagged_athletes.forEach(athlete => {
+        if (!acc.find(a => a.id === athlete.id)) {
+          acc.push(athlete)
+        }
+      })
+    }
+    return acc
+  }, [] as Array<{ id: string; first_name: string; last_name: string }>)
+
+  // Get the currently selected athletes
+  const selectedAthletes = selectedAthleteIds.size > 0
+    ? taggedAthletes.filter(a => selectedAthleteIds.has(a.id))
+    : []
 
   useEffect(() => {
     if (!isReady || !id) return
@@ -64,7 +101,7 @@ export default function PhotosGallery() {
         getGalleryById(context, id),
         getPhotosForGallery(context, {
           gallery_id: id,
-          athlete_id: filterAthleteId || undefined,
+          athlete_id: selectedAthleteIds.size > 0 ? Array.from(selectedAthleteIds).join(',') : undefined,
         }),
       ])
 
@@ -97,31 +134,7 @@ export default function PhotosGallery() {
     }
 
     loadGallery()
-  }, [context, isReady, id, filterAthleteId])
-
-  const albumPhotos: Photo[] = useMemo(
-    () =>
-      photos.map((photo, index) => {
-        const photoUrl = getGalleryPhotoUrl(photo.storage_path)
-        return {
-          src: photoUrl,
-          width: 800,
-          height: 600,
-          key: photo.id,
-          alt: `Photo ${index + 1}`,
-        } as Photo
-      }),
-    [photos]
-  )
-
-  const handlePhotoClick = ({ index }: { index: number }) => {
-    if (isManageMode && canModerate) {
-      const photo = photos[index]
-      setTaggingPhoto(photo)
-    } else {
-      setLightboxIndex(index)
-    }
-  }
+  }, [context, isReady, id, selectedAthleteIds])
 
   if (loading) {
     return (
@@ -170,49 +183,127 @@ export default function PhotosGallery() {
         { label: gallery.name },
       ]}
     >
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <PageTitle>{gallery.name}</PageTitle>
-          <div className="flex items-center gap-3">
-            {gallery.require_approval && (
-              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
-                Moderation Required
-              </span>
-            )}
-            {!isManageMode && canModerate && (
-              <Link to={getLink('portal.photosGalleryManage', { id: gallery.id })}>
-                <Button variant="secondary">
-                  <Icon name="edit" size="text-sm" className="mr-2" />
-                  Manage
-                </Button>
-              </Link>
-            )}
-            {!isManageMode && gallery.allow_contributions && canUpload && (
-              <Button
-                variant="primary"
-                onClick={() => setShowParentUpload(!showParentUpload)}
-              >
-                <Icon name="add" size="text-sm" className="mr-2" />
-                Add Your Photos
-              </Button>
-            )}
-            {isManageMode && (
-              <Link to={getLink('portal.photosGallery', { id: gallery.id })}>
-                <Button variant="secondary">
-                  <Icon name="arrow_back" size="text-sm" className="mr-2" />
-                  Back to Gallery
-                </Button>
-              </Link>
-            )}
+      {/* Header Section */}
+      <section className="mb-16">
+        <div className="flex flex-col gap-4">
+          <h1 className="text-6xl md:text-7xl font-[900] tracking-tighter text-slate-900 dark:text-white leading-none">
+            {gallery.name}
+          </h1>
+
+          <div className="flex items-center justify-between mt-8 pt-8 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-8">
+              {/* Athlete filter dropdown */}
+              {taggedAthletes.length > 0 && (
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setShowAthleteDropdown(!showAthleteDropdown)}
+                    className="group flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black dark:hover:text-white transition-colors"
+                  >
+                    {selectedAthletes.length === 0 ? 'All Athletes' : `${selectedAthletes.length} Athlete${selectedAthletes.length > 1 ? 's' : ''}`}
+                    <span className={`material-symbols-outlined text-sm transition-transform ${showAthleteDropdown ? 'rotate-180' : ''}`}>
+                      expand_more
+                    </span>
+                  </button>
+
+                  {/* Dropdown menu */}
+                  {showAthleteDropdown && (
+                    <div className="absolute top-full left-0 mt-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 min-w-[200px] z-50">
+                      <button
+                        onClick={() => setSelectedAthleteIds(new Set())}
+                        className="w-full text-left px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                      >
+                        Clear All
+                      </button>
+                      {taggedAthletes.map((athlete) => {
+                        const isSelected = selectedAthleteIds.has(athlete.id)
+                        return (
+                          <button
+                            key={athlete.id}
+                            onClick={() => {
+                              setSelectedAthleteIds((prev) => {
+                                const next = new Set(prev)
+                                if (next.has(athlete.id)) {
+                                  next.delete(athlete.id)
+                                } else {
+                                  next.add(athlete.id)
+                                }
+                                return next
+                              })
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700"
+                          >
+                            <span className={isSelected ? 'font-semibold text-black dark:text-white' : 'text-slate-600 dark:text-slate-300'}>
+                              {athlete.first_name}
+                            </span>
+                            {isSelected && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedAthleteIds((prev) => {
+                                    const next = new Set(prev)
+                                    next.delete(athlete.id)
+                                    return next
+                                  })
+                                }}
+                                className="text-slate-400 hover:text-red-500 transition-colors"
+                              >
+                                <span className="material-symbols-outlined text-sm">close</span>
+                              </button>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Action buttons */}
+              {gallery.require_approval && (
+                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
+                  {t('photos.galleryView.moderationRequired')}
+                </span>
+              )}
+              {!isManageMode && canModerate && (
+                <Link to={getLink('portal.photosGalleryManage', { id: gallery.id })}>
+                  <button className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black dark:hover:text-white transition-colors">
+                    <Icon name="edit" size="text-sm" />
+                    {t('photos.galleryView.manage')}
+                  </button>
+                </Link>
+              )}
+              {!isManageMode && gallery.allow_contributions && canUpload && (
+                <button
+                  onClick={() => setShowParentUpload(!showParentUpload)}
+                  className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black dark:hover:text-white transition-colors"
+                >
+                  <Icon name="add" size="text-sm" />
+                  {t('photos.galleryView.addYourPhotos')}
+                </button>
+              )}
+              {canModerate && (
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black dark:hover:text-white transition-colors"
+                >
+                  <Icon name="edit" size="text-sm" />
+                  Update Album
+                </button>
+              )}
+            </div>
+
+            <div className="text-sm font-medium text-slate-400 italic">
+              Showing {photos.length} {photos.length === 1 ? 'photo' : 'photos'}
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Parent upload (shown in view mode when allow_contributions is true) */}
       {!isManageMode && showParentUpload && gallery && gallery.allow_contributions && (
         <Card className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Share Your Highlights</h2>
+            <h2 className="text-xl font-bold">{t('photos.galleryView.shareHighlights')}</h2>
             <Button
               variant="secondary"
               onClick={() => setShowParentUpload(false)}
@@ -291,132 +382,118 @@ export default function PhotosGallery() {
         </Card>
       ) : (
         <>
-          {/* Filters and layout toggle */}
-          <div className="mb-4 flex items-center justify-between flex-wrap gap-4">
-            {/* Athlete filter chips */}
-            {photos.some((p) => p.tagged_athletes && p.tagged_athletes.length > 0) && (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setFilterAthleteId(null)}
-                  className={`px-3 py-1 text-sm rounded ${
-                    !filterAthleteId
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                  }`}
+          {/* Photo Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12 mb-32">
+            {photos.map((photo, index) => {
+              const isSelected = selectedPhotos.has(photo.id)
+              const thumbnailUrl = getGalleryPhotoThumbnailUrl(photo.thumbnail_path, photo.storage_path)
+              const taggedNames = photo.tagged_athletes
+                ?.map((a) => a.first_name)
+                .join(' • ') || ''
+
+              return (
+                <div
+                  key={photo.id}
+                  className="group relative flex flex-col gap-4 cursor-pointer"
                 >
-                  All Athletes
-                </button>
-                {Array.from(
-                  new Set(
-                    photos.flatMap((p) => p.tagged_athletes || []).map((a) => a.id)
-                  )
-                )
-                  .slice(0, 5)
-                  .map((athleteId) => {
-                    const athlete = photos
-                      .flatMap((p) => p.tagged_athletes || [])
-                      .find((a) => a.id === athleteId)
-                    if (!athlete) return null
-                    return (
-                      <button
-                        key={athleteId}
-                        onClick={() => setFilterAthleteId(athleteId)}
-                        className={`px-3 py-1 text-sm rounded ${
-                          filterAthleteId === athleteId
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        {athlete.first_name} {athlete.last_name}
-                      </button>
-                    )
-                  })}
-              </div>
-            )}
-
-            {/* Layout toggle */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setLayout('masonry')}
-                className={`px-3 py-1 text-sm rounded ${
-                  layout === 'masonry'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                Masonry
-              </button>
-              <button
-                onClick={() => setLayout('rows')}
-                className={`px-3 py-1 text-sm rounded ${
-                  layout === 'rows'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                Grid
-              </button>
-            </div>
-          </div>
-
-          {/* Selection mode controls */}
-          {isManageMode && canModerate && (
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex gap-2">
-                {selectedPhotos.size > 0 ? (
-                  <>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        const selected = photos.filter((p) => selectedPhotos.has(p.id))
-                        setBulkTaggingPhotos(selected)
-                      }}
-                    >
-                      <Icon name="label" size="text-sm" className="mr-2" />
-                      Tag {selectedPhotos.size} Photo{selectedPhotos.size !== 1 ? 's' : ''}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => setSelectedPhotos(new Set())}
-                    >
-                      Clear Selection
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    variant="secondary"
+                  {/* Photo Container */}
+                  <div
+                    className="aspect-[4/5] w-full rounded-2xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-200/50 dark:ring-slate-700/50 group-hover:shadow-2xl group-hover:-translate-y-1 transition-all duration-500"
+                    style={
+                      isSelected
+                        ? {
+                            boxShadow: '0 20px 25px -5px rgba(59, 130, 246, 0.1), 0 8px 10px -6px rgba(59, 130, 246, 0.1)',
+                            transform: 'translateY(-4px)',
+                          }
+                        : {}
+                    }
                     onClick={() => {
-                      // Enable selection mode
+                      setTaggingPhoto(photo)
+                      setTaggingPhotoIndex(index)
                     }}
                   >
-                    <Icon name="select_all" size="text-sm" className="mr-2" />
-                    Select Photos
-                  </Button>
-                )}
+                    <img
+                      alt={photo.caption || `Photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      src={thumbnailUrl}
+                    />
+
+                    {/* Checkbox Overlay - Top Right */}
+                    <div
+                      className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedPhotos((prev) => {
+                          const next = new Set(prev)
+                          if (next.has(photo.id)) {
+                            next.delete(photo.id)
+                          } else {
+                            next.add(photo.id)
+                          }
+                          return next
+                        })
+                      }}
+                    >
+                      {isSelected ? (
+                        <div className="size-6 rounded-full bg-primary border-2 border-white flex items-center justify-center shadow-lg">
+                          <span className="material-symbols-outlined text-white text-base font-bold">
+                            check
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="size-6 rounded-full border-2 border-white flex items-center justify-center bg-white/20 backdrop-blur-md"></div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Photo Details */}
+                  <div className="px-2">
+                    <h4 className="text-sm font-bold text-black dark:text-white">
+                      {photo.caption || `Photo ${index + 1}`}
+                    </h4>
+                    {taggedNames && (
+                      <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-semibold">
+                        {taggedNames}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Bottom Action Bar - Fixed when photos are selected */}
+          {selectedPhotos.size > 0 && (
+            <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[60]">
+              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl px-8 py-4 rounded-full shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)] border border-slate-200 dark:border-slate-700 flex items-center gap-10">
+                <div className="flex items-center gap-4 border-r border-slate-200 dark:border-slate-700 pr-10">
+                  <span className="text-black dark:text-white font-black text-sm">
+                    {selectedPhotos.size} {selectedPhotos.size === 1 ? 'PHOTO' : 'PHOTOS'} SELECTED
+                  </span>
+                  <button
+                    onClick={() => setSelectedPhotos(new Set())}
+                    className="text-slate-400 hover:text-red-500 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-xl">close</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-6">
+                  <button className="flex items-center gap-2 text-sm font-bold hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-xl">ios_share</span>
+                    Share
+                  </button>
+                  <button className="flex items-center gap-2 text-sm font-bold hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-xl">favorite</span>
+                    Favorite
+                  </button>
+                  <button className="bg-black dark:bg-primary text-white px-8 py-3 rounded-full text-sm font-black hover:bg-slate-800 dark:hover:bg-blue-600 transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-black/10">
+                    <span className="material-symbols-outlined text-xl">download</span>
+                    Download Selected
+                  </button>
+                </div>
               </div>
             </div>
-          )}
-
-          {/* Photo grid: masonry (feed) or rows (grid) with layout-specific props */}
-          {layout === 'masonry' ? (
-            <PhotoAlbum
-              photos={albumPhotos}
-              layout="masonry"
-              columns={1}
-              onClick={handlePhotoClick}
-              spacing={8}
-              padding={0}
-            />
-          ) : (
-            <PhotoAlbum
-              photos={albumPhotos}
-              layout="rows"
-              targetRowHeight={(containerWidth) => (containerWidth >= 1200 ? 320 : containerWidth >= 600 ? 280 : containerWidth >= 300 ? 240 : 200)}
-              rowConstraints={{ maxPhotos: 2, minPhotos: 1 }}
-              onClick={handlePhotoClick}
-              spacing={8}
-              padding={0}
-            />
           )}
 
           {/* Lightbox */}
@@ -426,26 +503,46 @@ export default function PhotosGallery() {
             index={lightboxIndex}
             slides={photos.map((photo) => ({
               src: getGalleryPhotoUrl(photo.storage_path),
-              alt: `Gallery photo`,
+              alt: photo.caption || 'Gallery photo',
             }))}
           />
         </>
       )}
 
       {/* Tagging slideout */}
-      {taggingPhoto && (
-        <AthleteTaggingSlideout
+      {taggingPhoto && gallery && (
+        <TaggingSlideout
           photo={taggingPhoto}
+          gallery={gallery}
           isOpen={!!taggingPhoto}
-          onClose={() => setTaggingPhoto(null)}
-          onSave={() => {
+          onClose={() => {
+            setTaggingPhoto(null)
+            setTaggingPhotoIndex(-1)
+          }}
+          onOpenLightbox={() => {
+            setLightboxIndex(taggingPhotoIndex >= 0 ? taggingPhotoIndex : 0)
+            setTaggingPhoto(null)
+            setTaggingPhotoIndex(-1)
+          }}
+          onSave={async ({ advanceToNext }) => {
             // Reload photos to get updated tags
             if (id) {
-              getPhotosForGallery(context, { gallery_id: id }).then((result) => {
-                if (result.data) {
-                  setPhotos(result.data)
+              const result = await getPhotosForGallery(context, { gallery_id: id })
+              if (result.data) {
+                setPhotos(result.data)
+                // If advancing to next, update tagging photo
+                if (advanceToNext && taggingPhotoIndex >= 0) {
+                  const nextIndex = taggingPhotoIndex + 1
+                  if (nextIndex < result.data.length) {
+                    setTaggingPhoto(result.data[nextIndex])
+                    setTaggingPhotoIndex(nextIndex)
+                  } else {
+                    // No more photos, close slideout
+                    setTaggingPhoto(null)
+                    setTaggingPhotoIndex(-1)
+                  }
                 }
-              })
+              }
             }
           }}
         />
@@ -469,6 +566,20 @@ export default function PhotosGallery() {
                 }
               })
             }
+          }}
+        />
+      )}
+
+      {/* Gallery Edit Modal */}
+      {gallery && (
+        <GalleryEditModal
+          open={showEditModal}
+          gallery={gallery}
+          photos={photos}
+          onClose={() => setShowEditModal(false)}
+          onSaved={(updatedGallery) => {
+            setGallery(updatedGallery)
+            setShowEditModal(false)
           }}
         />
       )}

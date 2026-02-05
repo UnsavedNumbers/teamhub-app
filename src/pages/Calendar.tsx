@@ -3,13 +3,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { 
-  getEvents, 
+  getCalendarEvents,
   updateRSVP, 
   getAthletes, 
   isGeneralRSVP, 
   isAthleteRSVP 
 } from '../data/services'
 import { getFanCalendar } from '../data/services/fanService'
+import type { CalendarEventSummary } from '../data/services/eventsService'
 import type { CalendarEvent as FanCalendarEvent } from '../types/staffAndFan'
 import { getContactForCategory } from '../data/services/organizationContactsService'
 import { 
@@ -21,7 +22,8 @@ import {
     formatEventTimeRange, 
     formatEventLocation,
     getEventLocationMapsUrl,
-    RSVPStatus
+    RSVPStatus,
+    RSVPType
 } from '../types/calendar'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
@@ -32,7 +34,7 @@ import CalendarGrid from '../components/calendar/CalendarGrid'
 import EventFilters from '../components/calendar/EventFilters'
 import RSVPButton from '../components/calendar/RSVPButton'
 import GeneralRSVPForm from '../components/calendar/GeneralRSVPForm'
-import { getSportFromEvent, type SportInfo } from '../utils/sportContext'
+import { type SportInfo } from '../utils/sportContext'
 import { useI18n } from '../i18n/useI18n'
 
 // Default filters
@@ -87,6 +89,40 @@ export default function Calendar() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
+  const mapSummaryToCalendarEvent = useCallback((summary: CalendarEventSummary): CalendarEvent => ({
+    id: summary.id,
+    team_id: summary.team_id,
+    season_id: summary.season_id,
+    title: summary.title,
+    type: summary.type,
+    start_time: summary.start_time,
+    end_time: summary.end_time,
+    arrival_time: summary.arrival_time,
+    timezone: summary.timezone,
+    location: summary.location,
+    notes: null,
+    uniform_notes: null,
+    equipment_notes: null,
+    weather_dependent: false,
+    external_link: null,
+    is_cancelled: summary.is_cancelled,
+    cancellation_reason: null,
+    cancelled_at: null,
+    cancelled_by_user_id: null,
+    created_by_user_id: null,
+    created_at: summary.start_time,
+    updated_at: summary.start_time,
+    requires_travel: summary.requires_travel,
+    rsvp_config: {
+      enabled: summary.rsvp_enabled,
+      type: summary.rsvp_type as RSVPType | null,
+    },
+    team: summary.team ?? undefined,
+    season: summary.season ?? undefined,
+    rsvps: [],
+    general_rsvps: [],
+  }), [])
+
   const fetchData = useCallback(async () => {
     if (!isReady || !context) return
     setLoading(true)
@@ -111,9 +147,11 @@ export default function Calendar() {
           start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
           end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
       } else {
-          // Agenda view gets all events regardless of time period
-          start = new Date(0) // Beginning of time
-          end = new Date('2099-12-31') // Far future
+          // Agenda view: reasonable 6-month window for performance
+          // (previously fetched all events from year 0 to 2099, causing slow queries)
+          const now = new Date()
+          start = new Date(now.getFullYear(), now.getMonth() - 1, 1) // 1 month in the past
+          end = new Date(now.getFullYear(), now.getMonth() + 6, 0)   // 6 months in the future
       }
       
       // Fetch user children for RSVP matching
@@ -124,10 +162,13 @@ export default function Calendar() {
         setChildren(childrenData || [])
       }
 
-      const { data, error: eventsError } = await getEvents(context, {
+      // Use lightweight calendar query for list views (faster, fewer joins)
+      // Full event details are loaded on-demand when viewing individual events
+      const { data, error: eventsError } = await getCalendarEvents(context, {
         startDate: start,
         endDate: end,
         includeCancelled: filters.showCancelled,
+        eventTypes: filters.eventTypes.length > 0 ? filters.eventTypes : undefined,
       })
 
       if (eventsError) {
@@ -135,28 +176,14 @@ export default function Calendar() {
         setError(eventsError.message || 'Failed to load events')
         setEvents([])
       } else {
-          // filter in memory for event types if service doesn't support it yet
-          let filtered = data || []
-          if (filters.eventTypes.length > 0) {
-              filtered = filtered.filter(e => filters.eventTypes.includes(e.type))
-          }
+          // Events are already filtered server-side via the query params
+          const filtered = (data || []).map(mapSummaryToCalendarEvent)
           setEvents(filtered)
           
-          // Load sports for events
-          const sportsMap: Record<string, SportInfo | null> = {}
-          await Promise.all(
-            filtered.map(async (event) => {
-              if (event.id) {
-                try {
-                  const sport = await getSportFromEvent(context, event.id)
-                  if (sport) sportsMap[event.id] = sport
-                } catch (err) {
-                  console.warn(`Failed to load sport for event ${event.id}:`, err)
-                }
-              }
-            })
-          )
-          setEventSports(sportsMap)
+          // Skip loading sports for calendar list view - this was causing N+1 queries
+          // Sports are now loaded only when viewing individual event details
+          // For calendar display, we use the team/season info from the lightweight query
+          setEventSports({})
       }
     } catch (err) {
       console.error('Unexpected error in fetchData:', err)

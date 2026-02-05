@@ -5,8 +5,7 @@
  */
 
 import { useState } from 'react'
-import { supabase } from '../../../lib/supabase'
-import { 
+import {
   Button,
   Input,
   InlineNotice
@@ -15,6 +14,9 @@ import Modal from '../../../components/platformAdmin/Modal'
 import type { StaffPermissions } from '../../../types/staffAndFan'
 import { DEFAULT_STAFF_PERMISSIONS } from '../../../constants/permissions'
 import { useI18n } from '../../../i18n/useI18n'
+import { findUserByEmail } from '../../../data/services/usersService'
+import { getErrorMessage } from '../../../utils/errorUtils'
+import { STAFF_PERMISSION_LABEL_KEYS, STAFF_PERMISSION_KEYS } from '../../../utils/staffPermissions'
 
 interface AddStaffModalProps {
   organizationId: string
@@ -26,7 +28,7 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
   const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [searching, setSearching] = useState(false)
-  const [user, setUser] = useState<{ id: string; email: string; display_name: string | null } | null>(null)
+  const [user, setUser] = useState<{ id: string; email: string | null; display_name: string | null } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [permissions, setPermissions] = useState<StaffPermissions>(DEFAULT_STAFF_PERMISSIONS)
   const [adding, setAdding] = useState(false)
@@ -42,21 +44,20 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
     setUser(null)
 
     try {
-      const { data, error: searchError } = await supabase
-        .from('users')
-        .select('id, email, display_name')
-        .ilike('email', email.trim())
-        .limit(1)
-        .single()
+      if (!navigator.onLine) {
+        setError(t('common.error.offline'))
+        return
+      }
 
+      const { data, error: searchError } = await findUserByEmail(email.trim())
       if (searchError || !data) {
-        setError(t('admin.staff.userNotFound', 'User not found. Please check the email address.'))
+        setError(searchError?.message || t('admin.staff.userNotFound'))
         return
       }
 
       setUser(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('admin.staff.searchFailed'))
+      setError(getErrorMessage(err) || t('admin.staff.searchFailed'))
     } finally {
       setSearching(false)
     }
@@ -69,10 +70,13 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
     setError(null)
 
     try {
+      if (!navigator.onLine) {
+        throw new Error(t('common.error.offline'))
+      }
       await onAdd(user.id, permissions)
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('admin.staff.errors.addStaffMemberFailed'))
+      setError(getErrorMessage(err) || t('admin.staff.errors.addStaffMemberFailed'))
     } finally {
       setAdding(false)
     }
@@ -110,20 +114,20 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
                   />
                 </div>
                 <div className="pa-flex pa-items-end">
-                <Button
-                  variant="primary"
-                  onClick={handleSearch}
-                  disabled={searching || !email.trim()}
-                >
-                  {searching ? (
-                    <>
-                      <span className="material-symbols-outlined animate-spin inline-block mr-1">hourglass_empty</span>
-                      {t('common.searching')}
-                    </>
-                  ) : (
-                    t('common.search')
-                  )}
-                </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleSearch}
+                    disabled={searching || !email.trim()}
+                  >
+                    {searching ? (
+                      <>
+                        <span className="material-symbols-outlined animate-spin inline-block mr-1">hourglass_empty</span>
+                        {t('common.searching')}
+                      </>
+                    ) : (
+                      t('common.search')
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>
@@ -136,13 +140,13 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
           <>
             <InlineNotice
               tone="success"
-              title={t('admin.staff.userFound', { name: user.display_name || user.email })}
+              title={t('admin.staff.userFound', { name: user.display_name || user.email || t('common.unknown') })}
             />
 
             <div>
               <label className="pa-label pa-mb-2">{t('admin.staff.permissions')}</label>
               <div className="pa-space-y-2">
-                {Object.entries(DEFAULT_STAFF_PERMISSIONS).map(([key, defaultValue]) => (
+                {STAFF_PERMISSION_KEYS.map((key) => (
                   <label
                     key={key}
                     className="pa-flex pa-items-center pa-gap-2"
@@ -150,12 +154,12 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
                   >
                     <input
                       type="checkbox"
-                      checked={permissions[key as keyof StaffPermissions] || false}
-                      onChange={() => togglePermission(key as keyof StaffPermissions)}
+                      checked={permissions[key] || false}
+                      onChange={() => togglePermission(key)}
                       className="pa-checkbox"
                     />
                     <span className="pa-body-m">
-                      {key.replace('can_', '').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                      {t(STAFF_PERMISSION_LABEL_KEYS[key])}
                     </span>
                   </label>
                 ))}
@@ -187,3 +191,4 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
     </Modal>
   )
 }
+

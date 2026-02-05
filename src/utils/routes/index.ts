@@ -54,6 +54,7 @@ export {
     getPortalRoutes,
     getAdminRoutes,
     getPlatformAdminRoutes,
+    getFanRoutes,
 } from './helpers'
 
 // Re-export hooks
@@ -81,6 +82,9 @@ export {
     platformAdminGlobalNavSections,
     // User dropdown
     userDropdownRoleLinks,
+    // Fan navigation
+    fanNavSections,
+    fanUserDropdownLinks,
 } from './navigation'
 
 // Re-export validation utilities (for testing/advanced use)
@@ -109,6 +113,7 @@ export const RouteKeys = {
     PORTAL_DASHBOARD: 'portal.dashboard',
     PORTAL_CALENDAR: 'portal.calendar',
     PORTAL_EVENT_DETAIL: 'portal.eventDetail',
+    PORTAL_EVENT_EDIT: 'portal.eventEdit',
     PORTAL_TRAVEL: 'portal.travel',
     PORTAL_TRAVEL_DETAIL: 'portal.travelDetail',
     PORTAL_MESSAGES: 'portal.messages',
@@ -224,6 +229,27 @@ export const RouteKeys = {
     PLATFORM_PHOTOS_CONTENT_REVIEW: 'platformAdmin.photos.contentReview',
     PLATFORM_PHOTOS_STORAGE: 'platformAdmin.photos.storage',
     PLATFORM_ORG_PHOTOS: 'platformAdmin.photos.orgGalleries',
+
+    // Fan
+    FAN_HOME: 'fan.home',
+    FAN_SCHEDULE: 'fan.schedule',
+    FAN_PHOTOS: 'fan.photos.list',
+    FAN_PHOTOS_GALLERY: 'fan.photos.gallery',
+    FAN_PHOTOS_ATHLETE: 'fan.photos.athlete',
+    FAN_TICKETS: 'fan.tickets.list',
+    FAN_TICKET_DETAIL: 'fan.tickets.detail',
+    FAN_FOLLOWING: 'fan.following.base',
+    FAN_DISCOVER: 'fan.following.discover',
+    FAN_ORG_PROFILE: 'fan.profiles.org',
+    FAN_TEAM_PROFILE: 'fan.profiles.team',
+    FAN_ATHLETE_PROFILE: 'fan.profiles.athlete',
+    FAN_PROFILE: 'fan.profile.base',
+    FAN_PROFILE_EDIT: 'fan.profile.edit',
+    FAN_PROFILE_NOTIFICATIONS: 'fan.profile.notifications',
+    FAN_PROFILE_LINKED_ATHLETES: 'fan.profile.linkedAthletes',
+    FAN_PROFILE_PRIVACY: 'fan.profile.privacy',
+    FAN_PROFILE_PASSWORD: 'fan.profile.password',
+    FAN_PROFILE_SECURITY: 'fan.profile.security',
 } as const
 
 export type RouteKeyConstant = typeof RouteKeys[keyof typeof RouteKeys]

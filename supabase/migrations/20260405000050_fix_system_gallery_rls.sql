@@ -130,10 +130,7 @@ BEGIN
     END CASE;
   END IF;
 
-  -- Temporarily disable RLS for this insert
-  SET LOCAL session_replication_role = 'replica';
-
-  -- Create the gallery
+  -- Create the gallery (SECURITY DEFINER + RLS policy allows system-generated galleries)
   INSERT INTO public.galleries (
     org_id,
     gallery_type,
@@ -181,4 +178,4 @@ GRANT EXECUTE ON FUNCTION public.ensure_entity_gallery(
 ) TO authenticated;
 
 COMMENT ON FUNCTION public.ensure_entity_gallery IS
-'Creates or retrieves the system-generated gallery for an entity. Runs with elevated privileges to bypass RLS for gallery creation.';
+'Creates or retrieves the system-generated gallery for an entity. Runs with elevated privileges (SECURITY DEFINER) to bypass RLS for gallery creation.';

@@ -9,16 +9,49 @@ import {
   Input,
   Select,
   InlineNotice,
+  Modal,
 } from '@/components/platformAdmin'
 import { useUserContext } from '@/hooks/useUserContext'
+import { useI18n } from '../../i18n/useI18n'
+import { USE_FAKE_DATA } from '@/data/config'
 import { GalleryManagementSection } from '@/components/admin/galleries/GalleryManagementSection'
 import { getGalleriesForUser, type Gallery } from '@/data/services/galleryService'
+import { getMockGalleriesForOrg } from '@/data/fake/mockGalleries'
 import { getLink } from '@/utils/routes'
 import './Photos.css'
+
+// Cache for galleries (5 minutes)
+const CACHE_KEY = 'admin_photos_galleries'
+
+interface CachedData {
+  galleries: Gallery[]
+  timestamp: number
+}
+
+function setCachedGalleries(galleries: Gallery[]) {
+  try {
+    const data: CachedData = {
+      galleries,
+      timestamp: Date.now(),
+    }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data))
+  } catch {
+    // Ignore cache errors
+  }
+}
+
+function clearCachedGalleries() {
+  try {
+    localStorage.removeItem(CACHE_KEY)
+  } catch {
+    // Ignore
+  }
+}
 
 export default function AdminPhotos() {
   const { context } = useUserContext()
   const navigate = useNavigate()
+  const { t } = useI18n()
 
   const [galleries, setGalleries] = useState<Gallery[]>([])
   const [loading, setLoading] = useState(true)
@@ -26,22 +59,44 @@ export default function AdminPhotos() {
   const [search, setSearch] = useState('')
   const [activeType, setActiveType] = useState<'all' | Gallery['gallery_type']>('all')
   const [sortBy, setSortBy] = useState<'recent' | 'az' | 'photos'>('recent')
-  const [showManagement, setShowManagement] = useState(false)
+  const [showManagement] = useState(false)
+  const [showDemoModal, setShowDemoModal] = useState(false)
 
   useEffect(() => {
     let mounted = true
     const load = async () => {
+      console.log('[Photos] load() called, context:', context?.orgId, 'USE_FAKE_DATA:', USE_FAKE_DATA)
+      
       if (!context?.orgId) {
+        console.log('[Photos] No context.orgId, returning early')
         setLoading(false)
         return
       }
+
+      // Demo mode: use mock data
+      if (USE_FAKE_DATA) {
+        console.log('[Photos] USE_FAKE_DATA is true, using mock data')
+        const mockGalleries = getMockGalleriesForOrg(context.orgId)
+        setGalleries(mockGalleries)
+        setLoading(false)
+        return
+      }
+
+      // Clear cache for debugging
+      clearCachedGalleries()
+
       setLoading(true)
-      const { data, error } = await getGalleriesForUser(context, { org_id: context.orgId })
+      console.log('[Photos] Loading galleries for org:', context.orgId)
+      const { data, error } = await getGalleriesForUser(context, {})
+      console.log('[Photos] Gallery result:', { data, error, count: data?.length })
       if (!mounted) return
       if (error) {
+        console.error('[Photos] Error loading galleries:', error)
         setError(error.message)
       } else {
+        console.log('[Photos] Loaded galleries:', data)
         setGalleries(data || [])
+        setCachedGalleries(data || [])
       }
       setLoading(false)
     }
@@ -91,20 +146,35 @@ export default function AdminPhotos() {
     [navigate],
   )
 
+  const handleCreateGallery = () => {
+    if (USE_FAKE_DATA) {
+      setShowDemoModal(true)
+      return
+    }
+    navigate(getLink('admin.photos.create'))
+  }
+
+  const getEntityLabel = (gallery: Gallery): string => {
+    // This would ideally fetch entity names from related tables
+    // For now, show entity type
+    const typeLabel = t(`photos.galleryType.${gallery.gallery_type}`)
+    return typeLabel
+  }
+
   return (
     <div className="pa-root admin-photos-page">
       <div className="pa-container">
         <PageHeader
-          title="Photos"
-          description="Create and manage galleries across teams, athletes, events, travel, seasons, and programs."
+          title={t('photos.title')}
+          description={t('photos.subtitle')}
         />
 
-        {error && <InlineNotice tone="error" title="Unable to load galleries" message={error} />}
+        {error && <InlineNotice tone="error" title={t('photos.errors.loadGalleries')} message={error} />}
 
         <div className="photos-header">
-          <h1 className="photos-title">Photos</h1>
-          <Button variant="primary" icon="add_a_photo" onClick={() => setShowManagement(true)}>
-            New Gallery
+          <h1 className="photos-title">{t('photos.title')}</h1>
+          <Button variant="primary" icon="add_a_photo" onClick={handleCreateGallery}>
+            {t('photos.createGallery')}
           </Button>
         </div>
 
@@ -112,7 +182,7 @@ export default function AdminPhotos() {
           <div className="filter-input">
             <span className="material-symbols-outlined search-icon">search</span>
             <Input
-              placeholder="Search galleries..."
+              placeholder={t('photos.filters.search')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -121,64 +191,49 @@ export default function AdminPhotos() {
           <span className="filter-divider" />
 
           <div className="filter-chip">
-            <div className="filter-chip-label">Entity Type</div>
+            <div className="filter-chip-label">{t('photos.filters.byType')}</div>
             <Select
               value={activeType}
               onChange={(e) => setActiveType(e.target.value as any)}
               options={[
-                { label: 'All Entities', value: 'all' },
-                { label: 'Events', value: 'event' },
-                { label: 'Teams', value: 'team' },
-                { label: 'Athletes', value: 'athlete' },
-                { label: 'Travel', value: 'travel' },
-                { label: 'Programs', value: 'program' },
-                { label: 'Seasons', value: 'season' },
-                { label: 'Organization', value: 'org' },
+                { label: t('photos.filters.all'), value: 'all' },
+                { label: t('photos.galleryType.event'), value: 'event' },
+                { label: t('photos.galleryType.team'), value: 'team' },
+                { label: t('photos.galleryType.athlete'), value: 'athlete' },
+                { label: t('photos.galleryType.season'), value: 'season' },
+                { label: t('photos.galleryType.organization'), value: 'organization' },
               ]}
             />
           </div>
 
           <div className="filter-chip">
-            <div className="filter-chip-label">Sort</div>
+            <div className="filter-chip-label">{t('common.sort')}</div>
             <Select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
               options={[
-                { label: 'Most recent', value: 'recent' },
+                { label: t('common.mostRecent'), value: 'recent' },
                 { label: 'A → Z', value: 'az' },
-                { label: 'Most photos', value: 'photos' },
+                { label: t('photos.stats.photosCount', { count: '' }).replace('0', 'Most'), value: 'photos' },
               ]}
             />
-          </div>
-
-          <div className="filter-actions">
-            <Button
-              variant="secondary"
-              icon="tune"
-              onClick={() => setShowManagement((prev) => !prev)}
-              aria-pressed={showManagement}
-            >
-              Filters
-            </Button>
           </div>
         </div>
 
         <div className="stats-grid">
-          <StatCard label="Galleries" value={totals.galleries} />
-          <StatCard label="Photos" value={totals.photos} />
-          <StatCard label="Pending approvals" value={totals.pending} />
+          <StatCard label={t('photos.stats.totalGalleries')} value={totals.galleries} />
+          <StatCard label={t('photos.stats.totalPhotos')} value={totals.photos} />
+          <StatCard label={t('photos.pendingApproval.adminMessage', { count: totals.pending })} value={totals.pending} />
         </div>
 
         <div className="tabs-row">
           {[
-            { key: 'all', label: 'All' },
-            { key: 'event', label: 'Events' },
-            { key: 'team', label: 'Teams' },
-            { key: 'athlete', label: 'Athletes' },
-            { key: 'travel', label: 'Travel' },
-            { key: 'program', label: 'Programs' },
-            { key: 'season', label: 'Seasons' },
-            { key: 'org', label: 'Organization' },
+            { key: 'all', label: t('photos.filters.all') },
+            { key: 'event', label: t('photos.galleryType.event') },
+            { key: 'team', label: t('photos.galleryType.team') },
+            { key: 'athlete', label: t('photos.galleryType.athlete') },
+            { key: 'season', label: t('photos.galleryType.season') },
+            { key: 'organization', label: t('photos.galleryType.organization') },
           ].map((tab) => (
             <Button
               key={tab.key}
@@ -195,8 +250,11 @@ export default function AdminPhotos() {
           <Card className="pa-card pa-h-64 pa-animate-pulse" />
         ) : filtered.length === 0 ? (
           <div className="empty-state">
-            <p className="pa-text-base pa-font-semibold">No galleries match your filters.</p>
-            <p className="pa-text-sm pa-text-muted">Try adjusting filters or create a new gallery.</p>
+            <p className="pa-text-base pa-font-semibold">{t('photos.filters.noResults')}</p>
+            <p className="pa-text-sm pa-text-muted">{t('photos.empty.message')}</p>
+            <Button variant="primary" onClick={handleCreateGallery} className="pa-mt-4">
+              {t('photos.createGallery')}
+            </Button>
           </div>
         ) : (
           <div className="gallery-grid">
@@ -212,23 +270,23 @@ export default function AdminPhotos() {
                     <img src={gallery.cover_url} alt={gallery.name} />
                   ) : (
                     <div className="pa-flex pa-items-center pa-justify-center pa-w-full pa-h-full pa-text-muted pa-text-sm">
-                      No cover image
+                      {t('photos.stats.emptyGallery')}
                     </div>
                   )}
                   <div className="gallery-badge">
-                    <Badge variant="info">{gallery.gallery_type}</Badge>
+                    <Badge variant="info">{getEntityLabel(gallery)}</Badge>
                   </div>
                 </div>
                 <div className="gallery-body">
                   <div className="gallery-title">{gallery.name}</div>
                   <div className="gallery-meta">
-                    Modified {new Date(gallery.updated_at || gallery.created_at).toLocaleDateString()}
+                    {t('common.modified')} {new Date(gallery.updated_at || gallery.created_at).toLocaleDateString()}
                   </div>
                   <div className="gallery-footer">
                     <div className="pa-flex pa-items-center pa-gap-2">
                       <span className="material-symbols-outlined pa-text-muted">image</span>
                       <span className="pa-text-sm pa-font-semibold">
-                        {gallery.photo_count || 0} photos
+                        {t('photos.stats.photosCount', { count: gallery.photo_count || 0 })}
                       </span>
                     </div>
                     <span className="material-symbols-outlined pa-text-muted">arrow_forward</span>
@@ -237,20 +295,37 @@ export default function AdminPhotos() {
               </Card>
             ))}
 
-            <Card className="add-card" onClick={() => setShowManagement(true)} noPadding>
+            <Card className="add-card" onClick={handleCreateGallery} noPadding>
               <div className="add-icon">
                 <span className="material-symbols-outlined">add</span>
               </div>
-              <div className="pa-text-base pa-font-semibold">Create new gallery</div>
+              <div className="pa-text-base pa-font-semibold">{t('photos.createGallery')}</div>
               <div className="pa-text-sm pa-text-muted">
-                Organize photos by team, event, season, or program.
+                {t('photos.subtitle')}
               </div>
             </Card>
           </div>
         )}
 
-        {showManagement && <GalleryManagementSection title="All galleries" allowCreate />}
+        {showManagement && <GalleryManagementSection title={t('photos.allGalleries')} allowCreate />}
+
+        {/* Demo Mode Modal */}
+        <Modal
+          open={showDemoModal}
+          onClose={() => setShowDemoModal(false)}
+          title={t('photos.demoMode.title')}
+        >
+          <p className="pa-text-sm pa-text-muted pa-mb-4">
+            {t('photos.demoMode.createBlocked')}
+          </p>
+          <div className="pa-flex pa-justify-end">
+            <Button variant="primary" onClick={() => setShowDemoModal(false)}>
+              {t('common.ok')}
+            </Button>
+          </div>
+        </Modal>
       </div>
     </div>
   )
 }
+

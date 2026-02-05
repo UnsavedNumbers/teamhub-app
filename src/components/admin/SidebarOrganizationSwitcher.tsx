@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { getLink, RouteKeys } from '@/utils/routes'
 import { formatRoleName, hasRole } from '@/utils/roleHelpers'
-import { isDemoMode } from '@/utils/demoMode'
+import { USE_FAKE_DATA } from '@/data/config'
 import { useOffline } from '@/hooks/useOffline'
 import { useEventListener } from '@/hooks/useEventListener'
 import { usePrevious } from '@/hooks/usePrevious'
@@ -198,7 +198,7 @@ export default function SidebarOrganizationSwitcher() {
       return
     }
     
-    if (isDemoMode()) {
+    if (USE_FAKE_DATA) {
       console.error('Demo mode: Role selection is not available')
       return
     }

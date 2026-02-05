@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { uploadPhotoToGallery } from '@/data/services/galleryService'
 import { useUserContext } from '@/hooks/useUserContext'
+import { useT } from '@/i18n/useI18n'
 import { showError, showSuccess } from '@/utils/toast'
 import { Button } from '../platformAdmin'
 
@@ -20,6 +21,7 @@ export function PhotoUploadButton({
   maxSizeMB = 10,
 }: PhotoUploadButtonProps) {
   const { context } = useUserContext()
+  const t = useT()
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [uploading, setUploading] = useState(false)
 
@@ -32,7 +34,7 @@ export function PhotoUploadButton({
     try {
       for (const file of list) {
         if (file.size > maxSizeMB * 1024 * 1024) {
-          showError(`"${file.name}" is larger than ${maxSizeMB}MB`)
+          showError(t('photos.errors.fileTooLarge', { name: file.name, size: maxSizeMB }))
           continue
         }
         const { error } = await uploadPhotoToGallery(context, galleryId, file)
@@ -40,7 +42,7 @@ export function PhotoUploadButton({
           showError(error.message)
         }
       }
-      showSuccess('Upload complete')
+      showSuccess(t('photos.upload.uploadComplete'))
       onUploadComplete?.()
     } finally {
       setUploading(false)
@@ -58,8 +60,17 @@ export function PhotoUploadButton({
         style={{ display: 'none' }}
         onChange={(e) => handleFiles(e.target.files)}
       />
-      <Button variant="primary" icon={uploading ? undefined : 'file_upload'} loading={uploading} onClick={openPicker}>
-        {uploading ? 'Uploading...' : 'Upload photos'}
+      <Button
+        variant="primary"
+        icon={uploading ? undefined : 'file_upload'}
+        loading={uploading}
+        onClick={openPicker}
+        style={{
+          borderRadius: '10px',
+          fontWeight: 500,
+        }}
+      >
+        {uploading ? t('photos.upload.uploading', { current: 1, total: maxFiles }) : t('photos.uploadPhotos')}
       </Button>
     </>
   )

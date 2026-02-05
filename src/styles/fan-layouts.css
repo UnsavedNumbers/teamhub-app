@@ -1,0 +1,2254 @@
+/* ============================================================================
+   FAN PAGES LAYOUT STYLES - Matching Design Mockups
+   Date: February 4, 2026
+   ============================================================================ */
+
+/* ============================================================================
+   TICKETS PAGE - Complete Layout
+   ============================================================================ */
+
+/* Page Container */
+.fan-tickets-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+}
+
+/* Page Header */
+.fan-tickets-header {
+    margin-bottom: 3rem;
+}
+
+.fan-tickets-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #a1a1aa;
+    margin-bottom: 1rem;
+}
+
+.fan-tickets-title {
+    font-size: 3rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: #111111;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    text-transform: none;
+}
+
+/* Search + Tabs Row */
+.fan-tickets-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-bottom: 2rem;
+    margin-bottom: 0;
+    border-bottom: 1px solid #f4f4f5;
+}
+
+@media (min-width: 768px) {
+    .fan-tickets-controls {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+}
+
+/* Search Input */
+.fan-tickets-search {
+    position: relative;
+    flex: 1;
+    max-width: 512px;
+}
+
+.fan-tickets-search .material-symbols-outlined {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.5rem;
+    color: #d4d4d8;
+    transition: color 0.25s ease;
+}
+
+.fan-tickets-search:focus-within .material-symbols-outlined {
+    color: #111111;
+}
+
+.fan-tickets-search-input {
+    width: 100%;
+    height: 3rem;
+    padding-left: 2.5rem;
+    padding-right: 1rem;
+    border: none;
+    background: transparent;
+    font-size: 1.125rem;
+    font-weight: 300;
+    color: #18181b;
+}
+
+.fan-tickets-search-input::placeholder {
+    color: #d4d4d8;
+}
+
+.fan-tickets-search-input:focus {
+    outline: none;
+}
+
+/* Filter Tabs */
+.fan-tickets-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.fan-tickets-tab {
+    padding: 0.25rem 0;
+    background: none;
+    border: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #a1a1aa;
+    cursor: pointer;
+    transition: color 0.25s ease;
+    position: relative;
+}
+
+.fan-tickets-tab:hover {
+    color: #111111;
+}
+
+.fan-tickets-tab.active {
+    color: #111111;
+}
+
+.fan-tickets-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #111111;
+}
+
+/* Two Column Layout */
+.fan-tickets-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4rem;
+    padding-top: 2rem;
+}
+
+@media (min-width: 1024px) {
+    .fan-tickets-layout {
+        grid-template-columns: 1fr 320px;
+    }
+}
+
+/* Main Content Area */
+.fan-tickets-main {
+    min-width: 0;
+}
+
+/* Ticket List */
+.fan-tickets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Individual Ticket Card - Horizontal Layout */
+.fan-ticket-card-horizontal {
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #f4f4f5;
+    overflow: hidden;
+    transition: all 0.25s ease;
+}
+
+.fan-ticket-card-horizontal:hover {
+    border-color: #d4d4d8;
+}
+
+@media (min-width: 768px) {
+    .fan-ticket-card-horizontal {
+        flex-direction: row;
+    }
+}
+
+/* Date Sidebar */
+.fan-ticket-date-sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background-color: #fafafa;
+    border-bottom: 1px solid #f4f4f5;
+    min-width: 12rem;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+}
+
+@media (min-width: 768px) {
+    .fan-ticket-date-sidebar {
+        border-bottom: none;
+        border-right: 1px solid #f4f4f5;
+    }
+}
+
+.fan-ticket-card-horizontal:hover .fan-ticket-date-sidebar {
+    background-color: #f4f4f5;
+}
+
+.fan-ticket-month {
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #a1a1aa;
+    margin-bottom: 0.25rem;
+}
+
+.fan-ticket-day {
+    font-size: 2.5rem;
+    font-weight: 300;
+    font-family: 'Inter', sans-serif;
+    color: #18181b;
+    line-height: 1;
+}
+
+.fan-ticket-weekday {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #a1a1aa;
+    margin-top: 0.25rem;
+}
+
+/* Ticket Content */
+.fan-ticket-card-horizontal .fan-ticket-card-content {
+    flex: 1;
+    padding: 2rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+@media (min-width: 768px) {
+    .fan-ticket-card-horizontal .fan-ticket-card-content {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 2rem;
+    }
+}
+
+.fan-ticket-category {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #a1a1aa;
+    margin-bottom: 0.5rem;
+}
+
+.fan-ticket-card-horizontal .fan-ticket-event-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: #18181b;
+    margin: 0 0 0.5rem 0;
+    text-transform: none;
+}
+
+.fan-ticket-card-horizontal .fan-ticket-event-name span {
+    color: #d4d4d8;
+    font-weight: 300;
+    margin: 0 0.25rem;
+}
+
+.fan-ticket-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.fan-ticket-detail {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #71717a;
+}
+
+.fan-ticket-detail .material-symbols-outlined {
+    font-size: 0.875rem;
+}
+
+/* Ticket Actions */
+.fan-ticket-card-actions {
+    display: flex;
+    align-items: center;
+    padding: 2rem;
+}
+
+.fan-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    background-color: #111111;
+    color: #ffffff;
+    border: none;
+    font-size: 0.625rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+    white-space: nowrap;
+}
+
+.fan-btn-primary:hover {
+    background-color: #27272a;
+}
+
+.fan-btn-primary .material-symbols-outlined {
+    font-size: 1rem;
+}
+
+/* Right Sidebar */
+.fan-tickets-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+}
+
+/* Ticket Wallet Card */
+.fan-ticket-wallet {
+    background-color: #fafafa;
+    border: 1px solid #f4f4f5;
+    padding: 2rem;
+}
+
+.fan-wallet-title {
+    font-size: 0.625rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: #a1a1aa;
+    margin: 0 0 2rem 0;
+}
+
+.fan-wallet-stats {
+    margin-bottom: 2.5rem;
+}
+
+.fan-wallet-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #71717a;
+    margin-bottom: 0.25rem;
+}
+
+.fan-wallet-count {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.fan-wallet-number {
+    font-size: 3rem;
+    font-weight: 300;
+    font-family: 'Inter', sans-serif;
+    color: #18181b;
+    line-height: 1;
+}
+
+.fan-wallet-unit {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #a1a1aa;
+}
+
+.fan-wallet-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e4e4e7;
+}
+
+.fan-wallet-action {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0;
+    background: none;
+    border: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #27272a;
+    cursor: pointer;
+    transition: color 0.25s ease;
+}
+
+.fan-wallet-action:hover {
+    color: #111111;
+}
+
+.fan-wallet-action .material-symbols-outlined {
+    color: #a1a1aa;
+    font-size: 1.25rem;
+    transition: color 0.25s ease;
+}
+
+.fan-wallet-action:hover .material-symbols-outlined {
+    color: #111111;
+}
+
+.fan-wallet-arrow {
+    margin-left: auto;
+    font-size: 0.875rem !important;
+    color: #d4d4d8 !important;
+}
+
+/* Help Card */
+.fan-ticket-help {
+    border: 1px solid #f4f4f5;
+    padding: 2rem;
+}
+
+.fan-help-title {
+    font-size: 0.625rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #18181b;
+    margin: 0 0 1rem 0;
+}
+
+.fan-help-text {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #71717a;
+    line-height: 1.6;
+    margin: 0 0 1.5rem 0;
+}
+
+.fan-help-button {
+    width: 100%;
+    padding: 0.75rem;
+    background: none;
+    border: 1px solid #e4e4e7;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #111111;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+}
+
+.fan-help-button:hover {
+    background-color: #fafafa;
+}
+
+/* Empty State */
+.fan-tickets-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6rem 2rem;
+    text-align: center;
+}
+
+.fan-tickets-empty-icon {
+    width: 6rem;
+    height: 6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #fafafa;
+    border: 2px dashed #e4e4e7;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.fan-tickets-empty-icon .material-symbols-outlined {
+    font-size: 2rem;
+    color: #a1a1aa;
+}
+
+.fan-tickets-empty-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #18181b;
+    margin: 0 0 0.5rem 0;
+}
+
+.fan-tickets-empty-text {
+    font-size: 0.875rem;
+    color: #71717a;
+    margin: 0;
+}
+
+
+/* ============================================================================
+   SCHEDULE PAGE - Week Calendar Grid
+   ============================================================================ */
+
+.fan-schedule-page {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 3rem 2.5rem;
+}
+
+.fan-schedule-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+@media (min-width: 768px) {
+    .fan-schedule-header {
+        flex-direction: row;
+        align-items: flex-end;
+        justify-content: space-between;
+    }
+}
+
+.fan-schedule-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #a1a1aa;
+    margin-bottom: 0.5rem;
+}
+
+.fan-schedule-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.fan-schedule-title {
+    font-size: 2.25rem;
+    font-weight: 300;
+    letter-spacing: -0.025em;
+    color: #18181b;
+    margin: 0;
+}
+
+.fan-schedule-nav-btns {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.fan-schedule-nav-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid #f4f4f5;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+}
+
+.fan-schedule-nav-btn:hover {
+    background-color: #fafafa;
+}
+
+.fan-schedule-nav-btn .material-symbols-outlined {
+    font-size: 1rem;
+}
+
+/* View Mode Toggle */
+.fan-schedule-views {
+    display: flex;
+    align-items: center;
+    background-color: #fafafa;
+    padding: 0.25rem;
+    border-radius: 0.5rem;
+}
+
+.fan-schedule-view-btn {
+    padding: 0.5rem 1.5rem;
+    background: none;
+    border: none;
+    font-size: 0.625rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #a1a1aa;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border-radius: 0.375rem;
+}
+
+.fan-schedule-view-btn:hover {
+    color: #111111;
+}
+
+.fan-schedule-view-btn.active {
+    background-color: #ffffff;
+    color: #111111;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+/* Week Calendar Grid */
+.fan-week-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-top: 1px solid #f4f4f5;
+}
+
+.fan-week-calendar-column {
+    border-right: 1px solid #f4f4f5;
+    display: flex;
+    flex-direction: column;
+    min-height: 700px;
+}
+
+.fan-week-calendar-column:last-child {
+    border-right: none;
+}
+
+.fan-week-calendar-header {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid #fafafa;
+    background-color: #ffffff;
+}
+
+.fan-week-calendar-column.today .fan-week-calendar-header {
+    background-color: #18181b;
+    color: #ffffff;
+}
+
+.fan-week-calendar-day-name {
+    display: block;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #a1a1aa;
+    margin-bottom: 0.25rem;
+}
+
+.fan-week-calendar-column.today .fan-week-calendar-day-name {
+    color: #a1a1aa;
+}
+
+.fan-week-calendar-day-number {
+    font-size: 1.25rem;
+    font-weight: 300;
+    font-family: 'Inter', sans-serif;
+}
+
+.fan-week-calendar-events {
+    padding: 0.75rem;
+    flex: 1;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.fan-week-calendar-column:nth-child(odd) .fan-week-calendar-events {
+    background-color: rgba(250, 250, 250, 0.5);
+}
+
+.fan-week-calendar-event {
+    padding: 1.25rem;
+    background-color: #ffffff;
+    border: 1px solid #f4f4f5;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.fan-week-calendar-event:hover {
+    box-shadow: 0 25px 50px -12px rgba(244, 244, 245, 1);
+    transform: translateY(-2px);
+}
+
+.fan-week-calendar-event.featured {
+    background-color: #18181b;
+    border-color: #18181b;
+}
+
+.fan-week-calendar-event.featured .fan-week-event-title {
+    color: #ffffff;
+}
+
+.fan-week-calendar-event.featured .fan-week-event-location {
+    color: #71717a;
+}
+
+.fan-week-event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.fan-week-event-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background-color: #18181b;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.625rem;
+    font-weight: 700;
+}
+
+.fan-week-event-time {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #a1a1aa;
+}
+
+.fan-week-event-time.live {
+    color: #3b82f6;
+}
+
+.fan-week-event-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.4;
+    color: #18181b;
+    margin: 0 0 0.5rem 0;
+    text-transform: none;
+}
+
+.fan-week-event-location {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #a1a1aa;
+    margin: 0;
+}
+
+/* Schedule Legend */
+.fan-schedule-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-top: 3rem;
+    padding-top: 2.5rem;
+    border-top: 1px solid #f4f4f5;
+}
+
+.fan-schedule-legend-items {
+    display: flex;
+    gap: 2rem;
+}
+
+.fan-schedule-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.fan-schedule-legend-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+}
+
+.fan-schedule-legend-dot.home {
+    background-color: #18181b;
+}
+
+.fan-schedule-legend-dot.away {
+    background-color: #d4d4d8;
+}
+
+.fan-schedule-legend-dot.community {
+    background-color: #3b82f6;
+}
+
+.fan-schedule-legend-label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #52525b;
+}
+
+.fan-schedule-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.fan-schedule-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: none;
+    border: 1px solid #e4e4e7;
+    font-size: 0.625rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #111111;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+}
+
+.fan-schedule-action-btn:hover {
+    background-color: #fafafa;
+}
+
+.fan-schedule-action-btn.primary {
+    background-color: #111111;
+    border-color: #111111;
+    color: #ffffff;
+}
+
+.fan-schedule-action-btn.primary:hover {
+    background-color: #27272a;
+}
+
+.fan-schedule-action-btn .material-symbols-outlined {
+    font-size: 0.875rem;
+}
+
+/* Schedule Content Area */
+.fan-schedule-content {
+    min-height: 400px;
+}
+
+.fan-schedule-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+}
+
+.fan-schedule-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6rem 2rem;
+    text-align: center;
+}
+
+.fan-schedule-empty-icon {
+    width: 5rem;
+    height: 5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #fafafa;
+    border: 2px dashed #e4e4e7;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.fan-schedule-empty-icon .material-symbols-outlined {
+    font-size: 2rem;
+    color: #a1a1aa;
+}
+
+.fan-schedule-empty-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #18181b;
+    margin: 0 0 0.5rem 0;
+}
+
+.fan-schedule-empty-text {
+    font-size: 0.875rem;
+    color: #71717a;
+    margin: 0;
+}
+
+/* Responsive Schedule */
+@media (max-width: 1024px) {
+    .fan-week-calendar-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .fan-week-calendar-column {
+        border-right: none;
+        border-bottom: 1px solid #f4f4f5;
+        min-height: auto;
+    }
+}
+
+
+/* ============================================================================
+   GALLERY / PHOTOS PAGE - Masonry Grid
+   ============================================================================ */
+
+.fan-photos-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem;
+}
+
+.fan-photos-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    margin-bottom: 4rem;
+}
+
+@media (min-width: 768px) {
+    .fan-photos-header {
+        flex-direction: row;
+        align-items: flex-end;
+        justify-content: space-between;
+    }
+}
+
+.fan-photos-label {
+    font-size: 0.625rem;
+    font-weight: 900;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #a1a1aa;
+    margin-bottom: 1rem;
+}
+
+.fan-photos-title {
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #111111;
+    margin: 0;
+}
+
+/* Media Type Toggle */
+.fan-photos-toggle {
+    display: flex;
+    align-items: center;
+    background-color: #fafafa;
+    padding: 0.25rem;
+    border: 1px solid #f4f4f5;
+}
+
+.fan-photos-toggle-btn {
+    padding: 0.625rem 2rem;
+    background: none;
+    border: none;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #a1a1aa;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.fan-photos-toggle-btn:hover {
+    color: #111111;
+}
+
+.fan-photos-toggle-btn.active {
+    background-color: #ffffff;
+    color: #111111;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+/* Masonry Grid */
+.fan-galleries-grid {
+    column-count: 1;
+    column-gap: 2rem;
+}
+
+@media (min-width: 768px) {
+    .fan-galleries-grid {
+        column-count: 2;
+    }
+}
+
+@media (min-width: 1024px) {
+    .fan-galleries-grid {
+        column-count: 3;
+    }
+}
+
+/* Gallery Card - Masonry Item */
+.fan-gallery-card-masonry {
+    break-inside: avoid;
+    margin-bottom: 2rem;
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+}
+
+.fan-gallery-cover-masonry {
+    position: relative;
+    overflow: hidden;
+}
+
+.fan-gallery-cover-masonry img {
+    width: 100%;
+    display: block;
+    filter: grayscale(100%);
+    transition: all 700ms ease-in-out;
+    transform: scale(1.05);
+}
+
+.fan-gallery-card-masonry:hover .fan-gallery-cover-masonry img {
+    filter: grayscale(0%);
+    transform: scale(1);
+}
+
+.fan-gallery-cover-placeholder {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background-color: #f4f4f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fan-gallery-cover-placeholder .material-symbols-outlined {
+    font-size: 3rem;
+    color: #d4d4d8;
+}
+
+/* Video Indicator */
+.fan-gallery-video-indicator {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.fan-gallery-video-indicator .material-symbols-outlined {
+    font-size: 0.875rem;
+    color: #ffffff;
+}
+
+/* Gallery Overlay */
+.fan-gallery-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 50%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 2rem;
+    opacity: 0;
+    transition: opacity 500ms ease;
+}
+
+.fan-gallery-card-masonry:hover .fan-gallery-overlay {
+    opacity: 1;
+}
+
+.fan-gallery-category {
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0 0 0.5rem 0;
+}
+
+.fan-gallery-name-overlay {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: normal;
+    text-transform: none;
+    margin: 0 0 0.5rem 0;
+}
+
+.fan-gallery-date-overlay {
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+}
+
+/* Load More Button */
+.fan-photos-load-more {
+    display: flex;
+    justify-content: center;
+    margin-top: 5rem;
+}
+
+.fan-load-more-btn {
+    padding: 1rem 3rem;
+    background: none;
+    border: 1px solid #e4e4e7;
+    font-size: 0.625rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    color: #18181b;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.fan-load-more-btn:hover {
+    background-color: #111111;
+    border-color: #111111;
+    color: #ffffff;
+}
+
+/* Photos Empty State */
+.fan-photos-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8rem 2rem;
+    text-align: center;
+}
+
+.fan-photos-empty-icon {
+    width: 6rem;
+    height: 6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #fafafa;
+    border: 2px dashed #e4e4e7;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.fan-photos-empty-icon .material-symbols-outlined {
+    font-size: 2.5rem;
+    color: #a1a1aa;
+}
+
+.fan-photos-empty-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #18181b;
+    margin: 0 0 0.5rem 0;
+}
+
+.fan-photos-empty-text {
+    font-size: 0.875rem;
+    color: #71717a;
+    margin: 0;
+}
+
+
+/* ============================================================================
+   FOLLOWING PAGE - Grid Layout with Section Headers
+   ============================================================================ */
+
+.fan-following-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem;
+}
+
+.fan-following-header {
+    margin-bottom: 4rem;
+}
+
+.fan-following-header-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+@media (min-width: 768px) {
+    .fan-following-header-row {
+        flex-direction: row;
+        align-items: flex-end;
+        justify-content: space-between;
+    }
+}
+
+.fan-following-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #a1a1aa;
+    margin-bottom: 0.5rem;
+}
+
+.fan-following-title {
+    font-size: 2.25rem;
+    font-weight: 300;
+    letter-spacing: -0.025em;
+    color: #18181b;
+    margin: 0 0 1rem 0;
+    text-transform: none;
+}
+
+.fan-following-subtitle {
+    font-size: 1.125rem;
+    font-weight: 300;
+    color: #71717a;
+    margin: 0;
+}
+
+/* Following Search */
+.fan-following-search {
+    position: relative;
+    width: 100%;
+    max-width: 24rem;
+}
+
+.fan-following-search .material-symbols-outlined {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.25rem;
+    color: #a1a1aa;
+}
+
+.fan-following-search-input {
+    width: 100%;
+    height: 3rem;
+    padding-left: 3rem;
+    padding-right: 1rem;
+    background-color: #fafafa;
+    border: 1px solid #f4f4f5;
+    font-size: 0.875rem;
+    color: #18181b;
+    transition: all 0.25s ease;
+}
+
+.fan-following-search-input::placeholder {
+    color: #a1a1aa;
+}
+
+.fan-following-search-input:focus {
+    outline: none;
+    border-color: #d4d4d8;
+}
+
+/* Section Headers */
+.fan-following-section {
+    margin-bottom: 6rem;
+}
+
+.fan-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f4f4f5;
+}
+
+.fan-section-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.fan-section-title {
+    font-size: 0.75rem;
+    font-weight: 900;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #111111;
+    margin: 0;
+}
+
+.fan-count-badge {
+    padding: 0.125rem 0.5rem;
+    background-color: #f4f4f5;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #71717a;
+}
+
+.fan-section-link {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #a1a1aa;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.25s ease;
+}
+
+.fan-section-link:hover {
+    color: #111111;
+}
+
+/* Following Grid */
+.fan-following-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+    .fan-following-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .fan-following-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Following Card */
+.fan-following-card {
+    padding: 1.5rem;
+    background: #ffffff;
+    border: 1px solid #f4f4f5;
+    text-align: center;
+    transition: all 0.25s ease;
+    cursor: pointer;
+}
+
+.fan-following-card:hover {
+    border-color: #e4e4e7;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.fan-following-card-avatar {
+    width: 5rem;
+    height: 5rem;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    background-color: #fafafa;
+    border: 1px solid #f4f4f5;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.fan-following-card-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: grayscale(100%);
+    transition: filter 500ms ease;
+}
+
+.fan-following-card:hover .fan-following-card-avatar img {
+    filter: grayscale(0%);
+}
+
+.fan-following-card-avatar-placeholder {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #d4d4d8;
+}
+
+.fan-following-card-name {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #18181b;
+    margin: 0 0 0.25rem 0;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.fan-following-card-meta {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #a1a1aa;
+    margin-bottom: 1.5rem;
+}
+
+/* Follow Button */
+.fan-follow-btn {
+    width: 100%;
+    padding: 0.625rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.fan-follow-btn.following {
+    background-color: #18181b;
+    border: 1px solid #18181b;
+    color: #ffffff;
+}
+
+.fan-follow-btn.following:hover {
+    background-color: #ffffff;
+    color: #18181b;
+}
+
+.fan-follow-btn.not-following {
+    background-color: transparent;
+    border: 1px solid #e4e4e7;
+    color: #a1a1aa;
+}
+
+.fan-follow-btn.not-following:hover {
+    border-color: #111111;
+    color: #111111;
+}
+
+.fan-follow-btn .material-symbols-outlined {
+    font-size: 0.875rem;
+}
+
+/* Organization Card (wide) */
+.fan-org-card {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    background: #ffffff;
+    border: 1px solid #f4f4f5;
+    text-align: left;
+    transition: all 0.25s ease;
+    cursor: pointer;
+}
+
+.fan-org-card:hover {
+    border-color: #e4e4e7;
+}
+
+.fan-org-card-avatar {
+    width: 4rem;
+    height: 4rem;
+    flex-shrink: 0;
+    background-color: #18181b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: #ffffff;
+}
+
+.fan-org-card-content {
+    flex: 1;
+}
+
+.fan-org-card-name {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #18181b;
+    margin: 0 0 0.125rem 0;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.fan-org-card-meta {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #a1a1aa;
+    margin-bottom: 1rem;
+}
+
+.fan-org-card-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #111111;
+}
+
+.fan-org-card-status-dot {
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 50%;
+    background-color: #3b82f6;
+}
+
+/* Organizations Grid (3 columns) */
+.fan-org-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .fan-org-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Recommendations Section */
+.fan-recommendations {
+    background-color: #fafafa;
+    padding: 3rem;
+    margin-top: 5rem;
+    text-align: center;
+}
+
+.fan-recommendations-label {
+    font-size: 0.75rem;
+    font-weight: 900;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #a1a1aa;
+    margin-bottom: 1rem;
+}
+
+.fan-recommendations-title {
+    font-size: 1.5rem;
+    font-weight: 300;
+    color: #18181b;
+    margin: 0 0 2rem 0;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.fan-recommendations-items {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.fan-recommendation-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.fan-recommendation-avatar {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background-color: #e4e4e7;
+    margin-bottom: 0.5rem;
+}
+
+.fan-recommendation-name {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #18181b;
+}
+
+.fan-recommendations-btn {
+    padding: 0.75rem 2rem;
+    background-color: #ffffff;
+    border: 1px solid #e4e4e7;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #18181b;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.fan-recommendations-btn:hover {
+    background-color: #111111;
+    border-color: #111111;
+    color: #ffffff;
+}
+/* ============================================================================
+   ORGANIZATION PROFILE PAGE
+   ============================================================================ */
+
+/* Page Container */
+.fan-org-profile-page {
+    width: 100%;
+}
+
+/* Hero Section */
+.fan-org-hero {
+    width: 100%;
+    background-color: #fafafa;
+    padding: 4rem 0 0;
+    border-bottom: 1px solid #f4f4f5;
+}
+
+.fan-org-hero-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+.fan-org-hero-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    margin-bottom: 4rem;
+}
+
+.fan-org-hero-left {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+/* Logo */
+.fan-org-logo-large {
+    width: 10rem;
+    height: 10rem;
+    background-color: #ffffff;
+    border: 1px solid #f4f4f5;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    flex-shrink: 0;
+}
+
+.fan-org-logo-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.fan-org-logo-large .material-symbols-outlined {
+    font-size: 4rem;
+    color: #d4d4d8;
+}
+
+/* Info */
+.fan-org-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.fan-org-badge {
+    display: inline-block;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #3b82f6;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    background-color: rgba(59, 130, 246, 0.05);
+    width: fit-content;
+}
+
+.fan-org-title {
+    font-size: 3rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: #111111;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    text-transform: none;
+}
+
+.fan-org-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #a1a1aa;
+}
+
+.fan-org-meta span:not(:last-child)::after {
+    content: '';
+    margin-left: 1rem;
+}
+
+/* Actions */
+.fan-org-actions {
+    display: flex;
+    gap: 1rem;
+    padding-bottom: 0.5rem;
+}
+
+.fan-org-follow-btn {
+    padding: 0.75rem 2rem;
+    background-color: #111111;
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.fan-org-follow-btn:hover {
+    background-color: #27272a;
+}
+
+.fan-org-follow-btn.following {
+    background-color: #ffffff;
+    color: #111111;
+    border: 1px solid #e4e4e7;
+}
+
+.fan-org-follow-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.fan-org-more-btn {
+    padding: 0.75rem;
+    border: 1px solid #e4e4e7;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.fan-org-more-btn:hover {
+    background-color: #fafafa;
+}
+
+.fan-org-more-btn .material-symbols-outlined {
+    font-size: 1.25rem;
+    color: #71717a;
+}
+
+/* Tabs */
+.fan-org-tabs {
+    display: flex;
+    gap: 2.5rem;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.fan-org-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.fan-org-tab {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #a1a1aa;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0 0 1rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.25s ease;
+}
+
+.fan-org-tab:hover {
+    color: #111111;
+}
+
+.fan-org-tab.active {
+    color: #111111;
+    border-bottom-color: #111111;
+}
+
+/* Content Layout */
+.fan-org-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+}
+
+.fan-org-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 4rem;
+}
+
+/* Feed Section */
+.fan-org-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+}
+
+.fan-org-feed-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f4f4f5;
+}
+
+.fan-org-feed-title {
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: #111111;
+    margin: 0;
+}
+
+.fan-org-feed-filters {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.fan-org-feed-filter {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #a1a1aa;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.25s ease;
+}
+
+.fan-org-feed-filter:hover,
+.fan-org-feed-filter.active {
+    color: #111111;
+}
+
+.fan-org-feed-posts {
+    display: flex;
+    flex-direction: column;
+    gap: 4rem;
+}
+
+.fan-org-feed-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.fan-org-feed-empty .material-symbols-outlined {
+    font-size: 3rem;
+    color: #d4d4d8;
+    margin-bottom: 1rem;
+}
+
+.fan-org-feed-empty p {
+    font-size: 0.875rem;
+    color: #a1a1aa;
+    margin: 0;
+}
+
+/* Post */
+.fan-org-post {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.fan-org-post:not(:last-child) {
+    padding-bottom: 3rem;
+    border-bottom: 1px solid #f4f4f5;
+}
+
+.fan-org-post-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.fan-org-post-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: #3b82f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.fan-org-post-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.fan-org-post-initials {
+    font-size: 0.625rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.2em;
+}
+
+.fan-org-post-author {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #111111;
+    margin: 0;
+}
+
+.fan-org-post-time {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #a1a1aa;
+    margin: 0.25rem 0 0;
+}
+
+.fan-org-post-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.fan-org-post-title {
+    font-size: 1.5rem;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    color: #18181b;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    text-transform: none;
+}
+
+.fan-org-post-text {
+    font-size: 1.125rem;
+    font-weight: 300;
+    line-height: 1.6;
+    color: #71717a;
+    margin: 0;
+}
+
+.fan-org-post-actions {
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+    padding-top: 1rem;
+}
+
+.fan-org-post-action {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: none;
+    color: #a1a1aa;
+    cursor: pointer;
+    transition: color 0.25s ease;
+}
+
+.fan-org-post-action:hover {
+    color: #111111;
+}
+
+.fan-org-post-action.ml-auto {
+    margin-left: auto;
+}
+
+.fan-org-post-action .material-symbols-outlined {
+    font-size: 1.25rem;
+}
+
+.fan-org-post-action span:last-child {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+}
+
+/* Sidebar */
+.fan-org-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+}
+
+.fan-org-sidebar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.fan-org-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.fan-org-sidebar-title {
+    font-size: 0.625rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: #a1a1aa;
+    margin: 0;
+}
+
+/* Next Game */
+.fan-org-next-game {
+    background-color: #fafafa;
+    border: 1px solid #f4f4f5;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.fan-org-next-game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.fan-org-next-game-time {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #a1a1aa;
+}
+
+.fan-org-next-game-live {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background-color: #3b82f6;
+}
+
+.fan-org-next-game-teams {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.fan-org-next-game-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.fan-org-next-game-logo {
+    width: 2.5rem;
+    height: 2.5rem;
+    background-color: #ffffff;
+    border: 1px solid #f4f4f5;
+}
+
+.fan-org-next-game-team span {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #18181b;
+}
+
+.fan-org-next-game-vs {
+    font-size: 0.75rem;
+    font-weight: 300;
+    color: #d4d4d8;
+}
+
+.fan-org-next-game-venue {
+    font-size: 0.625rem;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-weight: 500;
+    color: #71717a;
+    margin: 0;
+}
+
+.fan-org-next-game-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #111111;
+    color: #ffffff;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.fan-org-next-game-btn:hover {
+    background-color: #27272a;
+}
+
+/* Stats List */
+.fan-org-stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.fan-org-stat-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f4f4f5;
+}
+
+.fan-org-stat-item:last-child {
+    border-bottom: none;
+}
+
+.fan-org-stat-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.fan-org-stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #71717a;
+}
+
+.fan-org-stat-value {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #18181b;
+}
+
+/* Contact */
+.fan-org-contact {
+    padding-top: 1.5rem;
+    border-top: 1px solid #f4f4f5;
+}
+
+.fan-org-contact-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.fan-org-contact-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #18181b;
+    text-decoration: none;
+    transition: color 0.25s ease;
+}
+
+.fan-org-contact-link:hover {
+    color: #3b82f6;
+}
+
+.fan-org-contact-link .material-symbols-outlined {
+    font-size: 1.25rem;
+    color: #a1a1aa;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .fan-org-layout {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+    }
+
+    .fan-org-sidebar {
+        order: -1;
+    }
+}
+
+@media (max-width: 768px) {
+    .fan-org-hero-main {
+        gap: 1.5rem;
+    }
+
+    .fan-org-hero-left {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .fan-org-logo-large {
+        width: 8rem;
+        height: 8rem;
+    }
+
+    .fan-org-title {
+        font-size: 2rem;
+    }
+
+    .fan-org-actions {
+        width: 100%;
+    }
+
+    .fan-org-follow-btn {
+        flex: 1;
+    }
+
+    .fan-org-content {
+        padding: 2rem 1rem;
+    }
+}

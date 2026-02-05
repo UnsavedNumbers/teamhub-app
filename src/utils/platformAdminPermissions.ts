@@ -67,7 +67,7 @@ export type PlatformAdminAction =
 /**
  * Permission matrix: maps actions to allowed roles
  */
-const PERMISSION_MATRIX: Record<PlatformAdminAction, PlatformAdminRole[]> = {
+export const PERMISSION_MATRIX: Record<PlatformAdminAction, PlatformAdminRole[]> = {
     // View actions - all platform admins can view
     view_dashboard: ['super_admin', 'support_admin', 'finance_admin', 'ops_admin'],
     view_organizations: ['super_admin', 'support_admin', 'finance_admin', 'ops_admin'],

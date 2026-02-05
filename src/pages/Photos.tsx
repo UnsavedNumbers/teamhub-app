@@ -20,8 +20,6 @@ import {
 import { getGuardianAthletes } from '../data/services/guardianService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle } from '../components/portal/Typography'
-import Card from '../components/portal/Card'
-import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import { getLink } from '../utils/routes'
 import type { Athlete } from '../types/family'
@@ -37,7 +35,7 @@ export default function Photos() {
     season: [],
     org: [],
   })
-  const [athletes, setAthletes] = useState<Athlete[]>([])
+  const [_athletes, setAthletes] = useState<Athlete[]>([])
   const [loading, setLoading] = useState(true)
   const [isLoadingAthletes, setIsLoadingAthletes] = useState(true)
 
@@ -96,40 +94,67 @@ export default function Photos() {
 
     return (
       <div className="mb-12">
-        <h2 className="text-2xl font-bold mb-4 text-slate-900 dark:text-slate-100">{title}</h2>
+        <h2 className="text-xl font-semibold mb-4 text-slate-900 dark:text-slate-100">{title}</h2>
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <div className="h-48 bg-slate-200 dark:bg-slate-700 rounded"></div>
-                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded mt-4"></div>
-              </Card>
+              <div key={i} className="border border-slate-200 dark:border-slate-700 animate-pulse" style={{ borderRadius: '2px' }}>
+                <div className="h-40 bg-slate-200 dark:bg-slate-700"></div>
+                <div className="p-3">
+                  <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                </div>
+              </div>
             ))}
           </div>
         ) : items.length === 0 ? (
-          <Card>
+          <div className="border border-slate-200 dark:border-slate-700 p-4" style={{ borderRadius: '2px' }}>
             <p className="text-slate-500 dark:text-slate-400">No galleries available.</p>
-          </Card>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {items.map((gallery) => (
-              <Link
-                key={gallery.id}
-                to={getLink('portal.photosGallery', { id: gallery.id })}
-              >
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <div className="aspect-video bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 rounded-lg mb-4 flex items-center justify-center">
-                    <Icon name="photo_library" size="text-4xl" className="text-slate-400" />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+            {items.map((gallery) => {
+              const hasCoverThumbnails = !!gallery.cover_thumbnails;
+              const legacyCoverUrl = gallery.cover_url;
+              const hasCover = hasCoverThumbnails || !!legacyCoverUrl;
+              const mainSrc = gallery.cover_thumbnails?.thumb_medium?.jpg || legacyCoverUrl;
+              const photoCount = gallery.photo_count || 0;
+              
+              return (
+                <Link
+                  key={gallery.id}
+                  to={getLink('portal.photosGallery', { id: gallery.id })}
+                  className="block border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-colors group"
+                  style={{ borderRadius: '2px' }}
+                >
+                  <div className="relative h-40 overflow-hidden bg-slate-100 dark:bg-slate-800">
+                    {hasCover && mainSrc ? (
+                      <picture className="w-full h-full block">
+                        {gallery.cover_thumbnails?.thumb_medium?.webp && (
+                          <source srcSet={gallery.cover_thumbnails.thumb_medium.webp} type="image/webp" />
+                        )}
+                        <img 
+                          src={mainSrc} 
+                          alt={`Cover photo for ${gallery.name}`}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      </picture>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Icon name="cloud_upload" size="text-5xl" className="text-slate-300 dark:text-slate-600" />
+                      </div>
+                    )}
+                    <div className="absolute bottom-2 right-2 px-2 py-1 flex items-center gap-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', borderRadius: '2px' }}>
+                      <Icon name="photo_camera" size="text-sm" className="text-white" />
+                      <span className="text-white text-sm font-normal">{photoCount}</span>
+                    </div>
                   </div>
-                  <h3 className="font-semibold text-lg mb-1">{gallery.name}</h3>
-                  {gallery.photo_count !== undefined && (
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {gallery.photo_count} {gallery.photo_count === 1 ? 'photo' : 'photos'}
-                    </p>
-                  )}
-                </Card>
-              </Link>
-            ))}
+                  <div className="p-3">
+                    <h3 className="font-medium text-base text-slate-900 dark:text-slate-100 leading-snug line-clamp-2">{gallery.name}</h3>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
@@ -153,12 +178,14 @@ export default function Photos() {
         </div>
 
         {/* Loading Skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <div className="h-48 bg-slate-200 dark:bg-slate-700 rounded"></div>
-              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded mt-4"></div>
-            </Card>
+            <div key={i} className="border border-slate-200 dark:border-slate-700 animate-pulse" style={{ borderRadius: '2px' }}>
+              <div className="h-40 bg-slate-200 dark:bg-slate-700"></div>
+              <div className="p-3">
+                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+              </div>
+            </div>
           ))}
         </div>
       </PortalLayout>
@@ -190,3 +217,4 @@ export default function Photos() {
     </PortalLayout>
   )
 }
+

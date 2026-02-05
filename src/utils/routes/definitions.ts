@@ -37,6 +37,12 @@ const portal = {
         label: 'Event Details',
         icon: 'event',
     },
+    eventEdit: {
+        path: '/portal/calendar/events/:eventId/edit',
+        params: ['eventId'] as const,
+        label: 'Edit Event',
+        icon: 'edit',
+    },
 
     // Travel
     travel: {
@@ -194,6 +200,28 @@ const portal = {
         label: 'Settings',
         icon: 'settings',
         description: 'Preferences',
+    },
+
+    // Following/Organizations
+    following: {
+        path: '/portal/following',
+        label: 'Followed Organizations',
+        icon: 'favorite',
+        description: 'Organizations you follow',
+    },
+    discoverOrgs: {
+        path: '/portal/discover',
+        label: 'Browse Organizations',
+        icon: 'explore',
+        description: 'Discover new teams',
+    },
+
+    // Help & Support
+    help: {
+        path: '/portal/help',
+        label: 'Help & Support',
+        icon: 'help',
+        description: 'Get assistance',
     },
 
     // Photos
@@ -950,11 +978,25 @@ const admin = {
             description: 'Photo galleries',
             requiresOrg: true,
         },
+        create: {
+            path: '/admin/photos/create',
+            label: 'Create Gallery',
+            icon: 'add_photo_alternate',
+            description: 'Create new photo gallery',
+            requiresOrg: true,
+        },
         detail: {
             path: '/admin/photos/:id',
             params: ['id'] as const,
             label: 'Gallery',
             icon: 'collections',
+            requiresOrg: true,
+        },
+        photo: {
+            path: '/admin/photos/:galleryId/photo/:photoId',
+            params: ['galleryId', 'photoId'] as const,
+            label: 'Photo Detail',
+            icon: 'image',
             requiresOrg: true,
         },
     },
@@ -1172,6 +1214,143 @@ const platformAdmin = {
 } as const satisfies Record<string, RouteDefinition | Record<string, RouteDefinition>>
 
 // ============================================================================
+// FAN ROUTES - Fan Navigation System
+// ============================================================================
+const fan = {
+    // Home Page (Feed)
+    home: {
+        path: '/fan',
+        label: 'Home',
+        icon: 'home',
+        description: 'Your personalized feed',
+    },
+
+    // Schedule
+    schedule: {
+        path: '/fan/schedule',
+        label: 'Schedule',
+        icon: 'calendar_month',
+        description: 'Upcoming events',
+    },
+
+    // Photos & Videos
+    photos: {
+        list: {
+            path: '/fan/photos',
+            label: 'Photos & Videos',
+            icon: 'photo_library',
+            description: 'Browse galleries',
+        },
+        gallery: {
+            path: '/fan/photos/gallery/:id',
+            params: ['id'] as const,
+            label: 'Gallery',
+            icon: 'photo_library',
+        },
+        athlete: {
+            path: '/fan/photos/athlete/:athleteId',
+            params: ['athleteId'] as const,
+            label: 'Athlete Photos',
+            icon: 'person',
+        },
+    },
+
+    // My Tickets
+    tickets: {
+        list: {
+            path: '/fan/tickets',
+            label: 'My Tickets',
+            icon: 'confirmation_number',
+            description: 'Your event tickets',
+        },
+        detail: {
+            path: '/fan/tickets/:ticketId',
+            params: ['ticketId'] as const,
+            label: 'Ticket Details',
+            icon: 'confirmation_number',
+        },
+    },
+
+    // Following
+    following: {
+        base: {
+            path: '/fan/following',
+            label: 'Following',
+            icon: 'favorite',
+            description: 'Teams and athletes',
+        },
+        discover: {
+            path: '/fan/discover',
+            label: 'Discover',
+            icon: 'explore',
+            description: 'Find teams to follow',
+        },
+    },
+
+    // Entity Profiles
+    profiles: {
+        org: {
+            path: '/fan/org/:orgId',
+            params: ['orgId'] as const,
+            label: 'Organization Profile',
+            icon: 'apartment',
+        },
+        team: {
+            path: '/fan/team/:teamId',
+            params: ['teamId'] as const,
+            label: 'Team Profile',
+            icon: 'groups',
+        },
+        athlete: {
+            path: '/fan/athlete/:athleteId',
+            params: ['athleteId'] as const,
+            label: 'Athlete Profile',
+            icon: 'person',
+        },
+    },
+
+    // Profile & Settings
+    profile: {
+        base: {
+            path: '/fan/profile',
+            label: 'Profile',
+            icon: 'account_circle',
+            description: 'Your account',
+        },
+        edit: {
+            path: '/fan/profile/edit',
+            label: 'Edit Profile',
+            icon: 'edit',
+        },
+        notifications: {
+            path: '/fan/profile/notifications',
+            label: 'Notifications',
+            icon: 'notifications',
+        },
+        linkedAthletes: {
+            path: '/fan/profile/linked-athletes',
+            label: 'Linked Athletes',
+            icon: 'supervisor_account',
+        },
+        privacy: {
+            path: '/fan/profile/privacy',
+            label: 'Privacy Settings',
+            icon: 'privacy_tip',
+        },
+        password: {
+            path: '/fan/profile/password',
+            label: 'Change Password',
+            icon: 'lock',
+        },
+        security: {
+            path: '/fan/profile/security',
+            label: 'Security',
+            icon: 'security',
+        },
+    },
+} as const satisfies Record<string, RouteDefinition | Record<string, RouteDefinition>>
+
+// ============================================================================
 // ROOT ROUTES
 // ============================================================================
 const root = {
@@ -1191,6 +1370,7 @@ export const routes = {
     auth,
     admin,
     platformAdmin,
+    fan,
 } as const
 
 // Type for the routes object

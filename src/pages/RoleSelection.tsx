@@ -8,7 +8,7 @@ import { useT } from '@/i18n/useI18n'
 import { useOffline } from '@/hooks/useOffline'
 import { hasRole } from '@/utils/roleHelpers'
 import { hasMultipleRoles, getLoginRedirect } from '@/utils/loginRedirect'
-import { isDemoMode } from '@/utils/demoMode'
+import { USE_FAKE_DATA } from '@/data/config'
 import { getLink, RouteKeys } from '@/utils/routes'
 import { showError } from '@/utils/toast'
 import type { OrgMemberRole } from '@/contexts/OrganizationContext'
@@ -175,7 +175,7 @@ export function RoleSelection() {
     }
 
     // Check demo mode
-    if (isDemoMode()) {
+    if (USE_FAKE_DATA) {
       setError(t('portal.roleSelection.errors.demoMode'))
       return
     }
@@ -294,7 +294,7 @@ export function RoleSelection() {
         window.location.reload()
       }
     } catch (err: any) {
-      setError(err.message || t('common.error'))
+      setError(err.message || t('common.error.label'))
     } finally {
       setRetrying(false)
     }
@@ -712,9 +712,9 @@ export function RoleSelection() {
         <div className="mt-20 w-full flex flex-col items-center gap-8">
           <button
             onClick={handleEnter}
-            disabled={!selectedCard || navigating || isOffline || isDemoMode()}
+            disabled={!selectedCard || navigating || isOffline || USE_FAKE_DATA}
             className={`flex min-w-[320px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 gap-3 text-lg font-black leading-normal tracking-widest uppercase transition-all ${
-              selectedCard && !navigating && !isOffline && !isDemoMode()
+              selectedCard && !navigating && !isOffline && !USE_FAKE_DATA
                 ? 'bg-primary text-white hover:bg-primary/90 shadow-[0_8px_0_0_#1a6ec2] active:shadow-[0_2px_0_0_#1a6ec2] active:translate-y-[6px]'
                 : 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-500 cursor-not-allowed'
             }`}

@@ -77,6 +77,26 @@ const PortalEditEvent = lazy(() => import('./pages/portal/PortalEditEvent'))
 const FollowedOrgs = lazy(() => import('./pages/portal/FollowedOrgs'))
 const BookmarkedEvents = lazy(() => import('./pages/portal/BookmarkedEvents'))
 
+// Fan Pages - Lazy loaded
+const FanHome = lazy(() => import('./pages/fan/FanHome'))
+const FanFollowing = lazy(() => import('./pages/fan/FanFollowing'))
+const FanOrgProfile = lazy(() => import('./pages/fan/FanOrgProfile'))
+const FanPhotos = lazy(() => import('./pages/fan/FanPhotos'))
+const FanGalleryDetail = lazy(() => import('./pages/fan/FanPhotos').then(m => ({ default: m.FanGalleryDetail })))
+const FanAthletePhotos = lazy(() => import('./pages/fan/FanPhotos').then(m => ({ default: m.FanAthletePhotos })))
+const FanSchedule = lazy(() => import('./pages/fan/FanSchedule'))
+const FanTickets = lazy(() => import('./pages/fan/FanTickets'))
+const FanTicketDetail = lazy(() => import('./pages/fan/FanTickets').then(m => ({ default: m.FanTicketDetail })))
+const FanProfile = lazy(() => import('./pages/fan/FanProfile'))
+const FanProfileEdit = lazy(() => import('./pages/fan/FanProfile').then(m => ({ default: m.FanProfileEdit })))
+const FanProfileNotifications = lazy(() => import('./pages/fan/FanProfile').then(m => ({ default: m.FanProfileNotifications })))
+const FanProfileLinkedAthletes = lazy(() => import('./pages/fan/FanProfile').then(m => ({ default: m.FanProfileLinkedAthletes })))
+const FanProfilePrivacy = lazy(() => import('./pages/fan/FanProfile').then(m => ({ default: m.FanProfilePrivacy })))
+const FanTeamProfile = lazy(() => import('./pages/fan/FanTeamProfile'))
+const FanAthleteProfile = lazy(() => import('./pages/fan/FanAthleteProfile'))
+const FanLayout = lazy(() => import('./components/fan/FanLayout'))
+
+
 // Video Pages - Lazy loaded
 const GuardianVideos = lazy(() => import('./pages/GuardianVideos'))
 const GuardianVideoDetail = lazy(() => import('./pages/GuardianVideoDetail'))
@@ -173,6 +193,8 @@ const AdminTryoutDetail = lazy(() => import('./pages/admin/AdminTryoutDetail'))
 const CreateTryout = lazy(() => import('./pages/admin/CreateTryout'))
 const AdminPhotos = lazy(() => import('./pages/admin/Photos'))
 const AdminGalleryDetail = lazy(() => import('./pages/admin/GalleryDetail'))
+const CreateGallery = lazy(() => import('./pages/admin/CreateGallery'))
+const PhotoDetail = lazy(() => import('./pages/admin/PhotoDetail'))
 const OrganizationSettings = lazy(() => import('./pages/admin/OrganizationSettings'))
 const OrganizationStructureForms = lazy(() => import('./pages/admin/OrganizationStructureForms'))
 const OrganizationUsers = lazy(() => import('./pages/admin/OrganizationUsers'))
@@ -305,7 +327,7 @@ function AppWithTheme() {
           {/* Redirect /accept-invite to /portal/accept-invite for old email links */}
           <Route path="/accept-invite" element={<AcceptInvite />} />
 
-          {/* Portal Routes - Parents/Coaches */}
+          {/* Portal Routes - Guardians Only */}
           <Route path="/portal" element={<HostGateLayout />}>
             {/* Public Auth Routes */}
             <Route path="login" element={<Login />} />
@@ -317,54 +339,82 @@ function AppWithTheme() {
             <Route path="confirm-email" element={<ConfirmEmail />} />
             <Route path="unauthorized" element={<Unauthorized />} />
 
-            {/* Protected Portal Routes */}
-            <Route path="role-selection" element={<ProtectedRoute><RoleSelection /></ProtectedRoute>} />
-            <Route path="dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="athletes" element={<ProtectedRoute><Athletes /></ProtectedRoute>} />
-            <Route path="athletes/new" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><CreateAthletePortal /></Suspense></ProtectedRoute>} />
-            <Route path="athletes/:id/profile" element={<ProtectedRoute><AthleteProfile /></ProtectedRoute>} />
-            <Route path="athletes/:id/edit" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><EditAthletePortal /></Suspense></ProtectedRoute>} />
-            <Route path="athletes/request-attachment" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><RequestAthleteAttachment /></Suspense></ProtectedRoute>} />
-            <Route path="join" element={<ProtectedRoute><JoinTeam /></ProtectedRoute>} />
-            <Route path="calendar/new" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><PortalCreateEvent /></Suspense></ProtectedRoute>} />
-            <Route path="calendar/events/:eventId/edit" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><PortalEditEvent /></Suspense></ProtectedRoute>} />
-            <Route path="calendar/events/:eventId" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
-            <Route path="calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
-            <Route path="payments" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.payments"><MyPayments /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="payments/:id" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.payments.detail"><PaymentDetail /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="payments/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
-            <Route path="payments/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />
-            <Route path="uniforms" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.uniforms"><Uniforms /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="uniforms/:kitId" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.uniforms.detail"><UniformKitOrder /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="travel" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.travel"><Travel /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="travel/:id" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.travel.detail"><TravelDetail /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="tryouts" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.tryouts"><Tryouts /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="tryouts/:tryoutId" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.tryouts.detail"><TryoutDetail /></FeatureGateRoute></ProtectedRoute>} />
+            {/* Protected Portal Routes - Guardians Only */}
+            <Route path="role-selection" element={<ProtectedRoute allowedRoles={['parent']}><RoleSelection /></ProtectedRoute>} />
+            <Route path="dashboard" element={<ProtectedRoute allowedRoles={['parent']}><Dashboard /></ProtectedRoute>} />
+            <Route path="settings" element={<ProtectedRoute allowedRoles={['parent']}><Settings /></ProtectedRoute>} />
+            <Route path="athletes" element={<ProtectedRoute allowedRoles={['parent']}><Athletes /></ProtectedRoute>} />
+            <Route path="athletes/new" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><CreateAthletePortal /></Suspense></ProtectedRoute>} />
+            <Route path="athletes/:id/profile" element={<ProtectedRoute allowedRoles={['parent']}><AthleteProfile /></ProtectedRoute>} />
+            <Route path="athletes/:id/edit" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><EditAthletePortal /></Suspense></ProtectedRoute>} />
+            <Route path="athletes/request-attachment" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><RequestAthleteAttachment /></Suspense></ProtectedRoute>} />
+            <Route path="join" element={<ProtectedRoute allowedRoles={['parent']}><JoinTeam /></ProtectedRoute>} />
+            <Route path="calendar/new" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><PortalCreateEvent /></Suspense></ProtectedRoute>} />
+            <Route path="calendar/events/:eventId/edit" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><PortalEditEvent /></Suspense></ProtectedRoute>} />
+            <Route path="calendar/events/:eventId" element={<ProtectedRoute allowedRoles={['parent']}><EventDetail /></ProtectedRoute>} />
+            <Route path="calendar" element={<ProtectedRoute allowedRoles={['parent']}><Calendar /></ProtectedRoute>} />
+            <Route path="payments" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.payments"><MyPayments /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="payments/:id" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.payments.detail"><PaymentDetail /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="payments/success" element={<ProtectedRoute allowedRoles={['parent']}><PaymentSuccess /></ProtectedRoute>} />
+            <Route path="payments/cancel" element={<ProtectedRoute allowedRoles={['parent']}><PaymentCancel /></ProtectedRoute>} />
+            <Route path="uniforms" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.uniforms"><Uniforms /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="uniforms/:kitId" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.uniforms.detail"><UniformKitOrder /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="travel" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.travel"><Travel /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="travel/:id" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.travel.detail"><TravelDetail /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="tryouts" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.tryouts"><Tryouts /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="tryouts/:tryoutId" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.tryouts.detail"><TryoutDetail /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="messages" element={<Navigate to="/portal/huddles/announcements" replace />} />
-            <Route path="messages/:announcementId" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><AnnouncementDetail /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="messages/:announcementId" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.messages"><AnnouncementDetail /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="huddles" element={<Navigate to="/portal/huddles/announcements" replace />} />
-            <Route path="huddles/announcements" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="huddles/chat" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="photos" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.photos"><Photos /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="photos/gallery/:id" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.photosGallery"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="photos/gallery/:id/manage" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.photosGalleryManage"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute></ProtectedRoute>} />
-            
+            <Route path="huddles/announcements" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="huddles/chat" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="photos" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.photos"><Photos /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="photos/gallery/:id" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.photosGallery"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="photos/gallery/:id/manage" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.photosGalleryManage"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute></ProtectedRoute>} />
+
             {/* Videos */}
-            <Route path="videos" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><GuardianVideos /></Suspense></ProtectedRoute>} />
-            <Route path="videos/:id" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><GuardianVideoDetail /></Suspense></ProtectedRoute>} />
-            
-            <Route path="account/tickets" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.myTickets"><MyTickets /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="follows" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FollowedOrgs /></Suspense></ProtectedRoute>} />
-            <Route path="bookmarks" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><BookmarkedEvents /></Suspense></ProtectedRoute>} />
-            
+            <Route path="videos" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><GuardianVideos /></Suspense></ProtectedRoute>} />
+            <Route path="videos/:id" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><GuardianVideoDetail /></Suspense></ProtectedRoute>} />
+
+            <Route path="account/tickets" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.myTickets"><MyTickets /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="follows" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><FollowedOrgs /></Suspense></ProtectedRoute>} />
+            <Route path="bookmarks" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><BookmarkedEvents /></Suspense></ProtectedRoute>} />
+
             {/* Redirect root portal to dashboard */}
-            <Route path="notifications" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Suspense fallback={<AdminLoadingSpinner />}><Notifications /></Suspense></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="notifications" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.messages"><Suspense fallback={<AdminLoadingSpinner />}><Notifications /></Suspense></FeatureGateRoute></ProtectedRoute>} />
             <Route index element={<Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace />} />
 
             {/* Catch-all to prevent blank/"blue" screens on unknown portal routes */}
             {/* Use replace: false to preserve browser history for back button navigation */}
             <Route path="*" element={<Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace={false} />} />
+          </Route>
+
+          {/* Fan Routes - Public fan experience */}
+          <Route path="/fan" element={<Suspense fallback={<AdminLoadingSpinner />}><FanLayout /></Suspense>}>
+            {/* Public routes - accessible without auth for browsing */}
+            <Route path="org/:slug" element={<Suspense fallback={<AdminLoadingSpinner />}><FanOrgProfile /></Suspense>} />
+            <Route path="team/:id" element={<Suspense fallback={<AdminLoadingSpinner />}><FanTeamProfile /></Suspense>} />
+            <Route path="athlete/:id" element={<Suspense fallback={<AdminLoadingSpinner />}><FanAthleteProfile /></Suspense>} />
+            
+            {/* Protected fan routes - require authentication */}
+            <Route index element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanHome /></Suspense></ProtectedRoute>} />
+            <Route path="home" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanHome /></Suspense></ProtectedRoute>} />
+            <Route path="schedule" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanSchedule /></Suspense></ProtectedRoute>} />
+            <Route path="photos" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanPhotos /></Suspense></ProtectedRoute>} />
+            <Route path="photos/gallery/:id" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanGalleryDetail /></Suspense></ProtectedRoute>} />
+            <Route path="photos/athlete/:athleteId" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanAthletePhotos /></Suspense></ProtectedRoute>} />
+            <Route path="tickets" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanTickets /></Suspense></ProtectedRoute>} />
+            <Route path="tickets/:ticketId" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanTicketDetail /></Suspense></ProtectedRoute>} />
+            <Route path="following" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanFollowing /></Suspense></ProtectedRoute>} />
+            <Route path="discover" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanFollowing /></Suspense></ProtectedRoute>} />
+            <Route path="profile" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanProfile /></Suspense></ProtectedRoute>} />
+            <Route path="profile/edit" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanProfileEdit /></Suspense></ProtectedRoute>} />
+            <Route path="profile/notifications" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanProfileNotifications /></Suspense></ProtectedRoute>} />
+            <Route path="profile/linked-athletes" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanProfileLinkedAthletes /></Suspense></ProtectedRoute>} />
+            <Route path="profile/privacy" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanProfilePrivacy /></Suspense></ProtectedRoute>} />
+            
+            {/* Catch-all for unknown fan routes */}
+            <Route path="*" element={<Navigate to="/fan" replace={false} />} />
           </Route>
 
           {/* Organization Onboarding - Standalone route outside AdminLayout */}
@@ -509,7 +559,9 @@ function AppWithTheme() {
             
               {/* Photos */}
               <Route path="photos" element={<FeatureGateRoute routeKey="admin.photos.list"><Suspense fallback={<AdminLoadingSpinner />}><AdminPhotos /></Suspense></FeatureGateRoute>} />
-              <Route path="photos/:id" element={<FeatureGateRoute routeKey="admin.photos.list"><Suspense fallback={<AdminLoadingSpinner />}><AdminGalleryDetail /></Suspense></FeatureGateRoute>} />
+              <Route path="photos/create" element={<FeatureGateRoute routeKey="admin.photos.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateGallery /></Suspense></FeatureGateRoute>} />
+              <Route path="photos/:id" element={<FeatureGateRoute routeKey="admin.photos.detail"><Suspense fallback={<AdminLoadingSpinner />}><AdminGalleryDetail /></Suspense></FeatureGateRoute>} />
+              <Route path="photos/:galleryId/photo/:photoId" element={<FeatureGateRoute routeKey="admin.photos.photo"><Suspense fallback={<AdminLoadingSpinner />}><PhotoDetail /></Suspense></FeatureGateRoute>} />
             
               {/* Videos */}
               <Route path="videos" element={<Suspense fallback={<AdminLoadingSpinner />}><CoachVideoLibrary /></Suspense>} />

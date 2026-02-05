@@ -205,7 +205,7 @@ export function filterByPermissions<T>(
 /**
  * Filter events by user permissions
  */
-export function filterEventsByRole<T extends { team_id?: string; team?: { id?: string; org_id?: string } }>(
+export function filterEventsByRole<T extends { team_id?: string | null; team?: { id?: string | null; org_id?: string | null } }>(
     events: T[],
     permissions: PermissionSet,
     childTeamMemberships: Array<{ childId: string; teamId: string }>,
@@ -317,7 +317,7 @@ const VALID_EVENT_TYPES = [
 
 const VALID_RSVP_STATUSES = ['going', 'late', 'not_going', 'unknown'] as const
 
-const VALID_ORG_MEMBER_ROLES = ['parent', 'coach', 'org_admin'] as const
+const VALID_ORG_MEMBER_ROLES = ['parent', 'coach', 'org_admin', 'staff'] as const
 
 const VALID_ORG_TYPES = ['school', 'club', 'league', 'academy', 'aau'] as const
 
