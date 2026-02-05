@@ -4,13 +4,13 @@
  * Handles demo mode detection and blocking of write operations
  */
 
-import { isSupabaseConfigured } from '../lib/supabase'
+import { USE_FAKE_DATA } from '../data/config'
 
 /**
  * Check if we're in demo mode (Supabase not configured)
  */
 export function isDemoMode(): boolean {
-  return !isSupabaseConfigured
+  return USE_FAKE_DATA
 }
 
 /**
@@ -27,7 +27,7 @@ export function shouldBlockInDemoMode(operation: 'read' | 'write'): boolean {
   if (operation === 'read') {
     return false // Reads can work in demo mode with mock data
   }
-  return isDemoMode() // Writes are blocked
+  return USE_FAKE_DATA // Writes are blocked
 }
 
 /**
@@ -38,3 +38,4 @@ export function assertNotDemoMode(operation: string = 'perform this action'): vo
     throw new Error(getDemoModeError(operation))
   }
 }
+

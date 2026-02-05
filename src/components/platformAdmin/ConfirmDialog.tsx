@@ -68,6 +68,7 @@ export function ConfirmDialog({
             maxWidth: '500px',
             margin: 'var(--pa-space-4)',
             padding: 0,
+            backgroundColor: 'white',
           }}
         >
           {/* Header */}

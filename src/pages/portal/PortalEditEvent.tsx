@@ -7,6 +7,7 @@ import EventForm from '../../components/calendar/EventForm'
 import { getEventDetails, updateEvent } from '../../data/services/eventsService'
 import { useUserContext } from '../../hooks/useUserContext'
 import { EventFormData } from '../../types/calendar'
+import { getLink, RouteKeys } from '../../utils/routes'
 
 export default function PortalEditEvent() {
   const { eventId } = useParams<{ eventId: string }>()
@@ -23,7 +24,7 @@ export default function PortalEditEvent() {
     const loadEvent = async () => {
       const { data, error } = await getEventDetails(context, eventId)
       if (error || !data) {
-        navigate('/portal/calendar')
+        navigate(getLink(RouteKeys.PORTAL_CALENDAR))
         return
       }
       
@@ -31,8 +32,8 @@ export default function PortalEditEvent() {
       setInitialValues({
         title: data.title,
         type: data.type,
-        team_id: data.team_id,
-        season_id: data.season_id,
+        team_id: data.team_id ?? undefined,
+        season_id: data.season_id ?? undefined,
         sport_id: '', // Would need to fetch from team relation if we want to populate this
         program_id: '', // Would need to fetch from team relation
         start_time: data.start_time.slice(0, 16), // datetime-local format
@@ -76,14 +77,14 @@ export default function PortalEditEvent() {
       setError(error.message)
       setLoading(false)
     } else {
-      navigate(`/portal/calendar/events/${eventId}`)
+      navigate(getLink(RouteKeys.PORTAL_EVENT_DETAIL, { eventId: eventId! }))
     }
   }
 
   if (fetching) return <PortalLayout><div className="p-12 text-center">Loading...</div></PortalLayout>
 
   return (
-    <PortalLayout breadcrumbs={[{ label: 'Calendar', path: '/portal/calendar' }, { label: initialValues.title || 'Event' }]}>
+    <PortalLayout breadcrumbs={[{ label: 'Calendar', path: getLink(RouteKeys.PORTAL_CALENDAR) }, { label: initialValues.title || 'Event' }]}>
       <div className="mb-6">
         <PageTitle>Edit Event</PageTitle>
       </div>

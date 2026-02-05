@@ -15,7 +15,7 @@ interface ModalProps {
   className?: string
 }
 
-export default function Modal({ open, onClose, title, children, size = 'medium' }: ModalProps) {
+export default function Modal({ open, onClose, title, children, size = 'medium', className = '' }: ModalProps) {
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden'
@@ -61,3 +61,4 @@ export default function Modal({ open, onClose, title, children, size = 'medium' 
     </div>
   )
 }
+

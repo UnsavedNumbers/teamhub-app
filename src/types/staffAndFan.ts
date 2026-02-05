@@ -104,6 +104,7 @@ export interface FanEventBookmark {
     start_time: string
     end_time: string
     location: string | null
+    timezone?: string
   }
 }
 
@@ -187,10 +188,15 @@ export interface CalendarEvent {
   start_time: string
   end_time: string
   location: string | null
-  source: CalendarEventSource[]
+  timezone?: string
+  source?: CalendarEventSource[]
+  sources?: CalendarEventSource[]
   org_id: string
   org_name: string
-  visibility: EventVisibility
+  org_slug?: string
+  visibility: EventVisibility | string
+  event_type?: string
+  description?: string | null
   // Relations
   event?: {
     id: string

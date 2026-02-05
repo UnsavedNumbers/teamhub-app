@@ -4,8 +4,7 @@
  * Modal showing audit log for a staff member.
  */
 
-import { useState, useEffect } from 'react'
-import { supabase } from '../../../lib/supabase'
+import { useState, useEffect, useCallback } from 'react'
 import { 
   Button,
   PlatformDataTable,
@@ -14,19 +13,8 @@ import {
 } from '../../../components/platformAdmin'
 import Modal from '../../../components/platformAdmin/Modal'
 import { formatDate } from '../../../utils/dateFormatters'
-
-interface AuditLogEntry {
-  id: string
-  action: string
-  changed_by: string | null
-  old_values: Record<string, unknown> | null
-  new_values: Record<string, unknown> | null
-  created_at: string
-  changed_by_user?: {
-    email: string | null
-    display_name: string | null
-  }
-}
+import { useI18n } from '../../../i18n/useI18n'
+import { getStaffAuditLog, type StaffAuditLogEntry } from '../../../data/services/usersService'
 
 interface StaffAuditLogProps {
   orgUserId: string
@@ -34,57 +22,54 @@ interface StaffAuditLogProps {
 }
 
 export default function StaffAuditLog({ orgUserId, onClose }: StaffAuditLogProps) {
-  const [entries, setEntries] = useState<AuditLogEntry[]>([])
+  const { t } = useI18n()
+  const [entries, setEntries] = useState<StaffAuditLogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(25)
+
+  const fetchAuditLog = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { data, error: fetchError } = await getStaffAuditLog(orgUserId)
+      if (fetchError) {
+        setError(fetchError.message || t('admin.staff.auditLog.loadFailed'))
+        setEntries([])
+      } else {
+        setEntries(data || [])
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('admin.staff.auditLog.loadFailed'))
+      setEntries([])
+    } finally {
+      setLoading(false)
+    }
+  }, [orgUserId, t])
 
   useEffect(() => {
-    const fetchAuditLog = async () => {
-      setLoading(true)
-      setError(null)
-
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('org_user_audit_log')
-          .select(`
-            id,
-            action,
-            changed_by,
-            old_values,
-            new_values,
-            created_at,
-            changed_by_user:users!org_user_audit_log_changed_by_fkey(email, display_name)
-          `)
-          .eq('org_user_id', orgUserId)
-          .order('created_at', { ascending: false })
-          .limit(50)
-
-        if (fetchError) {
-          setError(fetchError.message || 'Failed to load audit log')
-          setEntries([])
-        } else {
-          setEntries((data || []) as AuditLogEntry[])
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load audit log')
-        setEntries([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchAuditLog()
-  }, [orgUserId])
+  }, [fetchAuditLog])
 
-  const columns: ColumnConfig<AuditLogEntry>[] = [
+  useEffect(() => {
+    if (page > 0 && page * rowsPerPage >= entries.length) {
+      setPage(0)
+    }
+  }, [entries.length, page, rowsPerPage])
+
+  const pagedEntries = entries.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+
+  const columns: ColumnConfig<StaffAuditLogEntry>[] = [
     {
       id: 'created_at',
-      label: 'Date',
+      label: t('admin.staff.auditLog.columns.date'),
       render: (row) => formatDate(row.created_at, 'long'),
     },
     {
       id: 'action',
-      label: 'Action',
+      label: t('admin.staff.auditLog.columns.action'),
       render: (row) => (
         <span className="pa-badge pa-badge--neutral" style={{ textTransform: 'capitalize' }}>
           {row.action}
@@ -93,12 +78,12 @@ export default function StaffAuditLog({ orgUserId, onClose }: StaffAuditLogProps
     },
     {
       id: 'changed_by',
-      label: 'Changed By',
-      render: (row) => row.changed_by_user?.display_name || row.changed_by_user?.email || 'System',
+      label: t('admin.staff.auditLog.columns.changedBy'),
+      render: (row) => row.changed_by_user?.display_name || row.changed_by_user?.email || t('admin.staff.auditLog.system'),
     },
     {
       id: 'changes',
-      label: 'Changes',
+      label: t('admin.staff.auditLog.columns.changes'),
       render: (row) => {
         const changes: string[] = []
         if (row.new_values) {
@@ -106,7 +91,7 @@ export default function StaffAuditLog({ orgUserId, onClose }: StaffAuditLogProps
             const oldVal = row.old_values?.[key]
             const newVal = row.new_values[key]
             if (oldVal !== newVal) {
-              changes.push(`${key}: ${JSON.stringify(oldVal)} → ${JSON.stringify(newVal)}`)
+              changes.push(`${key}: ${JSON.stringify(oldVal)} -> ${JSON.stringify(newVal)}`)
             }
           })
         }
@@ -117,10 +102,10 @@ export default function StaffAuditLog({ orgUserId, onClose }: StaffAuditLogProps
                 {changes.slice(0, 3).map((change, idx) => (
                   <li key={idx}>{change}</li>
                 ))}
-                {changes.length > 3 && <li>...and {changes.length - 3} more</li>}
+                {changes.length > 3 && <li>{t('admin.staff.auditLog.moreChanges', { count: changes.length - 3 })}</li>}
               </ul>
             ) : (
-              <span className="pa-text-muted">No changes recorded</span>
+              <span className="pa-text-muted">{t('admin.staff.auditLog.noChanges')}</span>
             )}
           </div>
         )
@@ -132,34 +117,48 @@ export default function StaffAuditLog({ orgUserId, onClose }: StaffAuditLogProps
     <Modal
       open={true}
       onClose={onClose}
-      title="Staff Audit Log"
+      title={t('admin.staff.auditLog.title')}
       size="large"
     >
       <div className="pa-space-y-4">
         {error && (
           <InlineNotice
             tone="error"
-            title="Unable to load audit log"
+            title={t('admin.staff.auditLog.unableToLoad')}
             message={error}
+            actions={
+              <Button
+                variant="ghost"
+                size="dense"
+                icon="refresh"
+                onClick={fetchAuditLog}
+                disabled={loading}
+              >
+                {t('admin.staff.retry')}
+              </Button>
+            }
             onClose={() => setError(null)}
           />
         )}
 
         <PlatformDataTable
           columns={columns}
-          rows={entries}
+          rows={pagedEntries}
           loading={loading}
           totalCount={entries.length}
-          page={0}
-          rowsPerPage={entries.length || 25}
-          onPageChange={() => {}}
-          onRowsPerPageChange={() => {}}
-          emptyMessage="No audit log entries found."
+          page={page}
+          rowsPerPage={rowsPerPage}
+          onPageChange={(nextPage) => setPage(nextPage)}
+          onRowsPerPageChange={(nextRows) => {
+            setRowsPerPage(nextRows)
+            setPage(0)
+          }}
+          emptyMessage={t('admin.staff.auditLog.empty')}
         />
 
         <div className="pa-flex pa-justify-end">
           <Button variant="ghost" onClick={onClose}>
-            Close
+            {t('common.close')}
           </Button>
         </div>
       </div>

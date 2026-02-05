@@ -514,7 +514,7 @@ export function getChildRSVPForEvent(eventId: string, childId: string): EventRSV
 
 export function getEventsForChildTeams(childId: string, teamMemberships: Array<{ childId: string; teamId: string }>): CalendarEvent[] {
     const teamIds = teamMemberships.filter((m) => m.childId === childId).map((m) => m.teamId)
-    return fakeEvents.filter((e) => teamIds.includes(e.team_id))
+    return fakeEvents.filter((e) => (e.team_id ? teamIds.includes(e.team_id) : false))
 }
 
 export function getAllEvents(): CalendarEvent[] {

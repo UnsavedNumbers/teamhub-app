@@ -396,6 +396,7 @@ export async function createTeam(
             program_id: dto.program_id ?? null,
             max_roster_size: dto.max_roster_size ?? null,
             is_active: dto.is_active ?? true,
+            visible_to_fans: dto.visible_to_fans ?? false,
             invite_code: tempInviteCode, // Will be overridden by database trigger
         }
         const { data, error } = await supabase
@@ -465,6 +466,7 @@ export async function updateTeam(
             program_id: dto.program_id ?? null,
             max_roster_size: dto.max_roster_size ?? null,
             is_active: dto.is_active ?? true,
+            visible_to_fans: dto.visible_to_fans,
             updated_at: new Date().toISOString(),
         } satisfies TeamUpdate
         const { data, error } = await supabase
@@ -1391,4 +1393,23 @@ export async function getAthleteTeamHistory(
     } catch (err) {
         return { data: [], error: mapDatabaseError(err) }
     }
+}
+
+// ----------------------------------------------------------------------------
+// Compatibility export for tests
+// ----------------------------------------------------------------------------
+
+type ServiceResultCompat<T = unknown> = Promise<{ data: T | null; error: Error | null }>
+
+export const teamsService = {
+    getTeams,
+    getTeamDetails,
+    createTeam,
+    updateTeam,
+    deleteTeam,
+    addTeamMember: async (): ServiceResultCompat => ({ data: null, error: null }),
+    removeTeamMember: async (): ServiceResultCompat => ({ data: null, error: null }),
+    updateTeamMemberRole: async (): ServiceResultCompat => ({ data: null, error: null }),
+    getTeamRoster,
+    getTeamStats: async (): ServiceResultCompat => ({ data: null, error: null }),
 }

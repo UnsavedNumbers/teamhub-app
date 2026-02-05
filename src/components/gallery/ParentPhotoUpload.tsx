@@ -74,12 +74,12 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
 
   const uploadPhoto = async (uploadFile: UploadFile) => {
     if (!context.orgId) {
-      showError('Organization context required')
+      showError(t('gallery.parentPhotoUpload.orgContextRequired'))
       return
     }
 
     if (!agreedToGuidelines) {
-      showError('Please agree to the media guidelines before uploading')
+      showError(t('gallery.parentPhotoUpload.agreeToGuidelines'))
       return
     }
 
@@ -110,7 +110,7 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
         )
       )
 
-      showSuccess(`Uploaded ${uploadFile.file.name}. Your photo is pending review.`)
+      showSuccess(t('gallery.parentPhotoUpload.uploadPendingReview', { fileName: uploadFile.file.name }))
       onUploadComplete?.()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Upload failed'
@@ -121,7 +121,7 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
             : f
         )
       )
-      showError(`Failed to upload ${uploadFile.file.name}: ${errorMessage}`)
+      showError(t('gallery.parentPhotoUpload.uploadErrorSingle', { fileName: uploadFile.file.name, error: errorMessage }))
     }
   }
 
@@ -138,7 +138,7 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
 
   const handleSubmit = () => {
     if (!agreedToGuidelines) {
-      showError('Please agree to the media guidelines')
+      showError(t('gallery.parentPhotoUpload.agreeToGuidelinesSubmit'))
       return
     }
 

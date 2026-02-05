@@ -97,6 +97,7 @@ export interface CreateTeamDTO {
     program_id?: string | null
     max_roster_size?: number | null
     is_active?: boolean
+    visible_to_fans?: boolean
     season_id?: string
 }
 
@@ -107,6 +108,7 @@ export interface UpdateTeamDTO {
     program_id?: string | null
     max_roster_size?: number | null
     is_active?: boolean
+    visible_to_fans?: boolean
 }
 
 export interface CreateSeasonDTO {

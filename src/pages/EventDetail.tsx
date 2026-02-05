@@ -44,6 +44,7 @@ interface Event {
     id: string
     status: string
     ticket_types: { price_cents: number; currency: string }[]
+    ticket_banner_url: string | null
   } | null
 }
 
@@ -409,9 +410,10 @@ export default function EventDetail() {
       if (eventError || !eventData) {
         // Preserve query params when redirecting back to calendar
         const searchParams = new URLSearchParams(location.search)
+        const calendarPath = getLink(RouteKeys.PORTAL_CALENDAR)
         const returnPath = searchParams.toString() 
-          ? `/portal/calendar?${searchParams.toString()}` 
-          : '/portal/calendar'
+          ? `${calendarPath}?${searchParams.toString()}` 
+          : calendarPath
         navigate(returnPath)
         return
       }
@@ -439,7 +441,8 @@ export default function EventDetail() {
         ticketed_event: eventData.ticketed_event ? {
           id: eventData.ticketed_event.id,
           status: eventData.ticketed_event.status,
-          ticket_types: eventData.ticketed_event.ticket_types || []
+          ticket_types: eventData.ticketed_event.ticket_types || [],
+          ticket_banner_url: eventData.ticketed_event.ticket_banner_url || null,
         } : null,
       })
 
@@ -551,7 +554,7 @@ export default function EventDetail() {
       alert(error.message)
       setLoading(false)
     } else {
-      navigate('/portal/calendar')
+      navigate(getLink(RouteKeys.PORTAL_CALENDAR))
     }
   }
 
@@ -602,8 +605,8 @@ export default function EventDetail() {
     return (
       <PortalLayout
         breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Calendar', path: '/portal/calendar' },
+          { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
+          { label: 'Calendar', path: getLink(RouteKeys.PORTAL_CALENDAR) },
           { label: t('common.loading') },
         ]}
       >
@@ -617,34 +620,123 @@ export default function EventDetail() {
   if (!event) return null
 
   const searchParams = new URLSearchParams(location.search)
+  const calendarPath = getLink(RouteKeys.PORTAL_CALENDAR)
+  const calendarPathWithParams = searchParams.toString()
+    ? `${calendarPath}?${searchParams.toString()}`
+    : calendarPath
+  const dashboardPath = getLink(RouteKeys.PORTAL_DASHBOARD)
   const venueAddress = (event.event_location as any)?.venue_address || event.location
+  
+  // Check if event ended more than 24 hours ago
+  const eventEndDate = new Date(event.end_time)
+  const now = new Date()
+  const hoursSinceEventEnded = (now.getTime() - eventEndDate.getTime()) / (1000 * 60 * 60)
+  const isEventOver24HoursAgo = hoursSinceEventEnded > 24
+
+  // Check if we have a banner image
+  const bannerUrl = event.ticketed_event?.ticket_banner_url
   
   return (
     <PortalLayout
-      breadcrumbs={[
-        { label: 'Home', path: '/portal/dashboard' },
+      breadcrumbs={bannerUrl ? [] : [
+        { label: 'Home', path: dashboardPath },
         { 
           label: 'Calendar', 
-          path: searchParams.toString() 
-            ? `/portal/calendar?${searchParams.toString()}` 
-            : '/portal/calendar' 
+          path: calendarPathWithParams
         },
         { label: event.title },
       ]}
     >
-      {/* Page Header */}
-      <div className="mb-8">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <PageTitle>{event.title}</PageTitle>
-            <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
-              {formatDate(event.start_time)} • {formatTime(event.start_time)} - {formatTime(event.end_time)}
+      {/* Hero Banner (if banner image exists) */}
+      {bannerUrl && (
+        <div 
+          className="event-hero-banner"
+          style={{ backgroundImage: `url(${bannerUrl})` }}
+        >
+          <div className="event-hero-banner-content">
+            {/* Breadcrumbs in hero */}
+            <nav className="portal-breadcrumbs flex items-center gap-2 text-sm mb-2">
+              <a href={dashboardPath} className="hover:underline">Home</a>
+              <span>/</span>
+              <a 
+                href={calendarPathWithParams} 
+                className="hover:underline"
+              >
+                Calendar
+              </a>
+              <span>/</span>
+              <span>{event.title}</span>
+            </nav>
+            
+            <h1 className="event-hero-title">{event.title}</h1>
+            <p className="event-hero-meta">
+              {formatDate(event.start_time)}<span className="meta-separator"> • </span><span className="meta-time">{formatTime(event.start_time)} - {formatTime(event.end_time)}</span>
             </p>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-2">
-              {event.team.name}
-            </p>
+            <p className="event-hero-team">{event.team.name}</p>
+            
+            {/* Quick Info Card - Inside hero on tablet/desktop */}
+            <div className="event-hero-quick-info hidden md:block">
+              <div className="quick-info-grid">
+                <div>
+                  <p className="quick-info-label">{t('calendar.event.eventType')}</p>
+                  <p className="quick-info-value capitalize">{event.type}</p>
+                </div>
+                {event.arrival_time && (
+                  <div>
+                    <p className="quick-info-label">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time) })}</p>
+                    <p className="quick-info-value">{formatTime(event.arrival_time)}</p>
+                  </div>
+                )}
+                {venueAddress && (
+                  <div>
+                    <p className="quick-info-label">{t('calendar.event.location')}</p>
+                    <p className="quick-info-value truncate">{venueAddress.split(',')[0]}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="quick-info-label">{t('calendar.event.weather')}</p>
+                  {loadingWeather ? (
+                    <p className="quick-info-value">{t('calendar.event.loading')}</p>
+                  ) : weatherData ? (
+                    <div>
+                      <p className="quick-info-value">{weatherData.temperature}°F • <span className="capitalize">{weatherData.description}</span></p>
+                      <p className="quick-info-subtext">{weatherData.precipitation}% precip • {weatherData.windSpeed} mph</p>
+                    </div>
+                  ) : (
+                    <p className="quick-info-value opacity-50">{t('calendar.event.unavailable')}</p>
+                  )}
+                </div>
+                {!isEventOver24HoursAgo && (
+                  <div>
+                    <p className="quick-info-label">{t('calendar.event.entry')}</p>
+                    {event.ticketed_event ? (
+                      <Button
+                        onClick={() => {
+                          if (orgSlug && event.ticketed_event?.id) {
+                            navigate(
+                              getLink(RouteKeys.PORTAL_ORG_TICKET_EVENT, {
+                                orgSlug,
+                                eventId: event.ticketed_event.id,
+                              })
+                            )
+                          }
+                        }}
+                        disabled={!orgSlug || !event.ticketed_event?.id}
+                        className="mt-1"
+                      >
+                        {t('calendar.event.getTickets')}
+                      </Button>
+                    ) : (
+                      <p className="quick-info-value">{t('calendar.event.freeEntry')}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2">
+          
+          {/* Action buttons in hero */}
+          <div className="event-hero-actions">
             {eventId && (
               <BookmarkButton
                 eventId={eventId}
@@ -654,7 +746,7 @@ export default function EventDetail() {
             )}
             {canManage && (
               <>
-                <Button variant="secondary" onClick={() => navigate(`/portal/calendar/events/${eventId}/edit`)}>
+                <Button variant="secondary" onClick={() => navigate(getLink(RouteKeys.PORTAL_EVENT_EDIT, { eventId: eventId! }))}>
                   <Icon name="edit" />
                 </Button>
                 <Button variant="secondary" onClick={handleDelete}>
@@ -664,8 +756,46 @@ export default function EventDetail() {
             )}
           </div>
         </div>
+      )}
 
-        {/* Quick Summary Banner */}
+      {/* Page Header (standard - when no banner) */}
+      {!bannerUrl && (
+        <div className="mb-8">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <PageTitle>{event.title}</PageTitle>
+              <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
+                {formatDate(event.start_time)} • {formatTime(event.start_time)} - {formatTime(event.end_time)}
+              </p>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-2">
+                {event.team.name}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {eventId && (
+                <BookmarkButton
+                  eventId={eventId}
+                  isBookmarked={isBookmarked}
+                  variant="icon-only"
+                />
+              )}
+              {canManage && (
+                <>
+                  <Button variant="secondary" onClick={() => navigate(getLink(RouteKeys.PORTAL_EVENT_EDIT, { eventId: eventId! }))}>
+                    <Icon name="edit" />
+                  </Button>
+                  <Button variant="secondary" onClick={handleDelete}>
+                    <Icon name="delete" />
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Summary Banner - Mobile only when hero exists, always when no hero */}
+      <div className={`mb-8 ${bannerUrl ? 'md:hidden' : ''}`}>
         <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-slate-50 dark:to-slate-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
             <div>
@@ -697,29 +827,31 @@ export default function EventDetail() {
                 <p className="text-lg font-black text-slate-500 dark:text-slate-400">{t('calendar.event.unavailable')}</p>
               )}
             </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.entry')}</p>
-              {event.ticketed_event ? (
-                <Button
-                  onClick={() => {
-                  if (orgSlug && event.ticketed_event?.id) {
-                    navigate(
-                      getLink(RouteKeys.PORTAL_ORG_TICKET_EVENT, {
-                        orgSlug,
-                        eventId: event.ticketed_event.id,
-                      })
-                    )
-                  }
-                  }}
-                  disabled={!orgSlug || !event.ticketed_event?.id}
-                  className="w-full"
-                >
-                  {t('calendar.event.getTickets')}
-                </Button>
-              ) : (
-                <p className="text-lg font-black text-slate-900 dark:text-white">{t('calendar.event.freeEntry')}</p>
-              )}
-            </div>
+            {!isEventOver24HoursAgo && (
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.entry')}</p>
+                {event.ticketed_event ? (
+                  <Button
+                    onClick={() => {
+                    if (orgSlug && event.ticketed_event?.id) {
+                      navigate(
+                        getLink(RouteKeys.PORTAL_ORG_TICKET_EVENT, {
+                          orgSlug,
+                          eventId: event.ticketed_event.id,
+                        })
+                      )
+                    }
+                    }}
+                    disabled={!orgSlug || !event.ticketed_event?.id}
+                    className="w-full"
+                  >
+                    {t('calendar.event.getTickets')}
+                  </Button>
+                ) : (
+                  <p className="text-lg font-black text-slate-900 dark:text-white">{t('calendar.event.freeEntry')}</p>
+                )}
+              </div>
+            )}
           </div>
         </Card>
       </div>
@@ -810,37 +942,39 @@ export default function EventDetail() {
                 </div>
 
                 {/* Ride-Share Shortcuts */}
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Need a Ride?</p>
-                  <div className="flex flex-wrap gap-2">
-                    {uberLink(venueAddress) ? (
-                      <a href={uberLink(venueAddress)!} target="_blank" rel="noreferrer">
-                        <Button variant="secondary" className="text-sm px-4 py-2">
+                {!isEventOver24HoursAgo && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Need a Ride?</p>
+                    <div className="flex flex-wrap gap-2">
+                      {uberLink(venueAddress) ? (
+                        <a href={uberLink(venueAddress)!} target="_blank" rel="noreferrer">
+                          <Button variant="secondary" className="text-sm px-4 py-2">
+                            <Icon name="local_taxi" size="text-sm" className="mr-2" />
+                            Uber
+                          </Button>
+                        </a>
+                      ) : (
+                        <Button variant="secondary" className="text-sm px-4 py-2" disabled>
                           <Icon name="local_taxi" size="text-sm" className="mr-2" />
                           Uber
                         </Button>
-                      </a>
-                    ) : (
-                      <Button variant="secondary" className="text-sm px-4 py-2" disabled>
-                        <Icon name="local_taxi" size="text-sm" className="mr-2" />
-                        Uber
-                      </Button>
-                    )}
-                    {lyftLink(venueAddress) ? (
-                      <a href={lyftLink(venueAddress)!} target="_blank" rel="noreferrer">
-                        <Button variant="secondary" className="text-sm px-4 py-2">
+                      )}
+                      {lyftLink(venueAddress) ? (
+                        <a href={lyftLink(venueAddress)!} target="_blank" rel="noreferrer">
+                          <Button variant="secondary" className="text-sm px-4 py-2">
+                            <Icon name="local_taxi" size="text-sm" className="mr-2" />
+                            Lyft
+                          </Button>
+                        </a>
+                      ) : (
+                        <Button variant="secondary" className="text-sm px-4 py-2" disabled>
                           <Icon name="local_taxi" size="text-sm" className="mr-2" />
                           Lyft
                         </Button>
-                      </a>
-                    ) : (
-                      <Button variant="secondary" className="text-sm px-4 py-2" disabled>
-                        <Icon name="local_taxi" size="text-sm" className="mr-2" />
-                        Lyft
-                      </Button>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </Card>
           ) : (
@@ -858,7 +992,7 @@ export default function EventDetail() {
                     <Button
                       variant="primary"
                       className="mt-4"
-                      onClick={() => navigate(`/portal/calendar/events/${eventId}/edit`)}
+                      onClick={() => navigate(getLink(RouteKeys.PORTAL_EVENT_EDIT, { eventId: eventId! }))}
                     >
                       <Icon name="edit" size="text-sm" className="mr-2" />
                       Add Location
@@ -892,54 +1026,56 @@ export default function EventDetail() {
           )}
 
           {/* RSVP Section */}
-          <Card className="p-6 relative rounded-tl-none">
-            <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
-              <Icon name="how_to_reg" size="text-2xl" />
-              {t('calendar.rsvp.title')}
-            </div>
-            <div className="pt-12">
-              {children.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-slate-500 dark:text-slate-400 mb-4">{t('portal.events.noChildren')}</p>
-                  <Button variant="primary" onClick={() => navigate('/portal/athletes')}>
-                    {t('portal.events.add')}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {children.map((child) => {
-                    const att = attendance[child.id]
-                    return (
-                      <div key={child.id} className="border-b border-slate-200 dark:border-slate-700 pb-4 last:border-b-0 last:pb-0">
-                        <div className="flex items-center justify-between mb-3">
-                          <CardTitle className="text-lg">{child.first_name} {child.last_name}</CardTitle>
-                          {saving === child.id && (
-                            <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('calendar.rsvp.saving')}</span>
-                          )}
+          {!isEventOver24HoursAgo && (
+            <Card className="p-6 relative rounded-tl-none">
+              <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                <Icon name="how_to_reg" size="text-2xl" />
+                {t('calendar.rsvp.title')}
+              </div>
+              <div className="pt-12">
+                {children.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-slate-500 dark:text-slate-400 mb-4">{t('portal.events.noChildren')}</p>
+                    <Button variant="primary" onClick={() => navigate(getLink(RouteKeys.PORTAL_ATHLETES))}>
+                      {t('portal.events.add')}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {children.map((child) => {
+                      const att = attendance[child.id]
+                      return (
+                        <div key={child.id} className="border-b border-slate-200 dark:border-slate-700 pb-4 last:border-b-0 last:pb-0">
+                          <div className="flex items-center justify-between mb-3">
+                            <CardTitle className="text-lg">{child.first_name} {child.last_name}</CardTitle>
+                            {saving === child.id && (
+                              <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('calendar.rsvp.saving')}</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            {(['going', 'late', 'not_going'] as const).map((status) => (
+                              <button
+                                key={status}
+                                onClick={() => handleRsvp(child.id, status)}
+                                disabled={saving === child.id}
+                                className={`flex-1 py-3 px-4 rounded font-bold text-sm uppercase tracking-wide transition-colors min-h-[44px] ${
+                                  att?.status === status
+                                    ? statusStyles[status]
+                                    : statusInactiveStyles
+                                }`}
+                              >
+                                {status === 'going' ? t('calendar.rsvp.going') : status === 'late' ? t('calendar.rsvp.late') : t('calendar.rsvp.notGoing')}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          {(['going', 'late', 'not_going'] as const).map((status) => (
-                            <button
-                              key={status}
-                              onClick={() => handleRsvp(child.id, status)}
-                              disabled={saving === child.id}
-                              className={`flex-1 py-3 px-4 rounded font-bold text-sm uppercase tracking-wide transition-colors min-h-[44px] ${
-                                att?.status === status
-                                  ? statusStyles[status]
-                                  : statusInactiveStyles
-                              }`}
-                            >
-                              {status === 'going' ? t('calendar.rsvp.going') : status === 'late' ? t('calendar.rsvp.late') : t('calendar.rsvp.notGoing')}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </Card>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
 
         </div>
 
@@ -954,74 +1090,74 @@ export default function EventDetail() {
               title={t('calendar.event.eventPhotos')}
             />
           )}
-
-          {/* Add to Calendar */}
-          <Card className="p-6 relative rounded-tl-none">
-            <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
-              <Icon name="event" size="text-2xl" />
-              {t('calendar.event.addToCalendar')}
-            </div>
-            <div className="pt-12">
-              {googleCalendarLink({
-                title: event.title,
-                startTime: event.start_time,
-                endTime: event.end_time,
-                location: venueAddress || '',
-              }) ? (
-                <a
-                  href={googleCalendarLink({
-                    title: event.title,
-                    startTime: event.start_time,
-                    endTime: event.end_time,
-                    location: venueAddress || '',
-                  })!}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block"
-                >
-                  <Button variant="primary" className="w-full">
+{!isEventOver24HoursAgo && (
+            <Card className="p-6 relative rounded-tl-none">
+              <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                <Icon name="event" size="text-2xl" />
+                {t('calendar.event.addToCalendar')}
+              </div>
+              <div className="pt-12">
+                {googleCalendarLink({
+                  title: event.title,
+                  startTime: event.start_time,
+                  endTime: event.end_time,
+                  location: venueAddress || '',
+                }) ? (
+                  <a
+                    href={googleCalendarLink({
+                      title: event.title,
+                      startTime: event.start_time,
+                      endTime: event.end_time,
+                      location: venueAddress || '',
+                    })!}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block"
+                  >
+                    <Button variant="primary" className="w-full">
+                      <Icon name="event" size="text-sm" className="mr-2" />
+                      {t('calendar.event.googleCalendar')}
+                    </Button>
+                  </a>
+                ) : (
+                  <Button variant="primary" className="w-full" disabled>
                     <Icon name="event" size="text-sm" className="mr-2" />
                     {t('calendar.event.googleCalendar')}
                   </Button>
-                </a>
-              ) : (
-                <Button variant="primary" className="w-full" disabled>
-                  <Icon name="event" size="text-sm" className="mr-2" />
-                  {t('calendar.event.googleCalendar')}
-                </Button>
-              )}
-              {appleCalendarLink({
-                title: event.title,
-                startTime: event.start_time,
-                endTime: event.end_time,
-                location: venueAddress || '',
-              }) ? (
-                <a
-                  href={appleCalendarLink({
-                    title: event.title,
-                    startTime: event.start_time,
-                    endTime: event.end_time,
-                    location: venueAddress || '',
-                  })!}
-                  download={`${event.title}.ics`}
-                  className="block mt-4"
-                >
-                  <Button variant="primary" className="w-full">
+                )}
+                {appleCalendarLink({
+                  title: event.title,
+                  startTime: event.start_time,
+                  endTime: event.end_time,
+                  location: venueAddress || '',
+                }) ? (
+                  <a
+                    href={appleCalendarLink({
+                      title: event.title,
+                      startTime: event.start_time,
+                      endTime: event.end_time,
+                      location: venueAddress || '',
+                    })!}
+                    download={`${event.title}.ics`}
+                    className="block mt-4"
+                  >
+                    <Button variant="primary" className="w-full">
+                      <Icon name="event" size="text-sm" className="mr-2" />
+                      {t('calendar.event.appleCalendar')}
+                    </Button>
+                  </a>
+                ) : (
+                  <Button variant="primary" className="w-full mt-4" disabled>
                     <Icon name="event" size="text-sm" className="mr-2" />
                     {t('calendar.event.appleCalendar')}
                   </Button>
-                </a>
-              ) : (
-                <Button variant="primary" className="w-full mt-4" disabled>
-                  <Icon name="event" size="text-sm" className="mr-2" />
-                  {t('calendar.event.appleCalendar')}
-                </Button>
-              )}
-            </div>
-          </Card>
+                )}
+              </div>
+            </Card>
+          )}
 
           {/* Commute Info */}
-          {venueAddress && (
+          {venueAddress && !isEventOver24HoursAgo && (
             <Card className="p-6 relative rounded-tl-none">
               <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
                 <Icon name="directions_car" size="text-2xl" />

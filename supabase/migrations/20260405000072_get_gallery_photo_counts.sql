@@ -25,10 +25,11 @@ BEGIN
     AND (
       gp.status = 'approved'
       OR EXISTS (
-        SELECT 1 FROM user_org_roles uor
-        WHERE uor.user_id = auth.uid()
-          AND uor.org_id = g.org_id
-          AND uor.role IN ('owner', 'admin', 'staff')
+        SELECT 1 FROM organization_members om
+        WHERE om.user_id = auth.uid()
+          AND om.org_id = g.org_id
+          AND om.is_active = true
+          AND om.role IN ('org_admin', 'coach', 'staff')
       )
     )
   GROUP BY gp.gallery_id;

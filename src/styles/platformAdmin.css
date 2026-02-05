@@ -85,7 +85,7 @@ html.dark {
     --pa-border-emphasis: #4b5563;
 
     /* Glass/Translucent Surfaces */
-    --pa-glass-bg: rgba(255, 255, 255, 0.85);
+    --pa-glass-bg: rgba(255, 255, 255, 0.98);
     --pa-glass-border: rgba(0, 0, 0, 0.06);
     --pa-glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
     --pa-glass-blur: blur(20px);
@@ -369,6 +369,7 @@ html.dark .pa-overline {
     flex-direction: column;
     margin-left: 280px;
     transition: margin-left var(--pa-motion-slow) var(--pa-ease-out);
+    min-width: 0; /* allow shrink so content does not overflow */
 }
 
 .pa-content {
@@ -377,6 +378,8 @@ html.dark .pa-overline {
     max-width: 1440px;
     width: 100%;
     margin: 0 auto;
+    min-width: 0; /* allow shrink so dashboard/grids do not overflow */
+    overflow-x: hidden; /* clip horizontal overflow on narrow viewports */
 }
 
 /* =====================================================================
@@ -3903,7 +3906,7 @@ html.dark .pa-text-danger {
 /* Dark mode overrides for glass effect */
 .dark .gn-root,
 .pa-root.dark .gn-root {
-    --pa-glass-bg: rgba(11, 15, 20, 0.85);
+    --pa-glass-bg: rgba(11, 15, 20, 0.98);
     --pa-glass-border: rgba(255, 255, 255, 0.1);
     --pa-glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
 }
@@ -4128,7 +4131,7 @@ html.dark .pa-text-danger {
     left: 0;
     min-width: 280px;
     max-width: 640px;
-    background: var(--pa-glass-bg);
+    background: rgba(255, 255, 255, 0.98);
     backdrop-filter: var(--pa-glass-blur);
     -webkit-backdrop-filter: var(--pa-glass-blur);
     border: 1px solid var(--pa-glass-border);
@@ -4140,6 +4143,11 @@ html.dark .pa-text-danger {
     transform: translateY(-8px);
     transition: all var(--pa-motion-normal) var(--pa-ease-out);
     z-index: 200;
+}
+
+.dark .gn-mega,
+html.dark .gn-mega {
+    background: rgba(11, 15, 20, 0.98);
 }
 
 .gn-mega.open {
@@ -5874,6 +5882,7 @@ html.dark .org-hierarchy-arrow {
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--pa-space-6);
+    padding-top: 20px;
 }
 
 .pa-dashboard-main {
@@ -5890,6 +5899,25 @@ html.dark .org-hierarchy-arrow {
     gap: var(--pa-space-3);
 }
 
+
+.pa-actions-grid .pa-btn .material-symbols-outlined,
+.pa-actions-grid button .material-symbols-outlined {
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+/* Label inside Quick Action button: smaller font so it fits and is never clipped */
+.pa-actions-grid .pa-btn .pa-actions-label,
+.pa-actions-grid button .pa-actions-label {
+    font-size: 0.6875rem; /* 11px */
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+}
 /* Filter sections */
 .pa-filter-section {
     margin-bottom: var(--pa-space-4);
@@ -5914,7 +5942,7 @@ html.dark .org-hierarchy-arrow {
 /* Tablet: 768px - 1023px */
 @media (min-width: 768px) and (max-width: 1023px) {
     .pa-actions-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
     }
 
     .pa-filter-row {
@@ -5931,7 +5959,7 @@ html.dark .org-hierarchy-arrow {
 @media (min-width: 1024px) {
     .pa-dashboard-grid {
         grid-template-columns: repeat(12, 1fr);
-        gap: var(--pa-space-10);
+        /* gap: var(--pa-space-10); */
     }
 
     .pa-dashboard-main {
@@ -5954,6 +5982,26 @@ html.dark .org-hierarchy-arrow {
     .pa-filter-actions {
         flex-shrink: 0;
     }
+}
+
+/* Layout / overflow utilities for responsive dashboard and grids */
+.pa-min-w-0 {
+    min-width: 0;
+}
+.pa-overflow-hidden {
+    overflow: hidden;
+}
+.pa-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pa-break-words {
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+.pa-flex-shrink-0 {
+    flex-shrink: 0;
 }
 
 /* Width Utilities for Desktop Intentionality */
