@@ -9,12 +9,9 @@
  * Design: FanConnect Minimalist Light
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useI18n } from '../../i18n/useI18n'
 import { getFanGalleries, type FanGallery } from '../../data/services/fanPhotosService'
-import { getFollowedOrgs } from '../../data/services/fanService'
-import type { FanOrgFollow } from '../../types/staffAndFan'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { showError } from '../../utils/toast'
@@ -25,19 +22,16 @@ type FilterType = 'all' | 'photos' | 'videos'
 type FilterEntity = 'all' | string
 
 export default function FanPhotos() {
-  const { t } = useI18n()
   const navigate = useNavigate()
   
   // Data state
   const [galleries, setGalleries] = useState<FanGallery[]>([])
-  const [followedOrgs, setFollowedOrgs] = useState<FanOrgFollow[]>([])
-  const [taggedAthletePhotos, setTaggedAthletePhotos] = useState<{ athleteId: string; athleteName: string; photos: any[] }[]>([])
   
   // UI state
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery] = useState('')
   const [filterType, setFilterType] = useState<FilterType>('all')
-  const [filterEntity, setFilterEntity] = useState<FilterEntity>('all')
+  const [filterEntity] = useState<FilterEntity>('all')
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   
@@ -76,10 +70,7 @@ export default function FanPhotos() {
   const loadInitialData = async () => {
     setLoading(true)
     
-    const [galleriesResult, orgsResult] = await Promise.all([
-      getFanGalleries(),
-      getFollowedOrgs(),
-    ])
+    const galleriesResult = await getFanGalleries()
     
     if (galleriesResult.error) {
       showError(galleriesResult.error.message)
@@ -88,10 +79,6 @@ export default function FanPhotos() {
       setHasMore(galleriesResult.data.length >= 20)
     }
 
-    if (!orgsResult.error && orgsResult.data) {
-      setFollowedOrgs(orgsResult.data)
-    }
-    
     setLoading(false)
   }
 
@@ -135,7 +122,7 @@ export default function FanPhotos() {
   if (loading && galleries.length === 0) {
     return (
       <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="large" />
       </div>
     )
   }
@@ -260,7 +247,6 @@ export function FanGalleryDetail() {
   const [photos, setPhotos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPhoto, setSelectedPhoto] = useState<any | null>(null)
-  const [page, setPage] = useState(1)
 
   useEffect(() => {
     loadGallery()
@@ -288,7 +274,7 @@ export function FanGalleryDetail() {
   if (loading) {
     return (
       <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="large" />
       </div>
     )
   }
@@ -478,7 +464,7 @@ export function FanAthletePhotos() {
   const { athleteId } = useParams<{ athleteId: string }>()
   const navigate = useNavigate()
   
-  const [athleteName, setAthleteName] = useState('')
+  const athleteName = ''
   const [photos, setPhotos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPhoto, setSelectedPhoto] = useState<any | null>(null)
@@ -498,7 +484,7 @@ export function FanAthletePhotos() {
   if (loading) {
     return (
       <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="large" />
       </div>
     )
   }

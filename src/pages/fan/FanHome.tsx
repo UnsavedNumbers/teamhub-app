@@ -145,12 +145,12 @@ export default function FanHome() {
     setSearchQuery('')
     setSearchResults([])
     
-    if (result.entity_type === 'org' && result.slug) {
-      navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { slug: result.slug }))
+    if (result.entity_type === 'org') {
+      navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { orgId: result.id }))
     } else if (result.entity_type === 'team') {
-      navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { id: result.id }))
+      navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { teamId: result.id }))
     } else if (result.entity_type === 'athlete') {
-      navigate(getLink(RouteKeys.FAN_ATHLETE_PROFILE, { id: result.id }))
+      navigate(getLink(RouteKeys.FAN_ATHLETE_PROFILE, { athleteId: result.id }))
     }
   }
 

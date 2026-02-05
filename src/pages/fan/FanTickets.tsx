@@ -8,9 +8,8 @@
  * Design: FanConnect Minimalist Light
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useI18n } from '../../i18n/useI18n'
 import { transferTicket } from '../../data/services/fanService'
 import { getMyTicketOrders, getTicketsForOrder } from '../../data/services/ticketingService'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
@@ -57,7 +56,6 @@ const generateQRPayload = (ticketId: string, timestamp: number): string => {
 
 export default function FanTickets() {
   const navigate = useNavigate()
-  const { t } = useI18n()
   
   // Data state
   const [tickets, setTickets] = useState<FanTicket[]>([])
@@ -116,13 +114,12 @@ export default function FanTickets() {
           event_start_time: event?.starts_at || '',
           event_name: event?.title || 'Event',
           event_location: eventLocation || null,
-          venue_name: event?.venue_name,
+          venue_name: event?.venue_name || undefined,
           order_confirmation_code: ticket.entry_code || null,
           ticket_type_name: ticketType?.name || 'General Admission',
           scanned_at: ticket.used_at || null,
           qr_code_data: ticket.entry_code || '',
           purchase_date: ticket.created_at,
-          amount_paid: ticket.price_paid,
           status,
         }
       })
@@ -175,11 +172,6 @@ export default function FanTickets() {
     }
   }
 
-  const openTransferModal = (ticket: FanTicket) => {
-    setSelectedTicket(ticket)
-    setShowTransferModal(true)
-  }
-
   // Navigate to ticket detail
   const handleTicketClick = (ticket: FanTicket) => {
     navigate(`/fan/tickets/${ticket.ticket_id}`)
@@ -193,7 +185,7 @@ export default function FanTickets() {
   if (loading) {
     return (
       <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="large" />
       </div>
     )
   }
@@ -263,7 +255,6 @@ export default function FanTickets() {
                   key={ticket.ticket_id}
                   ticket={ticket}
                   onClick={() => handleTicketClick(ticket)}
-                  onTransfer={() => openTransferModal(ticket)}
                 />
               ))}
             </div>
@@ -325,10 +316,9 @@ export default function FanTickets() {
 interface TicketCardProps {
   ticket: FanTicket
   onClick: () => void
-  onTransfer: () => void
 }
 
-function TicketCard({ ticket, onClick, onTransfer }: TicketCardProps) {
+function TicketCard({ ticket, onClick }: TicketCardProps) {
   const [showQR, setShowQR] = useState(false)
   const [qrTimestamp, setQrTimestamp] = useState(Date.now())
   const [refreshCountdown, setRefreshCountdown] = useState(30)
@@ -355,34 +345,6 @@ function TicketCard({ ticket, onClick, onTransfer }: TicketCardProps) {
       }
     }
   }, [showQR, ticket.status])
-
-  const formatDateTime = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short',
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZoneName: 'short'
-    })
-  }
-
-  const getStatusBadge = () => {
-    switch (ticket.status) {
-      case 'valid':
-        return <span className="fan-status-badge fan-status-valid">Valid</span>
-      case 'used':
-        return <span className="fan-status-badge fan-status-used">Used</span>
-      case 'expired':
-        return <span className="fan-status-badge fan-status-expired">Expired</span>
-      case 'transferred':
-        return <span className="fan-status-badge fan-status-transferred">Transferred</span>
-      default:
-        return <span className="fan-status-badge">Pending</span>
-    }
-  }
 
   const qrPayload = generateQRPayload(ticket.ticket_id, qrTimestamp)
 
@@ -543,13 +505,12 @@ export function FanTicketDetail() {
           event_start_time: event?.starts_at || '',
           event_name: event?.title || 'Event',
           event_location: eventLocation || null,
-          venue_name: event?.venue_name,
+          venue_name: event?.venue_name || undefined,
           order_confirmation_code: foundTicket.entry_code || null,
           ticket_type_name: ticketType?.name || 'General Admission',
           scanned_at: foundTicket.used_at || null,
           qr_code_data: foundTicket.entry_code || '',
           purchase_date: foundTicket.created_at,
-          amount_paid: foundTicket.price_paid,
           status,
         })
       }
@@ -578,7 +539,7 @@ export function FanTicketDetail() {
   if (loading) {
     return (
       <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="large" />
       </div>
     )
   }
@@ -828,7 +789,7 @@ function TransferModal({ ticket, onClose, onTransfer }: TransferModalProps) {
                 Cancel
               </button>
               <button type="submit" disabled={loading} className="fan-btn fan-btn-primary">
-                {loading ? <LoadingSpinner size="sm" /> : 'Transfer Ticket'}
+                {loading ? <LoadingSpinner size="small" /> : 'Transfer Ticket'}
               </button>
             </div>
           </form>

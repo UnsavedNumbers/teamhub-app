@@ -10,7 +10,6 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useI18n } from '../../i18n/useI18n'
 import { followOrg, unfollowOrg } from '../../data/services/fanService'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
@@ -51,10 +50,10 @@ export default function FanAthleteProfile() {
   const [followLoading, setFollowLoading] = useState(false)
   
   // Related content
-  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([])
-  const [stats, setStats] = useState<any[]>([])
-  const [taggedPhotos, setTaggedPhotos] = useState<any[]>([])
-  const [achievements, setAchievements] = useState<any[]>([])
+  const [upcomingEvents] = useState<any[]>([])
+  const [stats] = useState<any[]>([])
+  const [taggedPhotos] = useState<any[]>([])
+  const [achievements] = useState<any[]>([])
 
   useEffect(() => {
     if (!id) {
@@ -110,7 +109,7 @@ export default function FanAthleteProfile() {
   if (loading) {
     return (
       <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="large" />
       </div>
     )
   }
@@ -197,7 +196,7 @@ export default function FanAthleteProfile() {
             disabled={followLoading}
           >
             {followLoading ? (
-              <LoadingSpinner size="sm" />
+              <LoadingSpinner size="small" />
             ) : isFollowing ? (
               <>
                 <span className="material-symbols-outlined">check</span>

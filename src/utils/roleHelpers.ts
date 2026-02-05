@@ -125,8 +125,6 @@ export function mapFrontendRoleToDbRole(role: FrontendRole): DbRole {
       return 'coach'
     case 'parent':
       return 'parent'
-    case 'staff':
-      return 'admin'
     default:
       // TypeScript exhaustiveness check
       const _exhaustive: never = role
@@ -148,6 +146,8 @@ export function mapDbRoleToFrontendRole(role: DbRole): FrontendRole {
       return 'coach'
     case 'parent':
       return 'parent'
+    case 'staff':
+      return 'admin'
     default:
       // TypeScript exhaustiveness check
       const _exhaustive: never = role

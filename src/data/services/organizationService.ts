@@ -21,6 +21,8 @@ export interface OrganizationUpdateDTO {
     state?: string | null
     zip?: string | null
     place_id?: string | null
+    latitude?: number | null
+    longitude?: number | null
     logo_path?: string | null
 }
 
@@ -41,6 +43,9 @@ interface OrganizationRow {
     city?: string | null
     state?: string | null
     zip?: string | null
+    place_id?: string | null
+    latitude?: number | null
+    longitude?: number | null
 }
 
 export async function getOrganizationDetails(orgId: string): Promise<{ data: Organization | null; error: Error | null }> {
@@ -104,6 +109,9 @@ export async function getOrganizationDetails(orgId: string): Promise<{ data: Org
             city: data.city || null,
             state: data.state || null,
             zip: data.zip || null,
+            place_id: data.place_id || null,
+            latitude: data.latitude || null,
+            longitude: data.longitude || null,
         }
 
         return { data: org, error: null }
@@ -174,6 +182,9 @@ export async function getOrganizationBySlug(slug: string): Promise<{ data: Organ
             city: data.city || null,
             state: data.state || null,
             zip: data.zip || null,
+            place_id: data.place_id || null,
+            latitude: data.latitude || null,
+            longitude: data.longitude || null,
         }
 
         return { data: org, error: null }
@@ -270,6 +281,9 @@ export async function updateOrganizationDetails(
             city: data.city || null,
             state: data.state || null,
             zip: data.zip || null,
+            place_id: data.place_id || null,
+            latitude: data.latitude || null,
+            longitude: data.longitude || null,
         }
 
         return { data: org, error: null }

@@ -111,24 +111,47 @@ export default function Photos() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {items.map((gallery) => (
-              <Link
-                key={gallery.id}
-                to={getLink('portal.photosGallery', { id: gallery.id })}
-              >
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <div className="aspect-video bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 rounded-lg mb-4 flex items-center justify-center">
-                    <Icon name="photo_library" size="text-4xl" className="text-slate-400" />
-                  </div>
-                  <h3 className="font-semibold text-lg mb-1">{gallery.name}</h3>
-                  {gallery.photo_count !== undefined && (
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {gallery.photo_count} {gallery.photo_count === 1 ? 'photo' : 'photos'}
-                    </p>
-                  )}
-                </Card>
-              </Link>
-            ))}
+            {items.map((gallery) => {
+              const hasCoverThumbnails = !!gallery.cover_thumbnails;
+              const legacyCoverUrl = gallery.cover_url;
+              const hasCover = hasCoverThumbnails || !!legacyCoverUrl;
+              const mainSrc = gallery.cover_thumbnails?.thumb_medium?.jpg || legacyCoverUrl;
+              
+              return (
+                <Link
+                  key={gallery.id}
+                  to={getLink('portal.photosGallery', { id: gallery.id })}
+                >
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                    <div className="aspect-video bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 rounded-lg mb-4 overflow-hidden">
+                      {hasCover && mainSrc ? (
+                        <picture className="w-full h-full block">
+                          {gallery.cover_thumbnails?.thumb_medium?.webp && (
+                            <source srcSet={gallery.cover_thumbnails.thumb_medium.webp} type="image/webp" />
+                          )}
+                          <img 
+                            src={mainSrc} 
+                            alt={`Cover photo for ${gallery.name}`}
+                            loading="lazy"
+                            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                          />
+                        </picture>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Icon name="photo_library" size="text-4xl" className="text-slate-400" />
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="font-semibold text-lg mb-1">{gallery.name}</h3>
+                    {gallery.photo_count !== undefined && (
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {gallery.photo_count} {gallery.photo_count === 1 ? 'photo' : 'photos'}
+                      </p>
+                    )}
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

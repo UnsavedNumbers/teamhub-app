@@ -472,6 +472,8 @@ export interface SearchEntityResult {
   parent_org_name?: string
   sport?: string
   relevance_score: number
+  isFollowing?: boolean
+  logo_url?: string
 }
 
 /**
@@ -518,6 +520,11 @@ export interface EntityProfile {
   privacy_level: 'public' | 'unlisted' | 'private'
   is_following: boolean
   created_at: string
+  logo_url?: string
+  cover_url?: string
+  follower_count?: number
+  email?: string
+  phone?: string
   // Org-specific fields
   slug?: string
   location_city?: string
