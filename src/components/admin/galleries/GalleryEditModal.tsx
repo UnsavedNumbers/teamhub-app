@@ -34,6 +34,12 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
 
   if (!open || !gallery) return null
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose()
+    }
+  }
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!context) return
@@ -75,19 +81,38 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
   }
 
   return (
-    <div className="pa-fixed pa-inset-0 pa-bg-black/40 pa-z-50 pa-grid pa-place-items-center">
-      <div className="pa-card pa-w-[540px] max-sm:pa-w-[95vw] pa-relative">
-        <button className="pa-absolute pa-top-3 pa-right-3 pa-text-muted" onClick={onClose}>✕</button>
-        <h3 className="pa-text-lg pa-font-semibold pa-mb-3">Edit Gallery</h3>
-        <form className="pa-space-y-3" onSubmit={handleSave}>
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={handleBackdropClick}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" />
+      
+      {/* Modal Content */}
+      <div 
+        className="oa-card relative w-full max-w-[540px] max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Edit Gallery</h3>
+          <button 
+            className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors text-2xl leading-none w-8 h-8 flex items-center justify-center" 
+            onClick={onClose}
+            type="button"
+          >
+            ×
+          </button>
+        </div>
+        <form className="space-y-4" onSubmit={handleSave}>
           <div>
-            <label className="pa-label">Name</label>
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Name</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
           </div>
           <div>
-            <label className="pa-label">Description</label>
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Description</label>
             <textarea
-              className="pa-input"
+              className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent resize-none"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
@@ -103,8 +128,12 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
             />
           </div>
           <div>
-            <label className="pa-label">Cover photo</label>
-            <select className="pa-input" value={coverPhotoId} onChange={(e) => setCoverPhotoId(e.target.value)}>
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Cover photo</label>
+            <select 
+              className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+              value={coverPhotoId} 
+              onChange={(e) => setCoverPhotoId(e.target.value)}
+            >
               <option value="">No cover</option>
               {photos.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -114,18 +143,18 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
             </select>
           </div>
 
-          <div className="pa-flex pa-justify-between pa-items-center pa-pt-2">
+          <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
             {onDelete && (
               <Button variant="danger" type="button" onClick={onDelete}>
-                Delete gallery
+                Delete Gallery
               </Button>
             )}
-            <div className="pa-flex pa-gap-2 pa-justify-end pa-flex-1">
+            <div className="flex gap-2 justify-end flex-1">
               <Button variant="ghost" type="button" onClick={onClose}>
                 Cancel
               </Button>
               <Button variant="primary" type="submit" loading={saving}>
-                Save
+                Save Changes
               </Button>
             </div>
           </div>

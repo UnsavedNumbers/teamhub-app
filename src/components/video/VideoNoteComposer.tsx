@@ -28,6 +28,7 @@ interface VideoNoteComposerProps {
   }) => Promise<void>
   onCancel?: () => void
   className?: string
+  disabled?: boolean
 }
 
 function formatTimestamp(seconds: number): string {
@@ -48,7 +49,8 @@ export default function VideoNoteComposer({
   athletes = [],
   onSave,
   onCancel,
-  className
+  className,
+  disabled = false
 }: VideoNoteComposerProps) {
   const [content, setContent] = useState('')
   const [scope, setScope] = useState<VideoNoteScope>('guardians')
@@ -209,7 +211,7 @@ export default function VideoNoteComposer({
             )}
             <Button
               onClick={handleSave}
-              disabled={!content.trim() || isSaving}
+              disabled={disabled || !content.trim() || isSaving}
               className="flex items-center gap-3"
             >
               <Icon name="add_circle" size="text-xl" />
