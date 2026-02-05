@@ -193,7 +193,7 @@ export function PhotoUploadZone({
           setIsDragging(false)
         }}
         onDrop={isLimitReached ? undefined : onDrop}
-        style={{ borderStyle: 'dashed' }}
+        style={{ borderStyle: 'dashed', marginTop: '6px' }}
       >
         <div style={{ textAlign: 'center', padding: '24px' }}>
           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-text-muted)', marginBottom: '12px', display: 'block' }}>cloud_upload</span>

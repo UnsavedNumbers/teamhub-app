@@ -142,7 +142,7 @@ export default function PhotoDetail() {
         </div>
 
         {/* Upload Zone */}
-        <Card className="pa-card">
+        <Card className="pa-card pa-mt-3">
           <div className="pa-flex pa-items-center pa-justify-between pa-mb-3">
             <h4 className="pa-text-base pa-font-semibold">{t('photos.upload.title')}</h4>
             {gallery && gallery.allow_contributions && (
@@ -162,7 +162,7 @@ export default function PhotoDetail() {
         </Card>
 
         {/* Photos Grid */}
-        <Card className="pa-card pa-space-y-3">
+        <Card className="pa-card pa-space-y-3 pa-mt-3">
           <div className="pa-flex pa-justify-between pa-items-center">
             <h4 className="pa-text-base pa-font-semibold">{t('photos.title')}</h4>
             <span className="pa-text-sm pa-text-muted">{t('photos.stats.photosCount', { count: photos.length })}</span>
