@@ -1000,6 +1000,31 @@ const admin = {
             requiresOrg: true,
         },
     },
+
+    // Videos
+    videos: {
+        list: {
+            path: '/admin/videos',
+            label: 'Videos',
+            icon: 'video_library',
+            description: 'Video library',
+            requiresOrg: true,
+        },
+        upload: {
+            path: '/admin/videos/upload',
+            label: 'Upload Video',
+            icon: 'upload',
+            description: 'Upload new video',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/videos/:id',
+            params: ['id'] as const,
+            label: 'Video Detail',
+            icon: 'play_circle',
+            requiresOrg: true,
+        },
+    },
 } as const satisfies Record<string, RouteDefinition | Record<string, RouteDefinition | Record<string, RouteDefinition>>>
 
 // ============================================================================
