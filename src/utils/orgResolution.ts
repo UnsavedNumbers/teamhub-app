@@ -59,15 +59,19 @@ export function isReservedPath(slug: string): boolean {
  * - No leading/trailing hyphens
  * - No consecutive hyphens
  */
-export function validateSlugFormat(slug: string): { valid: boolean; error?: string } {
+export type SlugValidationErrorCode = 'too_short' | 'too_long' | 'invalid_format' | 'reserved'
+
+export function validateSlugFormat(
+  slug: string
+): { valid: boolean; code?: SlugValidationErrorCode } {
   const normalized = slug.toLowerCase().trim()
 
   if (normalized.length < 3) {
-    return { valid: false, error: 'Slug must be at least 3 characters' }
+    return { valid: false, code: 'too_short' }
   }
 
   if (normalized.length > 48) {
-    return { valid: false, error: 'Slug must be at most 48 characters' }
+    return { valid: false, code: 'too_long' }
   }
 
   // Regex: lowercase letters, numbers, single hyphens as separators
@@ -75,12 +79,12 @@ export function validateSlugFormat(slug: string): { valid: boolean; error?: stri
   if (!slugRegex.test(normalized)) {
     return {
       valid: false,
-      error: 'Slug must contain only lowercase letters, numbers, and hyphens. Cannot start or end with a hyphen, and cannot contain consecutive hyphens.',
+      code: 'invalid_format',
     }
   }
 
   if (isReservedPath(normalized)) {
-    return { valid: false, error: 'This slug is reserved and cannot be used' }
+    return { valid: false, code: 'reserved' }
   }
 
   return { valid: true }

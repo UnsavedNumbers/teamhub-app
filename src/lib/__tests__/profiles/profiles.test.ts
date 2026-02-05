@@ -731,17 +731,17 @@ describe('Profile Management', () => {
 async function mockUploadProfilePhoto(userId: string, file: File, existingPath?: string) {
   try {
     if (existingPath) {
-      await supabase.storage.from('profiles').remove([existingPath])
+      await supabase.storage.from(import.meta.env.VITE_SUPABASE_PROFILES_BUCKET).remove([existingPath])
     }
 
     const fileExt = file.name.split('.').pop()
     const fileName = `${Date.now()}.${fileExt}`
     const filePath = `profiles/${userId}/${fileName}`
 
-    const { error } = await supabase.storage.from('profiles').upload(filePath, file)
+    const { error } = await supabase.storage.from(import.meta.env.VITE_SUPABASE_PROFILES_BUCKET).upload(filePath, file)
     if (error) throw error
 
-    const { data: urlData } = supabase.storage.from('profiles').getPublicUrl(filePath)
+    const { data: urlData } = supabase.storage.from(import.meta.env.VITE_SUPABASE_PROFILES_BUCKET).getPublicUrl(filePath)
 
     return { photoUrl: urlData.publicUrl, error: null }
   } catch (err) {
@@ -751,7 +751,7 @@ async function mockUploadProfilePhoto(userId: string, file: File, existingPath?:
 
 async function mockRemoveProfilePhoto(userId: string, photoPath: string) {
   try {
-    const { error } = await supabase.storage.from('profiles').remove([photoPath])
+    const { error } = await supabase.storage.from(import.meta.env.VITE_SUPABASE_PROFILES_BUCKET).remove([photoPath])
     if (error) throw error
 
     await usersService.updateUserProfile(userId, { profile_photo_path: null })

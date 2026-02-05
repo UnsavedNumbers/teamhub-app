@@ -24,6 +24,7 @@ import {
   Checkbox
 } from '../../components/platformAdmin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+import { FanVisibilityToggle } from '../../components/admin/FanVisibilityToggle'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import type { StructuredAddress } from '../../types/location'
 import { startTransition } from 'react'
@@ -34,6 +35,7 @@ import {
 } from '../../types/calendar'
 import { API_TIMEOUT_MS } from '../../constants/api'
 import { STORAGE_KEYS, STORAGE_EXPIRY } from '../../constants/storage'
+import { getDefaultEventVisibility } from '../../utils/fanVisibilityHelpers'
 
 const STORAGE_KEY = STORAGE_KEYS.FORM_AUTOSAVE
 const DRAFT_TTL_MS = STORAGE_EXPIRY.FORM_AUTOSAVE
@@ -62,6 +64,8 @@ export default function CreateEvent() {
   const [showLocationDetails, setShowLocationDetails] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
   const [draftSaved, setDraftSaved] = useState(false)
+  const [orgVisibilityDefaults, setOrgVisibilityDefaults] = useState<Record<string, boolean> | null>(null)
+  const [visibility, setVisibility] = useState<'public' | 'private'>('private')
 
   const t = useT()
   const { context, isReady } = useUserContext()
@@ -198,6 +202,7 @@ export default function CreateEvent() {
   const watchRSVPEnabled = watch('rsvp_enabled')
   const watchTicketingEnabled = watch('ticketing.is_ticketed')
   const watchTicketSalesImmediate = watch('ticketing.sales_immediate')
+  const watchEventType = watch('type')
   
   // Watch all form values for persistence
   const formValues = watch()
@@ -398,6 +403,41 @@ export default function CreateEvent() {
     if (isReady) fetchSports()
   }, [isReady, fetchSports])
 
+  // Fetch organization visibility defaults
+  useEffect(() => {
+    const fetchOrgVisibilityDefaults = async () => {
+      if (!isReady || !context?.orgId) return
+      
+      try {
+        const { data, error } = await supabase
+          .from('organization_visibility_settings')
+          .select('fan_visibility_defaults')
+          .eq('org_id', context.orgId)
+          .single()
+        
+        if (error) {
+          console.error('Error fetching org visibility defaults:', error)
+          return
+        }
+        
+        setOrgVisibilityDefaults(data?.fan_visibility_defaults || null)
+      } catch (err) {
+        console.error('Error fetching org visibility defaults:', err)
+      }
+    }
+    
+    fetchOrgVisibilityDefaults()
+  }, [isReady, context?.orgId])
+
+  // Update visibility when event type changes (only for new events, not restored drafts)
+  useEffect(() => {
+    if (!hasRestoredRef.current) return // Don't override restored draft
+    if (!watchEventType) return
+    
+    const defaultVisibility = getDefaultEventVisibility(watchEventType, orgVisibilityDefaults)
+    setVisibility(defaultVisibility)
+  }, [watchEventType, orgVisibilityDefaults])
+
   useEffect(() => {
     if (!watchSportId) {
       setPrograms([])
@@ -505,6 +545,7 @@ export default function CreateEvent() {
         external_link: data.external_link,
         rsvp_enabled: data.rsvp_enabled,
         rsvp_type: data.rsvp_enabled ? data.rsvp_type : null,
+        visibility: visibility,
         created_by_user_id: context.userId
       } satisfies EventInsert
       const { data: eventData, error: insertError } = await supabase.from('events').insert(eventInsertData).select().single()
@@ -1391,7 +1432,26 @@ export default function CreateEvent() {
               </div>
             </section>
 
-          {/* SECTION 6: ACTIONS */}
+            {/* SECTION 7: FAN VISIBILITY */}
+            <section className="oa-form-section" aria-labelledby="event-visibility-heading">
+              <div className="oa-form-section-header">
+                <div>
+                  <h3 id="event-visibility-heading" className="oa-form-section-title">Fan Visibility</h3>
+                  <p className="oa-form-section-subtitle">Control who can see this event in the public fan portal.</p>
+                </div>
+              </div>
+              <div className="oa-form-section-body">
+                <FanVisibilityToggle
+                  checked={visibility === 'public'}
+                  onChange={(checked) => setVisibility(checked ? 'public' : 'private')}
+                  entityType="event"
+                  disabled={saving}
+                  contextForWarning={watchTicketingEnabled ? 'payment' : null}
+                />
+              </div>
+            </section>
+
+          {/* SECTION 8: ACTIONS */}
           {/* Mobile: Full-width stacked | Tablet: Full-width or right-aligned | Desktop: Right-aligned */}
           <div className="pa-form-actions">
             <OrgAdminButton

@@ -225,16 +225,23 @@ export async function getGalleriesForUser(
     console.log('[galleryService] getGalleriesForUser params:', params, 'context.orgId:', context.orgId)
 
     // Debug: check org admin status
-    const { data: debugResult } = await supabase.rpc('is_org_admin', {
+    const { data: debugResult, error: debugAdminError } = await supabase.rpc('is_org_admin', {
       org_id_param: context.orgId
     })
-    console.log('[galleryService] is_org_admin check:', debugResult)
+    console.log('[galleryService] is_org_admin check:', debugResult, debugAdminError)
 
     // Debug: check user's organization memberships
     const { data: memberships, error: memError } = await supabase
       .from('organization_members')
       .select('organization_id, role, user_id')
     console.log('[galleryService] User memberships:', memberships, memError)
+
+    // Debug: Try to call can_view_gallery directly for a known gallery
+    const testGalleryId = '2a7eba2b-ae54-4b79-a4aa-f68a37aa7bf8' // Known gallery ID
+    const { data: canViewResult, error: canViewError } = await supabase.rpc('can_view_gallery', {
+      gallery_id_param: testGalleryId
+    })
+    console.log('[galleryService] can_view_gallery test:', { galleryId: testGalleryId, canView: canViewResult, error: canViewError })
 
     // Debug: check what galleries exist (without RLS)
     const { data: allGalleries, error: debugError } = await supabase
@@ -1554,7 +1561,7 @@ export async function deleteGallery(
       })
 
     if (paths.length > 0) {
-      const { error: storageError } = await supabase.storage.from('public-media').remove(paths)
+      const { error: storageError } = await supabase.storage.from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET).remove(paths)
       if (storageError) console.warn('[galleryService] Storage delete warning:', storageError)
     }
 

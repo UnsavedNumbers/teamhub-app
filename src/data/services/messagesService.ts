@@ -359,7 +359,8 @@ export async function createAnnouncement(
     authorId: string,
     orgId: string,
     type: 'general' | 'reminder' | 'schedule_change' | 'urgent' | 'payment' | 'travel' = 'general',
-    isOrgWide: boolean = false
+    isOrgWide: boolean = false,
+    visibleToFans: boolean = false
 ): Promise<{ data: Announcement | null; error: Error | null }> {
     // Input validation
     if (!title || !title.trim()) {
@@ -414,7 +415,8 @@ export async function createAnnouncement(
             type,
             org_id: orgId,
             author_id: authorId,
-            team_id: isOrgWide ? null : (teamId as string | null)
+            team_id: isOrgWide ? null : (teamId as string | null),
+            visible_to_fans: visibleToFans
         } as Database['public']['Tables']['announcements']['Insert']
 
         const { data, error } = await supabase

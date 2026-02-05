@@ -874,8 +874,8 @@ export async function createTravelPlan(
             const objectPath = `${teamValidation.orgId}/${data.team_id}/temp/${Date.now()}-${sanitizeFilename(data.itinerary_file.name)}`
 
             const { error: uploadError } = await supabase.storage
-                .from('travel-itineraries')
-                .upload(objectPath, data.itinerary_file, {
+                .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
+                .upload(`travel-itineraries/${objectPath}`, data.itinerary_file, {
                     upsert: false,
                     contentType: data.itinerary_file.type || 'application/pdf',
                 })
@@ -953,8 +953,8 @@ export async function createTravelPlan(
             // Cleanup uploaded file if insert failed
             if (filePath) {
                 await supabase.storage
-                    .from('travel-itineraries')
-                    .remove([filePath])
+                    .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
+                    .remove([`travel-itineraries/${filePath}`])
                     .catch(err => console.error('Failed to cleanup uploaded file:', err))
             }
             return { data: null, error: new Error(`Failed to create travel plan: ${insertError.message}`) }
@@ -966,8 +966,8 @@ export async function createTravelPlan(
             if (filePath !== finalPath) {
                 // Move file to final location
                 const { error: moveError } = await supabase.storage
-                    .from('travel-itineraries')
-                    .move(filePath, finalPath)
+                    .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
+                    .move(`travel-itineraries/${filePath}`, `travel-itineraries/${finalPath}`)
 
                 if (!moveError) {
                     await supabase
@@ -1098,8 +1098,8 @@ export async function updateTravelPlan(
             newFilePath = `${existingPlanTyped.team?.org_id ?? context.orgId}/${existingPlanTyped.team_id}/${planId}/${Date.now()}-${sanitizeFilename(data.itinerary_file.name)}`
 
             const { error: uploadError } = await supabase.storage
-                .from('travel-itineraries')
-                .upload(newFilePath, data.itinerary_file, {
+                .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
+                .upload(`travel-itineraries/${newFilePath}`, data.itinerary_file, {
                     upsert: false,
                     contentType: data.itinerary_file.type || 'application/pdf',
                 })
@@ -1149,8 +1149,8 @@ export async function updateTravelPlan(
             // Cleanup new file if update failed
             if (newFilePath) {
                 await supabase.storage
-                    .from('travel-itineraries')
-                    .remove([newFilePath])
+                    .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
+                    .remove([`travel-itineraries/${newFilePath}`])
                     .catch(err => console.error('Failed to cleanup uploaded file:', err))
             }
             return { data: null, error: new Error(`Failed to update travel plan: ${updateError.message}`) }
@@ -1163,8 +1163,8 @@ export async function updateTravelPlan(
         // Delete old file if replaced
         if (oldFilePath && newFilePath && oldFilePath !== newFilePath) {
             await supabase.storage
-                .from('travel-itineraries')
-                .remove([oldFilePath])
+                .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
+                .remove([`travel-itineraries/${oldFilePath}`])
                 .catch(err => console.error('Failed to delete old file:', err))
         }
 
@@ -1227,8 +1227,8 @@ export async function uploadTravelItinerary(
         const objectPath = `${orgId}/${(plan as { team_id: string }).team_id}/${planId}/${Date.now()}-${sanitizeFilename(file.name)}`
 
         const { error: uploadError } = await supabase.storage
-            .from('travel-itineraries')
-            .upload(objectPath, file, {
+            .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
+            .upload(`travel-itineraries/${objectPath}`, file, {
                 upsert: false,
                 contentType: file.type || 'application/pdf',
             })
@@ -1247,8 +1247,8 @@ export async function uploadTravelItinerary(
         if (updateError) {
             // Cleanup uploaded file if update failed
             await supabase.storage
-                .from('travel-itineraries')
-                .remove([objectPath])
+                .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
+                .remove([`travel-itineraries/${objectPath}`])
                 .catch(err => console.error('Failed to cleanup uploaded file:', err))
             return { data: null, error: new Error(`Failed to update travel plan: ${updateError.message}`) }
         }
@@ -1296,8 +1296,8 @@ export async function getTravelItinerarySignedUrl(
 
         // Generate signed URL (10 minute expiry)
         const { data: signedUrlData, error: urlError } = await supabase.storage
-            .from('travel-itineraries')
-            .createSignedUrl(filePath, 60 * 10)
+            .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
+            .createSignedUrl(`travel-itineraries/${filePath}`, 60 * 10)
 
         if (urlError || !signedUrlData) {
             return { data: null, error: new Error(`Failed to generate download URL: ${urlError?.message ?? 'Unknown error'}`) }
