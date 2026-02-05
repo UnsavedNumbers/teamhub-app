@@ -44,6 +44,7 @@ interface Event {
     id: string
     status: string
     ticket_types: { price_cents: number; currency: string }[]
+    ticket_banner_url: string | null
   } | null
 }
 
@@ -409,9 +410,10 @@ export default function EventDetail() {
       if (eventError || !eventData) {
         // Preserve query params when redirecting back to calendar
         const searchParams = new URLSearchParams(location.search)
+        const calendarPath = getLink(RouteKeys.PORTAL_CALENDAR)
         const returnPath = searchParams.toString() 
-          ? `/portal/calendar?${searchParams.toString()}` 
-          : '/portal/calendar'
+          ? `${calendarPath}?${searchParams.toString()}` 
+          : calendarPath
         navigate(returnPath)
         return
       }
@@ -439,7 +441,8 @@ export default function EventDetail() {
         ticketed_event: eventData.ticketed_event ? {
           id: eventData.ticketed_event.id,
           status: eventData.ticketed_event.status,
-          ticket_types: eventData.ticketed_event.ticket_types || []
+          ticket_types: eventData.ticketed_event.ticket_types || [],
+          ticket_banner_url: eventData.ticketed_event.ticket_banner_url || null,
         } : null,
       })
 
@@ -551,7 +554,7 @@ export default function EventDetail() {
       alert(error.message)
       setLoading(false)
     } else {
-      navigate('/portal/calendar')
+      navigate(getLink(RouteKeys.PORTAL_CALENDAR))
     }
   }
 
@@ -602,8 +605,8 @@ export default function EventDetail() {
     return (
       <PortalLayout
         breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Calendar', path: '/portal/calendar' },
+          { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
+          { label: 'Calendar', path: getLink(RouteKeys.PORTAL_CALENDAR) },
           { label: t('common.loading') },
         ]}
       >
@@ -617,6 +620,11 @@ export default function EventDetail() {
   if (!event) return null
 
   const searchParams = new URLSearchParams(location.search)
+  const calendarPath = getLink(RouteKeys.PORTAL_CALENDAR)
+  const calendarPathWithParams = searchParams.toString()
+    ? `${calendarPath}?${searchParams.toString()}`
+    : calendarPath
+  const dashboardPath = getLink(RouteKeys.PORTAL_DASHBOARD)
   const venueAddress = (event.event_location as any)?.venue_address || event.location
   
   // Check if event ended more than 24 hours ago
@@ -624,33 +632,111 @@ export default function EventDetail() {
   const now = new Date()
   const hoursSinceEventEnded = (now.getTime() - eventEndDate.getTime()) / (1000 * 60 * 60)
   const isEventOver24HoursAgo = hoursSinceEventEnded > 24
+
+  // Check if we have a banner image
+  const bannerUrl = event.ticketed_event?.ticket_banner_url
   
   return (
     <PortalLayout
-      breadcrumbs={[
-        { label: 'Home', path: '/portal/dashboard' },
+      breadcrumbs={bannerUrl ? [] : [
+        { label: 'Home', path: dashboardPath },
         { 
           label: 'Calendar', 
-          path: searchParams.toString() 
-            ? `/portal/calendar?${searchParams.toString()}` 
-            : '/portal/calendar' 
+          path: calendarPathWithParams
         },
         { label: event.title },
       ]}
     >
-      {/* Page Header */}
-      <div className="mb-8">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <PageTitle>{event.title}</PageTitle>
-            <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
-              {formatDate(event.start_time)} • {formatTime(event.start_time)} - {formatTime(event.end_time)}
+      {/* Hero Banner (if banner image exists) */}
+      {bannerUrl && (
+        <div 
+          className="event-hero-banner"
+          style={{ backgroundImage: `url(${bannerUrl})` }}
+        >
+          <div className="event-hero-banner-content">
+            {/* Breadcrumbs in hero */}
+            <nav className="portal-breadcrumbs flex items-center gap-2 text-sm mb-2">
+              <a href={dashboardPath} className="hover:underline">Home</a>
+              <span>/</span>
+              <a 
+                href={calendarPathWithParams} 
+                className="hover:underline"
+              >
+                Calendar
+              </a>
+              <span>/</span>
+              <span>{event.title}</span>
+            </nav>
+            
+            <h1 className="event-hero-title">{event.title}</h1>
+            <p className="event-hero-meta">
+              {formatDate(event.start_time)}<span className="meta-separator"> • </span><span className="meta-time">{formatTime(event.start_time)} - {formatTime(event.end_time)}</span>
             </p>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-2">
-              {event.team.name}
-            </p>
+            <p className="event-hero-team">{event.team.name}</p>
+            
+            {/* Quick Info Card - Inside hero on tablet/desktop */}
+            <div className="event-hero-quick-info hidden md:block">
+              <div className="quick-info-grid">
+                <div>
+                  <p className="quick-info-label">{t('calendar.event.eventType')}</p>
+                  <p className="quick-info-value capitalize">{event.type}</p>
+                </div>
+                {event.arrival_time && (
+                  <div>
+                    <p className="quick-info-label">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time) })}</p>
+                    <p className="quick-info-value">{formatTime(event.arrival_time)}</p>
+                  </div>
+                )}
+                {venueAddress && (
+                  <div>
+                    <p className="quick-info-label">{t('calendar.event.location')}</p>
+                    <p className="quick-info-value truncate">{venueAddress.split(',')[0]}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="quick-info-label">{t('calendar.event.weather')}</p>
+                  {loadingWeather ? (
+                    <p className="quick-info-value">{t('calendar.event.loading')}</p>
+                  ) : weatherData ? (
+                    <div>
+                      <p className="quick-info-value">{weatherData.temperature}°F • <span className="capitalize">{weatherData.description}</span></p>
+                      <p className="quick-info-subtext">{weatherData.precipitation}% precip • {weatherData.windSpeed} mph</p>
+                    </div>
+                  ) : (
+                    <p className="quick-info-value opacity-50">{t('calendar.event.unavailable')}</p>
+                  )}
+                </div>
+                {!isEventOver24HoursAgo && (
+                  <div>
+                    <p className="quick-info-label">{t('calendar.event.entry')}</p>
+                    {event.ticketed_event ? (
+                      <Button
+                        onClick={() => {
+                          if (orgSlug && event.ticketed_event?.id) {
+                            navigate(
+                              getLink(RouteKeys.PORTAL_ORG_TICKET_EVENT, {
+                                orgSlug,
+                                eventId: event.ticketed_event.id,
+                              })
+                            )
+                          }
+                        }}
+                        disabled={!orgSlug || !event.ticketed_event?.id}
+                        className="mt-1"
+                      >
+                        {t('calendar.event.getTickets')}
+                      </Button>
+                    ) : (
+                      <p className="quick-info-value">{t('calendar.event.freeEntry')}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2">
+          
+          {/* Action buttons in hero */}
+          <div className="event-hero-actions">
             {eventId && (
               <BookmarkButton
                 eventId={eventId}
@@ -660,7 +746,7 @@ export default function EventDetail() {
             )}
             {canManage && (
               <>
-                <Button variant="secondary" onClick={() => navigate(`/portal/calendar/events/${eventId}/edit`)}>
+                <Button variant="secondary" onClick={() => navigate(getLink(RouteKeys.PORTAL_EVENT_EDIT, { eventId: eventId! }))}>
                   <Icon name="edit" />
                 </Button>
                 <Button variant="secondary" onClick={handleDelete}>
@@ -670,8 +756,46 @@ export default function EventDetail() {
             )}
           </div>
         </div>
+      )}
 
-        {/* Quick Summary Banner */}
+      {/* Page Header (standard - when no banner) */}
+      {!bannerUrl && (
+        <div className="mb-8">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <PageTitle>{event.title}</PageTitle>
+              <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
+                {formatDate(event.start_time)} • {formatTime(event.start_time)} - {formatTime(event.end_time)}
+              </p>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-2">
+                {event.team.name}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {eventId && (
+                <BookmarkButton
+                  eventId={eventId}
+                  isBookmarked={isBookmarked}
+                  variant="icon-only"
+                />
+              )}
+              {canManage && (
+                <>
+                  <Button variant="secondary" onClick={() => navigate(getLink(RouteKeys.PORTAL_EVENT_EDIT, { eventId: eventId! }))}>
+                    <Icon name="edit" />
+                  </Button>
+                  <Button variant="secondary" onClick={handleDelete}>
+                    <Icon name="delete" />
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Summary Banner - Mobile only when hero exists, always when no hero */}
+      <div className={`mb-8 ${bannerUrl ? 'md:hidden' : ''}`}>
         <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-slate-50 dark:to-slate-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
             <div>
@@ -868,7 +992,7 @@ export default function EventDetail() {
                     <Button
                       variant="primary"
                       className="mt-4"
-                      onClick={() => navigate(`/portal/calendar/events/${eventId}/edit`)}
+                      onClick={() => navigate(getLink(RouteKeys.PORTAL_EVENT_EDIT, { eventId: eventId! }))}
                     >
                       <Icon name="edit" size="text-sm" className="mr-2" />
                       Add Location
@@ -912,7 +1036,7 @@ export default function EventDetail() {
                 {children.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-slate-500 dark:text-slate-400 mb-4">{t('portal.events.noChildren')}</p>
-                    <Button variant="primary" onClick={() => navigate('/portal/athletes')}>
+                    <Button variant="primary" onClick={() => navigate(getLink(RouteKeys.PORTAL_ATHLETES))}>
                       {t('portal.events.add')}
                     </Button>
                   </div>

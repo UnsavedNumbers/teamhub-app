@@ -41,6 +41,10 @@ export interface Organization {
   place_id?: string | null
   latitude: number | null
   longitude: number | null
+
+  // Public profile
+  logo_url?: string | null
+  profile_visible_to_fans?: boolean
 }
 
 export type OrganizationStatus = 'trial' | 'active' | 'suspended' | 'expired'

@@ -197,25 +197,41 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
       ],
     },
     {
-      label: 'Schedule',
+      label: 'My Events',
       route: '/portal/calendar',
       groups: [
         {
-          label: 'Schedule',
+          label: 'My Events',
           items: [
-            { routeKey: 'portal.calendar', text: 'Schedule', icon: 'calendar_month', path: '/portal/calendar', description: 'View all events' },
+            { routeKey: 'portal.calendar', text: 'Events I\'m Attending', icon: 'calendar_month', path: '/portal/calendar', description: 'View upcoming events' },
+            { routeKey: 'portal.myTickets', text: 'My Tickets', icon: 'confirmation_number', path: '/account/tickets', description: 'Event tickets' },
+            { routeKey: 'portal.bookmarkedEvents', text: 'My Bookmarks', icon: 'bookmark', path: '/portal/bookmarks', description: 'Saved events' },
           ],
         },
       ],
     },
     {
-      label: 'Travel',
-      route: '/portal/travel',
+      label: 'My Teams',
+      route: '/portal/athletes',
       groups: [
         {
-          label: 'Travel',
+          label: 'My Teams',
           items: [
-            { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip information' },
+            { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', path: '/portal/athletes', description: 'Athletes and teams I follow' },
+            { routeKey: 'portal.requestAttachment', text: 'Request Athlete Attachment', icon: 'person_add', path: '/portal/athletes/request-attachment', description: 'Attach to an existing athlete' },
+            { routeKey: 'portal.uniforms', text: 'Uniform Orders', icon: 'checkroom', path: '/portal/uniforms', description: 'Gear and uniforms' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Fees',
+      route: '/portal/payments',
+      groups: [
+        {
+          label: '',
+          items: [
+            { routeKey: 'portal.payments', text: 'Fees', icon: 'receipt_long', path: '/portal/payments', description: 'Outstanding fees and payment history' },
           ],
         },
       ],
@@ -227,20 +243,21 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Messages',
           items: [
-            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Announcements and chat' },
+            { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', path: '/portal/messages', description: 'Team chat and announcements' },
           ],
         },
       ],
     },
     {
-      label: 'Payments',
-      route: '/portal/payments',
+      label: 'Organizations',
+      route: '/portal/following',
       groups: [
         {
-          label: 'Payments',
+          label: 'Organizations',
           items: [
-            // Flat link (no dropdown): text matches section label so nav renders as a direct link
-            { routeKey: 'portal.payments', text: 'Payments', icon: 'receipt_long', path: '/portal/payments', description: 'Outstanding fees' },
+            { routeKey: 'portal.following', text: 'Followed Organizations', icon: 'favorite', path: '/portal/following', description: 'Organizations I follow' },
+            { routeKey: 'portal.discoverOrgs', text: 'Browse Organizations', icon: 'explore', path: '/portal/discover', description: 'Discover new teams' },
+            { routeKey: 'portal.join', text: 'Join a Team', icon: 'group_add', path: '/portal/join', description: 'Enter an invite code' },
           ],
         },
       ],
@@ -249,29 +266,17 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
       label: 'More',
       groups: [
         {
-          label: 'Programs',
+          label: 'Media & Programs',
           items: [
-            { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', path: '/portal/athletes', description: t('portal.navigation.yourChildrenTeams') },
-            { routeKey: 'portal.athletes.requestAttachment', text: 'Request Athlete Attachment', icon: 'person_add', path: '/portal/athletes/request-attachment', description: 'Request to attach to an existing athlete' },
-            { routeKey: 'portal.join', text: 'Join a Team', icon: 'group_add', path: '/portal/join', description: 'Enter an invite code' },
+            { routeKey: 'portal.photos', text: 'Photos & Videos', icon: 'photo_library', path: '/portal/photos', description: 'Team galleries' },
             { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
           ],
         },
         {
-          label: 'Fan Features',
+          label: 'Account',
           items: [
-            { routeKey: 'portal.followedOrgs', text: 'Followed Organizations', icon: 'favorite', path: '/portal/follows', description: 'Organizations you follow' },
-            { routeKey: 'portal.bookmarkedEvents', text: 'Bookmarked Events', icon: 'bookmark', path: '/portal/bookmarks', description: 'Events you\'ve saved' },
-            { routeKey: 'portal.myTickets', text: 'My Tickets', icon: 'confirmation_number', path: '/account/tickets', description: 'Your event tickets' },
-          ],
-        },
-        {
-          label: 'Additional',
-          items: [
-            { routeKey: 'portal.uniforms', text: 'Uniforms', icon: 'checkroom', path: '/portal/uniforms', description: 'Uniform orders' },
-            { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', path: '/portal/photos', description: 'Team photos' },
-            { routeKey: 'portal.videos', text: 'Videos', icon: 'smart_display', path: '/portal/videos', description: 'Coach feedback & video' },
-            { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
+            { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Account preferences' },
+            { routeKey: 'portal.help', text: 'Help & Support', icon: 'help', path: '/portal/help', description: 'Get assistance' },
           ],
         },
       ],

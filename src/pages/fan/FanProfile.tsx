@@ -109,18 +109,6 @@ export default function FanProfile() {
           />
         </div>
 
-        {/* Linked Athletes Section */}
-        <div className="fan-settings-section">
-          <h2 className="fan-settings-section-title">Linked Athletes</h2>
-          
-          <SettingsMenuItem
-            icon="family_restroom"
-            title="Linked Athletes"
-            subtitle="Manage athletes connected to your account"
-            onClick={() => navigate(getLink(RouteKeys.FAN_PROFILE_LINKED_ATHLETES))}
-          />
-        </div>
-
         {/* Notifications Section */}
         <div className="fan-settings-section">
           <h2 className="fan-settings-section-title">Notifications</h2>

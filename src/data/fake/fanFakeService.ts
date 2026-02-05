@@ -187,3 +187,81 @@ export async function getUserPurchases(): Promise<{ data: Purchase[]; error: Err
         error: null,
     }
 }
+
+// ============================================
+// ENTITY PROFILES (FAKE)
+// ============================================
+
+export async function getOrgProfile(orgId: string): Promise<{ data: any | null; error: Error | null }> {
+    return {
+        data: {
+            id: orgId,
+            name: 'Demo Organization',
+            slug: 'demo-org',
+            description: 'A demo youth sports organization',
+            location_city: 'Springfield',
+            location_state: 'IL',
+            location_visible: true,
+            website: 'https://example.com',
+            email: 'contact@example.com',
+            phone: '(555) 123-4567',
+            logo_url: null,
+            cover_url: null,
+            privacy_level: 'public',
+            is_following: false,
+            follower_count: 42,
+            created_at: new Date().toISOString(),
+        },
+        error: null,
+    }
+}
+
+export async function getTeamProfile(teamId: string): Promise<{ data: any | null; error: Error | null }> {
+    return {
+        data: {
+            id: teamId,
+            name: 'Demo Team',
+            description: 'A demo team',
+            sport: 'Basketball',
+            season: '2024-2025',
+            gender: 'coed',
+            age_group: 'U12',
+            logo_url: null,
+            cover_url: null,
+            parent_org_id: 'org-fake',
+            parent_org_name: 'Demo Organization',
+            parent_org_slug: 'demo-org',
+            visible_to_fans: true,
+            is_following: false,
+            follower_count: 42,
+            created_at: new Date().toISOString(),
+        },
+        error: null,
+    }
+}
+
+export async function getAthleteProfile(athleteId: string): Promise<{ data: any | null; error: Error | null }> {
+    return {
+        data: {
+            id: athleteId,
+            first_name: 'John',
+            last_name: 'Doe',
+            full_name: 'John Doe',
+            jersey_number: '23',
+            position: 'Guard',
+            height: '5\'10"',
+            weight: '150',
+            graduation_year: 2026,
+            bio: 'A dedicated athlete',
+            profile_photo_url: null,
+            cover_url: null,
+            org_id: 'org-fake',
+            org_name: 'Demo Organization',
+            org_slug: 'demo-org',
+            privacy_level: 'public',
+            current_teams: ['Demo Team'],
+            created_at: new Date().toISOString(),
+        },
+        error: null,
+    }
+}

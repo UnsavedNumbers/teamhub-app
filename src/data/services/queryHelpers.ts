@@ -42,6 +42,47 @@ export function buildEventQuery(
 }
 
 /**
+ * Build a LIGHTWEIGHT event query optimized for calendar list views
+ * Only includes essential fields and minimal joins for fast loading
+ * Use this for calendar grids, event lists, and quick previews
+ * 
+ * For full event details (with RSVPs, tickets, etc.), use buildEventQuery instead
+ *
+ * @param supabase - Supabase client instance
+ * @returns Query builder with minimal event joins for fast calendar loading
+ *
+ * @example
+ * ```typescript
+ * const query = buildCalendarEventQuery(supabase)
+ * const { data, error } = await query.gte('start_time', startDate).lte('start_time', endDate)
+ * ```
+ */
+export function buildCalendarEventQuery(
+    supabase: SupabaseClient<SupabaseExtended>
+) {
+    // Lightweight query: only team/season names, no RSVPs or ticket details
+    return supabase.from('events').select(`
+        id,
+        team_id,
+        season_id,
+        title,
+        type,
+        start_time,
+        end_time,
+        location,
+        arrival_time,
+        timezone,
+        is_cancelled,
+        requires_travel,
+        rsvp_enabled,
+        rsvp_type,
+        visibility,
+        team:teams(id, name, org_id),
+        season:seasons(id, name)
+    `)
+}
+
+/**
  * Build a standardized fee assignment query with all common joins
  * Includes: fee (with season and team), athlete, payments
  *

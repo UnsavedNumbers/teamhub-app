@@ -6295,18 +6295,21 @@ export type Database = {
             organization_visibility_settings: {
                 Row: {
                     created_at: string
+                    fan_visibility_defaults: Json | null
                     org_id: string
                     role_permissions: Json | null
                     updated_at: string
                 }
                 Insert: {
                     created_at?: string
+                    fan_visibility_defaults?: Json | null
                     org_id: string
                     role_permissions?: Json | null
                     updated_at?: string
                 }
                 Update: {
                     created_at?: string
+                    fan_visibility_defaults?: Json | null
                     org_id?: string
                     role_permissions?: Json | null
                     updated_at?: string
@@ -6370,6 +6373,7 @@ export type Database = {
                     primary_city: string | null
                     primary_region_radius_miles: number | null
                     primary_state: string | null
+                    profile_visible_to_fans: boolean | null
                     refund_policy: string | null
                     slug: string | null
                     status: Database["public"]["Enums"]["org_status"]
@@ -6413,6 +6417,7 @@ export type Database = {
                     primary_city?: string | null
                     primary_region_radius_miles?: number | null
                     primary_state?: string | null
+                    profile_visible_to_fans?: boolean | null
                     refund_policy?: string | null
                     slug?: string | null
                     status?: Database["public"]["Enums"]["org_status"]
@@ -6456,6 +6461,7 @@ export type Database = {
                     primary_city?: string | null
                     primary_region_radius_miles?: number | null
                     primary_state?: string | null
+                    profile_visible_to_fans?: boolean | null
                     refund_policy?: string | null
                     slug?: string | null
                     status?: Database["public"]["Enums"]["org_status"]
@@ -7988,6 +7994,7 @@ export type Database = {
                     program_id: string | null
                     sport_id: string | null
                     updated_at: string | null
+                    visible_to_fans: boolean | null
                 }
                 Insert: {
                     created_at?: string | null
@@ -8001,6 +8008,7 @@ export type Database = {
                     program_id?: string | null
                     sport_id?: string | null
                     updated_at?: string | null
+                    visible_to_fans?: boolean | null
                 }
                 Update: {
                     created_at?: string | null
@@ -8014,6 +8022,7 @@ export type Database = {
                     program_id?: string | null
                     sport_id?: string | null
                     updated_at?: string | null
+                    visible_to_fans?: boolean | null
                 }
                 Relationships: [
                     {

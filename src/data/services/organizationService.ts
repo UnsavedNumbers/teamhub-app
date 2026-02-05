@@ -8,6 +8,8 @@ import {
     uploadOrganizationLogo as uploadFakeOrganizationLogo,
     getOrganizationBySlug as getFakeOrganizationBySlug,
     updateOrganizationSlug as updateFakeOrganizationSlug,
+    getOrganizationSlug as getFakeOrganizationSlug,
+    checkOrganizationSlugAvailability as checkFakeOrganizationSlugAvailability,
 } from '../fake/organizationFakeService'
 
 
@@ -23,7 +25,8 @@ export interface OrganizationUpdateDTO {
     place_id?: string | null
     latitude?: number | null
     longitude?: number | null
-    logo_path?: string | null
+    logo_url?: string | null
+    profile_visible_to_fans?: boolean | null
 }
 
 // Define explicit row type to handle stale database.types.ts
@@ -46,6 +49,8 @@ interface OrganizationRow {
     place_id?: string | null
     latitude?: number | null
     longitude?: number | null
+    logo_url?: string | null
+    profile_visible_to_fans?: boolean
 }
 
 export async function getOrganizationDetails(orgId: string): Promise<{ data: Organization | null; error: Error | null }> {
@@ -112,6 +117,8 @@ export async function getOrganizationDetails(orgId: string): Promise<{ data: Org
             place_id: data.place_id || null,
             latitude: data.latitude || null,
             longitude: data.longitude || null,
+            logo_url: data.logo_url || null,
+            profile_visible_to_fans: data.profile_visible_to_fans ?? undefined,
         }
 
         return { data: org, error: null }
@@ -185,6 +192,8 @@ export async function getOrganizationBySlug(slug: string): Promise<{ data: Organ
             place_id: data.place_id || null,
             latitude: data.latitude || null,
             longitude: data.longitude || null,
+            logo_url: data.logo_url || null,
+            profile_visible_to_fans: data.profile_visible_to_fans ?? undefined,
         }
 
         return { data: org, error: null }
@@ -206,7 +215,7 @@ export async function updateOrganizationSlug(
         if (!orgId) return { error: new Error('Organization ID is required') }
         if (!slug) return { error: new Error('Slug is required') }
 
-        const { error } = await (supabase as any).rpc('update_org_slug', {
+        const { error } = await supabase.rpc('update_org_slug', {
             p_org_id: orgId,
             p_new_slug: slug,
         })
@@ -217,6 +226,73 @@ export async function updateOrganizationSlug(
     } catch (err) {
         console.error('[organizationService] Error updating organization slug:', err)
         return { error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
+export async function getOrganizationSlug(
+    orgId: string
+): Promise<{ data: string | null; error: Error | null }> {
+    try {
+        if (USE_FAKE_DATA) {
+            return getFakeOrganizationSlug(orgId)
+        }
+
+        if (!orgId) {
+            return { data: null, error: new Error('Organization ID is required') }
+        }
+
+        // Prefer secure RPC when available
+        const { data, error } = await supabase.rpc('get_org_slug_by_id', {
+            p_org_id: orgId,
+        })
+
+        if (!error) {
+            return { data: data ?? null, error: null }
+        }
+
+        // Fallback to direct select (for environments without RPC)
+        const { data: row, error: selectError } = await supabase
+            .from('organizations')
+            .select('slug')
+            .eq('id', orgId)
+            .maybeSingle()
+
+        if (selectError) throw selectError
+
+        return { data: row?.slug ?? null, error: null }
+    } catch (err) {
+        console.error('[organizationService] Error fetching organization slug:', err)
+        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
+export async function checkOrganizationSlugAvailability(
+    slug: string,
+    orgId?: string
+): Promise<{ available: boolean; error: Error | null }> {
+    try {
+        if (USE_FAKE_DATA) {
+            return checkFakeOrganizationSlugAvailability(slug, orgId)
+        }
+
+        if (!slug) {
+            return { available: false, error: new Error('Slug is required') }
+        }
+
+        const normalized = slug.toLowerCase().trim()
+        const { data, error } = await supabase
+            .from('organizations')
+            .select('id')
+            .eq('slug', normalized)
+            .maybeSingle()
+
+        if (error) throw error
+
+        const available = !data || (orgId ? data.id === orgId : false)
+        return { available, error: null }
+    } catch (err) {
+        console.error('[organizationService] Error checking slug availability:', err)
+        return { available: false, error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }
 
@@ -284,6 +360,8 @@ export async function updateOrganizationDetails(
             place_id: data.place_id || null,
             latitude: data.latitude || null,
             longitude: data.longitude || null,
+            logo_url: data.logo_url || null,
+            profile_visible_to_fans: data.profile_visible_to_fans ?? undefined,
         }
 
         return { data: org, error: null }
@@ -307,15 +385,17 @@ export async function uploadOrganizationLogo(
         }
 
         const fileExt = file.name.split('.').pop() || 'png'
-        const filePath = `${orgId}/logo.${fileExt}`
+        const filePath = `org-logos/${orgId}/logo.${fileExt}`
 
         const { error: uploadError } = await supabase.storage
-            .from('organization-assets')
+            .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
             .upload(filePath, file, { upsert: true })
 
         if (uploadError) throw uploadError
 
-        return { path: filePath, error: null }
+        // Get the full public URL for the logo
+        const { data } = supabase.storage.from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET).getPublicUrl(filePath)
+        return { path: data.publicUrl, error: null }
     } catch (err) {
         console.error('[organizationService] Error uploading logo:', err)
         return { path: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -337,15 +417,15 @@ export async function uploadTicketBanner(
 
         const fileExt = file.name.split('.').pop() || 'png'
         const fileName = `banner-${Date.now()}.${fileExt}`
-        const filePath = `ticket-banners/${orgId}/${eventId}/${fileName}`
+        const filePath = `event-banners/${orgId}/ticket-banners/${eventId}/${fileName}`
 
         const { error: uploadError } = await supabase.storage
-            .from('organization-assets')
+            .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
             .upload(filePath, file, { upsert: true })
 
         if (uploadError) throw uploadError
 
-        const { data } = supabase.storage.from('organization-assets').getPublicUrl(filePath)
+        const { data } = supabase.storage.from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET).getPublicUrl(filePath)
         return { path: data.publicUrl, error: null }
     } catch (err) {
         console.error('[organizationService] Error uploading ticket banner:', err)

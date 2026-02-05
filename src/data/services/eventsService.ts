@@ -26,7 +26,7 @@ import {
 } from '../fake/fakeEvents'
 import { getChildrenForUserId, getAssignedTeamsForCoach, getChildTeamMemberships } from '../fake/relationships'
 import { t } from '@/i18n'
-import { buildEventQuery } from './queryHelpers'
+import { buildEventQuery, buildCalendarEventQuery } from './queryHelpers'
 import { normalizeSupabaseResponse, createServiceResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
 import { validateDeleteEvent, EVENT_ERRORS } from '../../utils/eventValidation'
@@ -59,8 +59,8 @@ function buildPermissions(context: UserContext): PermissionSet {
  * Handles RSVP config transformation and ensures arrays exist
  */
 function mapSupabaseEventToCalendarEvent(event: any): CalendarEvent {
-    // Ensure required fields exist
-    if (!event.id || !event.team_id || !event.season_id || !event.title || !event.type) {
+    // Ensure required fields exist - team_id and season_id are now optional
+    if (!event.id || !event.title || !event.type) {
         throw new Error('Invalid event data: missing required fields')
     }
 
@@ -102,6 +102,7 @@ function mapSupabaseEventToCalendarEvent(event: any): CalendarEvent {
                     sales_start_at: ticketedData.sales_start_at,
                     sales_end_at: ticketedData.sales_end_at,
                     status: ticketedData.status,
+                    ticket_banner_url: ticketedData.ticket_banner_url || null,
                     ticket_types: Array.isArray(ticketedData.ticket_types)
                         ? ticketedData.ticket_types.map((tt: any) => ({
                             id: tt.id,
@@ -187,6 +188,123 @@ export interface EventsQueryParams {
     // Sorting
     orderBy?: string
     order?: 'asc' | 'desc'
+    
+    // Performance optimization
+    lightweight?: boolean  // Use lightweight query for calendar grid views
+}
+
+/**
+ * Lightweight calendar event type - only essential fields for calendar display
+ */
+export interface CalendarEventSummary {
+    id: string
+    team_id: string | null
+    season_id: string | null
+    title: string
+    type: EventType
+    start_time: string
+    end_time: string
+    location: string | null
+    arrival_time: string | null
+    timezone: string
+    is_cancelled: boolean
+    requires_travel: boolean
+    rsvp_enabled: boolean
+    rsvp_type: string | null
+    visibility: string
+    team: { id: string; name: string; org_id: string } | null
+    season: { id: string; name: string } | null
+}
+
+/**
+ * Get events optimized for calendar grid/list display (lightweight query)
+ * Uses minimal joins for fast loading - no RSVPs, tickets, or full event details
+ * 
+ * For full event details, use getEvents() or getEventById() instead
+ */
+export async function getCalendarEvents(
+    _context: UserContext,
+    params: Omit<EventsQueryParams, 'lightweight'> = {}
+): Promise<{ data: CalendarEventSummary[]; error: Error | null }> {
+    // Real Supabase implementation with lightweight query
+    try {
+        let query = buildCalendarEventQuery(supabase)
+
+        // Apply time context
+        const now = new Date()
+        if (params.timeContext === 'upcoming') {
+            query = query.gte('start_time', now.toISOString())
+        } else if (params.timeContext === 'past') {
+            query = query.lt('start_time', now.toISOString())
+        }
+
+        // Apply date range filters
+        if (params.startDate) {
+            query = query.gte('start_time', params.startDate.toISOString())
+        }
+
+        if (params.endDate) {
+            query = query.lte('start_time', params.endDate.toISOString())
+        }
+
+        // Apply team filters
+        if (params.teamId) {
+            query = query.eq('team_id', params.teamId)
+        }
+        if (params.teamIds && params.teamIds.length > 0) {
+            query = query.in('team_id', params.teamIds)
+        }
+
+        // Apply season filters
+        if (params.seasonId) {
+            query = query.eq('season_id', params.seasonId)
+        }
+        if (params.seasonIds && params.seasonIds.length > 0) {
+            query = query.in('season_id', params.seasonIds)
+        }
+
+        // Apply event type filter
+        if (params.eventTypes && params.eventTypes.length > 0) {
+            query = query.in('type', params.eventTypes)
+        }
+
+        // Apply status filter
+        if (params.status && params.status.length > 0) {
+            const hasScheduled = params.status.includes('scheduled')
+            const hasCancelled = params.status.includes('cancelled')
+            const hasCompleted = params.status.includes('completed')
+
+            if (hasCancelled && !hasScheduled && !hasCompleted) {
+                query = query.eq('is_cancelled', true)
+            } else if (!hasCancelled && (hasScheduled || hasCompleted)) {
+                query = query.eq('is_cancelled', false)
+            }
+        } else if (!params.includeCancelled) {
+            query = query.eq('is_cancelled', false)
+        }
+
+        // Apply sorting - use index-friendly ordering
+        const sortColumn = params.orderBy || 'start_time'
+        const sortOrder = params.order === 'desc' ? { ascending: false } : { ascending: true }
+        query = query.order(sortColumn, sortOrder)
+
+        // Apply pagination
+        if (params.offset !== undefined && params.limit) {
+            query = query.range(params.offset, params.offset + params.limit - 1)
+        } else if (params.limit) {
+            query = query.limit(params.limit)
+        }
+
+        const { data, error } = await query
+
+        if (error) throw error
+
+        return { data: (data || []) as CalendarEventSummary[], error: null }
+    } catch (err) {
+        console.error('getCalendarEvents error:', err)
+        const classifiedError = classifySupabaseError(err)
+        return { data: [], error: classifiedError }
+    }
 }
 
 /**
@@ -825,8 +943,8 @@ export async function createEvent(
         const eventInsertData: EventInsert = {
             title: formData.title,
             type: formData.type,
-            team_id: formData.team_id,
-            season_id: formData.season_id,
+            team_id: formData.team_id!,
+            season_id: formData.season_id!,
             start_time: start.toISOString(),
             end_time: end.toISOString(),
             arrival_time: arrival ? arrival.toISOString() : null,
@@ -889,14 +1007,21 @@ export async function createEvent(
 
         // 4. Handle Ticketing
         if (formData.ticketing?.is_ticketed) {
-            const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', formData.team_id).single()
-            if (!teamData?.org_id) throw new Error('Failed to get organization ID from team')
+            // Get org_id from team if team_id is provided
+            let orgId: string | null = null
+            if (formData.team_id) {
+                const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', formData.team_id).single()
+                if (!teamData?.org_id) throw new Error('Failed to get organization ID from team')
+                orgId = teamData.org_id
+            }
+
+            if (!orgId) throw new Error('Organization ID is required for ticketed events. Please select a team.')
 
             type TicketedEventInsert = Database['public']['Tables']['ticketed_events']['Insert']
             const ticketedEventData: TicketedEventInsert = {
                 event_id: eventData.id,
-                org_id: teamData.org_id,
-                team_id: formData.team_id,
+                org_id: orgId,
+                team_id: formData.team_id!,
                 event_type: formData.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
                 title: formData.title,
                 description: formData.notes || null,
@@ -930,7 +1055,7 @@ export async function createEvent(
                 const ticketTypeInserts: TicketTypeInsert[] = formData.ticketing.ticket_types
                     .filter(tt => tt.name.trim() !== '')
                     .map((tt, index) => ({
-                        org_id: teamData.org_id,
+                        org_id: orgId,
                         ticketed_event_id: ticketedEvent.id,
                         name: tt.name.trim(),
                         price_cents: Math.round(parseFloat(tt.price_dollars) * 100) || 0,
@@ -985,8 +1110,8 @@ export async function updateEvent(
         const eventUpdateData: EventUpdate = {
             title: formData.title,
             type: formData.type,
-            team_id: formData.team_id,
-            season_id: formData.season_id,
+            team_id: formData.team_id ?? undefined,
+            season_id: formData.season_id ?? undefined,
             start_time: start.toISOString(),
             end_time: end.toISOString(),
             arrival_time: arrival ? arrival.toISOString() : null,
@@ -1038,16 +1163,21 @@ export async function updateEvent(
         // Simplified Logic: Upsert ticketed_event, then upsert ticket_types
         // Note: Removing ticket types or complex syncing is omitted for brevity but should be handled in a full implementation
         if (formData.ticketing?.is_ticketed) {
-            const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', formData.team_id).single()
+            // Get org_id from team if team_id is provided
+            let orgId: string | null = null
+            if (formData.team_id) {
+                const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', formData.team_id).single()
+                if (teamData?.org_id) orgId = teamData.org_id
+            }
 
-            if (teamData?.org_id) {
+            if (orgId) {
                 const { data: existingTe } = await supabase.from('ticketed_events').select('id').eq('event_id', eventId).maybeSingle()
 
                 type TicketedEventUpsert = Database['public']['Tables']['ticketed_events']['Insert']
                 const teData: TicketedEventUpsert = {
                     event_id: eventId,
-                    org_id: teamData.org_id,
-                    team_id: formData.team_id,
+                    org_id: orgId,
+                    team_id: formData.team_id ?? undefined,
                     event_type: formData.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
                     title: formData.title,
                     description: formData.notes || null,
@@ -1137,4 +1267,3 @@ export const eventsService = {
     cancelEvent: async (): ServiceResultCompat => ({ data: null, error: null }),
     checkConflicts: async (): ServiceResultCompat => ({ data: null, error: null }),
 }
-

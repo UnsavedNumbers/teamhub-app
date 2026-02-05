@@ -1,6 +1,7 @@
 import { CSSProperties, ReactNode } from 'react'
 import { Checkbox } from './Checkbox'
 import { cn } from '../../utils/cn'
+import { useI18n } from '../../i18n/useI18n'
 
 /**
  * Column configuration for PlatformDataTable
@@ -47,7 +48,7 @@ export default function PlatformDataTable<T extends { id: string }>({
   data,
   rows,
   loading = false,
-  emptyMessage = 'No data available',
+  emptyMessage,
   page = 0,
   rowsPerPage = 10,
   totalCount = 0,
@@ -65,9 +66,11 @@ export default function PlatformDataTable<T extends { id: string }>({
   selectAllMode = 'none',
   onSelectAllChange,
 }: PlatformDataTableProps<T>) {
+  const { t } = useI18n()
   // Defensive guard against null (if default didn't catch it due to explicit null pass)
   const safeRows = (data || rows) || []
   const safeColumns = columns || []
+  const resolvedEmptyMessage = emptyMessage ?? t('common.table.emptyMessage')
 
   const totalPages = Math.ceil(totalCount / rowsPerPage)
   const startRow = totalCount === 0 ? 0 : page * rowsPerPage + 1
@@ -157,8 +160,8 @@ export default function PlatformDataTable<T extends { id: string }>({
           <div className="pa-empty-icon">
             <span className="material-symbols-outlined">inbox</span>
           </div>
-          <h3 className="pa-empty-title">NO DATA</h3>
-          <p className="pa-empty-text">{emptyMessage}</p>
+          <h3 className="pa-empty-title">{t('common.table.emptyTitle')}</h3>
+          <p className="pa-empty-text">{resolvedEmptyMessage}</p>
         </div>
       </div>
     )
@@ -193,6 +196,7 @@ export default function PlatformDataTable<T extends { id: string }>({
                     indeterminate={headerCheckboxState === 'indeterminate'}
                     onChange={() => handleSelectAll()}
                     label=""
+                    aria-label={t('common.table.selectAll')}
                     style={{ margin: 0 }}
                   />
                 </th>
@@ -287,12 +291,12 @@ export default function PlatformDataTable<T extends { id: string }>({
                       <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
                         {column.render
                           ? column.render(row)
-                          : String(row[column.id as keyof T] ?? '—')}
+                          : String(row[column.id as keyof T] ?? t('common.table.emptyValue'))}
                       </div>
                     ) : column.render ? (
                       column.render(row)
                     ) : (
-                      String(row[column.id as keyof T] ?? '—')
+                      String(row[column.id as keyof T] ?? t('common.table.emptyValue'))
                     )}
                   </td>
                 ))}
@@ -336,7 +340,7 @@ export default function PlatformDataTable<T extends { id: string }>({
                   <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--pa-n900)' }}>
                     {keyColumn.render
                       ? keyColumn.render(row)
-                      : String(row[keyColumn.id as keyof T] ?? '—')}
+                      : String(row[keyColumn.id as keyof T] ?? t('common.table.emptyValue'))}
                   </div>
                 </div>
               )}
@@ -351,7 +355,7 @@ export default function PlatformDataTable<T extends { id: string }>({
                     <div style={{ fontSize: '0.875rem', color: 'var(--pa-n700)' }}>
                       {column.render
                         ? column.render(row)
-                        : String(row[column.id as keyof T] ?? '—')}
+                        : String(row[column.id as keyof T] ?? t('common.table.emptyValue'))}
                     </div>
                   </div>
                 ))}
@@ -366,7 +370,7 @@ export default function PlatformDataTable<T extends { id: string }>({
                   <Checkbox
                     checked={selectedIds.has(row.id)}
                     onChange={() => handleRowToggle(row.id)}
-                    label="Select"
+                    label={t('common.table.select')}
                   />
                 </div>
               )}
@@ -389,7 +393,7 @@ export default function PlatformDataTable<T extends { id: string }>({
           style={{ whiteSpace: 'nowrap' }}
         >
           <span className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
-            Rows per page:
+            {t('common.table.rowsPerPage')}
           </span>
           <select
             className="pa-input pa-select"
@@ -406,7 +410,7 @@ export default function PlatformDataTable<T extends { id: string }>({
 
         {/* Page info */}
         <span className="pa-body-s pa-text-center" style={{ color: 'var(--pa-n700)' }}>
-          {startRow}–{endRow} of {totalCount}
+          {t('common.table.pageSummary', { start: startRow, end: endRow, total: totalCount })}
         </span>
 
         {/* Page controls */}
@@ -415,7 +419,7 @@ export default function PlatformDataTable<T extends { id: string }>({
             className="pa-btn pa-btn--ghost pa-btn--dense"
             onClick={() => onPageChange(page - 1)}
             disabled={page === 0}
-            aria-label="Previous page"
+            aria-label={t('common.table.previousPage')}
             style={{ minHeight: '44px', minWidth: '44px' }}
           >
             <span className="material-symbols-outlined">chevron_left</span>
@@ -424,7 +428,7 @@ export default function PlatformDataTable<T extends { id: string }>({
             className="pa-btn pa-btn--ghost pa-btn--dense"
             onClick={() => onPageChange(page + 1)}
             disabled={page >= totalPages - 1}
-            aria-label="Next page"
+            aria-label={t('common.table.nextPage')}
             style={{ minHeight: '44px', minWidth: '44px' }}
           >
             <span className="material-symbols-outlined">chevron_right</span>

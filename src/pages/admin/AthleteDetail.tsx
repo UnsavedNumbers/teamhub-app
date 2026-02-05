@@ -1441,6 +1441,7 @@ export default function AthleteDetail() {
               <PhotoSection
                 entityType="athlete"
                 entityId={athlete.id}
+                orgId={athlete.org_id}
                 title="Athlete Photos"
               />
             </Card>

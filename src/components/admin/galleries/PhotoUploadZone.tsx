@@ -246,7 +246,7 @@ export function PhotoUploadZone({
                     <span className="pa-text-xs pa-text-muted">
                       {item.state === 'uploading' && `${item.progress}%`}
                       {item.state === 'success' && t('common.success')}
-                      {item.state === 'error' && t('common.error')}
+                      {item.state === 'error' && t('common.error.label')}
                       {item.state === 'pending' && t('common.pending')}
                     </span>
                   </div>
@@ -261,4 +261,3 @@ export function PhotoUploadZone({
     </div>
   )
 }
-

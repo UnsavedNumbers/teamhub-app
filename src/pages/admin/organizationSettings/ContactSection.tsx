@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Card, Button, Input, Switch } from '../../../components/platformAdmin'
 import { showSuccess, showError } from '../../../utils/toast'
+import { getErrorMessage } from '../../../utils/errorUtils'
 import { 
   getOrganizationContacts, 
   upsertDefaultContact, 
@@ -21,6 +22,8 @@ import {
   type ContactCategory,
   defaultContactSchema 
 } from '../../../types/organizationContacts'
+import { useI18n } from '../../../i18n/useI18n'
+import type { TranslationKey } from '../../../i18n'
 
 // Schema for a single category row in the form
 const subContactSchema = z.object({
@@ -57,7 +60,16 @@ const contactFormSchema = z.object({
 
 type ContactFormData = z.infer<typeof contactFormSchema>
 
+const TRAVEL_SUBCATEGORY_KEYS = ['transportation', 'lodging', 'venue', 'emergency'] as const
+const TRAVEL_SUBCATEGORY_LABEL_KEYS: Record<(typeof TRAVEL_SUBCATEGORY_KEYS)[number], TranslationKey> = {
+  transportation: 'admin.organizationSettings.contacts.travelCategories.transportation',
+  lodging: 'admin.organizationSettings.contacts.travelCategories.lodging',
+  venue: 'admin.organizationSettings.contacts.travelCategories.venue',
+  emergency: 'admin.organizationSettings.contacts.travelCategories.emergency',
+}
+
 export default function ContactSection({ orgId }: { orgId: string }) {
+  const { t } = useI18n()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   
@@ -186,7 +198,7 @@ export default function ContactSection({ orgId }: { orgId: string }) {
       
       reset(formData)
     } catch (err) {
-      showError('Failed to load contacts')
+      showError(getErrorMessage(err) || t('admin.organizationSettings.contacts.loadFailed'))
       console.error(err)
     } finally {
       setLoading(false)
@@ -196,6 +208,10 @@ export default function ContactSection({ orgId }: { orgId: string }) {
   const onSubmit = async (data: ContactFormData) => {
     setSaving(true)
     try {
+      if (!navigator.onLine) {
+        throw new Error(t('common.error.offline'))
+      }
+
       // 1. Save Default Contact
       const { error: defaultError } = await upsertDefaultContact(orgId, data.defaultContact)
       if (defaultError) throw defaultError
@@ -209,7 +225,8 @@ export default function ContactSection({ orgId }: { orgId: string }) {
           
           if (catRow.is_custom) {
              if (!catRow.first_name || !catRow.last_name || !catRow.email) {
-                 throw new Error(`Missing required fields for ${catRow.category}`)
+                 const categoryLabel = t(`admin.organizationSettings.contacts.categories.${catRow.category}`)
+                 throw new Error(t('admin.organizationSettings.contacts.missingFields', { category: categoryLabel }))
              }
           }
 
@@ -220,6 +237,7 @@ export default function ContactSection({ orgId }: { orgId: string }) {
               email: catRow.email || '',
               phone: catRow.phone || null,
           })
+          if (res.error) throw res.error
 
           // If travel category, also upsert travel subcontacts
           if (catRow.category === 'travel' && context && catRow.travel_contacts) {
@@ -229,26 +247,28 @@ export default function ContactSection({ orgId }: { orgId: string }) {
               const hasName = sc?.first_name || sc?.last_name
               const email = sc?.email || ''
               if (hasName && !email) {
-                throw new Error(`Email is required for ${sub} travel contact if a name is provided.`)
+                const subLabel = t(`admin.organizationSettings.contacts.travelCategories.${sub}`)
+                throw new Error(t('admin.organizationSettings.contacts.travelEmailRequired', { category: subLabel }))
               }
-              await upsertOrganizationTravelContact(context, sub as TravelContactCategoryOrg, {
+              const { error: travelError } = await upsertOrganizationTravelContact(context, sub as TravelContactCategoryOrg, {
                 first_name: sc?.first_name || '',
                 last_name: sc?.last_name || '',
                 email: sc?.email || '',
                 phone: sc?.phone || null,
               })
+              if (travelError) throw travelError
             }
           }
 
           return res
       }))
 
-      showSuccess('Contacts updated successfully')
+      showSuccess(t('admin.organizationSettings.contacts.saveSuccess'))
       // Reload to ensure consistent state
       loadData() 
       
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to save contacts')
+      showError(err instanceof Error ? err.message : t('admin.organizationSettings.contacts.saveFailed'))
       console.error(err)
     } finally {
       setSaving(false)
@@ -256,53 +276,53 @@ export default function ContactSection({ orgId }: { orgId: string }) {
   }
 
   if (loading) {
-      return <div className="pa-p-8 pa-text-center">Loading contacts...</div>
+      return <div className="pa-p-8 pa-text-center">{t('admin.organizationSettings.contacts.loading')}</div>
   }
 
   return (
     <div className="oa-contact-section">
       {/* Default Contact Section */}
-      <Card title="Default Organization Contact (Required)">
-        <p className="pa-text-sm pa-text-muted pa-mb-4">This contact is used whenever a category does not have its own contact.</p>
+      <Card title={t('admin.organizationSettings.contacts.defaultTitle')}>
+        <p className="pa-text-sm pa-text-muted pa-mb-4">{t('admin.organizationSettings.contacts.defaultDescription')}</p>
         <div className="oa-contact-form-grid">
                 <Controller
                     control={control}
                     name="defaultContact.first_name"
                     render={({ field, fieldState }) => (
-                        <Input {...field} label="First Name" required error={fieldState.error?.message} />
+                        <Input {...field} label={t('formFields.firstName')} required error={fieldState.error?.message} />
                     )}
                 />
                 <Controller
                     control={control}
                     name="defaultContact.last_name"
                     render={({ field, fieldState }) => (
-                        <Input {...field} label="Last Name" required error={fieldState.error?.message} />
+                        <Input {...field} label={t('formFields.lastName')} required error={fieldState.error?.message} />
                     )}
                 />
                 <Controller
                     control={control}
                     name="defaultContact.email"
                     render={({ field, fieldState }) => (
-                        <Input {...field} label="Email" type="email" required error={fieldState.error?.message} />
+                        <Input {...field} label={t('formFields.email')} type="email" required error={fieldState.error?.message} />
                     )}
                 />
                 <Controller
                     control={control}
                     name="defaultContact.phone"
                     render={({ field, fieldState }) => (
-                        <Input {...field} value={field.value || ''} label="Phone" type="tel" error={fieldState.error?.message} />
+                        <Input {...field} value={field.value || ''} label={t('formFields.phone')} type="tel" error={fieldState.error?.message} />
                     )}
                 />
             </div>
       </Card>
 
       {/* Category Contacts Section */}
-      <Card title="Category Contacts">
-        <p className="pa-text-sm pa-text-muted pa-mb-4">Override the default contact for specific inquiries.</p>
+      <Card title={t('admin.organizationSettings.contacts.categoryTitle')}>
+        <p className="pa-text-sm pa-text-muted pa-mb-4">{t('admin.organizationSettings.contacts.categoryDescription')}</p>
         <div className="oa-category-list">
             {fields.map((field, index) => {
                 const isCustom = watch(`categories.${index}.is_custom`)
-                const categoryLabel = field.category.charAt(0).toUpperCase() + field.category.slice(1)
+                const categoryLabel = t(`admin.organizationSettings.contacts.categories.${field.category}`)
                 
                 return (
                     <div key={field.id} className="oa-category-row">
@@ -314,7 +334,7 @@ export default function ContactSection({ orgId }: { orgId: string }) {
                                     name={`categories.${index}.is_custom`}
                               render={({ field: switchField }) => (
                                 <Switch
-                                  label="Custom contact"
+                                  label={t('admin.organizationSettings.contacts.customContact')}
                                   checked={!!switchField.value}
                                   onCheckedChange={(checked) => switchField.onChange(checked)}
                                 />
@@ -328,54 +348,54 @@ export default function ContactSection({ orgId }: { orgId: string }) {
                                 <Controller
                                     control={control}
                                     name={`categories.${index}.first_name`}
-                                    rules={{ required: isCustom ? "Required" : false }}
+                                    rules={{ required: isCustom ? t('formFields.required') : false }}
                                     render={({ field: inputField, fieldState }) => (
-                                        <Input {...inputField} label="First Name" required={isCustom} error={fieldState.error?.message} />
+                                        <Input {...inputField} label={t('formFields.firstName')} required={isCustom} error={fieldState.error?.message} />
                                     )}
                                 />
                                 <Controller
                                     control={control}
                                     name={`categories.${index}.last_name`}
-                                    rules={{ required: isCustom ? "Required" : false }}
+                                    rules={{ required: isCustom ? t('formFields.required') : false }}
                                     render={({ field: inputField, fieldState }) => (
-                                        <Input {...inputField} label="Last Name" required={isCustom} error={fieldState.error?.message} />
+                                        <Input {...inputField} label={t('formFields.lastName')} required={isCustom} error={fieldState.error?.message} />
                                     )}
                                 />
                                 <Controller
                                     control={control}
                                     name={`categories.${index}.email`}
-                                    rules={{ required: isCustom ? "Required" : false }}
+                                    rules={{ required: isCustom ? t('formFields.required') : false }}
                                     render={({ field: inputField, fieldState }) => (
-                                        <Input {...inputField} label="Email" type="email" required={isCustom} error={fieldState.error?.message} />
+                                        <Input {...inputField} label={t('formFields.email')} type="email" required={isCustom} error={fieldState.error?.message} />
                                     )}
                                 />
                                 <Controller
                                     control={control}
                                     name={`categories.${index}.phone`}
                                     render={({ field: inputField }) => (
-                                        <Input {...inputField} value={inputField.value || ''} label="Phone" type="tel" />
+                                        <Input {...inputField} value={inputField.value || ''} label={t('formFields.phone')} type="tel" />
                                     )}
                                 />
                                 {field.category === 'travel' && (
                                   <>
-                                    <div className="pa-w-full pa-text-sm pa-text-muted pa-mb-2">Specify contacts for travel-related coordination. Leave empty to use the main Travel contact above.</div>
-                                    {['transportation','lodging','venue','emergency'].map((sub, subIdx) => (
+                                    <div className="pa-w-full pa-text-sm pa-text-muted pa-mb-2">{t('admin.organizationSettings.contacts.travelIntro')}</div>
+                                    {TRAVEL_SUBCATEGORY_KEYS.map((sub, subIdx) => (
                                       <Fragment key={sub}>
                                         {subIdx > 0 && <hr className="pa-border-t pa-my-4" />}
                                         
                                         <div className="oa-contact-form-grid">
-                                          <h4 className="oa-category-title">{sub.charAt(0).toUpperCase() + sub.slice(1)}</h4>
+                                          <h4 className="oa-category-title">{t(TRAVEL_SUBCATEGORY_LABEL_KEYS[sub])}</h4>
                                           <div className="pa-text-xs pa-text-muted pa-text-right">
-                                            {sub === 'transportation' && 'Bus, flight, or excessive travel coordination.'}
-                                            {sub === 'lodging' && 'Hotel and room block management.'}
-                                            {sub === 'venue' && 'Contact at the venue (e.g. facility manager).'}
-                                            {sub === 'emergency' && 'Urgent issues during the trip.'}
+                                            {sub === 'transportation' && t('admin.organizationSettings.contacts.travelDescriptions.transportation')}
+                                            {sub === 'lodging' && t('admin.organizationSettings.contacts.travelDescriptions.lodging')}
+                                            {sub === 'venue' && t('admin.organizationSettings.contacts.travelDescriptions.venue')}
+                                            {sub === 'emergency' && t('admin.organizationSettings.contacts.travelDescriptions.emergency')}
                                           </div>
                                           
-                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.first_name` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label="First Name" />} />
-                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.last_name` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label="Last Name" />} />
-                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.email` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label="Email" type="email" />} />
-                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.phone` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label="Phone" type="tel" />} />
+                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.first_name` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label={t('formFields.firstName')} />} />
+                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.last_name` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label={t('formFields.lastName')} />} />
+                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.email` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label={t('formFields.email')} type="email" />} />
+                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.phone` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label={t('formFields.phone')} type="tel" />} />
                                         </div>
                                       </Fragment>
                                     ))}
@@ -386,7 +406,7 @@ export default function ContactSection({ orgId }: { orgId: string }) {
                             <div className="oa-default-preview">
                             <div className="oa-default-badge">
                               <span className="material-symbols-outlined">settings</span>
-                              Using default contact
+                              {t('admin.organizationSettings.contacts.usingDefault')}
                             </div>
                             <div className="oa-default-contact">
                               <div className="oa-default-name">
@@ -404,7 +424,7 @@ export default function ContactSection({ orgId }: { orgId: string }) {
 
       <div className="oa-form-actions">
           <Button onClick={handleSubmit(onSubmit)} loading={saving} variant="primary">
-              Save Contact Settings
+              {t('admin.organizationSettings.contacts.save')}
           </Button>
       </div>
     </div>
