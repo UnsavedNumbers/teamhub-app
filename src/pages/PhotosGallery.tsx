@@ -1,8 +1,8 @@
 /**
  * Gallery View Page
- * 
- * Displays a single gallery with photos using react-photo-album and yet-another-react-lightbox.
- * Supports both masonry (feed) and grid layouts.
+ *
+ * Displays a single gallery with photos in a grid layout, with selection, tagging,
+ * and yet-another-react-lightbox for full-size viewing.
  */
 
 import { useEffect, useState, useRef } from 'react'
@@ -189,7 +189,7 @@ export default function PhotosGallery() {
           <h1 className="text-6xl md:text-7xl font-[900] tracking-tighter text-slate-900 dark:text-white leading-none">
             {gallery.name}
           </h1>
-          
+
           <div className="flex items-center justify-between mt-8 pt-8 border-t border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-8">
               {/* Athlete filter dropdown */}
@@ -257,7 +257,7 @@ export default function PhotosGallery() {
                   )}
                 </div>
               )}
-              
+
               {/* Action buttons */}
               {gallery.require_approval && (
                 <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
@@ -291,7 +291,7 @@ export default function PhotosGallery() {
                 </button>
               )}
             </div>
-            
+
             <div className="text-sm font-medium text-slate-400 italic">
               Showing {photos.length} {photos.length === 1 ? 'photo' : 'photos'}
             </div>
@@ -390,7 +390,7 @@ export default function PhotosGallery() {
               const taggedNames = photo.tagged_athletes
                 ?.map((a) => a.first_name)
                 .join(' • ') || ''
-              
+
               return (
                 <div
                   key={photo.id}
@@ -417,7 +417,7 @@ export default function PhotosGallery() {
                       className="w-full h-full object-cover"
                       src={thumbnailUrl}
                     />
-                    
+
                     {/* Checkbox Overlay - Top Right */}
                     <div
                       className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -445,7 +445,7 @@ export default function PhotosGallery() {
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Photo Details */}
                   <div className="px-2">
                     <h4 className="text-sm font-bold text-black dark:text-white">
@@ -477,7 +477,7 @@ export default function PhotosGallery() {
                     <span className="material-symbols-outlined text-xl">close</span>
                   </button>
                 </div>
-                
+
                 <div className="flex items-center gap-6">
                   <button className="flex items-center gap-2 text-sm font-bold hover:text-primary transition-colors">
                     <span className="material-symbols-outlined text-xl">ios_share</span>
