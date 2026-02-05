@@ -268,13 +268,18 @@ export async function getGalleriesForUser(
     const { data: galleries, error } = await query
 
     console.log('[galleryService] Query result:', { count: galleries?.length, error, galleries })
+    console.log('[galleryService] Cover data for galleries:', galleries?.map((g: any) => ({ id: g.id, name: g.name, cover_photo_id: g.cover_photo_id, cover: g.cover })))
 
     if (error) throw error
 
-    const galleryList = (galleries || []).map((g: any) => ({
-      ...g,
-      cover_url: g.cover ? getGalleryPhotoThumbnailUrl(g.cover.thumbnail_path, g.cover.storage_path) : null,
-    })) as Gallery[]
+    const galleryList = (galleries || []).map((g: any) => {
+      const coverUrl = g.cover ? getGalleryPhotoThumbnailUrl(g.cover.thumbnail_path, g.cover.storage_path) : null
+      console.log('[galleryService] Cover URL for', g.name, ':', { cover: g.cover, coverUrl })
+      return {
+        ...g,
+        cover_url: coverUrl,
+      }
+    }) as Gallery[]
 
     // Get photo counts for all galleries using direct query (RPC function may not exist)
     if (galleryList.length > 0) {
@@ -319,6 +324,40 @@ export async function getGalleriesForUser(
             .eq('status', 'pending')
           gallery.photo_count = totalCount || 0
           gallery.pending_count = pendingCount || 0
+        }
+      }
+
+      // For galleries without a cover photo, fetch the first photo as a fallback cover
+      const galleriesWithoutCover = galleryList.filter(g => !g.cover_url && (g.photo_count ?? 0) > 0)
+      if (galleriesWithoutCover.length > 0) {
+        const galleryIdsNeedingCover = galleriesWithoutCover.map(g => g.id)
+        
+        // Get first photo for each gallery that needs a cover
+        const { data: firstPhotos } = await supabase
+          .from('gallery_photos')
+          .select('gallery_id, thumbnail_path, storage_path')
+          .in('gallery_id', galleryIdsNeedingCover)
+          .order('created_at', { ascending: true })
+        
+        if (firstPhotos) {
+          // Build a map of gallery_id -> first photo (only keep first per gallery)
+          const firstPhotoMap = new Map<string, { thumbnail_path: string | null; storage_path: string }>()
+          for (const photo of firstPhotos) {
+            if (!firstPhotoMap.has(photo.gallery_id)) {
+              firstPhotoMap.set(photo.gallery_id, photo)
+            }
+          }
+          
+          // Set cover_url for galleries using their first photo
+          galleryList.forEach((gallery) => {
+            if (!gallery.cover_url) {
+              const firstPhoto = firstPhotoMap.get(gallery.id)
+              if (firstPhoto) {
+                gallery.cover_url = getGalleryPhotoThumbnailUrl(firstPhoto.thumbnail_path, firstPhoto.storage_path)
+                console.log('[galleryService] Using first photo as cover for', gallery.name, ':', gallery.cover_url)
+              }
+            }
+          })
         }
       }
     }

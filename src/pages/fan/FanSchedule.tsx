@@ -8,12 +8,11 @@
  * Design: FanConnect Minimalist Light
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useI18n } from '../../i18n/useI18n'
-import { getFanCalendar, getFollowedOrgs } from '../../data/services/fanService'
-import type { CalendarEvent, FanOrgFollow } from '../../types/staffAndFan'
-import { getLink, RouteKeys } from '../../utils/routes'
+import { getFanCalendar } from '../../data/services/fanService'
+import type { CalendarEvent } from '../../types/staffAndFan'
 import BookmarkButton from '../../components/fan/BookmarkButton'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { showError } from '../../utils/toast'
@@ -28,12 +27,10 @@ const VIEW_STORAGE_KEY = 'fan_schedule_view'
 
 export default function FanSchedule() {
   const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useI18n()
   
   // Data state
   const [events, setEvents] = useState<CalendarEvent[]>([])
-  const [followedOrgs, setFollowedOrgs] = useState<FanOrgFollow[]>([])
   
   // View state - persisted
   const savedView = (localStorage.getItem(VIEW_STORAGE_KEY) as ViewMode) || 'month'
@@ -41,9 +38,8 @@ export default function FanSchedule() {
   const [currentDate, setCurrentDate] = useState(new Date())
   
   // Filter state
-  const [entityFilter, setEntityFilter] = useState<string>('all')
-  const [typeFilter, setTypeFilter] = useState<EventTypeFilter>('all')
-  const [activeFilters, setActiveFilters] = useState<string[]>([])
+  const [entityFilter] = useState<string>('all')
+  const [typeFilter] = useState<EventTypeFilter>('all')
   
   // UI state
   const [loading, setLoading] = useState(true)
@@ -52,7 +48,6 @@ export default function FanSchedule() {
   // Load events on mount and date change
   useEffect(() => {
     loadEvents()
-    loadFollowedOrgs()
   }, [currentDate, viewMode])
 
   // Persist view preference
@@ -117,13 +112,6 @@ export default function FanSchedule() {
     setLoading(false)
   }
 
-  const loadFollowedOrgs = async () => {
-    const { data, error } = await getFollowedOrgs()
-    if (!error && data) {
-      setFollowedOrgs(data)
-    }
-  }
-
   // Navigation handlers
   const handlePrevious = () => {
     if (viewMode === 'month') {
@@ -143,45 +131,6 @@ export default function FanSchedule() {
       newDate.setDate(currentDate.getDate() + 7)
       setCurrentDate(newDate)
     }
-  }
-
-  const handleToday = () => {
-    setCurrentDate(new Date())
-  }
-
-  // Filter handlers
-  const handleEntityFilterChange = (value: string) => {
-    setEntityFilter(value)
-    updateActiveFilters('entity', value)
-  }
-
-  const handleTypeFilterChange = (value: EventTypeFilter) => {
-    setTypeFilter(value)
-    updateActiveFilters('type', value)
-  }
-
-  const updateActiveFilters = (category: string, value: string) => {
-    if (value === 'all') {
-      setActiveFilters(prev => prev.filter(f => !f.startsWith(category)))
-    } else {
-      setActiveFilters(prev => {
-        const filtered = prev.filter(f => !f.startsWith(category))
-        return [...filtered, `${category}:${value}`]
-      })
-    }
-  }
-
-  const clearAllFilters = () => {
-    setEntityFilter('all')
-    setTypeFilter('all')
-    setActiveFilters([])
-  }
-
-  const removeFilter = (filter: string) => {
-    const [category] = filter.split(':')
-    if (category === 'entity') setEntityFilter('all')
-    if (category === 'type') setTypeFilter('all')
-    setActiveFilters(prev => prev.filter(f => f !== filter))
   }
 
   // View title
@@ -262,7 +211,7 @@ export default function FanSchedule() {
       <div className="fan-schedule-content">
         {loading ? (
           <div className="fan-schedule-loading">
-            <LoadingSpinner size="lg" />
+            <LoadingSpinner size="large" />
           </div>
         ) : events.length === 0 ? (
           <div className="fan-schedule-empty">
@@ -334,8 +283,6 @@ interface AgendaViewProps {
 }
 
 function AgendaView({ events, onEventClick }: AgendaViewProps) {
-  const { t } = useI18n()
-  
   // Group events by date
   const groupedEvents = useMemo(() => {
     const upcomingEvents = events

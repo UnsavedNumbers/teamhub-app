@@ -392,6 +392,30 @@ export const en = {
         teamNotFound: 'This team may not exist or is not publicly visible.',
         athleteNotFound: 'This athlete profile may not exist or is not publicly visible.',
       },
+      // Organization Profile Page
+      orgProfile: {
+        followTeam: 'Follow Team',
+        teamFeed: 'Team Feed',
+        recentHighlights: 'Recent Highlights',
+        pressReleases: 'Press Releases',
+        teamNews: 'Team News',
+        welcomeTo: 'Welcome to {{name}}',
+        stayTuned: 'Stay tuned for updates from our organization.',
+        nextGame: 'Next Game',
+        noUpcomingGames: 'No upcoming games scheduled',
+        stats: 'Stats',
+        clubMemberAccess: 'Club Member Access',
+        clubMemberDescription: 'Get early access to postseason tickets and exclusive digital collectibles.',
+        joinTheClub: 'Join the Club',
+        privateDescription: 'This organization\'s content is only visible to approved followers.',
+        tabs: {
+          overview: 'Overview',
+          schedule: 'Schedule',
+          roster: 'Roster',
+          media: 'Media',
+          shop: 'Shop',
+        },
+      },
       // Original followed orgs section
       followedOrgs: {
         title: 'Followed Organizations',

@@ -11,7 +11,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useI18n } from '../../i18n/useI18n'
 import { 
   getFollowedOrgs,
   searchEntities,
@@ -29,18 +28,7 @@ import '../../styles/fan-layouts.css'
 type TabType = 'following' | 'discover'
 type EntityType = 'org' | 'team' | 'athlete'
 
-interface FollowedEntity {
-  id: string
-  type: EntityType
-  name: string
-  slug?: string
-  logo_url?: string
-  location?: string
-  sport?: string
-}
-
 export default function FanFollowing() {
-  const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState<TabType>(
     (searchParams.get('tab') as TabType) || 'following'
@@ -103,7 +91,7 @@ function MyFollowingTab({ onSwitchToDiscover }: MyFollowingTabProps) {
   const [loading, setLoading] = useState(true)
   
   // Filter state
-  const [filterType, setFilterType] = useState<'all' | EntityType>('all')
+  const [filterType] = useState<'all' | EntityType>('all')
 
   useEffect(() => {
     loadFollowedEntities()
@@ -164,7 +152,7 @@ function MyFollowingTab({ onSwitchToDiscover }: MyFollowingTabProps) {
   if (loading) {
     return (
       <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="large" />
       </div>
     )
   }
@@ -303,7 +291,7 @@ interface FollowingCardProps {
   onClick: () => void
 }
 
-function FollowingCard({ type, id, name, logoUrl, subtitle, sport, onUnfollow, onClick }: FollowingCardProps) {
+function FollowingCard({ type, name, logoUrl, subtitle, sport, onUnfollow, onClick }: FollowingCardProps) {
   const [isUnfollowing, setIsUnfollowing] = useState(false)
 
   const handleUnfollow = async (e: React.MouseEvent) => {
@@ -341,7 +329,7 @@ function FollowingCard({ type, id, name, logoUrl, subtitle, sport, onUnfollow, o
         disabled={isUnfollowing}
       >
         {isUnfollowing ? (
-          <LoadingSpinner size="sm" />
+          <LoadingSpinner size="small" />
         ) : (
           <>
             <span className="material-symbols-outlined">check</span>
@@ -490,7 +478,7 @@ function DiscoverTab() {
       {/* Loading State */}
       {loading && (
         <div className="fan-loading-section">
-          <LoadingSpinner size="md" />
+          <LoadingSpinner size="medium" />
         </div>
       )}
 
@@ -615,7 +603,7 @@ function SearchResultCard({ entity, onFollow, onUnfollow, onClick }: SearchResul
         disabled={isProcessing}
       >
         {isProcessing ? (
-          <LoadingSpinner size="sm" />
+          <LoadingSpinner size="small" />
         ) : entity.isFollowing ? (
           <>
             <span className="material-symbols-outlined">check</span>

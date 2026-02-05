@@ -9,8 +9,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useI18n } from '../../i18n/useI18n'
+import { useNavigate } from 'react-router-dom'
 import { 
   getNotificationPreferences, 
   updateNotificationPreferences, 
@@ -23,12 +22,10 @@ import { supabase } from '../../lib/supabase'
 import '../../styles/fan.css'
 
 export default function FanProfile() {
-  const { t } = useI18n()
   const navigate = useNavigate()
   
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
 
   useEffect(() => {
     loadUserData()
@@ -54,36 +51,38 @@ export default function FanProfile() {
 
   if (loading) {
     return (
-      <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+      <div className="fan-loading">
+        <LoadingSpinner size="large" />
       </div>
     )
   }
 
   return (
-    <>
-      {/* Profile Header */}
-      <div className="fan-profile-header">
-        <div className="fan-profile-avatar">
-          {user?.user_metadata?.avatar_url ? (
-            <img src={user.user_metadata.avatar_url} alt="" />
-          ) : (
-            <span className="material-symbols-outlined">person</span>
-          )}
-        </div>
-        <div className="fan-profile-info">
-          <h1 className="fan-profile-name">
-            {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Fan'}
-          </h1>
-          <p className="fan-profile-email">{user?.email}</p>
-          <p className="fan-profile-joined">
-            Member since {user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently'}
-          </p>
-        </div>
-      </div>
+    <div className="fan-page">
+      <main className="fan-main">
+        <div className="fan-container">
+          {/* Profile Header */}
+          <div className="fan-profile-header">
+            <div className="fan-avatar fan-avatar-lg">
+              {user?.user_metadata?.avatar_url ? (
+                <img src={user.user_metadata.avatar_url} alt="" />
+              ) : (
+                <span className="material-symbols-outlined">person</span>
+              )}
+            </div>
+            <div className="fan-profile-info">
+              <h1 className="fan-profile-name">
+                {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Fan'}
+              </h1>
+              <p className="fan-profile-email">{user?.email}</p>
+              <p className="fan-profile-joined">
+                Member since {user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently'}
+              </p>
+            </div>
+          </div>
 
-      {/* Settings Menu */}
-      <div className="fan-settings-menu">
+          {/* Settings Menu */}
+          <div className="fan-settings-menu">
         {/* Account Section */}
         <div className="fan-settings-section">
           <h2 className="fan-settings-section-title">Account</h2>
@@ -198,13 +197,15 @@ export default function FanProfile() {
           </button>
         </div>
 
-        {/* App Version */}
-        <div className="fan-settings-version">
-          <p>YouthSports.team Fan App</p>
-          <p>Version 1.0.0</p>
+          {/* App Version */}
+          <div className="fan-settings-version">
+            <p>YouthSports.team Fan App</p>
+            <p>Version 1.0.0</p>
+          </div>
         </div>
-      </div>
-    </>
+        </div>
+      </main>
+    </div>
   )
 }
 
@@ -298,28 +299,38 @@ export function FanProfileEdit() {
 
   if (loading) {
     return (
-      <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+      <div className="fan-loading">
+        <LoadingSpinner size="large" />
       </div>
     )
   }
 
   return (
-    <>
-      {/* Back Button */}
-      <button 
-        className="fan-back-btn"
-        onClick={() => navigate(getLink(RouteKeys.FAN_PROFILE))}
-      >
-        <span className="material-symbols-outlined">arrow_back</span>
-        Back to Profile
-      </button>
+    <div className="fan-page">
+      <main className="fan-main">
+        <div className="fan-container">
+          {/* Back Button */}
+          <button 
+            className="fan-btn fan-btn-outline"
+            onClick={() => navigate(getLink(RouteKeys.FAN_PROFILE))}
+            style={{ marginBottom: 'var(--spacing-6)' }}
+          >
+            <span className="material-symbols-outlined">arrow_back</span>
+            Back to Profile
+          </button>
 
-      <div className="fan-page-header">
-        <h1 className="fan-page-title">Edit Profile</h1>
-      </div>
+          {/* Page Header */}
+          <div style={{ marginBottom: 'var(--spacing-8)' }}>
+            <h1 style={{ 
+              fontSize: 'var(--font-size-3xl)', 
+              fontWeight: 'var(--font-weight-light)', 
+              letterSpacing: 'var(--tracking-tight)', 
+              color: 'var(--color-zinc-900)',
+              marginBottom: 'var(--spacing-2)'
+            }}>Edit Profile</h1>
+          </div>
 
-      <div className="fan-form-section">
+          <div className="fan-form-section">
         {/* Avatar Upload */}
         <div className="fan-form-avatar">
           <div className="fan-profile-avatar fan-profile-avatar-large">
@@ -370,9 +381,9 @@ export function FanProfileEdit() {
         </div>
 
         {/* Save Button */}
-        <div className="fan-form-actions">
+        <div className="fan-form-actions" style={{ display: 'flex', gap: 'var(--spacing-4)', marginTop: 'var(--spacing-8)' }}>
           <button 
-            className="fan-btn fan-btn-secondary"
+            className="fan-btn fan-btn-outline"
             onClick={() => navigate(getLink(RouteKeys.FAN_PROFILE))}
           >
             Cancel
@@ -382,11 +393,13 @@ export function FanProfileEdit() {
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? <LoadingSpinner size="sm" /> : 'Save Changes'}
+            {saving ? <LoadingSpinner size="small" /> : 'Save Changes'}
           </button>
         </div>
-      </div>
-    </>
+        </div>
+        </div>
+      </main>
+    </div>
   )
 }
 
@@ -395,7 +408,6 @@ export function FanProfileEdit() {
  * URL/ROUTE: /fan/profile/notifications
  */
 export function FanProfileNotifications() {
-  const { t } = useI18n()
   const navigate = useNavigate()
   
   const [loading, setLoading] = useState(true)
@@ -460,41 +472,61 @@ export function FanProfileNotifications() {
 
   if (loading) {
     return (
-      <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+      <div className="fan-loading">
+        <LoadingSpinner size="large" />
       </div>
     )
   }
 
   if (!preferences) {
     return (
-      <div className="fan-empty-state">
-        <span className="material-symbols-outlined">error</span>
-        <h3>Failed to load preferences</h3>
-        <button className="fan-btn fan-btn-primary" onClick={loadPreferences}>
-          Try Again
-        </button>
+      <div className="fan-page">
+        <main className="fan-main">
+          <div className="fan-container">
+            <div className="fan-empty-state">
+              <span className="material-symbols-outlined fan-empty-icon">error</span>
+              <h3 className="fan-empty-title">Failed to load preferences</h3>
+              <button className="fan-btn fan-btn-primary" onClick={loadPreferences}>
+                Try Again
+              </button>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }
 
   return (
-    <>
-      {/* Back Button */}
-      <button 
-        className="fan-back-btn"
-        onClick={() => navigate(getLink(RouteKeys.FAN_PROFILE))}
-      >
-        <span className="material-symbols-outlined">arrow_back</span>
-        Back to Profile
-      </button>
+    <div className="fan-page">
+      <main className="fan-main">
+        <div className="fan-container">
+          {/* Back Button */}
+          <button 
+            className="fan-btn fan-btn-outline"
+            onClick={() => navigate(getLink(RouteKeys.FAN_PROFILE))}
+            style={{ marginBottom: 'var(--spacing-6)' }}
+          >
+            <span className="material-symbols-outlined">arrow_back</span>
+            Back to Profile
+          </button>
 
-      <div className="fan-page-header">
-        <h1 className="fan-page-title">Notification Preferences</h1>
-        <p className="fan-page-subtitle">Control how and when you receive notifications</p>
-      </div>
+          {/* Page Header */}
+          <div style={{ marginBottom: 'var(--spacing-8)' }}>
+            <h1 style={{ 
+              fontSize: 'var(--font-size-3xl)', 
+              fontWeight: 'var(--font-weight-light)', 
+              letterSpacing: 'var(--tracking-tight)', 
+              color: 'var(--color-zinc-900)',
+              marginBottom: 'var(--spacing-2)'
+            }}>Notification Preferences</h1>
+            <p style={{ 
+              fontSize: 'var(--font-size-sm)', 
+              color: 'var(--color-zinc-500)',
+              fontWeight: 'var(--font-weight-light)'
+            }}>Control how and when you receive notifications</p>
+          </div>
 
-      <div className="fan-settings-form">
+          <div className="fan-settings-form">
         {/* Master Toggles */}
         <div className="fan-settings-card">
           <h3 className="fan-settings-card-title">Notification Channels</h3>
@@ -613,9 +645,9 @@ export function FanProfileNotifications() {
         </div>
 
         {/* Save Button */}
-        <div className="fan-form-actions">
+        <div className="fan-form-actions" style={{ display: 'flex', gap: 'var(--spacing-4)', marginTop: 'var(--spacing-8)' }}>
           <button 
-            className="fan-btn fan-btn-secondary"
+            className="fan-btn fan-btn-outline"
             onClick={() => navigate(getLink(RouteKeys.FAN_PROFILE))}
           >
             Cancel
@@ -625,11 +657,13 @@ export function FanProfileNotifications() {
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? <LoadingSpinner size="sm" /> : 'Save Preferences'}
+            {saving ? <LoadingSpinner size="small" /> : 'Save Preferences'}
           </button>
         </div>
-      </div>
-    </>
+        </div>
+        </div>
+      </main>
+    </div>
   )
 }
 
@@ -696,30 +730,44 @@ export function FanProfileLinkedAthletes() {
 
   if (loading) {
     return (
-      <div className="fan-loading-page">
-        <LoadingSpinner size="lg" />
+      <div className="fan-loading">
+        <LoadingSpinner size="large" />
       </div>
     )
   }
 
   return (
-    <>
-      {/* Back Button */}
-      <button 
-        className="fan-back-btn"
-        onClick={() => navigate(getLink(RouteKeys.FAN_PROFILE))}
-      >
-        <span className="material-symbols-outlined">arrow_back</span>
-        Back to Profile
-      </button>
+    <div className="fan-page">
+      <main className="fan-main">
+        <div className="fan-container">
+          {/* Back Button */}
+          <button 
+            className="fan-btn fan-btn-outline"
+            onClick={() => navigate(getLink(RouteKeys.FAN_PROFILE))}
+            style={{ marginBottom: 'var(--spacing-6)' }}
+          >
+            <span className="material-symbols-outlined">arrow_back</span>
+            Back to Profile
+          </button>
 
-      <div className="fan-page-header">
-        <h1 className="fan-page-title">Linked Athletes</h1>
-        <p className="fan-page-subtitle">Athletes connected to your account for enhanced access</p>
-      </div>
+          {/* Page Header */}
+          <div style={{ marginBottom: 'var(--spacing-8)' }}>
+            <h1 style={{ 
+              fontSize: 'var(--font-size-3xl)', 
+              fontWeight: 'var(--font-weight-light)', 
+              letterSpacing: 'var(--tracking-tight)', 
+              color: 'var(--color-zinc-900)',
+              marginBottom: 'var(--spacing-2)'
+            }}>Linked Athletes</h1>
+            <p style={{ 
+              fontSize: 'var(--font-size-sm)', 
+              color: 'var(--color-zinc-500)',
+              fontWeight: 'var(--font-weight-light)'
+            }}>Athletes connected to your account for enhanced access</p>
+          </div>
 
-      {/* Description */}
-      <div className="fan-info-banner">
+          {/* Description */}
+          <div className="fan-info-banner">
         <span className="material-symbols-outlined">info</span>
         <p>
           Linking athletes to your account gives you access to private galleries, 
@@ -727,63 +775,66 @@ export function FanProfileLinkedAthletes() {
         </p>
       </div>
 
-      {linkedAthletes.length === 0 ? (
-        <div className="fan-empty-state">
-          <span className="material-symbols-outlined">family_restroom</span>
-          <h3>No linked athletes</h3>
-          <p>Link athletes to access their private content and schedules</p>
-          <button 
-            className="fan-btn fan-btn-primary"
-            onClick={() => setShowLinkModal(true)}
-          >
-            <span className="material-symbols-outlined">add</span>
-            Link an Athlete
-          </button>
-        </div>
-      ) : (
-        <>
-          <div className="fan-linked-athletes-list">
-            {linkedAthletes.map((athlete) => (
-              <div key={athlete.id} className="fan-linked-athlete-card">
-                <div className="fan-linked-athlete-avatar">
-                  {athlete.photo_url ? (
-                    <img src={athlete.photo_url} alt="" />
-                  ) : (
-                    <span className="material-symbols-outlined">person</span>
-                  )}
-                </div>
-                <div className="fan-linked-athlete-info">
-                  <h3>{athlete.first_name} {athlete.last_name}</h3>
-                  <p>{athlete.team_name}</p>
-                  <span className="fan-linked-athlete-status">
-                    {athlete.verified ? 'Verified' : 'Pending Verification'}
-                  </span>
-                </div>
-                <button 
-                  className="fan-linked-athlete-remove"
-                  onClick={() => handleUnlink(athlete.id)}
-                >
-                  <span className="material-symbols-outlined">close</span>
-                </button>
+          {linkedAthletes.length === 0 ? (
+            <div className="fan-empty-state">
+              <span className="material-symbols-outlined fan-empty-icon">family_restroom</span>
+              <h3 className="fan-empty-title">No linked athletes</h3>
+              <p className="fan-empty-text">Link athletes to access their private content and schedules</p>
+              <button 
+                className="fan-btn fan-btn-primary"
+                onClick={() => setShowLinkModal(true)}
+              >
+                <span className="material-symbols-outlined">add</span>
+                Link an Athlete
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="fan-linked-athletes-list">
+                {linkedAthletes.map((athlete) => (
+                  <div key={athlete.id} className="fan-linked-athlete-card">
+                    <div className="fan-linked-athlete-avatar">
+                      {athlete.photo_url ? (
+                        <img src={athlete.photo_url} alt="" />
+                      ) : (
+                        <span className="material-symbols-outlined">person</span>
+                      )}
+                    </div>
+                    <div className="fan-linked-athlete-info">
+                      <h3>{athlete.first_name} {athlete.last_name}</h3>
+                      <p>{athlete.team_name}</p>
+                      <span className="fan-linked-athlete-status">
+                        {athlete.verified ? 'Verified' : 'Pending Verification'}
+                      </span>
+                    </div>
+                    <button 
+                      className="fan-linked-athlete-remove"
+                      onClick={() => handleUnlink(athlete.id)}
+                    >
+                      <span className="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          
-          <button 
-            className="fan-btn fan-btn-secondary fan-btn-full"
-            onClick={() => setShowLinkModal(true)}
-          >
-            <span className="material-symbols-outlined">add</span>
-            Link Another Athlete
-          </button>
-        </>
-      )}
+              
+              <button 
+                className="fan-btn fan-btn-outline"
+                onClick={() => setShowLinkModal(true)}
+                style={{ width: '100%', marginTop: 'var(--spacing-6)' }}
+              >
+                <span className="material-symbols-outlined">add</span>
+                Link Another Athlete
+              </button>
+            </>
+          )}
 
-      {/* Link Athlete Modal would go here */}
-      {showLinkModal && (
-        <LinkAthleteModal onClose={() => setShowLinkModal(false)} />
-      )}
-    </>
+          {/* Link Athlete Modal would go here */}
+          {showLinkModal && (
+            <LinkAthleteModal onClose={() => setShowLinkModal(false)} />
+          )}
+        </div>
+      </main>
+    </div>
   )
 }
 
@@ -848,7 +899,7 @@ function LinkAthleteModal({ onClose }: LinkAthleteModalProps) {
             onClick={handleSubmit}
             disabled={loading}
           >
-            {loading ? <LoadingSpinner size="sm" /> : 'Link Athlete'}
+            {loading ? <LoadingSpinner size="small" /> : 'Link Athlete'}
           </button>
         </div>
       </div>
@@ -880,22 +931,36 @@ export function FanProfilePrivacy() {
   }
 
   return (
-    <>
-      {/* Back Button */}
-      <button 
-        className="fan-back-btn"
-        onClick={() => navigate(getLink(RouteKeys.FAN_PROFILE))}
-      >
-        <span className="material-symbols-outlined">arrow_back</span>
-        Back to Profile
-      </button>
+    <div className="fan-page">
+      <main className="fan-main">
+        <div className="fan-container">
+          {/* Back Button */}
+          <button 
+            className="fan-btn fan-btn-outline"
+            onClick={() => navigate(getLink(RouteKeys.FAN_PROFILE))}
+            style={{ marginBottom: 'var(--spacing-6)' }}
+          >
+            <span className="material-symbols-outlined">arrow_back</span>
+            Back to Profile
+          </button>
 
-      <div className="fan-page-header">
-        <h1 className="fan-page-title">Privacy Settings</h1>
-        <p className="fan-page-subtitle">Control who can see your information and activity</p>
-      </div>
+          {/* Page Header */}
+          <div style={{ marginBottom: 'var(--spacing-8)' }}>
+            <h1 style={{ 
+              fontSize: 'var(--font-size-3xl)', 
+              fontWeight: 'var(--font-weight-light)', 
+              letterSpacing: 'var(--tracking-tight)', 
+              color: 'var(--color-zinc-900)',
+              marginBottom: 'var(--spacing-2)'
+            }}>Privacy Settings</h1>
+            <p style={{ 
+              fontSize: 'var(--font-size-sm)', 
+              color: 'var(--color-zinc-500)',
+              fontWeight: 'var(--font-weight-light)'
+            }}>Control who can see your information and activity</p>
+          </div>
 
-      <div className="fan-settings-form">
+          <div className="fan-settings-form">
         <div className="fan-settings-card">
           <h3 className="fan-settings-card-title">Profile Visibility</h3>
           
@@ -944,9 +1009,9 @@ export function FanProfilePrivacy() {
         </div>
 
         {/* Save Button */}
-        <div className="fan-form-actions">
+        <div className="fan-form-actions" style={{ display: 'flex', gap: 'var(--spacing-4)', marginTop: 'var(--spacing-8)' }}>
           <button 
-            className="fan-btn fan-btn-secondary"
+            className="fan-btn fan-btn-outline"
             onClick={() => navigate(getLink(RouteKeys.FAN_PROFILE))}
           >
             Cancel
@@ -956,10 +1021,12 @@ export function FanProfilePrivacy() {
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? <LoadingSpinner size="sm" /> : 'Save Settings'}
+            {saving ? <LoadingSpinner size="small" /> : 'Save Settings'}
           </button>
         </div>
-      </div>
-    </>
+        </div>
+        </div>
+      </main>
+    </div>
   )
 }
