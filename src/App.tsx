@@ -85,6 +85,7 @@ const FanPhotos = lazy(() => import('./pages/fan/FanPhotos'))
 const FanGalleryDetail = lazy(() => import('./pages/fan/FanPhotos').then(m => ({ default: m.FanGalleryDetail })))
 const FanAthletePhotos = lazy(() => import('./pages/fan/FanPhotos').then(m => ({ default: m.FanAthletePhotos })))
 const FanSchedule = lazy(() => import('./pages/fan/FanSchedule'))
+const FanEventDetail = lazy(() => import('./pages/fan/FanEventDetail'))
 const FanTickets = lazy(() => import('./pages/fan/FanTickets'))
 const FanTicketDetail = lazy(() => import('./pages/fan/FanTickets').then(m => ({ default: m.FanTicketDetail })))
 const FanProfile = lazy(() => import('./pages/fan/FanProfile'))
@@ -395,6 +396,7 @@ function AppWithTheme() {
             <Route path="org/:slug" element={<Suspense fallback={<AdminLoadingSpinner />}><FanOrgProfile /></Suspense>} />
             <Route path="team/:id" element={<Suspense fallback={<AdminLoadingSpinner />}><FanTeamProfile /></Suspense>} />
             <Route path="athlete/:id" element={<Suspense fallback={<AdminLoadingSpinner />}><FanAthleteProfile /></Suspense>} />
+            <Route path="events/:eventId" element={<Suspense fallback={<AdminLoadingSpinner />}><FanEventDetail /></Suspense>} />
             
             {/* Protected fan routes - require authentication */}
             <Route index element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanHome /></Suspense></ProtectedRoute>} />

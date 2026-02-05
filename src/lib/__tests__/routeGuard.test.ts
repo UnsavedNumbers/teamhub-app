@@ -10,7 +10,7 @@ import {
   getRedirectForUnauthorizedAccess,
   getNamespaceForRole,
   mapAuthRoleToStandardRole,
-} from '../../lib/routeGuard';
+} from '../routeGuard';
 
 describe('Route Access Control', () => {
   describe('isRouteAllowedForRole', () => {
@@ -141,12 +141,22 @@ describe('Route Access Control', () => {
       expect(mapAuthRoleToStandardRole('parent', false, [])).toBe('parent');
     });
 
-    test('maps users with no organizations as fans', () => {
-      expect(mapAuthRoleToStandardRole(undefined, false, [])).toBe('fan');
+    test('maps users with no organizations and isFan=true as fans', () => {
+      expect(mapAuthRoleToStandardRole(undefined, false, [], true)).toBe('fan');
     });
 
-    test('defaults to fan for unknown cases', () => {
-      expect(mapAuthRoleToStandardRole('unknown', false, [])).toBe('fan');
+    test('maps users with no organizations and isFan=false as parents (guardians)', () => {
+      // Guardians without org memberships should NOT be treated as fans
+      expect(mapAuthRoleToStandardRole(undefined, false, [])).toBe('parent');
+    });
+
+    test('defaults to parent for unknown cases without fan flag', () => {
+      // Unknown role without fan flag should default to parent, not fan
+      expect(mapAuthRoleToStandardRole('unknown', false, [])).toBe('parent');
+    });
+
+    test('explicit fan flag takes precedence for users without org roles', () => {
+      expect(mapAuthRoleToStandardRole('unknown', false, [], true)).toBe('fan');
     });
   });
 });

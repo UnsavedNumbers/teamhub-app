@@ -55,12 +55,20 @@ export function hasCoachRole(organizations: Organization[]): boolean {
  * 2. Users with multiple roles -> /portal/role-selection
  * 3. Users with admin role -> /admin
  * 4. Users with coach role -> /admin
- * 5. Users with no organizations (fans) -> /fan/home
- * 6. Otherwise -> /portal/dashboard (parents)
+ * 5. Fans (explicitly identified via signup_mode or fan_org_follows) -> /fan
+ * 6. Otherwise -> /portal/dashboard (parents/guardians)
+ * 
+ * Note: A user is a fan if:
+ * - They signed up with signup_mode='fan' in their auth metadata, OR
+ * - They have entries in the fan_org_follows table
+ * 
+ * A guardian with no org memberships is NOT a fan - they're a parent waiting
+ * to be linked to athletes.
  */
 export function getLoginRedirect(
   isPlatformAdmin: boolean,
-  organizations: Organization[]
+  organizations: Organization[],
+  isFan: boolean = false
 ): string {
   // Priority 1: Platform admins
   if (isPlatformAdmin) {
@@ -82,11 +90,13 @@ export function getLoginRedirect(
     return getLink(RouteKeys.ADMIN_DASHBOARD)
   }
 
-  // Priority 5: Fans (no organization memberships) -> fan home
-  if (organizations.length === 0) {
+  // Priority 5: Explicitly identified fans -> fan home
+  // This is determined by signup_mode='fan' or having fan_org_follows entries
+  if (isFan) {
     return getLink(RouteKeys.FAN_HOME)
   }
 
-  // Default: Parent dashboard
+  // Default: Parent/guardian dashboard
+  // Note: Guardians with no org memberships go here, NOT to fan home
   return getLink(RouteKeys.PORTAL_DASHBOARD)
 }

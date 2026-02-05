@@ -62,8 +62,19 @@ const ROUTE_NAMESPACE_CONFIG: RouteNamespaceConfig[] = [
 
 /**
  * Maps user roles from the auth system to our standardized roles
+ * 
+ * Note: The isFan parameter should be determined by checking:
+ * 1. user.user_metadata?.signup_mode === 'fan'
+ * 2. OR user has entries in fan_org_follows table
+ * 
+ * A guardian/parent with no org memberships is NOT a fan - they default to 'parent'.
  */
-export function mapAuthRoleToStandardRole(authRole: string | undefined, isPlatformAdmin: boolean, organizations: any[]): UserRole {
+export function mapAuthRoleToStandardRole(
+  authRole: string | undefined, 
+  isPlatformAdmin: boolean, 
+  organizations: any[],
+  isFan: boolean = false
+): UserRole {
   if (isPlatformAdmin) return 'platform_admin';
 
   // Check for admin/coach roles in organizations
@@ -79,11 +90,12 @@ export function mapAuthRoleToStandardRole(authRole: string | undefined, isPlatfo
   if (authRole === 'admin') return 'org_admin';
   if (authRole === 'parent') return 'parent';
 
-  // If no organizations, assume fan
-  if (organizations.length === 0) return 'fan';
+  // Check if explicitly identified as a fan
+  if (isFan) return 'fan';
 
-  // Default fallback
-  return 'fan';
+  // Default: Users without org memberships who aren't fans are parents/guardians
+  // (e.g., guardians waiting to be linked to athletes)
+  return 'parent';
 }
 
 /**
