@@ -60,6 +60,8 @@ function mapFakeToDomain(org: FakeOrganization): Organization {
     city: org.city ?? null,
     state: org.state ?? null,
     zip: org.postal_code ?? null,
+    latitude: null,
+    longitude: null,
   }
 }
 

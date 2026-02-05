@@ -109,7 +109,6 @@ export default function CreateAthletePortal() {
     const timeoutRef = useRef<NodeJS.Timeout | null>(null)
     const isMountedRef = useRef(true)
     const isCheckingRef = useRef(false)
-    const isLoadingSportsRef = useRef(false)
 
     // Cleanup on unmount
     useEffect(() => {
@@ -179,15 +178,12 @@ export default function CreateAthletePortal() {
         }
     }, [formData.additionalGuardianEmail, emailTouched, debouncedGuardianLookup])
 
-    // Load system sports on mount
+    // Load system sports on mount (same pattern as AthleteProfile.tsx)
     useEffect(() => {
-        if (!isReady || isLoadingSportsRef.current) return
-
-        isLoadingSportsRef.current = true
-        setIsLoadingSports(true)
-
-        getSystemSports()
-            .then(({ data, error }) => {
+        const loadSports = async () => {
+            try {
+                setIsLoadingSports(true)
+                const { data, error } = await getSystemSports()
                 if (error) {
                     console.error('Error loading sports:', error)
                     return
@@ -195,14 +191,16 @@ export default function CreateAthletePortal() {
                 if (isMountedRef.current && data) {
                     setSports(data)
                 }
-            })
-            .finally(() => {
+            } catch (err) {
+                console.error('Failed to load sports:', err)
+            } finally {
                 if (isMountedRef.current) {
                     setIsLoadingSports(false)
-                    isLoadingSportsRef.current = false
                 }
-            })
-    }, [isReady])
+            }
+        }
+        loadSports()
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
