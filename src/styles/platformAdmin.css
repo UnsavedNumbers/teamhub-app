@@ -85,7 +85,7 @@ html.dark {
     --pa-border-emphasis: #4b5563;
 
     /* Glass/Translucent Surfaces */
-    --pa-glass-bg: rgba(255, 255, 255, 0.85);
+    --pa-glass-bg: rgba(255, 255, 255, 0.98);
     --pa-glass-border: rgba(0, 0, 0, 0.06);
     --pa-glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
     --pa-glass-blur: blur(20px);
@@ -3906,7 +3906,7 @@ html.dark .pa-text-danger {
 /* Dark mode overrides for glass effect */
 .dark .gn-root,
 .pa-root.dark .gn-root {
-    --pa-glass-bg: rgba(11, 15, 20, 0.85);
+    --pa-glass-bg: rgba(11, 15, 20, 0.98);
     --pa-glass-border: rgba(255, 255, 255, 0.1);
     --pa-glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
 }
@@ -4131,7 +4131,7 @@ html.dark .pa-text-danger {
     left: 0;
     min-width: 280px;
     max-width: 640px;
-    background: var(--pa-glass-bg);
+    background: rgba(255, 255, 255, 0.98);
     backdrop-filter: var(--pa-glass-blur);
     -webkit-backdrop-filter: var(--pa-glass-blur);
     border: 1px solid var(--pa-glass-border);
@@ -4143,6 +4143,11 @@ html.dark .pa-text-danger {
     transform: translateY(-8px);
     transition: all var(--pa-motion-normal) var(--pa-ease-out);
     z-index: 200;
+}
+
+.dark .gn-mega,
+html.dark .gn-mega {
+    background: rgba(11, 15, 20, 0.98);
 }
 
 .gn-mega.open {

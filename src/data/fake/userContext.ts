@@ -205,7 +205,7 @@ export function filterByPermissions<T>(
 /**
  * Filter events by user permissions
  */
-export function filterEventsByRole<T extends { team_id?: string; team?: { id?: string; org_id?: string } }>(
+export function filterEventsByRole<T extends { team_id?: string | null; team?: { id?: string | null; org_id?: string | null } }>(
     events: T[],
     permissions: PermissionSet,
     childTeamMemberships: Array<{ childId: string; teamId: string }>,

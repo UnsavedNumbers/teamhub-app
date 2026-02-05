@@ -218,12 +218,12 @@ export async function getFanCalendar(
       }
     }
 
-    // Check cache first
+    // Check cache first (use maybeSingle to avoid error when no rows found)
     const { data: cacheData } = await supabaseAny.from('fan_calendar_cache')
       .select('calendar_data, generated_at, expires_at')
       .eq('user_id', userId)
       .gt('expires_at', new Date().toISOString())
-      .single()
+      .maybeSingle()
 
     if (cacheData) {
       return {
@@ -246,10 +246,14 @@ export async function getFanCalendar(
 
     if (error) throw error
 
+    // RPC returns { events: [...], generated_at: ... }
+    const rpcResult = data as { events?: unknown[]; generated_at?: string } | null
+    const events = Array.isArray(rpcResult?.events) ? rpcResult.events : []
+
     return {
       data: {
-        events: (data || []) as CalendarEvent[],
-        generated_at: new Date().toISOString(),
+        events: events as CalendarEvent[],
+        generated_at: rpcResult?.generated_at || new Date().toISOString(),
         from_cache: false,
       },
       error: null,
@@ -529,6 +533,7 @@ export interface EntityProfile {
   slug?: string
   location_city?: string
   location_state?: string
+  location_visible?: boolean
   website?: string
   // Team-specific fields
   sport?: string
@@ -544,7 +549,7 @@ export interface EntityProfile {
  * Get organization profile
  */
 export async function getOrgProfile(orgId: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return { data: null, error: null }
+  if (USE_FAKE_DATA) return fakeService.getOrgProfile(orgId)
 
   try {
     const { data, error } = await supabaseAny.rpc('get_org_profile', {
@@ -568,14 +573,19 @@ export async function getOrgProfile(orgId: string): Promise<{ data: EntityProfil
 /**
  * Get team profile
  */
-export async function getTeamProfile(_teamId: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return { data: null, error: null }
+export async function getTeamProfile(teamId: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
+  if (USE_FAKE_DATA) return fakeService.getTeamProfile(teamId)
 
   try {
-    // TODO: Implement get_team_profile RPC function
+    const { data, error } = await supabaseAny.rpc('get_team_profile', {
+      p_team_id: teamId,
+    })
+
+    if (error) throw error
+
     return {
-      data: null,
-      error: new Error('Team profiles not yet implemented'),
+      data: data as EntityProfile,
+      error: null,
     }
   } catch (err) {
     return {
@@ -588,14 +598,19 @@ export async function getTeamProfile(_teamId: string): Promise<{ data: EntityPro
 /**
  * Get athlete profile
  */
-export async function getAthleteProfile(_athleteId: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return { data: null, error: null }
+export async function getAthleteProfile(athleteId: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
+  if (USE_FAKE_DATA) return fakeService.getAthleteProfile(athleteId)
 
   try {
-    // TODO: Implement get_athlete_profile RPC function
+    const { data, error } = await supabaseAny.rpc('get_athlete_profile', {
+      p_athlete_id: athleteId,
+    })
+
+    if (error) throw error
+
     return {
-      data: null,
-      error: new Error('Athlete profiles not yet implemented'),
+      data: data as EntityProfile,
+      error: null,
     }
   } catch (err) {
     return {

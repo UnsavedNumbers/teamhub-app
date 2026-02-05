@@ -37,6 +37,12 @@ const portal = {
         label: 'Event Details',
         icon: 'event',
     },
+    eventEdit: {
+        path: '/portal/calendar/events/:eventId/edit',
+        params: ['eventId'] as const,
+        label: 'Edit Event',
+        icon: 'edit',
+    },
 
     // Travel
     travel: {
@@ -194,6 +200,28 @@ const portal = {
         label: 'Settings',
         icon: 'settings',
         description: 'Preferences',
+    },
+
+    // Following/Organizations
+    following: {
+        path: '/portal/following',
+        label: 'Followed Organizations',
+        icon: 'favorite',
+        description: 'Organizations you follow',
+    },
+    discoverOrgs: {
+        path: '/portal/discover',
+        label: 'Browse Organizations',
+        icon: 'explore',
+        description: 'Discover new teams',
+    },
+
+    // Help & Support
+    help: {
+        path: '/portal/help',
+        label: 'Help & Support',
+        icon: 'help',
+        description: 'Get assistance',
     },
 
     // Photos

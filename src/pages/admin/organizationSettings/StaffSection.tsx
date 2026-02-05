@@ -27,6 +27,7 @@ import AddStaffModal from '../../../components/admin/staff/AddStaffModal'
 import StaffPermissionEditor from '../../../components/admin/staff/StaffPermissionEditor'
 import StaffAuditLog from '../../../components/admin/staff/StaffAuditLog'
 import { useI18n } from '../../../i18n/useI18n'
+import { STAFF_PERMISSION_LABEL_KEYS } from '../../../utils/staffPermissions'
 
 interface StaffSectionProps {
   organizationId: string
@@ -41,6 +42,8 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
   const [viewingAuditLog, setViewingAuditLog] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(25)
 
   const fetchStaff = useCallback(async () => {
     if (!isReady || !context) return
@@ -70,10 +73,20 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
     if (isReady) fetchStaff()
   }, [isReady, fetchStaff])
 
+  useEffect(() => {
+    if (page > 0 && page * rowsPerPage >= staff.length) {
+      setPage(0)
+    }
+  }, [page, rowsPerPage, staff.length])
+
   const handleAddStaff = async (userId: string, permissions: StaffPermissions) => {
     if (!context) return
 
     try {
+      if (!navigator.onLine) {
+        showError(t('common.error.offline'))
+        return
+      }
       const { error: addError } = await addStaffMember(context, {
         user_id: userId,
         org_id: organizationId,
@@ -97,6 +110,10 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
     if (!context) return
 
     try {
+      if (!navigator.onLine) {
+        showError(t('common.error.offline'))
+        return
+      }
       const { error: updateError } = await updateStaffPermissions(
         context,
         organizationId,
@@ -122,6 +139,10 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
     if (!confirm(t('admin.staff.revokeConfirm'))) return
 
     try {
+      if (!navigator.onLine) {
+        showError(t('common.error.offline'))
+        return
+      }
       const { error: revokeError } = await revokeStaffAccess(
         context,
         organizationId,
@@ -163,7 +184,10 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
         const perms = row.permissions || {}
         const activePerms = Object.entries(perms)
           .filter(([_, value]) => value === true)
-          .map(([key]) => key.replace('can_', '').replace(/_/g, ' '))
+          .map(([key]) => {
+            const labelKey = STAFF_PERMISSION_LABEL_KEYS[key as keyof StaffPermissions]
+            return labelKey ? t(labelKey) : key
+          })
         
         return (
           <div className="pa-flex pa-gap-1 pa-flex-wrap">
@@ -217,7 +241,7 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
             size="compact"
             onClick={() => setViewingAuditLog(row.id)}
           >
-            {t('admin.staff.auditLog')}
+            {t('admin.staff.auditLog.label')}
           </Button>
           {row.is_active && (
             <Button
@@ -232,6 +256,8 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
       ),
     },
   ]
+
+  const pagedStaff = staff.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
 
   return (
     <div>
@@ -275,13 +301,16 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
       <Card>
         <PlatformDataTable
           columns={columns}
-          rows={staff}
+          rows={pagedStaff}
           loading={loading}
           totalCount={staff.length}
-          page={0}
-          rowsPerPage={staff.length || 25}
-          onPageChange={() => {}}
-          onRowsPerPageChange={() => {}}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          onPageChange={(nextPage) => setPage(nextPage)}
+          onRowsPerPageChange={(nextRows) => {
+            setRowsPerPage(nextRows)
+            setPage(0)
+          }}
           emptyMessage={t('admin.staff.noStaff')}
         />
       </Card>

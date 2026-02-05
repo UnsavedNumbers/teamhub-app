@@ -294,7 +294,7 @@ export function RoleSelection() {
         window.location.reload()
       }
     } catch (err: any) {
-      setError(err.message || t('common.error'))
+      setError(err.message || t('common.error.label'))
     } finally {
       setRetrying(false)
     }

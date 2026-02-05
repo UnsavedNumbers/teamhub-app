@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Card, PageHeader, Button, Input } from '@/components/platformAdmin'
+import { FanVisibilityToggle } from '@/components/admin/FanVisibilityToggle'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
 import { USE_FAKE_DATA } from '@/data/config'
 import { showError, showSuccess } from '@/utils/toast'
 import { getLink } from '@/utils/routes'
 import { createGalleryForEntity, mapEntityToGalleryType, type GalleryEntityType } from '@/data/services/galleryService'
+import { mapFanVisibilityToGalleryVisibility } from '@/utils/fanVisibilityHelpers'
 
 type EntityTypeOption = 'organization' | 'season'
 
@@ -21,6 +23,7 @@ export default function CreateGallery() {
   const [entityType, setEntityType] = useState<EntityTypeOption>('organization')
   const [entityId, setEntityId] = useState('')
   const [requireApproval, setRequireApproval] = useState(false)
+  const [visibleToFans, setVisibleToFans] = useState(false)
   const [saving, setSaving] = useState(false)
 
   // Pre-fill from query params
@@ -71,6 +74,7 @@ export default function CreateGallery() {
     setSaving(true)
     try {
       const galleryType = mapEntityToGalleryType(entityType as GalleryEntityType)
+      const visibility = mapFanVisibilityToGalleryVisibility(visibleToFans)
       const { data, error } = await createGalleryForEntity(
         context,
         galleryType,
@@ -79,7 +83,7 @@ export default function CreateGallery() {
         true, // is_active
         requireApproval,
         description.trim() || null,
-        'team' // default visibility
+        visibility
       )
 
       if (error || !data) {
@@ -197,6 +201,16 @@ export default function CreateGallery() {
                   {t('photos.form.requireApprovalHelp')}
                 </p>
               </div>
+            </div>
+
+            {/* Fan Visibility */}
+            <div>
+              <FanVisibilityToggle
+                checked={visibleToFans}
+                onChange={setVisibleToFans}
+                entityType="gallery"
+                disabled={saving}
+              />
             </div>
 
             {/* Actions */}

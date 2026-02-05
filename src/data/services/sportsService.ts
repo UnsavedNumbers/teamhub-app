@@ -720,8 +720,8 @@ export async function uploadSportIcon(
         const filePath = `sports/${context.orgId}/${sportId}/icon.${fileExt}`
 
         const { error: uploadError } = await supabase.storage
-            .from('organization-assets')
-            .upload(filePath, file, { upsert: true })
+            .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
+            .upload(`sports/${filePath}`, file, { upsert: true })
 
         if (uploadError) {
             // Check for network errors
@@ -792,8 +792,8 @@ export function getSportIconUrl(iconPath: string | null): string | null {
     if (!iconPath.includes('/') && !iconPath.includes('.')) return null
     
     const { data } = supabase.storage
-        .from('organization-assets')
-        .getPublicUrl(iconPath)
+        .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
+        .getPublicUrl(`sports/${iconPath}`)
     
     return data.publicUrl
 }
@@ -834,8 +834,8 @@ export async function deleteSportIcon(
             : null
         if (customizationRow?.icon_path) {
             const { error: deleteError } = await supabase.storage
-                .from('organization-assets')
-                .remove([customizationRow.icon_path])
+                .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
+                .remove([`sports/${customizationRow.icon_path}`])
 
             if (deleteError) {
                 console.error('[sportsService] Error deleting icon file:', deleteError)

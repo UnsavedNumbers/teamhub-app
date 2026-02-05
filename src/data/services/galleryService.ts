@@ -56,6 +56,7 @@ export interface Gallery {
   created_by_user_id?: string | null
   allow_contributions: boolean
   require_approval: boolean
+  fans_can_see?: boolean
   is_system_generated?: boolean
   created_at: string
   updated_at: string
@@ -225,16 +226,23 @@ export async function getGalleriesForUser(
     console.log('[galleryService] getGalleriesForUser params:', params, 'context.orgId:', context.orgId)
 
     // Debug: check org admin status
-    const { data: debugResult } = await supabase.rpc('is_org_admin', {
+    const { data: debugResult, error: debugAdminError } = await supabase.rpc('is_org_admin', {
       org_id_param: context.orgId
     })
-    console.log('[galleryService] is_org_admin check:', debugResult)
+    console.log('[galleryService] is_org_admin check:', debugResult, debugAdminError)
 
     // Debug: check user's organization memberships
     const { data: memberships, error: memError } = await supabase
       .from('organization_members')
       .select('organization_id, role, user_id')
     console.log('[galleryService] User memberships:', memberships, memError)
+
+    // Debug: Try to call can_view_gallery directly for a known gallery
+    const testGalleryId = '2a7eba2b-ae54-4b79-a4aa-f68a37aa7bf8' // Known gallery ID
+    const { data: canViewResult, error: canViewError } = await supabase.rpc('can_view_gallery', {
+      gallery_id_param: testGalleryId
+    })
+    console.log('[galleryService] can_view_gallery test:', { galleryId: testGalleryId, canView: canViewResult, error: canViewError })
 
     // Debug: check what galleries exist (without RLS)
     const { data: allGalleries, error: debugError } = await supabase
@@ -331,14 +339,14 @@ export async function getGalleriesForUser(
       const galleriesWithoutCover = galleryList.filter(g => !g.cover_url && (g.photo_count ?? 0) > 0)
       if (galleriesWithoutCover.length > 0) {
         const galleryIdsNeedingCover = galleriesWithoutCover.map(g => g.id)
-        
+
         // Get first photo for each gallery that needs a cover
         const { data: firstPhotos } = await supabase
           .from('gallery_photos')
           .select('gallery_id, thumbnail_path, storage_path')
           .in('gallery_id', galleryIdsNeedingCover)
           .order('created_at', { ascending: true })
-        
+
         if (firstPhotos) {
           // Build a map of gallery_id -> first photo (only keep first per gallery)
           const firstPhotoMap = new Map<string, { thumbnail_path: string | null; storage_path: string }>()
@@ -347,7 +355,7 @@ export async function getGalleriesForUser(
               firstPhotoMap.set(photo.gallery_id, photo)
             }
           }
-          
+
           // Set cover_url for galleries using their first photo
           galleryList.forEach((gallery) => {
             if (!gallery.cover_url) {
@@ -578,13 +586,15 @@ export async function getRelatedGalleries(
  * @param entityType Entity type (athlete, team, event, travel_plan, program)
  * @param entityId Entity ID
  * @param name Optional custom gallery name
+ * @param orgId Optional org ID override - if provided, will be used instead of context.orgId
  * @returns Gallery data or null
  */
 export async function ensureEntityGallery(
   context: UserContext,
   entityType: GalleryEntityType,
   entityId: string,
-  name?: string | null
+  name?: string | null,
+  orgId?: string | null
 ): Promise<{ data: Gallery | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
     await simulateDelay()
@@ -607,11 +617,14 @@ export async function ensureEntityGallery(
       }
     }
 
+    // Use provided orgId if available, otherwise fall back to context.orgId
+    const effectiveOrgId = orgId || context.orgId
+
     // Call the elevated RPC to ensure gallery exists
     const { data: galleryId, error: rpcError } = await supabase.rpc('ensure_entity_gallery', {
       p_entity_type: galleryType,
       p_entity_id: entityId,
-      p_org_id: context.orgId,
+      p_org_id: effectiveOrgId,
       p_user_id: context.userId,
       p_name: name || undefined,
     })
@@ -985,6 +998,7 @@ export async function createGalleryForEntity(
         name,
         description: description || null,
         visibility,
+        fans_can_see: visibility === 'public',
         allow_contributions: allowContributions,
         require_approval: requireApproval,
         is_system_generated: isSystemGenerated,
@@ -1405,6 +1419,7 @@ export async function updateGallery(
       .from('galleries')
       .update({
         ...payload,
+        fans_can_see: payload.visibility ? payload.visibility === 'public' : undefined,
         updated_at: new Date().toISOString(),
       })
       .eq('id', galleryId)
@@ -1554,7 +1569,7 @@ export async function deleteGallery(
       })
 
     if (paths.length > 0) {
-      const { error: storageError } = await supabase.storage.from('public-media').remove(paths)
+      const { error: storageError } = await supabase.storage.from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET).remove(paths)
       if (storageError) console.warn('[galleryService] Storage delete warning:', storageError)
     }
 

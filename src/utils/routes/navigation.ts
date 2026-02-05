@@ -31,35 +31,52 @@ export const parentNavSections: NavigationSection[] = [
         ],
     },
     {
-        label: 'Schedule',
+        label: 'My Events',
         route: '/portal/calendar',
         groups: [
             {
-                label: 'Schedule',
+                label: 'My Events',
                 items: [
-                    { routeKey: 'portal.calendar', text: 'Schedule', icon: 'calendar_month', description: 'View all events' },
+                    { routeKey: 'portal.calendar', text: 'Events I\'m Attending', icon: 'calendar_month', description: 'View upcoming events' },
+                    { routeKey: 'portal.bookmarkedEvents', text: 'My Bookmarks', icon: 'bookmark', description: 'Saved events' },
+                    { routeKey: 'portal.calendar', text: 'Past Events', icon: 'history', description: 'Event history' },
                 ],
             },
         ],
     },
     {
-        label: 'Travel',
-        route: '/portal/travel',
+        label: 'My Teams',
+        route: '/portal/athletes',
         groups: [
             {
-                label: 'Travel',
+                label: 'My Teams',
                 items: [
-                    { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', description: 'Trip information' },
+                    { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', description: 'Athletes and teams I follow' },
+                    { routeKey: 'portal.requestAttachment', text: 'Request Athlete Attachment', icon: 'person_add', description: 'Attach to an existing athlete' },
                 ],
             },
         ],
     },
     {
-        label: 'Huddles',
+        label: 'Tickets & Payments',
+        route: '/portal/payments',
+        groups: [
+            {
+                label: 'Tickets & Payments',
+                items: [
+                    { routeKey: 'portal.myTickets', text: 'My Tickets', icon: 'confirmation_number', description: 'Event tickets' },
+                    { routeKey: 'portal.payments', text: 'Payment History', icon: 'receipt_long', description: 'Outstanding fees and history' },
+                    { routeKey: 'portal.uniforms', text: 'Uniform Orders', icon: 'checkroom', description: 'Gear and uniforms' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'Messages',
         route: '/portal/messages',
         groups: [
             {
-                label: 'Huddles',
+                label: 'Messages',
                 items: [
                     { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team chat and announcements' },
                 ],
@@ -67,25 +84,15 @@ export const parentNavSections: NavigationSection[] = [
         ],
     },
     {
-        label: 'Payments',
-        route: '/portal/payments',
+        label: 'Organizations',
+        route: '/portal/following',
         groups: [
             {
-                label: '',
+                label: 'Organizations',
                 items: [
-                    { routeKey: 'portal.payments', text: 'Payments', icon: 'receipt_long', description: 'Outstanding fees' },
-                ],
-            },
-        ],
-    },
-    {
-        label: 'Photos',
-        route: '/portal/photos',
-        groups: [
-            {
-                label: 'Photos',
-                items: [
-                    { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', description: 'Team and athlete photos' },
+                    { routeKey: 'portal.following', text: 'Followed Organizations', icon: 'favorite', description: 'Organizations I follow' },
+                    { routeKey: 'portal.discoverOrgs', text: 'Browse Organizations', icon: 'explore', description: 'Discover new teams' },
+                    { routeKey: 'portal.join', text: 'Join a Team', icon: 'group_add', description: 'Enter an invite code' },
                 ],
             },
         ],
@@ -94,19 +101,17 @@ export const parentNavSections: NavigationSection[] = [
         label: 'More',
         groups: [
             {
-                label: 'Programs',
+                label: 'Media & Programs',
                 items: [
-                    { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', description: 'Your children\'s profiles' },
-                    { routeKey: 'portal.athletes.requestAttachment', text: 'Request Athlete Attachment', icon: 'person_add', description: 'Request to attach to an existing athlete' },
-                    { routeKey: 'portal.join', text: 'Join a Team', icon: 'group_add', description: 'Enter an invite code' },
+                    { routeKey: 'portal.photos', text: 'Photos & Videos', icon: 'photo_library', description: 'Team galleries' },
                     { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
                 ],
             },
             {
-                label: 'Additional',
+                label: 'Account',
                 items: [
-                    { routeKey: 'portal.uniforms', text: 'Uniforms', icon: 'checkroom', description: 'Uniform orders' },
-                    { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', description: 'Preferences' },
+                    { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', description: 'Account preferences' },
+                    { routeKey: 'portal.help', text: 'Help & Support', icon: 'help', description: 'Get assistance' },
                 ],
             },
         ],

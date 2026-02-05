@@ -136,6 +136,7 @@ export const rolePermissionsSchema = z.record(
 export const visibilitySettingsSchema = z.object({
   org_id: z.string().uuid(),
   role_permissions: rolePermissionsSchema.optional(),
+  fan_visibility_defaults: z.record(z.string(), z.boolean()).optional(),
   updated_at: z.string(),
 })
 
