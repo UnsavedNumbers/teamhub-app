@@ -410,9 +410,10 @@ export default function EventDetail() {
       if (eventError || !eventData) {
         // Preserve query params when redirecting back to calendar
         const searchParams = new URLSearchParams(location.search)
+        const calendarPath = getLink(RouteKeys.PORTAL_CALENDAR)
         const returnPath = searchParams.toString() 
-          ? `/portal/calendar?${searchParams.toString()}` 
-          : '/portal/calendar'
+          ? `${calendarPath}?${searchParams.toString()}` 
+          : calendarPath
         navigate(returnPath)
         return
       }
@@ -553,7 +554,7 @@ export default function EventDetail() {
       alert(error.message)
       setLoading(false)
     } else {
-      navigate('/portal/calendar')
+      navigate(getLink(RouteKeys.PORTAL_CALENDAR))
     }
   }
 
@@ -604,8 +605,8 @@ export default function EventDetail() {
     return (
       <PortalLayout
         breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Calendar', path: '/portal/calendar' },
+          { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
+          { label: 'Calendar', path: getLink(RouteKeys.PORTAL_CALENDAR) },
           { label: t('common.loading') },
         ]}
       >
@@ -619,6 +620,11 @@ export default function EventDetail() {
   if (!event) return null
 
   const searchParams = new URLSearchParams(location.search)
+  const calendarPath = getLink(RouteKeys.PORTAL_CALENDAR)
+  const calendarPathWithParams = searchParams.toString()
+    ? `${calendarPath}?${searchParams.toString()}`
+    : calendarPath
+  const dashboardPath = getLink(RouteKeys.PORTAL_DASHBOARD)
   const venueAddress = (event.event_location as any)?.venue_address || event.location
   
   // Check if event ended more than 24 hours ago
@@ -633,12 +639,10 @@ export default function EventDetail() {
   return (
     <PortalLayout
       breadcrumbs={bannerUrl ? [] : [
-        { label: 'Home', path: '/portal/dashboard' },
+        { label: 'Home', path: dashboardPath },
         { 
           label: 'Calendar', 
-          path: searchParams.toString() 
-            ? `/portal/calendar?${searchParams.toString()}` 
-            : '/portal/calendar' 
+          path: calendarPathWithParams
         },
         { label: event.title },
       ]}
@@ -652,10 +656,10 @@ export default function EventDetail() {
           <div className="event-hero-banner-content">
             {/* Breadcrumbs in hero */}
             <nav className="portal-breadcrumbs flex items-center gap-2 text-sm mb-2">
-              <a href="/portal/dashboard" className="hover:underline">Home</a>
+              <a href={dashboardPath} className="hover:underline">Home</a>
               <span>/</span>
               <a 
-                href={searchParams.toString() ? `/portal/calendar?${searchParams.toString()}` : '/portal/calendar'} 
+                href={calendarPathWithParams} 
                 className="hover:underline"
               >
                 Calendar
@@ -718,7 +722,6 @@ export default function EventDetail() {
                           }
                         }}
                         disabled={!orgSlug || !event.ticketed_event?.id}
-                        size="sm"
                         className="mt-1"
                       >
                         {t('calendar.event.getTickets')}
@@ -743,7 +746,7 @@ export default function EventDetail() {
             )}
             {canManage && (
               <>
-                <Button variant="secondary" onClick={() => navigate(`/portal/calendar/events/${eventId}/edit`)}>
+                <Button variant="secondary" onClick={() => navigate(getLink(RouteKeys.PORTAL_EVENT_EDIT, { eventId: eventId! }))}>
                   <Icon name="edit" />
                 </Button>
                 <Button variant="secondary" onClick={handleDelete}>
@@ -778,7 +781,7 @@ export default function EventDetail() {
               )}
               {canManage && (
                 <>
-                  <Button variant="secondary" onClick={() => navigate(`/portal/calendar/events/${eventId}/edit`)}>
+                  <Button variant="secondary" onClick={() => navigate(getLink(RouteKeys.PORTAL_EVENT_EDIT, { eventId: eventId! }))}>
                     <Icon name="edit" />
                   </Button>
                   <Button variant="secondary" onClick={handleDelete}>
@@ -989,7 +992,7 @@ export default function EventDetail() {
                     <Button
                       variant="primary"
                       className="mt-4"
-                      onClick={() => navigate(`/portal/calendar/events/${eventId}/edit`)}
+                      onClick={() => navigate(getLink(RouteKeys.PORTAL_EVENT_EDIT, { eventId: eventId! }))}
                     >
                       <Icon name="edit" size="text-sm" className="mr-2" />
                       Add Location
@@ -1033,7 +1036,7 @@ export default function EventDetail() {
                 {children.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-slate-500 dark:text-slate-400 mb-4">{t('portal.events.noChildren')}</p>
-                    <Button variant="primary" onClick={() => navigate('/portal/athletes')}>
+                    <Button variant="primary" onClick={() => navigate(getLink(RouteKeys.PORTAL_ATHLETES))}>
                       {t('portal.events.add')}
                     </Button>
                   </div>

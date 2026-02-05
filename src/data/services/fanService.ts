@@ -218,12 +218,12 @@ export async function getFanCalendar(
       }
     }
 
-    // Check cache first
+    // Check cache first (use maybeSingle to avoid error when no rows found)
     const { data: cacheData } = await supabaseAny.from('fan_calendar_cache')
       .select('calendar_data, generated_at, expires_at')
       .eq('user_id', userId)
       .gt('expires_at', new Date().toISOString())
-      .single()
+      .maybeSingle()
 
     if (cacheData) {
       return {
@@ -246,10 +246,14 @@ export async function getFanCalendar(
 
     if (error) throw error
 
+    // RPC returns { events: [...], generated_at: ... }
+    const rpcResult = data as { events?: unknown[]; generated_at?: string } | null
+    const events = Array.isArray(rpcResult?.events) ? rpcResult.events : []
+
     return {
       data: {
-        events: (data || []) as CalendarEvent[],
-        generated_at: new Date().toISOString(),
+        events: events as CalendarEvent[],
+        generated_at: rpcResult?.generated_at || new Date().toISOString(),
         from_cache: false,
       },
       error: null,

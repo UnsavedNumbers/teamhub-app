@@ -539,7 +539,7 @@ export async function getTravelEvents(
                     getTeamsForUserChildren(context.userId).forEach(id => accessibleTeamIds.add(id))
                 }
 
-                travelEvents = travelEvents.filter(e => accessibleTeamIds.has(e.team_id))
+                travelEvents = travelEvents.filter(e => (e.team_id ? accessibleTeamIds.has(e.team_id) : false))
             }
 
             // Sort by start date
@@ -1501,8 +1501,8 @@ function convertEventToTravelPlan(event: TravelEvent): FakeTravelPlan {
     return {
         id: event.id,
         org_id: event.team?.org_id || '',
-        team_id: event.team_id,
-        season_id: event.season_id,
+        team_id: event.team_id || event.team?.id || '',
+        season_id: event.season_id || event.season?.id || '',
         title: event.title,
         location: event.location || event.event_location?.city || '',
         destination_city: event.event_location?.city || null,

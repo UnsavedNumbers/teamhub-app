@@ -140,7 +140,7 @@ export default function AddStaffModal({ organizationId: _organizationId, onClose
           <>
             <InlineNotice
               tone="success"
-              title={t('admin.staff.userFound', { name: user.display_name || user.email })}
+              title={t('admin.staff.userFound', { name: user.display_name || user.email || t('common.unknown') })}
             />
 
             <div>

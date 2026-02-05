@@ -23,6 +23,7 @@ import {
   defaultContactSchema 
 } from '../../../types/organizationContacts'
 import { useI18n } from '../../../i18n/useI18n'
+import type { TranslationKey } from '../../../i18n'
 
 // Schema for a single category row in the form
 const subContactSchema = z.object({
@@ -58,6 +59,14 @@ const contactFormSchema = z.object({
 })
 
 type ContactFormData = z.infer<typeof contactFormSchema>
+
+const TRAVEL_SUBCATEGORY_KEYS = ['transportation', 'lodging', 'venue', 'emergency'] as const
+const TRAVEL_SUBCATEGORY_LABEL_KEYS: Record<(typeof TRAVEL_SUBCATEGORY_KEYS)[number], TranslationKey> = {
+  transportation: 'admin.organizationSettings.contacts.travelCategories.transportation',
+  lodging: 'admin.organizationSettings.contacts.travelCategories.lodging',
+  venue: 'admin.organizationSettings.contacts.travelCategories.venue',
+  emergency: 'admin.organizationSettings.contacts.travelCategories.emergency',
+}
 
 export default function ContactSection({ orgId }: { orgId: string }) {
   const { t } = useI18n()
@@ -370,12 +379,12 @@ export default function ContactSection({ orgId }: { orgId: string }) {
                                 {field.category === 'travel' && (
                                   <>
                                     <div className="pa-w-full pa-text-sm pa-text-muted pa-mb-2">{t('admin.organizationSettings.contacts.travelIntro')}</div>
-                                    {['transportation','lodging','venue','emergency'].map((sub, subIdx) => (
+                                    {TRAVEL_SUBCATEGORY_KEYS.map((sub, subIdx) => (
                                       <Fragment key={sub}>
                                         {subIdx > 0 && <hr className="pa-border-t pa-my-4" />}
                                         
                                         <div className="oa-contact-form-grid">
-                                          <h4 className="oa-category-title">{t(`admin.organizationSettings.contacts.travelCategories.${sub}`)}</h4>
+                                          <h4 className="oa-category-title">{t(TRAVEL_SUBCATEGORY_LABEL_KEYS[sub])}</h4>
                                           <div className="pa-text-xs pa-text-muted pa-text-right">
                                             {sub === 'transportation' && t('admin.organizationSettings.contacts.travelDescriptions.transportation')}
                                             {sub === 'lodging' && t('admin.organizationSettings.contacts.travelDescriptions.lodging')}

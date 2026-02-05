@@ -2945,6 +2945,10 @@ export const en = {
             message: 'Create your first photo gallery to get started',
             createButton: 'Create Gallery',
         },
+        emptySection: {
+            title: 'No photos yet',
+            description: 'Upload your first photo.',
+        },
 
         // Errors
         errors: {
@@ -2989,12 +2993,6 @@ export const en = {
         photo: 'photo',
         photos: 'photos',
         viewAll: 'View All',
-
-        // Empty states for photo sections
-        empty: {
-            title: 'No photos yet',
-            description: 'Upload your first photo.',
-        },
 
         // Error states for photo sections
         error: {
@@ -5743,6 +5741,10 @@ export const es = {
             title: 'Aún no hay galerías',
             message: 'Crea tu primera galería de fotos para comenzar',
             createButton: 'Crear Galería',
+        },
+        emptySection: {
+            title: 'Aún no hay fotos',
+            description: 'Sube tu primera foto.',
         },
 
         // Errores

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { startTransition } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
@@ -167,7 +167,7 @@ export default function OrganizationSettings() {
       console.log('loadData: received org details', {
         'profile_visible_to_fans': detailsResult.data?.profile_visible_to_fans,
         'name': detailsResult.data?.name,
-        'updated_at': detailsResult.data?.updated_at,
+        'updated_at': detailsResult.data?.updatedAt,
       })
       setOrgDetails(detailsResult.data)
       setSettings(settingsResult.data)
@@ -357,7 +357,7 @@ export default function OrganizationSettings() {
         </TabsList>
 
         <TabsContent value="overview">
-          {orgDetails && <OverviewForm key={orgDetails.id + '-' + (orgDetails.updated_at || 'initial')} org={orgDetails} onSave={handleSaveOverview} loading={saving} />}
+          {orgDetails && <OverviewForm key={orgDetails.id + '-' + (orgDetails.updatedAt || 'initial')} org={orgDetails} onSave={handleSaveOverview} loading={saving} />}
 
           {/* Public URL slug — set/update slug for established orgs */}
           {currentOrganization?.id && (
@@ -1062,7 +1062,7 @@ function NotificationsForm({ settings, onSave, loading }: { settings: OrgSetting
 
 function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsType['visibility'], onSave: (d: any) => void, loading: boolean }) {
     const { t } = useI18n()
-    const { control, handleSubmit, reset, watch, setValue } = useForm({
+    const { control, handleSubmit, reset } = useForm({
     defaultValues: { 
       ...settings,
       fan_visibility_defaults: settings.fan_visibility_defaults || {}
@@ -1871,5 +1871,4 @@ function AdvancedForm({ settings, onSave, loading }: { settings: OrgSettingsType
     </Card>
   )
 }
-
 

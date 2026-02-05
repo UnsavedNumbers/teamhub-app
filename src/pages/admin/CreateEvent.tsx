@@ -36,6 +36,7 @@ import {
 import { API_TIMEOUT_MS } from '../../constants/api'
 import { STORAGE_KEYS, STORAGE_EXPIRY } from '../../constants/storage'
 import { getDefaultEventVisibility } from '../../utils/fanVisibilityHelpers'
+import { getLink, RouteKeys } from '../../utils/routes'
 
 const STORAGE_KEY = STORAGE_KEYS.FORM_AUTOSAVE
 const DRAFT_TTL_MS = STORAGE_EXPIRY.FORM_AUTOSAVE
@@ -420,7 +421,8 @@ export default function CreateEvent() {
           return
         }
         
-        setOrgVisibilityDefaults(data?.fan_visibility_defaults || null)
+        const defaults = (data?.fan_visibility_defaults as Record<string, boolean> | null) ?? null
+        setOrgVisibilityDefaults(defaults)
       } catch (err) {
         console.error('Error fetching org visibility defaults:', err)
       }
@@ -532,8 +534,8 @@ export default function CreateEvent() {
       const eventInsertData = {
         title: data.title,
         type: data.type,
-        team_id: data.team_id,
-        season_id: data.season_id,
+        team_id: data.team_id!,
+        season_id: data.season_id!,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
         arrival_time: arrival ? arrival.toISOString() : null,
@@ -598,7 +600,7 @@ export default function CreateEvent() {
       // 4. Handle Ticketing
       if (data.ticketing?.is_ticketed) {
         // Get org_id from team
-        const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', data.team_id).single()
+        const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', data.team_id!).single()
         if (!teamData?.org_id) {
           throw new Error('Failed to get organization ID from team')
         }
@@ -608,7 +610,7 @@ export default function CreateEvent() {
         const ticketedEventData: TicketedEventInsert = {
           event_id: eventDataAny.id,
           org_id: teamData.org_id,
-          team_id: data.team_id,
+          team_id: data.team_id!,
           event_type: data.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
           title: data.title,
           description: data.notes || null,
@@ -694,11 +696,11 @@ export default function CreateEvent() {
 
       // Distribute notifications
       const { distributeEventNotifications } = await import('../../data/services/notificationDistribution')
-      const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', data.team_id).single()
+      const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', data.team_id!).single()
       if (teamData?.org_id) {
         distributeEventNotifications({
           id: eventDataAny.id,
-          team_id: data.team_id,
+          team_id: data.team_id!,
           org_id: teamData.org_id,
           title: data.title,
           start_time: new Date(data.start_time).toISOString(),
@@ -718,7 +720,7 @@ export default function CreateEvent() {
         showSuccess(t('admin.events.ticketing.success.created'))
       }
 
-      navigate('/admin/events')
+      navigate(getLink(RouteKeys.ADMIN_EVENTS))
     } catch (err: unknown) {
       // Parse database errors and show friendly messages
       const rawError = getErrorMessage(err) || ''
@@ -768,7 +770,7 @@ export default function CreateEvent() {
         title="Create Event" 
         subtitle={t('admin.events.createSubtitle')}
         breadcrumbs={[
-          { label: 'Events', path: '/admin/events' },
+          { label: 'Events', path: getLink(RouteKeys.ADMIN_EVENTS) },
           { label: 'Create Event' },
         ]}
       />

@@ -118,7 +118,7 @@ export async function getOrganizationDetails(orgId: string): Promise<{ data: Org
             latitude: data.latitude || null,
             longitude: data.longitude || null,
             logo_url: data.logo_url || null,
-            profile_visible_to_fans: data.profile_visible_to_fans || null,
+            profile_visible_to_fans: data.profile_visible_to_fans ?? undefined,
         }
 
         return { data: org, error: null }
@@ -193,7 +193,7 @@ export async function getOrganizationBySlug(slug: string): Promise<{ data: Organ
             latitude: data.latitude || null,
             longitude: data.longitude || null,
             logo_url: data.logo_url || null,
-            profile_visible_to_fans: data.profile_visible_to_fans || null,
+            profile_visible_to_fans: data.profile_visible_to_fans ?? undefined,
         }
 
         return { data: org, error: null }
@@ -361,7 +361,7 @@ export async function updateOrganizationDetails(
             latitude: data.latitude || null,
             longitude: data.longitude || null,
             logo_url: data.logo_url || null,
-            profile_visible_to_fans: data.profile_visible_to_fans || null,
+            profile_visible_to_fans: data.profile_visible_to_fans ?? undefined,
         }
 
         return { data: org, error: null }

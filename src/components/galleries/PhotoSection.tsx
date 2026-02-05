@@ -342,7 +342,7 @@ export function PhotoSection({
                 color: '#475569',
               }}
             >
-              {t('photos.empty.title')}
+              {t('photos.emptySection.title')}
             </h4>
             <p
               style={{
@@ -351,7 +351,7 @@ export function PhotoSection({
                 color: '#64748b',
               }}
             >
-              {t('photos.empty.description')}
+              {t('photos.emptySection.description')}
             </p>
           </div>
         )}
