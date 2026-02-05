@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { uploadPhotoToGallery } from '@/data/services/galleryService'
 import { useUserContext } from '@/hooks/useUserContext'
-import { useTranslation } from '@/i18n'
+import { useT } from '@/i18n/useI18n'
 import { showError, showSuccess } from '@/utils/toast'
 import { Button } from '../platformAdmin'
 
@@ -21,7 +21,7 @@ export function PhotoUploadButton({
   maxSizeMB = 10,
 }: PhotoUploadButtonProps) {
   const { context } = useUserContext()
-  const { t } = useTranslation()
+  const t = useT()
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [uploading, setUploading] = useState(false)
 

@@ -299,6 +299,7 @@ export default function AthleteProfilePage() {
                 <PhotoSection
                   entityType="athlete"
                   entityId={athleteId}
+                  orgId={athlete?.org_id}
                   title="Athlete Photos"
                   canUpload
                 />

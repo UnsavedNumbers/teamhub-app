@@ -25,7 +25,8 @@ export interface OrganizationUpdateDTO {
     place_id?: string | null
     latitude?: number | null
     longitude?: number | null
-    logo_path?: string | null
+    logo_url?: string | null
+    profile_visible_to_fans?: boolean | null
 }
 
 // Define explicit row type to handle stale database.types.ts
@@ -48,6 +49,8 @@ interface OrganizationRow {
     place_id?: string | null
     latitude?: number | null
     longitude?: number | null
+    logo_url?: string | null
+    profile_visible_to_fans?: boolean
 }
 
 export async function getOrganizationDetails(orgId: string): Promise<{ data: Organization | null; error: Error | null }> {
@@ -114,6 +117,8 @@ export async function getOrganizationDetails(orgId: string): Promise<{ data: Org
             place_id: data.place_id || null,
             latitude: data.latitude || null,
             longitude: data.longitude || null,
+            logo_url: data.logo_url || null,
+            profile_visible_to_fans: data.profile_visible_to_fans || null,
         }
 
         return { data: org, error: null }
@@ -187,6 +192,8 @@ export async function getOrganizationBySlug(slug: string): Promise<{ data: Organ
             place_id: data.place_id || null,
             latitude: data.latitude || null,
             longitude: data.longitude || null,
+            logo_url: data.logo_url || null,
+            profile_visible_to_fans: data.profile_visible_to_fans || null,
         }
 
         return { data: org, error: null }
@@ -353,6 +360,8 @@ export async function updateOrganizationDetails(
             place_id: data.place_id || null,
             latitude: data.latitude || null,
             longitude: data.longitude || null,
+            logo_url: data.logo_url || null,
+            profile_visible_to_fans: data.profile_visible_to_fans || null,
         }
 
         return { data: org, error: null }
@@ -376,15 +385,17 @@ export async function uploadOrganizationLogo(
         }
 
         const fileExt = file.name.split('.').pop() || 'png'
-        const filePath = `${orgId}/logo.${fileExt}`
+        const filePath = `org-logos/${orgId}/logo.${fileExt}`
 
         const { error: uploadError } = await supabase.storage
             .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
-            .upload(`org-logos/${filePath}`, file, { upsert: true })
+            .upload(filePath, file, { upsert: true })
 
         if (uploadError) throw uploadError
 
-        return { path: filePath, error: null }
+        // Get the full public URL for the logo
+        const { data } = supabase.storage.from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET).getPublicUrl(filePath)
+        return { path: data.publicUrl, error: null }
     } catch (err) {
         console.error('[organizationService] Error uploading logo:', err)
         return { path: null, error: err instanceof Error ? err : new Error('Unknown error') }

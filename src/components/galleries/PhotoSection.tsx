@@ -10,8 +10,9 @@ import {
 } from '@/data/services/galleryService'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useGalleryPermissions } from '@/hooks/useGalleryPermissions'
-import { useTranslation } from '@/i18n'
-import { Button, EmptyState } from '../platformAdmin'
+import { useT } from '@/i18n/useI18n'
+import { Card } from '../platformAdmin'
+import Icon from '../portal/Icon'
 import { PhotoUploadButton } from './PhotoUploadButton'
 import { PhotoThumbnailGrid } from './PhotoThumbnailGrid'
 import { RelatedGalleriesSection } from './RelatedGalleriesSection'
@@ -21,6 +22,8 @@ import { ROUTES } from '@/constants/routes'
 interface PhotoSectionProps {
   entityType: Extract<GalleryEntityType, 'athlete' | 'team' | 'event' | 'travel_plan' | 'program'>
   entityId: string
+  /** Optional org ID - if provided, will be used to create gallery if entity has no org_id in DB */
+  orgId?: string
   canUpload?: boolean
   previewCount?: number
   title?: string
@@ -45,6 +48,7 @@ interface PhotoSectionProps {
 export function PhotoSection({
   entityType,
   entityId,
+  orgId,
   canUpload = true,
   previewCount = 5,
   title,
@@ -52,30 +56,43 @@ export function PhotoSection({
 }: PhotoSectionProps) {
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const t = useT()
   const perms = useGalleryPermissions(entityType)
   const [gallery, setGallery] = useState<Gallery | null>(null)
   const [photos, setPhotos] = useState<GalleryPhoto[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isExiting, setIsExiting] = useState(false)
+  const [noOrgAssigned, setNoOrgAssigned] = useState(false)
 
   useEffect(() => {
     const load = async () => {
       if (!context || !isReady || !entityId) return
       setLoading(true)
       setError(null)
+      setNoOrgAssigned(false)
       try {
         const { data: galleryData, error: galleryError } = await ensureEntityGallery(
           context,
           entityType,
-          entityId
+          entityId,
+          undefined, // name
+          orgId // pass explicit orgId if provided
         )
 
-        if (galleryError) throw galleryError
+        if (galleryError) {
+          // Check if error is due to missing organization
+          if (galleryError.message?.includes('Organization not found')) {
+            setNoOrgAssigned(true)
+            setLoading(false)
+            return
+          }
+          throw galleryError
+        }
 
         if (!galleryData) {
-          setError('Gallery not found. It may still be being created.')
+          // No gallery and no error - likely missing org
+          setNoOrgAssigned(true)
           return
         }
 
@@ -99,7 +116,7 @@ export function PhotoSection({
       }
     }
     load()
-  }, [context, isReady, entityId, entityType, previewCount])
+  }, [context, isReady, entityId, entityType, previewCount, orgId])
 
   const handleUploadComplete = async () => {
     if (!context || !gallery) return
@@ -134,124 +151,29 @@ export function PhotoSection({
   }
 
   return (
-    <section
-      className={`pa-card pa-photo-section ${isExiting ? 'pa-exiting' : ''}`}
-      style={{
-        background: 'white',
-        borderRadius: '16px',
-        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06)',
-        padding: '24px',
-        position: 'relative',
-        overflow: 'hidden',
-        opacity: isExiting ? 0 : 1,
-        transition: 'opacity 0.15s ease',
-      }}
-    >
-      {/* Accent Gradient Bar */}
-      <div
-        className="pa-photo-section-accent"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '4px',
-          background: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%)',
-        }}
-      />
-
-      {/* Header */}
-      <div
-        className="pa-photo-section-header pa-flex pa-justify-between pa-items-center"
-        style={{
-          marginBottom: '20px',
-          flexWrap: 'wrap',
-          gap: '12px',
-        }}
-      >
-        <div
-          className="pa-flex pa-gap-3 pa-items-center"
-          style={{
-            alignItems: 'center',
-          }}
-        >
-          <div
-            className="pa-photo-section-icon"
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)',
-            }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{
-                color: 'white',
-                fontSize: '22px',
-              }}
-            >
-              photo_library
-            </span>
-          </div>
-          <div>
-            <h3
-              className="pa-text-lg pa-font-semibold"
-              style={{
-                margin: 0,
-                fontSize: '18px',
-                fontWeight: 600,
-                color: '#1e293b',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                flexWrap: 'wrap',
-              }}
-            >
-              {title || t('photos.sectionTitle')}
-              {gallery && gallery.photo_count !== undefined && (
-                <span
-                  className="pa-photo-count-badge"
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    padding: '2px 10px',
-                    borderRadius: '12px',
-                    background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
-                    color: '#64748b',
-                    border: '1px solid #cbd5e1',
-                  }}
-                >
-                  {gallery.photo_count} {gallery.photo_count === 1 ? t('photos.photo') : t('photos.photos')}
-                </span>
-              )}
-            </h3>
-          </div>
-        </div>
+    <Card className={`p-6 relative rounded-tl-none pa-photo-section ${isExiting ? 'pa-exiting' : ''}`} style={{ opacity: isExiting ? 0 : 1, transition: 'opacity 0.15s ease' }}>
+      {/* Black Header Bar - Matching other right column cards */}
+      <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+        <Icon name="photo_library" size="text-2xl" />
+        {title || t('photos.sectionTitle')}
+        {gallery && gallery.photo_count !== undefined && (
+          <span className="text-sm font-normal text-gray-300 ml-2">
+            ({gallery.photo_count} {gallery.photo_count === 1 ? t('photos.photo') : t('photos.photos')})
+          </span>
+        )}
         {gallery && (
-          <Button
-            variant="secondary"
-            size="compact"
-            icon="open_in_new"
+          <button
             onClick={viewAll}
-            style={{
-              borderRadius: '8px',
-              fontWeight: 500,
-              transition: 'all 0.2s ease',
-            }}
-            className="pa-view-all-btn"
+            className="ml-auto text-xs font-normal text-gray-300 hover:text-white flex items-center gap-1 transition-colors"
           >
             {t('photos.viewAll')}
-          </Button>
+            <span className="material-symbols-outlined text-sm">open_in_new</span>
+          </button>
         )}
       </div>
 
-      {/* Content */}
-      <div className="pa-photo-section-content">
+      {/* Content with pt-12 to account for header */}
+      <div className="pt-12 pa-photo-section-content">
         {loading ? (
           <div
             className="pa-photo-loading-skeleton"
@@ -311,12 +233,75 @@ export function PhotoSection({
             </h4>
             <p
               style={{
-                margin: 0,
+                margin: '0 0 16px 0',
                 fontSize: '14px',
                 color: '#b91c1c',
               }}
             >
               {error}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                refresh
+              </span>
+              Retry
+            </button>
+          </div>
+        ) : noOrgAssigned ? (
+          <div
+            className="pa-photo-no-org-state"
+            style={{
+              padding: '32px',
+              textAlign: 'center',
+              background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+              borderRadius: '12px',
+              border: '1px solid #fcd34d',
+            }}
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{
+                fontSize: '48px',
+                color: '#f59e0b',
+                display: 'block',
+                marginBottom: '12px',
+              }}
+            >
+              domain_disabled
+            </span>
+            <h4
+              style={{
+                margin: '0 0 8px 0',
+                fontSize: '16px',
+                fontWeight: 600,
+                color: '#92400e',
+              }}
+            >
+              No Organization Assigned
+            </h4>
+            <p
+              style={{
+                margin: 0,
+                fontSize: '14px',
+                color: '#a16207',
+              }}
+            >
+              Photos cannot be uploaded until this athlete is assigned to an organization.
             </p>
           </div>
         ) : gallery && photos.length > 0 ? (
@@ -406,11 +391,6 @@ export function PhotoSection({
           100% { background-position: -200% 0; }
         }
 
-        .pa-view-all-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-        }
-
         .pa-photo-empty-state:hover {
           borderColor: '#94a3b8';
           background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)';
@@ -420,6 +400,6 @@ export function PhotoSection({
           transform: scale(1.1);
         }
       `}</style>
-    </section>
+    </Card>
   )
 }

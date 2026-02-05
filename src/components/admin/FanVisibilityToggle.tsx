@@ -95,9 +95,8 @@ export function FanVisibilityToggle({
   return (
     <>
       <div 
-        className="fan-visibility-section"
         style={{
-          background: '#f8f9fa',
+          backgroundColor: '#f8f9fa',
           padding: '12px',
           border: '1px solid #e5e7eb',
           borderRadius: '8px',

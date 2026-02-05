@@ -1,8 +1,7 @@
-
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { startTransition } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
@@ -13,19 +12,20 @@ import { showSuccess, showError } from '../../utils/toast'
 import { refreshOrganizationTheme } from '../../hooks/useOrganizationTheme'
 import { validateSlugFormat, normalizeSlug, invalidateSlugCache, type SlugValidationErrorCode } from '../../utils/orgResolution'
 import PublicUrlBanner, { QUERY_KEY_ORG_SLUG } from '@/components/admin/PublicUrlBanner'
-import { 
-  AdminPageHeader, 
-  Card, 
-  Button, 
+import { AdminPageHeader } from '../../components/admin/AdminPageHeader'
+import { FanVisibilityToggle } from '../../components/admin/FanVisibilityToggle'
+import {
+  Button,
   Input,
   Select,
   Checkbox,
   ThemePicker,
+  Card,
   Tabs,
   TabsList,
   TabsTrigger,
   TabsContent,
-  Badge
+  Badge,
 } from '../../components/platformAdmin'
 import { FileUpload } from '../../components/common/FileUpload'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
@@ -164,6 +164,11 @@ export default function OrganizationSettings() {
       if (settingsResult.error) throw settingsResult.error
       if (themeResult.error) throw themeResult.error
 
+      console.log('loadData: received org details', {
+        'profile_visible_to_fans': detailsResult.data?.profile_visible_to_fans,
+        'name': detailsResult.data?.name,
+        'updated_at': detailsResult.data?.updated_at,
+      })
       setOrgDetails(detailsResult.data)
       setSettings(settingsResult.data)
       setThemeSettings(themeResult.data)
@@ -202,7 +207,7 @@ export default function OrganizationSettings() {
 
       const updates: OrganizationUpdateDTO = {
         ...data,
-        ...(logoPath ? { logo_path: logoPath } : {}),
+        ...(logoPath ? { logo_url: logoPath } : {}),
       }
 
       const { data: updatedOrg, error: updateError } = await updateOrganizationDetails(
@@ -211,8 +216,15 @@ export default function OrganizationSettings() {
       )
 
       if (updateError) throw updateError
-      
+
       setOrgDetails(updatedOrg)
+
+      // Immediately reload data to ensure we have the freshest state from server
+      // This helps prevent stale data issues where the response doesn't reflect all changes
+      loadData().catch(err => {
+        console.error('Failed to reload organization details after save:', err)
+      })
+
       showSuccess(t('admin.organizationSettings.messages.profileUpdated'))
     } catch (err) {
       const errorMessage = getErrorMessage(err) || t('admin.organizationSettings.messages.profileUpdateFailed')
@@ -345,7 +357,7 @@ export default function OrganizationSettings() {
         </TabsList>
 
         <TabsContent value="overview">
-          {orgDetails && <OverviewForm org={orgDetails} onSave={handleSaveOverview} loading={saving} />}
+          {orgDetails && <OverviewForm key={orgDetails.id + '-' + (orgDetails.updated_at || 'initial')} org={orgDetails} onSave={handleSaveOverview} loading={saving} />}
 
           {/* Public URL slug — set/update slug for established orgs */}
           {currentOrganization?.id && (
@@ -635,7 +647,7 @@ function PublicUrlSlugForm({ orgId, initialSlug }: { orgId: string; initialSlug?
 
 function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (data: OrganizationUpdateDTO, file?: File) => void, loading: boolean }) {
   const { t } = useI18n()
-  const { control, handleSubmit, setValue, trigger } = useForm<OrganizationUpdateDTO>({
+  const { control, handleSubmit, setValue, trigger, reset } = useForm<OrganizationUpdateDTO>({
     defaultValues: {
       name: org.name,
       website: org.website || '',
@@ -652,12 +664,38 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
   })
   const [logoFile, setLogoFile] = useState<File | undefined>(undefined)
   const [logoError, setLogoError] = useState<string | null>(null)
+  const [profileVisibleToFans, setProfileVisibleToFans] = useState(org.profile_visible_to_fans || false)
+
+  // Sync form state when org prop changes (e.g., after save/reload)
+  useEffect(() => {
+    console.log('OverviewForm: org prop changed', {
+      'org.profile_visible_to_fans': org.profile_visible_to_fans,
+      'org.name': org.name,
+      'org.id': org.id,
+    })
+    reset({
+      name: org.name,
+      website: org.website || '',
+      phone: org.phone || '',
+      email: org.email || '',
+      address: org.address || '',
+      city: org.city || '',
+      state: org.state || '',
+      zip: org.zip || '',
+      place_id: org.place_id || '',
+      latitude: org.latitude || null,
+      longitude: org.longitude || null,
+    })
+    setProfileVisibleToFans(org.profile_visible_to_fans || false)
+    console.log('OverviewForm: set profileVisibleToFans to', org.profile_visible_to_fans || false)
+  }, [org, reset])
 
   return (
     <Card>
       <form onSubmit={handleSubmit((data) => {
         if (logoError) return
-        onSave(data, logoFile)
+        const dataWithVisibility = { ...data, profile_visible_to_fans: profileVisibleToFans } as any
+        onSave(dataWithVisibility, logoFile)
       })}>
         <div className="pa-form-grid pa-form-grid-2">
           {/* Left Column: Basic Info */}
@@ -688,6 +726,22 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
           {/* Right Column: Logo */}
           <div>
             <h3 className="pa-h3 pa-mb-2">{t('admin.organizationSettings.overview.logo')}</h3>
+            {/* Show existing logo if available */}
+            {org.logo_url && !logoFile && (
+              <div className="pa-mb-3">
+                <img 
+                  src={org.logo_url} 
+                  alt={org.name} 
+                  style={{ 
+                    maxWidth: '120px', 
+                    maxHeight: '120px', 
+                    borderRadius: '8px',
+                    border: '1px solid var(--pa-n200)',
+                    objectFit: 'contain'
+                  }} 
+                />
+              </div>
+            )}
             <FileUpload
               accept="image/png,image/jpeg"
               maxSize={2 * 1024 * 1024}
@@ -698,7 +752,7 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
                 setLogoError(null)
               }}
               disabled={loading}
-              buttonText={t('admin.organizationSettings.overview.logoChoose')}
+              buttonText={org.logo_url ? t('admin.organizationSettings.overview.logoReplace') : t('admin.organizationSettings.overview.logoChoose')}
               replaceText={t('admin.organizationSettings.overview.logoReplace')}
               error={logoError}
             />
@@ -746,6 +800,17 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
                <Input {...field} value={field.value || ''} label={t('admin.organizationSettings.overview.zip')} />
             )} />
           </div>
+        </div>
+
+        {/* Public Visibility Section */}
+        <div className="pa-mt-6 pa-pt-6 pa-border-t">
+          <h3 className="pa-h3 pa-mb-4">Public Visibility</h3>
+          <FanVisibilityToggle
+            checked={profileVisibleToFans}
+            onChange={setProfileVisibleToFans}
+            entityType="organization"
+            disabled={loading}
+          />
         </div>
 
         <div className="pa-form-actions">
@@ -1806,11 +1871,5 @@ function AdvancedForm({ settings, onSave, loading }: { settings: OrgSettingsType
     </Card>
   )
 }
-
-
-
-
-
-
 
 

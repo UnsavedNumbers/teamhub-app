@@ -59,8 +59,8 @@ function buildPermissions(context: UserContext): PermissionSet {
  * Handles RSVP config transformation and ensures arrays exist
  */
 function mapSupabaseEventToCalendarEvent(event: any): CalendarEvent {
-    // Ensure required fields exist
-    if (!event.id || !event.team_id || !event.season_id || !event.title || !event.type) {
+    // Ensure required fields exist - team_id and season_id are now optional
+    if (!event.id || !event.title || !event.type) {
         throw new Error('Invalid event data: missing required fields')
     }
 
@@ -198,8 +198,8 @@ export interface EventsQueryParams {
  */
 export interface CalendarEventSummary {
     id: string
-    team_id: string
-    season_id: string
+    team_id: string | null
+    season_id: string | null
     title: string
     type: EventType
     start_time: string
@@ -943,8 +943,8 @@ export async function createEvent(
         const eventInsertData: EventInsert = {
             title: formData.title,
             type: formData.type,
-            team_id: formData.team_id,
-            season_id: formData.season_id,
+            team_id: formData.team_id || null,
+            season_id: formData.season_id || null,
             start_time: start.toISOString(),
             end_time: end.toISOString(),
             arrival_time: arrival ? arrival.toISOString() : null,
@@ -1007,14 +1007,21 @@ export async function createEvent(
 
         // 4. Handle Ticketing
         if (formData.ticketing?.is_ticketed) {
-            const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', formData.team_id).single()
-            if (!teamData?.org_id) throw new Error('Failed to get organization ID from team')
+            // Get org_id from team if team_id is provided
+            let orgId: string | null = null
+            if (formData.team_id) {
+                const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', formData.team_id).single()
+                if (!teamData?.org_id) throw new Error('Failed to get organization ID from team')
+                orgId = teamData.org_id
+            }
+
+            if (!orgId) throw new Error('Organization ID is required for ticketed events. Please select a team.')
 
             type TicketedEventInsert = Database['public']['Tables']['ticketed_events']['Insert']
             const ticketedEventData: TicketedEventInsert = {
                 event_id: eventData.id,
-                org_id: teamData.org_id,
-                team_id: formData.team_id,
+                org_id: orgId,
+                team_id: formData.team_id || null,
                 event_type: formData.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
                 title: formData.title,
                 description: formData.notes || null,
@@ -1048,7 +1055,7 @@ export async function createEvent(
                 const ticketTypeInserts: TicketTypeInsert[] = formData.ticketing.ticket_types
                     .filter(tt => tt.name.trim() !== '')
                     .map((tt, index) => ({
-                        org_id: teamData.org_id,
+                        org_id: orgId,
                         ticketed_event_id: ticketedEvent.id,
                         name: tt.name.trim(),
                         price_cents: Math.round(parseFloat(tt.price_dollars) * 100) || 0,
@@ -1103,8 +1110,8 @@ export async function updateEvent(
         const eventUpdateData: EventUpdate = {
             title: formData.title,
             type: formData.type,
-            team_id: formData.team_id,
-            season_id: formData.season_id,
+            team_id: formData.team_id || null,
+            season_id: formData.season_id || null,
             start_time: start.toISOString(),
             end_time: end.toISOString(),
             arrival_time: arrival ? arrival.toISOString() : null,
@@ -1156,16 +1163,21 @@ export async function updateEvent(
         // Simplified Logic: Upsert ticketed_event, then upsert ticket_types
         // Note: Removing ticket types or complex syncing is omitted for brevity but should be handled in a full implementation
         if (formData.ticketing?.is_ticketed) {
-            const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', formData.team_id).single()
+            // Get org_id from team if team_id is provided
+            let orgId: string | null = null
+            if (formData.team_id) {
+                const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', formData.team_id).single()
+                if (teamData?.org_id) orgId = teamData.org_id
+            }
 
-            if (teamData?.org_id) {
+            if (orgId) {
                 const { data: existingTe } = await supabase.from('ticketed_events').select('id').eq('event_id', eventId).maybeSingle()
 
                 type TicketedEventUpsert = Database['public']['Tables']['ticketed_events']['Insert']
                 const teData: TicketedEventUpsert = {
                     event_id: eventId,
-                    org_id: teamData.org_id,
-                    team_id: formData.team_id,
+                    org_id: orgId,
+                    team_id: formData.team_id || null,
                     event_type: formData.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
                     title: formData.title,
                     description: formData.notes || null,
