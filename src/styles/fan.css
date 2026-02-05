@@ -2651,3 +2651,141 @@
   padding: var(--spacing-6);
   border-top: 1px solid var(--color-zinc-100);
 }
+
+/* ===========================================
+   ORG PROFILE SCHEDULE TAB
+   =========================================== */
+
+.fan-org-schedule-tab {
+  min-height: 200px;
+}
+
+.fan-org-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.fan-org-event-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-6);
+  padding: var(--spacing-6);
+  background: var(--color-white);
+  border: 1px solid var(--color-zinc-100);
+  border-radius: var(--radius-lg);
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.fan-org-event-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-zinc-200);
+}
+
+.fan-org-event-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: var(--color-primary-50);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.fan-org-event-day {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.fan-org-event-month {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.fan-org-event-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.fan-org-event-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-zinc-900);
+  margin: 0 0 var(--spacing-2) 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fan-org-event-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-6);
+  font-size: var(--font-size-sm);
+  color: var(--color-zinc-500);
+}
+
+.fan-org-event-meta span {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.fan-org-event-meta .material-symbols-outlined {
+  font-size: 1rem;
+  color: var(--color-zinc-400);
+}
+
+.fan-org-event-type {
+  flex-shrink: 0;
+}
+
+.fan-event-type-badge {
+  display: inline-flex;
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: capitalize;
+  border-radius: var(--radius-full);
+  background: var(--color-zinc-100);
+  color: var(--color-zinc-600);
+}
+
+.fan-event-type-badge.game {
+  background: var(--color-green-100);
+  color: var(--color-green-700);
+}
+
+.fan-event-type-badge.practice {
+  background: var(--color-blue-100);
+  color: var(--color-blue-700);
+}
+
+.fan-event-type-badge.meeting {
+  background: var(--color-amber-100);
+  color: var(--color-amber-700);
+}
+
+.fan-event-type-badge.ticketed {
+  background: var(--color-purple-100);
+  color: var(--color-purple-700);
+}
+
+@media (max-width: 640px) {
+  .fan-org-event-card {
+    flex-wrap: wrap;
+  }
+  
+  .fan-org-event-type {
+    width: 100%;
+    margin-left: 66px;
+    margin-top: var(--spacing-2);
+  }
+}

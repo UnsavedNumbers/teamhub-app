@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRelatedGalleries } from '@/hooks/useEntityGallery'
-import { useTranslation } from '@/i18n'
+import { useT } from '@/i18n/useI18n'
 import { type GalleryEntityType } from '@/data/services/galleryService'
 import { ROUTES } from '@/constants/routes'
 
@@ -28,7 +28,7 @@ export function RelatedGalleriesSection({
   entityId,
 }: RelatedGalleriesSectionProps) {
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const t = useT()
   const [hoveredGallery, setHoveredGallery] = useState<string | null>(null)
   const { data: relatedGalleries, isLoading, error } = useRelatedGalleries(entityType, entityId)
 

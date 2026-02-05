@@ -1,60 +1,18 @@
 -- ============================================================================
--- Fix RLS Policy for System-Generated Galleries
+-- Fix session_replication_role Permission Error in ensure_entity_gallery
 -- ============================================================================
--- This migration fixes the RLS policy issue where system-generated galleries
--- are blocked by RLS when created through triggers or RPC.
+-- This migration fixes the permission error where ensure_entity_gallery fails
+-- with "permission denied to set parameter session_replication_role"
 --
--- The issue: galleries_insert_policy checks auth.uid(), which is null when
--- triggers execute (no user context).
+-- The issue: SET LOCAL session_replication_role = 'replica' requires superuser
+-- privileges, but the function runs with SECURITY DEFINER (not superuser).
 --
--- Solution:
--- 1. Update RLS policy to allow system-generated galleries
--- 2. Create elevated RPC function for app-layer gallery creation
--- 3. Remove problematic triggers (they can't reliably bypass RLS)
+-- Solution: Remove the session_replication_role setting since the function
+-- already runs with SECURITY DEFINER and the RLS policy allows system-generated
+-- galleries (is_system_generated = true), so RLS is not blocking the insert.
 -- ============================================================================
 
--- Drop existing triggers and functions first
-DROP TRIGGER IF EXISTS trg_create_athlete_gallery ON public.athletes;
-DROP TRIGGER IF EXISTS trg_create_team_gallery ON public.teams;
-DROP TRIGGER IF EXISTS trg_create_event_gallery ON public.events;
-DROP TRIGGER IF EXISTS trg_create_travel_gallery ON public.travel_plans;
-DROP TRIGGER IF EXISTS trg_create_program_gallery ON public.programs;
-
-DROP FUNCTION IF EXISTS public.create_athlete_gallery() CASCADE;
-DROP FUNCTION IF EXISTS public.create_team_gallery() CASCADE;
-DROP FUNCTION IF EXISTS public.create_event_gallery() CASCADE;
-DROP FUNCTION IF EXISTS public.create_travel_gallery() CASCADE;
-DROP FUNCTION IF EXISTS public.create_program_gallery() CASCADE;
-
--- Update the insert policy to allow system-generated galleries
--- even when auth.uid() is null (trigger context)
-DROP POLICY IF EXISTS galleries_insert_policy ON public.galleries;
-
-CREATE POLICY galleries_insert_policy ON public.galleries
-FOR INSERT
-WITH CHECK (
-  -- Allow org admins to create any gallery in their org
-  public.is_org_admin(org_id, auth.uid())
-  OR
-  -- Allow coaches to create team galleries for their teams
-  (
-    gallery_type = 'team'::public.gallery_type
-    AND entity_id IS NOT NULL
-    AND public.is_coach_for_team(entity_id, auth.uid())
-  )
-  OR
-  -- Allow system-generated galleries (even from triggers where auth.uid() is null)
-  is_system_generated = true
-);
-
-COMMENT ON POLICY galleries_insert_policy ON public.galleries IS
-'Allows org admins, coaches, and system-generated galleries (from triggers or RPC).';
-
--- ============================================================================
--- Create elevated RPC function for ensuring entity galleries
--- This function runs with elevated privileges and bypasses RLS for inserts
--- ============================================================================
-
+-- Drop and recreate the function without session_replication_role
 CREATE OR REPLACE FUNCTION public.ensure_entity_gallery(
   p_entity_type public.gallery_type,
   p_entity_id uuid,
@@ -75,10 +33,14 @@ BEGIN
   -- Get org_id based on entity type if not provided
   IF p_org_id IS NULL THEN
     CASE p_entity_type
+      WHEN 'org'::public.gallery_type THEN
+        SELECT id INTO v_org_id FROM public.organizations WHERE id = p_entity_id;
       WHEN 'athlete'::public.gallery_type THEN
         SELECT a.org_id INTO v_org_id FROM public.athletes a WHERE a.id = p_entity_id;
       WHEN 'team'::public.gallery_type THEN
         SELECT t.org_id INTO v_org_id FROM public.teams t WHERE t.id = p_entity_id;
+      WHEN 'season'::public.gallery_type THEN
+        SELECT s.org_id INTO v_org_id FROM public.seasons s WHERE s.id = p_entity_id;
       WHEN 'program'::public.gallery_type THEN
         SELECT p.org_id INTO v_org_id FROM public.programs p WHERE p.id = p_entity_id;
       WHEN 'event'::public.gallery_type THEN
@@ -113,12 +75,18 @@ BEGIN
     v_gallery_name := p_name;
   ELSE
     CASE p_entity_type
+      WHEN 'org'::public.gallery_type THEN
+        SELECT COALESCE(NULLIF(TRIM(o.name), ''), 'Organization') || ' Photos'
+        INTO v_gallery_name
+        FROM public.organizations o WHERE o.id = p_entity_id;
       WHEN 'athlete'::public.gallery_type THEN
         SELECT COALESCE(NULLIF(TRIM(a.first_name || ' ' || a.last_name), ''), 'Athlete') || '''s Photos'
         INTO v_gallery_name
         FROM public.athletes a WHERE a.id = p_entity_id;
       WHEN 'team'::public.gallery_type THEN
         SELECT t.name || ' Photos' INTO v_gallery_name FROM public.teams t WHERE t.id = p_entity_id;
+      WHEN 'season'::public.gallery_type THEN
+        SELECT s.name || ' Photos' INTO v_gallery_name FROM public.seasons s WHERE s.id = p_entity_id;
       WHEN 'program'::public.gallery_type THEN
         SELECT p.name || ' Photos' INTO v_gallery_name FROM public.programs p WHERE p.id = p_entity_id;
       WHEN 'event'::public.gallery_type THEN
@@ -168,7 +136,7 @@ EXCEPTION
 END;
 $$;
 
--- Grant execute permission to authenticated users
+-- Re-grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION public.ensure_entity_gallery(
   public.gallery_type,
   uuid,
@@ -178,4 +146,8 @@ GRANT EXECUTE ON FUNCTION public.ensure_entity_gallery(
 ) TO authenticated;
 
 COMMENT ON FUNCTION public.ensure_entity_gallery IS
-'Creates or retrieves the system-generated gallery for an entity. Runs with elevated privileges (SECURITY DEFINER) to bypass RLS for gallery creation.';
+'Creates or retrieves the system-generated gallery for an entity. Supports all entity types: org, season, team, event, travel_plan, athlete. Runs with elevated privileges (SECURITY DEFINER) to bypass RLS for gallery creation.';
+
+-- ============================================================================
+-- End of Migration
+-- ============================================================================

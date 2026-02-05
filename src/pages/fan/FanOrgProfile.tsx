@@ -13,9 +13,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { 
   getOrgProfile, 
   followOrg, 
-  unfollowOrg, 
+  unfollowOrg,
+  getFanCalendar,
   type EntityProfile 
 } from '../../data/services/fanService'
+import type { CalendarEvent } from '../../types/staffAndFan'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { useT } from '../../i18n/useI18n'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
@@ -39,6 +41,11 @@ export default function FanOrgProfile() {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [feedFilter, setFeedFilter] = useState<FeedFilter>('highlights')
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+  
+  // Schedule tab state
+  const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [eventsLoading, setEventsLoading] = useState(false)
+  const [eventsLoaded, setEventsLoaded] = useState(false)
 
   useEffect(() => {
     if (!orgId) {
@@ -123,6 +130,39 @@ export default function FanOrgProfile() {
     if (tab === 'shop') {
       showInfo(t('portal.fan.orgProfile.shopComingSoon'))
     }
+    if (tab === 'schedule' && !eventsLoaded && profile?.id) {
+      loadEvents(profile.id)
+    }
+  }
+
+  const loadEvents = async (profileId: string) => {
+    setEventsLoading(true)
+    
+    // Get events for next 60 days
+    const startDate = new Date()
+    const endDate = new Date()
+    endDate.setDate(endDate.getDate() + 60)
+    
+    const { data, error } = await getFanCalendar({
+      start_date: startDate.toISOString(),
+      end_date: endDate.toISOString(),
+      org_ids: [profileId],
+    })
+    
+    if (!error && data?.events) {
+      setEvents(data.events)
+    }
+    
+    setEventsLoaded(true)
+    setEventsLoading(false)
+  }
+
+  const formatEventTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit'
+    })
   }
 
   const handleShareProfile = async () => {
@@ -225,7 +265,7 @@ export default function FanOrgProfile() {
                   {profile.sport || 'Youth Sports Organization'}
                 </span>
                 <h2 className="fan-org-profile-name">{profile.name}</h2>
-                {(profile.location_city || profile.location_state) && (
+                {profile.location_visible !== false && (profile.location_city || profile.location_state) && (
                   <div className="fan-org-profile-meta">
                     {profile.location_city && profile.location_state ? (
                       <span>{profile.location_city}, {profile.location_state}</span>
@@ -341,9 +381,52 @@ export default function FanOrgProfile() {
           )}
 
           {activeTab === 'schedule' && (
-            <div className="fan-empty-state">
-              <span className="material-symbols-outlined">calendar_month</span>
-              <p>{t('portal.fan.orgProfile.noUpcomingEvents')}</p>
+            <div className="fan-org-schedule-tab">
+              {eventsLoading ? (
+                <div className="fan-loading">
+                  <LoadingSpinner size="medium" />
+                </div>
+              ) : events.length === 0 ? (
+                <div className="fan-empty-state">
+                  <span className="material-symbols-outlined">calendar_month</span>
+                  <p>{t('portal.fan.orgProfile.noUpcomingEvents')}</p>
+                </div>
+              ) : (
+                <div className="fan-org-events-list">
+                  {events.map((event) => (
+                    <div key={event.id} className="fan-org-event-card">
+                      <div className="fan-org-event-date">
+                        <span className="fan-org-event-day">
+                          {new Date(event.start_time).getDate()}
+                        </span>
+                        <span className="fan-org-event-month">
+                          {new Date(event.start_time).toLocaleDateString('en-US', { month: 'short' })}
+                        </span>
+                      </div>
+                      <div className="fan-org-event-details">
+                        <h4 className="fan-org-event-title">{event.title}</h4>
+                        <div className="fan-org-event-meta">
+                          <span>
+                            <span className="material-symbols-outlined">schedule</span>
+                            {formatEventTime(event.start_time)}
+                          </span>
+                          {event.location && (
+                            <span>
+                              <span className="material-symbols-outlined">location_on</span>
+                              {event.location}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="fan-org-event-type">
+                        <span className={`fan-event-type-badge ${event.event_type || 'event'}`}>
+                          {event.event_type || 'Event'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

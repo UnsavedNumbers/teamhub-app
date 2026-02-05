@@ -56,6 +56,7 @@ export interface Gallery {
   created_by_user_id?: string | null
   allow_contributions: boolean
   require_approval: boolean
+  fans_can_see?: boolean
   is_system_generated?: boolean
   created_at: string
   updated_at: string
@@ -338,14 +339,14 @@ export async function getGalleriesForUser(
       const galleriesWithoutCover = galleryList.filter(g => !g.cover_url && (g.photo_count ?? 0) > 0)
       if (galleriesWithoutCover.length > 0) {
         const galleryIdsNeedingCover = galleriesWithoutCover.map(g => g.id)
-        
+
         // Get first photo for each gallery that needs a cover
         const { data: firstPhotos } = await supabase
           .from('gallery_photos')
           .select('gallery_id, thumbnail_path, storage_path')
           .in('gallery_id', galleryIdsNeedingCover)
           .order('created_at', { ascending: true })
-        
+
         if (firstPhotos) {
           // Build a map of gallery_id -> first photo (only keep first per gallery)
           const firstPhotoMap = new Map<string, { thumbnail_path: string | null; storage_path: string }>()
@@ -354,7 +355,7 @@ export async function getGalleriesForUser(
               firstPhotoMap.set(photo.gallery_id, photo)
             }
           }
-          
+
           // Set cover_url for galleries using their first photo
           galleryList.forEach((gallery) => {
             if (!gallery.cover_url) {
@@ -585,13 +586,15 @@ export async function getRelatedGalleries(
  * @param entityType Entity type (athlete, team, event, travel_plan, program)
  * @param entityId Entity ID
  * @param name Optional custom gallery name
+ * @param orgId Optional org ID override - if provided, will be used instead of context.orgId
  * @returns Gallery data or null
  */
 export async function ensureEntityGallery(
   context: UserContext,
   entityType: GalleryEntityType,
   entityId: string,
-  name?: string | null
+  name?: string | null,
+  orgId?: string | null
 ): Promise<{ data: Gallery | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
     await simulateDelay()
@@ -614,11 +617,14 @@ export async function ensureEntityGallery(
       }
     }
 
+    // Use provided orgId if available, otherwise fall back to context.orgId
+    const effectiveOrgId = orgId || context.orgId
+
     // Call the elevated RPC to ensure gallery exists
     const { data: galleryId, error: rpcError } = await supabase.rpc('ensure_entity_gallery', {
       p_entity_type: galleryType,
       p_entity_id: entityId,
-      p_org_id: context.orgId,
+      p_org_id: effectiveOrgId,
       p_user_id: context.userId,
       p_name: name || undefined,
     })
@@ -992,6 +998,7 @@ export async function createGalleryForEntity(
         name,
         description: description || null,
         visibility,
+        fans_can_see: visibility === 'public',
         allow_contributions: allowContributions,
         require_approval: requireApproval,
         is_system_generated: isSystemGenerated,
@@ -1412,6 +1419,7 @@ export async function updateGallery(
       .from('galleries')
       .update({
         ...payload,
+        fans_can_see: payload.visibility ? payload.visibility === 'public' : undefined,
         updated_at: new Date().toISOString(),
       })
       .eq('id', galleryId)
