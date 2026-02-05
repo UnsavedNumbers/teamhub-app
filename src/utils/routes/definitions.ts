@@ -1233,6 +1233,16 @@ const fan = {
         description: 'Upcoming events',
     },
 
+    // Event Detail
+    events: {
+        detail: {
+            path: '/fan/events/:eventId',
+            params: ['eventId'] as const,
+            label: 'Event Details',
+            icon: 'event',
+        },
+    },
+
     // Photos & Videos
     photos: {
         list: {

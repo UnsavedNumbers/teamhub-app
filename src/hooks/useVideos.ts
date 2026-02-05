@@ -84,7 +84,7 @@ export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
           team:teams!videos_team_id_fkey(id, name),
           event:events!videos_event_id_fkey(id, title, type),
           video_athlete_links(id, athlete_id, link_type),
-          video_tag_links(id, tag_id, tag:video_tags(id, name, type, color))
+          video_tag_links(id, tag_id, tag:video_tags(id, name, tag_type, color))
         `, { count: 'exact' })
         .eq('org_id', orgId)
         .neq('status', 'deleted')
@@ -166,7 +166,7 @@ export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [orgId, filters, limit, sortBy, sortOrder, page, enabled])
+  }, [orgId, JSON.stringify(filters), limit, sortBy, sortOrder, page, enabled])
   
   useEffect(() => {
     fetchVideos(false)
@@ -215,12 +215,12 @@ export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideo
           team:teams!videos_team_id_fkey(id, name),
           event:events!videos_event_id_fkey(id, title, type),
           video_athlete_links(
-            id, athlete_id, link_type, timestamp_start, timestamp_end, notes,
-            athlete:athletes(id, first_name, last_name, jersey_number, photo_url)
+            id, athlete_id, link_type, start_time_seconds, end_time_seconds,
+            athlete:athletes(id, first_name, last_name, jersey_number, has_profile_photo, profile_photo_updated_at)
           ),
           video_tag_links(
-            id, tag_id, timestamp_start, timestamp_end,
-            tag:video_tags(id, name, type, color)
+            id, tag_id,
+            tag:video_tags(id, name, tag_type, color)
           ),
           video_notes(
             id, content, timestamp_seconds, duration_seconds, scope, author_id, created_at,

@@ -233,6 +233,7 @@ export const RouteKeys = {
     // Fan
     FAN_HOME: 'fan.home',
     FAN_SCHEDULE: 'fan.schedule',
+    FAN_EVENT_DETAIL: 'fan.events.detail',
     FAN_PHOTOS: 'fan.photos.list',
     FAN_PHOTOS_GALLERY: 'fan.photos.gallery',
     FAN_PHOTOS_ATHLETE: 'fan.photos.athlete',
