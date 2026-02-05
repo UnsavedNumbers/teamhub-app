@@ -142,7 +142,7 @@ export async function updateOrganizationDetails(
       city: updates.city ?? existing.city,
       state: updates.state ?? existing.state,
       postal_code: updates.zip ?? existing.postal_code,
-      logo_url: updates.logo_path ?? existing.logo_url,
+      logo_url: updates.logo_url ?? existing.logo_url,
       updated_at: new Date().toISOString(),
     }
 

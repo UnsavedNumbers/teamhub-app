@@ -17,7 +17,6 @@ import type {
   StaffMemberInput,
   StaffMemberUpdate,
 } from '../../types/staffAndFan'
-import type { StaffPermissions } from '../../types/staffAndFan'
 import { DEFAULT_STAFF_PERMISSIONS } from '../../constants/permissions'
 import { getUserByEmail, getUserById, fakeUsers } from '../fake/fakeUsers'
 
@@ -358,11 +357,14 @@ export async function addStaffMember(
   }
 
   try {
+    const permissionsPayload: Record<string, boolean> | null = input.permissions
+      ? { ...input.permissions }
+      : null
     const { error } = await supabase.rpc('add_org_role_with_permissions', {
       p_user_id: input.user_id,
       p_org_id: input.org_id,
       p_role: 'staff',
-      p_permissions: input.permissions || null,
+      p_permissions: permissionsPayload,
     })
 
     if (error) throw error
@@ -515,10 +517,11 @@ export async function updateStaffPermissions(
       return { data: updated, error: null }
     }
 
+    const permissionsPayload: Record<string, boolean> = { ...permissions }
     const { error } = await supabase.rpc('update_staff_permissions', {
       p_org_id: orgId,
       p_user_id: userId,
-      p_permissions: permissions || {},
+      p_permissions: permissionsPayload,
     })
 
     if (error) throw error
@@ -573,7 +576,7 @@ export async function revokeStaffAccess(
     const { error } = await supabase.rpc('revoke_staff_access', {
       p_org_id: orgId,
       p_user_id: userId,
-      p_reason: reason || null,
+      p_reason: reason || undefined,
     })
 
     if (error) throw error

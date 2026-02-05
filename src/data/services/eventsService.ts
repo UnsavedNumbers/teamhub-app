@@ -943,8 +943,8 @@ export async function createEvent(
         const eventInsertData: EventInsert = {
             title: formData.title,
             type: formData.type,
-            team_id: formData.team_id || null,
-            season_id: formData.season_id || null,
+            team_id: formData.team_id!,
+            season_id: formData.season_id!,
             start_time: start.toISOString(),
             end_time: end.toISOString(),
             arrival_time: arrival ? arrival.toISOString() : null,
@@ -1021,7 +1021,7 @@ export async function createEvent(
             const ticketedEventData: TicketedEventInsert = {
                 event_id: eventData.id,
                 org_id: orgId,
-                team_id: formData.team_id || null,
+                team_id: formData.team_id!,
                 event_type: formData.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
                 title: formData.title,
                 description: formData.notes || null,
@@ -1110,8 +1110,8 @@ export async function updateEvent(
         const eventUpdateData: EventUpdate = {
             title: formData.title,
             type: formData.type,
-            team_id: formData.team_id || null,
-            season_id: formData.season_id || null,
+            team_id: formData.team_id ?? undefined,
+            season_id: formData.season_id ?? undefined,
             start_time: start.toISOString(),
             end_time: end.toISOString(),
             arrival_time: arrival ? arrival.toISOString() : null,
@@ -1177,7 +1177,7 @@ export async function updateEvent(
                 const teData: TicketedEventUpsert = {
                     event_id: eventId,
                     org_id: orgId,
-                    team_id: formData.team_id || null,
+                    team_id: formData.team_id ?? undefined,
                     event_type: formData.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
                     title: formData.title,
                     description: formData.notes || null,

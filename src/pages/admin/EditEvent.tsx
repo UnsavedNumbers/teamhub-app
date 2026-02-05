@@ -654,7 +654,7 @@ export default function EditEvent() {
 
       // Handle ticketing: create or update ticketed_events and ticket_types
       if (data.ticketing?.is_ticketed) {
-        const { data: teamDataForTicketing } = await supabase.from('teams').select('org_id').eq('id', data.team_id).single()
+        const { data: teamDataForTicketing } = await supabase.from('teams').select('org_id').eq('id', data.team_id!).single()
         if (!teamDataForTicketing?.org_id) {
           throw new Error('Failed to get organization ID from team')
         }
@@ -679,7 +679,7 @@ export default function EditEvent() {
           const ticketedEventData: TicketedEventInsert = {
             event_id: eventId,
             org_id: orgId,
-            team_id: data.team_id,
+            team_id: data.team_id!,
             event_type: data.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
             title: data.title,
             description: data.notes || null,
@@ -837,11 +837,11 @@ export default function EditEvent() {
 
       // Distribute notifications
       const { distributeEventUpdateNotifications } = await import('../../data/services/notificationDistribution')
-      const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', data.team_id).single()
+      const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', data.team_id!).single()
       if (teamData?.org_id) {
           distributeEventUpdateNotifications({
               id: eventId,
-              team_id: data.team_id,
+              team_id: data.team_id!,
               org_id: teamData.org_id,
               title: data.title,
               start_time: new Date(data.start_time).toISOString(),

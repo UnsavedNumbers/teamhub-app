@@ -361,16 +361,46 @@
   background-size: cover;
   background-position: center;
   border: 1px solid var(--color-zinc-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-zinc-600);
+}
+
+.fan-avatar .material-symbols-outlined {
+  font-size: 1.25rem;
+  color: var(--color-zinc-400);
 }
 
 .fan-avatar-sm {
   width: 2rem;
   height: 2rem;
+  font-size: var(--font-size-xs);
+}
+
+.fan-avatar-sm .material-symbols-outlined {
+  font-size: 1rem;
 }
 
 .fan-avatar-lg {
-  width: 3rem;
-  height: 3rem;
+  width: 5rem;
+  height: 5rem;
+  font-size: var(--font-size-2xl);
+}
+
+.fan-avatar-lg .material-symbols-outlined {
+  font-size: 2.5rem;
+}
+
+.fan-avatar-header {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: var(--font-size-xs);
+  background-color: var(--color-primary-100);
+  border-color: var(--color-primary-200);
+  color: var(--color-primary);
 }
 
 /* ----------------------------------------------------------------------------
@@ -1293,13 +1323,21 @@
 }
 
 .fan-btn-primary {
-  background-color: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
+  padding: 12px 32px;
+  background-color: #111111 !important;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  border: none;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+  white-space: nowrap;
 }
 
 .fan-btn-primary:hover {
-  background-color: var(--color-zinc-800);
+  background-color: #27272a !important;
 }
 
 .fan-btn-outline {

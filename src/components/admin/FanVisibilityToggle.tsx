@@ -5,7 +5,7 @@
  * Provides consistent UI, first-time confirmation dialog, and accessibility.
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { ConfirmDialog } from '../platformAdmin/ConfirmDialog'
 import { useT } from '../../i18n/useI18n'
 

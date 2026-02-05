@@ -37,6 +37,12 @@ const portal = {
         label: 'Event Details',
         icon: 'event',
     },
+    eventEdit: {
+        path: '/portal/calendar/events/:eventId/edit',
+        params: ['eventId'] as const,
+        label: 'Edit Event',
+        icon: 'edit',
+    },
 
     // Travel
     travel: {
