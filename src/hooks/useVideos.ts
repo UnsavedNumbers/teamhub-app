@@ -279,15 +279,24 @@ export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideo
       
       if (fetchError) throw fetchError
       
-      let videoData = data as unknown as Video
-      if (videoData?.mux_playback_id) {
+      const raw = data as Record<string, unknown>
+      const videoData: Video = {
+        ...raw,
+        athlete_links: (raw.video_athlete_links as Video['athlete_links']) ?? [],
+        tags: (raw.video_tag_links as Video['tags']) ?? [],
+      } as Video
+      delete (videoData as unknown as Record<string, unknown>).video_athlete_links
+      delete (videoData as unknown as Record<string, unknown>).video_tag_links
+
+      let result: Video = videoData
+      if (result.mux_playback_id) {
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.access_token) {
-          const signedUrl = await getSignedThumbnailUrl(session.access_token, { video_id: videoData.id })
-          if (signedUrl) videoData = { ...videoData, thumbnail_url: signedUrl }
+          const signedUrl = await getSignedThumbnailUrl(session.access_token, { video_id: result.id })
+          if (signedUrl) result = { ...result, thumbnail_url: signedUrl }
         }
       }
-      setVideo(videoData)
+      setVideo(result)
     } catch (err) {
       console.error('Error fetching video:', err)
       setError(err instanceof Error ? err : new Error('Failed to fetch video'))
