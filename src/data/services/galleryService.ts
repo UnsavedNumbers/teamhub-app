@@ -396,7 +396,7 @@ export async function getRecentGalleryActivity(
         id,
         gallery_id,
         created_at,
-        gallery:galleries!inner(
+        gallery:galleries!gallery_photos_gallery_id_fkey!inner(
           id,
           name,
           org_id,
