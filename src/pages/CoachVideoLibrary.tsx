@@ -16,6 +16,8 @@ import { supabase } from '@/lib/supabase'
 import { AdminPageHeader, Card } from '@/components/platformAdmin'
 import Button from '@/components/portal/Button'
 import Icon from '@/components/portal/Icon'
+import { t } from '@/i18n'
+import { showSuccess, showError } from '@/utils/toast'
 import '@/styles/orgAdmin.css'
 
 type SortOption = 'created_at' | 'title' | 'duration' | 'view_count'
@@ -60,6 +62,11 @@ export default function CoachVideoLibrary() {
   const [editDescription, setEditDescription] = useState('')
   const [editCategory, setEditCategory] = useState<VideoCategory | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+
+  // Delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [videoToDelete, setVideoToDelete] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   
   // Data for filters
   const [teams, setTeams] = useState<Array<{ id: string; name: string }>>([])
@@ -170,12 +177,35 @@ export default function CoachVideoLibrary() {
     setTimeout(() => setCopySuccess(false), 2000)
   }, [shareLink])
   
-  const handleDeleteVideo = useCallback(async (videoId: string) => {
-    if (window.confirm('Are you sure you want to delete this video? This action cannot be undone.')) {
-      await deleteVideo(videoId)
-      refresh()
+  const handleOpenDeleteModal = useCallback((videoId: string) => {
+    setVideoToDelete(videoId)
+    setShowDeleteModal(true)
+  }, [])
+
+  const handleCloseDeleteModal = useCallback(() => {
+    if (!isDeleting) {
+      setShowDeleteModal(false)
+      setVideoToDelete(null)
     }
-  }, [deleteVideo, refresh])
+  }, [isDeleting])
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!videoToDelete) return
+    setIsDeleting(true)
+    try {
+      const ok = await deleteVideo(videoToDelete)
+      if (ok) {
+        setShowDeleteModal(false)
+        setVideoToDelete(null)
+        showSuccess(t('toast.success.deleted'))
+        refresh()
+      } else {
+        showError(t('videoLibrary.errors.deleteFailed'))
+      }
+    } finally {
+      setIsDeleting(false)
+    }
+  }, [videoToDelete, deleteVideo, refresh, t])
   
   // Handle upload complete
   const handleUploadComplete = useCallback(() => {
@@ -392,7 +422,7 @@ export default function CoachVideoLibrary() {
               video={video}
               onEdit={handleEditVideo}
               onShare={handleShareVideo}
-              onDelete={handleDeleteVideo}
+              onDelete={handleOpenDeleteModal}
             />
           ))}
           
@@ -613,6 +643,45 @@ export default function CoachVideoLibrary() {
                   Close
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Video Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full shadow-xl">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+              <h3 className="text-xl font-bold">{t('videoLibrary.actions.delete')}</h3>
+              <button
+                onClick={handleCloseDeleteModal}
+                className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50"
+                disabled={isDeleting}
+                aria-label={t('common.close')}
+              >
+                <Icon name="close" size="text-xl" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 dark:text-gray-400">{t('videoLibrary.delete.message')}</p>
+            </div>
+            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-end gap-3">
+              <Button
+                variant="secondary"
+                onClick={handleCloseDeleteModal}
+                disabled={isDeleting}
+              >
+                {t('common.cancel')}
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="bg-red-500 hover:bg-red-600 text-white border-red-500"
+              >
+                {isDeleting ? t('common.loading') : t('common.delete')}
+              </Button>
             </div>
           </div>
         </div>
