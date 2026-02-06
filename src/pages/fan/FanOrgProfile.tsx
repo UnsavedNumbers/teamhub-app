@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { 
   getOrgProfile, 
+  getOrgProfileBySlug,
   followOrg, 
   unfollowOrg,
   getFanCalendar,
@@ -30,7 +31,7 @@ type FeedFilter = 'highlights' | 'press'
 
 export default function FanOrgProfile() {
   const t = useT()
-  const { slug: orgId } = useParams<{ slug: string }>()
+  const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   
   const [profile, setProfile] = useState<EntityProfile | null>(null)
@@ -48,21 +49,27 @@ export default function FanOrgProfile() {
   const [eventsLoaded, setEventsLoaded] = useState(false)
 
   useEffect(() => {
-    if (!orgId) {
+    if (!slug) {
       setError(t('portal.fan.entityProfile.orgNotFound'))
       setLoading(false)
       return
     }
     loadProfile()
-  }, [orgId])
+  }, [slug])
 
   const loadProfile = async () => {
-    if (!orgId) return
+    if (!slug) return
 
     setLoading(true)
     setError(null)
 
-    const { data, error: profileError } = await getOrgProfile(orgId)
+    // Try treating the param as an org ID first, then fallback to slug lookup
+    let res = await getOrgProfile(slug)
+    if (res.error || !res.data) {
+      res = await getOrgProfileBySlug(slug)
+    }
+
+    const { data, error: profileError } = res
 
     if (profileError || !data) {
       setError(profileError?.message || t('portal.fan.entityProfile.orgNotFound'))
