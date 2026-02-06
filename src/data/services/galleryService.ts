@@ -245,6 +245,14 @@ export async function getGalleriesForUser(
       query = query.eq('org_id', context.orgId)
     }
 
+    // Pagination
+    if (params.limit) {
+      query = query.limit(params.limit)
+    }
+    if (params.offset) {
+      query = query.range(params.offset, params.offset + (params.limit || 1000) - 1)
+    }
+
     const { data: galleries, error } = await query
 
     if (error) throw error
@@ -344,6 +352,110 @@ export async function getGalleriesForUser(
     }
   } catch (err) {
     console.error('[galleryService] Error getting galleries:', err)
+    return {
+      data: [],
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
+ * Recent activity item interface
+ */
+export interface RecentActivityItem {
+  type: 'photo_upload' | 'gallery_created' | 'gallery_updated'
+  gallery_id: string
+  gallery_name: string
+  gallery_cover_url: string | null
+  timestamp: string
+  photo_count?: number
+}
+
+/**
+ * Get recent gallery activity for an organization
+ * Returns recent photo uploads and gallery updates
+ */
+export async function getRecentGalleryActivity(
+  context: UserContext,
+  limit: number = 10
+): Promise<{ data: RecentActivityItem[]; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: [], error: null }
+  }
+
+  try {
+    if (!context.orgId) {
+      return { data: [], error: new Error('Organization context required') }
+    }
+
+    // Get recent photo uploads (last 10 photos) with gallery info
+    const { data: recentPhotos, error: photosError } = await supabase
+      .from('gallery_photos')
+      .select(`
+        id,
+        gallery_id,
+        created_at,
+        gallery:galleries!inner(
+          id,
+          name,
+          org_id,
+          cover_photo_id,
+          cover:cover_photo_id(thumbnail_path, storage_path)
+        )
+      `)
+      .eq('gallery.org_id', context.orgId)
+      .order('created_at', { ascending: false })
+      .limit(limit * 2) // Get more to account for grouping
+
+    if (photosError) throw photosError
+
+    const activityItems: RecentActivityItem[] = []
+
+    if (recentPhotos) {
+      // Group by gallery and get most recent per gallery
+      const galleryMap = new Map<string, RecentActivityItem>()
+      
+      for (const photo of recentPhotos as any[]) {
+        const gallery = photo.gallery
+        if (!gallery) continue
+
+        const galleryId = gallery.id
+        if (!galleryMap.has(galleryId)) {
+          const coverUrl = gallery.cover 
+            ? getGalleryPhotoThumbnailUrl(gallery.cover.thumbnail_path, gallery.cover.storage_path)
+            : null
+
+          galleryMap.set(galleryId, {
+            type: 'photo_upload',
+            gallery_id: galleryId,
+            gallery_name: gallery.name,
+            gallery_cover_url: coverUrl,
+            timestamp: photo.created_at,
+            photo_count: 1,
+          })
+        } else {
+          const item = galleryMap.get(galleryId)!
+          item.photo_count = (item.photo_count || 0) + 1
+          // Keep the most recent timestamp
+          if (new Date(photo.created_at) > new Date(item.timestamp)) {
+            item.timestamp = photo.created_at
+          }
+        }
+      }
+
+      activityItems.push(...Array.from(galleryMap.values()))
+    }
+
+    // Sort by timestamp descending and limit
+    activityItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    
+    return {
+      data: activityItems.slice(0, limit),
+      error: null,
+    }
+  } catch (err) {
+    console.error('[galleryService] Error getting recent activity:', err)
     return {
       data: [],
       error: err instanceof Error ? err : new Error('Unknown error'),

@@ -51,8 +51,19 @@ export const en = {
         connecting_to_chat: 'Connecting to chat...',
         select: 'Select',
         clearSelection: 'Clear Selection',
-        selectAll: 'Select All Due',
+        selectAll: 'Select All',
         selectedCount: '{{count}} selected',
+        all: 'All',
+        date: 'Date',
+        lastWeek: 'Last Week',
+        lastMonth: 'Last Month',
+        lastYear: 'Last Year',
+        public: 'Public',
+        team: 'Team',
+        private: 'Private',
+        deleting: 'Deleting...',
+        name: 'Name',
+        type: 'Type',
         note: 'NOTE',
         notes: 'NOTES',
         home: 'Home',
@@ -3211,6 +3222,75 @@ export const en = {
         // Auto-approval
         autoApproved: 'Auto-approved',
         approvedByCoach: 'Approved by coach',
+
+        // Dashboard
+        dashboard: {
+            title: 'Dashboard',
+            recentActivity: 'Recent Activity',
+            photosAddedThisWeek: 'photos added this week',
+            storageUsed: 'Storage Used',
+            of: 'of',
+            limit: 'limit',
+            quickActions: 'Quick Actions',
+            bulkUpload: 'Bulk Upload Photos',
+            reviewPending: 'Review Pending Photos',
+            generateReports: 'Generate Reports',
+            noRecentActivity: 'No recent activity',
+            photoAdded: 'Photo added',
+            photosAdded: '{{count}} photos added',
+        },
+
+        // Browse
+        browse: {
+            title: 'Browse',
+            selectSeason: 'Select a season',
+            selectEntity: 'Select an entity',
+            noGalleries: 'No galleries found',
+            emptyGallery: 'Empty gallery',
+            hasPhotos: 'Has photos',
+        },
+
+        // Search
+        search: {
+            title: 'Search & Filter',
+            searchPlaceholder: 'Search galleries...',
+            filters: 'Filters',
+            results: 'Results',
+            noResults: 'No galleries match your search',
+            exportResults: 'Export Results',
+        },
+
+        // Bulk Operations
+        bulk: {
+            title: 'Bulk Operations',
+            selectGalleries: 'Select Galleries',
+            selectedCount: '{{count}} galleries selected',
+            selectAllEmpty: 'Select All Empty Galleries',
+            selectByDate: 'Select by Date Range',
+            selectByType: 'Select by Entity Type',
+            actions: 'Actions',
+            deleteEmpty: 'Delete Empty Galleries',
+            mergeGalleries: 'Merge Galleries',
+            bulkTag: 'Bulk Tag Assignment',
+            batchPermissions: 'Batch Permission Changes',
+            archive: 'Archive Galleries',
+            generateReport: 'Generate Report',
+            comingSoon: 'Coming soon',
+            confirmDeleteEmpty: 'Are you sure you want to delete {{count}} empty gallery(ies)?',
+            deleteSuccess: 'Successfully deleted {{count}} gallery(ies)',
+            deleteError: 'Error deleting galleries',
+        },
+
+        // Settings
+        settings: {
+            title: 'Settings',
+            galleryPreferences: 'Gallery Preferences',
+            defaultVisibility: 'Default Visibility',
+            defaultRequireApproval: 'Default Require Approval',
+            hideEmptyByDefault: 'Hide Empty Galleries by Default',
+            save: 'Save Preferences',
+            saved: 'Preferences saved',
+        },
 
         // Photo actions
         setCoverPhoto: 'Set as Cover Photo',
