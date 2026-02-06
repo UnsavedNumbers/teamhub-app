@@ -247,8 +247,31 @@ export default function AuthCallback() {
             }
           })
 
-          // Determine redirect based on roles
-          const finalRedirect = getLoginRedirect(isPlatformAdmin, organizations)
+          // Check if user is a fan:
+          // 1. Check auth metadata for signup_mode='fan'
+          // 2. Check if user has any entries in fan_org_follows table
+          let isFan = false
+          
+          // Check auth metadata signup_mode
+          const signupMode = data.session.user.user_metadata?.signup_mode
+          if (signupMode === 'fan') {
+            isFan = true
+          }
+          
+          // If not determined by metadata, check fan_org_follows table
+          if (!isFan) {
+            const { count } = await supabase
+              .from('fan_org_follows')
+              .select('id', { count: 'exact', head: true })
+              .eq('user_id', userId)
+            
+            if (count && count > 0) {
+              isFan = true
+            }
+          }
+
+          // Determine redirect based on roles and fan status
+          const finalRedirect = getLoginRedirect(isPlatformAdmin, organizations, isFan)
           // Navigation will unmount and cleanup will handle loading state
           navigate(finalRedirect, { replace: true })
         } catch (err) {

@@ -167,7 +167,6 @@ export interface VideoTag {
   org_id: string
   name: string
   tag_type: VideoTagType
-  type?: VideoTagType
   color: string | null
   usage_count: number
   description: string | null
@@ -180,9 +179,7 @@ export interface VideoTagLink {
   id: string
   video_id: string
   tag_id: string
-  timestamp_start: number | null
-  timestamp_end: number | null
-  created_by: string
+  created_by: string | null
   created_at: string
   
   // Relations
@@ -198,12 +195,10 @@ export interface VideoAthleteLink {
   video_id: string
   athlete_id: string
   link_type: VideoLinkType
-  timestamp_start: number | null
-  timestamp_end: number | null
-  notes: string | null
-  created_by: string
+  start_time_seconds: number | null
+  end_time_seconds: number | null
+  created_by: string | null
   created_at: string
-  updated_at: string
   
   // Relations
   athlete?: {
@@ -371,6 +366,8 @@ export interface GetPlaybackTokenResponse {
   animated_gif_url: string
   storyboard_url: string
   token: string
+  thumbnail_token: string
+  storyboard_token: string
   expires_in: number
   video?: {
     id: string

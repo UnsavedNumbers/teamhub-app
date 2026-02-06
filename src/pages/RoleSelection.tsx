@@ -11,6 +11,7 @@ import { hasMultipleRoles, getLoginRedirect } from '@/utils/loginRedirect'
 import { USE_FAKE_DATA } from '@/data/config'
 import { getLink, RouteKeys } from '@/utils/routes'
 import { showError } from '@/utils/toast'
+import { supabase } from '@/lib/supabase'
 import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 
 interface RoleCard {
@@ -104,8 +105,33 @@ export function RoleSelection() {
 
     // If user doesn't have multiple roles, redirect appropriately
     if (!hasMultipleRoles(profile.organizations)) {
-      const redirectTo = getLoginRedirect(profile.isPlatformAdmin, profile.organizations)
-      navigate(redirectTo, { replace: true })
+      // Check if user is a fan for proper redirect
+      const checkFanAndRedirect = async () => {
+        let isFan = false
+        
+        // Check auth metadata signup_mode
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user?.user_metadata?.signup_mode === 'fan') {
+          isFan = true
+        }
+        
+        // If not determined by metadata, check fan_org_follows table
+        if (!isFan && profile.id) {
+          const { count } = await supabase
+            .from('fan_org_follows')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', profile.id)
+          
+          if (count && count > 0) {
+            isFan = true
+          }
+        }
+        
+        const redirectTo = getLoginRedirect(profile.isPlatformAdmin, profile.organizations, isFan)
+        navigate(redirectTo, { replace: true })
+      }
+      
+      checkFanAndRedirect()
     }
   }, [profile, authLoading, orgLoading, navigate])
 
