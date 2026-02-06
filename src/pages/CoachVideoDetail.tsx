@@ -126,9 +126,7 @@ function AthleteSelectorModal({
       const { data, error } = await supabase
         .from('athletes')
         .select('id, first_name, last_name, jersey_number, has_profile_photo, profile_photo_updated_at')
-        .eq('team_id', teamId)
         .order('last_name')
-      
       if (error) throw error
       setAthletes(data || [])
     } catch (err) {
@@ -262,7 +260,7 @@ function AthleteSelectorModal({
             <Button
               variant="primary"
               onClick={handleSave}
-              disabled={saving || selectedIds.length === 0}
+              disabled={saving && selectedIds.length === 0}
             >
               {saving ? t('common.saving') : t('videoLibrary.athletes.saveLinks')}
             </Button>
