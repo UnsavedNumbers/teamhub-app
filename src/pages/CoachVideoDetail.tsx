@@ -43,6 +43,8 @@ import { t } from '@/i18n'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import { supabase } from '@/lib/supabase'
 import { getLink } from '@/utils/routes'
+import { showSuccess, showError } from '@/utils/toast'
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { cn } from '@/utils/cn'
 import { USE_FAKE_DATA } from '@/data/config'
 import '@/styles/orgAdmin.css'
@@ -968,12 +970,19 @@ export default function CoachVideoDetail() {
     }
   }, [notes])
   
+  const { copy: copyToClipboard } = useCopyToClipboard()
+
   // Copy link to clipboard
-  const handleCopyLink = useCallback(() => {
-    const url = `${window.location.origin}${getLink('admin.videos.detail', { id: videoId! })}`
-    navigator.clipboard.writeText(url)
-    // Could add a toast notification here
-  }, [videoId])
+  const handleCopyLink = useCallback(async () => {
+    if (!videoId) return
+    const url = `${window.location.origin}${getLink('admin.videos.detail', { id: videoId })}`
+    const ok = await copyToClipboard(url)
+    if (ok) {
+      showSuccess(t('videoLibrary.actions.linkCopied'))
+    } else {
+      showError(t('common.error.clipboardFailed'))
+    }
+  }, [videoId, copyToClipboard])
   
   // Handle video edit
   const handleStartEdit = useCallback(() => {
