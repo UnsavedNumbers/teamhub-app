@@ -284,12 +284,19 @@ export default function AdminPhotos() {
                   </div>
                   <div className="gallery-footer">
                     <div className="pa-flex pa-items-center pa-gap-2">
-                      <span className="material-symbols-outlined pa-text-muted">image</span>
+                      <span className="material-symbols-outlined pa-text-muted">
+                        {(gallery.photo_count || 0) === 0 ? 'upload' : 'image'}
+                      </span>
                       <span className="pa-text-sm pa-font-semibold">
-                        {t('photos.stats.photosCount', { count: gallery.photo_count || 0 })}
+                        {(gallery.photo_count || 0) === 0 
+                          ? t('photos.addFirstPhoto')
+                          : `${gallery.photo_count} ${gallery.photo_count === 1 ? t('photos.photo') : t('photos.photos')}`
+                        }
                       </span>
                     </div>
-                    <span className="material-symbols-outlined pa-text-muted">arrow_forward</span>
+                    {(gallery.photo_count || 0) > 0 && (
+                      <span className="material-symbols-outlined pa-text-muted">arrow_forward</span>
+                    )}
                   </div>
                 </div>
               </Card>

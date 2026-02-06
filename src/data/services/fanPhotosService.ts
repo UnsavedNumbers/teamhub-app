@@ -40,9 +40,9 @@ export async function getFanGalleries(
             return { data: [], error }
         }
 
-        // Filter for fan visibility
+        // Filter for fan visibility and galleries with at least one photo
         const fanGalleries = allGalleries.filter(
-            (gallery: any) => gallery.fans_can_see === true
+            (gallery: any) => gallery.fans_can_see === true && (gallery.photo_count || 0) > 0
         ) as FanGallery[]
 
         return {

@@ -135,10 +135,10 @@ export default function PhotoDetail() {
 
         {/* Stats */}
         <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-4 pa-gap-3">
-          <StatCard label={t('photos.stats.totalPhotos')} value={photos.length} />
-          <StatCard label={t('common.approved')} value={photos.filter((p) => (p.approval_status || p.status) === 'approved').length} />
-          <StatCard label={t('photos.pendingApproval.badge')} value={photos.filter((p) => (p.approval_status || p.status) === 'pending').length} />
-          <StatCard label={t('photos.stats.flagged')} value={photos.filter((p) => (p.approval_status || p.status) === 'rejected').length} />
+          <StatCard label={t('photos.stats.totalPhotos')} value={String(photos.length)} />
+          <StatCard label={t('common.approved')} value={String(photos.filter((p) => (p.approval_status || p.status) === 'approved').length)} />
+          <StatCard label={t('photos.pendingApproval.badge')} value={String(photos.filter((p) => (p.approval_status || p.status) === 'pending').length)} />
+          <StatCard label={t('photos.stats.flagged')} value={String(photos.filter((p) => (p.approval_status || p.status) === 'rejected').length)} />
         </div>
 
         {/* Upload Zone */}

@@ -20,6 +20,7 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
   const [name, setName] = useState(gallery?.name || '')
   const [description, setDescription] = useState(gallery?.description || '')
   const [visibleToFans, setVisibleToFans] = useState(false)
+  const [visibilityExplicitlyChanged, setVisibilityExplicitlyChanged] = useState(false)
   const [coverPhotoId, setCoverPhotoId] = useState<string | ''>(gallery?.cover_photo_id || '')
   const [saving, setSaving] = useState(false)
 
@@ -28,6 +29,7 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
       setName(gallery.name)
       setDescription(gallery.description || '')
       setVisibleToFans(mapGalleryVisibilityToFanVisibility(gallery.visibility as any))
+      setVisibilityExplicitlyChanged(false) // Reset when opening modal
       setCoverPhotoId(gallery.cover_photo_id || '')
     }
   }, [gallery, open])
@@ -45,13 +47,19 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
     if (!context) return
     setSaving(true)
     try {
-      const visibility = mapFanVisibilityToGalleryVisibility(visibleToFans)
-      const { data, error } = await updateGallery(context, gallery.id, {
+      // Only update visibility if it was explicitly changed by the user
+      // Otherwise preserve the original visibility setting
+      const updates: Parameters<typeof updateGallery>[2] = {
         name: name.trim(),
         description: description.trim(),
-        visibility,
         cover_photo_id: coverPhotoId || null,
-      })
+      }
+
+      if (visibilityExplicitlyChanged) {
+        updates.visibility = mapFanVisibilityToGalleryVisibility(visibleToFans)
+      }
+
+      const { data, error } = await updateGallery(context, gallery.id, updates)
       if (error || !data) throw error || new Error('Failed to update gallery')
       
       // Check if cover changed and trigger regeneration
@@ -122,7 +130,10 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
           <div>
             <FanVisibilityToggle
               checked={visibleToFans}
-              onChange={setVisibleToFans}
+              onChange={(newValue) => {
+                setVisibleToFans(newValue)
+                setVisibilityExplicitlyChanged(true)
+              }}
               entityType="gallery"
               disabled={saving}
             />

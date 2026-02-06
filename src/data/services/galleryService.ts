@@ -223,34 +223,6 @@ export async function getGalleriesForUser(
   }
 
   try {
-    console.log('[galleryService] getGalleriesForUser params:', params, 'context.orgId:', context.orgId)
-
-    // Debug: check org admin status
-    const { data: debugResult, error: debugAdminError } = await supabase.rpc('is_org_admin', {
-      org_id_param: context.orgId
-    })
-    console.log('[galleryService] is_org_admin check:', debugResult, debugAdminError)
-
-    // Debug: check user's organization memberships
-    const { data: memberships, error: memError } = await supabase
-      .from('organization_members')
-      .select('organization_id, role, user_id')
-    console.log('[galleryService] User memberships:', memberships, memError)
-
-    // Debug: Try to call can_view_gallery directly for a known gallery
-    const testGalleryId = '2a7eba2b-ae54-4b79-a4aa-f68a37aa7bf8' // Known gallery ID
-    const { data: canViewResult, error: canViewError } = await supabase.rpc('can_view_gallery', {
-      gallery_id_param: testGalleryId
-    })
-    console.log('[galleryService] can_view_gallery test:', { galleryId: testGalleryId, canView: canViewResult, error: canViewError })
-
-    // Debug: check what galleries exist (without RLS)
-    const { data: allGalleries, error: debugError } = await supabase
-      .from('galleries')
-      .select('id, name, gallery_type, org_id')
-      .limit(5)
-    console.log('[galleryService] Sample galleries (with RLS):', allGalleries, debugError)
-
     let query = supabase
       .from('galleries')
       .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
@@ -262,27 +234,23 @@ export async function getGalleriesForUser(
     }
 
     // Filter by entity_id (team, athlete, event, travel)
-    if (params.entity_id) {
+    if (params.entity_id && params.entity_id !== '') {
       query = query.eq('entity_id', params.entity_id)
     }
 
     // Filter by org_id
     if (params.org_id) {
       query = query.eq('org_id', params.org_id)
-    } else if (context.orgId) {
+    } else if (context.orgId && context.orgId !== '') {
       query = query.eq('org_id', context.orgId)
     }
 
     const { data: galleries, error } = await query
 
-    console.log('[galleryService] Query result:', { count: galleries?.length, error, galleries })
-    console.log('[galleryService] Cover data for galleries:', galleries?.map((g: any) => ({ id: g.id, name: g.name, cover_photo_id: g.cover_photo_id, cover: g.cover })))
-
     if (error) throw error
 
     const galleryList = (galleries || []).map((g: any) => {
       const coverUrl = g.cover ? getGalleryPhotoThumbnailUrl(g.cover.thumbnail_path, g.cover.storage_path) : null
-      console.log('[galleryService] Cover URL for', g.name, ':', { cover: g.cover, coverUrl })
       return {
         ...g,
         cover_url: coverUrl,

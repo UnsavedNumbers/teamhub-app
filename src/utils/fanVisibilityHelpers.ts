@@ -54,9 +54,15 @@ export function mapFanVisibilityToGalleryVisibility(isVisibleToFans: boolean): '
  * Map gallery visibility enum to fan visibility toggle state
  * @param visibility - Gallery visibility from database
  * @returns Toggle state (true = visible to fans)
+ *
+ * Note: Galleries with 'public', 'organization', 'team', or 'guardians' visibility
+ * are potentially visible to fans/guardians (subject to RLS and fans_can_see flag).
+ * Only 'private' galleries are definitely not visible.
  */
 export function mapGalleryVisibilityToFanVisibility(visibility: string | null | undefined): boolean {
-    return visibility === 'public'
+    if (!visibility) return false
+    // Galleries that are NOT private are potentially visible to fans
+    return visibility !== 'private'
 }
 
 /**
