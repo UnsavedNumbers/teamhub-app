@@ -44,6 +44,7 @@ interface EventDetail {
   org_name: string
   org_slug: string
   org_logo_url: string | null
+  org_public_description: string | null
   // Venue info
   venue_name: string | null
   venue_address: string | null
@@ -101,47 +102,36 @@ export default function FanEventDetail() {
     setError(null)
 
     try {
+      // First check if user is authenticated
+      const { data: { user } } = await supabase.auth.getUser()
+      
       // Load event with organization details
+      // Note: We select all event fields plus related data
       const { data, error: fetchError } = await supabase
         .from('events')
         .select(`
-          id,
-          title,
-          description,
-          start_time,
-          end_time,
-          arrival_time,
-          timezone,
-          location,
-          type,
-          is_cancelled,
-          visibility,
-          weather_dependent,
-          external_link,
-          notes,
-          uniform_notes,
-          equipment_notes,
-          team:teams (
+          *,
+          teams (
             id,
             name,
             org_id,
-            organization:organizations (
+            organizations (
               id,
               name,
               slug,
               logo_url
             )
           ),
-          season:seasons (
+          seasons (
             id,
             name
           ),
-          event_location:event_locations (
+          event_locations (
             venue_name,
-            address,
+            address_line1,
             city,
             state,
-            zip
+            postal_code
           ),
           ticketed_events (
             id,
@@ -150,9 +140,14 @@ export default function FanEventDetail() {
           )
         `)
         .eq('id', id)
-        .single()
+        .maybeSingle()
 
-      if (fetchError) throw fetchError
+      console.log('Event query result:', { data, fetchError, user: !!user })
+
+      if (fetchError) {
+        console.error('Error fetching event:', fetchError)
+        throw fetchError
+      }
 
       if (!data) {
         setError('Event not found')
@@ -164,11 +159,22 @@ export default function FanEventDetail() {
       // Using any type here due to complex Supabase query result structure
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const dataAny = data as any
-      const team = Array.isArray(dataAny.team) ? dataAny.team[0] : dataAny.team
-      const org = team?.organization
-      const eventLocation = Array.isArray(dataAny.event_location) ? dataAny.event_location[0] : dataAny.event_location
+      const team = Array.isArray(dataAny.teams) ? dataAny.teams[0] : dataAny.teams
+      let org = team?.organizations ? (Array.isArray(team.organizations) ? team.organizations[0] : team.organizations) : null
+      // If org missing, try fetching it by team.org_id as a fallback (ensures org name is available)
+      if (!org?.id && team?.org_id) {
+        const { data: orgData } = await supabase
+          .from('organizations')
+          .select('id, name, slug, logo_url, public_description')
+          .eq('id', team.org_id)
+          .maybeSingle()
+        if (orgData) {
+          org = orgData
+        }
+      }
+      const eventLocation = Array.isArray(dataAny.event_locations) ? dataAny.event_locations[0] : dataAny.event_locations
       const ticketedEvent = Array.isArray(dataAny.ticketed_events) ? dataAny.ticketed_events[0] : dataAny.ticketed_events
-      const season = Array.isArray(dataAny.season) ? dataAny.season[0] : dataAny.season
+      const season = Array.isArray(dataAny.seasons) ? dataAny.seasons[0] : dataAny.seasons
 
       const eventDetail: EventDetail = {
         id: dataAny.id,
@@ -191,11 +197,12 @@ export default function FanEventDetail() {
         org_name: org?.name || 'Organization',
         org_slug: org?.slug || '',
         org_logo_url: org?.logo_url || null,
+        org_public_description: org?.public_description || null,
         venue_name: eventLocation?.venue_name || ticketedEvent?.venue_name || null,
-        venue_address: eventLocation?.address || null,
+        venue_address: eventLocation?.address_line1 || null,
         venue_city: eventLocation?.city || null,
         venue_state: eventLocation?.state || null,
-        venue_zip: eventLocation?.zip || null,
+        venue_zip: eventLocation?.postal_code || null,
         is_ticketed: !!ticketedEvent,
         ticket_event_id: ticketedEvent?.id || null,
         ticket_price_min: null, // Would need separate query to ticket_types
@@ -483,6 +490,9 @@ export default function FanEventDetail() {
                 )}
               </div>
             </div>
+            {event.org_public_description && (
+              <p className="fan-event-org-description">{event.org_public_description}</p>
+            )}
 
             {/* Action Buttons */}
             <div className="fan-event-actions-row">
@@ -584,35 +594,7 @@ export default function FanEventDetail() {
             </section>
           )}
 
-          {/* Additional Notes Card */}
-          {(event.notes || event.uniform_notes || event.equipment_notes) && (
-            <section className="fan-event-card">
-              <h2 className="fan-event-card-title">
-                <span className="material-symbols-outlined">note</span>
-                Event Notes
-              </h2>
-              <div className="fan-event-notes">
-                {event.notes && (
-                  <div className="fan-event-note-item">
-                    <h4>General Notes</h4>
-                    <p>{event.notes}</p>
-                  </div>
-                )}
-                {event.uniform_notes && (
-                  <div className="fan-event-note-item">
-                    <h4>Uniform</h4>
-                    <p>{event.uniform_notes}</p>
-                  </div>
-                )}
-                {event.equipment_notes && (
-                  <div className="fan-event-note-item">
-                    <h4>Equipment</h4>
-                    <p>{event.equipment_notes}</p>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
+          {/* Event notes are intentionally hidden from fans */}
         </div>
 
         {/* Sidebar */}
@@ -633,6 +615,12 @@ export default function FanEventDetail() {
                     )}
                   </div>
                 )}
+                <div className="fan-event-ticket-meta">
+                  {event.ticket_price_min !== null && (
+                    <span className="fan-event-ticket-from">From ${event.ticket_price_min.toFixed(2)}</span>
+                  )}
+                  <span className="fan-event-ticket-date">{formatEventDate(event.start_time, false)}</span>
+                </div>
                 <button
                   className="fan-btn fan-btn-primary fan-event-cta-btn"
                   onClick={handleGetTickets}

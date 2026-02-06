@@ -3083,6 +3083,30 @@
   color: var(--color-zinc-500);
 }
 
+.fan-event-org-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-2);
+  line-height: var(--line-height-normal);
+}
+
+.fan-event-ticket-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-4);
+  margin: var(--spacing-4) 0;
+}
+
+.fan-event-ticket-from {
+  font-weight: var(--font-weight-semibold);
+}
+
+.fan-event-ticket-date {
+  color: var(--color-zinc-500);
+  font-size: var(--font-size-sm);
+}
+
 /* Actions Row */
 .fan-event-actions-row {
   display: flex;
@@ -3174,7 +3198,7 @@
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
   color: var(--color-primary);
-  margin: 0 0 var(--spacing-6) 0;
+  margin: 0 0 var(--spacing-8) 0;
   padding-bottom: var(--spacing-4);
   border-bottom: 1px solid var(--color-zinc-100);
 }
@@ -3182,6 +3206,11 @@
 .fan-event-card-title .material-symbols-outlined {
   font-size: 1.25rem;
   color: var(--color-zinc-400);
+}
+
+/* Ensure card title bottom spacing overrides global heading reset */
+.fan-page .fan-event-card-title {
+  margin-bottom: var(--spacing-8);
 }
 
 /* Description */
