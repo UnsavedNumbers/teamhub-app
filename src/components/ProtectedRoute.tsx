@@ -34,6 +34,7 @@ export function ProtectedRoute({
     isAdminRoute && !isPlatformAdmin ? currentOrganization?.id : undefined,
     { requireOrganization: isAdminRoute && !isPlatformAdmin }
   )
+  const hasIdentity = !!user && !!profile
 
   // Track whether we've set loading to true using a ref (survives through cleanup)
   const hasSetLoadingRef = useRef(false)
@@ -43,7 +44,7 @@ export function ProtectedRoute({
   useEffect(() => {
     // Determine if we should show loading based on all conditions
     const shouldShowLoading = 
-      loading || // Auth is loading
+      (loading && !hasIdentity) || // Auth is loading (only before identity is ready)
       (isAdminRoute && !isPlatformAdmin && licenseLoading) || // License is loading for admin routes
       (!user || !profile) // Waiting for user/profile
 
@@ -69,7 +70,7 @@ export function ProtectedRoute({
 
   // Always wait for auth loading. Do NOT globally block on orgLoading;
   // platform admins and admin routes must be able to render without an org selected.
-  if (loading) {
+  if (loading && !hasIdentity) {
     return null
   }
 
