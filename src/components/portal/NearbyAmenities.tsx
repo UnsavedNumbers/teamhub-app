@@ -32,7 +32,7 @@ interface NearbyAmenitiesProps {
   eventType: string
   eventStartTime: string
   className?: string
-  variant?: 'event' | 'travel'
+  variant?: 'event' | 'travel' | 'fan'
 }
 
 /**
@@ -137,6 +137,7 @@ function getDefaultExpandedKey(eventStartTime: string, categoryIdsWithItems: Cur
 const TITLE_BY_VARIANT = {
   travel: 'Near the venue',
   event: 'Nearby Amenities',
+  fan: 'Nearby',
 } as const
 
 const SUBTITLE = 'Food, coffee & essentials within walking distance'
@@ -265,6 +266,134 @@ export default function NearbyAmenities({
   // No data - hide section
   if (!hasData) {
     return null
+  }
+
+  // Fan variant uses fan-event-sidebar-card styling
+  if (variant === 'fan') {
+    return (
+      <div className={`fan-event-sidebar-card ${className}`}>
+        <h3 className="fan-event-sidebar-title">
+          <span className="material-symbols-outlined">explore</span>
+          {TITLE_BY_VARIANT[variant]}
+        </h3>
+        <p className="fan-event-sidebar-text fan-text-xs">
+          {SUBTITLE}
+        </p>
+
+        {/* Fallback notice */}
+        {isFallback && (
+          <p className="fan-commute-location fan-text-xs">
+            AI descriptions temporarily unavailable. Showing nearby places by category.
+          </p>
+        )}
+
+        {/* Accordion */}
+        {groupedByCategory.length > 0 ? (
+          <div className="fan-nearby-accordion" role="region" aria-label="Nearby amenities by category">
+            {groupedByCategory.map(({ category, items }, index) => {
+              const isExpanded = expandedKey === category.id
+              const panelId = `nearby-amenities-panel-${category.id.replace(/\s+/g, '-')}`
+              const headerId = `nearby-amenities-header-${category.id.replace(/\s+/g, '-')}`
+
+              const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setExpandedKey(prev => (prev === category.id ? null : category.id))
+                  return
+                }
+                if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                  e.preventDefault()
+                  const next = groupedByCategory[index + 1]
+                  if (next) {
+                    headerRefs.current.get(next.category.id)?.focus()
+                    setExpandedKey(next.category.id)
+                  }
+                }
+                if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                  e.preventDefault()
+                  const prev = groupedByCategory[index - 1]
+                  if (prev) {
+                    headerRefs.current.get(prev.category.id)?.focus()
+                    setExpandedKey(prev.category.id)
+                  }
+                }
+                if (e.key === 'Home') {
+                  e.preventDefault()
+                  const first = groupedByCategory[0]
+                  if (first) {
+                    headerRefs.current.get(first.category.id)?.focus()
+                    setExpandedKey(first.category.id)
+                  }
+                }
+                if (e.key === 'End') {
+                  e.preventDefault()
+                  const last = groupedByCategory[groupedByCategory.length - 1]
+                  if (last) {
+                    headerRefs.current.get(last.category.id)?.focus()
+                    setExpandedKey(last.category.id)
+                  }
+                }
+              }
+
+              return (
+                <div key={category.id} className="fan-nearby-category">
+                  <h4>
+                    <button
+                      ref={el => headerRefs.current.set(category.id, el)}
+                      type="button"
+                      id={headerId}
+                      aria-expanded={isExpanded}
+                      aria-controls={panelId}
+                      onClick={() => setExpandedKey(prev => (prev === category.id ? null : category.id))}
+                      onKeyDown={handleKeyDown}
+                      className="fan-nearby-category-header"
+                    >
+                      <span className="material-symbols-outlined">
+                        {category.icon}
+                      </span>
+                      <span className="fan-nearby-category-name">
+                        <strong>{category.name}</strong>
+                        <span>{category.descriptor}</span>
+                      </span>
+                      <span className="fan-nearby-category-count">
+                        {items.length}
+                      </span>
+                      <span className={`material-symbols-outlined fan-nearby-category-arrow ${isExpanded ? 'expanded' : ''}`}>
+                        expand_more
+                      </span>
+                    </button>
+                  </h4>
+                  <div
+                    id={panelId}
+                    role="region"
+                    aria-labelledby={headerId}
+                    hidden={!isExpanded}
+                    className={isExpanded ? '' : 'hidden'}
+                  >
+                    <div className="fan-nearby-category-content">
+                      {items.map((amenity, i) => (
+                        <AmenityRow key={`${amenity.place_id}-${i}`} amenity={amenity} category={category.id} isFan />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="fan-nearby-list">
+            {amenities.map((amenity, i) => (
+              <AmenityRow key={`${amenity.place_id}-${i}`} amenity={amenity} category={amenity.category} isFan />
+            ))}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="fan-nearby-footer">
+          Walking times are approximate
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -436,10 +565,55 @@ export default function NearbyAmenities({
 /**
  * Individual amenity row component - compact horizontal layout
  */
-function AmenityRow({ amenity, category }: { amenity: AmenityItem; category?: string }) {
+function AmenityRow({ amenity, category, isFan = false }: { amenity: AmenityItem; category?: string; isFan?: boolean }) {
   const mapsUrl = getMapsUrl(amenity.place_id, amenity.name)
   const sanitizedDescription = sanitizeDescription(amenity.description)
   const categoryIcon = getCategoryIcon(category || amenity.category || 'Nearby')
+
+  if (isFan) {
+    return (
+      <a
+        href={mapsUrl || '#'}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fan-nearby-item"
+      >
+        {/* Category icon */}
+        <div className="fan-nearby-item-icon">
+          <span className="material-symbols-outlined">
+            {categoryIcon}
+          </span>
+        </div>
+
+        {/* Name and description */}
+        <div className="fan-nearby-item-info">
+          <span className="fan-nearby-item-name">
+            {amenity.name}
+          </span>
+          {sanitizedDescription && (
+            <span className="fan-nearby-item-desc">
+              {sanitizedDescription}
+            </span>
+          )}
+        </div>
+
+        {/* Walking time */}
+        {amenity.walking_minutes > 0 && (
+          <span className="fan-nearby-item-walk">
+            <span className="material-symbols-outlined">
+              directions_walk
+            </span>
+            {amenity.walking_minutes}m
+          </span>
+        )}
+
+        {/* External link icon */}
+        <span className="material-symbols-outlined fan-nearby-item-link">
+          open_in_new
+        </span>
+      </a>
+    )
+  }
 
   return (
     <a

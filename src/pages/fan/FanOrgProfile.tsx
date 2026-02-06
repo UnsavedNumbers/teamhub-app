@@ -401,7 +401,14 @@ export default function FanOrgProfile() {
               ) : (
                 <div className="fan-org-events-list">
                   {events.map((event) => (
-                    <div key={event.id} className="fan-org-event-card">
+                    <div
+                      key={event.id}
+                      className="fan-org-event-card"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigate(getLink(RouteKeys.FAN_EVENT_DETAIL, { eventId: event.id }))}
+                      onKeyDown={(e) => { if (e.key === 'Enter') navigate(getLink(RouteKeys.FAN_EVENT_DETAIL, { eventId: event.id })) }}
+                    >
                       <div className="fan-org-event-date">
                         <span className="fan-org-event-day">
                           {new Date(event.start_time).getDate()}
