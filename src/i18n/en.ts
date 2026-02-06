@@ -312,6 +312,9 @@ export const en = {
         share: 'Share',
         downloadAll: 'Download All',
         taggedAs: 'Tagged:',
+        form: {
+          charactersRemaining: '{{count}} characters remaining',
+        },
       },
       // Following Page
       following: {
