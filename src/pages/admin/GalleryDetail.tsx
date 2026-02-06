@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import Lightbox from 'yet-another-react-lightbox'
+import 'yet-another-react-lightbox/styles.css'
 import { Button, Card, InlineNotice } from '@/components/platformAdmin'
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import {
@@ -7,6 +9,7 @@ import {
   deletePhotos,
   getGalleryById,
   getPhotosForGallery,
+  getGalleryPhotoUrl,
   moderatePhotos,
   type Gallery,
   type GalleryPhoto,
@@ -19,6 +22,8 @@ import { showError, showSuccess } from '@/utils/toast'
 import { PhotoUploadZone } from '@/components/admin/galleries/PhotoUploadZone'
 import { PhotoGalleryGrid } from '@/components/admin/galleries/PhotoGalleryGrid'
 import { GalleryEditModal } from '@/components/admin/galleries/GalleryEditModal'
+import { TaggingSlideout } from '@/components/gallery/TaggingSlideout'
+import { BulkTaggingModal } from '@/components/gallery/BulkTaggingModal'
 import { getLink } from '@/utils/routes'
 
 const MAX_PHOTOS_PER_GALLERY = 25
@@ -38,6 +43,10 @@ export default function GalleryDetail() {
   const [entityInfo, setEntityInfo] = useState<any>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [visibleCount, setVisibleCount] = useState(PHOTOS_PER_PAGE)
+  const [taggingPhoto, setTaggingPhoto] = useState<GalleryPhoto | null>(null)
+  const [taggingPhotoIndex, setTaggingPhotoIndex] = useState<number>(-1)
+  const [lightboxIndex, setLightboxIndex] = useState(-1)
+  const [bulkTaggingPhotos, setBulkTaggingPhotos] = useState<GalleryPhoto[]>([])
 
   const load = async () => {
     if (!id || !context) return
@@ -313,6 +322,13 @@ export default function GalleryDetail() {
                     onDelete={handleDeletePhotos}
                     showPendingBadge={gallery?.require_approval || false}
                     viewMode={viewMode}
+                    onPhotoClick={(photo, index) => {
+                      setTaggingPhoto(photo)
+                      setTaggingPhotoIndex(index)
+                    }}
+                    onBulkTag={(selectedPhotos) => {
+                      setBulkTaggingPhotos(selectedPhotos)
+                    }}
                     onModerate={async (ids, action) => {
                       if (!context || !gallery) return
                       if (USE_FAKE_DATA) {
@@ -361,6 +377,65 @@ export default function GalleryDetail() {
           onDelete={handleDeleteGallery}
         />
       )}
+
+      {taggingPhoto && gallery && (
+        <TaggingSlideout
+          photo={taggingPhoto}
+          gallery={gallery}
+          isOpen={!!taggingPhoto}
+          onClose={() => {
+            setTaggingPhoto(null)
+            setTaggingPhotoIndex(-1)
+          }}
+          onOpenLightbox={() => {
+            setLightboxIndex(taggingPhotoIndex >= 0 ? taggingPhotoIndex : 0)
+            setTaggingPhoto(null)
+            setTaggingPhotoIndex(-1)
+          }}
+          onSave={async ({ advanceToNext }) => {
+            if (id) {
+              const result = await getPhotosForGallery(context, { gallery_id: id, order_by: 'created_at', order_direction: 'asc' })
+              if (result.data) {
+                setPhotos(result.data)
+                if (advanceToNext && taggingPhotoIndex >= 0) {
+                  const nextIndex = taggingPhotoIndex + 1
+                  if (nextIndex < result.data.length) {
+                    setTaggingPhoto(result.data[nextIndex])
+                    setTaggingPhotoIndex(nextIndex)
+                  } else {
+                    setTaggingPhoto(null)
+                    setTaggingPhotoIndex(-1)
+                  }
+                }
+              }
+            }
+          }}
+        />
+      )}
+
+      {/* Bulk tagging modal */}
+      {bulkTaggingPhotos.length > 0 && (
+        <BulkTaggingModal
+          photos={bulkTaggingPhotos}
+          isOpen={bulkTaggingPhotos.length > 0}
+          onClose={() => setBulkTaggingPhotos([])}
+          onComplete={() => {
+            setBulkTaggingPhotos([])
+            load()
+          }}
+        />
+      )}
+
+      {/* Lightbox */}
+      <Lightbox
+        open={lightboxIndex >= 0}
+        close={() => setLightboxIndex(-1)}
+        index={lightboxIndex}
+        slides={photos.map((photo) => ({
+          src: getGalleryPhotoUrl(photo.storage_path),
+          alt: photo.caption || 'Gallery photo',
+        }))}
+      />
     </div>
   )
 }
