@@ -16,6 +16,7 @@ import type { CalendarEvent } from '../../types/staffAndFan'
 import BookmarkButton from '../../components/fan/BookmarkButton'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { showError } from '../../utils/toast'
+import { getLink, RouteKeys } from '../../utils/routes'
 import '../../styles/fan.css'
 import '../../styles/fan-layouts.css'
 
@@ -152,7 +153,7 @@ export default function FanSchedule() {
 
   // Navigate to event detail
   const handleEventClick = (eventId: string) => {
-    navigate(`/fan/schedule/event/${eventId}`)
+    navigate(getLink(RouteKeys.FAN_EVENT_DETAIL, { eventId }))
   }
 
   return (

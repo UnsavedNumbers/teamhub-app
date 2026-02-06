@@ -337,7 +337,7 @@ export default function FanHome() {
                   <div 
                     key={event.id} 
                     className="fan-event-card"
-                    onClick={() => navigate(getLink(RouteKeys.FAN_SCHEDULE))}
+                    onClick={() => navigate(getLink(RouteKeys.FAN_EVENT_DETAIL, { eventId: event.id }))}
                   >
                     <div className="fan-event-header">
                       <span className={`fan-event-badge ${isLiveSoon(event.start_time) ? 'fan-event-badge-live' : 'fan-event-badge-date'}`}>
