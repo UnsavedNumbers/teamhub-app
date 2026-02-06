@@ -3142,6 +3142,38 @@ export const en = {
             org: 'Organization',
         },
 
+            // Create Gallery UI
+            section: {
+                basicInfo: {
+                    title: 'Basic Information',
+                    subtitle: 'Set up the essential details for your gallery',
+                },
+                entity: {
+                    title: 'Entity Configuration',
+                    subtitle: 'Choose what this gallery belongs to',
+                },
+                settings: {
+                    title: 'Gallery Settings',
+                    subtitle: 'Configure how your gallery works',
+                },
+            },
+
+
+            button: {
+                showAdvanced: 'Show Advanced',
+                hideAdvanced: 'Hide',
+                creatingGallery: 'Creating Gallery...'
+            },
+
+            progress: {
+                complete: '{completed}/{total} Complete'
+            },
+
+            status: {
+                valid: 'Valid',
+                seasonSelected: 'Season Selected'
+            },
+
         // Entity relationships
         linkedTo: 'Linked to',
         linkedEntities: 'Linked Entities',
@@ -3209,6 +3241,7 @@ export const en = {
             titleRequired: 'Title is required',
             description: 'Description',
             descriptionPlaceholder: 'Optional description',
+            charactersRemaining: '{{count}} characters remaining',
             requireApproval: 'Require approval for parent uploads',
             requireApprovalHelp: 'Photos uploaded by parents will need approval before appearing in the gallery',
             entityType: 'Link to Entity',
@@ -5985,6 +6018,34 @@ export const es = {
             travel_plan: 'Plan de viaje',
             org: 'Organización',
         },
+
+            // Create Gallery UI
+            section: {
+                basicInfo: {
+                    title: 'Información básica',
+                    subtitle: 'Configura los detalles esenciales de la galería',
+                },
+                entity: {
+                    title: 'Configuración de entidad',
+                    subtitle: 'Elige a qué pertenece esta galería',
+                },
+                settings: {
+                    title: 'Configuración de la galería',
+                    subtitle: 'Configura cómo funciona la galería',
+                },
+            },
+
+
+            button: {
+                showAdvanced: 'Mostrar avanzadas',
+                hideAdvanced: 'Ocultar',
+                creatingGallery: 'Creando galería...'
+            },
+
+            status: {
+                valid: 'Válido',
+                seasonSelected: 'Temporada seleccionada'
+            },
 
         // Relaciones de entidad
         linkedTo: 'Vinculado a',
