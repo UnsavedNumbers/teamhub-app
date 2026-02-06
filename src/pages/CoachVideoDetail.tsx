@@ -821,6 +821,7 @@ export default function CoachVideoDetail() {
   
   // State
   const [currentTime, setCurrentTime] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<'timestamp' | 'created'>('timestamp')
   
@@ -1183,6 +1184,8 @@ export default function CoachVideoDetail() {
             status={video.status}
             poster={video.thumbnail_url || undefined}
             onTimeUpdate={handleTimeUpdate}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
             markers={markers}
             onMarkerClick={(marker) => handleSeekToNote(marker.time)}
           />
@@ -1406,6 +1409,8 @@ export default function CoachVideoDetail() {
           {/* Note Composer */}
           <VideoNoteComposer
             currentTime={currentTime}
+            isPlaying={isPlaying}
+            durationSeconds={video.duration_seconds ?? undefined}
             athletes={video.athlete_links?.map(link => ({
               id: link.athlete_id,
               name: `${link.athlete?.first_name} ${link.athlete?.last_name}`

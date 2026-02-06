@@ -186,6 +186,10 @@ export default function VideoPlayer({
     const handlePause = () => {
       setIsPlaying(false)
       onPause?.()
+      // Sync current time on pause (browsers don't guarantee timeupdate at exact pause moment)
+      if (player?.currentTime !== undefined) {
+        onTimeUpdate?.(player.currentTime)
+      }
     }
     
     const handleTimeUpdate = () => {
