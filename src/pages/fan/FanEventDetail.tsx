@@ -13,7 +13,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import BookmarkButton from '../../components/fan/BookmarkButton'
-import FollowButton from '../../components/fan/FollowButton'
+import NearbyAmenities from '../../components/portal/NearbyAmenities'
 import { showError, showSuccess } from '../../utils/toast'
 import { getLink, RouteKeys } from '../../utils/routes'
 import '../../styles/fan.css'
@@ -44,12 +44,16 @@ interface EventDetail {
   org_name: string
   org_slug: string
   org_logo_url: string | null
+  org_public_description: string | null
   // Venue info
   venue_name: string | null
   venue_address: string | null
   venue_city: string | null
   venue_state: string | null
   venue_zip: string | null
+  place_id: string | null
+  latitude: number | null
+  longitude: number | null
   // Ticketing info
   is_ticketed: boolean
   ticket_event_id: string | null
@@ -95,53 +99,54 @@ export default function FanEventDetail() {
   const [isFollowingOrg, setIsFollowingOrg] = useState(false)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
+  const [commuteStartLocation, setCommuteStartLocation] = useState<string>(() => {
+    const saved = localStorage.getItem('commuteStartLocation')
+    return saved || ''
+  })
+  const [isEditingCommute, setIsEditingCommute] = useState(false)
+  const [commuteInputValue, setCommuteInputValue] = useState(commuteStartLocation)
+  const [commuteSummary, setCommuteSummary] = useState<{
+    distance: string
+    duration: string
+    durationInTraffic?: string
+  } | null>(null)
+  const [loadingCommute, setLoadingCommute] = useState(false)
 
   const loadEventDetail = useCallback(async (id: string) => {
     setLoading(true)
     setError(null)
 
     try {
+      // First check if user is authenticated
+      const { data: { user } } = await supabase.auth.getUser()
+      
       // Load event with organization details
+      // Note: We select all event fields plus related data
       const { data, error: fetchError } = await supabase
         .from('events')
         .select(`
-          id,
-          title,
-          description,
-          start_time,
-          end_time,
-          arrival_time,
-          timezone,
-          location,
-          type,
-          is_cancelled,
-          visibility,
-          weather_dependent,
-          external_link,
-          notes,
-          uniform_notes,
-          equipment_notes,
-          team:teams (
+          *,
+          organizations (
             id,
             name,
-            org_id,
-            organization:organizations (
-              id,
-              name,
-              slug,
-              logo_url
-            )
+            slug,
+            logo_url,
+            description
           ),
-          season:seasons (
+          teams (
             id,
             name
           ),
-          event_location:event_locations (
+          seasons (
+            id,
+            name
+          ),
+          event_locations (
             venue_name,
-            address,
+            address_line1,
             city,
             state,
-            zip
+            postal_code
           ),
           ticketed_events (
             id,
@@ -150,9 +155,14 @@ export default function FanEventDetail() {
           )
         `)
         .eq('id', id)
-        .single()
+        .maybeSingle()
 
-      if (fetchError) throw fetchError
+      console.log('Event query result:', { data, fetchError, user: !!user })
+
+      if (fetchError) {
+        console.error('Error fetching event:', fetchError)
+        throw fetchError
+      }
 
       if (!data) {
         setError('Event not found')
@@ -164,11 +174,11 @@ export default function FanEventDetail() {
       // Using any type here due to complex Supabase query result structure
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const dataAny = data as any
-      const team = Array.isArray(dataAny.team) ? dataAny.team[0] : dataAny.team
-      const org = team?.organization
-      const eventLocation = Array.isArray(dataAny.event_location) ? dataAny.event_location[0] : dataAny.event_location
+      const team = Array.isArray(dataAny.teams) ? dataAny.teams[0] : dataAny.teams
+      const org = Array.isArray(dataAny.organizations) ? dataAny.organizations[0] : dataAny.organizations
+      const eventLocation = Array.isArray(dataAny.event_locations) ? dataAny.event_locations[0] : dataAny.event_locations
       const ticketedEvent = Array.isArray(dataAny.ticketed_events) ? dataAny.ticketed_events[0] : dataAny.ticketed_events
-      const season = Array.isArray(dataAny.season) ? dataAny.season[0] : dataAny.season
+      const season = Array.isArray(dataAny.seasons) ? dataAny.seasons[0] : dataAny.seasons
 
       const eventDetail: EventDetail = {
         id: dataAny.id,
@@ -191,11 +201,15 @@ export default function FanEventDetail() {
         org_name: org?.name || 'Organization',
         org_slug: org?.slug || '',
         org_logo_url: org?.logo_url || null,
+        org_public_description: org?.description || null,
         venue_name: eventLocation?.venue_name || ticketedEvent?.venue_name || null,
-        venue_address: eventLocation?.address || null,
+        venue_address: eventLocation?.address_line1 || null,
         venue_city: eventLocation?.city || null,
         venue_state: eventLocation?.state || null,
-        venue_zip: eventLocation?.zip || null,
+        venue_zip: eventLocation?.postal_code || null,
+        place_id: eventLocation?.place_id || null,
+        latitude: eventLocation?.latitude || null,
+        longitude: eventLocation?.longitude || null,
         is_ticketed: !!ticketedEvent,
         ticket_event_id: ticketedEvent?.id || null,
         ticket_price_min: null, // Would need separate query to ticket_types
@@ -266,6 +280,74 @@ export default function FanEventDetail() {
       loadEventDetail(eventId)
     }
   }, [eventId, loadEventDetail])
+
+  // Fetch commute summary when we have both start and destination
+  useEffect(() => {
+    const fetchCommuteSummary = async () => {
+      if (!commuteStartLocation || !event?.venue_address) {
+        setCommuteSummary(null)
+        return
+      }
+      
+      setLoadingCommute(true)
+      setCommuteSummary(null)
+      
+      try {
+        const origins = encodeURIComponent(commuteStartLocation)
+        const destinations = encodeURIComponent(getFullAddress())
+        
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/distance-matrix?origins=${origins}&destinations=${destinations}`
+        const { data } = await supabase.auth.getSession()
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${data.session?.access_token}`,
+          },
+        })
+        
+        if (!response.ok) {
+          console.error('Distance matrix API error:', response.status, response.statusText)
+          setLoadingCommute(false)
+          return
+        }
+        
+        const result = await response.json()
+        console.log('Distance matrix response:', result)
+        
+        if (result?.status === 'OK' && result.rows?.[0]?.elements?.[0]?.status === 'OK') {
+          const element = result.rows[0].elements[0]
+          setCommuteSummary({
+            distance: element.distance?.text || '',
+            duration: element.duration?.text || '',
+            durationInTraffic: element.duration_in_traffic?.text,
+          })
+        } else {
+          console.error('Distance matrix failed:', result?.status, result?.rows?.[0]?.elements?.[0])
+        }
+      } catch (err) {
+        console.error('Error fetching commute summary:', err)
+      } finally {
+        setLoadingCommute(false)
+      }
+    }
+    
+    fetchCommuteSummary()
+  }, [commuteStartLocation, event?.venue_address])
+
+  // Helper functions for commute info
+  const handleSaveCommuteLocation = () => {
+    const trimmed = commuteInputValue.trim()
+    setCommuteStartLocation(trimmed)
+    localStorage.setItem('commuteStartLocation', trimmed)
+    setIsEditingCommute(false)
+  }
+
+  const getCommuteDirectionsUrl = (): string | null => {
+    if (!commuteStartLocation || !getFullAddress()) return null
+    const origin = encodeURIComponent(commuteStartLocation.trim())
+    const dest = encodeURIComponent(getFullAddress().trim())
+    return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&traffic=1`
+  }
 
   // Get event status
   const getEventStatus = (): EventStatus => {
@@ -483,6 +565,9 @@ export default function FanEventDetail() {
                 )}
               </div>
             </div>
+            {event.org_public_description && (
+              <p className="fan-event-org-description">{event.org_public_description}</p>
+            )}
 
             {/* Action Buttons */}
             <div className="fan-event-actions-row">
@@ -584,35 +669,7 @@ export default function FanEventDetail() {
             </section>
           )}
 
-          {/* Additional Notes Card */}
-          {(event.notes || event.uniform_notes || event.equipment_notes) && (
-            <section className="fan-event-card">
-              <h2 className="fan-event-card-title">
-                <span className="material-symbols-outlined">note</span>
-                Event Notes
-              </h2>
-              <div className="fan-event-notes">
-                {event.notes && (
-                  <div className="fan-event-note-item">
-                    <h4>General Notes</h4>
-                    <p>{event.notes}</p>
-                  </div>
-                )}
-                {event.uniform_notes && (
-                  <div className="fan-event-note-item">
-                    <h4>Uniform</h4>
-                    <p>{event.uniform_notes}</p>
-                  </div>
-                )}
-                {event.equipment_notes && (
-                  <div className="fan-event-note-item">
-                    <h4>Equipment</h4>
-                    <p>{event.equipment_notes}</p>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
+          {/* Event notes are intentionally hidden from fans */}
         </div>
 
         {/* Sidebar */}
@@ -633,6 +690,12 @@ export default function FanEventDetail() {
                     )}
                   </div>
                 )}
+                <div className="fan-event-ticket-meta">
+                  {event.ticket_price_min !== null && (
+                    <span className="fan-event-ticket-from">From ${event.ticket_price_min.toFixed(2)}</span>
+                  )}
+                  <span className="fan-event-ticket-date">{formatEventDate(event.start_time, false)}</span>
+                </div>
                 <button
                   className="fan-btn fan-btn-primary fan-event-cta-btn"
                   onClick={handleGetTickets}
@@ -685,13 +748,35 @@ export default function FanEventDetail() {
                 <span className="fan-event-sidebar-org-link">View Profile →</span>
               </div>
             </div>
-            <div className="fan-event-sidebar-follow">
-              <FollowButton
-                orgId={event.org_id}
-                isFollowing={isFollowingOrg}
-                onToggle={setIsFollowingOrg}
-              />
-            </div>
+            {!isFollowingOrg && (
+              <button
+                className="fan-btn fan-btn-primary"
+                onClick={async () => {
+                  try {
+                    const { data: { user } } = await supabase.auth.getUser()
+                    if (!user) {
+                      showError('Please sign in to follow organizations')
+                      return
+                    }
+                    const { error } = await supabase
+                      .from('fan_org_follows')
+                      .insert({ user_id: user.id, org_id: event.org_id })
+                    if (error) {
+                      showError('Failed to follow organization')
+                    } else {
+                      setIsFollowingOrg(true)
+                      showSuccess(`Now following ${event.org_name}`)
+                    }
+                  } catch (err) {
+                    showError('Failed to follow organization')
+                  }
+                }}
+                style={{ marginTop: 'var(--spacing-3)' }}
+              >
+                <span className="material-symbols-outlined">add</span>
+                Follow
+              </button>
+            )}
           </div>
 
           {/* Quick Actions */}
@@ -728,6 +813,161 @@ export default function FanEventDetail() {
               )}
             </div>
           </div>
+
+          {/* Commute Info */}
+          {fullAddress && status === 'upcoming' && (
+            <div className="fan-event-sidebar-card">
+              <h3 className="fan-event-sidebar-title">
+                <span className="material-symbols-outlined">directions_car</span>
+                Commute Info
+              </h3>
+              {!isEditingCommute ? (
+                <>
+                  {commuteStartLocation ? (
+                    <>
+                      <div className="fan-commute-location">
+                        <div className="fan-commute-location-header">
+                          <p className="fan-commute-label">Your Starting Point</p>
+                          <button
+                            className="fan-commute-edit-btn"
+                            onClick={() => {
+                              setIsEditingCommute(true)
+                              setCommuteInputValue(commuteStartLocation)
+                            }}
+                          >
+                            <span className="material-symbols-outlined">edit</span>
+                            Edit
+                          </button>
+                        </div>
+                        <p className="fan-commute-address">{commuteStartLocation}</p>
+                      </div>
+                      
+                      {loadingCommute ? (
+                        <div className="fan-commute-loading">
+                          <div className="fan-commute-spinner"></div>
+                          <span>Calculating route...</span>
+                        </div>
+                      ) : commuteSummary ? (
+                        <>
+                          <div className="fan-commute-stats">
+                            <div>
+                              <p className="fan-commute-stat-label">Distance</p>
+                              <p className="fan-commute-stat-value">{commuteSummary.distance}</p>
+                            </div>
+                            <div>
+                              <p className="fan-commute-stat-label">
+                                {commuteSummary.durationInTraffic ? 'With Traffic' : 'Duration'}
+                              </p>
+                              <p className="fan-commute-stat-value">
+                                {commuteSummary.durationInTraffic || commuteSummary.duration}
+                              </p>
+                            </div>
+                          </div>
+                          {(() => {
+                            const targetTime = event.arrival_time || event.start_time
+                            const durationText = commuteSummary.durationInTraffic || commuteSummary.duration
+                            const hoursMatch = durationText.match(/(\d+)\s*hour/)
+                            const minsMatch = durationText.match(/(\d+)\s*min/)
+                            const hours = hoursMatch ? parseInt(hoursMatch[1]) : 0
+                            const mins = minsMatch ? parseInt(minsMatch[1]) : 0
+                            const totalMinutes = hours * 60 + mins
+                            
+                            if (totalMinutes > 0) {
+                              const targetDate = new Date(targetTime)
+                              const leaveByDate = new Date(targetDate.getTime() - totalMinutes * 60 * 1000)
+                              const leaveByTime = leaveByDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                              
+                              return (
+                                <div className="fan-commute-leave-by">
+                                  <p className="fan-commute-label">Need to Leave By</p>
+                                  <p className="fan-commute-leave-time">{leaveByTime}</p>
+                                  <p className="fan-commute-leave-note">
+                                    To arrive by {new Date(targetTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                    {event.arrival_time ? ' (arrival time)' : ' (start time)'}
+                                  </p>
+                                </div>
+                              )
+                            }
+                            return null
+                          })()}
+                        </>
+                      ) : null}
+                      
+                      {getCommuteDirectionsUrl() && (
+                        <a
+                          href={getCommuteDirectionsUrl()!}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="fan-btn fan-btn-primary"
+                          style={{ display: 'block', marginTop: 'var(--spacing-4)' }}
+                        >
+                          <span className="material-symbols-outlined">navigation</span>
+                          Get Directions with Traffic
+                        </a>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p className="fan-event-sidebar-text">
+                        Save your home, work, or any starting point to quickly get directions with current traffic conditions.
+                      </p>
+                      <button
+                        className="fan-btn fan-btn-primary"
+                        onClick={() => setIsEditingCommute(true)}
+                        style={{ width: '100%' }}
+                      >
+                        <span className="material-symbols-outlined">add_location</span>
+                        Set Starting Location
+                      </button>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div className="fan-commute-edit-form">
+                  <p className="fan-commute-label">Enter Your Starting Location</p>
+                  <input
+                    type="text"
+                    value={commuteInputValue}
+                    onChange={(e) => setCommuteInputValue(e.target.value)}
+                    placeholder="e.g., 123 Main St, City, State"
+                    className="fan-commute-input"
+                    autoFocus
+                  />
+                  <div className="fan-commute-actions">
+                    <button
+                      className="fan-btn fan-btn-primary"
+                      onClick={handleSaveCommuteLocation}
+                      disabled={!commuteInputValue.trim()}
+                    >
+                      <span className="material-symbols-outlined">check</span>
+                      Save
+                    </button>
+                    <button
+                      className="fan-btn fan-btn-outline"
+                      onClick={() => {
+                        setIsEditingCommute(false)
+                        setCommuteInputValue(commuteStartLocation)
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Nearby Amenities */}
+          {status === 'upcoming' && (
+            <NearbyAmenities
+              placeId={event.place_id}
+              latitude={event.latitude}
+              longitude={event.longitude}
+              eventType={event.type}
+              eventStartTime={event.start_time}
+              variant="fan"
+            />
+          )}
 
           {/* Need Help Card */}
           <div className="fan-event-sidebar-card fan-event-help-card">

@@ -308,6 +308,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mountedRef.current) return
 
+      // Ignore TOKEN_REFRESHED events - they fire on tab focus and cause unnecessary re-renders
+      // The session is still valid, no need to trigger loading states or re-fetch profile
+      if (event === 'TOKEN_REFRESHED') {
+        // Silently update session without triggering loading states
+        if (session) {
+          setSession(session)
+          // Don't update user or trigger profile fetch - nothing meaningful changed
+        }
+        return
+      }
+
       // Event debouncing (Bug Prevention #3)
       const now = Date.now()
       const lastEvent = lastAuthEventRef.current

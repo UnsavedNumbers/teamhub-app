@@ -291,8 +291,9 @@ function AppWithTheme() {
   function PlatformAdminRoute({ children }: { children: React.ReactNode }) {
     const { user, profile, loading } = useAuth()
     const location = useLocation()
+    const hasIdentity = !!user && !!profile
 
-    if (loading) return <AdminLoadingSpinner />
+    if (loading && !hasIdentity) return <AdminLoadingSpinner />
     if (!user) return <Navigate to={getLink(RouteKeys.AUTH_LOGIN)} state={{ from: location }} replace />
     if (!profile) return <AdminLoadingSpinner />
     if (!profile.isPlatformAdmin) return <Navigate to={getLink(RouteKeys.AUTH_UNAUTHORIZED)} replace />

@@ -43,6 +43,8 @@ import { t } from '@/i18n'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import { supabase } from '@/lib/supabase'
 import { getLink } from '@/utils/routes'
+import { showSuccess, showError } from '@/utils/toast'
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { cn } from '@/utils/cn'
 import { USE_FAKE_DATA } from '@/data/config'
 import '@/styles/orgAdmin.css'
@@ -126,9 +128,7 @@ function AthleteSelectorModal({
       const { data, error } = await supabase
         .from('athletes')
         .select('id, first_name, last_name, jersey_number, has_profile_photo, profile_photo_updated_at')
-        .eq('team_id', teamId)
         .order('last_name')
-      
       if (error) throw error
       setAthletes(data || [])
     } catch (err) {
@@ -262,7 +262,7 @@ function AthleteSelectorModal({
             <Button
               variant="primary"
               onClick={handleSave}
-              disabled={saving || selectedIds.length === 0}
+              disabled={saving && selectedIds.length === 0}
             >
               {saving ? t('common.saving') : t('videoLibrary.athletes.saveLinks')}
             </Button>
@@ -821,11 +821,14 @@ export default function CoachVideoDetail() {
   
   // State
   const [currentTime, setCurrentTime] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<'timestamp' | 'created'>('timestamp')
   
   // Modals
   const [isEditingDetails, setIsEditingDetails] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [showAthletesModal, setShowAthletesModal] = useState(false)
   const [showTagsModal, setShowTagsModal] = useState(false)
   
@@ -843,6 +846,7 @@ export default function CoachVideoDetail() {
   const [editRecordedAt, setEditRecordedAt] = useState<string>('')
   const [editRecordedLocation, setEditRecordedLocation] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   
   // Dropdowns for edit form
   const [teams, setTeams] = useState<Team[]>([])
@@ -970,13 +974,38 @@ export default function CoachVideoDetail() {
     }
   }, [notes])
   
+  const { copy: copyToClipboard } = useCopyToClipboard()
+
   // Copy link to clipboard
-  const handleCopyLink = useCallback(() => {
-    const url = `${window.location.origin}${getLink('admin.videos.detail', { id: videoId! })}`
-    navigator.clipboard.writeText(url)
-    // Could add a toast notification here
-  }, [videoId])
+  const handleCopyLink = useCallback(async () => {
+    if (!videoId) return
+    const url = `${window.location.origin}${getLink('admin.videos.detail', { id: videoId })}`
+    const ok = await copyToClipboard(url)
+    if (ok) {
+      showSuccess(t('videoLibrary.actions.linkCopied'))
+    } else {
+      showError(t('common.error.clipboardFailed'))
+    }
+  }, [videoId, copyToClipboard])
   
+  // Handle visibility change with team reset logic
+  const handleVisibilityChange = useCallback((newVisibility: VideoVisibility) => {
+    setEditVisibility(newVisibility)
+    
+    // Reset team when switching to Organization visibility
+    if (newVisibility === 'organization') {
+      setEditTeamId(null)
+      showSuccess(t('videoLibrary.edit.teamClearedForOrg'))
+    }
+    
+    // Clear team-related errors when visibility changes
+    setFormErrors(prev => {
+      const updated = { ...prev }
+      delete updated.team
+      return updated
+    })
+  }, [t])
+
   // Handle video edit
   const handleStartEdit = useCallback(() => {
     if (video) {
@@ -992,45 +1021,74 @@ export default function CoachVideoDetail() {
       setEditEventId(video.event_id || null)
       setEditRecordedAt(video.recorded_at ? video.recorded_at.split('T')[0] : '')
       setEditRecordedLocation(video.recording_location || '')
+      setFormErrors({})
       setIsEditingDetails(true)
     }
   }, [video])
   
   const handleSaveDetails = useCallback(async () => {
     if (!videoId || !video) return
+
+    // Validate form based on visibility
+    const errors: Record<string, string> = {}
     
+    // Team conditional validation
+    if (['team', 'guardians'].includes(editVisibility) && !editTeamId) {
+      errors.team = t('videoLibrary.edit.errors.teamRequired')
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      showError(t('videoLibrary.edit.errors.validationFailed'))
+      return
+    }
+
     setIsSaving(true)
     try {
-      await updateVideo(videoId, {
+      // Only pass fields that exist on the videos table (no season_id, program_id, level_id, sport_id, recording_location)
+      const ok = await updateVideo(videoId, {
         title: editTitle,
         description: editDescription,
         category: editCategory,
         visibility: editVisibility,
         team_id: editTeamId,
-        season_id: editSeasonId,
-        program_id: editProgramId,
-        level_id: editLevelId,
-        sport_id: editSportId,
         event_id: editEventId,
         recorded_at: editRecordedAt || null,
-        recording_location: editRecordedLocation || null,
       })
-      setIsEditingDetails(false)
-      refreshVideo()
+      if (ok) {
+        setIsEditingDetails(false)
+        setFormErrors({})
+        refreshVideo()
+        showSuccess(t('toast.success.updated'))
+      } else {
+        showError(t('videoLibrary.errors.updateFailed'))
+      }
     } catch (err) {
       console.error('Error saving video details:', err)
+      showError(t('videoLibrary.errors.updateFailed'))
     } finally {
       setIsSaving(false)
     }
-  }, [videoId, video, editTitle, editDescription, editCategory, editVisibility, editTeamId, editSeasonId, editProgramId, editLevelId, editSportId, editEventId, editRecordedAt, editRecordedLocation, updateVideo, refreshVideo])
+  }, [videoId, video, editTitle, editDescription, editCategory, editVisibility, editTeamId, editEventId, editRecordedAt, updateVideo, refreshVideo, t])
   
-  // Handle video delete
-  const handleDeleteVideo = useCallback(async () => {
+  // Open delete confirmation modal
+  const handleOpenDeleteModal = useCallback(() => setShowDeleteModal(true), [])
+
+  // Confirm delete (called from modal Delete button)
+  const handleConfirmDelete = useCallback(async () => {
     if (!videoId) return
-    
-    if (window.confirm(t('videoLibrary.delete.message'))) {
-      await deleteVideo(videoId)
-      navigate(getLink('admin.videos.list'))
+    setIsDeleting(true)
+    try {
+      const ok = await deleteVideo(videoId)
+      if (ok) {
+        setShowDeleteModal(false)
+        showSuccess(t('toast.success.deleted'))
+        navigate(getLink('admin.videos.list'))
+      } else {
+        showError(t('videoLibrary.errors.deleteFailed'))
+      }
+    } finally {
+      setIsDeleting(false)
     }
   }, [videoId, deleteVideo, navigate, t])
   
@@ -1151,7 +1209,7 @@ export default function CoachVideoDetail() {
               {t('common.edit')}
             </Button>
             <button
-              onClick={handleDeleteVideo}
+              onClick={handleOpenDeleteModal}
               disabled={USE_FAKE_DATA}
               title={USE_FAKE_DATA ? t('videoLibrary.demoMode.message') : undefined}
               className={cn(
@@ -1174,6 +1232,8 @@ export default function CoachVideoDetail() {
             status={video.status}
             poster={video.thumbnail_url || undefined}
             onTimeUpdate={handleTimeUpdate}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
             markers={markers}
             onMarkerClick={(marker) => handleSeekToNote(marker.time)}
           />
@@ -1397,6 +1457,8 @@ export default function CoachVideoDetail() {
           {/* Note Composer */}
           <VideoNoteComposer
             currentTime={currentTime}
+            isPlaying={isPlaying}
+            durationSeconds={video.duration_seconds ?? undefined}
             athletes={video.athlete_links?.map(link => ({
               id: link.athlete_id,
               name: `${link.athlete?.first_name} ${link.athlete?.last_name}`
@@ -1536,7 +1598,7 @@ export default function CoachVideoDetail() {
                 </label>
                 <select
                   value={editVisibility}
-                  onChange={(e) => setEditVisibility(e.target.value as VideoVisibility)}
+                  onChange={(e) => handleVisibilityChange(e.target.value as VideoVisibility)}
                   className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
                 >
                   <option value="private">{t('videoUploader.visibilities.private')}</option>
@@ -1544,23 +1606,56 @@ export default function CoachVideoDetail() {
                   <option value="organization">{t('videoUploader.visibilities.organization')}</option>
                   <option value="guardians">{t('videoUploader.visibilities.guardians')}</option>
                 </select>
+                <p className="mt-1.5 text-xs text-gray-500">
+                  {editVisibility === 'private' && t('videoLibrary.edit.helpText.private')}
+                  {editVisibility === 'team' && t('videoLibrary.edit.helpText.team')}
+                  {editVisibility === 'organization' && t('videoLibrary.edit.helpText.organization')}
+                  {editVisibility === 'guardians' && t('videoLibrary.edit.helpText.guardians')}
+                </p>
               </div>
               
               {/* Team */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
                   {t('videoLibrary.edit.teamLabel')}
+                  {['team', 'guardians'].includes(editVisibility) && (
+                    <span className="text-red-500 ml-1" aria-label="required">*</span>
+                  )}
                 </label>
                 <select
                   value={editTeamId || ''}
-                  onChange={(e) => setEditTeamId(e.target.value || null)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  onChange={(e) => {
+                    setEditTeamId(e.target.value || null)
+                    // Clear error when user makes selection
+                    if (e.target.value) {
+                      setFormErrors(prev => {
+                        const updated = { ...prev }
+                        delete updated.team
+                        return updated
+                      })
+                    }
+                  }}
+                  className={`w-full px-4 py-3 rounded-lg border ${
+                    formErrors.team
+                      ? 'border-red-500 dark:border-red-500'
+                      : ['team', 'guardians'].includes(editVisibility)
+                      ? 'border-blue-500 dark:border-blue-500'
+                      : 'border-gray-200 dark:border-gray-700'
+                  } bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent`}
+                  aria-required={['team', 'guardians'].includes(editVisibility)}
+                  aria-invalid={!!formErrors.team}
+                  aria-describedby={formErrors.team ? 'team-error' : undefined}
                 >
                   <option value="">{t('videoLibrary.edit.teamPlaceholder')}</option>
                   {teams.map(team => (
                     <option key={team.id} value={team.id}>{team.name}</option>
                   ))}
                 </select>
+                {formErrors.team && (
+                  <p id="team-error" className="mt-1.5 text-xs text-red-500" role="alert">
+                    {formErrors.team}
+                  </p>
+                )}
               </div>
               
               {/* Season */}
@@ -1690,6 +1785,45 @@ export default function CoachVideoDetail() {
                 disabled={isSaving}
               >
                 {isSaving ? t('common.saving') : t('videoLibrary.edit.saveChanges')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Video Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full shadow-xl">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+              <h3 className="text-xl font-bold">{t('videoLibrary.actions.delete')}</h3>
+              <button
+                onClick={() => !isDeleting && setShowDeleteModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50"
+                disabled={isDeleting}
+                aria-label={t('common.close')}
+              >
+                <Icon name="close" size="text-xl" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 dark:text-gray-400">{t('videoLibrary.delete.message')}</p>
+            </div>
+            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-end gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+              >
+                {t('common.cancel')}
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="bg-red-500 hover:bg-red-600 text-white border-red-500"
+              >
+                {isDeleting ? t('common.loading') : t('common.delete')}
               </Button>
             </div>
           </div>

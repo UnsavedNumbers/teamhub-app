@@ -279,15 +279,24 @@ export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideo
       
       if (fetchError) throw fetchError
       
-      let videoData = data as unknown as Video
-      if (videoData?.mux_playback_id) {
+      const raw = data as Record<string, unknown>
+      const videoData: Video = {
+        ...raw,
+        athlete_links: (raw.video_athlete_links as Video['athlete_links']) ?? [],
+        tags: (raw.video_tag_links as Video['tags']) ?? [],
+      } as Video
+      delete (videoData as unknown as Record<string, unknown>).video_athlete_links
+      delete (videoData as unknown as Record<string, unknown>).video_tag_links
+
+      let result: Video = videoData
+      if (result.mux_playback_id) {
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.access_token) {
-          const signedUrl = await getSignedThumbnailUrl(session.access_token, { video_id: videoData.id })
-          if (signedUrl) videoData = { ...videoData, thumbnail_url: signedUrl }
+          const signedUrl = await getSignedThumbnailUrl(session.access_token, { video_id: result.id })
+          if (signedUrl) result = { ...result, thumbnail_url: signedUrl }
         }
       }
-      setVideo(videoData)
+      setVideo(result)
     } catch (err) {
       console.error('Error fetching video:', err)
       setError(err instanceof Error ? err : new Error('Failed to fetch video'))
@@ -1144,10 +1153,15 @@ export function useVideoMutations(): UseVideoMutationsReturn {
     updates: Partial<Video>
   ): Promise<boolean> => {
     try {
-      // Extract only the fields that can be safely updated
-      const { 
-        title, description, category, visibility, team_id, season_id, 
-        event_id, program_id, level_id, sport_id, recorded_at 
+      // Only include columns that exist on the videos table (no season_id, program_id, level_id, sport_id, recording_location)
+      const {
+        title,
+        description,
+        category,
+        visibility,
+        team_id,
+        event_id,
+        recorded_at,
       } = updates
       const safeUpdates = {
         ...(title !== undefined && { title }),
@@ -1155,11 +1169,7 @@ export function useVideoMutations(): UseVideoMutationsReturn {
         ...(category !== undefined && { category }),
         ...(visibility !== undefined && { visibility }),
         ...(team_id !== undefined && { team_id }),
-        ...(season_id !== undefined && { season_id }),
         ...(event_id !== undefined && { event_id }),
-        ...(program_id !== undefined && { program_id }),
-        ...(level_id !== undefined && { level_id }),
-        ...(sport_id !== undefined && { sport_id }),
         ...(recorded_at !== undefined && { recorded_at }),
       }
       

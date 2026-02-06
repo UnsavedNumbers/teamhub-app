@@ -571,6 +571,33 @@ export async function getOrgProfile(orgId: string): Promise<{ data: EntityProfil
 }
 
 /**
+ * Get organization profile by slug (lookup id then call getOrgProfile)
+ */
+export async function getOrgProfileBySlug(slug: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
+  if (USE_FAKE_DATA) return fakeService.getOrgProfile(slug)
+
+  try {
+    const { data: orgRow, error: orgError } = await supabaseAny
+      .from('organizations')
+      .select('id')
+      .eq('slug', slug)
+      .maybeSingle()
+
+    if (orgError) throw orgError
+    if (!orgRow || !orgRow.id) {
+      return { data: null, error: new Error('Organization not found') }
+    }
+
+    return await getOrgProfile(orgRow.id)
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error('Failed to get organization by slug'),
+    }
+  }
+}
+
+/**
  * Get team profile
  */
 export async function getTeamProfile(teamId: string): Promise<{ data: EntityProfile | null; error: Error | null }> {

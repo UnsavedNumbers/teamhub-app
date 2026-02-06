@@ -198,6 +198,38 @@ export default function FanHome() {
     return `${diffDays} Days Ago`
   }
 
+  // Generate friendly feed text based on content type
+  const getFeedText = (item: FanFeedItem): string => {
+    const name = item.source_entity_name || 'An organization'
+    const date = new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+    switch (item.content_type) {
+      case 'event':
+        return `${name} has a new event coming up on ${date}.`
+      case 'announcement':
+        return `${name} shared a new announcement on ${date}.`
+      case 'photo':
+        return `${name} posted new photos on ${date}.`
+      case 'video':
+        return `${name} uploaded a new video on ${date}.`
+      case 'result':
+        return `${name} posted new results on ${date}.`
+      default:
+        return `${name} has a new update from ${date}.`
+    }
+  }
+
+  // Get the link destination for a feed item
+  const getFeedItemLink = (item: FanFeedItem): string => {
+    switch (item.content_type) {
+      case 'event':
+        return getLink(RouteKeys.FAN_EVENT_DETAIL, { eventId: item.content_id })
+      case 'photo':
+        return getLink(RouteKeys.FAN_PHOTOS)
+      default:
+        return getLink(RouteKeys.FAN_SCHEDULE)
+    }
+  }
+
   // Cleanup
   useEffect(() => {
     return () => {
@@ -337,7 +369,7 @@ export default function FanHome() {
                   <div 
                     key={event.id} 
                     className="fan-event-card"
-                    onClick={() => navigate(getLink(RouteKeys.FAN_SCHEDULE))}
+                    onClick={() => navigate(getLink(RouteKeys.FAN_EVENT_DETAIL, { eventId: event.id }))}
                   >
                     <div className="fan-event-header">
                       <span className={`fan-event-badge ${isLiveSoon(event.start_time) ? 'fan-event-badge-live' : 'fan-event-badge-date'}`}>
@@ -425,7 +457,16 @@ export default function FanHome() {
                       </div>
                       <div className="fan-post-body">
                         <p className="fan-post-text">
-                          New {item.content_type} from {item.source_entity_name}
+                          {getFeedText(item)}{' '}
+                          <button
+                            className="fan-event-link"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigate(getFeedItemLink(item))
+                            }}
+                          >
+                            Check it out
+                          </button>
                         </p>
                       </div>
                       <div className="fan-post-actions">
@@ -433,12 +474,8 @@ export default function FanHome() {
                           <span className="material-symbols-outlined">favorite</span>
                           <span>Like</span>
                         </button>
-                        <button className="fan-post-action">
-                          <span className="material-symbols-outlined">mode_comment</span>
-                          <span>Comment</span>
-                        </button>
                         <button className="fan-post-action fan-post-action-share">
-                          <span className="material-symbols-outlined">ios_share</span>
+                          <span className="material-symbols-outlined" style={{ fontSize: '1.5rem' }}>ios_share</span>
                         </button>
                       </div>
                       {index < feedItems.length - 1 && <div className="fan-post-divider"></div>}
