@@ -3128,6 +3128,9 @@ export const en = {
         viewGallery: 'View Gallery',
         deleteGallery: 'Delete Gallery',
         uploadPhotos: 'Upload Photos',
+        photo: 'photo',
+        photos: 'photos',
+        addFirstPhoto: 'Add the first photo',
 
         // Gallery types
         galleryType: {
@@ -6005,6 +6008,9 @@ export const es = {
         viewGallery: 'Ver Galería',
         deleteGallery: 'Eliminar Galería',
         uploadPhotos: 'Subir Fotos',
+        photo: 'foto',
+        photos: 'fotos',
+        addFirstPhoto: 'Añadir la primera foto',
 
         // Tipos de galería
         galleryType: {

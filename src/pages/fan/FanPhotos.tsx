@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getFanGalleries, type FanGallery } from '../../data/services/fanPhotosService'
+import { getFanGalleries, getFanGallery, type FanGallery } from '../../data/services/fanPhotosService'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { showError } from '../../utils/toast'
@@ -254,20 +254,25 @@ export function FanGalleryDetail() {
 
   const loadGallery = async () => {
     setLoading(true)
-    
-    // In production, fetch gallery details and photos
-    // For now, use mock data structure
-    const { data, error } = await getFanGalleries()
-    
+
+    if (!id) {
+      setLoading(false)
+      return
+    }
+
+    // Fetch the specific gallery directly
+    const { data, error } = await getFanGallery(id)
+
     if (!error && data) {
-      const found = data.find((g: FanGallery) => g.id === id)
-      if (found) {
-        setGallery(found)
-        // Mock photos - in production would be separate API call
-        setPhotos([])
+      setGallery(data)
+      // Load photos for the gallery
+      const { getFanGalleryPhotos } = await import('../../data/services/fanPhotosService')
+      const photosResult = await getFanGalleryPhotos(id)
+      if (!photosResult.error) {
+        setPhotos(photosResult.data)
       }
     }
-    
+
     setLoading(false)
   }
 

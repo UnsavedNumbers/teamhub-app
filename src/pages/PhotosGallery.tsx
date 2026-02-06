@@ -408,6 +408,9 @@ export default function PhotosGallery() {
                         : {}
                     }
                     onClick={() => {
+                      // Don't open tagging slideout for pending photos if user can't moderate
+                      const isPending = (photo.approval_status || photo.status) === 'pending'
+                      if (isPending && !canModerate) return
                       setTaggingPhoto(photo)
                       setTaggingPhotoIndex(index)
                     }}

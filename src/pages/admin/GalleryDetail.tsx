@@ -25,6 +25,8 @@ import { GalleryEditModal } from '@/components/admin/galleries/GalleryEditModal'
 import { TaggingSlideout } from '@/components/gallery/TaggingSlideout'
 import { BulkTaggingModal } from '@/components/gallery/BulkTaggingModal'
 import { getLink } from '@/utils/routes'
+import { getEventDetails } from '@/data/services/eventsService'
+import type { CalendarEvent } from '@/types/calendar'
 
 const MAX_PHOTOS_PER_GALLERY = 25
 const PHOTOS_PER_PAGE = 12
@@ -71,9 +73,22 @@ export default function GalleryDetail() {
     setGallery(gRes.data || null)
     setPhotos(pRes.data || [])
     
-    // TODO: Load entity info for breadcrumbs if gallery has entity_id
-    // For now, mock the structure
-    if (gRes.data?.entity_id) {
+    // Load entity info if gallery has entity_id
+    if (gRes.data?.entity_id && gRes.data?.gallery_type === 'event') {
+      // Fetch actual event details
+      const { data: eventData, error: eventError } = await getEventDetails(context, gRes.data.entity_id)
+      if (!eventError && eventData) {
+        const eventLocation = eventData.event_location
+        setEntityInfo({
+          venue: eventLocation?.venue_name || eventLocation?.name || null,
+          city: eventLocation?.city || null,
+          state: eventLocation?.state || null,
+          eventTitle: eventData.title,
+        })
+      }
+    } else if (gRes.data?.entity_id) {
+      // For other gallery types, keep the TODO structure for now
+      // TODO: Load entity info for team, program, season, etc.
       setEntityInfo({
         sport: 'Soccer',
         program: 'Travel',
@@ -176,7 +191,11 @@ export default function GalleryDetail() {
     if (!gallery) return undefined
     switch (gallery.gallery_type) {
       case 'event':
-        return entityInfo ? `${entityInfo.venue || 'Event'} — ${entityInfo.city || ''}, ${entityInfo.state || ''}` : 'Event Album'
+        if (entityInfo) {
+          const locationParts = [entityInfo.venue, entityInfo.city, entityInfo.state].filter(Boolean)
+          return locationParts.length > 0 ? locationParts.join(', ') : 'Event Album'
+        }
+        return 'Event Album'
       case 'team':
         return entityInfo?.team || 'Team Album'
       case 'org':

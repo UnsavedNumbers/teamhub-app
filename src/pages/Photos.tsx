@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
+import { useI18n } from '../i18n/useI18n'
 import {
   getGalleriesForUser,
   type Gallery,
@@ -26,6 +27,7 @@ import type { Athlete } from '../types/family'
 
 export default function Photos() {
   const { context, isReady } = useUserContext()
+  const { t } = useI18n()
   const [galleries, setGalleries] = useState<Record<GalleryType, Gallery[]>>({
     athlete: [],
     team: [],
@@ -145,8 +147,10 @@ export default function Photos() {
                       </div>
                     )}
                     <div className="absolute bottom-2 right-2 px-2 py-1 flex items-center gap-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', borderRadius: '2px' }}>
-                      <Icon name="photo_camera" size="text-sm" className="text-white" />
-                      <span className="text-white text-sm font-normal">{photoCount}</span>
+                      <Icon name={photoCount === 0 ? 'upload' : 'photo_camera'} size="text-sm" className="text-white" />
+                      <span className="text-white text-sm font-normal">
+                        {photoCount === 0 ? t('photos.addFirstPhoto') : `${photoCount} ${photoCount === 1 ? t('photos.photo') : t('photos.photos')}`}
+                      </span>
                     </div>
                   </div>
                   <div className="p-3">

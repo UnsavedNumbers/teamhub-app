@@ -74,6 +74,9 @@ export function PhotoGalleryGrid({
     const isSelected = selected.has(photo.id)
     const isPending = (photo.approval_status || photo.status) === 'pending'
     const thumb = photo.thumbnail_url || getGalleryPhotoThumbnailUrl(photo.thumbnail_path, photo.storage_path)
+    const taggedNames = photo.tagged_athletes
+      ?.map((a) => a.first_name)
+      .join(' • ') || ''
     
     return (
       <div key={photo.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -96,7 +99,7 @@ export function PhotoGalleryGrid({
           />
           
           {/* Badges - Left corner */}
-          <div style={{ position: 'absolute', top: '8px', left: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ position: 'absolute', top: '8px', left: '8px', display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.9)', borderRadius: '8px', padding: coverPhotoId === photo.id || (showPendingBadge && isPending) ? '4px 6px' : '0' }}>
             {coverPhotoId === photo.id && (
               <Badge variant="info">{t('photos.coverPhoto')}</Badge>
             )}
@@ -146,6 +149,20 @@ export function PhotoGalleryGrid({
               {t('photos.reject')}
             </Button>
           </div>
+        )}
+        
+        {/* Tagged athletes display */}
+        {taggedNames && (
+          <p style={{ 
+            fontSize: '11px', 
+            color: 'var(--pa-text-muted)', 
+            textTransform: 'uppercase', 
+            letterSpacing: '0.1em', 
+            fontWeight: 600,
+            paddingLeft: '4px'
+          }}>
+            {taggedNames}
+          </p>
         )}
       </div>
     )
@@ -203,6 +220,9 @@ export function PhotoGalleryGrid({
             const isSelected = selected.has(photo.id)
             const isPending = (photo.approval_status || photo.status) === 'pending'
             const thumb = photo.thumbnail_url || getGalleryPhotoThumbnailUrl(photo.thumbnail_path, photo.storage_path)
+            const taggedNames = photo.tagged_athletes
+              ?.map((a) => a.first_name)
+              .join(' • ') || ''
             
             return (
               <div 
@@ -231,6 +251,18 @@ export function PhotoGalleryGrid({
                   {photo.caption && (
                     <p style={{ fontSize: '14px', color: 'var(--pa-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {photo.caption}
+                    </p>
+                  )}
+                  {taggedNames && (
+                    <p style={{ 
+                      fontSize: '11px', 
+                      color: 'var(--pa-text-muted)', 
+                      textTransform: 'uppercase', 
+                      letterSpacing: '0.1em', 
+                      fontWeight: 600,
+                      marginTop: '4px'
+                    }}>
+                      {taggedNames}
                     </p>
                   )}
                 </div>
