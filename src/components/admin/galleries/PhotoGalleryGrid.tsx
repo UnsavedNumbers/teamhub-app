@@ -12,6 +12,8 @@ interface PhotoGalleryGridProps {
   viewMode?: 'grid' | 'list'
   onDelete?: (ids: string[]) => Promise<void> | void
   onModerate?: (ids: string[], action: 'approve' | 'reject') => Promise<void> | void
+  onPhotoClick?: (photo: GalleryPhoto, index: number) => void
+  onBulkTag?: (photos: GalleryPhoto[]) => void
 }
 
 export function PhotoGalleryGrid({ 
@@ -21,6 +23,8 @@ export function PhotoGalleryGrid({
   viewMode = 'grid',
   onDelete, 
   onModerate,
+  onPhotoClick,
+  onBulkTag,
 }: PhotoGalleryGridProps) {
   const navigate = useNavigate()
   const { t } = useI18n()
@@ -54,9 +58,11 @@ export function PhotoGalleryGrid({
     setConfirmDelete(false)
   }
 
-  const handlePhotoClick = (photo: GalleryPhoto) => {
-    // Navigate to photo detail page
-    if (photo.gallery_id) {
+  const handlePhotoClick = (photo: GalleryPhoto, index: number) => {
+    if (onPhotoClick) {
+      onPhotoClick(photo, index)
+    } else if (photo.gallery_id) {
+      // Fallback: navigate to photo detail page
       navigate(getLink('admin.photos.photo', { 
         galleryId: photo.gallery_id, 
         photoId: photo.id 
@@ -64,7 +70,7 @@ export function PhotoGalleryGrid({
     }
   }
 
-  const renderPhoto = (photo: GalleryPhoto) => {
+  const renderPhoto = (photo: GalleryPhoto, index: number) => {
     const isSelected = selected.has(photo.id)
     const isPending = (photo.approval_status || photo.status) === 'pending'
     const thumb = photo.thumbnail_url || getGalleryPhotoThumbnailUrl(photo.thumbnail_path, photo.storage_path)
@@ -86,7 +92,7 @@ export function PhotoGalleryGrid({
             src={thumb}
             alt={photo.filename || t('photos.viewPhoto')}
             style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.7s' }}
-            onClick={() => handlePhotoClick(photo)}
+            onClick={() => handlePhotoClick(photo, index)}
           />
           
           {/* Badges - Left corner */}
@@ -171,6 +177,15 @@ export function PhotoGalleryGrid({
               </Button>
             </>
           )}
+          {selected.size > 0 && onBulkTag && (
+            <Button variant="secondary" size="small" onClick={() => {
+              const selectedPhotos = photos.filter((p) => selected.has(p.id))
+              onBulkTag(selectedPhotos)
+              setSelected(new Set())
+            }}>
+              {t('gallery.tagging.title')}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -180,11 +195,11 @@ export function PhotoGalleryGrid({
         </div>
       ) : viewMode === 'grid' ? (
         <div className="pa-grid pa-grid-4">
-          {photos.map(renderPhoto)}
+          {photos.map((photo, index) => renderPhoto(photo, index))}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {photos.map((photo) => {
+          {photos.map((photo, index) => {
             const isSelected = selected.has(photo.id)
             const isPending = (photo.approval_status || photo.status) === 'pending'
             const thumb = photo.thumbnail_url || getGalleryPhotoThumbnailUrl(photo.thumbnail_path, photo.storage_path)
@@ -207,7 +222,7 @@ export function PhotoGalleryGrid({
                   src={thumb} 
                   alt={photo.filename || t('photos.viewPhoto')} 
                   style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer' }}
-                  onClick={() => handlePhotoClick(photo)}
+                  onClick={() => handlePhotoClick(photo, index)}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
