@@ -43,6 +43,8 @@ import { t } from '@/i18n'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import { supabase } from '@/lib/supabase'
 import { getLink } from '@/utils/routes'
+import { showSuccess, showError } from '@/utils/toast'
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { cn } from '@/utils/cn'
 import { USE_FAKE_DATA } from '@/data/config'
 import '@/styles/orgAdmin.css'
@@ -126,9 +128,7 @@ function AthleteSelectorModal({
       const { data, error } = await supabase
         .from('athletes')
         .select('id, first_name, last_name, jersey_number, has_profile_photo, profile_photo_updated_at')
-        .eq('team_id', teamId)
         .order('last_name')
-      
       if (error) throw error
       setAthletes(data || [])
     } catch (err) {
@@ -262,7 +262,7 @@ function AthleteSelectorModal({
             <Button
               variant="primary"
               onClick={handleSave}
-              disabled={saving || selectedIds.length === 0}
+              disabled={saving && selectedIds.length === 0}
             >
               {saving ? t('common.saving') : t('videoLibrary.athletes.saveLinks')}
             </Button>
@@ -971,12 +971,19 @@ export default function CoachVideoDetail() {
     }
   }, [notes])
   
+  const { copy: copyToClipboard } = useCopyToClipboard()
+
   // Copy link to clipboard
-  const handleCopyLink = useCallback(() => {
-    const url = `${window.location.origin}${getLink('admin.videos.detail', { id: videoId! })}`
-    navigator.clipboard.writeText(url)
-    // Could add a toast notification here
-  }, [videoId])
+  const handleCopyLink = useCallback(async () => {
+    if (!videoId) return
+    const url = `${window.location.origin}${getLink('admin.videos.detail', { id: videoId })}`
+    const ok = await copyToClipboard(url)
+    if (ok) {
+      showSuccess(t('videoLibrary.actions.linkCopied'))
+    } else {
+      showError(t('common.error.clipboardFailed'))
+    }
+  }, [videoId, copyToClipboard])
   
   // Handle video edit
   const handleStartEdit = useCallback(() => {
