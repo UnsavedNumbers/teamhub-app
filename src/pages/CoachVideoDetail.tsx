@@ -1006,31 +1006,33 @@ export default function CoachVideoDetail() {
   
   const handleSaveDetails = useCallback(async () => {
     if (!videoId || !video) return
-    
+
     setIsSaving(true)
     try {
-      await updateVideo(videoId, {
+      // Only pass fields that exist on the videos table (no season_id, program_id, level_id, sport_id, recording_location)
+      const ok = await updateVideo(videoId, {
         title: editTitle,
         description: editDescription,
         category: editCategory,
         visibility: editVisibility,
         team_id: editTeamId,
-        season_id: editSeasonId,
-        program_id: editProgramId,
-        level_id: editLevelId,
-        sport_id: editSportId,
         event_id: editEventId,
         recorded_at: editRecordedAt || null,
-        recording_location: editRecordedLocation || null,
       })
-      setIsEditingDetails(false)
-      refreshVideo()
+      if (ok) {
+        setIsEditingDetails(false)
+        refreshVideo()
+        showSuccess(t('toast.success.updated'))
+      } else {
+        showError(t('videoLibrary.errors.updateFailed'))
+      }
     } catch (err) {
       console.error('Error saving video details:', err)
+      showError(t('videoLibrary.errors.updateFailed'))
     } finally {
       setIsSaving(false)
     }
-  }, [videoId, video, editTitle, editDescription, editCategory, editVisibility, editTeamId, editSeasonId, editProgramId, editLevelId, editSportId, editEventId, editRecordedAt, editRecordedLocation, updateVideo, refreshVideo])
+  }, [videoId, video, editTitle, editDescription, editCategory, editVisibility, editTeamId, editEventId, editRecordedAt, updateVideo, refreshVideo, t])
   
   // Handle video delete
   const handleDeleteVideo = useCallback(async () => {
