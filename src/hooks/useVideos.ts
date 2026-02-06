@@ -37,6 +37,36 @@ const getEdgeFunctionUrl = (functionName: string): string => {
   return `${supabaseUrl}/functions/v1/${functionName}`
 }
 
+/**
+ * Fetches a signed thumbnail URL from the mux-signed-playback edge function.
+ * Database thumbnail_url is unsigned; Mux requires a signed token for image access.
+ */
+async function getSignedThumbnailUrl(
+  accessToken: string,
+  options: { video_id: string } | { playback_id: string },
+  expiration = 300
+): Promise<string | null> {
+  try {
+    const response = await fetch(getEdgeFunctionUrl('mux-signed-playback'), {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...options,
+        type: 'thumbnail',
+        expiration,
+      }),
+    })
+    if (!response.ok) return null
+    const data: GetPlaybackTokenResponse = await response.json()
+    return data.thumbnail_url ?? null
+  } catch {
+    return null
+  }
+}
+
 // ============================================================================
 // Video List Hook
 // ============================================================================
@@ -149,7 +179,20 @@ export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
       
       if (fetchError) throw fetchError
       
-      const fetchedVideos = (data || []) as unknown as Video[]
+      let fetchedVideos = (data || []) as unknown as Video[]
+      
+      // Attach signed thumbnail URLs: DB thumbnail_url has no token; Mux requires signed URLs.
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        const withSignedThumbnails = await Promise.all(
+          fetchedVideos.map(async (video): Promise<Video> => {
+            if (!video.mux_playback_id) return video
+            const signedUrl = await getSignedThumbnailUrl(session.access_token!, { video_id: video.id })
+            return signedUrl ? { ...video, thumbnail_url: signedUrl } : video
+          })
+        )
+        fetchedVideos = withSignedThumbnails
+      }
       
       if (isLoadMore) {
         setVideos(prev => [...prev, ...fetchedVideos])
@@ -236,7 +279,15 @@ export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideo
       
       if (fetchError) throw fetchError
       
-      setVideo(data as unknown as Video)
+      let videoData = data as unknown as Video
+      if (videoData?.mux_playback_id) {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+          const signedUrl = await getSignedThumbnailUrl(session.access_token, { video_id: videoData.id })
+          if (signedUrl) videoData = { ...videoData, thumbnail_url: signedUrl }
+        }
+      }
+      setVideo(videoData)
     } catch (err) {
       console.error('Error fetching video:', err)
       setError(err instanceof Error ? err : new Error('Failed to fetch video'))
