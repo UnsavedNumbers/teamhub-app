@@ -1153,10 +1153,15 @@ export function useVideoMutations(): UseVideoMutationsReturn {
     updates: Partial<Video>
   ): Promise<boolean> => {
     try {
-      // Extract only the fields that can be safely updated
-      const { 
-        title, description, category, visibility, team_id, season_id, 
-        event_id, program_id, level_id, sport_id, recorded_at 
+      // Only include columns that exist on the videos table (no season_id, program_id, level_id, sport_id, recording_location)
+      const {
+        title,
+        description,
+        category,
+        visibility,
+        team_id,
+        event_id,
+        recorded_at,
       } = updates
       const safeUpdates = {
         ...(title !== undefined && { title }),
@@ -1164,11 +1169,7 @@ export function useVideoMutations(): UseVideoMutationsReturn {
         ...(category !== undefined && { category }),
         ...(visibility !== undefined && { visibility }),
         ...(team_id !== undefined && { team_id }),
-        ...(season_id !== undefined && { season_id }),
         ...(event_id !== undefined && { event_id }),
-        ...(program_id !== undefined && { program_id }),
-        ...(level_id !== undefined && { level_id }),
-        ...(sport_id !== undefined && { sport_id }),
         ...(recorded_at !== undefined && { recorded_at }),
       }
       
