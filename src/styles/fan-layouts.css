@@ -1780,6 +1780,7 @@
     overflow-x: auto;
     -ms-overflow-style: none;
     scrollbar-width: none;
+    max-width: 100%;
 }
 
 .fan-org-tabs::-webkit-scrollbar {
