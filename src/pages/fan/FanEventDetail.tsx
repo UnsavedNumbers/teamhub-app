@@ -111,16 +111,16 @@ export default function FanEventDetail() {
         .from('events')
         .select(`
           *,
-          teams (
+          organizations (
             id,
             name,
-            org_id,
-            organizations (
-              id,
-              name,
-              slug,
-              logo_url
-            )
+            slug,
+            logo_url,
+            description
+          ),
+          teams (
+            id,
+            name
           ),
           seasons (
             id,
@@ -160,18 +160,7 @@ export default function FanEventDetail() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const dataAny = data as any
       const team = Array.isArray(dataAny.teams) ? dataAny.teams[0] : dataAny.teams
-      let org = team?.organizations ? (Array.isArray(team.organizations) ? team.organizations[0] : team.organizations) : null
-      // If org missing, try fetching it by team.org_id as a fallback (ensures org name is available)
-      if (!org?.id && team?.org_id) {
-        const { data: orgData } = await supabase
-          .from('organizations')
-          .select('id, name, slug, logo_url, public_description')
-          .eq('id', team.org_id)
-          .maybeSingle()
-        if (orgData) {
-          org = orgData
-        }
-      }
+      const org = Array.isArray(dataAny.organizations) ? dataAny.organizations[0] : dataAny.organizations
       const eventLocation = Array.isArray(dataAny.event_locations) ? dataAny.event_locations[0] : dataAny.event_locations
       const ticketedEvent = Array.isArray(dataAny.ticketed_events) ? dataAny.ticketed_events[0] : dataAny.ticketed_events
       const season = Array.isArray(dataAny.seasons) ? dataAny.seasons[0] : dataAny.seasons
@@ -197,7 +186,7 @@ export default function FanEventDetail() {
         org_name: org?.name || 'Organization',
         org_slug: org?.slug || '',
         org_logo_url: org?.logo_url || null,
-        org_public_description: org?.public_description || null,
+        org_public_description: org?.description || null,
         venue_name: eventLocation?.venue_name || ticketedEvent?.venue_name || null,
         venue_address: eventLocation?.address_line1 || null,
         venue_city: eventLocation?.city || null,
