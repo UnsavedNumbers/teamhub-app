@@ -192,6 +192,12 @@ const EditTravelPlan = lazy(() => import('./pages/admin/EditTravelPlan'))
 const AdminTryouts = lazy(() => import('./pages/admin/AdminTryouts'))
 const AdminTryoutDetail = lazy(() => import('./pages/admin/AdminTryoutDetail'))
 const CreateTryout = lazy(() => import('./pages/admin/CreateTryout'))
+const AdminPhotosLayout = lazy(() => import('./pages/admin/photos/AdminPhotosLayout').then(m => ({ default: m.AdminPhotosLayout })))
+const PhotosDashboardView = lazy(() => import('./pages/admin/photos/PhotosDashboardView').then(m => ({ default: m.PhotosDashboardView })))
+const PhotosBrowseView = lazy(() => import('./pages/admin/photos/PhotosBrowseView').then(m => ({ default: m.PhotosBrowseView })))
+const PhotosSearchView = lazy(() => import('./pages/admin/photos/PhotosSearchView').then(m => ({ default: m.PhotosSearchView })))
+const PhotosBulkView = lazy(() => import('./pages/admin/photos/PhotosBulkView').then(m => ({ default: m.PhotosBulkView })))
+const PhotosSettingsView = lazy(() => import('./pages/admin/photos/PhotosSettingsView').then(m => ({ default: m.PhotosSettingsView })))
 const AdminPhotos = lazy(() => import('./pages/admin/Photos'))
 const AdminGalleryDetail = lazy(() => import('./pages/admin/GalleryDetail'))
 const CreateGallery = lazy(() => import('./pages/admin/CreateGallery'))
@@ -561,7 +567,13 @@ function AppWithTheme() {
               <Route path="tryouts/:tryoutId" element={<FeatureGateRoute routeKey="admin.tryouts.detail"><AdminTryoutDetail /></FeatureGateRoute>} />
             
               {/* Photos */}
-              <Route path="photos" element={<FeatureGateRoute routeKey="admin.photos.list"><Suspense fallback={<AdminLoadingSpinner />}><AdminPhotos /></Suspense></FeatureGateRoute>} />
+              <Route path="photos" element={<FeatureGateRoute routeKey="admin.photos.list"><Suspense fallback={<AdminLoadingSpinner />}><AdminPhotosLayout /></Suspense></FeatureGateRoute>}>
+                <Route index element={<PhotosDashboardView />} />
+                <Route path="browse" element={<Suspense fallback={<AdminLoadingSpinner />}><PhotosBrowseView /></Suspense>} />
+                <Route path="search" element={<Suspense fallback={<AdminLoadingSpinner />}><PhotosSearchView /></Suspense>} />
+                <Route path="bulk" element={<Suspense fallback={<AdminLoadingSpinner />}><PhotosBulkView /></Suspense>} />
+                <Route path="settings" element={<Suspense fallback={<AdminLoadingSpinner />}><PhotosSettingsView /></Suspense>} />
+              </Route>
               <Route path="photos/create" element={<FeatureGateRoute routeKey="admin.photos.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateGallery /></Suspense></FeatureGateRoute>} />
               <Route path="photos/:id" element={<FeatureGateRoute routeKey="admin.photos.detail"><Suspense fallback={<AdminLoadingSpinner />}><AdminGalleryDetail /></Suspense></FeatureGateRoute>} />
               <Route path="photos/:galleryId/photo/:photoId" element={<FeatureGateRoute routeKey="admin.photos.photo"><Suspense fallback={<AdminLoadingSpinner />}><PhotoDetail /></Suspense></FeatureGateRoute>} />

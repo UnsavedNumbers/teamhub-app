@@ -1,0 +1,126 @@
+.photos-browse {
+  width: 100%;
+}
+
+.browse-loading {
+  min-height: 400px;
+}
+
+.browse-container {
+  display: flex;
+  gap: var(--pa-space-6);
+  min-height: 600px;
+}
+
+.browse-sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  background: var(--pa-surface);
+  border: 1px solid var(--pa-border-subtle);
+  border-radius: var(--pa-radius-l);
+  padding: var(--pa-space-4);
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+}
+
+.browse-sidebar-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pa-space-3);
+  margin-bottom: var(--pa-space-4);
+  padding-bottom: var(--pa-space-4);
+  border-bottom: 1px solid var(--pa-border-subtle);
+}
+
+.browse-sidebar-header h3 {
+  font-size: var(--pa-font-size-lg);
+  font-weight: 700;
+  margin: 0;
+}
+
+.hide-empty-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--pa-space-2);
+  font-size: var(--pa-font-size-sm);
+  cursor: pointer;
+}
+
+.hide-empty-toggle input {
+  cursor: pointer;
+}
+
+.tree-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pa-space-1);
+}
+
+.tree-node {
+  display: flex;
+  align-items: center;
+  gap: var(--pa-space-2);
+  padding: var(--pa-space-2) var(--pa-space-3);
+  border-radius: var(--pa-radius-m);
+  cursor: pointer;
+  transition: background 0.2s ease;
+  font-size: var(--pa-font-size-sm);
+}
+
+.tree-node:hover {
+  background: var(--pa-surface-muted);
+}
+
+.tree-node.selected {
+  background: var(--pa-surface-muted);
+  font-weight: 600;
+}
+
+.tree-node-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.tree-node-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-node-indicator {
+  flex-shrink: 0;
+  font-size: 10px;
+}
+
+.tree-node-count {
+  flex-shrink: 0;
+  font-size: var(--pa-font-size-xs);
+  color: var(--pa-text-muted);
+  font-weight: 600;
+}
+
+.tree-node-loading {
+  flex-shrink: 0;
+  color: var(--pa-text-muted);
+}
+
+.tree-node-children {
+  margin-left: var(--pa-space-2);
+}
+
+.browse-content {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .browse-container {
+    flex-direction: column;
+  }
+
+  .browse-sidebar {
+    width: 100%;
+    max-height: 300px;
+  }
+}
