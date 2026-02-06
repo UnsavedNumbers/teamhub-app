@@ -145,6 +145,8 @@ export default function FanTickets() {
     // Search filter
     const matchesSearch = searchQuery === '' || 
       ticket.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.venue_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.event_location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ticket.order_confirmation_code?.toLowerCase().includes(searchQuery.toLowerCase())
     
     return matchesTab && matchesSearch
