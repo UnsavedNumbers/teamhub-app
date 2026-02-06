@@ -844,6 +844,7 @@ export default function CoachVideoDetail() {
   const [editRecordedAt, setEditRecordedAt] = useState<string>('')
   const [editRecordedLocation, setEditRecordedLocation] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   
   // Dropdowns for edit form
   const [teams, setTeams] = useState<Team[]>([])
@@ -985,6 +986,24 @@ export default function CoachVideoDetail() {
     }
   }, [videoId, copyToClipboard])
   
+  // Handle visibility change with team reset logic
+  const handleVisibilityChange = useCallback((newVisibility: VideoVisibility) => {
+    setEditVisibility(newVisibility)
+    
+    // Reset team when switching to Organization visibility
+    if (newVisibility === 'organization') {
+      setEditTeamId(null)
+      showSuccess(t('videoLibrary.edit.teamClearedForOrg'))
+    }
+    
+    // Clear team-related errors when visibility changes
+    setFormErrors(prev => {
+      const updated = { ...prev }
+      delete updated.team
+      return updated
+    })
+  }, [t])
+
   // Handle video edit
   const handleStartEdit = useCallback(() => {
     if (video) {
@@ -1000,12 +1019,27 @@ export default function CoachVideoDetail() {
       setEditEventId(video.event_id || null)
       setEditRecordedAt(video.recorded_at ? video.recorded_at.split('T')[0] : '')
       setEditRecordedLocation(video.recording_location || '')
+      setFormErrors({})
       setIsEditingDetails(true)
     }
   }, [video])
   
   const handleSaveDetails = useCallback(async () => {
     if (!videoId || !video) return
+
+    // Validate form based on visibility
+    const errors: Record<string, string> = {}
+    
+    // Team conditional validation
+    if (['team', 'guardians'].includes(editVisibility) && !editTeamId) {
+      errors.team = t('videoLibrary.edit.errors.teamRequired')
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      showError(t('videoLibrary.edit.errors.validationFailed'))
+      return
+    }
 
     setIsSaving(true)
     try {
@@ -1021,6 +1055,7 @@ export default function CoachVideoDetail() {
       })
       if (ok) {
         setIsEditingDetails(false)
+        setFormErrors({})
         refreshVideo()
         showSuccess(t('toast.success.updated'))
       } else {
@@ -1550,7 +1585,7 @@ export default function CoachVideoDetail() {
                 </label>
                 <select
                   value={editVisibility}
-                  onChange={(e) => setEditVisibility(e.target.value as VideoVisibility)}
+                  onChange={(e) => handleVisibilityChange(e.target.value as VideoVisibility)}
                   className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
                 >
                   <option value="private">{t('videoUploader.visibilities.private')}</option>
@@ -1558,23 +1593,56 @@ export default function CoachVideoDetail() {
                   <option value="organization">{t('videoUploader.visibilities.organization')}</option>
                   <option value="guardians">{t('videoUploader.visibilities.guardians')}</option>
                 </select>
+                <p className="mt-1.5 text-xs text-gray-500">
+                  {editVisibility === 'private' && t('videoLibrary.edit.helpText.private')}
+                  {editVisibility === 'team' && t('videoLibrary.edit.helpText.team')}
+                  {editVisibility === 'organization' && t('videoLibrary.edit.helpText.organization')}
+                  {editVisibility === 'guardians' && t('videoLibrary.edit.helpText.guardians')}
+                </p>
               </div>
               
               {/* Team */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
                   {t('videoLibrary.edit.teamLabel')}
+                  {['team', 'guardians'].includes(editVisibility) && (
+                    <span className="text-red-500 ml-1" aria-label="required">*</span>
+                  )}
                 </label>
                 <select
                   value={editTeamId || ''}
-                  onChange={(e) => setEditTeamId(e.target.value || null)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  onChange={(e) => {
+                    setEditTeamId(e.target.value || null)
+                    // Clear error when user makes selection
+                    if (e.target.value) {
+                      setFormErrors(prev => {
+                        const updated = { ...prev }
+                        delete updated.team
+                        return updated
+                      })
+                    }
+                  }}
+                  className={`w-full px-4 py-3 rounded-lg border ${
+                    formErrors.team
+                      ? 'border-red-500 dark:border-red-500'
+                      : ['team', 'guardians'].includes(editVisibility)
+                      ? 'border-blue-500 dark:border-blue-500'
+                      : 'border-gray-200 dark:border-gray-700'
+                  } bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent`}
+                  aria-required={['team', 'guardians'].includes(editVisibility)}
+                  aria-invalid={!!formErrors.team}
+                  aria-describedby={formErrors.team ? 'team-error' : undefined}
                 >
                   <option value="">{t('videoLibrary.edit.teamPlaceholder')}</option>
                   {teams.map(team => (
                     <option key={team.id} value={team.id}>{team.name}</option>
                   ))}
                 </select>
+                {formErrors.team && (
+                  <p id="team-error" className="mt-1.5 text-xs text-red-500" role="alert">
+                    {formErrors.team}
+                  </p>
+                )}
               </div>
               
               {/* Season */}

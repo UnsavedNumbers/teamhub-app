@@ -2697,6 +2697,17 @@ export const en = {
             recordedDateLabel: 'Recorded Date',
             recordedLocationLabel: 'Location',
             recordedLocationPlaceholder: 'Where was this recorded?',
+            teamClearedForOrg: 'Team cleared - content will be visible organization-wide',
+            helpText: {
+                private: 'Content visible only to you',
+                team: 'Team selection required - content visible to selected team members',
+                organization: 'Content visible to all organization members',
+                guardians: 'Team selection required - content visible to guardians of selected team',
+            },
+            errors: {
+                teamRequired: 'Team selection is required for this visibility setting',
+                validationFailed: 'Please fix the errors before saving',
+            },
         },
         
         // Delete confirmation
@@ -5724,6 +5735,53 @@ export const es = {
         uploadError: 'Error al cargar video: {{message}}',
         uploadSuccess: 'Video cargado exitosamente',
         selectTeamFirst: 'Por favor selecciona un equipo primero',
+    },
+
+    // Biblioteca de Videos
+    videoLibrary: {
+        // Edit modal
+        edit: {
+            title: 'Editar Detalles del Video',
+            saveChanges: 'Guardar Cambios',
+            cancel: 'Cancelar',
+            saving: 'Guardando...',
+            titleLabel: 'Título',
+            titlePlaceholder: 'Ingresa el título del video',
+            descriptionLabel: 'Descripción',
+            descriptionPlaceholder: 'Agrega descripción del video',
+            categoryLabel: 'Categoría',
+            visibilityLabel: 'Visibilidad',
+            teamLabel: 'Equipo',
+            teamPlaceholder: 'Selecciona un equipo',
+            seasonLabel: 'Temporada',
+            seasonPlaceholder: 'Selecciona temporada',
+            programLabel: 'Programa',
+            programPlaceholder: 'Selecciona programa',
+            levelLabel: 'Nivel',
+            levelPlaceholder: 'Selecciona nivel',
+            sportLabel: 'Deporte',
+            sportPlaceholder: 'Selecciona deporte',
+            eventLabel: 'Evento',
+            eventPlaceholder: 'Selecciona evento',
+            recordedDateLabel: 'Fecha de Grabación',
+            recordedLocationLabel: 'Ubicación',
+            recordedLocationPlaceholder: '¿Dónde se grabó esto?',
+            teamClearedForOrg: 'Equipo borrado - el contenido será visible para toda la organización',
+            helpText: {
+                private: 'Contenido visible solo para ti',
+                team: 'Selección de equipo requerida - contenido visible para miembros del equipo seleccionado',
+                organization: 'Contenido visible para todos los miembros de la organización',
+                guardians: 'Selección de equipo requerida - contenido visible para tutores del equipo seleccionado',
+            },
+            errors: {
+                teamRequired: 'La selección de equipo es requerida para esta configuración de visibilidad',
+                validationFailed: 'Por favor corrige los errores antes de guardar',
+            },
+        },
+        notes: 'Notas',
+        note: 'NOTA',
+        notes_plural: 'NOTAS',
+        noNotes: 'Sin notas aún',
     },
 
     // Venta de Entradas y Pedidos
