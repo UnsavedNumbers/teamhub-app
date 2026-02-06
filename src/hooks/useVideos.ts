@@ -37,6 +37,36 @@ const getEdgeFunctionUrl = (functionName: string): string => {
   return `${supabaseUrl}/functions/v1/${functionName}`
 }
 
+/**
+ * Fetches a signed thumbnail URL from the mux-signed-playback edge function.
+ * Database thumbnail_url is unsigned; Mux requires a signed token for image access.
+ */
+async function getSignedThumbnailUrl(
+  accessToken: string,
+  options: { video_id: string } | { playback_id: string },
+  expiration = 300
+): Promise<string | null> {
+  try {
+    const response = await fetch(getEdgeFunctionUrl('mux-signed-playback'), {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...options,
+        type: 'thumbnail',
+        expiration,
+      }),
+    })
+    if (!response.ok) return null
+    const data: GetPlaybackTokenResponse = await response.json()
+    return data.thumbnail_url ?? null
+  } catch {
+    return null
+  }
+}
+
 // ============================================================================
 // Video List Hook
 // ============================================================================
@@ -84,7 +114,7 @@ export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
           team:teams!videos_team_id_fkey(id, name),
           event:events!videos_event_id_fkey(id, title, type),
           video_athlete_links(id, athlete_id, link_type),
-          video_tag_links(id, tag_id, tag:video_tags(id, name, type, color))
+          video_tag_links(id, tag_id, tag:video_tags(id, name, tag_type, color))
         `, { count: 'exact' })
         .eq('org_id', orgId)
         .neq('status', 'deleted')
@@ -149,7 +179,20 @@ export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
       
       if (fetchError) throw fetchError
       
-      const fetchedVideos = (data || []) as unknown as Video[]
+      let fetchedVideos = (data || []) as unknown as Video[]
+      
+      // Attach signed thumbnail URLs: DB thumbnail_url has no token; Mux requires signed URLs.
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        const withSignedThumbnails = await Promise.all(
+          fetchedVideos.map(async (video): Promise<Video> => {
+            if (!video.mux_playback_id) return video
+            const signedUrl = await getSignedThumbnailUrl(session.access_token!, { video_id: video.id })
+            return signedUrl ? { ...video, thumbnail_url: signedUrl } : video
+          })
+        )
+        fetchedVideos = withSignedThumbnails
+      }
       
       if (isLoadMore) {
         setVideos(prev => [...prev, ...fetchedVideos])
@@ -166,7 +209,7 @@ export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [orgId, filters, limit, sortBy, sortOrder, page, enabled])
+  }, [orgId, JSON.stringify(filters), limit, sortBy, sortOrder, page, enabled])
   
   useEffect(() => {
     fetchVideos(false)
@@ -215,12 +258,12 @@ export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideo
           team:teams!videos_team_id_fkey(id, name),
           event:events!videos_event_id_fkey(id, title, type),
           video_athlete_links(
-            id, athlete_id, link_type, timestamp_start, timestamp_end, notes,
-            athlete:athletes(id, first_name, last_name, jersey_number, photo_url)
+            id, athlete_id, link_type, start_time_seconds, end_time_seconds,
+            athlete:athletes(id, first_name, last_name, jersey_number, has_profile_photo, profile_photo_updated_at)
           ),
           video_tag_links(
-            id, tag_id, timestamp_start, timestamp_end,
-            tag:video_tags(id, name, type, color)
+            id, tag_id,
+            tag:video_tags(id, name, tag_type, color)
           ),
           video_notes(
             id, content, timestamp_seconds, duration_seconds, scope, author_id, created_at,
@@ -236,7 +279,15 @@ export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideo
       
       if (fetchError) throw fetchError
       
-      setVideo(data as unknown as Video)
+      let videoData = data as unknown as Video
+      if (videoData?.mux_playback_id) {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+          const signedUrl = await getSignedThumbnailUrl(session.access_token, { video_id: videoData.id })
+          if (signedUrl) videoData = { ...videoData, thumbnail_url: signedUrl }
+        }
+      }
+      setVideo(videoData)
     } catch (err) {
       console.error('Error fetching video:', err)
       setError(err instanceof Error ? err : new Error('Failed to fetch video'))

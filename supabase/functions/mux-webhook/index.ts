@@ -2,29 +2,29 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
 
-// Environment variables
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!
-const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-const muxWebhookSecret = Deno.env.get("MUX_WEBHOOK_SECRET")!
-
-// Validate environment
-if (!supabaseUrl || !supabaseServiceRoleKey || !muxWebhookSecret) {
-  console.error("Missing env vars:", {
-    hasSupabaseUrl: !!supabaseUrl,
-    hasServiceKey: !!supabaseServiceRoleKey,
-    hasMuxWebhookSecret: !!muxWebhookSecret,
-  })
-  throw new Error("Missing required environment configuration")
-}
-
-// Create Supabase client with service role
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
-
 // CORS headers (webhooks don't typically need CORS, but including for consistency)
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "mux-signature, content-type",
+}
+
+/**
+ * Lazily load and validate environment variables + Supabase client.
+ * This avoids throwing at module load time, which would kill the
+ * function before it can respond to any requests.
+ */
+function getConfig() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!
+  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  const muxWebhookSecret = Deno.env.get("MUX_WEBHOOK_SECRET")
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    throw new Error("Missing required Supabase environment configuration")
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
+  return { supabase, muxWebhookSecret }
 }
 
 // Mux webhook event types we handle
@@ -59,7 +59,8 @@ interface MuxWebhookEvent {
  */
 async function verifyMuxSignature(
   body: string,
-  signatureHeader: string
+  signatureHeader: string,
+  muxWebhookSecret: string
 ): Promise<boolean> {
   if (!signatureHeader) {
     console.error("No signature header provided")
@@ -114,7 +115,7 @@ async function verifyMuxSignature(
  * Handle video.upload.asset_created event
  * This fires when upload completes and asset is being created
  */
-async function handleUploadAssetCreated(data: any): Promise<void> {
+async function handleUploadAssetCreated(data: any, supabase: ReturnType<typeof createClient>): Promise<void> {
   const uploadId = data.id
   const assetId = data.asset_id
   
@@ -141,7 +142,7 @@ async function handleUploadAssetCreated(data: any): Promise<void> {
  * Handle video.asset.ready event
  * This fires when asset processing is complete and video is playable
  */
-async function handleAssetReady(data: any): Promise<void> {
+async function handleAssetReady(data: any, supabase: ReturnType<typeof createClient>): Promise<void> {
   const assetId = data.id
   const playbackIds = data.playback_ids || []
   const duration = data.duration
@@ -201,7 +202,7 @@ async function handleAssetReady(data: any): Promise<void> {
 /**
  * Handle video.asset.errored event
  */
-async function handleAssetErrored(data: any): Promise<void> {
+async function handleAssetErrored(data: any, supabase: ReturnType<typeof createClient>): Promise<void> {
   const assetId = data.id
   const errors = data.errors || {}
   const errorType = errors.type || "unknown"
@@ -228,7 +229,7 @@ async function handleAssetErrored(data: any): Promise<void> {
 /**
  * Handle video.upload.errored event
  */
-async function handleUploadErrored(data: any): Promise<void> {
+async function handleUploadErrored(data: any, supabase: ReturnType<typeof createClient>): Promise<void> {
   const uploadId = data.id
   const error = data.error || {}
   const errorType = error.type || "upload_error"
@@ -254,7 +255,7 @@ async function handleUploadErrored(data: any): Promise<void> {
 /**
  * Handle video.upload.cancelled event
  */
-async function handleUploadCancelled(data: any): Promise<void> {
+async function handleUploadCancelled(data: any, supabase: ReturnType<typeof createClient>): Promise<void> {
   const uploadId = data.id
   
   console.log(`Upload ${uploadId} was cancelled`)
@@ -276,7 +277,7 @@ async function handleUploadCancelled(data: any): Promise<void> {
 /**
  * Handle video.asset.deleted event
  */
-async function handleAssetDeleted(data: any): Promise<void> {
+async function handleAssetDeleted(data: any, supabase: ReturnType<typeof createClient>): Promise<void> {
   const assetId = data.id
   
   console.log(`Asset ${assetId} was deleted`)
@@ -299,7 +300,7 @@ async function handleAssetDeleted(data: any): Promise<void> {
  * Handle video.asset.created event
  * This provides early notification that asset processing has started
  */
-async function handleAssetCreated(data: any): Promise<void> {
+async function handleAssetCreated(data: any, supabase: ReturnType<typeof createClient>): Promise<void> {
   const assetId = data.id
   const passthrough = data.passthrough
   
@@ -351,26 +352,34 @@ serve(async (req: Request) => {
   }
   
   try {
+    // Load config
+    const config = getConfig()
+    const { supabase, muxWebhookSecret } = config
+    
     // Get raw body for signature verification
     const body = await req.text()
     
-    // Verify webhook signature
+    // Verify webhook signature (skip if MUX_WEBHOOK_SECRET not set - for development)
     const signatureHeader = req.headers.get("mux-signature")
-    if (!signatureHeader) {
-      console.error("Missing Mux signature header")
-      return new Response(JSON.stringify({ error: "Missing signature" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
-    }
-    
-    const isValid = await verifyMuxSignature(body, signatureHeader)
-    if (!isValid) {
-      console.error("Invalid Mux signature")
-      return new Response(JSON.stringify({ error: "Invalid signature" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+    if (muxWebhookSecret) {
+      if (!signatureHeader) {
+        console.error("Missing Mux signature header")
+        return new Response(JSON.stringify({ error: "Missing signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      
+      const isValid = await verifyMuxSignature(body, signatureHeader, muxWebhookSecret)
+      if (!isValid) {
+        console.error("Invalid Mux signature")
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+    } else {
+      console.warn("MUX_WEBHOOK_SECRET not set - skipping signature verification")
     }
     
     // Parse event
@@ -384,31 +393,31 @@ serve(async (req: Request) => {
     // Handle different event types
     switch (event.type) {
       case "video.upload.asset_created":
-        await handleUploadAssetCreated(event.data)
+        await handleUploadAssetCreated(event.data, supabase)
         break
       
       case "video.asset.created":
-        await handleAssetCreated(event.data)
+        await handleAssetCreated(event.data, supabase)
         break
       
       case "video.asset.ready":
-        await handleAssetReady(event.data)
+        await handleAssetReady(event.data, supabase)
         break
       
       case "video.asset.errored":
-        await handleAssetErrored(event.data)
+        await handleAssetErrored(event.data, supabase)
         break
       
       case "video.upload.errored":
-        await handleUploadErrored(event.data)
+        await handleUploadErrored(event.data, supabase)
         break
       
       case "video.upload.cancelled":
-        await handleUploadCancelled(event.data)
+        await handleUploadCancelled(event.data, supabase)
         break
       
       case "video.asset.deleted":
-        await handleAssetDeleted(event.data)
+        await handleAssetDeleted(event.data, supabase)
         break
       
       default:

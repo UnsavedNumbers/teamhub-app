@@ -2,138 +2,197 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
 
-// Environment variables
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!
-const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-const muxSigningKeyId = Deno.env.get("MUX_SIGNING_KEY_ID")!
-const muxSigningKeyPrivate = Deno.env.get("MUX_SIGNING_KEY_PRIVATE")!
-
-// Validate environment
-if (!supabaseUrl || !supabaseServiceRoleKey || !muxSigningKeyId || !muxSigningKeyPrivate) {
-  console.error("Missing env vars:", {
-    hasSupabaseUrl: !!supabaseUrl,
-    hasServiceKey: !!supabaseServiceRoleKey,
-    hasMuxSigningKeyId: !!muxSigningKeyId,
-    hasMuxSigningKeyPrivate: !!muxSigningKeyPrivate,
-  })
-  throw new Error("Missing required environment configuration")
-}
-
-// CORS headers
+// CORS headers (must be available before any env var validation)
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, content-type, x-client-info, apikey",
 }
 
-/**
- * Base64 URL encode (no padding, URL safe characters)
- */
-function base64UrlEncode(data: Uint8Array | string): string {
-  const base64 = typeof data === "string"
-    ? btoa(data)
-    : btoa(String.fromCharCode(...data))
-  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+function getConfig() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!
+  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  const muxSigningKeyId = Deno.env.get("MUX_SIGNING_KEY_ID")!
+  const muxSigningKeyPrivate = Deno.env.get("MUX_SIGNING_KEY_PRIVATE")!
+
+  if (!supabaseUrl || !supabaseServiceRoleKey || !muxSigningKeyId || !muxSigningKeyPrivate) {
+    console.error("Missing env vars:", {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceRoleKey,
+      hasMuxSigningKeyId: !!muxSigningKeyId,
+      hasMuxSigningKeyPrivate: !!muxSigningKeyPrivate,
+    })
+    throw new Error("Missing required environment configuration")
+  }
+
+  return { supabaseUrl, supabaseServiceRoleKey, muxSigningKeyId, muxSigningKeyPrivate }
+}
+
+// ============================================================================
+// JWT Signing - follows https://www.mux.com/docs/guides/secure-video-playback
+// ============================================================================
+
+/** Mux audience types per the docs: v=video, t=thumbnail, g=gif, s=storyboard */
+const MUX_AUD: Record<string, string> = {
+  video: "v",
+  thumbnail: "t",
+  gif: "g",
+  storyboard: "s",
+}
+
+/** Base64-URL encode (no padding, URL-safe chars) */
+function b64url(input: Uint8Array | string): string {
+  const str = typeof input === "string" ? input : String.fromCharCode(...input)
+  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
 }
 
 /**
- * Import the RSA private key for signing
+ * Decode the private key from its stored format and import it for signing.
+ *
+ * The Mux API returns the private key as a base64-encoded PEM (PKCS#1).
+ * The key may be stored as:
+ *   - The raw base64-encoded PEM (from the API / mux.txt)
+ *   - The decoded PEM text (from the .pem file)
+ *
+ * We need to get to the raw DER bytes, then wrap in PKCS#8 for WebCrypto.
  */
-async function importPrivateKey(pemKey: string): Promise<CryptoKey> {
-  // Clean the PEM key - handle both literal \n and actual newlines
-  const cleanedPem = pemKey
-    .replace(/\\n/g, "\n")
-    .replace(/-----BEGIN RSA PRIVATE KEY-----|-----END RSA PRIVATE KEY-----|\s/g, "")
-  
-  // Decode base64
-  const binaryDer = Uint8Array.from(atob(cleanedPem), c => c.charCodeAt(0))
-  
-  // Import as PKCS#8 (Mux provides RSA private keys)
-  // First convert PKCS#1 to PKCS#8 format
-  // PKCS#8 header for RSA
-  const pkcs8Header = new Uint8Array([
-    0x30, 0x82, // SEQUENCE
-    ((binaryDer.length + 26) >> 8) & 0xff,
-    (binaryDer.length + 26) & 0xff,
-    0x02, 0x01, 0x00, // INTEGER 0
-    0x30, 0x0d, // SEQUENCE
-    0x06, 0x09, // OID
-    0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, // rsaEncryption
-    0x05, 0x00, // NULL
-    0x04, 0x82, // OCTET STRING
-    (binaryDer.length >> 8) & 0xff,
-    binaryDer.length & 0xff,
+async function importSigningKey(rawKey: string): Promise<CryptoKey> {
+  console.log("DEBUG: Starting key import, key length:", rawKey.length)
+
+  // Normalise literal \n from env-var storage
+  let key = rawKey.replace(/\\n/g, "\n").trim()
+  console.log("DEBUG: After normalize, starts with PEM header:", key.startsWith("-----"))
+
+  // If the value does NOT start with "-----", it's the base64-encoded PEM
+  // that Mux returns from the signing-key API. Decode it first.
+  if (!key.startsWith("-----")) {
+    try {
+      key = new TextDecoder().decode(
+        Uint8Array.from(atob(key), (c) => c.charCodeAt(0))
+      )
+      console.log("DEBUG: Decoded base64 PEM, starts with header:", key.startsWith("-----"))
+    } catch (e) {
+      console.log("DEBUG: Base64 decode failed, assuming already PEM:", e)
+      // not valid base64, assume it's already PEM text
+    }
+  }
+
+  // Strip PEM headers/footers and whitespace to get raw base64 body
+  const b64Body = key
+    .replace(/-----BEGIN (?:RSA )?PRIVATE KEY-----/g, "")
+    .replace(/-----END (?:RSA )?PRIVATE KEY-----/g, "")
+    .replace(/\s/g, "")
+
+  console.log("DEBUG: Base64 body length:", b64Body.length)
+
+  // Decode base64 → DER bytes (this is PKCS#1 for Mux keys)
+  const derBytes = Uint8Array.from(atob(b64Body), (c) => c.charCodeAt(0))
+  console.log("DEBUG: DER bytes length:", derBytes.length)
+
+  // Build proper ASN.1 DER-encoded PKCS#8 structure
+  // PKCS#8 = SEQUENCE { version, AlgorithmIdentifier, OCTET STRING privateKey }
+  const algorithmIdentifier = new Uint8Array([
+    0x30, 0x0d,                   // SEQUENCE of 13 bytes
+    0x06, 0x09,                   // OID, 9 bytes
+    0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, // rsaEncryption OID
+    0x05, 0x00,                   // NULL
   ])
-  
-  const pkcs8Key = new Uint8Array(pkcs8Header.length + binaryDer.length)
-  pkcs8Key.set(pkcs8Header)
-  pkcs8Key.set(binaryDer, pkcs8Header.length)
-  
+
+  // OCTET STRING header for the private key
+  const derLength = derBytes.length
+  const octetStringHeader = derLength > 255
+    ? new Uint8Array([0x04, 0x82, (derLength >> 8) & 0xff, derLength & 0xff])
+    : new Uint8Array([0x04, derLength])
+
+  // Calculate total private key info length (version + algo + octet string)
+  const version = new Uint8Array([0x02, 0x01, 0x00]) // INTEGER 0
+  const privateKeyInfoLength = version.length + algorithmIdentifier.length + octetStringHeader.length + derBytes.length
+
+  // Build the complete PKCS#8 SEQUENCE
+  const sequenceHeader = privateKeyInfoLength > 255
+    ? new Uint8Array([0x30, 0x82, (privateKeyInfoLength >> 8) & 0xff, privateKeyInfoLength & 0xff])
+    : new Uint8Array([0x30, privateKeyInfoLength])
+
+  console.log("DEBUG: Sequence header:", Array.from(sequenceHeader))
+  console.log("DEBUG: Private key info length:", privateKeyInfoLength)
+
+  // Assemble the complete PKCS#8 key
+  const pkcs8Parts = [
+    sequenceHeader,
+    version,
+    algorithmIdentifier,
+    octetStringHeader,
+    derBytes,
+  ]
+
+  const totalLength = pkcs8Parts.reduce((sum, part) => sum + part.length, 0)
+  const pkcs8 = new Uint8Array(totalLength)
+  let offset = 0
+  for (const part of pkcs8Parts) {
+    pkcs8.set(part, offset)
+    offset += part.length
+  }
+
+  console.log("DEBUG: PKCS#8 total length:", pkcs8.length)
+  console.log("DEBUG: PKCS#8 first 20 bytes:", Array.from(pkcs8.slice(0, 20)))
+
   try {
-    return await crypto.subtle.importKey(
+    const importedKey = await crypto.subtle.importKey(
       "pkcs8",
-      pkcs8Key,
+      pkcs8,
       { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
       false,
-      ["sign"]
+      ["sign"],
     )
+    console.log("DEBUG: Key imported successfully")
+    return importedKey
   } catch (e) {
-    // If PKCS#8 conversion fails, try importing as-is
-    // This might work if the key is already in PKCS#8 format
-    console.log("PKCS#8 conversion failed, trying direct import")
-    return await crypto.subtle.importKey(
-      "pkcs8",
-      binaryDer,
-      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-      false,
-      ["sign"]
-    )
+    console.error("ERROR: Key import failed:", e)
+    throw e
   }
 }
 
 /**
- * Generate a signed JWT for Mux playback
+ * Generate a signed JWT for Mux playback.
+ *
+ * Per the Mux guide the JWT must contain:
+ *   sub  – Mux Playback ID
+ *   aud  – "v" | "t" | "g" | "s" | "d"
+ *   exp  – UNIX epoch seconds
+ *   kid  – Signing Key ID
  */
 async function generateSignedPlaybackToken(
   playbackId: string,
   type: "video" | "thumbnail" | "gif" | "storyboard" = "video",
-  expirationSeconds: number = 7200 // 2 hours default
+  expirationSeconds: number = 7200,
+  signingKeyId: string,
+  signingKeyPrivate: string,
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000)
-  const exp = now + expirationSeconds
-  
-  // JWT header
-  const header = {
-    alg: "RS256",
-    typ: "JWT",
-    kid: muxSigningKeyId,
-  }
-  
-  // JWT payload
-  const payload: any = {
+
+  // 1. Build JWT header & payload per Mux docs
+  const header = { alg: "RS256", typ: "JWT", kid: signingKeyId }
+  const payload = {
     sub: playbackId,
-    aud: type,
-    exp: exp,
-    kid: muxSigningKeyId,
+    aud: MUX_AUD[type] || "v",
+    exp: now + expirationSeconds,
+    kid: signingKeyId,
   }
-  
-  // Encode header and payload
-  const encodedHeader = base64UrlEncode(JSON.stringify(header))
-  const encodedPayload = base64UrlEncode(JSON.stringify(payload))
-  const signingInput = `${encodedHeader}.${encodedPayload}`
-  
-  // Sign the JWT
-  const privateKey = await importPrivateKey(muxSigningKeyPrivate)
-  const encoder = new TextEncoder()
-  const signature = await crypto.subtle.sign(
+
+  // 2. Encode
+  const encodedHeader  = b64url(JSON.stringify(header))
+  const encodedPayload = b64url(JSON.stringify(payload))
+  const signingInput   = `${encodedHeader}.${encodedPayload}`
+
+  // 3. Sign with RSA-SHA256
+  const privateKey = await importSigningKey(signingKeyPrivate)
+  const sig = await crypto.subtle.sign(
     "RSASSA-PKCS1-v1_5",
     privateKey,
-    encoder.encode(signingInput)
+    new TextEncoder().encode(signingInput),
   )
-  
-  const encodedSignature = base64UrlEncode(new Uint8Array(signature))
-  
-  return `${signingInput}.${encodedSignature}`
+
+  return `${signingInput}.${b64url(new Uint8Array(sig))}`
 }
 
 // Main handler
@@ -153,6 +212,9 @@ serve(async (req: Request) => {
   }
   
   try {
+    const config = getConfig()
+    const { supabaseUrl, supabaseServiceRoleKey, muxSigningKeyId, muxSigningKeyPrivate } = config
+    
     // Verify authentication
     const authHeader = req.headers.get("Authorization")
     if (!authHeader?.startsWith("Bearer ")) {
@@ -245,20 +307,22 @@ serve(async (req: Request) => {
     const signedToken = await generateSignedPlaybackToken(
       finalPlaybackId,
       type,
-      Math.min(expiration, 43200) // Cap at 12 hours
+      Math.min(expiration, 43200), // Cap at 12 hours
+      muxSigningKeyId,
+      muxSigningKeyPrivate
     )
     
     // Construct playback URLs
     const streamUrl = `https://stream.mux.com/${finalPlaybackId}.m3u8?token=${signedToken}`
-    const thumbnailToken = await generateSignedPlaybackToken(finalPlaybackId, "thumbnail", expiration)
+    const thumbnailToken = await generateSignedPlaybackToken(finalPlaybackId, "thumbnail", expiration, muxSigningKeyId, muxSigningKeyPrivate)
     const thumbnailUrl = `https://image.mux.com/${finalPlaybackId}/thumbnail.jpg?token=${thumbnailToken}`
     
     // Generate animated GIF token
-    const gifToken = await generateSignedPlaybackToken(finalPlaybackId, "gif", expiration)
+    const gifToken = await generateSignedPlaybackToken(finalPlaybackId, "gif", expiration, muxSigningKeyId, muxSigningKeyPrivate)
     const animatedGifUrl = `https://image.mux.com/${finalPlaybackId}/animated.gif?token=${gifToken}`
     
     // Generate storyboard token
-    const storyboardToken = await generateSignedPlaybackToken(finalPlaybackId, "storyboard", expiration)
+    const storyboardToken = await generateSignedPlaybackToken(finalPlaybackId, "storyboard", expiration, muxSigningKeyId, muxSigningKeyPrivate)
     const storyboardUrl = `https://image.mux.com/${finalPlaybackId}/storyboard.vtt?token=${storyboardToken}`
     
     return new Response(
@@ -269,6 +333,8 @@ serve(async (req: Request) => {
         animated_gif_url: animatedGifUrl,
         storyboard_url: storyboardUrl,
         token: signedToken,
+        thumbnail_token: thumbnailToken,
+        storyboard_token: storyboardToken,
         expires_in: expiration,
         video: videoData ? {
           id: videoData.id,
@@ -314,8 +380,9 @@ async function verifyVideoAccess(
   const { data: member } = await supabase
     .from("organization_members")
     .select("role")
-    .eq("organization_id", video.org_id)
+    .eq("org_id", video.org_id)
     .eq("user_id", userId)
+    .eq("is_active", true)
     .single()
   
   if (member) {

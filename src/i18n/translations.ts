@@ -2589,6 +2589,312 @@ export const en = {
         selectTeamFirst: 'Please select a team first',
     },
 
+    // Video Library Feature
+    videoLibrary: {
+        // Page titles
+        title: 'Video Library',
+        detail: 'Video Detail',
+        upload: 'Upload Video',
+        
+        // Categories
+        categories: {
+            game: 'Game',
+            practice: 'Practice',
+            training: 'Training',
+            highlight: 'Highlight',
+            event: 'Event',
+            other: 'Other',
+        },
+        
+        // Visibility
+        visibilities: {
+            private: 'Private',
+            privateDesc: 'Only you',
+            team: 'Team',
+            teamDesc: 'Team members',
+            organization: 'Organization',
+            organizationDesc: 'All members',
+            guardians: 'Guardians',
+            guardiansDesc: 'Guardians of linked athletes',
+        },
+        
+        // Status
+        status: {
+            pending_upload: 'Pending Upload',
+            uploading: 'Uploading',
+            processing: 'Processing',
+            ready: 'Ready',
+            errored: 'Error',
+            deleted: 'Deleted',
+        },
+        
+        // Detail page sections
+        details: {
+            title: 'Video Details',
+            description: 'Description',
+            noDescription: 'No description provided',
+            metadata: 'Metadata',
+            uploadedBy: 'Uploaded By',
+            uploadDate: 'Upload Date',
+            recordedDate: 'Recorded Date',
+            recordedLocation: 'Recorded Location',
+            duration: 'Duration',
+            team: 'Team',
+            season: 'Season',
+            program: 'Program',
+            level: 'Level',
+            sport: 'Sport',
+            event: 'Event',
+            category: 'Category',
+            visibility: 'Visibility',
+            status: 'Status',
+            notesCount: 'Notes',
+            commentsCount: 'Comments',
+            linkedAthletes: 'Linked Athletes',
+            tags: 'Tags',
+        },
+        
+        // Actions
+        actions: {
+            edit: 'Edit Details',
+            delete: 'Delete Video',
+            share: 'Share',
+            copyLink: 'Copy Link',
+            linkCopied: 'Link copied to clipboard',
+            download: 'Download',
+            emailAthletes: 'Email to Athletes',
+            exportClips: 'Export Clips',
+            duplicate: 'Duplicate',
+            linkAthletes: 'Link Athletes',
+            manageTags: 'Manage Tags',
+            generateShareLink: 'Generate Share Link',
+        },
+        
+        // Edit modal
+        edit: {
+            title: 'Edit Video Details',
+            saveChanges: 'Save Changes',
+            cancel: 'Cancel',
+            saving: 'Saving...',
+            titleLabel: 'Title',
+            titlePlaceholder: 'Enter video title',
+            descriptionLabel: 'Description',
+            descriptionPlaceholder: 'Add video description',
+            categoryLabel: 'Category',
+            visibilityLabel: 'Visibility',
+            teamLabel: 'Team',
+            teamPlaceholder: 'Select team',
+            seasonLabel: 'Season',
+            seasonPlaceholder: 'Select season',
+            programLabel: 'Program',
+            programPlaceholder: 'Select program',
+            levelLabel: 'Level',
+            levelPlaceholder: 'Select level',
+            sportLabel: 'Sport',
+            sportPlaceholder: 'Select sport',
+            eventLabel: 'Event',
+            eventPlaceholder: 'Select event',
+            recordedDateLabel: 'Recorded Date',
+            recordedLocationLabel: 'Location',
+            recordedLocationPlaceholder: 'Where was this recorded?',
+        },
+        
+        // Delete confirmation
+        delete: {
+            title: 'Delete Video',
+            message: 'Are you sure you want to delete this video? This action cannot be undone.',
+            confirm: 'Delete Video',
+            cancel: 'Cancel',
+            deleting: 'Deleting...',
+        },
+        
+        // Notes
+        notes: {
+            title: 'Coaching Notes',
+            composer: 'Add Note',
+            composerPlaceholder: 'Start typing your coaching observation...',
+            noNotes: 'No notes yet',
+            noNotesMessage: 'Use the composer above to add your first coaching observation.',
+            sortBy: 'Sort by',
+            sortByTimestamp: 'Timestamp',
+            sortByCreated: 'Date Created',
+            timestamp: 'Timestamp',
+            scope: 'Visibility',
+            scopes: {
+                private: 'Private (only me)',
+                coaches: 'Visible to coaches',
+                guardians: 'Share with guardians',
+                all: 'Visible to all',
+            },
+            assignTo: 'Assign to Athletes',
+            entireTeam: 'Entire Team',
+            addNote: 'Add Note',
+            deleteNote: 'Delete Note',
+            deleteConfirm: 'Are you sure you want to delete this note?',
+            pinNote: 'Pin Note',
+            unpinNote: 'Unpin Note',
+        },
+        
+        // Athletes
+        athletes: {
+            title: 'Linked Athletes',
+            noAthletes: 'No athletes linked',
+            linkAthletes: 'Link Athletes',
+            unlinkAthlete: 'Unlink',
+            linkAllTeam: 'Link All Team Members',
+            linkType: 'Link Type',
+            linkTypes: {
+                featured: 'Featured',
+                appears: 'Appears In',
+                highlight: 'Highlight',
+            },
+            selectAthletes: 'Select Athletes',
+            athletesSelected: '{{count}} selected',
+            timeRange: 'Time Range (Optional)',
+            startTime: 'Start Time',
+            endTime: 'End Time',
+            saveLinks: 'Save Links',
+        },
+        
+        // Tags
+        tags: {
+            title: 'Tags',
+            noTags: 'No tags',
+            addTag: 'Add Tag',
+            createTag: 'Create Tag',
+            removeTag: 'Remove',
+            tagName: 'Tag Name',
+            tagType: 'Tag Type',
+            tagTypes: {
+                skill: 'Skill',
+                drill: 'Drill',
+                play: 'Play',
+                custom: 'Custom',
+            },
+            tagColor: 'Color',
+            selectTags: 'Select Tags',
+            tagsSelected: '{{count}} tags',
+        },
+        
+        // Comments
+        comments: {
+            title: 'Comments',
+            noComments: 'No comments yet',
+            noCommentsMessage: 'Start a discussion about this video.',
+            addComment: 'Add Comment',
+            writeComment: 'Write a comment...',
+            postComment: 'Post',
+            editComment: 'Edit',
+            deleteComment: 'Delete',
+            deleteConfirm: 'Are you sure you want to delete this comment?',
+            reply: 'Reply',
+            replies: 'Replies',
+            showReplies: 'Show {{count}} replies',
+            hideReplies: 'Hide replies',
+            edited: 'Edited',
+        },
+        
+        // Bookmarks
+        bookmarks: {
+            title: 'Bookmarks',
+            noBookmarks: 'No bookmarks',
+            noBookmarksMessage: 'Add timestamps to quickly navigate this video.',
+            addBookmark: 'Add Bookmark',
+            deleteBookmark: 'Delete',
+            bookmarkLabel: 'Label (optional)',
+            bookmarkLabelPlaceholder: 'e.g., Great play',
+            visibility: 'Visibility',
+            visibilities: {
+                private: 'Private (only me)',
+                shared: 'Shared with team',
+            },
+            jumpTo: 'Jump to',
+        },
+        
+        // Share link
+        shareLink: {
+            title: 'Share Video',
+            description: 'Generate a secure link to share this video.',
+            generateLink: 'Generate Link',
+            copyLink: 'Copy Link',
+            linkCopied: 'Link copied!',
+            expiration: 'Link Expiration',
+            expirations: {
+                hour1: '1 hour',
+                hours24: '24 hours',
+                days7: '7 days',
+                days30: '30 days',
+                never: 'Never',
+            },
+            allowDownload: 'Allow download',
+            requireAuth: 'Require authentication',
+            currentLink: 'Current Link',
+            revokeLink: 'Revoke Link',
+            revoked: 'Link revoked',
+        },
+        
+        // Processing states
+        processing: {
+            pendingUpload: 'Waiting to Upload',
+            uploading: 'Uploading video...',
+            uploadingMessage: 'Please keep this window open until upload completes.',
+            uploadProgress: '{{progress}}% uploaded',
+            processing: 'Processing video...',
+            processingMessage: 'Your video is being processed. This may take a few minutes.',
+            processingTime: 'This typically takes 1-3 minutes per minute of video.',
+            ready: 'Video Ready',
+            readyMessage: 'Your video is ready to view.',
+            failed: 'Processing Failed',
+            failedMessage: 'Video processing failed. Please try uploading again.',
+            reconnecting: 'Reconnecting...',
+            deleted: 'Video Deleted',
+        },
+        
+        // Errors
+        errors: {
+            loadFailed: 'Failed to load video',
+            loadFailedMessage: 'Could not load video details. Please try again.',
+            notFound: 'Video Not Found',
+            notFoundMessage: 'This video does not exist or you do not have permission to view it.',
+            updateFailed: 'Failed to update video',
+            deleteFailed: 'Failed to delete video',
+            permissionDenied: 'Permission Denied',
+            permissionDeniedMessage: 'You do not have permission to perform this action.',
+            retry: 'Retry',
+        },
+        
+        // Empty states
+        empty: {
+            title: 'No videos yet',
+            message: 'Upload your first video to get started.',
+            uploadButton: 'Upload Video',
+        },
+        
+        // Filters
+        filters: {
+            all: 'All Videos',
+            search: 'Search videos...',
+            category: 'Category',
+            team: 'Team',
+            status: 'Status',
+            clearFilters: 'Clear Filters',
+        },
+        
+        // Stats
+        stats: {
+            totalVideos: 'Total Videos',
+            totalDuration: 'Total Duration',
+            viewCount: 'Views',
+        },
+        
+        // Demo mode
+        demoMode: {
+            title: 'Demo Mode Active',
+            message: 'Changes are disabled in demo mode. Configure Supabase to enable editing.',
+            disabled: 'This action is disabled in demo mode',
+        },
+    },
+
     // Ticketing & Orders
     ticketing: {
         orders: {

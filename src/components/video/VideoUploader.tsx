@@ -97,6 +97,42 @@ export default function VideoUploader({
     }
   })
   
+  const [uploadedVideoId, setUploadedVideoId] = useState<string | null>(null)
+  const [videoStatus, setVideoStatus] = useState<string | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  
+  // Poll video status after upload completes
+  useEffect(() => {
+    if (!uploadedVideoId || uploadProgress < 100) return
+    
+    const pollStatus = async () => {
+      const { data } = await supabase
+        .from('videos')
+        .select('status')
+        .eq('id', uploadedVideoId)
+        .single()
+      
+      if (data) {
+        setVideoStatus(data.status)
+        if (data.status === 'ready') {
+          if (pollRef.current) clearInterval(pollRef.current)
+          onUploadComplete?.(uploadedVideoId)
+        } else if (data.status === 'errored') {
+          if (pollRef.current) clearInterval(pollRef.current)
+          onUploadError?.(new Error('Video processing failed'))
+        }
+      }
+    }
+    
+    // Poll every 5 seconds
+    pollStatus()
+    pollRef.current = setInterval(pollStatus, 5000)
+    
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [uploadedVideoId, uploadProgress, onUploadComplete, onUploadError])
+  
   // Load teams for the organization
   useEffect(() => {
     if (!orgId) return
@@ -201,6 +237,7 @@ export default function VideoUploader({
       return
     }
     
+    setUploadedVideoId(result.video_id)
     onUploadStart?.(result.video_id)
     
     // Use UpChunk for resumable upload
@@ -210,7 +247,7 @@ export default function VideoUploader({
       const upload = createUpChunk({
         endpoint: result.upload_url,
         file: selectedFile,
-        chunkSize: 5 * 1024 * 1024, // 5MB chunks
+        chunkSize: 256 * 1024, // 256KB chunks (valid: multiples of 256, max 512KB)
       })
       
       upload.on('progress', (progressEvent) => {
@@ -237,6 +274,7 @@ export default function VideoUploader({
   
   // Cancel/Reset
   const handleCancel = () => {
+    if (pollRef.current) clearInterval(pollRef.current)
     reset()
     setSelectedFile(null)
     setUploadStep('select')
@@ -507,12 +545,19 @@ export default function VideoUploader({
         
         {/* Status */}
         <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-          {uploadProgress < 100 ? 'Uploading Video...' : 'Processing Video...'}
+          {uploadProgress < 100 ? 'Uploading Video...' : 
+           videoStatus === 'ready' ? 'Upload Complete!' :
+           videoStatus === 'errored' ? 'Processing Failed' :
+           'Processing Video...'}
         </h3>
         <p className="text-sm text-slate-500 mb-6">
           {uploadProgress < 100 
             ? 'Please keep this window open until the upload completes.'
-            : 'Your video is being processed. This may take a few minutes.'
+            : videoStatus === 'ready'
+            ? 'Your video is ready to watch!'
+            : videoStatus === 'errored'
+            ? 'There was an error processing your video.'
+            : 'Your video is being processed. You can close this and check back later.'
           }
         </p>
         
@@ -544,6 +589,27 @@ export default function VideoUploader({
                 <Icon name="error" size="text-lg" className="text-red-500" />
                 <span className="text-red-600 dark:text-red-400 font-medium">{muxProgress.error || 'Upload failed'}</span>
               </>
+            )}
+          </div>
+        )}
+        
+        {/* Done / Close button - show after upload reaches 100% */}
+        {uploadProgress >= 100 && (
+          <div className="mt-6">
+            {videoStatus === 'ready' ? (
+              <Button onClick={() => onUploadComplete?.(uploadedVideoId!)}>
+                <Icon name="check_circle" size="text-lg" className="mr-2" />
+                Done
+              </Button>
+            ) : (
+              <button
+                onClick={() => {
+                  onUploadComplete?.(uploadedVideoId!)
+                }}
+                className="px-6 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                Close &amp; Continue in Background
+              </button>
             )}
           </div>
         )}

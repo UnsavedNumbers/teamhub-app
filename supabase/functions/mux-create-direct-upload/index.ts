@@ -2,45 +2,50 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
 
-// Environment variables
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!
-const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-const muxTokenId = Deno.env.get("MUX_TOKEN_ID")!
-const muxTokenSecret = Deno.env.get("MUX_TOKEN_SECRET")!
-
-// Validate environment
-if (!supabaseUrl || !supabaseServiceRoleKey || !muxTokenId || !muxTokenSecret) {
-  console.error("Missing env vars:", {
-    hasSupabaseUrl: !!supabaseUrl,
-    hasServiceKey: !!supabaseServiceRoleKey,
-    hasMuxTokenId: !!muxTokenId,
-    hasMuxTokenSecret: !!muxTokenSecret,
-  })
-  throw new Error("Missing required environment configuration")
-}
-
-// Create Supabase client with service role for database operations
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
-
-// CORS headers
+// CORS headers (must be available before any env var validation)
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 }
 
+/**
+ * Lazily load and validate environment variables + Supabase client.
+ * This avoids throwing at module load time, which would kill the
+ * function before it can respond to CORS preflight (OPTIONS) requests.
+ */
+function getConfig() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!
+  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  const muxTokenId = Deno.env.get("MUX_TOKEN_ID")!
+  const muxTokenSecret = Deno.env.get("MUX_SECRET_KEY")!
+
+  if (!supabaseUrl || !supabaseServiceRoleKey || !muxTokenId || !muxTokenSecret) {
+    console.error("Missing env vars:", {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceRoleKey,
+      hasMuxTokenId: !!muxTokenId,
+      hasMuxSecretKey: !!muxTokenSecret,
+    })
+    throw new Error("Missing required environment configuration")
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
+  return { supabaseUrl, supabaseServiceRoleKey, muxTokenId, muxTokenSecret, supabase }
+}
+
 // Mux API base URL
 const MUX_API_BASE = "https://api.mux.com"
 
 interface CreateUploadRequest {
-  orgId: string
-  teamId?: string
-  eventId?: string
+  org_id: string
+  team_id?: string
+  event_id?: string
   title: string
   description?: string
   category?: "practice" | "game" | "highlight" | "training" | "event" | "other"
   visibility?: "private" | "team" | "organization" | "guardians"
-  recordedAt?: string
+  recorded_at?: string
 }
 
 interface MuxDirectUploadResponse {
@@ -62,16 +67,19 @@ interface MuxDirectUploadResponse {
  */
 async function createDirectUpload(
   userId: string,
-  request: CreateUploadRequest
-): Promise<{ uploadUrl: string; videoId: string; muxUploadId: string }> {
+  request: CreateUploadRequest,
+  config: ReturnType<typeof getConfig>
+): Promise<{ upload_url: string; video_id: string; upload_id: string }> {
+  const { supabase, muxTokenId, muxTokenSecret } = config
+  
   // Generate a video record ID upfront so we can use it in passthrough
   const videoId = crypto.randomUUID()
   
   // Create passthrough data for webhook correlation
   const passthrough = JSON.stringify({
     video_id: videoId,
-    org_id: request.orgId,
-    team_id: request.teamId || null,
+    org_id: request.org_id,
+    team_id: request.team_id || null,
     uploaded_by: userId,
   })
   
@@ -110,9 +118,9 @@ async function createDirectUpload(
     .from("videos")
     .insert({
       id: videoId,
-      org_id: request.orgId,
-      team_id: request.teamId || null,
-      event_id: request.eventId || null,
+      org_id: request.org_id,
+      team_id: request.team_id || null,
+      event_id: request.event_id || null,
       mux_upload_id: muxUploadId,
       title: request.title,
       description: request.description || null,
@@ -120,11 +128,11 @@ async function createDirectUpload(
       visibility: request.visibility || "team",
       status: "pending_upload",
       uploaded_by: userId,
-      recorded_at: request.recordedAt ? new Date(request.recordedAt).toISOString() : null,
+      recorded_at: request.recorded_at ? new Date(request.recorded_at).toISOString() : null,
       passthrough: {
         video_id: videoId,
-        org_id: request.orgId,
-        team_id: request.teamId || null,
+        org_id: request.org_id,
+        team_id: request.team_id || null,
         uploaded_by: userId,
       },
     })
@@ -137,35 +145,36 @@ async function createDirectUpload(
   console.log(`Created video ${videoId} with Mux upload ${muxUploadId}`)
   
   return {
-    uploadUrl,
-    videoId,
-    muxUploadId,
+    upload_url: uploadUrl,
+    video_id: videoId,
+    upload_id: muxUploadId,
   }
 }
 
 /**
  * Verify user has permission to upload videos for this org
  */
-async function verifyUploadPermission(userId: string, orgId: string): Promise<boolean> {
+async function verifyUploadPermission(userId: string, orgId: string, supabase: ReturnType<typeof createClient>): Promise<boolean> {
   const { data, error } = await supabase
     .from("organization_members")
     .select("role")
     .eq("org_id", orgId)
     .eq("user_id", userId)
+    .eq("is_active", true)
     .single()
   
   if (error || !data) {
     return false
   }
   
-  // Only owners, admins, and coaches can upload videos
-  return ["owner", "admin", "coach"].includes(data.role)
+  // Only org_admins, staff, and coaches can upload videos
+  return ["org_admin", "staff", "coach"].includes(data.role)
 }
 
 /**
  * Extract user ID from Authorization header
  */
-async function getUserIdFromAuth(authHeader: string): Promise<string | null> {
+async function getUserIdFromAuth(authHeader: string, supabase: ReturnType<typeof createClient>): Promise<string | null> {
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return null
   }
@@ -199,6 +208,9 @@ serve(async (req: Request) => {
   }
   
   try {
+    // Load config (env vars + supabase client) inside the handler, after CORS preflight
+    const config = getConfig()
+    
     // Authenticate user
     const authHeader = req.headers.get("authorization")
     if (!authHeader) {
@@ -208,7 +220,7 @@ serve(async (req: Request) => {
       })
     }
     
-    const userId = await getUserIdFromAuth(authHeader)
+    const userId = await getUserIdFromAuth(authHeader, config.supabase)
     if (!userId) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
@@ -220,9 +232,9 @@ serve(async (req: Request) => {
     const body: CreateUploadRequest = await req.json()
     
     // Validate required fields
-    if (!body.orgId || !body.title) {
+    if (!body.org_id || !body.title) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: orgId, title" }),
+        JSON.stringify({ error: "Missing required fields: org_id, title" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -231,7 +243,7 @@ serve(async (req: Request) => {
     }
     
     // Verify user has upload permission
-    const hasPermission = await verifyUploadPermission(userId, body.orgId)
+    const hasPermission = await verifyUploadPermission(userId, body.org_id, config.supabase)
     if (!hasPermission) {
       return new Response(
         JSON.stringify({ error: "You do not have permission to upload videos to this organization" }),
@@ -243,7 +255,7 @@ serve(async (req: Request) => {
     }
     
     // Create direct upload
-    const result = await createDirectUpload(userId, body)
+    const result = await createDirectUpload(userId, body, config)
     
     return new Response(JSON.stringify(result), {
       status: 200,

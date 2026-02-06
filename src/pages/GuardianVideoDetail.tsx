@@ -194,6 +194,7 @@ export default function GuardianVideoDetail() {
         {/* Player */}
         <VideoPlayer
           videoId={video.id}
+          status={video.status}
           poster={video.thumbnail_url || undefined}
           onTimeUpdate={handleTimeUpdate}
           markers={markers}
