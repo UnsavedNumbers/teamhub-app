@@ -56,22 +56,17 @@ export interface Gallery {
   created_by_user_id?: string | null
   allow_contributions: boolean
   require_approval: boolean
-  fans_can_see?: boolean
-  is_system_generated?: boolean
+  fans_can_see: boolean
+  is_system_generated: boolean
+  cover_generated_at: string | null
+  cover_generation_status: string | null
+  cover_thumbnails: any | null
   created_at: string
   updated_at: string
   // Computed fields (from queries)
   photo_count?: number
   pending_count?: number
   cover_url?: string | null
-  cover_thumbnails?: {
-    thumb_small?: { webp: string; jpg: string };
-    thumb_medium?: { webp: string; jpg: string };
-    thumb_large?: { webp: string; jpg: string };
-    thumb_wide?: { webp: string; jpg: string };
-  } | null
-  cover_generated_at?: string | null
-  cover_generation_status?: 'pending' | 'processing' | 'completed' | 'failed'
 }
 
 export interface GalleryAlbum {
@@ -113,6 +108,8 @@ export interface GetGalleriesParams {
   gallery_type?: GalleryType
   entity_id?: string
   org_id?: string
+  limit?: number
+  offset?: number
 }
 
 export interface GetPhotosParams {

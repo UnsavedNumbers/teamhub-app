@@ -110,6 +110,7 @@ export const en = {
             select: 'Select',
             selectAll: 'Select all',
         },
+        actions: 'Actions',
     },
     nav: {
         photos: 'Photos',
@@ -741,6 +742,11 @@ export const en = {
                 noGalleries: 'No galleries available',
                 noPhotosOfAthlete: 'No photos of {{name}} yet',
                 accessDenied: 'You don\'t have access to this gallery',
+                browse: {
+                    navigation: {
+                        hideEmpty: 'Hide empty galleries',
+                    },
+                },
             },
             // Tickets Page
             tickets: {
@@ -3248,6 +3254,27 @@ export const en = {
             noGalleries: 'No galleries found',
             emptyGallery: 'Empty gallery',
             hasPhotos: 'Has photos',
+            searchTree: 'Search tree...',
+            globalLibrary: 'All Photos',
+            recentArchives: 'Recent',
+            browseGalleries: 'Browse Galleries',
+            galleryName: 'Gallery Name',
+            mediaCount: 'Media Count',
+            status: 'Status',
+            type: 'Type',
+            albumName: 'Album Name',
+            allRegisteredDecks: 'All Photo Galleries',
+            viewAll: 'View All',
+            browseDeck: 'View Gallery',
+            photosCountSimple: '{{count}} Photos',
+            publicStatus: 'Public',
+            draftStatus: 'Draft',
+            featuredLabel: 'Featured',
+            noResultsTitle: 'No Galleries',
+            noResultsDesc: 'Select a category from the sidebar to view galleries',
+            navigation: {
+                hideEmpty: 'Hide empty galleries',
+            },
         },
 
         // Search
@@ -3258,6 +3285,15 @@ export const en = {
             results: 'Results',
             noResults: 'No galleries match your search',
             exportResults: 'Export Results',
+            clearFilters: 'Clear All Filters',
+            filterByStatus: 'Filter by Status',
+            filterBySize: 'Filter by Size',
+            searching: 'Searching...',
+            exporting: 'Exporting...',
+            exportSuccess: 'Export completed successfully',
+            exportError: 'Failed to export results',
+            photoCount: '{{count}} photo(s)',
+            lastModified: 'Modified {{date}}',
         },
 
         // Bulk Operations
@@ -3420,12 +3456,6 @@ export const en = {
         noPendingPhotos: 'No pending photos to approve',
         photoFeed: 'Photo Feed',
         loadMore: 'Load More Architectural Grid',
-
-        // Photo Section components
-        sectionTitle: 'Photos',
-        photo: 'photo',
-        photos: 'photos',
-        viewAll: 'View All',
 
         // Error states for photo sections
         error: {
@@ -3693,6 +3723,7 @@ export const es = {
             select: 'Seleccionar',
             selectAll: 'Seleccionar todo',
         },
+        actions: 'Acciones',
     },
     nav: {
         photos: 'Fotos',
@@ -6294,6 +6325,37 @@ export const es = {
         noPendingPhotos: 'No hay fotos pendientes para aprobar',
         photoFeed: 'Feed de Fotos',
         loadMore: 'Cargar Más Cuadrícula Arquitectónica',
+
+        // Browse
+        browse: {
+            title: 'Examinar',
+            selectSeason: 'Seleccionar una temporada',
+            selectEntity: 'Seleccionar una entidad',
+            noGalleries: 'No se encontraron galerías',
+            emptyGallery: 'Galería vacía',
+            hasPhotos: 'Tiene fotos',
+            searchTree: 'Buscar árbol...',
+            globalLibrary: 'Todas las Fotos',
+            recentArchives: 'Recientes',
+            browseGalleries: 'Examinar Galerías',
+            galleryName: 'Nombre de Galería',
+            mediaCount: 'Cantidad de Medios',
+            status: 'Estado',
+            type: 'Tipo',
+            albumName: 'Nombre del Álbum',
+            allRegisteredDecks: 'Todas las Galerías de Fotos',
+            viewAll: 'Ver Todo',
+            browseDeck: 'Ver Galería',
+            photosCountSimple: '{{count}} Fotos',
+            publicStatus: 'Público',
+            draftStatus: 'Borrador',
+            featuredLabel: 'Destacado',
+            noResultsTitle: 'Sin Galerías',
+            noResultsDesc: 'Selecciona una categoría de la barra lateral para ver galerías',
+            navigation: {
+                hideEmpty: 'Ocultar galerías vacías',
+            },
+        },
     },
 
     // Características del Administrador de Plataforma

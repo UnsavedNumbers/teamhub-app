@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Button, Checkbox } from '@/components/platformAdmin'
+import { Button, Checkbox, AdminPageHeader } from '@/components/platformAdmin'
 import { useI18n } from '@/i18n/useI18n'
 import { getLink } from '@/utils/routes'
 import { USE_FAKE_DATA } from '@/data/config'
@@ -35,17 +35,15 @@ export function AdminPhotosLayout() {
 
   return (
     <div className="pa-root admin-photos-layout">
-      <div className="pa-container">
-        <div className="photos-layout-header">
-          <div className="photos-layout-title-section">
-            <h1 className="photos-title">{t('photos.title')}</h1>
-            <p className="photos-subtitle">{t('photos.subtitle')}</p>
-          </div>
+      <AdminPageHeader 
+        title={t('photos.title')}
+        actions={
           <Button variant="primary" icon="add_a_photo" onClick={handleCreateGallery}>
             {t('photos.createGallery')}
           </Button>
-        </div>
-
+        }
+      />
+      <div className="pa-container">
         <div className="photos-view-switcher">
           <div className="view-switcher-buttons">
             {VIEWS.map((view) => {

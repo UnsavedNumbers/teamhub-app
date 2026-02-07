@@ -8,19 +8,27 @@ import {
   InlineNotice,
   Table,
   Checkbox,
+  Modal,
 } from '@/components/platformAdmin'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
+import { useDebounce } from '@/hooks/useDebounce'
 import { USE_FAKE_DATA } from '@/data/config'
-import { getGalleriesForUser, type Gallery, type GalleryType } from '@/data/services/galleryService'
-import { getMockGalleriesForOrg } from '@/data/fake/mockGalleries'
-import { getLink } from '@/utils/routes'
+import { 
+  getGalleriesForUser, 
+  deleteGallery,
+  type Gallery, 
+  type GalleryType 
+} from '@/data/services/galleryService'
+import { getMockGalleriesForOrg, getMockPhotosForGallery } from '@/data/fake/mockGalleries'
+import { getLink } from '@/utils/routes/helpers'
 import { usePagination } from '@/hooks/usePagination'
 import { useHideEmptyGalleries } from './useHideEmptyGalleries'
+import { showError, showSuccess } from '@/utils/toast'
 import './PhotosSearchView.css'
 
 export function PhotosSearchView() {
-  const { context } = useUserContext()
+  const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -29,37 +37,66 @@ export function PhotosSearchView() {
   const [galleries, setGalleries] = useState<Gallery[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
 
-  // Filters
+  // Filters with URL sync
   const [search, setSearch] = useState(searchParams.get('q') || '')
-  const [entityType, setEntityType] = useState<GalleryType | 'all'>(searchParams.get('type') as GalleryType || 'all')
-  const [dateRange, setDateRange] = useState<'all' | 'week' | 'month' | 'year'>('all')
-  const [photoStatus, setPhotoStatus] = useState<'all' | 'has_photos' | 'empty' | 'pending'>('all')
-  const [sizeRange, setSizeRange] = useState<'all' | '1-10' | '11-50' | '50+'>('all')
+  const debouncedSearch = useDebounce(search, 300)
+  const [entityType, setEntityType] = useState<GalleryType | 'all'>(
+    (searchParams.get('type') as GalleryType) || 'all'
+  )
+  const [dateRange, setDateRange] = useState<'all' | 'week' | 'month' | 'year'>(
+    (searchParams.get('date') as any) || 'all'
+  )
+  const [photoStatus, setPhotoStatus] = useState<'all' | 'has_photos' | 'empty' | 'pending'>(
+    (searchParams.get('status') as any) || 'all'
+  )
+  const [sizeRange, setSizeRange] = useState<'all' | '1-10' | '11-50' | '50+'>(
+    (searchParams.get('size') as any) || 'all'
+  )
+
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [galleryToDelete, setGalleryToDelete] = useState<Gallery | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const { page, rowsPerPage, setPage, setRowsPerPage, setTotalCount } = usePagination(0, 50)
 
+  // Load galleries from Supabase or fake data
   useEffect(() => {
     let mounted = true
     const load = async () => {
-      if (!context?.orgId) {
+      if (!isReady || !context?.orgId) {
         setLoading(false)
         return
       }
 
       if (USE_FAKE_DATA) {
         const mockGalleries = getMockGalleriesForOrg(context.orgId)
-        setGalleries(mockGalleries)
+        // Add photo counts for mock galleries
+        const galleriesWithCounts = mockGalleries.map(g => {
+          const photos = getMockPhotosForGallery(g.id)
+          return {
+            ...g,
+            photo_count: photos.filter(p => p.status === 'approved').length,
+            pending_count: photos.filter(p => p.status === 'pending').length,
+            cover_url: photos.find(p => p.id === g.cover_photo_id)?.storage_path || null,
+          }
+        })
+        setGalleries(galleriesWithCounts as Gallery[])
         setLoading(false)
         return
       }
 
       setLoading(true)
+      setError(null)
       const { data, error: galleriesError } = await getGalleriesForUser(context, {})
       if (!mounted) return
 
       if (galleriesError) {
-        setError(galleriesError.message)
+        const errorMessage = galleriesError.message || t('photos.errors.loadGalleries')
+        setError(errorMessage)
+        showError(errorMessage)
       } else {
         setGalleries(data || [])
       }
@@ -69,16 +106,18 @@ export function PhotosSearchView() {
     return () => {
       mounted = false
     }
-  }, [context])
+  }, [context, isReady, t])
 
+  // Apply all filters
   const filteredGalleries = useMemo(() => {
     let result = galleries
 
-    // Search filter
-    if (search.trim()) {
-      const term = search.toLowerCase()
+    // Search filter (debounced)
+    if (debouncedSearch.trim()) {
+      const term = debouncedSearch.toLowerCase()
       result = result.filter(g => 
-        g.name.toLowerCase().includes(term) ||
+        (g.name || '').toLowerCase().includes(term) ||
+        (g.title || '').toLowerCase().includes(term) ||
         (g.description || '').toLowerCase().includes(term)
       )
     }
@@ -141,18 +180,27 @@ export function PhotosSearchView() {
       result = result.filter(g => (g.photo_count || 0) > 0)
     }
 
-    return result
-  }, [galleries, search, entityType, dateRange, photoStatus, sizeRange, hideEmpty])
+    // Sort by most recent
+    result = result.sort((a, b) => 
+      new Date(b.updated_at || b.created_at).getTime() - 
+      new Date(a.updated_at || a.created_at).getTime()
+    )
 
+    return result
+  }, [galleries, debouncedSearch, entityType, dateRange, photoStatus, sizeRange, hideEmpty])
+
+  // Update total count for pagination
   useEffect(() => {
     setTotalCount(filteredGalleries.length)
   }, [filteredGalleries.length, setTotalCount])
 
+  // Paginate results
   const paginatedGalleries = useMemo(() => {
-    const start = (page - 1) * rowsPerPage
+    const start = page * rowsPerPage
     return filteredGalleries.slice(start, start + rowsPerPage)
   }, [filteredGalleries, page, rowsPerPage])
 
+  // Sync search to URL
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value)
     const params = new URLSearchParams(searchParams)
@@ -161,33 +209,152 @@ export function PhotosSearchView() {
     } else {
       params.delete('q')
     }
-    setSearchParams(params)
-  }, [searchParams, setSearchParams])
+    setSearchParams(params, { replace: true })
+    setPage(0) // Reset to first page on search
+  }, [searchParams, setSearchParams, setPage])
 
+  // Sync filter changes to URL
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (search) params.set('q', search)
+    if (entityType !== 'all') params.set('type', entityType)
+    if (dateRange !== 'all') params.set('date', dateRange)
+    if (photoStatus !== 'all') params.set('status', photoStatus)
+    if (sizeRange !== 'all') params.set('size', sizeRange)
+    setSearchParams(params, { replace: true })
+  }, [entityType, dateRange, photoStatus, sizeRange, setSearchParams, search])
+
+  // Export to CSV
   const handleExport = useCallback(() => {
-    const csv = [
-      ['Name', 'Type', 'Photo Count', 'Last Modified'].join(','),
-      ...filteredGalleries.map(g => [
-        `"${g.name}"`,
-        g.gallery_type,
-        g.photo_count || 0,
-        new Date(g.updated_at || g.created_at).toLocaleDateString(),
-      ].join(','))
-    ].join('\n')
+    if (USE_FAKE_DATA) {
+      showError(t('photos.demoMode.message'))
+      return
+    }
 
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `galleries-export-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }, [filteredGalleries])
+    setExporting(true)
+    try {
+      const csv = [
+        ['Name', 'Type', 'Photo Count', 'Pending Count', 'Last Modified', 'Visibility'].join(','),
+        ...filteredGalleries.map(g => [
+          `"${(g.name || g.title || 'Untitled').replace(/"/g, '""')}"`,
+          g.gallery_type,
+          g.photo_count || 0,
+          g.pending_count || 0,
+          new Date(g.updated_at || g.created_at).toLocaleDateString(),
+          g.visibility || 'team',
+        ].join(','))
+      ].join('\n')
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `galleries-export-${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      
+      showSuccess(t('photos.search.exportSuccess'))
+    } catch (err) {
+      showError(t('photos.search.exportError'))
+    } finally {
+      setExporting(false)
+    }
+  }, [filteredGalleries, t])
+
+  // Clear all filters
+  const handleClearFilters = useCallback(() => {
+    setSearch('')
+    setEntityType('all')
+    setDateRange('all')
+    setPhotoStatus('all')
+    setSizeRange('all')
+    setHideEmpty(false)
+    setSearchParams({}, { replace: true })
+    setPage(0)
+  }, [setHideEmpty, setSearchParams, setPage])
+
+  // Navigate to gallery detail
+  const handleViewGallery = useCallback((id: string) => {
+    if (!id) {
+      showError(t('photos.errors.loadGallery'))
+      return
+    }
+    navigate(getLink('admin.photos.detail', { id }))
+  }, [navigate, t])
+
+  // Navigate to gallery edit
+  const handleEditGallery = useCallback((id: string) => {
+    if (!id) {
+      showError(t('photos.errors.loadGallery'))
+      return
+    }
+
+    if (USE_FAKE_DATA) {
+      showError(t('photos.demoMode.editBlocked'))
+      return
+    }
+
+    navigate(getLink('admin.photos.edit', { id }))
+  }, [navigate, t])
+
+  // Initiate delete
+  const handleDeleteGallery = useCallback((gallery: Gallery) => {
+    if (USE_FAKE_DATA) {
+      showError(t('photos.demoMode.deleteBlocked'))
+      return
+    }
+    
+    setGalleryToDelete(gallery)
+    setDeleteModalOpen(true)
+  }, [t])
+
+  // Confirm delete
+  const confirmDelete = useCallback(async () => {
+    if (!galleryToDelete || USE_FAKE_DATA) return
+    
+    setDeleting(true)
+    try {
+      const { error } = await deleteGallery(context, galleryToDelete.id)
+      
+      if (error) {
+        throw error
+      }
+      
+      showSuccess(t('photos.success.galleryDeleted'))
+      setDeleteModalOpen(false)
+      setGalleryToDelete(null)
+      
+      // Refresh galleries
+      const { data, error: loadError } = await getGalleriesForUser(context)
+      if (!loadError && data) {
+        setGalleries(data)
+      }
+    } catch (err) {
+      const errorMessage = (err as Error)?.message || t('photos.errors.deleteGallery')
+      showError(errorMessage)
+    } finally {
+      setDeleting(false)
+    }
+  }, [galleryToDelete, context, t])
+
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    return search !== '' || 
+           entityType !== 'all' || 
+           dateRange !== 'all' || 
+           photoStatus !== 'all' || 
+           sizeRange !== 'all' ||
+           hideEmpty
+  }, [search, entityType, dateRange, photoStatus, sizeRange, hideEmpty])
 
   if (loading) {
     return (
-      <div className="search-loading">
-        <Card className="pa-card pa-h-64 pa-animate-pulse" />
+      <div className="photos-search">
+        <div className="search-loading">
+          <Card className="pa-card pa-h-64 pa-animate-pulse" />
+        </div>
       </div>
     )
   }
@@ -212,11 +379,28 @@ export function PhotosSearchView() {
               value={search}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="search-input"
+              disabled={loading}
             />
           </div>
-          <Button variant="secondary" onClick={handleExport}>
-            {t('photos.search.exportResults')}
-          </Button>
+          <div className="pa-flex pa-gap-2">
+            {hasActiveFilters && (
+              <Button 
+                variant="ghost" 
+                onClick={handleClearFilters}
+                disabled={loading}
+              >
+                {t('photos.search.clearFilters')}
+              </Button>
+            )}
+            <Button 
+              variant="secondary" 
+              onClick={handleExport}
+              disabled={loading || exporting || filteredGalleries.length === 0}
+              loading={exporting}
+            >
+              {t('photos.search.exportResults')}
+            </Button>
+          </div>
         </div>
 
         <div className="search-content">
@@ -228,7 +412,11 @@ export function PhotosSearchView() {
               <label className="filter-label">{t('photos.settings.hideEmptyByDefault')}</label>
               <Checkbox
                 checked={hideEmpty}
-                onChange={(e) => setHideEmpty(e.target.checked)}
+                onChange={(e) => {
+                  setHideEmpty(e.target.checked)
+                  setPage(0)
+                }}
+                disabled={loading}
               />
             </div>
 
@@ -236,13 +424,19 @@ export function PhotosSearchView() {
               <label className="filter-label">{t('photos.filters.byType')}</label>
               <Select
                 value={entityType}
-                onChange={(e) => setEntityType(e.target.value as any)}
+                onChange={(e) => {
+                  setEntityType(e.target.value as any)
+                  setPage(0)
+                }}
+                disabled={loading}
                 options={[
                   { label: t('photos.filters.all'), value: 'all' },
                   { label: t('photos.galleryType.event'), value: 'event' },
                   { label: t('photos.galleryType.team'), value: 'team' },
                   { label: t('photos.galleryType.athlete'), value: 'athlete' },
                   { label: t('photos.galleryType.season'), value: 'season' },
+                  { label: t('photos.galleryType.program'), value: 'program' },
+                  { label: t('photos.galleryType.travel'), value: 'travel' },
                   { label: t('photos.galleryType.organization'), value: 'org' },
                 ]}
               />
@@ -252,7 +446,11 @@ export function PhotosSearchView() {
               <label className="filter-label">{t('common.date')}</label>
               <Select
                 value={dateRange}
-                onChange={(e) => setDateRange(e.target.value as any)}
+                onChange={(e) => {
+                  setDateRange(e.target.value as any)
+                  setPage(0)
+                }}
+                disabled={loading}
                 options={[
                   { label: t('common.all'), value: 'all' },
                   { label: t('common.lastWeek'), value: 'week' },
@@ -263,10 +461,14 @@ export function PhotosSearchView() {
             </div>
 
             <div className="filter-group">
-              <label className="filter-label">{t('photos.search.filters')}</label>
+              <label className="filter-label">{t('photos.search.filterByStatus')}</label>
               <Select
                 value={photoStatus}
-                onChange={(e) => setPhotoStatus(e.target.value as any)}
+                onChange={(e) => {
+                  setPhotoStatus(e.target.value as any)
+                  setPage(0)
+                }}
+                disabled={loading}
                 options={[
                   { label: t('common.all'), value: 'all' },
                   { label: t('photos.browse.hasPhotos'), value: 'has_photos' },
@@ -277,10 +479,14 @@ export function PhotosSearchView() {
             </div>
 
             <div className="filter-group">
-              <label className="filter-label">{t('photos.stats.totalPhotos')}</label>
+              <label className="filter-label">{t('photos.search.filterBySize')}</label>
               <Select
                 value={sizeRange}
-                onChange={(e) => setSizeRange(e.target.value as any)}
+                onChange={(e) => {
+                  setSizeRange(e.target.value as any)
+                  setPage(0)
+                }}
+                disabled={loading}
                 options={[
                   { label: t('common.all'), value: 'all' },
                   { label: '1-10', value: '1-10' },
@@ -294,43 +500,176 @@ export function PhotosSearchView() {
           {/* Results */}
           <div className="search-results">
             <div className="results-header">
-              <h3>{t('photos.search.results')} ({filteredGalleries.length})</h3>
+              <h3>
+                {t('photos.search.results')} ({filteredGalleries.length})
+              </h3>
             </div>
 
             {paginatedGalleries.length === 0 ? (
               <Card className="pa-card pa-p-8 pa-text-center">
-                <p className="pa-text-muted">{t('photos.search.noResults')}</p>
+                <span className="material-symbols-outlined pa-text-5xl pa-text-muted pa-mb-4">
+                  photo_library
+                </span>
+                <p className="pa-text-lg pa-font-medium pa-mb-2">
+                  {t('photos.search.noResults')}
+                </p>
+                {hasActiveFilters && (
+                  <Button 
+                    variant="secondary" 
+                    onClick={handleClearFilters}
+                    className="pa-mt-4"
+                  >
+                    {t('photos.search.clearFilters')}
+                  </Button>
+                )}
               </Card>
             ) : (
               <Table
                 data={paginatedGalleries.map(g => ({
                   id: g.id,
-                  name: g.name,
+                  name: g.name || g.title || 'Untitled',
                   photoCount: g.photo_count || 0,
+                  pendingCount: g.pending_count || 0,
                   lastModified: new Date(g.updated_at || g.created_at).toLocaleDateString(),
                   type: t(`photos.galleryType.${g.gallery_type}`),
                   coverUrl: g.cover_url,
+                  visibility: g.visibility || 'team',
                 }))}
                 columns={[
-                  { key: 'name', label: t('common.name') },
-                  { key: 'photoCount', label: t('photos.stats.totalPhotos') },
-                  { key: 'lastModified', label: t('common.modified') },
-                  { key: 'type', label: t('common.type') },
+                  { id: 'name', label: t('common.name') },
+                  { 
+                    id: 'type', 
+                    label: t('common.type'),
+                    render: (row) => (
+                      <span className="pa-text-sm pa-text-muted">{row.type}</span>
+                    )
+                  },
+                  { 
+                    id: 'photoCount', 
+                    label: t('photos.stats.totalPhotos'),
+                    render: (row) => (
+                      <span className="pa-text-sm">
+                        {row.photoCount}
+                        {row.pendingCount > 0 && (
+                          <span className="pa-ml-2 pa-text-xs pa-text-warning">
+                            (+{row.pendingCount} {t('photos.pendingApproval.badge').toLowerCase()})
+                          </span>
+                        )}
+                      </span>
+                    )
+                  },
+                  { 
+                    id: 'lastModified', 
+                    label: t('common.modified'),
+                    render: (row) => (
+                      <span className="pa-text-sm pa-text-muted">{row.lastModified}</span>
+                    )
+                  },
+                  {
+                    id: 'visibility',
+                    label: t('photos.browse.status'),
+                    render: (row) => (
+                      <span className={`table-status-badge ${row.visibility === 'public' ? 'public' : 'draft'}`}>
+                        {row.visibility === 'public' ? t('photos.browse.publicStatus') : t('photos.browse.draftStatus')}
+                      </span>
+                    )
+                  },
+                  {
+                    id: 'actions',
+                    label: '',
+                    render: (row) => (
+                      <div className="pa-flex pa-gap-2 pa-justify-end" onClick={(e) => e.stopPropagation()}>
+                        <button 
+                          className="table-more-button"
+                          onClick={() => handleViewGallery(row.id)}
+                          title={t('photos.viewGallery')}
+                          disabled={loading}
+                        >
+                          <span className="material-symbols-outlined">visibility</span>
+                        </button>
+                        <button 
+                          className="table-more-button"
+                          onClick={() => handleEditGallery(row.id)}
+                          title={t('photos.editGallery')}
+                          disabled={loading}
+                        >
+                          <span className="material-symbols-outlined">edit</span>
+                        </button>
+                        <button 
+                          className="table-more-button"
+                          onClick={() => {
+                            const gallery = galleries.find(g => g.id === row.id)
+                            if (gallery) handleDeleteGallery(gallery)
+                          }}
+                          title={t('photos.deleteGallery')}
+                          disabled={loading}
+                        >
+                          <span className="material-symbols-outlined">delete</span>
+                        </button>
+                      </div>
+                    )
+                  },
                 ]}
-                onRowClick={(row) => navigate(getLink('admin.photos.detail', { id: row.id }))}
+                onRowClick={(row) => handleViewGallery(row.id as string)}
                 pagination={{
                   currentPage: page,
                   totalRows: filteredGalleries.length,
                   totalPages: Math.ceil(filteredGalleries.length / rowsPerPage),
                   rowsPerPage,
                   onPageChange: setPage,
-                  onRowsPerPageChange: setRowsPerPage,
+                  onRowsPerPageChange: (newRowsPerPage) => {
+                    setRowsPerPage(newRowsPerPage)
+                    setPage(0)
+                  },
                 }}
               />
             )}
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteModalOpen}
+        onClose={() => !deleting && setDeleteModalOpen(false)}
+        title={t('photos.deleteGallery')}
+      >
+        <div className="pa-mb-4">
+          <p className="pa-text-sm pa-mb-2">
+            {t('photos.bulk.confirmDeleteEmpty', { count: 1 })}
+          </p>
+          {galleryToDelete && (
+            <div className="pa-mt-3 pa-p-3 pa-bg-muted pa-rounded">
+              <strong className="pa-block pa-mb-1">{galleryToDelete.name || galleryToDelete.title}</strong>
+              <span className="pa-text-sm pa-text-muted">
+                {galleryToDelete.photo_count || 0} {t('photos.photos')}
+              </span>
+            </div>
+          )}
+          {galleryToDelete && galleryToDelete.photo_count && galleryToDelete.photo_count > 0 && (
+            <p className="pa-text-sm pa-text-warning pa-mt-3">
+              ⚠️ This will permanently delete {galleryToDelete.photo_count} photo(s).
+            </p>
+          )}
+        </div>
+        <div className="pa-flex pa-justify-end pa-gap-3">
+          <Button 
+            variant="ghost" 
+            onClick={() => setDeleteModalOpen(false)}
+            disabled={deleting}
+          >
+            {t('common.cancel')}
+          </Button>
+          <Button 
+            variant="danger" 
+            onClick={confirmDelete}
+            loading={deleting}
+            disabled={deleting}
+          >
+            {t('photos.deleteGallery')}
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }
