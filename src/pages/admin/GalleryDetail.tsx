@@ -213,14 +213,27 @@ export default function GalleryDetail() {
     }
   }
 
+  // Show loading skeleton for entire page
+  if (loading) {
+    return (
+      <div className="org-structure-page">
+        <div className="pa-animate-pulse pa-space-y-4 pa-p-6">
+          <div className="pa-h-8 pa-w-64 pa-bg-muted pa-rounded" />
+          <div className="pa-h-4 pa-w-48 pa-bg-muted pa-rounded" />
+          <Card className="pa-card pa-h-40" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="org-structure-page">
       <AdminPageHeader
-        title={gallery?.name || t('photos.viewGallery')}
+        title={gallery?.name || t('photos.allGalleries')}
         subtitle={getGallerySubtitle()}
         breadcrumbs={[
-          { label: 'Photos', path: getLink('admin.photos.list') },
-          { label: gallery?.name || 'Gallery' },
+          { label: t('photos.title'), path: getLink('admin.photos.list') },
+          { label: gallery?.name || t('photos.allGalleries') },
         ]}
         actions={
           <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
@@ -236,17 +249,14 @@ export default function GalleryDetail() {
 
       <div className="pa-space-y-6">
 
-        {loading ? (
-          <Card className="pa-card pa-h-40 pa-animate-pulse" />
-        ) : (
-          <>
-            {/* Stats */}
-            <section className="org-stats-section">
-              <div className="org-stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                <div className="org-stat-box">
-                  <span className="org-stat-label">{t('photos.stats.totalPhotos')}</span>
-                  <span className="org-stat-value">{String(photoStats.total).padStart(2, '0')}</span>
-                </div>
+        <>
+          {/* Stats */}
+          <section className="org-stats-section">
+            <div className="org-stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+              <div className="org-stat-box">
+                <span className="org-stat-label">{t('photos.stats.totalPhotos')}</span>
+                <span className="org-stat-value">{String(photoStats.total).padStart(2, '0')}</span>
+              </div>
                 <div className="org-stat-box">
                   <span className="org-stat-label">{t('photos.pendingApproval.badge')}</span>
                   <span className="org-stat-value" style={{ color: 'var(--pa-theme-action-primary)' }}>{String(photoStats.pending).padStart(2, '0')}</span>
@@ -380,7 +390,6 @@ export default function GalleryDetail() {
               </div>
             </Card>
           </>
-        )}
       </div>
 
       {editOpen && gallery && (

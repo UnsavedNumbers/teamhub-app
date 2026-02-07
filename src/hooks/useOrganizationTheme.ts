@@ -77,8 +77,11 @@ export function useOrganizationTheme(): { ready: boolean } {
           applyThemeTokens(generateTokens(theme, resolvedTheme === 'dark'))
         }
         setHasLoadedOrgTheme(true)
+        // themeId was provided directly — no need to re-fetch from server
+      } else {
+        // No themeId in event — bump version to trigger a re-fetch
+        setThemeVersion(v => v + 1)
       }
-      setThemeVersion(v => v + 1)
     }
     window.addEventListener('organization-theme-changed', handleThemeChanged)
     return () => window.removeEventListener('organization-theme-changed', handleThemeChanged)
