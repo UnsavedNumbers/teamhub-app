@@ -297,7 +297,12 @@ export const en = {
         transferSuccess: 'Ticket transferred successfully',
       },
       // Photos Page
-      photos: {
+  photos: {
+    visibility: {
+      label: 'Visibility',
+      draft: 'Draft',
+      public: 'Public',
+    },
         title: 'Photos & Videos',
         subtitle: 'Browse galleries from teams you follow',
         searchPlaceholder: 'Search gallery names, tags...',

@@ -8,7 +8,6 @@ import {
   InlineNotice,
   Table,
   Checkbox,
-  Modal,
 } from '@/components/platformAdmin'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
@@ -17,7 +16,9 @@ import { USE_FAKE_DATA } from '@/data/config'
 import { 
   getGalleriesForUser, 
   deleteGallery,
+  getPhotosForGallery,
   type Gallery, 
+  type GalleryPhoto,
   type GalleryType 
 } from '@/data/services/galleryService'
 import { getMockGalleriesForOrg, getMockPhotosForGallery } from '@/data/fake/mockGalleries'
@@ -25,6 +26,7 @@ import { getLink } from '@/utils/routes/helpers'
 import { usePagination } from '@/hooks/usePagination'
 import { useHideEmptyGalleries } from './useHideEmptyGalleries'
 import { showError, showSuccess } from '@/utils/toast'
+import { GalleryEditModal } from '@/components/admin/galleries/GalleryEditModal'
 import './PhotosSearchView.css'
 
 export function PhotosSearchView() {
@@ -38,6 +40,9 @@ export function PhotosSearchView() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [galleryToEdit, setGalleryToEdit] = useState<Gallery | null>(null)
+  const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([])
 
   // Filters with URL sync
   const [search, setSearch] = useState(searchParams.get('q') || '')
@@ -54,11 +59,6 @@ export function PhotosSearchView() {
   const [sizeRange, setSizeRange] = useState<'all' | '1-10' | '11-50' | '50+'>(
     (searchParams.get('size') as any) || 'all'
   )
-
-  // Delete modal state
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const [galleryToDelete, setGalleryToDelete] = useState<Gallery | null>(null)
-  const [deleting, setDeleting] = useState(false)
 
   const { page, rowsPerPage, setPage, setRowsPerPage, setTotalCount } = usePagination(0, 50)
 
@@ -285,7 +285,7 @@ export function PhotosSearchView() {
   }, [navigate, t])
 
   // Navigate to gallery edit
-  const handleEditGallery = useCallback((id: string) => {
+  const handleEditGallery = useCallback(async (id: string) => {
     if (!id) {
       showError(t('photos.errors.loadGallery'))
       return
@@ -296,48 +296,34 @@ export function PhotosSearchView() {
       return
     }
 
-    navigate(getLink('admin.photos.edit', { id }))
-  }, [navigate, t])
-
-  // Initiate delete
-  const handleDeleteGallery = useCallback((gallery: Gallery) => {
-    if (USE_FAKE_DATA) {
-      showError(t('photos.demoMode.deleteBlocked'))
+    if (!context) {
+      showError(t('photos.errors.loadGallery'))
       return
     }
-    
-    setGalleryToDelete(gallery)
-    setDeleteModalOpen(true)
-  }, [t])
 
-  // Confirm delete
-  const confirmDelete = useCallback(async () => {
-    if (!galleryToDelete || USE_FAKE_DATA) return
-    
-    setDeleting(true)
-    try {
-      const { error } = await deleteGallery(context, galleryToDelete.id)
-      
-      if (error) {
-        throw error
-      }
-      
-      showSuccess(t('photos.success.galleryDeleted'))
-      setDeleteModalOpen(false)
-      setGalleryToDelete(null)
-      
-      // Refresh galleries
-      const { data, error: loadError } = await getGalleriesForUser(context)
-      if (!loadError && data) {
-        setGalleries(data)
-      }
-    } catch (err) {
-      const errorMessage = (err as Error)?.message || t('photos.errors.deleteGallery')
-      showError(errorMessage)
-    } finally {
-      setDeleting(false)
+    const gallery = galleries.find(g => g.id === id)
+    if (!gallery) {
+      showError(t('photos.errors.loadGallery'))
+      return
     }
-  }, [galleryToDelete, context, t])
+
+    setGalleryToEdit(gallery)
+    setEditModalOpen(true)
+    setGalleryPhotos([])
+
+    const { data, error: photosError } = await getPhotosForGallery(context, { 
+      gallery_id: id,
+      order_by: 'created_at',
+      order_direction: 'asc',
+    })
+
+    if (photosError) {
+      showError(photosError.message || t('photos.errors.loadGallery'))
+      return
+    }
+
+    setGalleryPhotos(data || [])
+  }, [context, galleries, t])
 
   // Check if any filters are active
   const hasActiveFilters = useMemo(() => {
@@ -595,28 +581,17 @@ export function PhotosSearchView() {
                         >
                           <span className="material-symbols-outlined">edit</span>
                         </button>
-                        <button 
-                          className="table-more-button"
-                          onClick={() => {
-                            const gallery = galleries.find(g => g.id === row.id)
-                            if (gallery) handleDeleteGallery(gallery)
-                          }}
-                          title={t('photos.deleteGallery')}
-                          disabled={loading}
-                        >
-                          <span className="material-symbols-outlined">delete</span>
-                        </button>
                       </div>
                     )
                   },
                 ]}
                 onRowClick={(row) => handleViewGallery(row.id as string)}
                 pagination={{
-                  currentPage: page,
+                  currentPage: page + 1,
                   totalRows: filteredGalleries.length,
                   totalPages: Math.ceil(filteredGalleries.length / rowsPerPage),
                   rowsPerPage,
-                  onPageChange: setPage,
+                  onPageChange: (nextPage) => setPage(Math.max(0, nextPage - 1)),
                   onRowsPerPageChange: (newRowsPerPage) => {
                     setRowsPerPage(newRowsPerPage)
                     setPage(0)
@@ -628,48 +603,37 @@ export function PhotosSearchView() {
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      <Modal
-        open={deleteModalOpen}
-        onClose={() => !deleting && setDeleteModalOpen(false)}
-        title={t('photos.deleteGallery')}
-      >
-        <div className="pa-mb-4">
-          <p className="pa-text-sm pa-mb-2">
-            {t('photos.bulk.confirmDeleteEmpty', { count: 1 })}
-          </p>
-          {galleryToDelete && (
-            <div className="pa-mt-3 pa-p-3 pa-bg-muted pa-rounded">
-              <strong className="pa-block pa-mb-1">{galleryToDelete.name || galleryToDelete.title}</strong>
-              <span className="pa-text-sm pa-text-muted">
-                {galleryToDelete.photo_count || 0} {t('photos.photos')}
-              </span>
-            </div>
-          )}
-          {galleryToDelete && galleryToDelete.photo_count && galleryToDelete.photo_count > 0 && (
-            <p className="pa-text-sm pa-text-warning pa-mt-3">
-              ⚠️ This will permanently delete {galleryToDelete.photo_count} photo(s).
-            </p>
-          )}
-        </div>
-        <div className="pa-flex pa-justify-end pa-gap-3">
-          <Button 
-            variant="ghost" 
-            onClick={() => setDeleteModalOpen(false)}
-            disabled={deleting}
-          >
-            {t('common.cancel')}
-          </Button>
-          <Button 
-            variant="danger" 
-            onClick={confirmDelete}
-            loading={deleting}
-            disabled={deleting}
-          >
-            {t('photos.deleteGallery')}
-          </Button>
-        </div>
-      </Modal>
+      {editModalOpen && galleryToEdit && (
+        <GalleryEditModal
+          open={editModalOpen}
+          gallery={galleryToEdit}
+          photos={galleryPhotos}
+          onClose={() => setEditModalOpen(false)}
+          onSaved={(updatedGallery) => {
+            setGalleries(prev => prev.map(g => g.id === updatedGallery.id ? updatedGallery : g))
+            setGalleryToEdit(updatedGallery)
+            setEditModalOpen(false)
+          }}
+          onDelete={async () => {
+            if (USE_FAKE_DATA) {
+              showError(t('photos.demoMode.deleteBlocked'))
+              return
+            }
+            if (!context || !galleryToEdit) return
+            const confirm = window.confirm(t('photos.confirmDeletePhotos', { count: galleryPhotos.length }))
+            if (!confirm) return
+            const { error: deleteError } = await deleteGallery(context, galleryToEdit.id)
+            if (deleteError) {
+              showError(deleteError.message || t('photos.errors.deleteGallery'))
+              return
+            }
+            showSuccess(t('photos.success.galleryDeleted'))
+            setGalleries(prev => prev.filter(g => g.id !== galleryToEdit.id))
+            setGalleryToEdit(null)
+            setEditModalOpen(false)
+          }}
+        />
+      )}
     </div>
   )
 }

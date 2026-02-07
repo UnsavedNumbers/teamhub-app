@@ -3175,6 +3175,7 @@ export const en = {
                 settings: {
                     title: 'Gallery Settings',
                     subtitle: 'Configure how your gallery works',
+                    advancedTitle: 'Advanced Settings',
                 },
             },
 
@@ -3363,6 +3364,7 @@ export const en = {
             charactersRemaining: '{{count}} characters remaining',
             requireApproval: 'Require approval for parent uploads',
             requireApprovalHelp: 'Photos uploaded by parents will need approval before appearing in the gallery',
+            requireApprovalWarning: 'Photos will need approval before being visible',
             entityType: 'Link to Entity',
             entityTypeHelp: 'Choose which entity this gallery belongs to',
             selectEntity: 'Select {{type}}',
@@ -3451,6 +3453,11 @@ export const en = {
 
         // Additional actions
         updateAlbumInfo: 'Update Album Info',
+        visibility: {
+            label: 'Visibility',
+            draft: 'Draft',
+            public: 'Public',
+        },
         approveAll: 'Approve All',
         approveAllConfirm: 'Approve all pending photos in this gallery?',
         noPendingPhotos: 'No pending photos to approve',
@@ -6149,6 +6156,7 @@ export const es = {
                 settings: {
                     title: 'Configuración de la galería',
                     subtitle: 'Configura cómo funciona la galería',
+                    advancedTitle: 'Configuración avanzada',
                 },
             },
 
@@ -6233,6 +6241,7 @@ export const es = {
             descriptionPlaceholder: 'Descripción opcional',
             requireApproval: 'Requerir aprobación para subidas de padres',
             requireApprovalHelp: 'Las fotos subidas por padres necesitarán aprobación antes de aparecer en la galería',
+            requireApprovalWarning: 'Las fotos requerirán aprobación antes de ser visibles',
             entityType: 'Vincular a Entidad',
             entityTypeHelp: 'Elige a qué entidad pertenece esta galería',
             selectEntity: 'Seleccionar {{type}}',
@@ -6320,6 +6329,11 @@ export const es = {
 
         // Acciones adicionales
         updateAlbumInfo: 'Actualizar Información del Álbum',
+        visibility: {
+            label: 'Visibilidad',
+            draft: 'Borrador',
+            public: 'Público',
+        },
         approveAll: 'Aprobar Todo',
         approveAllConfirm: '¿Aprobar todas las fotos pendientes en esta galería?',
         noPendingPhotos: 'No hay fotos pendientes para aprobar',
