@@ -9,115 +9,167 @@
  * Design: FanConnect Minimalist Light
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getFanGalleries, getFanGallery, type FanGallery } from '../../data/services/fanPhotosService'
+import {
+  getFanGalleries,
+  getFanGallery,
+  getFanGalleryPhotos,
+  type FanGallery,
+  type FanGalleryGroup,
+} from '../../data/services/fanPhotosService'
+import type { GalleryPhoto, KeysetCursor } from '../../data/services/galleryService'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { showError } from '../../utils/toast'
+import { useI18n } from '../../i18n/useI18n'
+import { usePhotoFilters } from '../../hooks/usePhotoFilters'
+import { PhotoFilterBar } from '../../components/gallery/PhotoFilterBar'
+import { useInfinitePhotos } from '../../hooks/useInfinitePhotos'
+import { buildPhotoQuery } from '../../utils/buildPhotoQuery'
+import { BulkDownloadButton } from '../../components/gallery/BulkDownloadButton'
 import '../../styles/fan.css'
 import '../../styles/fan-layouts.css'
 
-type FilterType = 'all' | 'photos' | 'videos'
-type FilterEntity = 'all' | string
+type FanPhoto = GalleryPhoto & {
+  tagged_people?: string[]
+  watermark_url?: string
+}
+
+const getPageSize = () => (typeof window !== 'undefined' && window.innerWidth < 768 ? 30 : 48)
 
 export default function FanPhotos() {
   const navigate = useNavigate()
-  
-  // Data state
+  const { t } = useI18n()
+  const tAny = t as unknown as (key: string, params?: any) => string
+
+  const { filters, setFilters, clearFilters } = usePhotoFilters({
+    viewKey: 'fanPhotos',
+    defaultSort: 'recent',
+    allowedSorts: ['recent', 'oldest'],
+    persistDensity: false,
+  })
+
   const [galleries, setGalleries] = useState<FanGallery[]>([])
-  
-  // UI state
+  const [grouped, setGrouped] = useState<FanGalleryGroup[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchQuery] = useState('')
-  const [filterType, setFilterType] = useState<FilterType>('all')
-  const [filterEntity] = useState<FilterEntity>('all')
-  const [page, setPage] = useState(1)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
-  
-  // Virtualization ref
-  const observerRef = useRef<IntersectionObserver | null>(null)
-  const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  const [cursor, setCursor] = useState<KeysetCursor | null>(null)
+  const [pageSize, setPageSize] = useState(getPageSize)
+  const [mediaType, setMediaType] = useState<'photos' | 'videos'>('photos')
+  const mountedRef = useRef(true)
 
   useEffect(() => {
-    loadInitialData()
+    return () => {
+      mountedRef.current = false
+    }
   }, [])
 
-  // Infinite scroll observer
   useEffect(() => {
-    if (loading) return
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
-          loadMoreGalleries()
-        }
-      },
-      { threshold: 0.1 }
-    )
-
-    if (loadMoreRef.current) {
-      observerRef.current.observe(loadMoreRef.current)
+    const handleResize = () => {
+      setPageSize(getPageSize())
     }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect()
+  const sortOptions = useMemo(
+    () => [
+      { value: 'recent', label: t('common.mostRecent') },
+      { value: 'oldest', label: t('photos.filters.oldest') },
+    ],
+    [t]
+  )
+
+  const orgOptions = useMemo(() => {
+    const options = grouped.map((group) => ({
+      value: group.org_id,
+      label: group.org_name || t('common.unknown'),
+    }))
+    return options.length > 1 ? options : []
+  }, [grouped, t])
+
+  const mergeGrouped = useCallback((prev: FanGalleryGroup[], next: FanGalleryGroup[]) => {
+    const map = new Map<string, FanGalleryGroup>()
+    prev.forEach((group) => map.set(group.org_id, { ...group, galleries: [...group.galleries] }))
+    next.forEach((group) => {
+      const existing = map.get(group.org_id)
+      if (existing) {
+        existing.galleries = [...existing.galleries, ...group.galleries]
+      } else {
+        map.set(group.org_id, { ...group, galleries: [...group.galleries] })
       }
-    }
-  }, [loading, hasMore])
+    })
+    return Array.from(map.values())
+  }, [])
 
-  const loadInitialData = async () => {
-    setLoading(true)
-    
-    const galleriesResult = await getFanGalleries()
-    
-    if (galleriesResult.error) {
-      showError(galleriesResult.error.message)
+  const loadGalleries = useCallback(async (reset: boolean) => {
+    if (loading || loadingMore) return
+
+    if (mediaType === 'videos') {
+      if (!mountedRef.current) return
+      setGalleries([])
+      setGrouped([])
+      setHasMore(false)
+      setCursor(null)
+      setLoading(false)
+      setLoadingMore(false)
+      return
+    }
+
+    if (reset) {
+      setLoading(true)
+      setCursor(null)
+      setHasMore(true)
     } else {
-      setGalleries(galleriesResult.data)
-      setHasMore(galleriesResult.data.length >= 20)
+      setLoadingMore(true)
+    }
+
+    const { data, grouped: groupedData, error } = await getFanGalleries({
+      search: filters.q || undefined,
+      org_ids: filters.org ? [filters.org] : undefined,
+      limit: pageSize,
+      cursor: reset ? undefined : cursor || undefined,
+      order_direction: filters.sort === 'oldest' ? 'asc' : 'desc',
+    })
+
+    if (!mountedRef.current) return
+
+    if (error) {
+      showError(error.message)
+    } else {
+      if (reset) {
+        setGalleries(data)
+        setGrouped(groupedData)
+      } else {
+        setGalleries((prev) => [...prev, ...data])
+        setGrouped((prev) => mergeGrouped(prev, groupedData))
+      }
+      const last = data[data.length - 1]
+      setCursor(last ? { created_at: last.created_at, id: last.id } : cursor)
+      setHasMore(data.length === pageSize)
     }
 
     setLoading(false)
-  }
+    setLoadingMore(false)
+  }, [loading, loadingMore, filters.q, filters.org, filters.sort, mediaType, pageSize, cursor, mergeGrouped])
 
-  const loadMoreGalleries = async () => {
-    if (loading || !hasMore) return
-    
-    setLoading(true)
-    const nextPage = page + 1
-    
-    const { data, error } = await getFanGalleries()
-    
-    if (!error && data) {
-      setGalleries(prev => [...prev, ...data])
-      setPage(nextPage)
-      setHasMore(data.length >= 20)
-    }
-    
-    setLoading(false)
-  }
+  useEffect(() => {
+    loadGalleries(true)
+  }, [loadGalleries])
+
+  useInfinitePhotos({
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore: () => loadGalleries(false),
+  })
 
   const handleGalleryClick = (galleryId: string) => {
     navigate(getLink(RouteKeys.FAN_PHOTOS_GALLERY, { id: galleryId }))
   }
 
-  // Filter galleries based on search and filters
-  const filteredGalleries = galleries.filter(gallery => {
-    // Search filter
-    const matchesSearch = searchQuery === '' || 
-      gallery.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      gallery.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    // Entity filter
-    const matchesEntity = filterEntity === 'all' || gallery.org_id === filterEntity
-    
-    // Type filter (would need type metadata on galleries)
-    const matchesType = filterType === 'all'
-    
-    return matchesSearch && matchesEntity && matchesType
-  })
+  const hasResults = grouped.some((group) => group.galleries.length > 0)
 
   if (loading && galleries.length === 0) {
     return (
@@ -132,67 +184,87 @@ export default function FanPhotos() {
       {/* Page Header - Matching Design */}
       <div className="fan-photos-header">
         <div>
-          <span className="fan-photos-label">Official Gallery</span>
-          <h1 className="fan-photos-title">Media Gallery</h1>
+          <span className="fan-photos-label">{tAny('fan.photos.officialLabel')}</span>
+          <h1 className="fan-photos-title">{tAny('fan.photos.mediaGalleryTitle')}</h1>
         </div>
 
         {/* Photos/Videos Toggle */}
         <div className="fan-photos-toggle">
-          <button 
-            className={`fan-photos-toggle-btn ${filterType === 'photos' || filterType === 'all' ? 'active' : ''}`}
-            onClick={() => setFilterType('photos')}
+          <button
+            className={`fan-photos-toggle-btn ${mediaType === 'photos' ? 'active' : ''}`}
+            onClick={() => setMediaType('photos')}
           >
-            Photos
+            {tAny('fan.photos.filterType.photos')}
           </button>
-          <button 
-            className={`fan-photos-toggle-btn ${filterType === 'videos' ? 'active' : ''}`}
-            onClick={() => setFilterType('videos')}
+          <button
+            className={`fan-photos-toggle-btn ${mediaType === 'videos' ? 'active' : ''}`}
+            onClick={() => setMediaType('videos')}
           >
-            Videos
+            {tAny('fan.photos.filterType.videos')}
           </button>
         </div>
       </div>
 
-      {/* Gallery Grid */}
-      {filteredGalleries.length === 0 ? (
+      <div className="mb-6">
+        <PhotoFilterBar
+          filters={filters}
+          onFiltersChange={setFilters}
+          onClear={clearFilters}
+          showDateRange={false}
+          sortOptions={sortOptions}
+          orgOptions={orgOptions}
+        />
+      </div>
+
+      {(!hasResults || mediaType === 'videos') && !loading ? (
         <div className="fan-photos-empty">
           <div className="fan-photos-empty-icon">
             <span className="material-symbols-outlined">
-              {searchQuery ? 'search_off' : 'photo_library'}
+              {filters.q ? 'search_off' : 'photo_library'}
             </span>
           </div>
           <h3 className="fan-photos-empty-title">
-            {searchQuery ? 'No galleries found' : 'No galleries available'}
+            {filters.q ? t('photos.filters.noResults') : tAny('fan.photos.noGalleries')}
           </h3>
           <p className="fan-photos-empty-text">
-            {searchQuery ? 'Try adjusting your search' : 'Check back later for new photos'}
+            {filters.q ? t('emptyStates.tryAdjusting') : tAny('fan.photos.checkBackLater')}
           </p>
         </div>
       ) : (
-        <>
-          <div className="fan-galleries-grid">
-            {filteredGalleries.map((gallery) => (
-              <GalleryCard
-                key={gallery.id}
-                gallery={gallery}
-                onClick={() => handleGalleryClick(gallery.id)}
-              />
-            ))}
-          </div>
-
-          {/* Load More Button */}
-          {hasMore && (
-            <div className="fan-photos-load-more">
-              <button 
-                className="fan-load-more-btn"
-                onClick={loadMoreGalleries}
-                disabled={loading}
-              >
-                {loading ? 'Loading...' : 'Load More Content'}
-              </button>
+        <div className="fan-galleries-grid">
+          {grouped.map((group) => (
+            <div key={group.org_id} className="fan-galleries-group">
+              <div className="fan-galleries-group-header">
+                <h2 className="fan-galleries-group-title">
+                  {group.org_name || t('common.unknown')}
+                </h2>
+                {!filters.org && (
+                  <button
+                    className="fan-galleries-group-link"
+                    onClick={() => setFilters({ org: group.org_id })}
+                  >
+                    {t('photos.browse.viewAll')}
+                  </button>
+                )}
+              </div>
+              <div className="fan-galleries-grid">
+                {group.galleries.map((gallery) => (
+                  <GalleryCard
+                    key={gallery.id}
+                    gallery={gallery}
+                    onClick={() => handleGalleryClick(gallery.id)}
+                  />
+                ))}
+              </div>
             </div>
-          )}
-        </>
+          ))}
+        </div>
+      )}
+
+      {loadingMore && (
+        <div className="fan-photos-load-more">
+          <LoadingSpinner size="small" />
+        </div>
       )}
     </div>
   )
@@ -207,11 +279,14 @@ interface GalleryCardProps {
 }
 
 function GalleryCard({ gallery, onClick }: GalleryCardProps) {
+  const { t } = useI18n()
+  const tAny = t as unknown as (key: string, params?: any) => string
+
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     })
   }
 
@@ -226,7 +301,7 @@ function GalleryCard({ gallery, onClick }: GalleryCardProps) {
           </div>
         )}
         <div className="fan-gallery-overlay">
-          <p className="fan-gallery-category">{gallery.org_name || gallery.team_name || 'Gallery'}</p>
+          <p className="fan-gallery-category">{gallery.org_name || gallery.team_name || tAny('fan.photos.galleryLabel')}</p>
           <h3 className="fan-gallery-name-overlay">{gallery.name}</h3>
           <p className="fan-gallery-date-overlay">{formatDate(gallery.created_at)}</p>
         </div>
@@ -242,41 +317,116 @@ function GalleryCard({ gallery, onClick }: GalleryCardProps) {
 export function FanGalleryDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  
+  const { t } = useI18n()
+  const tAny = t as unknown as (key: string, params?: any) => string
+
+  const { filters, setFilters, clearFilters, setDensity } = usePhotoFilters({
+    viewKey: `fanGallery:${id || 'unknown'}`,
+    defaultSort: 'recent',
+    allowedSorts: ['recent', 'oldest'],
+    persistDensity: true,
+  })
+
   const [gallery, setGallery] = useState<FanGallery | null>(null)
-  const [photos, setPhotos] = useState<any[]>([])
+  const [photos, setPhotos] = useState<FanPhoto[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedPhoto, setSelectedPhoto] = useState<any | null>(null)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [cursor, setCursor] = useState<KeysetCursor | null>(null)
+  const [selectedPhoto, setSelectedPhoto] = useState<FanPhoto | null>(null)
+  const [pageSize, setPageSize] = useState(getPageSize)
+  const mountedRef = useRef(true)
 
   useEffect(() => {
-    loadGallery()
-  }, [id])
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
-  const loadGallery = async () => {
-    setLoading(true)
+  useEffect(() => {
+    const handleResize = () => {
+      setPageSize(getPageSize())
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
-    if (!id) {
-      setLoading(false)
+  const sortOptions = useMemo(
+    () => [
+      { value: 'recent', label: t('common.mostRecent') },
+      { value: 'oldest', label: t('photos.filters.oldest') },
+    ],
+    [t]
+  )
+
+  const loadGallery = useCallback(async () => {
+    if (!id) return
+    const { data, error } = await getFanGallery(id)
+    if (!mountedRef.current) return
+    if (error) {
+      showError(error.message)
       return
     }
+    setGallery(data)
+  }, [id])
 
-    // Fetch the specific gallery directly
-    const { data, error } = await getFanGallery(id)
+  const loadPhotos = useCallback(async (reset: boolean) => {
+    if (!id || loadingMore) return
 
-    if (!error && data) {
-      setGallery(data)
-      // Load photos for the gallery
-      const { getFanGalleryPhotos } = await import('../../data/services/fanPhotosService')
-      const photosResult = await getFanGalleryPhotos(id)
-      if (!photosResult.error) {
-        setPhotos(photosResult.data)
+    if (reset) {
+      setLoading(true)
+      setCursor(null)
+      setHasMore(true)
+    } else {
+      setLoadingMore(true)
+    }
+
+    const query = buildPhotoQuery(filters, {
+      gallery_id: id,
+      limit: pageSize,
+    })
+
+    const { gallery_id: _galleryId, ...params } = query
+
+    const { data, error } = await getFanGalleryPhotos(id, {
+      ...params,
+      cursor: reset ? undefined : cursor || undefined,
+    })
+
+    if (!mountedRef.current) return
+
+    if (error) {
+      showError(error.message)
+    } else {
+      if (reset) {
+        setPhotos(data)
+      } else {
+        setPhotos((prev) => [...prev, ...data])
       }
+      const last = data[data.length - 1]
+      setCursor(last ? { created_at: last.created_at, id: last.id } : cursor)
+      setHasMore(data.length === pageSize)
     }
 
     setLoading(false)
-  }
+    setLoadingMore(false)
+  }, [id, filters, pageSize, cursor, loadingMore])
 
-  if (loading) {
+  useEffect(() => {
+    loadGallery()
+  }, [loadGallery])
+
+  useEffect(() => {
+    loadPhotos(true)
+  }, [loadPhotos])
+
+  useInfinitePhotos({
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore: () => loadPhotos(false),
+  })
+
+  if (loading && photos.length === 0) {
     return (
       <div className="fan-loading-page">
         <LoadingSpinner size="large" />
@@ -288,13 +438,13 @@ export function FanGalleryDetail() {
     return (
       <div className="fan-empty-state">
         <span className="material-symbols-outlined">error</span>
-        <h3>Gallery not found</h3>
-        <p>This gallery may have been removed or is not available to fans</p>
-        <button 
+        <h3>{tAny('fan.photos.galleryNotFoundTitle')}</h3>
+        <p>{tAny('fan.photos.galleryNotFoundMessage')}</p>
+        <button
           className="fan-btn fan-btn-primary"
           onClick={() => navigate(getLink(RouteKeys.FAN_PHOTOS))}
         >
-          Back to Photos
+          {tAny('fan.photos.backToPhotos')}
         </button>
       </div>
     )
@@ -303,12 +453,12 @@ export function FanGalleryDetail() {
   return (
     <>
       {/* Back Button */}
-      <button 
+      <button
         className="fan-back-btn"
         onClick={() => navigate(getLink(RouteKeys.FAN_PHOTOS))}
       >
         <span className="material-symbols-outlined">arrow_back</span>
-        Back to Photos
+        {tAny('fan.photos.backToPhotos')}
       </button>
 
       {/* Gallery Header */}
@@ -320,34 +470,52 @@ export function FanGalleryDetail() {
         <div className="fan-gallery-meta">
           <span>{gallery.org_name || gallery.team_name}</span>
           <span>•</span>
-          <span>{gallery.photo_count || 0} photos</span>
+          <span>
+            {(gallery.photo_count || 0) === 1
+              ? tAny('fan.photos.photoCount', { count: gallery.photo_count || 0 })
+              : tAny('fan.photos.photoCount_plural', { count: gallery.photo_count || 0 })}
+          </span>
           <span>•</span>
           <span>{new Date(gallery.created_at).toLocaleDateString()}</span>
         </div>
-        
+
         <div className="fan-gallery-actions">
-          <button className="fan-btn fan-btn-secondary">
-            <span className="material-symbols-outlined">download</span>
-            Download All
-          </button>
+          {gallery.can_download && (
+            <BulkDownloadButton
+              galleryId={gallery.id}
+              label={t('photos.download.download')}
+            />
+          )}
           <button className="fan-btn fan-btn-secondary">
             <span className="material-symbols-outlined">share</span>
-            Share
+            {t('common.share')}
           </button>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <PhotoFilterBar
+          filters={filters}
+          onFiltersChange={setFilters}
+          onClear={clearFilters}
+          sortOptions={sortOptions}
+          showStatus={false}
+          showDensity
+          onDensityChange={setDensity}
+        />
       </div>
 
       {/* Photo Grid */}
       {photos.length === 0 ? (
         <div className="fan-empty-state">
           <span className="material-symbols-outlined">image</span>
-          <h3>No photos yet</h3>
-          <p>Check back later for new photos</p>
+          <h3>{tAny('fan.photos.noPhotosYet')}</h3>
+          <p>{tAny('fan.photos.checkBackLater')}</p>
         </div>
       ) : (
-        <div className="fan-photos-grid">
+        <div className={`fan-photos-grid ${filters.density === 'compact' ? 'fan-photos-grid-compact' : ''}`}>
           {photos.map((photo, index) => (
-            <div 
+            <div
               key={photo.id || index}
               className="fan-photo-item"
               onClick={() => setSelectedPhoto(photo)}
@@ -355,6 +523,12 @@ export function FanGalleryDetail() {
               <img src={photo.thumbnail_url || photo.url} alt="" loading="lazy" />
             </div>
           ))}
+        </div>
+      )}
+
+      {loadingMore && (
+        <div className="fan-photos-load-more">
+          <LoadingSpinner size="small" />
         </div>
       )}
 
@@ -375,15 +549,17 @@ export function FanGalleryDetail() {
  * Photo Lightbox Component
  */
 interface PhotoLightboxProps {
-  photo: any
-  photos: any[]
+  photo: FanPhoto
+  photos: FanPhoto[]
   onClose: () => void
-  onNavigate: (photo: any) => void
+  onNavigate: (photo: FanPhoto) => void
 }
 
 function PhotoLightbox({ photo, photos, onClose, onNavigate }: PhotoLightboxProps) {
-  const currentIndex = photos.findIndex(p => p.id === photo.id)
-  
+  const { t } = useI18n()
+  const tAny = t as unknown as (key: string, params?: any) => string
+  const currentIndex = photos.findIndex((p) => p.id === photo.id)
+
   const handlePrev = () => {
     if (currentIndex > 0) {
       onNavigate(photos[currentIndex - 1])
@@ -403,7 +579,7 @@ function PhotoLightbox({ photo, photos, onClose, onNavigate }: PhotoLightboxProp
   }
 
   return (
-    <div 
+    <div
       className="fan-lightbox"
       onClick={onClose}
       onKeyDown={handleKeyDown}
@@ -439,7 +615,7 @@ function PhotoLightbox({ photo, photos, onClose, onNavigate }: PhotoLightboxProp
         <div className="fan-lightbox-info">
           {photo.tagged_people && photo.tagged_people.length > 0 && (
             <div className="fan-lightbox-tags">
-              <span className="fan-lightbox-tags-label">Tagged:</span>
+              <span className="fan-lightbox-tags-label">{tAny('fan.photos.taggedLabel')}</span>    
               {photo.tagged_people.map((person: string, index: number) => (
                 <span key={index} className="fan-lightbox-tag">{person}</span>
               ))}
@@ -448,11 +624,11 @@ function PhotoLightbox({ photo, photos, onClose, onNavigate }: PhotoLightboxProp
           <div className="fan-lightbox-actions">
             <button className="fan-btn fan-btn-secondary">
               <span className="material-symbols-outlined">download</span>
-              Download
+              {t('common.download')}
             </button>
             <button className="fan-btn fan-btn-secondary">
               <span className="material-symbols-outlined">share</span>
-              Share
+              {t('common.share')}
             </button>
           </div>
         </div>
@@ -468,7 +644,9 @@ function PhotoLightbox({ photo, photos, onClose, onNavigate }: PhotoLightboxProp
 export function FanAthletePhotos() {
   const { athleteId } = useParams<{ athleteId: string }>()
   const navigate = useNavigate()
-  
+  const { t } = useI18n()
+  const tAny = t as unknown as (key: string, params?: any) => string
+
   const athleteName = ''
   const [photos, setPhotos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -497,29 +675,35 @@ export function FanAthletePhotos() {
   return (
     <>
       {/* Back Button */}
-      <button 
+      <button
         className="fan-back-btn"
         onClick={() => navigate(getLink(RouteKeys.FAN_PHOTOS))}
       >
         <span className="material-symbols-outlined">arrow_back</span>
-        Back to Photos
+        {tAny('fan.photos.backToPhotos')}
       </button>
 
       <div className="fan-page-header">
-        <h1 className="fan-page-title">Photos of {athleteName || 'Athlete'}</h1>
-        <p className="fan-page-subtitle">{photos.length} photos across all galleries</p>
+        <h1 className="fan-page-title">
+          {tAny('fan.photos.photosOf', { name: athleteName || t('errors.athlete') })}
+        </h1>
+        <p className="fan-page-subtitle">
+          {photos.length === 1
+            ? tAny('fan.photos.photosAcrossGalleries', { count: photos.length })
+            : tAny('fan.photos.photosAcrossGalleries_plural', { count: photos.length })}
+        </p>
       </div>
 
       {photos.length === 0 ? (
         <div className="fan-empty-state">
           <span className="material-symbols-outlined">image</span>
-          <h3>No photos found</h3>
-          <p>No tagged photos available for this athlete</p>
+          <h3>{tAny('fan.photos.noPhotosFound')}</h3>
+          <p>{tAny('fan.photos.noTaggedPhotos')}</p>
         </div>
       ) : (
         <div className="fan-photos-grid">
           {photos.map((photo, index) => (
-            <div 
+            <div
               key={photo.id || index}
               className="fan-photo-item"
               onClick={() => setSelectedPhoto(photo)}

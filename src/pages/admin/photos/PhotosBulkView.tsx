@@ -40,7 +40,10 @@ export function PhotosBulkView() {
       }
 
       if (USE_FAKE_DATA) {
-        const mockGalleries = getMockGalleriesForOrg(context.orgId)
+        const mockGalleriesDb = getMockGalleriesForOrg(context.orgId)
+        const mockGalleries = mockGalleriesDb.map(
+          (g) => ({ ...g, can_download: g.can_download ?? undefined }) as unknown as Gallery,
+        )
         setGalleries(mockGalleries)
         setLoading(false)
         return

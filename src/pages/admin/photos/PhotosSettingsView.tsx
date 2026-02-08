@@ -18,6 +18,7 @@ export function PhotosSettingsView() {
   const { context } = useUserContext()
   const { t } = useI18n()
   const { hideEmpty, setHideEmpty } = useHideEmptyGalleries()
+  void context
 
   const [defaultVisibility, setDefaultVisibility] = useState<'public' | 'team' | 'private'>(() => {
     try {
@@ -72,6 +73,7 @@ export function PhotosSettingsView() {
         {saved && (
           <InlineNotice
             tone="success"
+            title="Saved"
             message={t('photos.settings.saved')}
           />
         )}

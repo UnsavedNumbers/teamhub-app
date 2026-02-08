@@ -199,6 +199,7 @@ const PhotosSearchView = lazy(() => import('./pages/admin/photos/PhotosSearchVie
 const PhotosBulkView = lazy(() => import('./pages/admin/photos/PhotosBulkView').then(m => ({ default: m.PhotosBulkView })))
 const PhotosSettingsView = lazy(() => import('./pages/admin/photos/PhotosSettingsView').then(m => ({ default: m.PhotosSettingsView })))
 const AdminPhotos = lazy(() => import('./pages/admin/Photos'))
+void AdminPhotos
 const AdminGalleryDetail = lazy(() => import('./pages/admin/GalleryDetail'))
 const CreateGallery = lazy(() => import('./pages/admin/CreateGallery'))
 const PhotoDetail = lazy(() => import('./pages/admin/PhotoDetail'))

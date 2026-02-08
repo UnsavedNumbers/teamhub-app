@@ -237,6 +237,8 @@ export const RouteKeys = {
     FAN_PHOTOS: 'fan.photos.list',
     FAN_PHOTOS_GALLERY: 'fan.photos.gallery',
     FAN_PHOTOS_ATHLETE: 'fan.photos.athlete',
+    FAN_VIDEOS: 'fan.videos.list',
+    FAN_VIDEO_DETAIL: 'fan.videos.detail',
     FAN_TICKETS: 'fan.tickets.list',
     FAN_TICKET_DETAIL: 'fan.tickets.detail',
     FAN_FOLLOWING: 'fan.following.base',

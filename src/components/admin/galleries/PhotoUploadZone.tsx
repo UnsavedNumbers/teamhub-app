@@ -5,6 +5,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { USE_FAKE_DATA } from '@/data/config'
 import { showError, showSuccess } from '@/utils/toast'
 import { Button, Card, ProgressBar, InlineNotice } from '@/components/platformAdmin'
+import { compressPhotoFile } from '@/utils/photoCompression'
 
 type UploadState = 'pending' | 'uploading' | 'success' | 'error' | 'canceled'
 
@@ -118,7 +119,11 @@ export function PhotoUploadZone({
     
     try {
       const approvalStatus = getApprovalStatus()
-      const { data, error } = await uploadPhotoToGallery(context, galleryId, item.file, null, approvalStatus)
+      const { file: processedFile } = await compressPhotoFile(item.file, {
+        maxSizeMB: 2,
+        maxDimension: 4000,
+      })
+      const { data, error } = await uploadPhotoToGallery(context, galleryId, processedFile, null, approvalStatus)
       if (error || !data) throw error || new Error(t('photos.errors.uploadPhoto'))
       
       setItems((prev) => prev.map((p) => (p.id === item.id ? { ...p, state: 'success', progress: 100 } : p)))

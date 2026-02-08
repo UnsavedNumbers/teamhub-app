@@ -265,6 +265,7 @@ export async function getAthletesByGallery(
     avatar_url?: string | null
 }>>> {
     try {
+        void context
         if (!galleryId) {
             return { data: [], error: null }
         }
