@@ -46,12 +46,12 @@ export default function BulkActionsBar({
                     </div>
 
                     {/* Right: Actions */}
-                    <div className={cn('flex items-center gap-2 flex-wrap')}>
+                    <div className={cn('flex items-center gap-2 flex-nowrap')}>
                         <OrgAdminButton
                             onClick={onCancel}
                             variant="ghost"
                             icon="cancel"
-                            className="hover:bg-white/10"
+                            className="hover:bg-white/10 whitespace-nowrap"
                             style={{ color: 'inherit' }}
                         >
                             Cancel Events
@@ -60,7 +60,7 @@ export default function BulkActionsBar({
                             onClick={onReschedule}
                             variant="ghost"
                             icon="schedule"
-                            className="hover:bg-white/10"
+                            className="hover:bg-white/10 whitespace-nowrap"
                             style={{ color: 'inherit' }}
                         >
                             Reschedule
@@ -69,6 +69,7 @@ export default function BulkActionsBar({
                             onClick={onDelete}
                             variant="danger"
                             icon="delete"
+                            className="whitespace-nowrap"
                             style={{ color: 'var(--org-status-error-text, #fff)' }}
                         >
                             Delete

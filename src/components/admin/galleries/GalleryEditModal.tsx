@@ -21,7 +21,7 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
   const [name, setName] = useState(gallery?.name || '')
   const [description, setDescription] = useState(gallery?.description || '')
   const [visibleToFans, setVisibleToFans] = useState(false)
-  const [visibilityExplicitlyChanged, setVisibilityExplicitlyChanged] = useState(false)
+  const [fansCanSee, setFansCanSee] = useState(false)
   const [coverPhotoId, setCoverPhotoId] = useState<string | ''>(gallery?.cover_photo_id || '')
   const [saving, setSaving] = useState(false)
 
@@ -30,7 +30,7 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
       setName(gallery.name)
       setDescription(gallery.description || '')
       setVisibleToFans(gallery.visibility === 'public')
-      setVisibilityExplicitlyChanged(false) // Reset when opening modal
+      setFansCanSee(gallery.fans_can_see || false)
       setCoverPhotoId(gallery.cover_photo_id || '')
     }
   }, [gallery, open])
@@ -54,10 +54,7 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
         name: name.trim(),
         description: description.trim(),
         cover_photo_id: coverPhotoId || null,
-      }
-
-      if (visibilityExplicitlyChanged) {
-        updates.visibility = mapFanVisibilityToGalleryVisibility(visibleToFans)
+        visibility: mapFanVisibilityToGalleryVisibility(visibleToFans),
       }
 
       const { data, error } = await updateGallery(context, gallery.id, updates)
@@ -142,7 +139,6 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
                 }`}
                 onClick={() => {
                   setVisibleToFans(false)
-                  setVisibilityExplicitlyChanged(true)
                 }}
                 disabled={saving}
                 aria-pressed={!visibleToFans}
@@ -158,12 +154,44 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
                 }`}
                 onClick={() => {
                   setVisibleToFans(true)
-                  setVisibilityExplicitlyChanged(true)
                 }}
                 disabled={saving}
                 aria-pressed={visibleToFans}
               >
                 {t('photos.visibility.public')}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">
+              Fan Visibility
+            </label>
+            <div className="inline-flex w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-1 gap-1">
+              <button
+                type="button"
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+                  !fansCanSee
+                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+                onClick={() => setFansCanSee(false)}
+                disabled={saving}
+                aria-pressed={!fansCanSee}
+              >
+                {t('photos.visibility.internal')}
+              </button>
+              <button
+                type="button"
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+                  fansCanSee
+                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+                onClick={() => setFansCanSee(true)}
+                disabled={saving}
+                aria-pressed={fansCanSee}
+              >
+                {t('photos.visibility.fansCanSee')}
               </button>
             </div>
           </div>
