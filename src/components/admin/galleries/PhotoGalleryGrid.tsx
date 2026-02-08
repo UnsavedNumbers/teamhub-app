@@ -99,9 +99,9 @@ export function PhotoGalleryGrid({
           />
           
           {/* Badges - Left corner */}
-          <div style={{ position: 'absolute', top: '8px', left: '8px', display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.9)', borderRadius: '8px', padding: coverPhotoId === photo.id || (showPendingBadge && isPending) ? '4px 6px' : '0' }}>
+          <div style={{ position: 'absolute', top: '8px', left: '8px', display: 'flex', gap: '8px', alignItems: 'center', borderRadius: '8px', padding: coverPhotoId === photo.id || (showPendingBadge && isPending) ? '4px 6px' : '0' }}>
             {coverPhotoId === photo.id && (
-              <Badge variant="info">{t('photos.coverPhoto')}</Badge>
+              <Badge variant="info" style={{ background: '#FFF' }}>{t('photos.coverPhoto')}</Badge>
             )}
             {showPendingBadge && isPending && (
               <Badge variant="warning">{t('photos.pendingApproval.badge')}</Badge>
@@ -112,7 +112,7 @@ export function PhotoGalleryGrid({
           <div 
             style={{ 
               position: 'absolute', 
-              top: '8px', 
+              top: '11px', 
               right: '8px',
               zIndex: 10
             }}
