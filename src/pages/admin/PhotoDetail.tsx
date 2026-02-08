@@ -6,7 +6,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { USE_FAKE_DATA } from '@/data/config'
 import { showError, showSuccess } from '@/utils/toast'
 import { getLink } from '@/utils/routes'
-import { getGalleryById, getPhotosForGallery, deletePhotos, moderatePhotos, type Gallery, type GalleryPhoto } from '@/data/services/galleryService'
+import { getGalleryById, getPhotosForGallery, deletePhotos, moderatePhotos, getPendingPhotosCount, type Gallery, type GalleryPhoto } from '@/data/services/galleryService'
 import { PhotoUploadZone } from '@/components/admin/galleries/PhotoUploadZone'
 import { PhotoGalleryGrid } from '@/components/admin/galleries/PhotoGalleryGrid'
 import { GalleryEditModal } from '@/components/admin/galleries/GalleryEditModal'
@@ -20,6 +20,7 @@ export default function PhotoDetail() {
 
   const [gallery, setGallery] = useState<Gallery | null>(null)
   const [photos, setPhotos] = useState<GalleryPhoto[]>([])
+  const [pendingCount, setPendingCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
 
@@ -38,20 +39,25 @@ export default function PhotoDetail() {
           throw galleryError || new Error('Gallery not found')
         }
 
-        // Load photos
-        const { data: photos, error: photosError } = await getPhotosForGallery(context, { gallery_id: galleryId, order_by: 'created_at', order_direction: 'asc' })
-        if (photosError) {
-          throw photosError
+        // Load photos and counts
+        const [photosResult, pendingResult] = await Promise.all([
+          getPhotosForGallery(context, { gallery_id: galleryId, order_by: 'created_at', order_direction: 'asc' }),
+          getPendingPhotosCount(context, galleryId)
+        ])
+
+        if (photosResult.error) {
+          throw photosResult.error
         }
 
-        const foundPhoto = photos?.find((p) => p.id === photoId)
+        const foundPhoto = photosResult.data?.find((p) => p.id === photoId)
         if (!foundPhoto) {
           throw new Error('Photo not found')
         }
 
         if (mounted) {
           setGallery(galleryData)
-          setPhotos(photos || [])
+          setPhotos(photosResult.data || [])
+          setPendingCount(pendingResult.data)
         }
       } catch (err) {
         if (mounted) {
@@ -82,10 +88,14 @@ export default function PhotoDetail() {
       const { error } = await moderatePhotos(context, ids, action)
       if (error) throw error
       showSuccess(action === 'approve' ? t('photos.success.photosApproved') : t('photos.success.photosRejected'))
-      // reload photos
+      // reload photos and counts
       if (!galleryId) return
-      const { data: refreshedPhotos } = await getPhotosForGallery(context, { gallery_id: galleryId })
-      setPhotos(refreshedPhotos || [])
+      const [photosResult, pendingResult] = await Promise.all([
+        getPhotosForGallery(context, { gallery_id: galleryId }),
+        getPendingPhotosCount(context, galleryId)
+      ])
+      setPhotos(photosResult.data || [])
+      setPendingCount(pendingResult.data)
     } catch (err) {
       showError(err instanceof Error ? err.message : tAny('photos.moderation.' + (action === 'approve' ? 'approveError' : 'rejectError')))
     }
@@ -135,10 +145,10 @@ export default function PhotoDetail() {
 
         {/* Stats */}
         <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-4 pa-gap-3">
-          <StatCard label={t('photos.stats.totalPhotos')} value={photos.length} />
-          <StatCard label={t('common.approved')} value={photos.filter((p) => (p.approval_status || p.status) === 'approved').length} />
-          <StatCard label={t('photos.pendingApproval.badge')} value={photos.filter((p) => (p.approval_status || p.status) === 'pending').length} />
-          <StatCard label={t('photos.stats.flagged')} value={photos.filter((p) => (p.approval_status || p.status) === 'rejected').length} />
+          <StatCard label={t('photos.stats.totalPhotos')} value={String(photos.length)} />
+          <StatCard label={t('common.approved')} value={String(photos.filter((p) => (p.approval_status || p.status) === 'approved').length)} />
+          <StatCard label={t('photos.pendingApproval.badge')} value={String(pendingCount)} />
+          <StatCard label={t('photos.stats.flagged')} value={String(photos.filter((p) => (p.approval_status || p.status) === 'rejected').length)} />
         </div>
 
         {/* Upload Zone */}
@@ -153,8 +163,12 @@ export default function PhotoDetail() {
             galleryId={gallery?.id || ''}
             onComplete={async () => {
               if (!context || !galleryId) return
-              const { data } = await getPhotosForGallery(context, { gallery_id: galleryId })
-              setPhotos(data || [])
+              const [photosResult, pendingResult] = await Promise.all([
+                getPhotosForGallery(context, { gallery_id: galleryId }),
+                getPendingPhotosCount(context, galleryId)
+              ])
+              setPhotos(photosResult.data || [])
+              setPendingCount(pendingResult.data)
             }}
             maxPhotos={25 - photos.length}
             requireApproval={gallery?.require_approval || false}
@@ -181,8 +195,12 @@ export default function PhotoDetail() {
               else {
                 showSuccess(t('photos.success.photosDeleted', { count: ids.length }))
                 if (!galleryId) return
-                const { data } = await getPhotosForGallery(context, { gallery_id: galleryId })
-                setPhotos(data || [])
+                const [photosResult, pendingResult] = await Promise.all([
+                  getPhotosForGallery(context, { gallery_id: galleryId }),
+                  getPendingPhotosCount(context, galleryId)
+                ])
+                setPhotos(photosResult.data || [])
+                setPendingCount(pendingResult.data)
               }
             }}
             showPendingBadge={gallery?.require_approval || false}

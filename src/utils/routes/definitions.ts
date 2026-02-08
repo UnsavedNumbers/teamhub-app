@@ -978,6 +978,20 @@ const admin = {
             description: 'Photo galleries',
             requiresOrg: true,
         },
+        browse: {
+            path: '/admin/photos/browse',
+            label: 'Browse',
+            icon: 'folder',
+            description: 'Browse galleries',
+            requiresOrg: true,
+        },
+        search: {
+            path: '/admin/photos/search',
+            label: 'Search',
+            icon: 'search',
+            description: 'Search galleries',
+            requiresOrg: true,
+        },
         create: {
             path: '/admin/photos/create',
             label: 'Create Gallery',
@@ -990,6 +1004,13 @@ const admin = {
             params: ['id'] as const,
             label: 'Gallery',
             icon: 'collections',
+            requiresOrg: true,
+        },
+        edit: {
+            path: '/admin/photos/:id/edit',
+            params: ['id'] as const,
+            label: 'Edit Gallery',
+            icon: 'edit',
             requiresOrg: true,
         },
         photo: {
@@ -1287,6 +1308,22 @@ const fan = {
             params: ['athleteId'] as const,
             label: 'Athlete Photos',
             icon: 'person',
+        },
+    },
+
+    // Videos
+    videos: {
+        list: {
+            path: '/fan/videos',
+            label: 'Videos',
+            icon: 'videocam',
+            description: 'Browse video library',
+        },
+        detail: {
+            path: '/fan/videos/:id',
+            params: ['id'] as const,
+            label: 'Video Details',
+            icon: 'play_circle',
         },
     },
 

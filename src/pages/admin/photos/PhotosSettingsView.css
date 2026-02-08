@@ -1,0 +1,45 @@
+.photos-settings {
+  width: 100%;
+  max-width: 800px;
+}
+
+.settings-card {
+  padding: var(--pa-space-6);
+}
+
+.settings-card h2 {
+  font-size: var(--pa-font-size-xl);
+  font-weight: 700;
+  margin: 0 0 var(--pa-space-6) 0;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pa-space-6);
+}
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pa-space-2);
+}
+
+.setting-label {
+  font-size: var(--pa-font-size-base);
+  font-weight: 600;
+  color: var(--pa-text);
+}
+
+.setting-help {
+  font-size: var(--pa-font-size-sm);
+  color: var(--pa-text-muted);
+  margin: 0;
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--pa-space-4);
+  border-top: 1px solid var(--pa-border-subtle);
+}

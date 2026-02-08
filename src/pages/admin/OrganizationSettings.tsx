@@ -64,7 +64,7 @@ import {
 
 import type { StripeConnectStatus } from '../../types/stripeConnect.types'
 
-import { type OrganizationSettings as OrgSettingsType } from '@/types/organizationSettings'
+import { type OrganizationSettings as OrgSettingsType, type GeneralSettings } from '@/types/organizationSettings'
 import ContactSection from './organizationSettings/ContactSection'
 import StaffSection from './organizationSettings/StaffSection'
 
@@ -95,7 +95,7 @@ export default function OrganizationSettings() {
 
   // Valid tab values for URL parameter
   const validTabs = useMemo(() => {
-    const baseTabs = ['overview', 'contact', 'general', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'staff', 'advanced']
+    const baseTabs = ['overview', 'contact', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'staff', 'advanced']
     if (hasPaymentAccess) {
       baseTabs.push('payments')
     }
@@ -344,8 +344,6 @@ export default function OrganizationSettings() {
         <TabsList className="pa-mb-6">
           <TabsTrigger value="overview">{t('admin.organizationSettings.tabs.overview')}</TabsTrigger>
           <TabsTrigger value="contact">{t('admin.organizationSettings.tabs.contact')}</TabsTrigger>
-          {/* Travel contacts merged into Contact tab */}
-          <TabsTrigger value="general">{t('admin.organizationSettings.tabs.general')}</TabsTrigger>
           <TabsTrigger value="appearance">{t('admin.organizationSettings.tabs.appearance')}</TabsTrigger>
           <TabsTrigger value="attendance">{t('admin.organizationSettings.tabs.attendance')}</TabsTrigger>
           <TabsTrigger value="registration">{t('admin.organizationSettings.tabs.registration')}</TabsTrigger>
@@ -357,7 +355,7 @@ export default function OrganizationSettings() {
         </TabsList>
 
         <TabsContent value="overview">
-          {orgDetails && <OverviewForm key={orgDetails.id + '-' + (orgDetails.updatedAt || 'initial')} org={orgDetails} onSave={handleSaveOverview} loading={saving} />}
+          {orgDetails && <OverviewForm key={orgDetails.id + '-' + (orgDetails.updatedAt || 'initial')} org={orgDetails} generalSettings={settings?.general} onSave={handleSaveOverview} onSaveGeneral={(d) => handleSaveSettings('general', d)} loading={saving} />}
 
           {/* Public URL slug — set/update slug for established orgs */}
           {currentOrganization?.id && (
@@ -390,10 +388,7 @@ export default function OrganizationSettings() {
         </TabsContent>
 
         {/* Travel contacts merged into Contact tab; section removed */}
-
-        <TabsContent value="general">
-          {settings && <GeneralConfigForm settings={settings.general} onSave={(d) => handleSaveSettings('general', d)} loading={saving} />}
-        </TabsContent>
+        {/* General settings (timezone/language) moved to Overview tab */}
 
         <TabsContent value="appearance">
           {themeSettings && (
@@ -645,7 +640,13 @@ function PublicUrlSlugForm({ orgId, initialSlug }: { orgId: string; initialSlug?
   )
 }
 
-function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (data: OrganizationUpdateDTO, file?: File) => void, loading: boolean }) {
+function OverviewForm({ org, generalSettings, onSave, onSaveGeneral, loading }: { 
+  org: Organization, 
+  generalSettings?: GeneralSettings,
+  onSave: (data: OrganizationUpdateDTO, file?: File) => void, 
+  onSaveGeneral: (data: any) => void,
+  loading: boolean 
+}) {
   const { t } = useI18n()
   const { control, handleSubmit, setValue, trigger, reset } = useForm<OrganizationUpdateDTO>({
     defaultValues: {
@@ -665,6 +666,17 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
   const [logoFile, setLogoFile] = useState<File | undefined>(undefined)
   const [logoError, setLogoError] = useState<string | null>(null)
   const [profileVisibleToFans, setProfileVisibleToFans] = useState(org.profile_visible_to_fans || false)
+  
+  // Localization state
+  const [timezone, setTimezone] = useState(generalSettings?.timezone || 'America/New_York')
+  const [defaultLanguage, setDefaultLanguage] = useState(generalSettings?.default_language || 'en')
+
+  const timezones = [
+    { value: 'America/New_York', label: t('admin.organizationSettings.general.timezones.eastern') },
+    { value: 'America/Chicago', label: t('admin.organizationSettings.general.timezones.central') },
+    { value: 'America/Denver', label: t('admin.organizationSettings.general.timezones.mountain') },
+    { value: 'America/Los_Angeles', label: t('admin.organizationSettings.general.timezones.pacific') },
+  ]
 
   // Sync form state when org prop changes (e.g., after save/reload)
   useEffect(() => {
@@ -690,12 +702,25 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
     console.log('OverviewForm: set profileVisibleToFans to', org.profile_visible_to_fans || false)
   }, [org, reset])
 
+  // Sync localization state when generalSettings change
+  useEffect(() => {
+    if (generalSettings) {
+      setTimezone(generalSettings.timezone || 'America/New_York')
+      setDefaultLanguage(generalSettings.default_language || 'en')
+    }
+  }, [generalSettings])
+
   return (
     <Card>
       <form onSubmit={handleSubmit((data) => {
         if (logoError) return
         const dataWithVisibility = { ...data, profile_visible_to_fans: profileVisibleToFans } as any
         onSave(dataWithVisibility, logoFile)
+        // Also save localization settings
+        onSaveGeneral({
+          timezone,
+          default_language: defaultLanguage,
+        })
       })}>
         <div className="pa-form-grid pa-form-grid-2">
           {/* Left Column: Basic Info */}
@@ -802,6 +827,31 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
           </div>
         </div>
 
+        {/* Localization Section */}
+        <div className="pa-mt-6 pa-pt-6 pa-border-t">
+          <div className="pa-form-grid pa-form-grid-2">
+            <div className="pa-form-group">
+              <Select 
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                label={t('admin.organizationSettings.general.timezoneLabel')} 
+                options={timezones} 
+              />
+            </div>
+            <div className="pa-form-group">
+              <Select
+                value={defaultLanguage}
+                onChange={(e) => setDefaultLanguage(e.target.value)}
+                label={t('admin.organizationSettings.general.languageLabel')}
+                options={[
+                  { value: 'en', label: t('admin.organizationSettings.general.languages.english') },
+                  { value: 'es', label: t('admin.organizationSettings.general.languages.spanish') }
+                ]}
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Public Visibility Section */}
         <div className="pa-mt-6 pa-pt-6 pa-border-t">
           <h3 className="pa-h3 pa-mb-4">Public Visibility</h3>
@@ -815,62 +865,6 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
 
         <div className="pa-form-actions">
           <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.overview.save')}</Button>
-        </div>
-      </form>
-    </Card>
-  )
-}
-
-function GeneralConfigForm({ settings, onSave, loading }: { settings: OrgSettingsType['general'], onSave: (d: any) => void, loading: boolean }) {
-  const { t } = useI18n()
-  const { control, handleSubmit, reset } = useForm({
-    defaultValues: {
-      organization_name: settings.organization_name,
-      timezone: settings.timezone,
-      default_language: settings.default_language || 'en',
-    }
-  })
-
-  useEffect(() => {
-    reset({
-      organization_name: settings.organization_name,
-      timezone: settings.timezone,
-      default_language: settings.default_language || 'en',
-    })
-  }, [reset, settings.organization_name, settings.timezone, settings.default_language])
-
-  const timezones = [
-    { value: 'America/New_York', label: t('admin.organizationSettings.general.timezones.eastern') },
-    { value: 'America/Chicago', label: t('admin.organizationSettings.general.timezones.central') },
-    { value: 'America/Denver', label: t('admin.organizationSettings.general.timezones.mountain') },
-    { value: 'America/Los_Angeles', label: t('admin.organizationSettings.general.timezones.pacific') },
-  ]
-
-  return (
-    <Card>
-      <form onSubmit={handleSubmit(onSave)}>
-        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.general.title')}</h3>
-        <div className="pa-form-grid pa-form-grid-2">
-          <div className="pa-form-group">
-            <Controller name="timezone" control={control} render={({field}) => (
-               <Select {...field} label={t('admin.organizationSettings.general.timezoneLabel')} options={timezones} />
-            )} />
-          </div>
-           <div className="pa-form-group">
-            <Controller name="default_language" control={control} render={({field}) => (
-               <Select
-                 {...field}
-                 label={t('admin.organizationSettings.general.languageLabel')}
-                 options={[
-                   { value: 'en', label: t('admin.organizationSettings.general.languages.english') },
-                   { value: 'es', label: t('admin.organizationSettings.general.languages.spanish') }
-                 ]}
-               />
-            )} />
-          </div>
-        </div>
-        <div className="pa-form-actions">
-          <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.general.save')}</Button>
         </div>
       </form>
     </Card>

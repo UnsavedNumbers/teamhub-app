@@ -1188,22 +1188,39 @@ export function useVideoMutations(): UseVideoMutationsReturn {
   
   const deleteVideo = useCallback(async (videoId: string): Promise<boolean> => {
     try {
+      // Log diagnostic information
+      console.log('[DEBUG] Attempting to delete video:', { videoId, userId: user?.id })
+      
       // Soft delete
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('videos')
         .update({ 
           status: 'deleted',
           deleted_at: new Date().toISOString(),
         })
         .eq('id', videoId)
+        .select()
+        .single()
       
-      if (error) throw error
+      if (error) {
+        console.error('[DEBUG] Video delete error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          videoId,
+          userId: user?.id
+        })
+        throw error
+      }
+      
+      console.log('[DEBUG] Video deleted successfully:', { videoId, result: data })
       return true
     } catch (err) {
-      console.error('Error deleting video:', err)
+      console.error('[DEBUG] Error deleting video:', err)
       return false
     }
-  }, [])
+  }, [user?.id])
   
   const linkAthletes = useCallback(async (
     videoId: string,

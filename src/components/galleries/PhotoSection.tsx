@@ -155,7 +155,7 @@ export function PhotoSection({
       {/* Black Header Bar - Matching other right column cards */}
       <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
         <Icon name="photo_library" size="text-2xl" />
-        {title || t('photos.sectionTitle')}
+        {title || t('photos.sectionTitle' as any)}
         {gallery && gallery.photo_count !== undefined && (
           <span className="text-sm font-normal text-gray-300 ml-2">
             ({gallery.photo_count} {gallery.photo_count === 1 ? t('photos.photo') : t('photos.photos')})
@@ -166,7 +166,7 @@ export function PhotoSection({
             onClick={viewAll}
             className="ml-auto text-xs font-normal text-gray-300 hover:text-white flex items-center gap-1 transition-colors"
           >
-            {t('photos.viewAll')}
+            {t('photos.viewAll' as any)}
             <span className="material-symbols-outlined text-sm">open_in_new</span>
           </button>
         )}

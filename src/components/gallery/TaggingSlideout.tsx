@@ -388,7 +388,7 @@ export function TaggingSlideout({
       />
 
       {/* Slideout Panel */}
-      <div className="relative ml-auto flex h-full w-full max-w-md flex-col shadow-xl transition-transform">
+      <div className="relative ml-auto flex h-full w-full max-w-md flex-col bg-white dark:bg-slate-900 shadow-xl transition-transform">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('gallery.tagging.title')}</h2>
@@ -403,9 +403,8 @@ export function TaggingSlideout({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto bg-slate-100 dark:bg-slate-850">
-          {/* Photo preview */}
-          <div className="aspect-[4/3] w-full overflow-hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900">{/* Photo preview */}
+          <div className="aspect-[4/3] w-full overflow-hidden bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
             <button
               onClick={onOpenLightbox}
               className="relative h-full w-full group"
@@ -425,7 +424,7 @@ export function TaggingSlideout({
           </div>
 
           {/* Search */}
-          <div className="p-4">
+          <div className="p-4 bg-white dark:bg-slate-900">
             <div className="relative">
               <input
                 ref={searchInputRef}
@@ -434,10 +433,10 @@ export function TaggingSlideout({
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 pr-24 dark:border-slate-600 dark:bg-slate-800"
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 px-4 py-2 pr-24 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
               {searchQuery && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 dark:text-slate-500">
                   {t('gallery.tagging.enterToAdd')}
                 </div>
               )}
@@ -451,9 +450,9 @@ export function TaggingSlideout({
 
           {/* Tagged people chips */}
           {taggedPeople.length > 0 && (
-            <div className="border-b border-slate-200 px-4 pb-4 dark:border-slate-700">
+            <div className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 pb-4">
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                   {t('gallery.tagging.peopleTagged', {
                     count: taggedPeople.length,
                     plural: taggedPeople.length !== 1 ? 's' : '',
@@ -464,15 +463,15 @@ export function TaggingSlideout({
                 {taggedPeople.map((person) => (
                   <div
                     key={person.id}
-                    className="flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 dark:bg-blue-900/30"
+                    className="flex items-center gap-2 rounded-full bg-blue-100 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800 px-3 py-1"
                   >
-                    <span className="text-sm">{person.displayName}</span>
+                    <span className="text-sm text-blue-900 dark:text-blue-100">{person.displayName}</span>
                     <button
                       onClick={() => removePerson(person.id)}
                       aria-label={t('gallery.tagging.removeButtonLabel', {
                         name: person.displayName,
                       })}
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
                     >
                       <Icon name="close" size="text-xs" />
                     </button>
@@ -483,8 +482,8 @@ export function TaggingSlideout({
           )}
 
           {/* Suggestions / Search results */}
-          <div className="p-4">
-            <h3 className="mb-2 text-sm font-semibold">{sectionLabel}</h3>
+          <div className="p-4 bg-white dark:bg-slate-900">
+            <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{sectionLabel}</h3>
 
             {loading ? (
               <div className="flex justify-center py-8">
@@ -508,7 +507,7 @@ export function TaggingSlideout({
                     <button
                       key={person.id}
                       onClick={() => addPerson(person)}
-                      className="flex w-full items-center gap-3 rounded-lg border-2 border-slate-200 p-3 text-left transition-colors hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600"
+                      className="flex w-full items-center gap-3 rounded-lg border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 text-left transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-slate-50 dark:hover:bg-slate-750"
                       aria-label={t('gallery.tagging.addToTagged', {
                         name: displayName,
                       })}
@@ -531,18 +530,18 @@ export function TaggingSlideout({
 
                       {/* Name */}
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">
+                        <div className="font-medium truncate text-slate-900 dark:text-white">
                           <span dangerouslySetInnerHTML={{ __html: highlightedName }} />
                         </div>
                         {person.role && (
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-slate-500 dark:text-slate-400">
                             {person.role}
                           </div>
                         )}
                       </div>
 
                       {/* Add button */}
-                      <div className="text-blue-500">
+                      <div className="text-blue-500 dark:text-blue-400">
                         <Icon name="add" size="text-lg" />
                       </div>
                     </button>
