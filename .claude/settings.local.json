@@ -3,7 +3,11 @@
     "allow": [
       "Bash(supabase functions logs:*)",
       "Bash(npx -y tsx -e \"\nconst Stripe = require\\(''stripe''\\);\nconst stripe = new Stripe\\(process.env.STRIPE_SECRET_KEY || ''sk_test_51P3Ea7KziXQqGRfkJKfgvt2vFa9UoP3Wl5PyVWq85qkFYqXHa0TgdhHPNgpuQoqxELJly6qWqDkMGRmkEjpm6xEq00JeZmuqZz''\\);\n\nasync function getSession\\(\\) {\n  const session = await stripe.checkout.sessions.retrieve\\(''cs_test_a1aHYL5TwVurrHcAzpvJ2TyRNQbaxhQRWNau4lGCBRlTpuwcE0UjmFrvqF''\\);\n  console.log\\(JSON.stringify\\(session, null, 2\\)\\);\n}\n\ngetSession\\(\\).catch\\(console.error\\);\n\")",
-      "Bash(npx -y tsx:*)"
+      "Bash(npx -y tsx:*)",
+      "Bash(npm test:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npx vitest run:*)"
     ]
   }
 }
