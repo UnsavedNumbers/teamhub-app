@@ -5,7 +5,8 @@
  * and provides simplified interfaces for fan use cases
  */
 
-import { getGalleriesForUser, getGalleryById, getPhotosForGallery, type Gallery, type GalleryPhoto, type GetPhotosParams } from './galleryService'
+import { supabase } from '../../lib/supabase'
+import { getGalleriesForUser, getGalleryById, getPhotosForGallery, type Gallery, type GalleryPhoto, type GetPhotosParams, type KeysetCursor } from './galleryService'
 import type { UserContext } from '../fake/userContext'
 
 export interface FanGallery extends Gallery {
@@ -14,17 +15,56 @@ export interface FanGallery extends Gallery {
     team_name?: string
 }
 
+export interface FanGalleryGroup {
+    org_id: string
+    org_name: string | null
+    galleries: FanGallery[]
+}
+
 /**
  * Get galleries visible to fans
  * Returns only galleries where fans_can_see = true
  */
 export async function getFanGalleries(
-    org_ids?: string[]
-): Promise<{ data: FanGallery[]; error: Error | null }> {
+    options?: {
+        org_ids?: string[]
+        search?: string
+        limit?: number
+        cursor?: KeysetCursor
+        order_direction?: 'asc' | 'desc'
+    }
+): Promise<{ data: FanGallery[]; grouped: FanGalleryGroup[]; error: Error | null }> {
     try {
+        const { data: userData, error: userError } = await supabase.auth.getUser()
+        if (userError || !userData.user) {
+            return { data: [], grouped: [], error: userError || new Error('Authentication required') }
+        }
+
+        const userId = userData.user.id
+
+        let orgIds: string[] = options?.org_ids || []
+
+        if (orgIds.length === 0) {
+            const [followsRes, ordersRes] = await Promise.all([
+                supabase
+                    .from('fan_org_follows')
+                    .select('org_id')
+                    .eq('user_id', userId),
+                supabase
+                    .from('ticket_orders')
+                    .select('org_id')
+                    .eq('purchaser_user_id', userId),
+            ])
+
+            const combined = new Set<string>()
+            ; (followsRes.data || []).forEach((row: any) => row.org_id && combined.add(row.org_id))
+            ; (ordersRes.data || []).forEach((row: any) => row.org_id && combined.add(row.org_id))
+            orgIds = Array.from(combined)
+        }
+
         // Temporary context for querying (fan users don't have org context)
         const context: UserContext = {
-            userId: '', // Will be populated by RLS
+            userId: userId,
             email: null,
             orgId: '',
             roles: [],
@@ -33,11 +73,15 @@ export async function getFanGalleries(
 
         // Get all galleries (RLS will filter admin-only ones)
         const { data: allGalleries, error } = await getGalleriesForUser(context, {
-            org_id: org_ids?.[0], // For now, filter by first org if provided
+            org_ids: orgIds.length > 0 ? orgIds : undefined,
+            search: options?.search,
+            limit: options?.limit,
+            cursor: options?.cursor,
+            order_direction: options?.order_direction,
         })
 
         if (error) {
-            return { data: [], error }
+            return { data: [], grouped: [], error }
         }
 
         // Filter for fan visibility and galleries with at least one photo
@@ -45,13 +89,30 @@ export async function getFanGalleries(
             (gallery: any) => gallery.fans_can_see === true && (gallery.photo_count || 0) > 0
         ) as FanGallery[]
 
+        const grouped: FanGalleryGroup[] = []
+        const groupMap = new Map<string, FanGalleryGroup>()
+        fanGalleries.forEach((gallery) => {
+            const orgId = gallery.org_id
+            if (!groupMap.has(orgId)) {
+                groupMap.set(orgId, {
+                    org_id: orgId,
+                    org_name: gallery.org_name || null,
+                    galleries: [],
+                })
+            }
+            groupMap.get(orgId)?.galleries.push(gallery)
+        })
+        grouped.push(...Array.from(groupMap.values()))
+
         return {
             data: fanGalleries,
+            grouped,
             error: null,
         }
     } catch (err) {
         return {
             data: [],
+            grouped: [],
             error: err instanceof Error ? err : new Error('Failed to get fan galleries'),
         }
     }

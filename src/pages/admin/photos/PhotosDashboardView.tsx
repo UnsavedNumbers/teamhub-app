@@ -147,7 +147,6 @@ export function PhotosDashboardView() {
         <StatCard 
           label={t('photos.dashboard.recentActivity')} 
           value={stats.photosThisWeek}
-          subtitle={t('photos.dashboard.photosAddedThisWeek')}
         />
         <StatCard 
           label={t('photos.pendingApproval.adminMessage', { count: stats.pending })} 
@@ -156,10 +155,6 @@ export function PhotosDashboardView() {
         <StatCard 
           label={t('photos.dashboard.storageUsed')} 
           value={storageInfo ? `${formatStorage(storageInfo.currentUsage)} GB` : '0 GB'}
-          subtitle={storageInfo && storageInfo.limit > 0 
-            ? `${t('photos.dashboard.of')} ${formatStorage(storageInfo.limit)} GB ${t('photos.dashboard.limit')}`
-            : undefined
-          }
         />
       </div>
 

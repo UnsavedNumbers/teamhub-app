@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Card,
   PageHeader,
@@ -13,6 +13,7 @@ import {
 } from '@/components/platformAdmin'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '../../i18n/useI18n'
+import { usePhotoFilters } from '../../hooks/usePhotoFilters'
 import { USE_FAKE_DATA } from '@/data/config'
 import { GalleryManagementSection } from '@/components/admin/galleries/GalleryManagementSection'
 import { getGalleriesForUser, type Gallery } from '@/data/services/galleryService'
@@ -56,11 +57,15 @@ export default function AdminPhotos() {
   const [galleries, setGalleries] = useState<Gallery[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
   const [activeType, setActiveType] = useState<'all' | Gallery['gallery_type']>('all')
-  const [sortBy, setSortBy] = useState<'recent' | 'az' | 'photos'>('recent')
   const [showManagement] = useState(false)
   const [showDemoModal, setShowDemoModal] = useState(false)
+  const { filters, setFilters } = usePhotoFilters({
+    viewKey: 'adminPhotos',
+    defaultSort: 'recent',
+    allowedSorts: ['recent', 'az', 'photos'],
+    persistDensity: false,
+  })
 
   useEffect(() => {
     let mounted = true
@@ -76,7 +81,10 @@ export default function AdminPhotos() {
       // Demo mode: use mock data
       if (USE_FAKE_DATA) {
         console.log('[Photos] USE_FAKE_DATA is true, using mock data')
-        const mockGalleries = getMockGalleriesForOrg(context.orgId)
+        const mockGalleriesDb = getMockGalleriesForOrg(context.orgId)
+        const mockGalleries = mockGalleriesDb.map(
+          (g) => ({ ...g, can_download: g.can_download ?? undefined }) as unknown as Gallery,
+        )
         setGalleries(mockGalleries)
         setLoading(false)
         return
@@ -111,13 +119,13 @@ export default function AdminPhotos() {
     if (activeType !== 'all') {
       result = result.filter((g) => g.gallery_type === activeType)
     }
-    if (search.trim()) {
-      const term = search.toLowerCase()
+    if (filters.q.trim()) {
+      const term = filters.q.toLowerCase()
       result = result.filter((g) => g.name.toLowerCase().includes(term))
     }
-    if (sortBy === 'az') {
+    if (filters.sort === 'az') {
       result = [...result].sort((a, b) => a.name.localeCompare(b.name))
-    } else if (sortBy === 'photos') {
+    } else if (filters.sort === 'photos') {
       result = [...result].sort((a, b) => (b.photo_count || 0) - (a.photo_count || 0))
     } else {
       result = [...result].sort(
@@ -127,7 +135,7 @@ export default function AdminPhotos() {
       )
     }
     return result
-  }, [galleries, activeType, search, sortBy])
+  }, [galleries, activeType, filters.q, filters.sort])
 
   const totals = useMemo(() => {
     const totalPhotos = galleries.reduce((sum, g) => sum + (g.photo_count || 0), 0)
@@ -154,11 +162,31 @@ export default function AdminPhotos() {
     navigate(getLink('admin.photos.create'))
   }
 
-  const getEntityLabel = (gallery: Gallery): string => {
-    // This would ideally fetch entity names from related tables
-    // For now, show entity type
-    const typeLabel = t(`photos.galleryType.${gallery.gallery_type}`)
-    return typeLabel
+  const getEntityMeta = (gallery: Gallery): { label: string; link?: string } => {
+    const label = gallery.entity_name || t(`photos.galleryType.${gallery.gallery_type}`)
+    if (!gallery.entity_id) {
+      if (gallery.gallery_type === 'org') {
+        return { label: gallery.org_name || label, link: getLink('admin.organization.base') }
+      }
+      return { label }
+    }
+
+    switch (gallery.gallery_type) {
+      case 'team':
+        return { label, link: getLink('admin.teams.detail', { id: gallery.entity_id }) }
+      case 'event':
+        return { label, link: getLink('admin.events.detail', { id: gallery.entity_id }) }
+      case 'season':
+        return { label, link: getLink('admin.seasons.detail', { id: gallery.entity_id }) }
+      case 'program':
+        return { label, link: getLink('admin.programs.detail', { id: gallery.entity_id }) }
+      case 'athlete':
+        return { label, link: getLink('admin.athletes.detail', { id: gallery.entity_id }) }
+      case 'travel':
+        return { label, link: getLink('admin.travel.edit', { id: gallery.entity_id }) }
+      default:
+        return { label }
+    }
   }
 
   return (
@@ -183,8 +211,8 @@ export default function AdminPhotos() {
             <span className="material-symbols-outlined search-icon">search</span>
             <Input
               placeholder={t('photos.filters.search')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={filters.q}
+              onChange={(e) => setFilters({ q: e.target.value })}
             />
           </div>
 
@@ -209,12 +237,12 @@ export default function AdminPhotos() {
           <div className="filter-chip">
             <div className="filter-chip-label">{t('common.sort')}</div>
             <Select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              value={filters.sort}
+              onChange={(e) => setFilters({ sort: e.target.value })}
               options={[
                 { label: t('common.mostRecent'), value: 'recent' },
-                { label: 'A → Z', value: 'az' },
-                { label: t('photos.stats.photosCount', { count: '' }).replace('0', 'Most'), value: 'photos' },
+                { label: t('photos.filters.az'), value: 'az' },
+                { label: t('photos.filters.mostPhotos'), value: 'photos' },
               ]}
             />
           </div>
@@ -274,7 +302,17 @@ export default function AdminPhotos() {
                     </div>
                   )}
                   <div className="gallery-badge">
-                    <Badge variant="info">{getEntityLabel(gallery)}</Badge>
+                    {(() => {
+                      const meta = getEntityMeta(gallery)
+                      if (meta.link) {
+                        return (
+                          <Link to={meta.link} onClick={(e) => e.stopPropagation()}>
+                            <Badge variant="info">{meta.label}</Badge>
+                          </Link>
+                        )
+                      }
+                      return <Badge variant="info">{meta.label}</Badge>
+                    })()}
                   </div>
                 </div>
                 <div className="gallery-body">

@@ -7,6 +7,7 @@ import { mapFeatureEntitlement, mapLicenseTier, mapTierFeatureAssignment } from 
 import type { FeatureEntitlement, LicenseTier, TierFeatureAssignment } from '../../types/domain/License'
 import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
 import { showSuccess, showError } from '../../utils/toast'
+import { useI18n } from '../../i18n/useI18n'
 
 const FEATURE_CATEGORIES_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
 const FEATURE_TYPES_OPTIONS = FEATURE_TYPES.map(type => ({ value: type, label: type }))
@@ -15,6 +16,7 @@ export default function FeatureDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const isNew = id === 'new'
+  const { t } = useI18n()
 
   const [feature, setFeature] = useState<Partial<FeatureEntitlement>>({
     featureKey: '',
@@ -35,6 +37,7 @@ export default function FeatureDetail() {
   const [featureTypeOverride, setFeatureTypeOverride] = useState(false)
   const [savingAssignment, setSavingAssignment] = useState<Record<string, boolean>>({})
   const [showUnsavedBanner, setShowUnsavedBanner] = useState(false)
+  const [pendingLimits, setPendingLimits] = useState<Record<string, number | null>>({})
 
   const fetchFeature = useCallback(async () => {
     if (isNew) return
@@ -87,11 +90,14 @@ export default function FeatureDetail() {
       if (assignmentsError) throw assignmentsError
 
       const assignmentsMap: Record<string, TierFeatureAssignment> = {}
+      const limitsMap: Record<string, number | null> = {}
       ;(data || []).forEach((assignment) => {
         const mapped = mapTierFeatureAssignment(assignment)
         assignmentsMap[mapped.licenseTierId] = mapped
+        limitsMap[mapped.licenseTierId] = mapped.limitValue ?? null
       })
       setAssignments(assignmentsMap)
+      setPendingLimits(limitsMap)
     } catch (err: any) {
       console.error('Error fetching assignments:', err)
     }
@@ -188,6 +194,31 @@ export default function FeatureDetail() {
     } catch (err: any) {
       console.error('Error updating role access:', err)
       showError(err.message || 'Failed to update role access')
+    } finally {
+      setSavingAssignment(prev => ({ ...prev, [tierId]: false }))
+    }
+  }
+
+  const updateAssignmentLimit = async (tierId: string, limitValue: number | null) => {
+    if (isNew || !id) return
+    const assignment = assignments[tierId]
+    if (!assignment?.id) return
+
+    setSavingAssignment(prev => ({ ...prev, [tierId]: true }))
+    try {
+      const { error: updateError } = await supabase
+        .from('tier_feature_assignments')
+        .update({
+          limit_value: limitValue,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', assignment.id)
+
+      if (updateError) throw updateError
+      await fetchAssignments()
+      showSuccess(t('platformAdmin.featureDetail.limitUpdated'))
+    } catch (err: any) {
+      showError(err.message || t('platformAdmin.featureDetail.limitUpdateError'))
     } finally {
       setSavingAssignment(prev => ({ ...prev, [tierId]: false }))
     }
@@ -351,6 +382,16 @@ export default function FeatureDetail() {
 
         // Update original feature after successful save
         setOriginalFeature(feature)
+        
+        // Save all pending limit changes
+        const limitPromises = Object.entries(pendingLimits).map(async ([tierId, limitValue]) => {
+          const assignment = assignments[tierId]
+          if (assignment?.id && limitValue !== assignment.limitValue) {
+            await updateAssignmentLimit(tierId, limitValue)
+          }
+        })
+        await Promise.all(limitPromises)
+        
         showSuccess('Feature updated successfully!')
         return true
       }
@@ -758,9 +799,32 @@ export default function FeatureDetail() {
                     <hr className="pa-tier-assignment-card__divider" />
                     <div className="pa-tier-assignment-card__details">
                       {feature.featureType === 'limit' && (
-                        <span><strong>Limit:</strong> {assignment.limitValue ?? 'Not set'}</span>
+                        <div className="pa-form-group" style={{ marginBottom: 'var(--pa-space-4)' }}>
+                          <label className="pa-label" style={{ fontSize: '12px', marginBottom: 'var(--pa-space-2)' }}>
+                            {t('platformAdmin.featureDetail.limitLabel')}
+                          </label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="999999"
+                            step="1"
+                            value={pendingLimits[tier.id] ?? assignment.limitValue ?? ''}
+                            onChange={(e) => {
+                              const value = e.target.value
+                              const numValue = value === '' ? null : parseInt(value, 10)
+                              if (numValue !== null && (Number.isNaN(numValue) || numValue < 0 || numValue > 999999)) {
+                                return
+                              }
+                              setPendingLimits(prev => ({ ...prev, [tier.id]: numValue }))
+                            }}
+                            placeholder="0"
+                            helper={t('platformAdmin.featureDetail.limitHelper')}
+                            disabled={isSaving || isNew}
+                            style={{ maxWidth: '180px' }}
+                          />
+                        </div>
                       )}
-                      <div className="pa-form-group" style={{ marginBottom: 0, marginTop: feature.featureType === 'limit' ? 'var(--pa-space-3)' : 0 }}>
+                      <div className="pa-form-group" style={{ marginBottom: 0 }}>
                         <label className="pa-label" style={{ fontSize: '12px', marginBottom: 'var(--pa-space-2)' }}>
                           Role Access
                         </label>

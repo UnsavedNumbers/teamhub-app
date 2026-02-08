@@ -32,6 +32,7 @@ export function AdminPhotosLayout() {
   }
 
   const currentView = VIEWS.find(v => location.pathname === v.path || (v.key === 'dashboard' && location.pathname === '/admin/photos')) || VIEWS[0]
+  void currentView
 
   return (
     <div className="pa-root admin-photos-layout">

@@ -1311,6 +1311,22 @@ const fan = {
         },
     },
 
+    // Videos
+    videos: {
+        list: {
+            path: '/fan/videos',
+            label: 'Videos',
+            icon: 'videocam',
+            description: 'Browse video library',
+        },
+        detail: {
+            path: '/fan/videos/:id',
+            params: ['id'] as const,
+            label: 'Video Details',
+            icon: 'play_circle',
+        },
+    },
+
     // My Tickets
     tickets: {
         list: {

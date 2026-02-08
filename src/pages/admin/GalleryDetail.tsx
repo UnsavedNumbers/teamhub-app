@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import { Button, Card, InlineNotice } from '@/components/platformAdmin'
@@ -8,15 +8,22 @@ import {
   deleteGallery,
   deletePhotos,
   getGalleryById,
+  getAlbumsForGallery,
   getPhotosForGallery,
   getGalleryPhotoUrl,
   moderatePhotos,
   type Gallery,
   type GalleryPhoto,
+  type GalleryAlbum,
+  type KeysetCursor,
 } from '@/data/services/galleryService'
 import { getMockGalleryById, getMockPhotosForGallery } from '@/data/fake/mockGalleries'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
+import { usePhotoFilters } from '@/hooks/usePhotoFilters'
+import { PhotoFilterBar } from '@/components/gallery/PhotoFilterBar'
+import { useInfinitePhotos } from '@/hooks/useInfinitePhotos'
+import { buildPhotoQuery } from '@/utils/buildPhotoQuery'
 import { USE_FAKE_DATA } from '@/data/config'
 import { showError, showSuccess } from '@/utils/toast'
 import { PhotoUploadZone } from '@/components/admin/galleries/PhotoUploadZone'
@@ -24,91 +31,182 @@ import { PhotoGalleryGrid } from '@/components/admin/galleries/PhotoGalleryGrid'
 import { GalleryEditModal } from '@/components/admin/galleries/GalleryEditModal'
 import { TaggingSlideout } from '@/components/gallery/TaggingSlideout'
 import { BulkTaggingModal } from '@/components/gallery/BulkTaggingModal'
+import { AlbumManager } from '@/components/gallery/AlbumManager'
 import { getLink } from '@/utils/routes'
-import { getEventDetails } from '@/data/services/eventsService'
-import type { CalendarEvent } from '@/types/calendar'
 
 const MAX_PHOTOS_PER_GALLERY = 25
-const PHOTOS_PER_PAGE = 12
+const GRID_PAGE_SIZE_MOBILE = 30
+const GRID_PAGE_SIZE_DESKTOP = 48
+
+const getGridPageSize = () =>
+  typeof window !== 'undefined' && window.innerWidth < 768 ? GRID_PAGE_SIZE_MOBILE : GRID_PAGE_SIZE_DESKTOP
 
 export default function GalleryDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { context } = useUserContext()
   const { t } = useI18n()
-  const tAny = t as any
+
+  console.log('[GalleryDetail] Component mounted - id:', id, 'context available:', !!context)
+
+  const { filters, setFilters, clearFilters, setDensity } = usePhotoFilters({
+    viewKey: `adminGallery:${id || 'unknown'}`,
+    defaultSort: 'recent',
+    allowedSorts: ['recent', 'oldest'],
+    defaultStatus: 'all',
+    allowedStatuses: ['all', 'approved', 'pending', 'rejected'],
+    persistDensity: true,
+  })
+  void setDensity
 
   const [gallery, setGallery] = useState<Gallery | null>(null)
   const [photos, setPhotos] = useState<GalleryPhoto[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
-  const [entityInfo, setEntityInfo] = useState<any>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [visibleCount, setVisibleCount] = useState(PHOTOS_PER_PAGE)
+  const [albums, setAlbums] = useState<GalleryAlbum[]>([])
+  const cursorRef = useRef<KeysetCursor | null>(null)
+  const [hasMore, setHasMore] = useState(true)
+  const [gridPageSize, setGridPageSize] = useState(getGridPageSize)
+  const [rowsPerPage, setRowsPerPage] = useState(25)
+  const [page, setPage] = useState(1)
   const [taggingPhoto, setTaggingPhoto] = useState<GalleryPhoto | null>(null)
   const [taggingPhotoIndex, setTaggingPhotoIndex] = useState<number>(-1)
   const [lightboxIndex, setLightboxIndex] = useState(-1)
   const [bulkTaggingPhotos, setBulkTaggingPhotos] = useState<GalleryPhoto[]>([])
+  const mountedRef = useRef(true)
+  const loadingMoreRef = useRef(false)
 
-  const load = async () => {
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleResize = () => {
+      setGridPageSize(getGridPageSize())
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const loadGallery = useCallback(async () => {
     if (!id || !context) return
-    setLoading(true)
-
-    // Demo mode: use mock data
     if (USE_FAKE_DATA) {
-      const mockGallery = getMockGalleryById(id)
-      const mockPhotos = getMockPhotosForGallery(id)
-      setGallery(mockGallery || null)
-      setPhotos(mockPhotos)
-      setLoading(false)
+      const mockGalleryDb = getMockGalleryById(id)
+      if (mountedRef.current) {
+        setGallery(
+          mockGalleryDb
+            ? ({ ...mockGalleryDb, can_download: mockGalleryDb.can_download ?? undefined } as unknown as Gallery)
+            : null,
+        )
+      }
       return
     }
 
-    const [gRes, pRes] = await Promise.all([
-      getGalleryById(context, id),
-      getPhotosForGallery(context, { gallery_id: id, order_by: 'created_at', order_direction: 'asc' }),
-    ])
-    if (gRes.error) showError(gRes.error.message)
-    if (pRes.error) showError(pRes.error.message)
-    setGallery(gRes.data || null)
-    setPhotos(pRes.data || [])
-    
-    // Load entity info if gallery has entity_id
-    if (gRes.data?.entity_id && gRes.data?.gallery_type === 'event') {
-      // Fetch actual event details
-      const { data: eventData, error: eventError } = await getEventDetails(context, gRes.data.entity_id)
-      if (!eventError && eventData) {
-        const eventLocation = eventData.event_location
-        setEntityInfo({
-          venue: eventLocation?.venue_name || eventLocation?.name || null,
-          city: eventLocation?.city || null,
-          state: eventLocation?.state || null,
-          eventTitle: eventData.title,
-        })
-      }
-    } else if (gRes.data?.entity_id) {
-      // For other gallery types, keep the TODO structure for now
-      // TODO: Load entity info for team, program, season, etc.
-      setEntityInfo({
-        sport: 'Soccer',
-        program: 'Travel',
-        level: 'U12 Boys',
-        season: 'Fall 2025',
-        team: 'U12 Eagles',
-        venue: 'Starlight Complex',
-        city: 'Austin',
-        state: 'TX',
-        date: gRes.data.created_at
-      })
+    ["GalleryDetail] Fetching gallery from database - id:', id)\n    const { data, error } = await getGalleryById(context, id)\n    console.log('[GalleryDetail] Gallery fetch result - data:', data, 'error:', error)\n    if (!mountedRef.current) return\n    if (error) {\n      console.log('[GalleryDetail] Gallery fetch error:', error)\n      showError(error.message)\n      return\n    }\n    console.log('[GalleryDetail] Setting gallery state - gallery exists:', !!data)\n    setGallery(data || null)"]
+  }, [id, context])
+
+  const loadAlbums = useCallback(async () => {
+    if (!id || !context || USE_FAKE_DATA) return
+    const { data, error } = await getAlbumsForGallery(context, id)
+    if (!mountedRef.current) return
+    if (error) {
+      showError(error.message)
+      return
     }
-    
+    setAlbums(data)
+  }, [id, context])
+
+  const loadPhotos = useCallback(async (reset: boolean): Promise<GalleryPhoto[] | null> => {
+    if (!id || !context) return null
+    if (loadingMoreRef.current && !reset) return null
+
+    if (reset) {
+      setLoading(true)
+      loadingMoreRef.current = false
+      cursorRef.current = null
+      setHasMore(true)
+    } else {
+      loadingMoreRef.current = true
+      setLoadingMore(true)
+    }
+
+    if (USE_FAKE_DATA) {
+      const mockPhotosDb = getMockPhotosForGallery(id)
+      const mockPhotos = mockPhotosDb.map(
+        (p) => ({ ...p, can_download: p.can_download ?? undefined }) as unknown as GalleryPhoto,
+      )
+      if (mountedRef.current) {
+        setPhotos(mockPhotos)
+        setHasMore(false)
+        setLoading(false)
+        loadingMoreRef.current = false
+        setLoadingMore(false)
+      }
+      return mockPhotos
+    }
+
+    const albumId = filters.album && filters.album !== 'favorites' ? filters.album : undefined
+    const limit = viewMode === 'grid' ? gridPageSize : rowsPerPage
+    const offset = viewMode === 'list' ? (page - 1) * rowsPerPage : undefined
+
+    const query = buildPhotoQuery(filters, {
+      gallery_id: id,
+      album_id: albumId,
+      limit,
+      offset,
+    })
+
+    const { data, error } = await getPhotosForGallery(context, {
+      ...query,
+      cursor: viewMode === 'grid' && !reset ? cursorRef.current || undefined : undefined,
+    })
+
+    if (!mountedRef.current) return null
+
+    if (error) {
+      showError(error.message)
+    } else {
+      if (viewMode === 'grid') {
+        setPhotos((prev) => (reset ? data : [...prev, ...data]))
+        const last = data[data.length - 1]
+        cursorRef.current = last ? { created_at: last.created_at, id: last.id } : cursorRef.current
+        setHasMore(data.length === limit)
+      } else {
+        setPhotos(data)
+        setHasMore(data.length === limit)
+      }
+    }
+
     setLoading(false)
-  }
+    loadingMoreRef.current = false
+    setLoadingMore(false)
+    return data || null
+  }, [id, context, filters, viewMode, gridPageSize, rowsPerPage, page])
 
   useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+    loadGallery()
+    loadAlbums()
+  }, [loadGallery, loadAlbums])
+
+  useEffect(() => {
+    if (viewMode === 'list') {
+      setPage(1)
+    }
+  }, [viewMode, filters.q, filters.album, filters.athlete, filters.sort, filters.status, filters.from, filters.to])
+
+  useEffect(() => {
+    loadPhotos(true)
+  }, [loadPhotos])
+
+  useInfinitePhotos({
+    hasMore: viewMode === 'grid' ? hasMore : false,
+    isLoading: loading || loadingMore,
+    onLoadMore: () => loadPhotos(false),
+  })
 
   const photoStats = useMemo(() => {
     const approved = photos.filter((p) => p.approval_status === 'approved').length
@@ -119,6 +217,40 @@ export default function GalleryDetail() {
     const limitReached = total >= MAX_PHOTOS_PER_GALLERY
 
     return { approved, pending, flagged, total, remaining, limitReached }
+  }, [photos])
+
+  const sortOptions = useMemo(
+    () => [
+      { value: 'recent', label: t('common.mostRecent') },
+      { value: 'oldest', label: t('photos.filters.oldest') },
+    ],
+    [t],
+  )
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'all', label: t('photos.filters.statusAll') },
+      { value: 'approved', label: t('common.approved') },
+      { value: 'pending', label: t('photos.pendingApproval.badge') },
+      { value: 'rejected', label: t('photos.filters.statusRejected') },
+    ],
+    [t],
+  )
+
+  const albumOptions = useMemo(
+    () => albums.map((album) => ({ value: album.id, label: album.name })),
+    [albums],
+  )
+
+  const athleteOptions = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>()
+    photos.forEach((photo) => {
+      photo.tagged_athletes?.forEach((athlete) => {
+        const name = `${athlete.first_name} ${athlete.last_name}`.trim()
+        map.set(athlete.id, { id: athlete.id, name })
+      })
+    })
+    return Array.from(map.values()).map((athlete) => ({ value: athlete.id, label: athlete.name }))
   }, [photos])
 
   const handleDeleteGallery = async () => {
@@ -152,7 +284,8 @@ export default function GalleryDetail() {
       return
     }
     showSuccess(t('photos.success.photosDeleted', { count: ids.length }))
-    load()
+    loadPhotos(true)
+    loadGallery()
   }
 
   const handleEdit = () => {
@@ -179,39 +312,41 @@ export default function GalleryDetail() {
     if (!confirm) return
     const { error } = await moderatePhotos(context, pendingIds, 'approve')
     if (error) {
-      showError(tAny('photos.moderation.approveError'))
+      showError(t('gallery.moderationQueue.approveError'))
     } else {
       showSuccess(t('photos.success.photosApproved'))
-      load()
+      loadPhotos(true)
+      loadGallery()
     }
   }
 
-  // Get subtitle based on gallery type
-  const getGallerySubtitle = () => {
-    if (!gallery) return undefined
-    switch (gallery.gallery_type) {
-      case 'event':
-        if (entityInfo) {
-          const locationParts = [entityInfo.venue, entityInfo.city, entityInfo.state].filter(Boolean)
-          return locationParts.length > 0 ? locationParts.join(', ') : 'Event Album'
-        }
-        return 'Event Album'
-      case 'team':
-        return entityInfo?.team || 'Team Album'
-      case 'org':
-        return 'Organization Album'
-      case 'athlete':
-        return 'Athlete Album'
-      case 'program':
-        return entityInfo?.program || 'Program Album'
-      case 'season':
-        return entityInfo?.season || 'Season Album'
-      case 'travel':
-        return 'Travel Album'
-      default:
-        return undefined
+  const entityMeta = useMemo(() => {
+    if (!gallery) return null
+    const label = gallery.entity_name || t(`photos.galleryType.${gallery.gallery_type}`)
+    if (!gallery.entity_id) {
+      if (gallery.gallery_type === 'org') {
+        return { label: gallery.org_name || label, link: getLink('admin.organization.base') }
+      }
+      return { label }
     }
-  }
+
+    switch (gallery.gallery_type) {
+      case 'team':
+        return { label, link: getLink('admin.teams.detail', { id: gallery.entity_id }) }
+      case 'event':
+        return { label, link: getLink('admin.events.detail', { id: gallery.entity_id }) }
+      case 'season':
+        return { label, link: getLink('admin.seasons.detail', { id: gallery.entity_id }) }
+      case 'program':
+        return { label, link: getLink('admin.programs.detail', { id: gallery.entity_id }) }
+      case 'athlete':
+        return { label, link: getLink('admin.athletes.detail', { id: gallery.entity_id }) }
+      case 'travel':
+        return { label, link: getLink('admin.travel.edit', { id: gallery.entity_id }) }
+      default:
+        return { label }
+    }
+  }, [gallery, t])
 
   // Show loading skeleton for entire page
   if (loading) {
@@ -230,7 +365,7 @@ export default function GalleryDetail() {
     <div className="org-structure-page">
       <AdminPageHeader
         title={gallery?.name || t('photos.allGalleries')}
-        subtitle={getGallerySubtitle()}
+        subtitle={entityMeta?.label}
         breadcrumbs={[
           { label: t('photos.title'), path: getLink('admin.photos.list') },
           { label: gallery?.name || t('photos.allGalleries') },
@@ -245,7 +380,13 @@ export default function GalleryDetail() {
             </Button>
           </div>
         }
-      />
+      >
+        {entityMeta?.link && (
+          <div className="pa-text-sm pa-text-muted">
+            <Link to={entityMeta.link}>{t('photos.linkedTo')} {entityMeta.label}</Link>
+          </div>
+        )}
+      </AdminPageHeader>
 
       <div className="pa-space-y-6">
 
@@ -296,9 +437,23 @@ export default function GalleryDetail() {
                 <div style={{ padding: 'var(--pa-space-6)' }}>
                   <PhotoUploadZone 
                     galleryId={id} 
-                    onComplete={() => load()} 
+                    onComplete={() => {
+                      loadPhotos(true)
+                      loadGallery()
+                    }} 
                     maxPhotos={photoStats.remaining}
                     requireApproval={gallery?.require_approval || false}
+                  />
+                </div>
+              </Card>
+            )}
+
+            {gallery && !USE_FAKE_DATA && (
+              <Card title={t('photos.albums.title')} className="oa-card oa-card--no-padding pa-mt-3">
+                <div style={{ padding: 'var(--pa-space-6)' }}>
+                  <AlbumManager
+                    galleryId={gallery.id}
+                    onAlbumsUpdated={(next) => setAlbums(next)}
                   />
                 </div>
               </Card>
@@ -338,6 +493,18 @@ export default function GalleryDetail() {
               }
             >
               <div style={{ padding: 'var(--pa-space-6)' }}>
+                <div className="pa-mb-4">
+                  <PhotoFilterBar
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    onClear={clearFilters}
+                    sortOptions={sortOptions}
+                    showStatus
+                    statusOptions={statusOptions}
+                    albumOptions={albumOptions}
+                    athleteOptions={athleteOptions}
+                  />
+                </div>
                 {photos.length === 0 ? (
                   <div className="pa-text-center pa-py-12 pa-text-muted">
                     <p>{t('photos.stats.emptyGallery')}</p>
@@ -346,44 +513,78 @@ export default function GalleryDetail() {
                 ) : (
                   <>
                     <PhotoGalleryGrid
-                    photos={photos.slice(0, visibleCount)}
-                    coverPhotoId={gallery?.cover_photo_id || undefined}
-                    onDelete={handleDeletePhotos}
-                    showPendingBadge={gallery?.require_approval || false}
-                    viewMode={viewMode}
-                    onPhotoClick={(photo, index) => {
-                      setTaggingPhoto(photo)
-                      setTaggingPhotoIndex(index)
-                    }}
-                    onBulkTag={(selectedPhotos) => {
-                      setBulkTaggingPhotos(selectedPhotos)
-                    }}
-                    onModerate={async (ids, action) => {
-                      if (!context || !gallery) return
-                      if (USE_FAKE_DATA) {
-                        showError(t('photos.demoMode.deleteBlocked'))
-                        return
-                      }
-                      const { error } = await moderatePhotos(context, ids, action)
-                      if (error) {
-                        showError(tAny('photos.moderation.' + (action === 'approve' ? 'approveError' : 'rejectError')))
-                        return
-                      }
-                      showSuccess(t('photos.success.photosApproved'))
-                      load()
-                    }}
-                  />
-                  
-                    {/* Load More Button - only show when there are more photos */}
-                    {visibleCount < photos.length && (
-                      <div style={{ marginTop: '48px', display: 'flex', justifyContent: 'center' }}>
-                        <Button 
-                          variant="secondary" 
-                          onClick={() => setVisibleCount((prev) => prev + PHOTOS_PER_PAGE)}
-                        >
-                          {t('photos.loadMore')}
-                        </Button>
+                      photos={photos}
+                      coverPhotoId={gallery?.cover_photo_id || undefined}
+                      onDelete={handleDeletePhotos}
+                      showPendingBadge={gallery?.require_approval || false}
+                      viewMode={viewMode}
+                      onPhotoClick={(photo, index) => {
+                        setTaggingPhoto(photo)
+                        setTaggingPhotoIndex(index)
+                      }}
+                      onBulkTag={(selectedPhotos) => {
+                        setBulkTaggingPhotos(selectedPhotos)
+                      }}
+                      onModerate={async (ids, action) => {
+                        if (!context || !gallery) return
+                        if (USE_FAKE_DATA) {
+                          showError(t('photos.demoMode.deleteBlocked'))
+                          return
+                        }
+                        const { error } = await moderatePhotos(context, ids, action)
+                        if (error) {
+                          showError(
+                            action === 'approve'
+                              ? t('gallery.moderationQueue.approveError')
+                              : t('gallery.moderationQueue.rejectError')
+                          )
+                          return
+                        }
+                        showSuccess(t('photos.success.photosApproved'))
+                        loadPhotos(true)
+                        loadGallery()
+                      }}
+                    />
+                    {viewMode === 'list' && (
+                      <div className="pa-flex pa-justify-between pa-items-center pa-mt-6">
+                        <div className="pa-flex pa-items-center pa-gap-2">
+                          <span className="pa-text-sm pa-text-muted">{t('common.table.rowsPerPage')}</span>
+                          <select
+                            className="pa-input pa-w-24"
+                            value={rowsPerPage}
+                            onChange={(e) => {
+                              setRowsPerPage(Number(e.target.value))
+                              setPage(1)
+                            }}
+                          >
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                          </select>
+                        </div>
+                        <div className="pa-flex pa-items-center pa-gap-2">
+                          <Button
+                            variant="secondary"
+                            size="small"
+                            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                            disabled={page === 1}
+                          >
+                            {t('common.table.previousPage')}
+                          </Button>
+                          <span className="pa-text-sm">{page}</span>
+                          <Button
+                            variant="secondary"
+                            size="small"
+                            onClick={() => setPage((prev) => prev + 1)}
+                            disabled={!hasMore}
+                          >
+                            {t('common.table.nextPage')}
+                          </Button>
+                        </div>
                       </div>
+                    )}
+                    {viewMode === 'grid' && loadingMore && (
+                      <div className="pa-text-center pa-mt-6 pa-text-muted">{t('common.loading')}</div>
                     )}
                   </>
                 )}
@@ -421,22 +622,17 @@ export default function GalleryDetail() {
             setTaggingPhotoIndex(-1)
           }}
           onSave={async ({ advanceToNext }) => {
-            if (id) {
-              const result = await getPhotosForGallery(context, { gallery_id: id, order_by: 'created_at', order_direction: 'asc' })
-              if (result.data) {
-                setPhotos(result.data)
-                if (advanceToNext && taggingPhotoIndex >= 0) {
-                  const nextIndex = taggingPhotoIndex + 1
-                  if (nextIndex < result.data.length) {
-                    setTaggingPhoto(result.data[nextIndex])
-                    setTaggingPhotoIndex(nextIndex)
-                  } else {
-                    setTaggingPhoto(null)
-                    setTaggingPhotoIndex(-1)
-                  }
-                }
+            const refreshed = await loadPhotos(true)
+            if (refreshed && advanceToNext && taggingPhotoIndex >= 0) {
+              const nextIndex = taggingPhotoIndex + 1
+              if (nextIndex < refreshed.length) {
+                setTaggingPhoto(refreshed[nextIndex])
+                setTaggingPhotoIndex(nextIndex)
+                return
               }
             }
+            setTaggingPhoto(null)
+            setTaggingPhotoIndex(-1)
           }}
         />
       )}
@@ -449,7 +645,8 @@ export default function GalleryDetail() {
           onClose={() => setBulkTaggingPhotos([])}
           onComplete={() => {
             setBulkTaggingPhotos([])
-            load()
+            loadPhotos(true)
+            loadGallery()
           }}
         />
       )}
@@ -461,7 +658,7 @@ export default function GalleryDetail() {
         index={lightboxIndex}
         slides={photos.map((photo) => ({
           src: getGalleryPhotoUrl(photo.storage_path),
-          alt: photo.caption || 'Gallery photo',
+          alt: photo.caption || t('photos.galleryView.photoAlt'),
         }))}
       />
     </div>
