@@ -133,16 +133,6 @@ export default function CreateGallery() {
     navigate(getLink('admin.photos.list'))
   }
 
-  // Calculate form completion
-  const isBasicInfoComplete = title.trim().length > 0
-  const isEntityComplete = entityId.length > 0
-  const completionSteps = [
-    { label: 'Basic Info', complete: isBasicInfoComplete },
-    { label: 'Entity Setup', complete: isEntityComplete },
-    { label: 'Settings', complete: true }, // Always complete as defaults are set
-  ]
-  const completedSteps = completionSteps.filter(step => step.complete).length
-
   return (
     <div className="oa-root oa-gallery-form">
       <div className="oa-gallery-form__container">
@@ -155,7 +145,6 @@ export default function CreateGallery() {
               { label: t('photos.title'), path: getLink('admin.photos.list') },
               { label: t('photos.createGallery') },
             ]}
-            actions={<Badge variant="info" size="small">{completedSteps}/{completionSteps.length} {t('photos.progress.complete', { completed: completedSteps, total: completionSteps.length })}</Badge>}
           />
         </div>
 
@@ -167,14 +156,6 @@ export default function CreateGallery() {
                 <CardTitle id="basicInfoHeading" className="oa-gallery-form__section-title">
                   {t('photos.section.basicInfo.title')}
                 </CardTitle>
-                <div className="oa-card-actions">
-                  {isBasicInfoComplete && (
-                    <Badge variant="success" size="small">
-                      <span className="material-symbols-rounded oa-form-icon oa-form-icon--badge">check_circle</span>
-                      {t('photos.status.valid')}
-                    </Badge>
-                  )}
-                </div>
                 <div className="oa-gallery-form__section-subtitle">{t('photos.section.basicInfo.subtitle')}</div>
               </CardHeader>
 
@@ -391,7 +372,7 @@ export default function CreateGallery() {
               type="submit"
               variant="primary"
               loading={saving}
-              disabled={!isBasicInfoComplete || !isEntityComplete}
+              disabled={!title.trim() || !entityId}
             >
               {saving ? t('photos.button.creatingGallery') : t('photos.createGallery')}
             </Button>
