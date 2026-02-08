@@ -47,7 +47,7 @@ export default function GalleryDetail() {
   const { context } = useUserContext()
   const { t } = useI18n()
 
-  console.log('[GalleryDetail] Component mounted - id:', id, 'context available:', !!context)
+  
 
   const { filters, setFilters, clearFilters, setDensity } = usePhotoFilters({
     viewKey: `adminGallery:${id || 'unknown'}`,
@@ -58,6 +58,9 @@ export default function GalleryDetail() {
     persistDensity: true,
   })
   void setDensity
+
+  // Local state for immediate UI updates (debounced URL sync)
+  const [localSearchQuery, setLocalSearchQuery] = useState(filters.q)
 
   const [gallery, setGallery] = useState<Gallery | null>(null)
   const [photos, setPhotos] = useState<GalleryPhoto[]>([])
@@ -77,12 +80,41 @@ export default function GalleryDetail() {
   const [bulkTaggingPhotos, setBulkTaggingPhotos] = useState<GalleryPhoto[]>([])
   const mountedRef = useRef(true)
   const loadingMoreRef = useRef(false)
+  const photoFeedRef = useRef<HTMLDivElement>(null)
+  const initializedRef = useRef(false)
 
   useEffect(() => {
+    // Reset on mount (important for React Strict Mode which unmounts/remounts)
+    mountedRef.current = true
+    // Mark component initialized after first render
+    initializedRef.current = true
     return () => {
       mountedRef.current = false
     }
   }, [])
+
+  // Sync local search query with URL filter when URL changes externally
+  useEffect(() => {
+    setLocalSearchQuery(filters.q)
+  }, [filters.q])
+
+  // Debounce search query updates to URL (prevent reload on every keystroke)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearchQuery !== filters.q) {
+        setFilters({ q: localSearchQuery })
+      }
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [localSearchQuery, filters.q, setFilters])
+
+  // Scroll to photo feed when filters change (better UX)
+  useEffect(() => {
+    if (photoFeedRef.current && initializedRef.current) {
+      photoFeedRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [filters.q, filters.album, filters.athlete, filters.sort, filters.status, filters.from, filters.to])
 
   useEffect(() => {
     const handleResize = () => {
@@ -106,7 +138,13 @@ export default function GalleryDetail() {
       return
     }
 
-    ["GalleryDetail] Fetching gallery from database - id:', id)\n    const { data, error } = await getGalleryById(context, id)\n    console.log('[GalleryDetail] Gallery fetch result - data:', data, 'error:', error)\n    if (!mountedRef.current) return\n    if (error) {\n      console.log('[GalleryDetail] Gallery fetch error:', error)\n      showError(error.message)\n      return\n    }\n    console.log('[GalleryDetail] Setting gallery state - gallery exists:', !!data)\n    setGallery(data || null)"]
+    const { data, error } = await getGalleryById(context, id)
+    if (!mountedRef.current) return
+    if (error) {
+      showError(error.message)
+      return
+    }
+    setGallery(data || null)
   }, [id, context])
 
   const loadAlbums = useCallback(async () => {
@@ -164,6 +202,7 @@ export default function GalleryDetail() {
       ...query,
       cursor: viewMode === 'grid' && !reset ? cursorRef.current || undefined : undefined,
     })
+    
 
     if (!mountedRef.current) return null
 
@@ -181,6 +220,7 @@ export default function GalleryDetail() {
       }
     }
 
+    
     setLoading(false)
     loadingMoreRef.current = false
     setLoadingMore(false)
@@ -200,13 +240,38 @@ export default function GalleryDetail() {
 
   useEffect(() => {
     loadPhotos(true)
-  }, [loadPhotos])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, context, viewMode, filters.q, filters.album, filters.athlete, filters.sort, filters.status, filters.from, filters.to, gridPageSize, rowsPerPage, page])
 
   useInfinitePhotos({
     hasMore: viewMode === 'grid' ? hasMore : false,
     isLoading: loading || loadingMore,
     onLoadMore: () => loadPhotos(false),
   })
+
+  // Wrapped filter setter that updates local search immediately
+  const handleFilterChange = useCallback(
+    (updates: Parameters<typeof setFilters>[0]) => {
+      if ('q' in updates) {
+        // Update local state immediately for instant UI feedback
+        setLocalSearchQuery(updates.q || '')
+        // Remove 'q' from updates as it will be handled by debounce effect
+        const { q, ...otherUpdates } = updates
+        if (Object.keys(otherUpdates).length > 0) {
+          setFilters(otherUpdates)
+        }
+      } else {
+        setFilters(updates)
+      }
+    },
+    [setFilters]
+  )
+
+  // Wrapped clear filters that also resets local search
+  const handleClearFilters = useCallback(() => {
+    setLocalSearchQuery('')
+    clearFilters()
+  }, [clearFilters])
 
   const photoStats = useMemo(() => {
     const approved = photos.filter((p) => p.approval_status === 'approved').length
@@ -361,6 +426,28 @@ export default function GalleryDetail() {
     )
   }
 
+  // Show error if gallery not found
+  if (!gallery) {
+    return (
+      <div className="org-structure-page">
+        <div className="pa-p-6">
+          <InlineNotice
+            tone="error"
+            title={t('photos.errors.galleryNotFound')}
+            message={t('photos.errors.galleryNotFound')}
+          />
+          <div className="pa-mt-4">
+            <Button variant="secondary" onClick={() => navigate(getLink('admin.photos.list'))}>
+              {t('common.goBack')}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  
+
   return (
     <div className="org-structure-page">
       <AdminPageHeader
@@ -493,11 +580,12 @@ export default function GalleryDetail() {
               }
             >
               <div style={{ padding: 'var(--pa-space-6)' }}>
-                <div className="pa-mb-4">
+                <div ref={photoFeedRef} id="photo-feed" className="pa-mb-4">
                   <PhotoFilterBar
                     filters={filters}
-                    onFiltersChange={setFilters}
-                    onClear={clearFilters}
+                    searchValue={localSearchQuery}
+                    onFiltersChange={handleFilterChange}
+                    onClear={handleClearFilters}
                     sortOptions={sortOptions}
                     showStatus
                     statusOptions={statusOptions}
@@ -547,10 +635,10 @@ export default function GalleryDetail() {
                     />
                     {viewMode === 'list' && (
                       <div className="pa-flex pa-justify-between pa-items-center pa-mt-6">
-                        <div className="pa-flex pa-items-center pa-gap-2">
-                          <span className="pa-text-sm pa-text-muted">{t('common.table.rowsPerPage')}</span>
+                        <div className="pa-flex pa-items-center pa-gap-2 whitespace-nowrap">
+                          <span className="pa-text-sm pa-text-muted mr-2">{t('common.table.rowsPerPage')}</span>
                           <select
-                            className="pa-input pa-w-24"
+                            className="pa-input pa-w-28"
                             value={rowsPerPage}
                             onChange={(e) => {
                               setRowsPerPage(Number(e.target.value))
@@ -562,25 +650,27 @@ export default function GalleryDetail() {
                             <option value={100}>100</option>
                           </select>
                         </div>
-                        <div className="pa-flex pa-items-center pa-gap-2">
-                          <Button
-                            variant="secondary"
-                            size="small"
-                            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                            disabled={page === 1}
-                          >
-                            {t('common.table.previousPage')}
-                          </Button>
-                          <span className="pa-text-sm">{page}</span>
-                          <Button
-                            variant="secondary"
-                            size="small"
-                            onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!hasMore}
-                          >
-                            {t('common.table.nextPage')}
-                          </Button>
-                        </div>
+                        {(page > 1 || hasMore) && (
+                          <div className="pa-flex pa-items-center pa-gap-2">
+                            <Button
+                              variant="secondary"
+                              size="small"
+                              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                              disabled={page === 1}
+                            >
+                              {t('common.table.previousPage')}
+                            </Button>
+                            <span className="pa-text-sm">{page}</span>
+                            <Button
+                              variant="secondary"
+                              size="small"
+                              onClick={() => setPage((prev) => prev + 1)}
+                              disabled={!hasMore}
+                            >
+                              {t('common.table.nextPage')}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     )}
                     {viewMode === 'grid' && loadingMore && (

@@ -1,4 +1,5 @@
 import { useI18n } from '../../i18n/useI18n'
+import { DatePicker } from '../platformAdmin'
 import type { PhotoFilters, PhotoDensity } from '../../hooks/usePhotoFilters'
 
 interface FilterOption {
@@ -21,6 +22,7 @@ interface PhotoFilterBarProps {
   orgOptions?: FilterOption[]
   showDensity?: boolean
   onDensityChange?: (density: PhotoDensity) => void
+  searchValue?: string // Optional override for search input value (for debouncing)
 }
 
 export function PhotoFilterBar({
@@ -38,8 +40,12 @@ export function PhotoFilterBar({
   orgOptions = [],
   showDensity = false,
   onDensityChange,
+  searchValue,
 }: PhotoFilterBarProps) {
   const { t } = useI18n()
+
+  // Use searchValue prop if provided (for debouncing), otherwise use filters.q
+  const currentSearchValue = searchValue !== undefined ? searchValue : filters.q
 
   const hasActiveFilters =
     !!filters.q ||
@@ -61,12 +67,12 @@ export function PhotoFilterBar({
             <div className="relative">
               <input
                 type="text"
-                value={filters.q}
+                value={currentSearchValue}
                 onChange={(e) => onFiltersChange({ q: e.target.value })}
                 placeholder={searchPlaceholder || t('photos.filters.search')}
                 className="w-full h-11 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 text-sm"
               />
-              {filters.q && (
+              {currentSearchValue && (
                 <button
                   type="button"
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
@@ -142,27 +148,19 @@ export function PhotoFilterBar({
 
         {showDateRange && (
           <>
-            <div className="min-w-[150px]">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
-                {t('photos.filters.from')}
-              </label>
-              <input
-                type="date"
+            <div className="min-w-[150px] [&_.pa-form-group]:mb-0">
+              <DatePicker
+                label={t('photos.filters.from')}
                 value={filters.from || ''}
-                onChange={(e) => onFiltersChange({ from: e.target.value || null })}
-                className="w-full h-11 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm"
+                onChange={(value) => onFiltersChange({ from: value || null })}
               />
             </div>
-            <div className="min-w-[150px]">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
-                {t('photos.filters.to')}
-              </label>
-              <input
-                type="date"
+            <div className="min-w-[150px] [&_.pa-form-group]:mb-0">
+              <DatePicker
+                label={t('photos.filters.to')}
                 value={filters.to || ''}
-                min={filters.from || undefined}
-                onChange={(e) => onFiltersChange({ to: e.target.value || null })}
-                className="w-full h-11 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm"
+                minValue={filters.from || undefined}
+                onChange={(value) => onFiltersChange({ to: value || null })}
               />
             </div>
           </>

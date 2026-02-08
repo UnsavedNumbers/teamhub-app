@@ -3659,7 +3659,9 @@ export const en = {
         visibility: {
             label: 'Visibility',
             draft: 'Draft',
-            public: 'Public',
+            public: 'Published',
+            internal: 'Internal',
+            fansCanSee: 'Fans Can See',
         },
         approveAll: 'Approve All',
         approveAllConfirm: 'Approve all pending photos in this gallery?',
@@ -6691,7 +6693,9 @@ export const es = {
         visibility: {
             label: 'Visibilidad',
             draft: 'Borrador',
-            public: 'Público',
+            public: 'Publicado',
+            internal: 'Interno',
+            fansCanSee: 'Fans Pueden Ver',
         },
         approveAll: 'Aprobar Todo',
         approveAllConfirm: '¿Aprobar todas las fotos pendientes en esta galería?',
