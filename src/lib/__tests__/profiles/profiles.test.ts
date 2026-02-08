@@ -745,7 +745,13 @@ async function mockUploadProfilePhoto(userId: string, file: File, existingPath?:
 
     return { photoUrl: urlData.publicUrl, error: null }
   } catch (err) {
-    return { photoUrl: null, error: err instanceof Error ? err : new Error('Unknown error') }
+    if (err instanceof Error) {
+      return { photoUrl: null, error: err }
+    }
+    if (err && typeof err === 'object' && 'message' in err) {
+      return { photoUrl: null, error: err as Error }
+    }
+    return { photoUrl: null, error: new Error('Unknown error') }
   }
 }
 
@@ -758,6 +764,12 @@ async function mockRemoveProfilePhoto(userId: string, photoPath: string) {
 
     return { error: null }
   } catch (err) {
-    return { error: err instanceof Error ? err : new Error('Unknown error') }
+    if (err instanceof Error) {
+      return { error: err }
+    }
+    if (err && typeof err === 'object' && 'message' in err) {
+      return { error: err as Error }
+    }
+    return { error: new Error('Unknown error') }
   }
 }

@@ -8,6 +8,8 @@ export const en = {
     close: 'Close',
     goBack: 'Go Back',
     viewDetails: 'View Details',
+    ok: 'OK',
+    actions: 'Actions',
   },
   license: {
     statusLabel: 'License Status',
@@ -295,7 +297,12 @@ export const en = {
         transferSuccess: 'Ticket transferred successfully',
       },
       // Photos Page
-      photos: {
+  photos: {
+    visibility: {
+      label: 'Visibility',
+      draft: 'Draft',
+      public: 'Public',
+    },
         title: 'Photos & Videos',
         subtitle: 'Browse galleries from teams you follow',
         searchPlaceholder: 'Search gallery names, tags...',
@@ -314,6 +321,26 @@ export const en = {
         taggedAs: 'Tagged:',
         form: {
           charactersRemaining: '{{count}} characters remaining',
+        },
+        browse: {
+          searchTree: 'Search...',
+          globalLibrary: 'Global Library',
+          recentArchives: 'Recent Archives',
+          featuredLabel: 'Featured',
+          browseDeck: 'Browse Deck',
+          allRegisteredDecks: 'All Registered Decks',
+          viewAll: 'View All',
+          type: 'Type',
+          albumName: 'Album Name',
+          mediaCount: 'Media Count',
+          status: 'Status',
+          publicStatus: 'Public',
+          draftStatus: 'Draft',
+          hasPhotos: 'Has Photos',
+          emptyGallery: 'Empty',
+          navigation: {
+            hideEmpty: 'Hide empty galleries',
+          },
         },
       },
       // Following Page
@@ -417,6 +444,69 @@ export const en = {
           roster: 'Roster',
           media: 'Media',
           shop: 'Shop',
+        },
+      },
+      // Photos Browse View - Enhanced navigation and organization
+      browse: {
+        pageTitle: 'Photo Gallery Browser',
+        pageSubtitle: 'Navigate your photo galleries by season, team, event, or athlete',
+        navigation: {
+          title: 'Browse by Category',
+          hideEmpty: 'Hide empty galleries',
+        },
+        stats: {
+          totalSeasons: 'Total Seasons',
+          totalGalleries: 'Total Galleries',
+        },
+        noSeasons: {
+          title: 'No Seasons Available',
+          description: 'Create seasons to organize your photo galleries',
+        },
+        selectEntity: {
+          title: 'Select a Category',
+          description: 'Choose a season, event, team, or athlete from the left to view their photo galleries',
+        },
+        noGalleries: {
+          title: 'No Galleries Found',
+          description: 'This category doesn\'t have any photo galleries yet',
+        },
+        noResults: {
+          title: 'No Matching Galleries',
+          description: 'Try adjusting your search terms',
+        },
+        noChildren: 'No items in this category',
+        search: {
+          placeholder: 'Search galleries...',
+        },
+        resultsCount: '{{count}} galleries',
+        clearSearch: 'Clear Search',
+        unnamedSeason: 'Unnamed Season',
+        unnamedEvent: 'Unnamed Event',
+        unnamedTeam: 'Unnamed Team',
+        unnamedAthlete: 'Unnamed Athlete',
+        unnamedGallery: 'Unnamed Gallery',
+        nodeType: {
+          season: 'Season',
+          event: 'Event',
+          team: 'Team',
+          athlete: 'Athlete',
+        },
+        galleryType: {
+          season: 'Season Gallery',
+          event: 'Event Gallery',
+          team: 'Team Gallery',
+          athlete: 'Athlete Gallery',
+        },
+        table: {
+          photoCount: 'Photos',
+        },
+        errors: {
+          title: 'Unable to Load',
+          loadFailed: 'Failed to load photo galleries',
+          loadSeasons: 'Failed to load seasons',
+          loadGalleries: 'Failed to load galleries',
+          loadChildren: 'Failed to load items',
+          navigation: 'Unable to navigate to gallery',
         },
       },
       // Original followed orgs section

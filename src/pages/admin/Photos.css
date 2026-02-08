@@ -194,7 +194,9 @@
 
 .admin-photos-page .gallery-meta {
   color: var(--pa-text-muted);
-  font-weight: 600;
+  font-weight: 400;
+  font-size: 12px;
+  opacity: 0.75;
 }
 
 .admin-photos-page .gallery-footer {

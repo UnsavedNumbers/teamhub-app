@@ -921,22 +921,25 @@ describe('Financial/Billing', () => {
 
   describe('Error Handling and Resilience', () => {
     test('handles payment gateway timeouts', async () => {
-      vi.mocked(paymentsService.processPayment).mockImplementation(
-        () => new Promise((_, reject) => setTimeout(() => reject(new Error('Gateway timeout')), 30000))
-      )
+      vi.mocked(paymentsService.processPayment).mockResolvedValue({
+        data: null,
+        error: { message: 'Gateway timeout' },
+      })
 
-      const resultPromise = paymentsService.processPayment({
+      const result = await paymentsService.processPayment({
         amount: 10000,
         payment_method_id: 'pm_valid',
       })
 
-      await expect(resultPromise).rejects.toThrow('Gateway timeout')
+      expect(result.data).toBeNull()
+      expect(result.error?.message).toBe('Gateway timeout')
     })
 
     test('handles network connectivity issues', async () => {
-      vi.mocked(paymentsService.processPayment).mockRejectedValue(
-        new Error('Network error')
-      )
+      vi.mocked(paymentsService.processPayment).mockResolvedValue({
+        data: null,
+        error: { message: 'Network error' },
+      })
 
       const result = await paymentsService.processPayment({
         amount: 10000,

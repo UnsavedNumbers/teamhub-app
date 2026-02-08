@@ -118,7 +118,10 @@ export function GalleryManagementSection({
             {gallery.visibility && <Badge variant="info">{gallery.visibility}</Badge>}
           </div>
           <p className="pa-text-sm pa-text-muted pa-m-0">
-            {t('photos.stats.photosCount', { count: gallery.photo_count ?? 0 })} • {new Date(gallery.created_at).toLocaleDateString()}
+            {(gallery.photo_count ?? 0) === 0 
+              ? t('photos.addFirstPhoto')
+              : `${gallery.photo_count} ${gallery.photo_count === 1 ? t('photos.photo') : t('photos.photos')}`
+            } • {new Date(gallery.created_at).toLocaleDateString()}
           </p>
           <p className="pa-text-xs pa-text-muted pa-m-0">
             {t(`photos.galleryType.${gallery.gallery_type}` as any)}

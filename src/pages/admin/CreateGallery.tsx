@@ -8,9 +8,12 @@ import { USE_FAKE_DATA } from '@/data/config'
 import { showError, showSuccess } from '@/utils/toast'
 import { getLink } from '@/utils/routes'
 import { createGalleryForEntity, mapEntityToGalleryType, type GalleryEntityType } from '@/data/services/galleryService'
+import { getSeasons } from '@/data/services/seasonsService'
 import { mapFanVisibilityToGalleryVisibility } from '@/utils/fanVisibilityHelpers'
 
 type EntityTypeOption = 'organization' | 'season'
+type SeasonRecord = { id: string; name?: string | null }
+type SeasonOption = { id: string; name: string }
 
 export default function CreateGallery() {
   const { context } = useUserContext()
@@ -26,6 +29,8 @@ export default function CreateGallery() {
   const [visibleToFans, setVisibleToFans] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [seasons, setSeasons] = useState<SeasonOption[]>([])
+  const [seasonsLoading, setSeasonsLoading] = useState(false)
 
   // Pre-fill from query params
   useEffect(() => {
@@ -47,6 +52,30 @@ export default function CreateGallery() {
       setEntityId(context.orgId)
     }
   }, [entityType, context?.orgId, entityId])
+
+  useEffect(() => {
+    if (entityType !== 'season' || !context || seasons.length > 0) return
+    let mounted = true
+    const loadSeasons = async () => {
+      setSeasonsLoading(true)
+      const { data, error } = await getSeasons(context, {})
+      if (!mounted) return
+      if (error) {
+        showError(error.message || t('photos.errors.loadGalleries'))
+      } else {
+        const list = (data || []).map((season: SeasonRecord) => ({
+          id: season.id,
+          name: season.name || season.id,
+        }))
+        setSeasons(list)
+      }
+      setSeasonsLoading(false)
+    }
+    loadSeasons()
+    return () => {
+      mounted = false
+    }
+  }, [entityType, context, seasons.length, t])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -104,21 +133,11 @@ export default function CreateGallery() {
     navigate(getLink('admin.photos.list'))
   }
 
-  // Calculate form completion
-  const isBasicInfoComplete = title.trim().length > 0
-  const isEntityComplete = entityId.length > 0
-  const completionSteps = [
-    { label: 'Basic Info', complete: isBasicInfoComplete },
-    { label: 'Entity Setup', complete: isEntityComplete },
-    { label: 'Settings', complete: true }, // Always complete as defaults are set
-  ]
-  const completedSteps = completionSteps.filter(step => step.complete).length
-
   return (
-    <div className="pa-root">
-      <div className="pa-container pa-max-w-4xl">
+    <div className="oa-root oa-gallery-form">
+      <div className="oa-gallery-form__container">
         {/* Page Header (org admin styles) */}
-        <div className="oa-page-header oa-mb-6">
+        <div className="oa-page-header oa-gallery-form__header">
           <PageHeader
             title={t('photos.createGallery')}
             description={t('photos.createGallerySubtitle')}
@@ -126,74 +145,65 @@ export default function CreateGallery() {
               { label: t('photos.title'), path: getLink('admin.photos.list') },
               { label: t('photos.createGallery') },
             ]}
-            actions={<Badge variant="info" size="small">{completedSteps}/{completionSteps.length} {t('photos.progress.complete', { completed: completedSteps, total: completionSteps.length })}</Badge>}
           />
         </div>
 
-        <form onSubmit={handleSubmit} className="oa-form-layout oa-space-y-6" aria-labelledby="createGalleryHeading">
+        <form onSubmit={handleSubmit} className="oa-form-layout oa-gallery-form__layout" aria-labelledby="createGalleryHeading">
           {/* Basic Information Section */}
           <section className="oa-form-section" aria-labelledby="basicInfoHeading">
             <Card className="oa-card">
-              <CardHeader className="oa-card-header">
-                <CardTitle id="basicInfoHeading">{t('photos.section.basicInfo.title')}</CardTitle>
-                <div className="oa-card-actions">
-                  {isBasicInfoComplete && (
-                    <Badge variant="success" size="small">
-                      <span className="material-symbols-rounded" style={{ fontSize: '12px' }}>check_circle</span>
-                      {t('photos.status.valid')}
-                    </Badge>
-                  )}
-                </div>
-                <div className="oa-form-section-subtitle">{t('photos.section.basicInfo.subtitle')}</div>
+              <CardHeader className="oa-card-header oa-gallery-form__section-header">
+                <CardTitle id="basicInfoHeading" className="oa-gallery-form__section-title">
+                  {t('photos.section.basicInfo.title')}
+                </CardTitle>
+                <div className="oa-gallery-form__section-subtitle">{t('photos.section.basicInfo.subtitle')}</div>
               </CardHeader>
 
-              <CardContent>
-                <div className="pa-p-6">
-                  <div className="pa-grid pa-grid-cols-1 md:pa-grid-cols-2 pa-gap-6">
-                    {/* Title */}
-                    <div className="md:pa-col-span-2">
-                      <label className="pa-label pa-flex pa-items-center pa-gap-2 pa-mb-2" htmlFor="title">
-                        <span className="material-symbols-rounded" style={{ fontSize: '16px' }}>title</span>
-                        {t('photos.form.title')}
-                        <span className="pa-text-red-600">*</span>
-                      </label>
-                      <Input
-                        id="title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder={t('photos.form.titlePlaceholder')}
-                        maxLength={120}
-                        required
-                        className={title.trim() ? 'pa-ring-2 pa-ring-primary/20' : ''}
-                      />
-                      <div className="pa-flex pa-justify-between pa-mt-1">
-                        <p className="pa-text-xs pa-text-muted">
-                          {120 - title.length} {t('photos.form.charactersRemaining', { count: 120 - title.length })}
-                        </p>
-                        {title.trim() && (
-                          <Badge variant="success" size="small">{t('photos.status.valid')}</Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <div className="md:pa-col-span-2">
-                      <label className="pa-label pa-flex pa-items-center pa-gap-2 pa-mb-2" htmlFor="description">
-                        <span className="material-symbols-rounded" style={{ fontSize: '16px' }}>description</span>
-                        {t('photos.form.description')}
-                      </label>
-                      <textarea
-                        id="description"
-                        className="oa-input oa-textarea pa-resize-none"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder={t('photos.form.descriptionPlaceholder')}
-                        rows={4}
-                      />
-                      <p className="pa-text-xs pa-text-muted pa-mt-1">
-                        {t('photos.form.descriptionPlaceholder')}
+              <CardContent className="oa-gallery-form__section-body">
+                <div className="oa-gallery-form__grid oa-gallery-form__grid--2">
+                  {/* Title */}
+                  <div className="oa-gallery-form__field oa-gallery-form__field--full oa-gallery-form__field--wide">
+                    <label className="oa-form-label" htmlFor="title">
+                      <span className="material-symbols-rounded oa-form-icon">title</span>
+                      {t('photos.form.title')}
+                      <span className="oa-form-required">*</span>
+                    </label>
+                    <Input
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder={t('photos.form.titlePlaceholder')}
+                      maxLength={120}
+                      required
+                      className={`oa-form-input${title.trim() ? ' is-filled' : ''}`}
+                    />
+                    <div className="oa-form-help-row">
+                      <p className="oa-form-help">
+                        {120 - title.length} {t('photos.form.charactersRemaining', { count: 120 - title.length })}
                       </p>
+                      {title.trim() && (
+                        <Badge variant="success" size="small">{t('photos.status.valid')}</Badge>
+                      )}
                     </div>
+                  </div>
+
+                  {/* Description */}
+                  <div className="oa-gallery-form__field oa-gallery-form__field--full oa-gallery-form__field--wide">
+                    <label className="oa-form-label" htmlFor="description">
+                      <span className="material-symbols-rounded oa-form-icon">description</span>
+                      {t('photos.form.description')}
+                    </label>
+                    <textarea
+                      id="description"
+                      className="oa-form-textarea"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder={t('photos.form.descriptionPlaceholder')}
+                      rows={4}
+                    />
+                    <p className="oa-form-help">
+                      {t('photos.form.descriptionPlaceholder')}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -203,117 +213,71 @@ export default function CreateGallery() {
           {/* Entity Configuration Section */}
           <section className="oa-form-section" aria-labelledby="entityConfigHeading">
             <Card className="oa-card">
-              <CardHeader className="oa-card-header">
-                <CardTitle id="entityConfigHeading">{t('photos.section.entity.title')}</CardTitle>
-                <div className="oa-card-actions">
-                  {isEntityComplete && (
-                    <Badge variant="success" size="small">
-                      <span className="material-symbols-rounded" style={{ fontSize: '12px' }}>check_circle</span>
-                      {t('photos.status.seasonSelected')}
-                    </Badge>
-                  )}
-                </div>
-                <div className="oa-form-section-subtitle">{t('photos.section.entity.subtitle')}</div>
+              <CardHeader className="oa-card-header oa-gallery-form__section-header">
+                <CardTitle id="entityConfigHeading" className="oa-gallery-form__section-title">
+                  {t('photos.section.entity.title')}
+                </CardTitle>
               </CardHeader>
 
-              <CardContent>
-                <div className="pa-p-6">
-                  <div className="pa-space-y-6">
+              <CardContent className="oa-gallery-form__section-body">
+                <div className="oa-gallery-form__stack">
                     {/* Entity Type */}
-                <div>
-                  <label className="pa-label pa-flex pa-items-center pa-gap-2 pa-mb-3" htmlFor="entityType">
-                    <span className="material-symbols-rounded" style={{ fontSize: '16px' }}>category</span>
-                    {t('photos.form.entityType')}
-                  </label>
-                  <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 pa-gap-3">
-                    <label className={`pa-relative pa-p-4 pa-border pa-rounded-lg pa-cursor-pointer pa-transition-all ${
-                      entityType === 'organization'
-                        ? 'pa-border-primary pa-bg-primary/5 pa-shadow-sm'
-                        : 'pa-border-n200 hover:pa-border-n300'
-                    }`}>
-                      <input
-                        type="radio"
-                        name="entityType"
-                        value="organization"
-                        checked={entityType === 'organization'}
-                        onChange={(e) => setEntityType(e.target.value as EntityTypeOption)}
-                        className="pa-absolute pa-opacity-0"
-                      />
-                      <div className="pa-flex pa-items-center pa-gap-3">
-                        <div className={`pa-w-4 pa-h-4 pa-rounded-full pa-border-2 pa-flex pa-items-center pa-justify-center ${
-                          entityType === 'organization'
-                            ? 'pa-border-primary pa-bg-primary'
-                            : 'pa-border-n300'
-                        }`}>
-                          {entityType === 'organization' && (
-                            <div className="pa-w-2 pa-h-2 pa-bg-white pa-rounded-full" />
-                          )}
-                        </div>
-                        <div>
-                          <div className="pa-font-medium pa-text-n700">Organization Gallery</div>
-                          <div className="pa-text-sm pa-text-n500">Photos for the entire organization</div>
-                        </div>
+                    <div className="oa-gallery-form__field oa-gallery-form__field--medium">
+                      <label className="oa-form-label" htmlFor="entityType">
+                        <span className="material-symbols-rounded oa-form-icon">category</span>
+                        {t('photos.form.entityType')}
+                      </label>
+                      <div className="oa-segmented">
+                        <button
+                          type="button"
+                          className={`oa-segmented__button${entityType === 'organization' ? ' is-active' : ''}`}
+                          onClick={() => setEntityType('organization')}
+                          aria-pressed={entityType === 'organization'}
+                        >
+                          {t('photos.galleryType.organization')}
+                        </button>
+                        <button
+                          type="button"
+                          className={`oa-segmented__button${entityType === 'season' ? ' is-active' : ''}`}
+                          onClick={() => setEntityType('season')}
+                          aria-pressed={entityType === 'season'}
+                        >
+                          {t('photos.galleryType.season')}
+                        </button>
                       </div>
-                    </label>
+                      <p className="oa-form-help">
+                        {t('photos.form.entityTypeHelp')}
+                      </p>
+                    </div>
 
-                    <label className={`pa-relative pa-p-4 pa-border pa-rounded-lg pa-cursor-pointer pa-transition-all ${
-                      entityType === 'season'
-                        ? 'pa-border-primary pa-bg-primary/5 pa-shadow-sm'
-                        : 'pa-border-n200 hover:pa-border-n300'
-                    }`}>
-                      <input
-                        type="radio"
-                        name="entityType"
-                        value="season"
-                        checked={entityType === 'season'}
-                        onChange={(e) => setEntityType(e.target.value as EntityTypeOption)}
-                        className="pa-absolute pa-opacity-0"
-                      />
-                      <div className="pa-flex pa-items-center pa-gap-3">
-                        <div className={`pa-w-4 pa-h-4 pa-rounded-full pa-border-2 pa-flex pa-items-center pa-justify-center ${
-                          entityType === 'season'
-                            ? 'pa-border-primary pa-bg-primary'
-                            : 'pa-border-n300'
-                        }`}>
-                          {entityType === 'season' && (
-                            <div className="pa-w-2 pa-h-2 pa-bg-white pa-rounded-full" />
-                          )}
-                        </div>
-                        <div>
-                          <div className="pa-font-medium pa-text-n700">Season Gallery</div>
-                          <div className="pa-text-sm pa-text-n500">Photos for a specific season</div>
-                        </div>
-                      </div>
-                    </label>
-                  </div>
-                  <p className="pa-text-xs pa-text-muted pa-mt-2">
-                    {t('photos.form.entityTypeHelp')}
-                  </p>
-                </div>
-
-                {/* Entity ID */}
-                {entityType === 'season' && (
-                  <div>
-                    <label className="pa-label pa-flex pa-items-center pa-gap-2 pa-mb-2" htmlFor="entityId">
-                      <span className="material-symbols-rounded" style={{ fontSize: '16px' }}>tag</span>
-                      {t('photos.form.selectEntity', { type: t('photos.galleryType.season') })}
-                      <span className="pa-text-red-600">*</span>
-                    </label>
-                    <Input
-                      id="entityId"
-                      value={entityId}
-                      onChange={(e) => setEntityId(e.target.value)}
-                      placeholder={t('photos.form.seasonIdPlaceholder')}
-                      className={entityId ? 'pa-ring-2 pa-ring-primary/20' : ''}
-                    />
-                    {entityId && (
-                      <div className="pa-mt-2">
-                        <Badge variant="success" size="small">✓ Season Selected</Badge>
-                      </div>
-                    )}
-                  </div>
-                )}
-                  </div>
+                  {/* Entity ID */}
+                  {entityType === 'season' && (
+                    <div className="oa-gallery-form__field oa-gallery-form__field--medium">
+                      <label className="oa-form-label" htmlFor="entityId">
+                        <span className="material-symbols-rounded oa-form-icon">tag</span>
+                        {t('photos.form.selectEntity', { type: t('photos.galleryType.season') })}
+                        <span className="oa-form-required">*</span>
+                      </label>
+                      <select
+                        id="entityId"
+                        value={entityId}
+                        onChange={(e) => setEntityId(e.target.value)}
+                        className={`oa-form-select${entityId ? ' is-filled' : ''}`}
+                        disabled={seasonsLoading}
+                      >
+                        <option value="">
+                          {seasonsLoading
+                            ? t('common.loading')
+                            : t('photos.form.selectEntity', { type: t('photos.galleryType.season') })}
+                        </option>
+                        {seasons.map((season) => (
+                          <option key={season.id} value={season.id}>
+                            {season.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -321,30 +285,31 @@ export default function CreateGallery() {
 
           {/* Gallery Settings Section */}
           <Card className="oa-card">
-            <CardHeader className="oa-card-header">
-              <CardTitle> {t('photos.section.settings.title')} </CardTitle>
+            <CardHeader className="oa-card-header oa-gallery-form__section-header">
+              <CardTitle className="oa-gallery-form__section-title">
+                {t('photos.section.settings.title')}
+              </CardTitle>
               <div className="oa-card-actions">
                 <Button
                   type="button"
                   variant="ghost"
                   size="small"
                   onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="pa-text-n600"
+                  className="oa-gallery-form__toggle"
                 >
-                  <span className="material-symbols-rounded pa-mr-1" style={{ fontSize: '16px' }}>
+                  <span className="material-symbols-rounded oa-form-icon oa-gallery-form__toggle-icon">
                     {showAdvanced ? 'expand_less' : 'expand_more'}
                   </span>
                   {showAdvanced ? t('photos.button.hideAdvanced') : t('photos.button.showAdvanced')}
                 </Button>
               </div>
-              <div className="oa-form-section-subtitle">{t('photos.section.settings.subtitle')}</div>
+              <div className="oa-gallery-form__section-subtitle">{t('photos.section.settings.subtitle')}</div>
             </CardHeader>
 
-            <CardContent>
-              <div className="pa-p-6">
-                <div className="pa-space-y-6">
+            <CardContent className="oa-gallery-form__section-body">
+              <div className="oa-gallery-form__stack">
                   {/* Fan Visibility */}
-                  <div className="pa-p-4 pa-bg-n50 pa-rounded-lg pa-border pa-border-n200">
+                  <div className="oa-gallery-form__panel">
                     <FanVisibilityToggle
                       checked={visibleToFans}
                       onChange={setVisibleToFans}
@@ -354,52 +319,52 @@ export default function CreateGallery() {
                   </div>
                 {/* Advanced Settings */}
                 {showAdvanced && (
-                  <div className="pa-space-y-4 pa-pt-4 pa-border-t pa-border-n200">
-                    <h4 className="pa-font-medium pa-text-n700 pa-flex pa-items-center pa-gap-2">
-                      <span className="material-symbols-rounded" style={{ fontSize: '16px' }}>admin_panel_settings</span>
-                      Advanced Settings
+                  <div className="oa-gallery-form__advanced">
+                    <h4 className="oa-gallery-form__advanced-title">
+                      <span className="material-symbols-rounded oa-form-icon">admin_panel_settings</span>
+                      {t('photos.section.settings.advancedTitle')}
                     </h4>
 
                     {/* Require Approval */}
-                    <div className="pa-flex pa-items-start pa-gap-4 pa-p-4 pa-bg-white pa-rounded-lg pa-border pa-border-n200">
-                      <input
-                        type="checkbox"
-                        id="requireApproval"
-                        checked={requireApproval}
-                        onChange={(e) => setRequireApproval(e.target.checked)}
-                        className="pa-mt-1 pa-w-4 pa-h-4 pa-text-primary pa-border-n300 pa-rounded focus:pa-ring-primary"
-                      />
-                      <div className="pa-flex-1">
-                        <label htmlFor="requireApproval" className="pa-label pa-cursor-pointer pa-flex pa-items-center pa-gap-2">
-                          <span className="material-symbols-rounded" style={{ fontSize: '16px' }}>verified</span>
+                    <div className="oa-gallery-form__panel oa-gallery-form__panel--light">
+                      <label htmlFor="requireApproval" className="oa-checkbox-row">
+                        <input
+                          type="checkbox"
+                          id="requireApproval"
+                          checked={requireApproval}
+                          onChange={(e) => setRequireApproval(e.target.checked)}
+                          className="oa-checkbox-input"
+                        />
+                        <span className="oa-checkbox-label">
+                          <span className="material-symbols-rounded oa-form-icon">verified</span>
                           {t('photos.form.requireApproval')}
-                        </label>
-                        <p className="pa-text-sm pa-text-muted pa-mt-1">
-                          {t('photos.form.requireApprovalHelp')}
-                        </p>
-                        {requireApproval && (
-                          <Badge variant="warning" size="small" className="pa-mt-2">
-                            <span className="material-symbols-rounded" style={{ fontSize: '12px' }}>warning</span>
-                            Photos will need approval before being visible
+                        </span>
+                      </label>
+                      <p className="oa-form-help">
+                        {t('photos.form.requireApprovalHelp')}
+                      </p>
+                      {requireApproval && (
+                        <div className="oa-form-help-row">
+                          <Badge variant="warning" size="small">
+                            <span className="material-symbols-rounded oa-form-icon oa-form-icon--badge">warning</span>
+                            {t('photos.form.requireApprovalWarning')}
                           </Badge>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
-                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Action Buttons */}
-          <div className="pa-flex pa-flex-col sm:pa-flex-row pa-justify-end pa-gap-3 pa-pt-6 pa-border-t pa-border-n200">
+          <div className="oa-form-actions oa-gallery-form__actions">
             <Button
               type="button"
               variant="ghost"
               onClick={handleCancel}
               disabled={saving}
-              className="pa-order-2 sm:pa-order-1"
             >
               {t('common.cancel')}
             </Button>
@@ -407,10 +372,9 @@ export default function CreateGallery() {
               type="submit"
               variant="primary"
               loading={saving}
-              disabled={!isBasicInfoComplete || !isEntityComplete}
-              className="pa-order-1 sm:pa-order-2 pa-min-w-[140px]"
+              disabled={!title.trim() || !entityId}
             >
-              {saving ? 'Creating Gallery...' : t('photos.createGallery')}
+              {saving ? t('photos.button.creatingGallery') : t('photos.createGallery')}
             </Button>
           </div>
         </form>

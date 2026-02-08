@@ -1,0 +1,120 @@
+.photos-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pa-space-6);
+}
+
+.dashboard-loading {
+  min-height: 400px;
+}
+
+.dashboard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--pa-space-4);
+}
+
+.dashboard-section-title {
+  font-size: var(--pa-font-size-lg);
+  font-weight: 700;
+  color: var(--pa-text);
+  margin: 0 0 var(--pa-space-4) 0;
+}
+
+.dashboard-quick-actions {
+  padding: var(--pa-space-6);
+  background: var(--pa-surface);
+  border: 1px solid var(--pa-border-subtle);
+  border-radius: var(--pa-radius-l);
+}
+
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--pa-space-3);
+}
+
+.dashboard-activity {
+  padding: var(--pa-space-6);
+  background: var(--pa-surface);
+  border: 1px solid var(--pa-border-subtle);
+  border-radius: var(--pa-radius-l);
+}
+
+.activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pa-space-3);
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: var(--pa-space-4);
+  padding: var(--pa-space-4);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.activity-item:hover {
+  background: var(--pa-surface-muted);
+  transform: translateX(4px);
+}
+
+.activity-thumbnail {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--pa-radius-m);
+  overflow: hidden;
+  background: var(--pa-surface-muted);
+  flex-shrink: 0;
+}
+
+.activity-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.activity-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pa-text-muted);
+}
+
+.activity-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-title {
+  font-weight: 600;
+  color: var(--pa-text);
+  margin-bottom: var(--pa-space-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-meta {
+  font-size: var(--pa-font-size-sm);
+  color: var(--pa-text-muted);
+}
+
+.activity-arrow {
+  color: var(--pa-text-muted);
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .dashboard-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
