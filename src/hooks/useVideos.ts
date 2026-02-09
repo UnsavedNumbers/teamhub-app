@@ -717,7 +717,10 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
     drawing_data?: Record<string, unknown>
     target_athlete_ids?: string[]
   }): Promise<VideoNote | null> => {
-    if (!videoId || !user?.id) return null
+    if (!videoId || !user?.id) {
+      console.error('[createNote] Missing required data:', { videoId, userId: user?.id })
+      return null
+    }
     
     try {
       const { target_athlete_ids, drawing_data } = note
@@ -731,13 +734,40 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
         drawing_data: (drawing_data ?? null) as Json | null,
       } as VideoNoteInsert
       
-      const { data, error: createError } = await supabase
+      // Insert WITHOUT .select() to avoid the SELECT RLS policy
+      // (can_view_video_note has recursion issues in RLS context)
+      const { error: createError } = await supabase
         .from('video_notes')
         .insert(payload)
-        .select(`*`)
-        .single()
       
-      if (createError) throw createError
+      if (createError) {
+        console.error('[createNote] INSERT FAILED:', createError)
+        throw createError
+      }
+      
+      // Fetch the newly created note separately
+      const { data, error: fetchError } = await supabase
+        .from('video_notes')
+        .select('*')
+        .eq('video_id', videoId)
+        .eq('author_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (fetchError || !data) {
+        console.warn('[createNote] Insert succeeded but fetch failed:', fetchError)
+        // Construct a minimal note from payload so the UI still updates
+        const fallbackNote = {
+          id: crypto.randomUUID(),
+          ...payload,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          deleted_at: null,
+        } as unknown as VideoNote
+        setNotes(prev => [...prev, fallbackNote])
+        return fallbackNote
+      }
       
       // Add athlete targets if specified
       if (target_athlete_ids && target_athlete_ids.length > 0) {

@@ -109,9 +109,9 @@ export default function VideoSortDropdown({
       >
         <Icon name={currentSort.icon} size="text-lg" className="text-gray-500" />
         <span className="text-sm font-medium">{currentSort.label}</span>
-        <button
+        <div
           onClick={toggleDirection}
-          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors cursor-pointer"
           title={value.direction === 'asc' ? 'Ascending' : 'Descending'}
         >
           <Icon 
@@ -119,7 +119,7 @@ export default function VideoSortDropdown({
             size="text-base" 
             className="text-gray-500"
           />
-        </button>
+        </div>
         <Icon 
           name={isOpen ? 'expand_less' : 'expand_more'} 
           size="text-lg" 

@@ -18,7 +18,17 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { VideoPlayer, VideoNoteCard, VideoNoteComposer } from '@/components/video'
+import { 
+  VideoPlayer, 
+  VideoNoteCard, 
+  VideoNoteComposer,
+  VideoCommentsPanel,
+  VideoFavoriteButton,
+  VideoShareModal,
+  VideoDownloadButton,
+  VideoThumbnailSelector,
+  VideoTagPicker
+} from '@/components/video'
 import {
   useVideo,
   useVideoNotes,
@@ -27,6 +37,7 @@ import {
   useVideoComments,
   useVideoBookmarks,
 } from '@/hooks/useVideos'
+import { useVideoFavorites } from '@/hooks/useVideosExtended'
 import type {
   VideoNote,
   VideoCategory,
@@ -484,174 +495,6 @@ function TagManagerModal({
   )
 }
 
-// Comments Section Component
-function CommentsSection({
-  videoId,
-  disabled = false,
-}: {
-  videoId: string
-  disabled?: boolean
-}) {
-  const { comments, isLoading, createComment, deleteComment } = useVideoComments({ videoId, enabled: true })
-  const [newComment, setNewComment] = useState('')
-  const [posting, setPosting] = useState(false)
-
-  const handlePost = async () => {
-    if (!newComment.trim()) return
-    
-    setPosting(true)
-    try {
-      await createComment(newComment.trim())
-      setNewComment('')
-    } finally {
-      setPosting(false)
-    }
-  }
-
-  const threadedComments = useMemo(() => {
-    const threads: (VideoComment & { replies?: VideoComment[] })[] = []
-    const commentMap = new Map<string, VideoComment & { replies?: VideoComment[] }>()
-
-    // Build map
-    comments.forEach(comment => {
-      commentMap.set(comment.id, { ...comment, replies: [] })
-    })
-
-    // Build threads
-    comments.forEach(comment => {
-      if (comment.parent_comment_id) {
-        const parent = commentMap.get(comment.parent_comment_id)
-        if (parent) {
-          parent.replies = parent.replies || []
-          parent.replies.push(commentMap.get(comment.id)!)
-        }
-      } else {
-        threads.push(commentMap.get(comment.id)!)
-      }
-    })
-
-    return threads
-  }, [comments])
-
-  return (
-    <Card className="p-6">
-      <h3 className="text-sm font-black uppercase tracking-widest mb-6">
-        {t('videoLibrary.comments.title')}
-      </h3>
-
-      {/* New Comment */}
-      <div className="mb-6">
-        <textarea
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          placeholder={t('videoLibrary.comments.writeComment')}
-          className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent resize-none"
-          rows={3}
-        />
-        <div className="mt-2 flex justify-end">
-          <Button
-            variant="primary"
-            className="!px-4 !py-2 text-sm"
-            onClick={handlePost}
-            disabled={disabled || posting || !newComment.trim()}
-          >
-            {posting ? t('common.adding') : t('videoLibrary.comments.postComment')}
-          </Button>
-        </div>
-      </div>
-
-      {/* Comments List */}
-      {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="animate-pulse">
-              <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-              <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded" />
-            </div>
-          ))}
-        </div>
-      ) : threadedComments.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          <Icon name="comment" size="text-4xl" className="mx-auto mb-2" />
-          <p className="text-sm">{t('videoLibrary.comments.noCommentsMessage')}</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {threadedComments.map(comment => (
-            <div key={comment.id} className="space-y-3">
-              {/* Main Comment */}
-              <div className="flex gap-3">
-                <div className="size-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
-                  <Icon name="person" size="text-sm" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-bold">
-                      {comment.author?.full_name || 'User'}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {new Date(comment.created_at).toLocaleDateString()}
-                    </span>
-                    {comment.is_edited && (
-                      <span className="text-xs text-gray-400">
-                        ({t('videoLibrary.comments.edited')})
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {comment.content}
-                  </p>
-                  <div className="mt-2 flex items-center gap-4">
-                    <button className="text-xs font-bold text-gray-500 hover:text-[var(--org-btn-primary-bg)]">
-                      {t('videoLibrary.comments.reply')}
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (window.confirm(t('videoLibrary.comments.deleteConfirm'))) {
-                          deleteComment(comment.id)
-                        }
-                      }}
-                      className="text-xs font-bold text-gray-500 hover:text-red-500"
-                    >
-                      {t('videoLibrary.comments.deleteComment')}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Replies */}
-              {comment.replies && comment.replies.length > 0 && (
-                <div className="ml-11 space-y-3 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
-                  {comment.replies.map(reply => (
-                    <div key={reply.id} className="flex gap-3">
-                      <div className="size-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
-                        <Icon name="person" size="text-xs" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold">
-                            {reply.author?.full_name || 'User'}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            {new Date(reply.created_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          {reply.content}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </Card>
-  )
-}
-
 // Bookmarks Panel Component
 function BookmarksPanel({
   videoId,
@@ -831,6 +674,8 @@ export default function CoachVideoDetail() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showAthletesModal, setShowAthletesModal] = useState(false)
   const [showTagsModal, setShowTagsModal] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [showThumbnailSelector, setShowThumbnailSelector] = useState(false)
   
   // Edit form state
   const [editTitle, setEditTitle] = useState('')
@@ -861,6 +706,8 @@ export default function CoachVideoDetail() {
     videoId,
     enabled: !!videoId
   })
+  
+  const { isFavorited, toggleFavorite } = useVideoFavorites(videoId || '')
   
   const { notes, isLoading: notesLoading, createNote, deleteNote, refresh: refreshNotes } = useVideoNotes({
     videoId,
@@ -1194,8 +1041,14 @@ export default function CoachVideoDetail() {
           { label: video.title }
         ]}
         actions={
-          <>
-            <Button variant="secondary" onClick={handleCopyLink}>
+          <div className="flex gap-2">
+            <VideoFavoriteButton
+              videoId={videoId!}
+              isFavorited={isFavorited}
+              onToggle={toggleFavorite}
+            />
+            <VideoDownloadButton videoId={videoId!} />
+            <Button variant="secondary" onClick={() => setShowShareModal(true)}>
               <Icon name="ios_share" size="text-sm" className="mr-2" />
               {t('videoLibrary.actions.share')}
             </Button>
@@ -1220,7 +1073,7 @@ export default function CoachVideoDetail() {
               <Icon name="delete" size="text-sm" />
               {t('common.delete')}
             </button>
-          </>
+          </div>
         }
       />
       
@@ -1525,7 +1378,10 @@ export default function CoachVideoDetail() {
           </div>
           
           {/* Comments Section */}
-          <CommentsSection videoId={videoId!} disabled={USE_FAKE_DATA} />
+          <VideoCommentsPanel
+            videoId={videoId!}
+            disabled={USE_FAKE_DATA}
+          />
         </div>
       </div>
       
@@ -1847,6 +1703,29 @@ export default function CoachVideoDetail() {
           orgId={currentOrganization.id}
           currentTagIds={video.tags?.map(t => t.tag_id!) || []}
           onSave={handleSaveTags}
+        />
+      )}
+      
+      {/* Share Modal */}
+      {showShareModal && videoId && (
+        <VideoShareModal
+          videoId={videoId}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
+      
+      {/* Thumbnail Selector */}
+      {showThumbnailSelector && videoId && video.mux_playback_id && (
+        <VideoThumbnailSelector
+          videoId={videoId}
+          muxPlaybackId={video.mux_playback_id}
+          duration={video.duration_seconds || 0}
+          onClose={() => setShowThumbnailSelector(false)}
+          onSave={async (timestamp) => {
+            await updateVideo(videoId, { thumbnail_timestamp: timestamp })
+            refreshVideo()
+            setShowThumbnailSelector(false)
+          }}
         />
       )}
       

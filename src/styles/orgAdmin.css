@@ -2204,6 +2204,32 @@ html.dark .oa-alert-card--error .oa-text-danger {
     gap: var(--pa-space-5);
 }
 
+.oa-form-shell {
+    width: 100%;
+}
+
+.oa-form-shell--centered {
+    max-width: 840px;
+    margin: 0 auto;
+    padding: var(--pa-space-6) var(--pa-space-4);
+}
+
+@media (min-width: 640px) {
+    .oa-form-shell--centered {
+        padding: var(--pa-space-6) var(--pa-space-6);
+    }
+}
+
+@media (min-width: 1024px) {
+    .oa-form-shell--centered {
+        max-width: 960px;
+    }
+}
+
+.oa-form-card {
+    padding: var(--pa-space-6);
+}
+
 .oa-form-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -2396,6 +2422,38 @@ html.dark .oa-form-section-subtitle {
     gap: var(--pa-space-4);
     margin: 0;
     padding: 0;
+}
+
+.oa-form-field {
+    width: 100%;
+}
+
+.oa-form-field--medium {
+    width: 100%;
+}
+
+@media (min-width: 640px) {
+    .oa-form-field--medium {
+        max-width: 320px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .oa-form-field--medium {
+        max-width: 280px;
+    }
+}
+
+.oa-form-checkbox {
+    width: 100%;
+}
+
+.oa-form-checkbox .pa-checkbox {
+    align-items: center;
+}
+
+.oa-form-checkbox .pa-checkbox-helper-offset {
+    margin-left: 28px;
 }
 
 /* =====================================================================
