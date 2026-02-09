@@ -122,7 +122,7 @@ export default function AdminLayout() {
       requiresOrg: true,
       children: [
         { routeKey: 'admin.photos.list', text: t('admin.navigation.allGalleries'), icon: 'collections', path: getLink('admin.photos.list'), requiresOrg: true },
-        { routeKey: 'admin.photos.list', text: t('admin.navigation.newGallery'), icon: 'add_photo_alternate', path: getLink('admin.photos.list') + '?new=1', requiresOrg: true },
+        { routeKey: 'admin.photos.create', text: t('admin.navigation.newGallery'), icon: 'add_photo_alternate', path: getLink('admin.photos.create'), requiresOrg: true },
       ],
     },
     {
@@ -224,6 +224,9 @@ export default function AdminLayout() {
     }
     return location.pathname.startsWith(path)
   }
+  /** For child/sibling links: only the exact current path is active (pathname + search so e.g. /admin/videos?upload=1 matches only Upload Video). */
+  const currentFullPath = location.pathname + (location.search || '')
+  const isActiveExact = (path: string) => currentFullPath === path
 
   // Mobile nav sections already filtered by useFilteredNavigation
   const mobileNavSections: NavSection[] = filteredSections as NavSection[]
@@ -347,7 +350,7 @@ export default function AdminLayout() {
                   <ul className="pa-nav-list">
                     {children.map((child: any) => {
                       const childDisabled = child.requiresOrg && !hasOrg
-                      const childActive = isActive(child.path ?? '')
+                      const childActive = isActiveExact(child.path ?? '')
 
                       if (childDisabled) {
                         return (
