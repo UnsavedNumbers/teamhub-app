@@ -10,7 +10,6 @@ import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
 import { useHideEmptyGalleries } from './useHideEmptyGalleries'
 import { showSuccess } from '@/utils/toast'
-import './PhotosSettingsView.css'
 
 const STORAGE_KEY_PREFIX = 'admin_photos_settings_'
 
@@ -66,65 +65,70 @@ export function PhotosSettingsView() {
   }
 
   return (
-    <div className="photos-settings">
-      <Card className="settings-card">
-        <h2>{t('photos.settings.galleryPreferences')}</h2>
+    <div className="oa-form-shell oa-form-shell--centered">
+      <Card className="oa-form-card">
+        <div className="oa-form-layout">
+          <div className="oa-form-section">
+            <div className="oa-form-section-header">
+              <h2 className="oa-form-section-title">{t('photos.settings.galleryPreferences')}</h2>
+            </div>
 
-        {saved && (
-          <InlineNotice
-            tone="success"
-            title="Saved"
-            message={t('photos.settings.saved')}
-          />
-        )}
+            {saved && (
+              <InlineNotice
+                tone="success"
+                title={t('photos.settings.saved')}
+                message={t('photos.settings.saved')}
+              />
+            )}
 
-        <div className="settings-form">
-          <div className="setting-group">
-            <label className="setting-label">{t('photos.settings.defaultVisibility')}</label>
-            <Select
-              value={defaultVisibility}
-              onChange={(e) => setDefaultVisibility(e.target.value as any)}
-              options={[
-                { label: t('common.public'), value: 'public' },
-                { label: t('common.team'), value: 'team' },
-                { label: t('common.private'), value: 'private' },
-              ]}
-            />
-            <p className="setting-help">
-              {t('photos.settings.defaultVisibility')} - {t('photos.form.requireApprovalHelp')}
-            </p>
-          </div>
+            <div className="oa-form-section-body">
+              <div className="oa-form-group oa-form-field oa-form-field--medium">
+                <label className="oa-form-label">{t('photos.settings.defaultVisibility')}</label>
+                <Select
+                  className="oa-form-select"
+                  value={defaultVisibility}
+                  onChange={(e) => setDefaultVisibility(e.target.value as any)}
+                  options={[
+                    { label: t('common.public'), value: 'public' },
+                    { label: t('common.team'), value: 'team' },
+                    { label: t('common.private'), value: 'private' },
+                  ]}
+                />
+                <p className="oa-form-help">
+                  {t('photos.settings.defaultVisibility')} - {t('photos.form.requireApprovalHelp')}
+                </p>
+              </div>
 
-          <div className="setting-group">
-            <label className="setting-label">{t('photos.settings.defaultRequireApproval')}</label>
-            <Checkbox
-              checked={defaultRequireApproval}
-              onChange={(e) => setDefaultRequireApproval(e.target.checked)}
-            />
-            <p className="setting-help">
-              {t('photos.form.requireApprovalHelp')}
-            </p>
-          </div>
+              <div className="oa-form-group">
+                <Checkbox
+                  className="oa-form-checkbox"
+                  label={t('photos.settings.defaultRequireApproval')}
+                  helperText={t('photos.form.requireApprovalHelp')}
+                  checked={defaultRequireApproval}
+                  onChange={(e) => setDefaultRequireApproval(e.target.checked)}
+                />
+              </div>
 
-          <div className="setting-group">
-            <label className="setting-label">{t('photos.settings.hideEmptyByDefault')}</label>
-            <Checkbox
-              checked={hideEmpty}
-              onChange={(e) => setHideEmpty(e.target.checked)}
-            />
-            <p className="setting-help">
-              {t('photos.settings.hideEmptyByDefault')} - Hide galleries with no photos by default
-            </p>
-          </div>
+              <div className="oa-form-group">
+                <Checkbox
+                  className="oa-form-checkbox"
+                  label={t('photos.settings.hideEmptyByDefault')}
+                  helperText={t('photos.settings.hideEmptyByDefault')}
+                  checked={hideEmpty}
+                  onChange={(e) => setHideEmpty(e.target.checked)}
+                />
+              </div>
 
-          <div className="settings-actions">
-            <Button
-              variant="primary"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? t('common.saving') : t('photos.settings.save')}
-            </Button>
+              <div className="oa-form-actions">
+                <Button
+                  variant="primary"
+                  onClick={handleSave}
+                  disabled={saving}
+                >
+                  {saving ? t('common.saving') : t('photos.settings.save')}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </Card>

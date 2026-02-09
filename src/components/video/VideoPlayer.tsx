@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { usePlaybackToken } from '@/hooks/useVideos'
+import { useOrganization } from '@/contexts/OrganizationContext'
 import Icon from '@/components/portal/Icon'
 import { cn } from '@/utils/cn'
 
@@ -108,6 +109,10 @@ export default function VideoPlayer({
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [_isPlaying, setIsPlaying] = useState(false)
+  
+  // Get organization theme color
+  const { currentOrganization } = useOrganization()
+  const accentColor = currentOrganization?.primary_color || '#137fec'
   
   // Get playback token from edge function
   const isReady = !status || status === 'ready'
@@ -289,23 +294,26 @@ export default function VideoPlayer({
   return (
     <div className={cn("relative w-full", className)}>
       {/* Mux Player */}
-      <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl">
-        <mux-player
-          ref={playerRef as React.RefObject<HTMLElement>}
-          playback-id={playbackData.playback_id}
-          playback-token={playbackData.token}
-          thumbnail-token={playbackData.thumbnail_token}
-          storyboard-token={playbackData.storyboard_token}
-          stream-type="on-demand"
-          start-time={startTime}
-          autoplay={autoPlay}
-          muted={muted}
-          loop={loop}
-          poster={poster || playbackData.thumbnail_url}
-          primary-color="var(--org-btn-primary-bg, #137fec)"
-          style={{ width: '100%', height: '100%' }}
-        />
-      </div>
+      <mux-player
+        ref={playerRef as React.RefObject<HTMLElement>}
+        playback-id={playbackData.playback_id}
+        playback-token={playbackData.token}
+        thumbnail-token={playbackData.thumbnail_token}
+        storyboard-token={playbackData.storyboard_token}
+        stream-type="on-demand"
+        start-time={startTime}
+        autoplay={autoPlay}
+        muted={muted}
+        loop={loop}
+        poster={poster || playbackData.thumbnail_url}
+        accent-color={accentColor}
+        style={{
+          aspectRatio: '16/9',
+          width: '100%',
+          borderRadius: '12px',
+          overflow: 'hidden',
+        }}
+      />
       
       {/* Timeline Markers */}
       {markers.length > 0 && duration > 0 && (
