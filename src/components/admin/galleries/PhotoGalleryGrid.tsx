@@ -104,7 +104,7 @@ export function PhotoGalleryGrid({
               <Badge variant="info" style={{ background: '#FFF' }}>{t('photos.coverPhoto')}</Badge>
             )}
             {showPendingBadge && isPending && (
-              <Badge variant="warning">{t('photos.pendingApproval.badge')}</Badge>
+              <Badge variant="warning" style={{ background: '#FFF' }}>{t('photos.pendingApproval.badge')}</Badge>
             )}
           </div>
           
@@ -170,7 +170,7 @@ export function PhotoGalleryGrid({
 
   return (
     <div className="pa-space-y-3">
-      <div className="pa-flex pa-justify-between pa-items-center">
+      <div className="pa-flex pa-justify-between pa-items-center pa-mb-2">
         <div className="pa-flex pa-gap-3 pa-items-center">
           <Checkbox checked={allSelected} onChange={toggleSelectAll} label={t('common.selectAll')} />
           <span className="pa-text-sm pa-text-muted">

@@ -21,7 +21,7 @@ import './PhotosDashboardView.css'
 
 function formatStorage(bytes: number): string {
   const gb = bytes / (1024 * 1024 * 1024)
-  return gb.toFixed(1)
+  return gb.toFixed(2)
 }
 
 export function PhotosDashboardView() {
@@ -146,7 +146,7 @@ export function PhotosDashboardView() {
         />
         <StatCard 
           label={t('photos.dashboard.recentActivity')} 
-          value={stats.photosThisWeek}
+          value={stats.recentCount}
         />
         <StatCard 
           label={t('photos.pendingApproval.adminMessage', { count: stats.pending })} 

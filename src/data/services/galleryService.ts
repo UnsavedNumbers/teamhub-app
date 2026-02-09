@@ -513,6 +513,8 @@ export interface RecentActivityItem {
   gallery_cover_url: string | null
   timestamp: string
   photo_count?: number
+  /** Status of the most recent photo in this activity (from gallery_photos.status) */
+  status?: PhotoStatus
 }
 
 /**
@@ -539,6 +541,7 @@ export async function getRecentGalleryActivity(
       .select(`
         id,
         gallery_id,
+        status,
         created_at,
         gallery:galleries!gallery_photos_gallery_id_fkey!inner(
           id,
@@ -577,13 +580,15 @@ export async function getRecentGalleryActivity(
             gallery_cover_url: coverUrl,
             timestamp: photo.created_at,
             photo_count: 1,
+            status: photo.status as PhotoStatus | undefined,
           })
         } else {
           const item = galleryMap.get(galleryId)!
           item.photo_count = (item.photo_count || 0) + 1
-          // Keep the most recent timestamp
+          // Keep the most recent timestamp and status
           if (new Date(photo.created_at) > new Date(item.timestamp)) {
             item.timestamp = photo.created_at
+            item.status = photo.status as PhotoStatus | undefined
           }
         }
       }
@@ -1155,14 +1160,17 @@ export async function getPendingPhotosCount(
 
     const { count, error } = await supabase
       .from('gallery_photos')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact' })
       .eq('gallery_id', galleryId)
       .eq('status', 'pending')
+      .limit(0)
 
     if (error) throw error
 
+    const value =
+      typeof count === 'number' && Number.isFinite(count) ? count : 0
     return {
-      data: count || 0,
+      data: value,
       error: null,
     }
   } catch (err) {
