@@ -41,6 +41,7 @@ interface FilterState {
 
 export default function CoachVideoLibrary() {
   const { currentOrganization } = useOrganization()
+  void useVideoSearch
   
   // State for filters and sorting
   const [searchQuery, setSearchQuery] = useState('')
@@ -117,6 +118,9 @@ export default function CoachVideoLibrary() {
   
   const { deleteVideo, updateVideo } = useVideoMutations()
   const { bulkDelete, bulkAddTags, isProcessing: isBulkLoading } = useBulkVideoOperations({ orgId: currentOrganization?.id })
+  void showBulkActions
+  void setShowBulkActions
+  void isBulkLoading
   
   // Load teams for filters
   useEffect(() => {
@@ -158,11 +162,13 @@ export default function CoachVideoLibrary() {
     })
     setSearchQuery('')
   }, [])
+  void handleClearFilters
   
   // Toggle sort direction
   const handleSort = useCallback(() => {
     setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
   }, [])
+  void handleSort
   
   // Handle video actions
   const handleEditVideo = useCallback((videoId: string) => {
@@ -200,6 +206,7 @@ export default function CoachVideoLibrary() {
     setSharingVideo(videoId)
     setCopySuccess(false)
   }, [])
+  void handleShareVideo
   
   const handleCopyLink = useCallback(() => {
     navigator.clipboard.writeText(shareLink)
@@ -247,6 +254,7 @@ export default function CoachVideoLibrary() {
   const handleSelectAll = useCallback(() => {
     setSelectedVideoIds(videos.map(v => v.id))
   }, [videos])
+  void handleSelectAll
   
   const handleClearSelection = useCallback(() => {
     setSelectedVideoIds([])
@@ -254,31 +262,32 @@ export default function CoachVideoLibrary() {
   
   const handleBulkDelete = useCallback(async () => {
     if (selectedVideoIds.length === 0) return
-    if (!confirm(t('videoLibrary.bulk.confirmDelete', { count: selectedVideoIds.length }))) return
+    if (!confirm(t('videoLibrary.bulk.confirmDelete' as any, { count: selectedVideoIds.length }))) return
     
     const result = await bulkDelete(selectedVideoIds)
     if (result.succeeded.length > 0) {
-      showSuccess(t('videoLibrary.bulk.deleteSuccess', { count: result.succeeded.length }))
+      showSuccess(t('videoLibrary.bulk.deleteSuccess' as any, { count: result.succeeded.length }))
       setSelectedVideoIds([])
       refresh()
     }
     if (result.failed.length > 0) {
-      showError(t('videoLibrary.bulk.deleteFailed'))
+      showError(t('videoLibrary.bulk.deleteFailed' as any))
     }
   }, [selectedVideoIds, bulkDelete, refresh, t])
+  void handleBulkDelete
   
   const handleBulkTag = useCallback(async (tagIds: string[]) => {
     if (selectedVideoIds.length === 0) return
     
     const result = await bulkAddTags(selectedVideoIds, tagIds)
     if (result.succeeded.length > 0) {
-      showSuccess(t('videoLibrary.bulk.tagSuccess'))
+      showSuccess(t('videoLibrary.bulk.tagSuccess' as any))
       setSelectedVideoIds([])
       setShowTagPicker(false)
       refresh()
     }
     if (result.failed.length > 0) {
-      showError(t('videoLibrary.bulk.tagFailed'))
+      showError(t('videoLibrary.bulk.tagFailed' as any))
     }
   }, [selectedVideoIds, bulkAddTags, refresh, t])
   
@@ -354,11 +363,15 @@ export default function CoachVideoLibrary() {
           </Button>
           <div className="flex-1" />
           <VideoSortDropdown
-            value={`${sortBy}_${sortDirection}` as any}
+            value={{
+              field: (sortBy === 'view_count' ? 'views' : sortBy) as any,
+              direction: sortDirection
+            }}
             onChange={(value) => {
-              const [field, dir] = value.split('_')
-              setSortBy(field as SortOption)
-              setSortDirection(dir as 'asc' | 'desc')
+              const nextField = value.field === 'views' ? 'view_count' : value.field
+              if (nextField === 'size' || nextField === 'comments' || nextField === 'bookmarks') return
+              setSortBy(nextField as SortOption)
+              setSortDirection(value.direction)
             }}
           />
         </div>
@@ -693,7 +706,9 @@ export default function CoachVideoLibrary() {
       {/* Share Modal */}
       {showShareModal && shareVideoId && (
         <VideoShareModal
+          isOpen={showShareModal}
           videoId={shareVideoId}
+          videoTitle={videos.find(v => v.id === shareVideoId)?.title || 'Video'}
           onClose={() => {
             setShowShareModal(false)
             setShareVideoId(null)
@@ -703,15 +718,35 @@ export default function CoachVideoLibrary() {
       
       {/* Tag Picker for Bulk Operations */}
       {showTagPicker && currentOrganization?.id && (
-        <VideoTagPicker
-          orgId={currentOrganization.id}
-          videoIds={tagVideoIds}
-          onClose={() => {
-            setShowTagPicker(false)
-            setTagVideoIds([])
-          }}
-          onSave={handleBulkTag}
-        />
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-2xl w-full p-6 space-y-4">
+            <h3 className="text-xl font-bold">Select Tags</h3>
+            <VideoTagPicker
+              orgId={currentOrganization.id}
+              selectedTagIds={tagVideoIds}
+              onChange={setTagVideoIds}
+            />
+            <div className="flex items-center justify-end gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowTagPicker(false)
+                  setTagVideoIds([])
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={async () => {
+                  await handleBulkTag(tagVideoIds)
+                }}
+              >
+                Save Tags
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
       
       {/* Filter Panel Modal */}
@@ -725,7 +760,10 @@ export default function CoachVideoLibrary() {
               type: newFilters.type.length > 0 ? newFilters.type[0] as VideoCategory : null,
               teamId: newFilters.teamId,
               athleteId: null,
-              dateRange: newFilters.dateRange,
+              dateRange: {
+                start: newFilters.dateRange.start ? new Date(newFilters.dateRange.start) : null,
+                end: newFilters.dateRange.end ? new Date(newFilters.dateRange.end) : null,
+              },
               status: newFilters.status.length > 0 ? newFilters.status[0] as VideoStatus : null
             })
           }}

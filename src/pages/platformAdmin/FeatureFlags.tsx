@@ -20,6 +20,7 @@ import { showSuccess } from '../../utils/toast'
 type TabType = 'flags' | 'overrides' | 'audit'
 
 export default function FeatureFlags() {
+  const db = supabase as any
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabType>('flags')
   const [flags, setFlags] = useState<AdminFeatureFlag[]>([])
@@ -131,7 +132,7 @@ export default function FeatureFlags() {
     try {
       // The admin_feature_flag_overrides view may not exist in production
       // Skip fetching overrides if the view doesn't exist
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('admin_feature_flag_overrides')
         .select('*')
         .order('created_at', { ascending: false })
@@ -147,7 +148,7 @@ export default function FeatureFlags() {
         setOverrides([])
       } else {
         // Map rows to include id field
-        const mapped = (data || []).map(row => mapFeatureFlagOverride(row))
+        const mapped = (data || []).map((row: any) => mapFeatureFlagOverride(row))
         setOverrides(mapped)
       }
     } catch (err) {

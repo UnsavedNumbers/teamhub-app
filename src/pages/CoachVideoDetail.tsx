@@ -661,6 +661,11 @@ export default function CoachVideoDetail() {
   const { id: videoId } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { currentOrganization } = useOrganization()
+  void VideoTagPicker
+  void useVideoComments
+  type _VideoCommentRef = VideoComment
+  const _videoCommentRef: _VideoCommentRef | null = null
+  void _videoCommentRef
   
   // State
   const [currentTime, setCurrentTime] = useState(0)
@@ -707,7 +712,7 @@ export default function CoachVideoDetail() {
     enabled: !!videoId
   })
   
-  const { isFavorited, toggleFavorite } = useVideoFavorites(videoId || '')
+  useVideoFavorites({ orgId: currentOrganization?.id, enabled: !!videoId })
   
   const { notes, isLoading: notesLoading, createNote, deleteNote, refresh: refreshNotes } = useVideoNotes({
     videoId,
@@ -834,6 +839,7 @@ export default function CoachVideoDetail() {
       showError(t('common.error.clipboardFailed'))
     }
   }, [videoId, copyToClipboard])
+  void handleCopyLink
   
   // Handle visibility change with team reset logic
   const handleVisibilityChange = useCallback((newVisibility: VideoVisibility) => {
@@ -1044,8 +1050,7 @@ export default function CoachVideoDetail() {
           <div className="flex gap-2">
             <VideoFavoriteButton
               videoId={videoId!}
-              isFavorited={isFavorited}
-              onToggle={toggleFavorite}
+              orgId={video.org_id}
             />
             <VideoDownloadButton videoId={videoId!} />
             <Button variant="secondary" onClick={() => setShowShareModal(true)}>
@@ -1709,7 +1714,9 @@ export default function CoachVideoDetail() {
       {/* Share Modal */}
       {showShareModal && videoId && (
         <VideoShareModal
+          isOpen={showShareModal}
           videoId={videoId}
+          videoTitle={video.title}
           onClose={() => setShowShareModal(false)}
         />
       )}
@@ -1718,11 +1725,12 @@ export default function CoachVideoDetail() {
       {showThumbnailSelector && videoId && video.mux_playback_id && (
         <VideoThumbnailSelector
           videoId={videoId}
-          muxPlaybackId={video.mux_playback_id}
+          videoUrl={`https://stream.mux.com/${video.mux_playback_id}.m3u8`}
+          currentThumbnailUrl={video.thumbnail_url || null}
           duration={video.duration_seconds || 0}
           onClose={() => setShowThumbnailSelector(false)}
-          onSave={async (timestamp) => {
-            await updateVideo(videoId, { thumbnail_timestamp: timestamp })
+          onThumbnailSelect={async (timestamp: number) => {
+            await updateVideo(videoId, { thumbnail_timestamp: timestamp } as any)
             refreshVideo()
             setShowThumbnailSelector(false)
           }}

@@ -267,7 +267,7 @@ export async function setAthleteRSVP(
       }
     }
 
-    const { data: eligible, error: eligibilityError } = await supabase
+    const { data: eligible, error: eligibilityError } = await (supabase as any)
       .rpc('is_child_eligible_for_event', {
         p_child_id: childId,
         p_event_id: eventId
@@ -318,7 +318,7 @@ export async function validateAthleteEventEligibility(
   eventId: string
 ): Promise<{ data: boolean; error: Error | null }> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .rpc('is_child_eligible_for_event', {
         p_child_id: childId,
         p_event_id: eventId

@@ -8,6 +8,7 @@ import { mapFeatureFlag, mapFeatureFlagOverride, mapFeatureFlagAuditLog } from '
 import type { FeatureFlag, FeatureFlagOverride, FeatureFlagAuditLog } from '../../types/domain/FeatureFlag'
 
 export default function FeatureFlagDetail() {
+  const db = supabase as any
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [flag, setFlag] = useState<FeatureFlag | null>(null)
@@ -38,7 +39,7 @@ export default function FeatureFlagDetail() {
     setNotFound(false)
     
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('admin_feature_flags_list')
         .select('*')
         .eq('id', id)
@@ -72,7 +73,7 @@ export default function FeatureFlagDetail() {
     if (!id) return
     
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('admin_feature_flag_overrides')
         .select('*')
         .eq('feature_flag_id', id)
@@ -83,7 +84,7 @@ export default function FeatureFlagDetail() {
         setOverrides([])
       } else {
         // Map rows to include id field
-        const mapped = (data || []).map(row => mapFeatureFlagOverride(row))
+        const mapped = (data || []).map((row: any) => mapFeatureFlagOverride(row))
         setOverrides(mapped)
       }
     } catch (err) {
@@ -96,7 +97,7 @@ export default function FeatureFlagDetail() {
     if (!id) return
     
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('admin_feature_flag_audit')
         .select('*')
         .eq('feature_flag_id', id)
@@ -107,7 +108,7 @@ export default function FeatureFlagDetail() {
         console.error('Error fetching audit log:', error)
         setAuditLog([])
       } else {
-        setAuditLog((data || []).map(row => mapFeatureFlagAuditLog(row)))
+        setAuditLog((data || []).map((row: any) => mapFeatureFlagAuditLog(row)))
       }
     } catch (err) {
       console.error('Error:', err)

@@ -5,6 +5,7 @@ import { JsonViewer } from '../../components/platformAdmin'
 import type { EntitlementAuditLog } from '../../types/licenseTiers.types'
 
 export default function LicensesAudit() {
+  const db = supabase as any
   const [logs, setLogs] = useState<EntitlementAuditLog[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -21,7 +22,7 @@ export default function LicensesAudit() {
     setLoading(true)
 
     try {
-      let query = supabase
+      let query = db
         .from('entitlement_audit_log')
         .select('*', { count: 'exact' })
 
