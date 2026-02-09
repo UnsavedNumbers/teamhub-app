@@ -226,39 +226,39 @@ export default function AdminAthletes() {
             )
 
             // Apply client-side filters
-            let filteredAthletes = enrichedAthletes
+            let filteredAthletes: AthleteCardData[] = enrichedAthletes
 
             // Search filter
             if (filters.search) {
                 const searchLower = filters.search.toLowerCase()
-                filteredAthletes = filteredAthletes.filter(a =>
+                filteredAthletes = filteredAthletes.filter((a: AthleteCardData) =>
                     `${a.first_name} ${a.last_name}`.toLowerCase().includes(searchLower)
                 )
             }
 
             // Gender filter
             if (filters.genders.length > 0) {
-                filteredAthletes = filteredAthletes.filter(a =>
+                filteredAthletes = filteredAthletes.filter((a: AthleteCardData) =>
                     a.gender && filters.genders.includes(a.gender)
                 )
             }
 
             // Team filter
             if (filters.teamIds.length > 0) {
-                filteredAthletes = filteredAthletes.filter((a) =>
+                filteredAthletes = filteredAthletes.filter((a: AthleteCardData) =>
                     a.primary_team && filters.teamIds.includes(a.primary_team.id as string)
                 )
             }
 
             // Sport filter
             if (filters.sportIds.length > 0) {
-                filteredAthletes = filteredAthletes.filter((a) =>
+                filteredAthletes = filteredAthletes.filter((a: AthleteCardData) =>
                     a.primary_sport && filters.sportIds.includes(a.primary_sport.id as string)
                 )
             }
 
             // Sort by last name
-            filteredAthletes.sort((a, b) => a.last_name.localeCompare(b.last_name))
+            filteredAthletes.sort((a: AthleteCardData, b: AthleteCardData) => a.last_name.localeCompare(b.last_name))
 
             // Client-side pagination
             const startIndex = page * rowsPerPage

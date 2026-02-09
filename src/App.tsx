@@ -84,6 +84,8 @@ const FanOrgProfile = lazy(() => import('./pages/fan/FanOrgProfile'))
 const FanPhotos = lazy(() => import('./pages/fan/FanPhotos'))
 const FanGalleryDetail = lazy(() => import('./pages/fan/FanPhotos').then(m => ({ default: m.FanGalleryDetail })))
 const FanAthletePhotos = lazy(() => import('./pages/fan/FanPhotos').then(m => ({ default: m.FanAthletePhotos })))
+const FanVideos = lazy(() => import('./pages/fan/FanVideos'))
+const FanVideoDetail = lazy(() => import('./pages/fan/FanVideoDetail'))
 const FanSchedule = lazy(() => import('./pages/fan/FanSchedule'))
 const FanEventDetail = lazy(() => import('./pages/fan/FanEventDetail'))
 const FanTickets = lazy(() => import('./pages/fan/FanTickets'))
@@ -103,6 +105,7 @@ const GuardianVideos = lazy(() => import('./pages/GuardianVideos'))
 const GuardianVideoDetail = lazy(() => import('./pages/GuardianVideoDetail'))
 const CoachVideoLibrary = lazy(() => import('./pages/CoachVideoLibrary'))
 const CoachVideoDetail = lazy(() => import('./pages/CoachVideoDetail'))
+const SharedVideoPage = lazy(() => import('./pages/SharedVideoPage'))
 
 // Admin Layout (Material Dashboard)
 import AdminLayout from './layouts/AdminLayout'
@@ -333,6 +336,13 @@ function AppWithTheme() {
           <Route path="/tickets/resend" element={<ResendTicketsPage />} />
           <Route path="/tickets/validate/:token" element={<TicketScanner />} />
           
+          {/* Public Shared Video Routes */}
+          <Route path="/share/video/:token" element={
+            <Suspense fallback={<FullScreenLoader />}>
+              <SharedVideoPage />
+            </Suspense>
+          } />
+          
           {/* Redirect /accept-invite to /portal/accept-invite for old email links */}
           <Route path="/accept-invite" element={<AcceptInvite />} />
 
@@ -413,6 +423,8 @@ function AppWithTheme() {
             <Route path="photos" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanPhotos /></Suspense></ProtectedRoute>} />
             <Route path="photos/gallery/:id" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanGalleryDetail /></Suspense></ProtectedRoute>} />
             <Route path="photos/athlete/:athleteId" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanAthletePhotos /></Suspense></ProtectedRoute>} />
+            <Route path="videos" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanVideos /></Suspense></ProtectedRoute>} />
+            <Route path="videos/:id" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanVideoDetail /></Suspense></ProtectedRoute>} />
             <Route path="tickets" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanTickets /></Suspense></ProtectedRoute>} />
             <Route path="tickets/:ticketId" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanTicketDetail /></Suspense></ProtectedRoute>} />
             <Route path="following" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanFollowing /></Suspense></ProtectedRoute>} />

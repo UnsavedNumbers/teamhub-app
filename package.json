@@ -52,6 +52,7 @@
     "stream-chat": "^8.0.0",
     "stream-chat-react": "^11.0.0",
     "stripe": "^17.5.0",
+    "supabase": "^2.76.6",
     "xlsx": "^0.18.5",
     "yet-another-react-lightbox": "^3.28.0",
     "zod": "^4.3.5"

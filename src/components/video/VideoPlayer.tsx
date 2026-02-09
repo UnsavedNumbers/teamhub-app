@@ -112,7 +112,7 @@ export default function VideoPlayer({
   
   // Get organization theme color
   const { currentOrganization } = useOrganization()
-  const accentColor = currentOrganization?.primary_color || '#137fec'
+  const accentColor = (currentOrganization as { primary_color?: string } | null)?.primary_color || '#137fec'
   
   // Get playback token from edge function
   const isReady = !status || status === 'ready'

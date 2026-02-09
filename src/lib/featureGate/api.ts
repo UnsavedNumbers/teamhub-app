@@ -74,7 +74,7 @@ export async function fetchFeatureGate(
             };
         }
 
-        const result = data as FeatureGateResult;
+        const result = data as unknown as FeatureGateResult;
 
         // Cache the result
         gateCache.set(cacheKey, { result, timestamp: Date.now() });
@@ -148,7 +148,7 @@ export async function fetchFeatureGates(
             };
         }
 
-        const results = data as Record<string, FeatureGateResult>;
+        const results = data as unknown as Record<string, FeatureGateResult>;
 
         // Cache the new results
         for (const [key, result] of Object.entries(results)) {

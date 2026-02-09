@@ -280,7 +280,7 @@ export function mapLicenseMetrics(row: any): LicenseMetrics {
 // Feature Flag Mappers
 // ============================================================================
 
-export function mapFeatureFlag(row: SupabaseExtended['public']['Views']['admin_feature_flags_list']['Row']): FeatureFlag {
+export function mapFeatureFlag(row: any): FeatureFlag {
   return {
     id: row.id,
     key: row.key,
@@ -299,7 +299,7 @@ export function mapFeatureFlag(row: SupabaseExtended['public']['Views']['admin_f
   }
 }
 
-export function mapFeatureFlagOverride(row: SupabaseExtended['public']['Views']['admin_feature_flag_overrides']['Row']): FeatureFlagOverride {
+export function mapFeatureFlagOverride(row: any): FeatureFlagOverride {
   // Generate id from composite key
   const id = `${row.feature_flag_id}:${row.scope_id}:${row.environment}`
   
@@ -320,7 +320,7 @@ export function mapFeatureFlagOverride(row: SupabaseExtended['public']['Views'][
   }
 }
 
-export function mapFeatureFlagAuditLog(row: SupabaseExtended['public']['Views']['admin_feature_flag_audit']['Row']): FeatureFlagAuditLog {
+export function mapFeatureFlagAuditLog(row: any): FeatureFlagAuditLog {
   return {
     id: row.id,
     actorId: row.actor_id,

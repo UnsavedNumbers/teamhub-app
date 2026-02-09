@@ -1434,6 +1434,18 @@ const root = {
 } as const satisfies Record<string, RouteDefinition>
 
 // ============================================================================
+// SHARE ROUTES - Public shared content
+// ============================================================================
+const share = {
+    video: {
+        path: '/share/video/:token',
+        params: ['token'] as const,
+        label: 'Shared Video',
+        icon: 'play_circle',
+    },
+} as const satisfies Record<string, RouteDefinition>
+
+// ============================================================================
 // EXPORTED ROUTE DEFINITIONS
 // ============================================================================
 export const routes = {
@@ -1443,6 +1455,7 @@ export const routes = {
     admin,
     platformAdmin,
     fan,
+    share,
 } as const
 
 // Type for the routes object

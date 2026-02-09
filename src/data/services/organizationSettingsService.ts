@@ -42,7 +42,7 @@ import {
 } from '../fake/organizationSettingsFakeService'
 
 type OrgSettingsContext = UserContext
-type PublicTableName = keyof SupabaseExtended['public']['Tables']
+type PublicTableName = Extract<keyof SupabaseExtended['public']['Tables'], string>
 const fromTable = <T extends PublicTableName>(table: T) => supabase.from(table)
 
 type OrganizationSettingsRow = SupabaseExtended['public']['Tables']['organization_settings']['Row']
@@ -419,7 +419,7 @@ async function getRegistrationSettings(
     const settings: RegistrationSettings = {
       org_id: row.org_id,
       required_fields: Array.isArray(row.required_fields)
-        ? row.required_fields.filter((f): f is string => typeof f === 'string')
+        ? row.required_fields.filter((f: unknown): f is string => typeof f === 'string')
         : undefined,
       allow_players_without_guardians: row.allow_players_without_guardians,
       allow_guardian_self_invite: row.allow_guardian_self_invite,
