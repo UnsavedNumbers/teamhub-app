@@ -331,7 +331,7 @@ export const adminMenuItems: MenuItemDefinition[] = [
         requiresOrg: true,
         children: [
             { text: 'All Galleries', icon: 'collections', routeKey: 'admin.photos.list', requiresOrg: true },
-            { text: 'New Gallery', icon: 'add_photo_alternate', routeKey: 'admin.photos.list', requiresOrg: true },
+            { text: 'New Gallery', icon: 'add_photo_alternate', routeKey: 'admin.photos.create', requiresOrg: true },
         ],
     },
     {
