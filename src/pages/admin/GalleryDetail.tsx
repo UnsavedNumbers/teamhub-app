@@ -11,6 +11,7 @@ import {
   getAlbumsForGallery,
   getPhotosForGallery,
   getGalleryPhotoUrl,
+  getGalleryPhotoCounts,
   moderatePhotos,
   type Gallery,
   type GalleryPhoto,
@@ -63,6 +64,8 @@ export default function GalleryDetail() {
   const [localSearchQuery, setLocalSearchQuery] = useState(filters.q)
 
   const [gallery, setGallery] = useState<Gallery | null>(null)
+  const [galleryFetched, setGalleryFetched] = useState(false)
+  const [photoCounts, setPhotoCounts] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 })
   const [photos, setPhotos] = useState<GalleryPhoto[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -125,15 +128,27 @@ export default function GalleryDetail() {
   }, [])
 
   const loadGallery = useCallback(async () => {
-    if (!id || !context) return
+    if (!id || !context) {
+      if (mountedRef.current) setGalleryFetched(true)
+      return
+    }
     if (USE_FAKE_DATA) {
       const mockGalleryDb = getMockGalleryById(id)
+      const mockPhotosDb = getMockPhotosForGallery(id)
       if (mountedRef.current) {
         setGallery(
           mockGalleryDb
             ? ({ ...mockGalleryDb, can_download: mockGalleryDb.can_download ?? undefined } as unknown as Gallery)
             : null,
         )
+        const status = (p: typeof mockPhotosDb[0]) => ((p as GalleryPhoto).approval_status ?? (p as { status?: string }).status) as string
+        setPhotoCounts({
+          total: mockPhotosDb.length,
+          pending: mockPhotosDb.filter((p) => status(p) === 'pending').length,
+          approved: mockPhotosDb.filter((p) => status(p) === 'approved').length,
+          rejected: mockPhotosDb.filter((p) => status(p) === 'rejected').length,
+        })
+        setGalleryFetched(true)
       }
       return
     }
@@ -142,9 +157,16 @@ export default function GalleryDetail() {
     if (!mountedRef.current) return
     if (error) {
       showError(error.message)
-      return
     }
-    setGallery(data || null)
+    if (mountedRef.current) {
+      setGallery(data || null)
+      setGalleryFetched(true)
+    }
+
+    const { data: counts } = await getGalleryPhotoCounts(context, id)
+    if (mountedRef.current && counts) {
+      setPhotoCounts(counts)
+    }
   }, [id, context])
 
   const loadAlbums = useCallback(async () => {
@@ -202,7 +224,6 @@ export default function GalleryDetail() {
       ...query,
       cursor: viewMode === 'grid' && !reset ? cursorRef.current || undefined : undefined,
     })
-    
 
     if (!mountedRef.current) return null
 
@@ -226,6 +247,11 @@ export default function GalleryDetail() {
     setLoadingMore(false)
     return data || null
   }, [id, context, filters, viewMode, gridPageSize, rowsPerPage, page])
+
+  useEffect(() => {
+    setGalleryFetched(false)
+    setPhotoCounts({ total: 0, pending: 0, approved: 0, rejected: 0 })
+  }, [id])
 
   useEffect(() => {
     loadGallery()
@@ -274,15 +300,11 @@ export default function GalleryDetail() {
   }, [clearFilters])
 
   const photoStats = useMemo(() => {
-    const approved = photos.filter((p) => p.approval_status === 'approved').length
-    const pending = photos.filter((p) => p.approval_status === 'pending').length
-    const flagged = photos.filter((p) => p.approval_status === 'rejected').length
-    const total = photos.length
+    const { total, pending, approved, rejected } = photoCounts
     const remaining = Math.max(0, MAX_PHOTOS_PER_GALLERY - total)
     const limitReached = total >= MAX_PHOTOS_PER_GALLERY
-
-    return { approved, pending, flagged, total, remaining, limitReached }
-  }, [photos])
+    return { total, pending, approved, flagged: rejected, remaining, limitReached }
+  }, [photoCounts])
 
   const sortOptions = useMemo(
     () => [
@@ -368,13 +390,25 @@ export default function GalleryDetail() {
       showError(t('photos.demoMode.deleteBlocked'))
       return
     }
-    const pendingIds = photos.filter((p) => p.approval_status === 'pending').map((p) => p.id)
-    if (pendingIds.length === 0) {
+    if (photoCounts.pending <= 0) {
       showError(t('photos.noPendingPhotos'))
       return
     }
     const confirm = window.confirm(t('photos.approveAllConfirm'))
     if (!confirm) return
+    if (!id || !context) return
+    const { data: pendingPhotos } = await getPhotosForGallery(context, {
+      gallery_id: id,
+      status: 'pending',
+      limit: 500,
+      order_by: 'created_at',
+      order_direction: 'asc',
+    })
+    const pendingIds = (pendingPhotos || []).map((p) => p.id)
+    if (pendingIds.length === 0) {
+      loadGallery()
+      return
+    }
     const { error } = await moderatePhotos(context, pendingIds, 'approve')
     if (error) {
       showError(t('gallery.moderationQueue.approveError'))
@@ -413,8 +447,8 @@ export default function GalleryDetail() {
     }
   }, [gallery, t])
 
-  // Show loading skeleton for entire page
-  if (loading) {
+  // Show loading skeleton until gallery fetch has completed (avoids flashing "Gallery not found" when loadPhotos finishes before loadGallery)
+  if (!galleryFetched || (loading && !gallery)) {
     return (
       <div className="org-structure-page">
         <div className="pa-animate-pulse pa-space-y-4 pa-p-6">
@@ -426,7 +460,7 @@ export default function GalleryDetail() {
     )
   }
 
-  // Show error if gallery not found
+  // Show error only after we know the gallery fetch completed and returned no gallery
   if (!gallery) {
     return (
       <div className="org-structure-page">
@@ -510,17 +544,17 @@ export default function GalleryDetail() {
             )}
 
             {/* Pending Approval Notice */}
-            {photoStats.pending > 0 && gallery?.require_approval && (
+            {photoCounts.pending > 0 && gallery?.require_approval && (
               <InlineNotice
                 tone="info"
-                title={t('photos.pendingApproval.adminMessage', { count: photoStats.pending })}
+                title={t('photos.pendingApproval.adminMessage', { count: photoCounts.pending })}
                 message={t('photos.pendingApproval.waitingMessage')}
               />
             )}
 
             {/* Upload Zone */}
             {!photoStats.limitReached && (
-              <Card title={t('photos.upload.title')} className="oa-card oa-card--no-padding">
+              <Card title={t('photos.upload.title')} className="oa-card oa-card--no-padding pa-mt-3">
                 <div style={{ padding: 'var(--pa-space-6)' }}>
                   <PhotoUploadZone 
                     galleryId={id} 
