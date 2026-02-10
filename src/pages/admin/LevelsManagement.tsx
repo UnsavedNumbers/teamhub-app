@@ -13,8 +13,9 @@ import { getLevels, deleteLevel } from '../../data/services/levelsService'
 import { getPrograms } from '../../data/services/sportsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Level, Program, Team } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, Select, ConfirmDialog, EmptyState, Badge, PlatformDataTable, InlineNotice } from '../../components/platformAdmin'
-import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
+import { AdminPageHeader, Card, Button, Select, ConfirmDialog, EmptyState, Badge, InlineNotice } from '../../components/platformAdmin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import { cn } from '../../utils/cn'
@@ -455,7 +456,7 @@ export default function LevelsManagement() {
             </div>
           </Card>
 
-          <PlatformDataTable
+          <OrgDataTable
             rows={filteredLevels}
             columns={columns}
             loading={loading || refreshing}

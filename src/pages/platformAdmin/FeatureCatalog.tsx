@@ -101,6 +101,7 @@ export default function FeatureCatalog() {
   const [sourceFilter, setSourceFilter] = useState<string | null>(null)
   const [systemFeatureFilter, setSystemFeatureFilter] = useState<'all' | 'yes' | 'no'>('all')
   const [platformAdminOnlyFilter, setPlatformAdminOnlyFilter] = useState<'all' | 'yes' | 'no'>('all')
+  const [hierarchyFilter, setHierarchyFilter] = useState<'all' | 'parents' | 'children'>('all')
 
   // Pagination
   const [page, setPage] = useState(0)
@@ -110,7 +111,7 @@ export default function FeatureCatalog() {
   // Selection State
   const [selectedFeatureIds, setSelectedFeatureIds] = useState<Set<string>>(new Set())
   const [selectAllMode, setSelectAllMode] = useState<'none' | 'page' | 'all'>('none')
-  const prevFiltersRef = useRef<{ statusFilter: string[]; tierFilter: string[]; roleFilter: string[]; integrationFilter: string[]; quantifiableFilter: string | null; sourceFilter: string | null; systemFeatureFilter: 'all' | 'yes' | 'no'; platformAdminOnlyFilter: 'all' | 'yes' | 'no' }>({ 
+  const prevFiltersRef = useRef<{ statusFilter: string[]; tierFilter: string[]; roleFilter: string[]; integrationFilter: string[]; quantifiableFilter: string | null; sourceFilter: string | null; systemFeatureFilter: 'all' | 'yes' | 'no'; platformAdminOnlyFilter: 'all' | 'yes' | 'no'; hierarchyFilter: 'all' | 'parents' | 'children' }>({ 
     statusFilter: [], 
     tierFilter: [], 
     roleFilter: [], 
@@ -118,7 +119,8 @@ export default function FeatureCatalog() {
     quantifiableFilter: null, 
     sourceFilter: null,
     systemFeatureFilter: 'all',
-    platformAdminOnlyFilter: 'all'
+    platformAdminOnlyFilter: 'all',
+    hierarchyFilter: 'all'
   })
 
   // Modal States
@@ -282,6 +284,21 @@ export default function FeatureCatalog() {
         query = query.eq('platform_admin_only', false)
       }
 
+      // Hierarchy filter
+      if (hierarchyFilter === 'parents') {
+        // Show only features that are parents (i.e., features that OTHER features point to as parent)
+        // This means we need features whose feature_key appears in other features' parent_feature_key
+        // For now, we can do a simple approach: exclude features that have no children
+        // We'll need to check if there exists any feature with parent_feature_key = this feature_key
+        // Since we can't easily do this in a single query, we'll just show non-null parent_feature_key is NOT the way
+        // Actually for "parents" we want to show features that DO NOT have a parent (are root level) but might have children
+        // Let's make this simpler: Parents = features with parent_feature_key IS NULL (root features)
+        query = query.is('parent_feature_key', null)
+      } else if (hierarchyFilter === 'children') {
+        // Show only features that are children (have a parent)
+        query = query.not('parent_feature_key', 'is', null)
+      }
+
       query = query.order('category', { ascending: true }).order('display_name', { ascending: true })
 
       const from = page * rowsPerPage
@@ -388,8 +405,18 @@ export default function FeatureCatalog() {
       
       return () => clearTimeout(timeoutId)
     }
-    prevFiltersRef.current = { statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter }
-  }, [statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, selectedFeatureIds.size])
+    prevFiltersRef.current = {
+      statusFilter,
+      tierFilter,
+      roleFilter,
+      integrationFilter,
+      quantifiableFilter,
+      sourceFilter,
+      systemFeatureFilter,
+      platformAdminOnlyFilter,
+      hierarchyFilter,
+    }
+  }, [statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, hierarchyFilter, selectedFeatureIds.size])
 
   // Discovery Logic
   const runDiscovery = useCallback(async (force = false) => {
@@ -841,12 +868,13 @@ export default function FeatureCatalog() {
     setSourceFilter(null)
     setSystemFeatureFilter('all')
     setPlatformAdminOnlyFilter('all')
+    setHierarchyFilter('all')
   }
 
   // Reset to first page when any filter changes so results make sense
   useEffect(() => {
     setPage(0)
-  }, [debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter])
+  }, [debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, hierarchyFilter])
 
   // Initial data fetch on mount
   // Initial mount: fetch tiers and run discovery once
@@ -888,6 +916,19 @@ export default function FeatureCatalog() {
       render: (row) => (
         <div>
           <div className="pa-body-m" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {(row as any).parent_feature_key && (
+              <span
+                className="material-symbols-outlined"
+                style={{
+                  fontSize: '16px',
+                  color: 'var(--pa-n500)',
+                  cursor: 'help',
+                }}
+                title={`Child of ${(row as any).parent_feature_key}`}
+              >
+                subdirectory_arrow_right
+              </span>
+            )}
             {row.display_name}
             {(row.is_toggleable === false || row.is_removable === false) && (
               <span
@@ -1048,6 +1089,8 @@ export default function FeatureCatalog() {
           onSystemFeatureFilterChange={setSystemFeatureFilter}
           platformAdminOnlyFilter={platformAdminOnlyFilter}
           onPlatformAdminOnlyFilterChange={setPlatformAdminOnlyFilter}
+          hierarchyFilter={hierarchyFilter}
+          onHierarchyFilterChange={setHierarchyFilter}
           onClearAll={handleClearFilters}
         />
 

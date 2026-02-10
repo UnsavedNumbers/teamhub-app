@@ -24,6 +24,7 @@ export const REASON_MESSAGES: Record<ReasonCode, string> = {
     not_found: 'Feature not available',
     no_organization: 'Select an organization to access this feature',
     limit_exceeded: 'You have reached the usage limit for this feature',
+    parent_feature_unavailable: 'Requires parent feature to be available',
     error: 'Unable to verify feature access',
 };
 
@@ -44,6 +45,7 @@ export const REASON_LABELS: Record<ReasonCode, string> = {
     not_found: 'Unavailable',
     no_organization: 'No Org',
     limit_exceeded: 'Limit Reached',
+    parent_feature_unavailable: 'Parent Required',
     error: 'Error',
 };
 

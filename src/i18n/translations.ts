@@ -154,6 +154,31 @@ export const en = {
         pageTitle: 'License & Billing',
         planSelectionTitle: 'Choose Your Plan',
         manageBilling: 'Manage Billing',
+
+        seasons: {
+            galleries: {
+                heroTitle: 'Galerías de Temporada',
+                heroSubtitle: 'Media curada para {{season}}',
+                heroSeasonPlaceholder: 'esta temporada',
+                heroBody: 'Organiza destacados, fotos de seguidores y álbumes de eventos dentro de una sola vitrina media.',
+                managementTitle: 'Galerías de temporada',
+                status: {
+                    active: 'Temporada activa',
+                    inactive: 'Temporada inactiva',
+                },
+                stats: {
+                    galleries: 'Galerías',
+                    galleriesSub: 'Galerías de temporada',
+                    photos: 'Fotos',
+                    photosSub: 'Fotos curadas',
+                    pending: 'Pendiente de aprobación',
+                    pendingSub: 'Esperando revisión',
+                },
+                actions: {
+                    viewAll: 'Ver todas las galerías',
+                },
+            },
+        },
         upgradePlan: 'Upgrade Plan',
         downgradePlan: 'Downgrade Plan',
         changePlan: 'Change Plan',
@@ -1176,6 +1201,42 @@ export const en = {
             unpaidFees: 'UNPAID FEES',
             upcomingEvents: 'UPCOMING EVENTS',
             uniformOrders: 'UNIFORM ORDERS',
+            // Greetings
+            greetingMorning: 'Good Morning',
+            greetingAfternoon: 'Good Afternoon',
+            greetingEvening: 'Good Evening',
+            // Layout selector
+            layoutLabel: 'Dashboard Layout',
+            layoutStadium: 'Stadium',
+            layoutEditorial: 'Editorial',
+            layoutAthlete: 'Athlete',
+            // Section headers
+            quickActions: 'QUICK ACTIONS',
+            recentActivity: 'RECENT ACTIVITY',
+            upcomingEventsTitle: 'UPCOMING EVENTS',
+            // Actions
+            refresh: 'Refresh',
+            viewAll: 'View All',
+            viewAllActivity: 'View All Activity',
+            // Quick action labels
+            actionNewEvent: 'New Event',
+            actionAddUser: 'Add User',
+            actionAssignFee: 'Assign Fee',
+            actionManageTeams: 'Manage Teams',
+            actionPhotos: 'Photos',
+            actionAnnouncement: 'Announcement',
+            // Content
+            noRecentActivity: 'No recent activity',
+            noUpcomingEvents: 'No upcoming events',
+            newFeeAssignment: 'New fee assignment',
+            fee: 'Fee',
+            // Attention banner
+            attentionUnpaidTitle: 'Unpaid Fees Need Attention',
+            attentionUnpaidAction: 'click to review',
+            // Variant-specific copy
+            heroTagline: 'Your command center for everything happening across your organization.',
+            editorialLead: 'Everything you need to manage your organization, all in one place.',
+            athleteTagline: 'Your team operations at a glance. Stay ahead of the game.',
         },
         organizationSettings: {
             title: 'Organization Settings',
@@ -3685,6 +3746,31 @@ export const en = {
             season: 'Season Photos',
             org: 'Organization Photos',
         },
+
+        seasons: {
+            galleries: {
+                heroTitle: 'Season Galleries',
+                heroSubtitle: 'Curated media for {{season}}',
+                heroSeasonPlaceholder: 'this season',
+                heroBody: 'Organize highlights, fan submissions, and event albums inside a single season media hub.',
+                managementTitle: 'Season galleries',
+                status: {
+                    active: 'Active season',
+                    inactive: 'Inactive season',
+                },
+                stats: {
+                    galleries: 'Galleries',
+                    galleriesSub: 'Season galleries',
+                    photos: 'Photos',
+                    photosSub: 'Curated photos',
+                    pending: 'Pending approvals',
+                    pendingSub: 'Awaiting review',
+                },
+                actions: {
+                    viewAll: 'View all galleries',
+                },
+            },
+        },
     },
 
     // Platform Admin Features
@@ -4815,6 +4901,42 @@ export const es = {
             unpaidFees: 'PAGOS PENDIENTES',
             upcomingEvents: 'EVENTOS PRÓXIMOS',
             uniformOrders: 'PEDIDOS DE UNIFORMES',
+            // Greetings
+            greetingMorning: 'Buenos Días',
+            greetingAfternoon: 'Buenas Tardes',
+            greetingEvening: 'Buenas Noches',
+            // Layout selector
+            layoutLabel: 'Diseño del Panel',
+            layoutStadium: 'Estadio',
+            layoutEditorial: 'Editorial',
+            layoutAthlete: 'Atleta',
+            // Section headers
+            quickActions: 'ACCIONES RÁPIDAS',
+            recentActivity: 'ACTIVIDAD RECIENTE',
+            upcomingEventsTitle: 'EVENTOS PRÓXIMOS',
+            // Actions
+            refresh: 'Actualizar',
+            viewAll: 'Ver Todo',
+            viewAllActivity: 'Ver Toda la Actividad',
+            // Quick action labels
+            actionNewEvent: 'Nuevo Evento',
+            actionAddUser: 'Agregar Usuario',
+            actionAssignFee: 'Asignar Cuota',
+            actionManageTeams: 'Gestionar Equipos',
+            actionPhotos: 'Fotos',
+            actionAnnouncement: 'Anuncio',
+            // Content
+            noRecentActivity: 'Sin actividad reciente',
+            noUpcomingEvents: 'Sin eventos próximos',
+            newFeeAssignment: 'Nueva asignación de cuota',
+            fee: 'Cuota',
+            // Attention banner
+            attentionUnpaidTitle: 'Pagos Pendientes Requieren Atención',
+            attentionUnpaidAction: 'haga clic para revisar',
+            // Variant-specific copy
+            heroTagline: 'Tu centro de mando para todo lo que sucede en tu organización.',
+            editorialLead: 'Todo lo que necesitas para gestionar tu organización, en un solo lugar.',
+            athleteTagline: 'Las operaciones de tu equipo de un vistazo. Mantente adelante del juego.',
         },
         organizationSettings: {
             title: 'ConfiguraciÃ³n de la organizaciÃ³n',

@@ -6,11 +6,11 @@ import { getOrganizationUsers } from '../../data/services/usersService'
 import { 
   AdminPageHeader, 
   Button, 
-  PlatformDataTable, 
   Badge,
   InlineNotice,
-  type ColumnConfig 
 } from '../../components/platformAdmin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { mapDbRoleToFrontendRole } from '../../utils/roleHelpers'
 import { formatDate } from '../../utils/dateFormatters'
@@ -178,7 +178,7 @@ export default function OrganizationUsers() {
         />
       )}
 
-      <PlatformDataTable
+      <OrgDataTable
         columns={columns}
         rows={users}
         loading={loading}

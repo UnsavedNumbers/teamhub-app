@@ -17,6 +17,8 @@ import SeasonTeamsSlideOver from '../../components/admin/SeasonTeamsSlideOver'
 import type { SeasonTeamRow } from '../../components/admin/SeasonTeamsSlideOver'
 import './SeasonDetail.css'
 import { GalleryManagementSection } from '@/components/admin/galleries/GalleryManagementSection'
+import { useI18n } from '@/i18n/useI18n'
+import type { Gallery } from '@/data/services/galleryService'
 
 interface SeasonStats {
   teamsCount: number
@@ -28,10 +30,17 @@ interface SeasonStats {
   staffCount: number
 }
 
+interface GalleryInsights {
+  total: number
+  photos: number
+  pending: number
+}
+
 export default function SeasonDetail() {
   const { id } = useParams<{ id: string }>()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const { t } = useI18n()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [season, setSeason] = useState<Season | null>(null)
@@ -41,6 +50,12 @@ export default function SeasonDetail() {
   const [archiving, setArchiving] = useState(false)
   const [seasonTeams, setSeasonTeams] = useState<SeasonTeamRow[]>([])
   const [teamsSlideOverOpen, setTeamsSlideOverOpen] = useState(false)
+  const [galleryInsights, setGalleryInsights] = useState<GalleryInsights>({
+    total: 0,
+    photos: 0,
+    pending: 0,
+  })
+  const [galleryLoading, setGalleryLoading] = useState(true)
 
   // Load season data
   useEffect(() => {
@@ -234,6 +249,17 @@ export default function SeasonDetail() {
 
     loadStats()
   }, [context, isReady, id, season])
+
+  const handleGalleriesLoaded = useCallback((galleries: Gallery[]) => {
+    const total = galleries.length
+    const photos = galleries.reduce((sum, gallery) => sum + (gallery.photo_count ?? 0), 0)
+    const pending = galleries.reduce((sum, gallery) => sum + (gallery.pending_count ?? 0), 0)
+    setGalleryInsights({ total, photos, pending })
+  }, [])
+
+  const handleGalleryLoading = useCallback((loading: boolean) => {
+    setGalleryLoading(loading)
+  }, [])
 
   const handleArchive = useCallback(async () => {
     if (!season || !id) return
@@ -459,14 +485,73 @@ export default function SeasonDetail() {
             </div>
           </Card>
 
-          <Card className="pa-card" style={{ marginTop: 'var(--pa-space-4)' }}>
-            <h3 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-3)' }}>Galleries</h3>
-            <GalleryManagementSection
-              entityType="season"
-              entityId={season.id}
-              orgId={context.orgId}
-              title="Season galleries"
-            />
+          <Card className="season-detail-galleries-card">
+            <div className="season-detail-galleries-hero">
+              <div className="season-detail-galleries-hero-text">
+                <p className="season-detail-galleries-hero-heading">
+                  {t('billing.seasons.galleries.heroTitle')}
+                </p>
+                <h3 className="season-detail-galleries-title">
+                  {season?.name ?? t('billing.seasons.galleries.heroTitle')}
+                </h3>
+                <p className="season-detail-galleries-subtitle">
+                  {t('billing.seasons.galleries.heroSubtitle', {
+                    season: season?.name ?? t('billing.seasons.galleries.heroSeasonPlaceholder'),
+                  })}
+                </p>
+                <p className="season-detail-galleries-body-copy">
+                  {t('billing.seasons.galleries.heroBody')}
+                </p>
+              </div>
+              <div className="season-detail-galleries-hero-actions">
+                <span
+                  className="season-detail-galleries-status"
+                  data-state={season?.is_active ? 'active' : 'inactive'}
+                >
+                  {season?.is_active
+                    ? t('billing.seasons.galleries.status.active')
+                    : t('billing.seasons.galleries.status.inactive')}
+                </span>
+                <Button variant="secondary" onClick={() => navigate(getLink('admin.photos.list'))}>
+                  {t('billing.seasons.galleries.actions.viewAll')}
+                </Button>
+              </div>
+            </div>
+            <div className="season-detail-galleries-body">
+              <div className="season-detail-galleries-stats">
+                {[
+                  {
+                    label: t('billing.seasons.galleries.stats.galleries'),
+                    value: galleryLoading ? '—' : formatNumber(galleryInsights.total),
+                    caption: t('billing.seasons.galleries.stats.galleriesSub'),
+                  },
+                  {
+                    label: t('billing.seasons.galleries.stats.photos'),
+                    value: galleryLoading ? '—' : formatNumber(galleryInsights.photos),
+                    caption: t('billing.seasons.galleries.stats.photosSub'),
+                  },
+                  {
+                    label: t('billing.seasons.galleries.stats.pending'),
+                    value: galleryLoading ? '—' : formatNumber(galleryInsights.pending),
+                    caption: t('billing.seasons.galleries.stats.pendingSub'),
+                  },
+                ].map((stat) => (
+                  <div key={stat.label} className="season-detail-galleries-stat">
+                    <p className="season-detail-galleries-stat-label">{stat.label}</p>
+                    <p className="season-detail-galleries-stat-value">{stat.value}</p>
+                    <p className="season-detail-galleries-stat-caption">{stat.caption}</p>
+                  </div>
+                ))}
+              </div>
+              <GalleryManagementSection
+                entityType="season"
+                entityId={season?.id}
+                orgId={context?.orgId}
+                title={t('billing.seasons.galleries.managementTitle')}
+                onGalleriesLoaded={handleGalleriesLoaded}
+                onLoadingChange={handleGalleryLoading}
+              />
+            </div>
           </Card>
 
         </div>

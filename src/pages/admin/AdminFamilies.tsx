@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AdminPageHeader, PlatformDataTable, Button, Badge, ErrorState, Card } from '../../components/platformAdmin'
+import { AdminPageHeader, Button, Badge, ErrorState, Card } from '../../components/platformAdmin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
-import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { getFamilies } from '../../data/services/familyService'
@@ -228,7 +229,7 @@ export default function AdminFamilies() {
           onRetry={fetchFamilies}
         />
       ) : (
-        <PlatformDataTable
+        <OrgDataTable
           rows={sortedAndPaginatedFamilies}
           columns={columns}
           loading={loading}

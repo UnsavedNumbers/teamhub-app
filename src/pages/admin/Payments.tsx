@@ -12,11 +12,11 @@ import {
   AdminPageHeader, 
   Badge, 
   StatCard, 
-  PlatformDataTable, 
   Button,
   Card,
-  type ColumnConfig 
 } from '../../components/platformAdmin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { FeatureGatedButton } from '../../components/FeatureGatedButton'
 import { cn } from '../../utils/cn'
 
@@ -668,7 +668,7 @@ export default function Payments() {
         ))}
       </div>
 
-      <PlatformDataTable
+      <OrgDataTable
         columns={columns}
         rows={payments}
         loading={loading}

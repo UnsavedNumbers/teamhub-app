@@ -15,9 +15,10 @@ import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
 import { supabase } from '../../lib/supabase'
-import { AdminPageHeader, Button, ConfirmDialog, EmptyState, Card, Select, Badge, PlatformDataTable, InlineNotice } from '../../components/platformAdmin'
+import { AdminPageHeader, Button, ConfirmDialog, EmptyState, Card, Select, Badge, InlineNotice } from '../../components/platformAdmin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
-import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 
@@ -574,7 +575,7 @@ export default function TeamsManagement() {
       </Card>
 
       {/* Teams List */}
-      <PlatformDataTable
+      <OrgDataTable
         rows={filteredTeams}
         columns={columns}
         loading={loading}

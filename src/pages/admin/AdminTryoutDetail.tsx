@@ -6,10 +6,10 @@ import type { Tryout, TryoutRegistration } from '../../data/services/tryoutsServ
 import { 
   AdminPageHeader,
   Card, 
-  PlatformDataTable, 
   Badge,
-  type ColumnConfig 
 } from '../../components/platformAdmin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 
 export default function AdminTryoutDetail() {
   const { tryoutId } = useParams<{ tryoutId: string }>()
@@ -77,7 +77,7 @@ export default function AdminTryoutDetail() {
 
       <Card>
         <h3 className="pa-h3 pa-mb-4">Registrations</h3>
-        <PlatformDataTable
+        <OrgDataTable
           columns={columns}
           rows={registrations}
           loading={loading}

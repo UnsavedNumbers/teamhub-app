@@ -6,11 +6,11 @@ import { getEventAttendance, updateAttendance } from '../../data/services/attend
 import type { AttendanceRecord, AttendanceStatus } from '../../types/attendance'
 import {
   Card, 
-  PlatformDataTable, 
   Button,
   Badge,
-  type ColumnConfig 
 } from '../../components/platformAdmin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 
 export default function AttendanceRoster() {
@@ -127,7 +127,7 @@ export default function AttendanceRoster() {
       </div>
 
       <Card>
-        <PlatformDataTable
+        <OrgDataTable
           columns={columns}
           rows={records}
           loading={loading}

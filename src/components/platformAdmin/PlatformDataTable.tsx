@@ -175,10 +175,9 @@ export default function PlatformDataTable<T extends { id: string }>({
     <div className="pa-card" style={{ padding: 0, overflow: 'hidden' }}>
       {/* Top Pagination */}
       <div
-        className={cn('pa-flex', 'pa-flex-col', 'pa-items-stretch', 'pa-gap-3', 'pa-bg-n50', 'pa-table-pagination')}
+        className={cn('pa-flex', 'pa-flex-col', 'pa-items-stretch', 'pa-gap-3', 'pa-table-pagination')}
         style={{
           padding: 'var(--pa-space-3)',
-          borderBottom: '1px solid var(--pa-n100)',
         }}
       >
         {/* Rows per page */}
@@ -186,7 +185,7 @@ export default function PlatformDataTable<T extends { id: string }>({
           className={cn('pa-flex', 'pa-items-center', 'pa-gap-2', 'pa-table-pagination-controls')}
           style={{ whiteSpace: 'nowrap' }}
         >
-          <span className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+          <span className="pa-body-s pa-table-pagination-label">
             {t('common.table.rowsPerPage')}
           </span>
           <select
@@ -203,7 +202,7 @@ export default function PlatformDataTable<T extends { id: string }>({
         </div>
 
         {/* Page info */}
-        <span className="pa-body-s pa-text-center" style={{ color: 'var(--pa-n700)' }}>
+        <span className="pa-body-s pa-text-center pa-table-pagination-info">
           {t('common.table.pageSummary', { start: startRow, end: endRow, total: totalCount })}
         </span>
 
@@ -438,10 +437,9 @@ export default function PlatformDataTable<T extends { id: string }>({
 
       {/* Pagination */}
       <div
-        className={cn('pa-flex', 'pa-flex-col', 'pa-items-stretch', 'pa-gap-3', 'pa-bg-n50', 'pa-table-pagination')}
+        className={cn('pa-flex', 'pa-flex-col', 'pa-items-stretch', 'pa-gap-3', 'pa-table-pagination')}
         style={{
           padding: 'var(--pa-space-3)',
-          borderTop: '1px solid var(--pa-n100)',
         }}
       >
         {/* Rows per page */}
@@ -449,7 +447,7 @@ export default function PlatformDataTable<T extends { id: string }>({
           className={cn('pa-flex', 'pa-items-center', 'pa-gap-2', 'pa-table-pagination-controls')}
           style={{ whiteSpace: 'nowrap' }}
         >
-          <span className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+          <span className="pa-body-s pa-table-pagination-label">
             {t('common.table.rowsPerPage')}
           </span>
           <select
@@ -466,7 +464,7 @@ export default function PlatformDataTable<T extends { id: string }>({
         </div>
 
         {/* Page info */}
-        <span className="pa-body-s pa-text-center" style={{ color: 'var(--pa-n700)' }}>
+        <span className="pa-body-s pa-text-center pa-table-pagination-info">
           {t('common.table.pageSummary', { start: startRow, end: endRow, total: totalCount })}
         </span>
 

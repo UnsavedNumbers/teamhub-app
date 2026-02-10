@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react'
-import { Card, PlatformDataTable, Badge } from '../../../components/platformAdmin'
-import type { ColumnConfig } from '../../../components/platformAdmin/PlatformDataTable'
+import { Card, Badge } from '../../../components/platformAdmin'
+import OrgDataTable from '../../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../../components/admin/OrgDataTable'
 import { useUserContext } from '../../../hooks/useUserContext'
 import { getAttendancePeople } from '../../../data/services/attendanceService'
 import type { AttendancePersonSummary } from '../../../types/attendance'
@@ -49,7 +50,7 @@ export default function AttendancePeople() {
 
   return (
     <Card>
-      <PlatformDataTable
+      <OrgDataTable
         columns={columns}
         rows={rowsWithId}
         loading={loading}

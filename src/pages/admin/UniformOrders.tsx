@@ -8,12 +8,12 @@ import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { 
   AdminPageHeader, 
   Card, 
-  PlatformDataTable, 
   Badge,
   Button,
   EmptyState,
-  type ColumnConfig 
 } from '../../components/platformAdmin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
 
@@ -166,7 +166,7 @@ export default function UniformOrders() {
           />
         </Card>
       ) : (
-        <PlatformDataTable
+        <OrgDataTable
           columns={columns}
           rows={submissions}
           loading={loading}

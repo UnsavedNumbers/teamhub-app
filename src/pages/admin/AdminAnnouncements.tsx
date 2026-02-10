@@ -8,13 +8,13 @@ import {
   AdminPageHeader, 
   Card, 
   Badge, 
-  PlatformDataTable, 
   Button, 
   EmptyState,
   Select,
   ConfirmDialog,
-  type ColumnConfig 
 } from '../../components/platformAdmin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { cn } from '../../utils/cn'
 import CreateAnnouncementModal from '../../components/admin/CreateAnnouncementModal'
 import { getAnnouncementEmoji, type AnnouncementType } from '../../utils/announcementTypes'
@@ -642,7 +642,7 @@ export default function AdminAnnouncements() {
           />
         </Card>
       ) : (
-        <PlatformDataTable 
+        <OrgDataTable 
           columns={columns} 
           rows={displayAnnouncements} 
           loading={loading} 
