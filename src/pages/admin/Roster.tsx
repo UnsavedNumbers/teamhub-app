@@ -11,10 +11,10 @@ import {
   Card, 
   Button, 
   Select, 
-  PlatformDataTable, 
-  type ColumnConfig,
   ConfirmDialog
 } from '../../components/platformAdmin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 
 interface Season {
@@ -337,7 +337,7 @@ export default function Roster() {
         />
       </Card>
 
-      <PlatformDataTable
+      <OrgDataTable
         columns={columns}
         rows={roster}
         loading={loading}

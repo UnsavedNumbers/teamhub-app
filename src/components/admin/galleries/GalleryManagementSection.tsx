@@ -22,6 +22,8 @@ interface Props {
   orgId?: string
   title?: string
   allowCreate?: boolean
+  onGalleriesLoaded?: (galleries: Gallery[]) => void
+  onLoadingChange?: (loading: boolean) => void
 }
 
 export function GalleryManagementSection({
@@ -30,6 +32,8 @@ export function GalleryManagementSection({
   orgId,
   title = 'Galleries',
   allowCreate = true,
+  onGalleriesLoaded,
+  onLoadingChange,
 }: Props) {
   const { context } = useUserContext()
   const { t } = useI18n()
@@ -45,24 +49,30 @@ export function GalleryManagementSection({
   const load = async () => {
     if (!context) return
     setLoading(true)
-    const { data, error } = await getGalleriesForUser(context, {
+    onLoadingChange?.(true)
+    try {
+      const { data, error } = await getGalleriesForUser(context, {
       org_id: orgId || context.orgId,
       gallery_type: galleryTypeFilter,
       entity_id: entityId,
     })
     if (error) {
       showError(error.message)
+        return
+      }
+      const fetchedGalleries = data || []
+      setGalleries(fetchedGalleries)
+      onGalleriesLoaded?.(fetchedGalleries)
+    } finally {
       setLoading(false)
-      return
+      onLoadingChange?.(false)
     }
-    setGalleries(data || [])
-    setLoading(false)
   }
 
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityId, entityType, orgId])
+  }, [entityId, entityType, orgId, onGalleriesLoaded, onLoadingChange])
 
   const handleDelete = async (galleryId: string) => {
     if (USE_FAKE_DATA) {

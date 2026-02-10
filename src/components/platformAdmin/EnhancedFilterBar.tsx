@@ -56,6 +56,10 @@ interface EnhancedFilterBarProps {
   platformAdminOnlyFilter: 'all' | 'yes' | 'no'
   onPlatformAdminOnlyFilterChange: (value: 'all' | 'yes' | 'no') => void
 
+  // Hierarchy filter (radio)
+  hierarchyFilter: 'all' | 'parents' | 'children'
+  onHierarchyFilterChange: (value: 'all' | 'parents' | 'children') => void
+
   // Clear all
   onClearAll: () => void
 }
@@ -120,6 +124,8 @@ export default function EnhancedFilterBar({
   onSystemFeatureFilterChange,
   platformAdminOnlyFilter,
   onPlatformAdminOnlyFilterChange,
+  hierarchyFilter,
+  onHierarchyFilterChange,
   onClearAll,
 }: EnhancedFilterBarProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -541,6 +547,30 @@ export default function EnhancedFilterBar({
                 checked={platformAdminOnlyFilter === 'no'}
                 onChange={() => onPlatformAdminOnlyFilterChange('no')}
                 label="No"
+              />
+            </div>
+          </div>
+
+          {/* Hierarchy Filter */}
+          <div>
+            <label className="pa-label" style={{ marginBottom: 'var(--pa-space-2)' }}>
+              Feature Hierarchy
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)' }}>
+              <Checkbox
+                checked={hierarchyFilter === 'all'}
+                onChange={() => onHierarchyFilterChange('all')}
+                label="All"
+              />
+              <Checkbox
+                checked={hierarchyFilter === 'parents'}
+                onChange={() => onHierarchyFilterChange('parents')}
+                label="Parents Only"
+              />
+              <Checkbox
+                checked={hierarchyFilter === 'children'}
+                onChange={() => onHierarchyFilterChange('children')}
+                label="Children Only"
               />
             </div>
           </div>

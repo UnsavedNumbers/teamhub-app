@@ -46,6 +46,7 @@ export interface FeatureEntitlement {
   lockReason?: string | null // Explanation for why feature is locked
   isSystemFeature?: boolean // If true, always available for every license tier (including new tiers)
   platformAdminOnly?: boolean // If true, not available to org users; platform admin only
+  parentFeatureKey?: string | null // Parent feature for hierarchy (child inherits parent unavailability)
 }
 
 export interface TierFeatureAssignment {

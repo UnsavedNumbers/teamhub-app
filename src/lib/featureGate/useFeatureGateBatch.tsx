@@ -26,7 +26,7 @@ let _batchContextWarned = false;
  * @returns Map of feature key to gate result, with loading state
  */
 export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchResult {
-    const { currentOrganization } = useOrganization();
+    const { currentOrganization, isLoading: isOrganizationLoading } = useOrganization();
     const { user, profile } = useAuth();
 
     const [gates, setGates] = useState<Map<string, FeatureGateResult>>(new Map());
@@ -54,7 +54,13 @@ export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchR
 
         const orgId = currentOrganization?.id ?? null;
 
-        if (import.meta.env.DEV && featureKeys.length > 0 && !orgId && !profile.isPlatformAdmin) {
+        if (
+            import.meta.env.DEV &&
+            featureKeys.length > 0 &&
+            !orgId &&
+            !isOrganizationLoading &&
+            !profile.isPlatformAdmin
+        ) {
             if (!_batchContextWarned) {
                 _batchContextWarned = true;
                 console.warn(
@@ -71,7 +77,7 @@ export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchR
             license_tier: null,
             is_platform_admin: profile.isPlatformAdmin ?? false,
         };
-    }, [user?.id, profile, currentOrganization?.id, featureKeys.length]);
+    }, [user?.id, profile, currentOrganization?.id, isOrganizationLoading, featureKeys.length]);
 
     // Stable key string for dependency checking (sorted to avoid re-renders from order changes)
     const keysString = useMemo(() =>

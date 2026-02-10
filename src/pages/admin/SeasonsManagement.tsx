@@ -9,9 +9,10 @@ import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getSeasons, deleteSeason, isSeasonEmpty } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, ConfirmDialog, EmptyState, Badge, PlatformDataTable, InlineNotice } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, ConfirmDialog, EmptyState, Badge, InlineNotice } from '../../components/platformAdmin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
-import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 
@@ -263,7 +264,7 @@ export default function SeasonsManagement() {
           </EmptyState>
         </Card>
       ) : (
-        <PlatformDataTable
+        <OrgDataTable
            rows={seasons}
            columns={columns}
            onRowClick={(row) => navigate(getLink('admin.seasons.detail', { id: row.id }))}

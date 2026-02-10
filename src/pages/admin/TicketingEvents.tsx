@@ -7,7 +7,8 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
 import { QUERY_KEY_ORG_SLUG } from '@/components/admin/PublicUrlBanner'
 import EmptyState from '@/components/platformAdmin/EmptyState'
-import { Badge, Button, PlatformDataTable, ProgressBar, DatePicker } from '@/components/platformAdmin'
+import { Badge, Button, ProgressBar, DatePicker } from '@/components/platformAdmin'
+import OrgDataTable from '@/components/admin/OrgDataTable'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { supabase } from '@/lib/supabase'
@@ -650,7 +651,7 @@ function TableView({
   }, [onView])
 
   return (
-    <PlatformDataTable
+    <OrgDataTable
       columns={columns}
       rows={events}
       page={(meta?.page || 1) - 1}

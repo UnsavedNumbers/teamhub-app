@@ -17,11 +17,11 @@ import {
 import { 
     AdminPageHeader, 
     Button, 
-    PlatformDataTable, 
     Badge,
-    type ColumnConfig,
     ConfirmDialog
 } from '../../components/platformAdmin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { getLink } from '../../utils/routes'
 import { calculateAge } from '../../utils/athleteHelpers'
 
@@ -391,7 +391,7 @@ export default function GuardianAttachmentRequests() {
             </div>
             
             {/* Requests Table */}
-            <PlatformDataTable
+            <OrgDataTable
                 columns={columns}
                 rows={requests}
                 loading={loading}

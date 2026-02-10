@@ -6,7 +6,6 @@ import { useLicense } from '../hooks/useLicense'
 import { LicenseWarningBanner } from '../components/admin/LicenseWarningBanner'
 import AdminLoadingSpinner from '../components/admin/AdminLoadingSpinner'
 import { useOrgAdminTheme } from '../hooks/useOrgAdminTheme'
-import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
 import { useOrganizationTheme } from '../hooks/useOrganizationTheme'
 import { useTheme } from '../hooks/useTheme'
 import { useT } from '../i18n/useI18n'
@@ -21,7 +20,6 @@ import type { NavSection } from '@/types/menu'
 import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 
 export default function AdminLayout() {
-  const { loaded: platformThemeLoaded } = usePlatformAdminTheme()
   const { loaded: orgThemeLoaded } = useOrgAdminTheme()
   const { ready: orgThemeReady } = useOrganizationTheme()
   const { resolvedTheme } = useTheme()
@@ -236,7 +234,7 @@ export default function AdminLayout() {
     setMobileSidebarOpen(false)
   }, [location.pathname])
 
-  if (!platformThemeLoaded || !orgThemeLoaded || !orgThemeReady) {
+  if (!orgThemeLoaded || !orgThemeReady) {
     return <AdminLoadingSpinner />
   }
 

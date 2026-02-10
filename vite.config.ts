@@ -4,6 +4,9 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    include: ['react-hook-form'],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

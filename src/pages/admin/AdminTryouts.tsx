@@ -8,10 +8,10 @@ import type { Tryout } from '../../data/services/tryoutsService'
 import { 
   AdminPageHeader, 
   Button, 
-  PlatformDataTable, 
   Badge,
-  type ColumnConfig 
 } from '../../components/platformAdmin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 
 export default function AdminTryouts() {
   const [tryouts, setTryouts] = useState<Tryout[]>([])
@@ -64,7 +64,7 @@ export default function AdminTryouts() {
           </Button>
         }
       />
-      <PlatformDataTable
+      <OrgDataTable
         columns={columns}
         rows={tryouts}
         loading={loading}

@@ -5,12 +5,12 @@ import {
     Card, 
     Button, 
     Badge, 
-    PlatformDataTable, 
     ConfirmDialog,
     ErrorState
 } from '../../components/platformAdmin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
-import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { useUserContext } from '../../hooks/useUserContext'
 import { 
     getFamilyDetails, 
@@ -167,7 +167,7 @@ export default function FamilyDetail() {
                                     {t('admin.families.addChild')}
                                 </Button>
                             </div>
-                            <PlatformDataTable
+                            <OrgDataTable
                                 data={family.children || []}
                                 columns={childColumns}
                                 page={0}
@@ -186,7 +186,7 @@ export default function FamilyDetail() {
                             <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
                                 <h3 className="pa-h3">Guardians</h3>
                             </div>
-                             <PlatformDataTable
+                             <OrgDataTable
                                 data={family.members || []}
                                 columns={memberColumns}
                                 page={0}
