@@ -3,6 +3,11 @@
  * 
  * React hook to check feature gate for a single feature.
  * Automatically builds context from OrganizationContext and useAuth.
+ * 
+ * Improvements:
+ *  - AbortController cancels in-flight requests on unmount / dependency change
+ *  - Context validation logs warnings in dev when org_id is missing
+ *  - Empty/null featureKey is handled without an RPC call
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -17,19 +22,14 @@ import type {
     ReasonCode
 } from './types';
 
+// Warn only once per feature key per session to avoid log spam
+const _warnedKeys = new Set<string>();
+
 /**
  * Hook to check feature gate for a single feature
  * 
- * @param featureKey - The feature key to check, or null to skip
+ * @param featureKey - The feature key to check, or null/empty string to skip
  * @returns Gate result with loading state and refetch function
- * 
- * @example
- * ```tsx
- * const { allowed, gate_action, loading } = useFeatureGate('travel');
- * if (!allowed) {
- *   return <UpgradePrompt action={gate_action} />;
- * }
- * ```
  */
 export function useFeatureGate(featureKey: string | null): UseFeatureGateResult {
     const { currentOrganization } = useOrganization();
@@ -52,29 +52,41 @@ export function useFeatureGate(featureKey: string | null): UseFeatureGateResult 
         };
     }, []);
 
-    // Build context from hooks
+    // Build context from hooks — with validation
     const context: FeatureGateContext | null = useMemo(() => {
         if (!user?.id || !profile) {
             return null;
         }
 
-        // Get user's role in current org
         const currentOrg = profile.organizations.find(
             org => org.id === currentOrganization?.id
         );
         const currentOrgRole = currentOrg?.roles?.[0] ?? 'parent';
 
+        const orgId = currentOrganization?.id ?? null;
+
+        // Dev-mode context validation
+        if (import.meta.env.DEV && featureKey && !orgId && !profile.isPlatformAdmin) {
+            if (!_warnedKeys.has(featureKey)) {
+                _warnedKeys.add(featureKey);
+                console.warn(
+                    `[useFeatureGate] Checking feature '${featureKey}' without an org_id. ` +
+                    'The RPC will likely return no_organization. Ensure OrganizationContext is set.'
+                );
+            }
+        }
+
         return {
-            org_id: currentOrganization?.id ?? null,
+            org_id: orgId,
             user_id: user.id,
             role: currentOrgRole as 'parent' | 'coach' | 'org_admin',
             license_tier: null, // Will be resolved by RPC
             is_platform_admin: profile.isPlatformAdmin ?? false,
         };
-    }, [user?.id, profile, currentOrganization?.id]);
+    }, [user?.id, profile, currentOrganization?.id, featureKey]);
 
-    const refetch = useCallback(async () => {
-        // No feature key means skip
+    const refetch = useCallback(async (signal?: AbortSignal) => {
+        // No feature key (or empty string) means skip
         if (!featureKey) {
             if (isMountedRef.current) {
                 setResult({
@@ -88,7 +100,7 @@ export function useFeatureGate(featureKey: string | null): UseFeatureGateResult 
             return;
         }
 
-        // No context yet - still loading
+        // No context yet — still loading
         if (!context) {
             if (isMountedRef.current) {
                 setLoading(true);
@@ -101,11 +113,15 @@ export function useFeatureGate(featureKey: string | null): UseFeatureGateResult 
         }
 
         try {
-            const gateResult = await fetchFeatureGate(featureKey, context);
-            if (isMountedRef.current) {
+            const gateResult = await fetchFeatureGate(featureKey, context, signal);
+            if (isMountedRef.current && !signal?.aborted) {
                 setResult(gateResult);
             }
         } catch (err) {
+            // Silently ignore AbortError — component unmounted or deps changed
+            if (err instanceof DOMException && err.name === 'AbortError') {
+                return;
+            }
             console.error('[useFeatureGate] Error:', err);
             if (isMountedRef.current) {
                 setResult({
@@ -117,21 +133,25 @@ export function useFeatureGate(featureKey: string | null): UseFeatureGateResult 
                 });
             }
         } finally {
-            if (isMountedRef.current) {
+            if (isMountedRef.current && !signal?.aborted) {
                 setLoading(false);
             }
         }
     }, [featureKey, context]);
 
-    // Fetch on mount and when dependencies change
+    // Fetch on mount and when dependencies change, with abort on cleanup
     useEffect(() => {
-        refetch();
+        const abortController = new AbortController();
+        refetch(abortController.signal);
+        return () => {
+            abortController.abort();
+        };
     }, [refetch]);
 
     return {
         ...result,
         loading,
-        refetch,
+        refetch: () => refetch(),
     };
 }
 

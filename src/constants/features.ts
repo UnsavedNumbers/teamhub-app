@@ -61,6 +61,8 @@ export const FEATURE_CATEGORIES = [
   'Tryouts',
   'Travel',
   'Uniforms & Gear',
+  'Photo Galleries',
+  'Video Library',
   'Reporting & Analytics',
   'Admin & Permissions',
   'Integrations',
