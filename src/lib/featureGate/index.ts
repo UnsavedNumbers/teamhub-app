@@ -37,6 +37,10 @@ export type {
 
 export { DEFAULT_DENIED_RESULT, DEFAULT_ALLOWED_RESULT } from './types';
 
+// Generated feature keys (DB → TypeScript)
+export type { FeatureKey } from './generatedFeatureKeys';
+export { VALID_FEATURE_KEYS, FEATURE_KEY_METADATA, isValidFeatureKey } from './generatedFeatureKeys';
+
 // Registry
 export {
     ROUTE_TO_FEATURE,
@@ -47,6 +51,7 @@ export {
     isRouteUngated,
     getAllRouteFeatureKeys,
     getAllActionFeatureKeys,
+    validateRegistry,
 } from './registry';
 
 // Reason Messages
@@ -70,8 +75,12 @@ export {
     getFeatureGateBehavior,
     clearFeatureGateCache,
     clearFeatureGateCacheForOrg,
+    onCacheInvalidation,
 } from './api';
 
 // Hooks
 export { useFeatureGate, useCanAccessFeature } from './useFeatureGate';
 export { useFeatureGateBatch, useFeatureGateChecker } from './useFeatureGateBatch';
+
+// Provider
+export { FeatureGateProvider, useFeatureGateProvider } from './FeatureGateProvider';

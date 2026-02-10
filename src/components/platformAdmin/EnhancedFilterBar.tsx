@@ -10,7 +10,7 @@
  * - Source filter (radio)
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { Select, Checkbox, Button } from './index'
 
 interface EnhancedFilterBarProps {
@@ -114,53 +114,46 @@ export default function EnhancedFilterBar({
   onPlatformAdminOnlyFilterChange,
   onClearAll,
 }: EnhancedFilterBarProps) {
-  const [localSearch, setLocalSearch] = useState(searchValue)
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  // Sync local search with prop
-  useEffect(() => {
-    setLocalSearch(searchValue)
-  }, [searchValue])
-
-  const handleSearchChange = (value: string) => {
-    setLocalSearch(value)
+  const handleSearchChange = useCallback((value: string) => {
     onSearchChange(value)
-  }
+  }, [onSearchChange])
 
-  const handleStatusToggle = (value: string) => {
+  const handleStatusToggle = useCallback((value: string) => {
     if (statusFilter.includes(value)) {
       onStatusFilterChange(statusFilter.filter(v => v !== value))
     } else {
       onStatusFilterChange([...statusFilter, value])
     }
-  }
+  }, [statusFilter, onStatusFilterChange])
 
-  const handleTierToggle = (tierKey: string) => {
+  const handleTierToggle = useCallback((tierKey: string) => {
     if (tierFilter.includes(tierKey)) {
       onTierFilterChange(tierFilter.filter(v => v !== tierKey))
     } else {
       onTierFilterChange([...tierFilter, tierKey])
     }
-  }
+  }, [tierFilter, onTierFilterChange])
 
-  const handleRoleToggle = (value: string) => {
+  const handleRoleToggle = useCallback((value: string) => {
     if (roleFilter.includes(value)) {
       onRoleFilterChange(roleFilter.filter(v => v !== value))
     } else {
       onRoleFilterChange([...roleFilter, value])
     }
-  }
+  }, [roleFilter, onRoleFilterChange])
 
-  const handleIntegrationToggle = (value: string) => {
+  const handleIntegrationToggle = useCallback((value: string) => {
     if (integrationFilter.includes(value)) {
       onIntegrationFilterChange(integrationFilter.filter(v => v !== value))
     } else {
       onIntegrationFilterChange([...integrationFilter, value])
     }
-  }
+  }, [integrationFilter, onIntegrationFilterChange])
 
   const hasActiveFilters =
-    localSearch !== '' ||
+    searchValue !== '' ||
     statusFilter.length > 0 ||
     tierFilter.length > 0 ||
     roleFilter.length > 0 ||
@@ -205,7 +198,7 @@ export default function EnhancedFilterBar({
     activeFilters.push({ key: 'platformAdminOnly', label: `Platform admin only: ${platformAdminOnlyFilter === 'yes' ? 'Yes' : 'No'}` })
   }
 
-  const handleRemoveFilter = (key: string) => {
+  const handleRemoveFilter = useCallback((key: string) => {
     switch (key) {
       case 'status':
         onStatusFilterChange([])
@@ -226,7 +219,7 @@ export default function EnhancedFilterBar({
         onSourceFilterChange(null)
         break
     }
-  }
+  }, [onStatusFilterChange, onTierFilterChange, onRoleFilterChange, onIntegrationFilterChange, onQuantifiableFilterChange, onSourceFilterChange])
 
   return (
     <div className="pa-mb-4">
@@ -253,15 +246,15 @@ export default function EnhancedFilterBar({
               <input
                 type="text"
                 className="pa-input"
-                value={localSearch}
+                value={searchValue}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder={searchPlaceholder}
                 style={{
                   paddingLeft: '40px',
-                  paddingRight: localSearch ? '40px' : undefined,
+                  paddingRight: searchValue ? '40px' : undefined,
                 }}
               />
-              {localSearch && (
+              {searchValue && (
                 <button
                   onClick={() => handleSearchChange('')}
                   style={{

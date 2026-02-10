@@ -25,6 +25,7 @@ export default function FeatureDetail() {
     featureType: 'module',
     description: '',
     rolloutStatus: 'live',
+    unavailableGateAction: 'overlay',
     isSystemFeature: false,
     platformAdminOnly: false,
   })
@@ -256,7 +257,8 @@ export default function FeatureDetail() {
         feature.category === originalFeature.category &&
         feature.featureType === originalFeature.featureType &&
         feature.description === originalFeature.description &&
-        feature.rolloutStatus === originalFeature.rolloutStatus
+        feature.rolloutStatus === originalFeature.rolloutStatus &&
+        feature.unavailableGateAction === originalFeature.unavailableGateAction
 
       if (matchesOriginal) {
         setShowUnsavedBanner(false)
@@ -303,6 +305,7 @@ export default function FeatureDetail() {
           feature_type: feature.featureType!,
           description: feature.description || null,
           rollout_status: feature.rolloutStatus || 'live',
+          unavailable_gate_action: feature.unavailableGateAction || 'overlay',
           is_system_feature: feature.isSystemFeature ?? false,
           platform_admin_only: feature.platformAdminOnly ?? false,
         } satisfies FeatureInsert
@@ -350,6 +353,7 @@ export default function FeatureDetail() {
           category: feature.category,
           feature_type: feature.featureType,
           description: feature.description || null,
+          unavailable_gate_action: feature.unavailableGateAction || 'overlay',
           is_system_feature: feature.isSystemFeature ?? false,
           platform_admin_only: feature.platformAdminOnly ?? false,
           // Only update rollout_status if feature is toggleable
@@ -680,6 +684,25 @@ export default function FeatureDetail() {
                 This feature is locked and its status cannot be changed.
               </div>
             )}
+          </div>
+
+          <div className="pa-form-group">
+            <label className="pa-label">Gate Action</label>
+            <Select
+              value={feature.unavailableGateAction || 'overlay'}
+              onChange={(e) => setFeature({ ...feature, unavailableGateAction: e.target.value as any })}
+              options={[
+                { value: 'hide', label: 'Hide (Remove from navigation)' },
+                { value: 'disable', label: 'Disable (Show but grayed out)' },
+                { value: 'overlay', label: 'Overlay (Show upgrade prompt)' },
+                { value: 'modal', label: 'Modal (Show in popup)' },
+                { value: 'paywall', label: 'Paywall (Redirect to billing)' },
+                { value: 'custom', label: 'Custom (Developer-defined)' },
+              ]}
+            />
+            <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginTop: '4px' }}>
+              How the UI responds when a user doesn't have access to this feature.
+            </div>
           </div>
 
             <div className="pa-form-group">

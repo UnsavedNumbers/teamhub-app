@@ -6,6 +6,7 @@ import { LoadingStateProvider } from './contexts/LoadingStateContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { FeatureGateRoute } from './components/FeatureGateRoute'
+import { FeatureGateProvider } from './lib/featureGate'
 import AdminLoadingSpinner from './components/admin/AdminLoadingSpinner'
 import FullScreenLoader from './components/common/FullScreenLoader'
 import { getHostAppContext } from './utils/host'
@@ -286,7 +287,9 @@ function App() {
     <OrganizationProvider>
       <AuthProvider>
         <LoadingStateProvider>
-          <AppWithTheme />
+          <FeatureGateProvider>
+            <AppWithTheme />
+          </FeatureGateProvider>
         </LoadingStateProvider>
       </AuthProvider>
     </OrganizationProvider>

@@ -242,6 +242,7 @@ export function mapFeatureEntitlement(row: SupabaseExtended['public']['Tables'][
     featureType: (row.feature_type ?? 'module') as 'module' | 'permission' | 'limit' | 'visibility' | 'integration',
     description: row.description ?? '',
     rolloutStatus: (row.rollout_status ?? 'hidden') as 'live' | 'beta' | 'hidden',
+    unavailableGateAction: (row.unavailable_gate_action as 'hide' | 'disable' | 'overlay' | 'modal' | 'paywall' | 'custom') ?? null,
     createdAt: row.created_at ?? new Date().toISOString(),
     updatedAt: row.updated_at ?? new Date().toISOString(),
     archivedAt: row.archived_at,

@@ -37,6 +37,7 @@ export interface FeatureEntitlement {
   featureType: 'module' | 'permission' | 'limit' | 'visibility' | 'integration'
   description: string | null
   rolloutStatus: 'live' | 'beta' | 'hidden'
+  unavailableGateAction?: 'hide' | 'disable' | 'overlay' | 'modal' | 'paywall' | 'custom' | null
   createdAt: string
   updatedAt: string
   archivedAt: string | null

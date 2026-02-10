@@ -69,7 +69,6 @@ export default function FeatureFlags() {
   
   // TODO: Fetch actual role
   const [adminRole] = useState<PlatformAdminRole>('super_admin')
-  const currentEnvironment = getEnvironment()
 
   const fetchFlags = useCallback(async () => {
     setLoading(true)
@@ -619,7 +618,7 @@ export default function FeatureFlags() {
           <Button
             variant="ghost"
             size="small"
-            onClick={(e) => {
+            onClick={(e: React.MouseEvent) => {
               e.stopPropagation()
               setEditDefaultDialog({ open: true, flag: row })
               setDefaultValue({
@@ -636,7 +635,7 @@ export default function FeatureFlags() {
             <Button
               variant="ghost"
               size="small"
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent) => {
                 e.stopPropagation()
                 setRestoreDialog({ open: true, flag: row })
               }}
@@ -648,7 +647,7 @@ export default function FeatureFlags() {
             <Button
               variant="ghost"
               size="small"
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent) => {
                 e.stopPropagation()
                 setDeleteDialog({ open: true, flag: row })
               }}

@@ -5,7 +5,12 @@
  * This is the single source of truth for which features gate which routes/actions.
  * 
  * Feature keys must match the `feature_key` column in the `feature_entitlements` table.
+ * The FeatureKey type is auto-generated from the database — run:
+ *   npm run generate:feature-keys
  */
+
+import type { FeatureKey } from './generatedFeatureKeys';
+import { VALID_FEATURE_KEYS } from './generatedFeatureKeys';
 
 // ============================================================================
 // Route Key → Feature Key Mapping
@@ -13,12 +18,12 @@
 
 /**
  * Maps route keys (from src/utils/routes/definitions.ts) to feature entitlement keys.
+ * Values are type-checked against the generated FeatureKey union.
  */
-export const ROUTE_TO_FEATURE: Record<string, string> = {
+export const ROUTE_TO_FEATURE: Record<string, FeatureKey> = {
     // -------------------------------------------------------------------------
     // Portal Routes
     // -------------------------------------------------------------------------
-    'portal.dashboard': 'dashboard',
     'portal.calendar': 'event_scheduling',
     'portal.travel': 'travel_planning',
     'portal.travel.detail': 'travel_details',
@@ -30,29 +35,14 @@ export const ROUTE_TO_FEATURE: Record<string, string> = {
     'portal.athletes': 'roster_management',
     'portal.athletes.requestAttachment': 'roster_management',
     'portal.athletes.create': 'roster_management',
-    'portal.join': 'registration_forms',
     'portal.tryouts': 'tryouts',
     'portal.tryouts.detail': 'tryouts',
     'portal.uniforms': 'uniform_orders',
     'portal.uniforms.detail': 'uniform_orders',
-    'portal.settings': 'settings',
-    'portal.preferences': 'settings',
-
-    // -------------------------------------------------------------------------
-    // Admin Routes - Dashboard
-    // -------------------------------------------------------------------------
-    'admin.dashboard': 'dashboard',
 
     // -------------------------------------------------------------------------
     // Admin Routes - Organization
     // -------------------------------------------------------------------------
-    'admin.organization.base': 'organization_settings',
-    'admin.organization.structure': 'organization_settings',
-    'admin.organization.billing': 'stripe_integration',
-    'admin.organization.billing.planSelection': 'stripe_integration',
-    'admin.organization.billing.checkoutSuccess': 'stripe_integration',
-    'admin.organization.billing.checkoutCancel': 'stripe_integration',
-    'admin.organization.users': 'multi_role_support',
 
     // -------------------------------------------------------------------------
     // Admin Routes - Athletes & Guardians
@@ -123,42 +113,6 @@ export const ROUTE_TO_FEATURE: Record<string, string> = {
     'admin.ticketingOrders': 'ticketing',
     'admin.ticketingScanner': 'ticketing',
 
-    // -------------------------------------------------------------------------
-    // Admin Routes - Settings & Onboarding
-    // -------------------------------------------------------------------------
-    'admin.settings': 'settings',
-    'admin.onboarding': 'onboarding',
-    'admin.trialExpired': 'trialexpired',
-
-    // -------------------------------------------------------------------------
-    // Platform Admin Routes (all platform_admin_only)
-    // -------------------------------------------------------------------------
-    'platformAdmin.dashboard': 'dashboard',
-    'platformAdmin.organizations.list': 'organizations',
-    'platformAdmin.organizations.detail': 'organizations',
-    'platformAdmin.users.list': 'list',
-    'platformAdmin.users.detail': 'detail',
-    'platformAdmin.users.create': 'create',
-    'platformAdmin.admins': 'admins',
-    'platformAdmin.payments': 'payments',
-    'platformAdmin.fees': 'fees',
-    'platformAdmin.audit': 'audit',
-    'platformAdmin.featureFlags': 'featureflags',
-    'platformAdmin.structure': 'structure',
-    'platformAdmin.ticketing.allEvents': 'ticketing',
-    'platformAdmin.ticketing.orderLookup': 'ticketing',
-    'platformAdmin.ticketing.webhookStatus': 'ticketing',
-    'platformAdmin.ticketing.organization': 'ticketing',
-    'platformAdmin.licenses.overview': 'overview',
-    'platformAdmin.licenses.tiers': 'tiers',
-    'platformAdmin.licenses.tiers.detail': 'tierdetail',
-    'platformAdmin.licenses.features': 'features',
-    'platformAdmin.licenses.features.detail': 'featuredetail',
-    'platformAdmin.licenses.overrides': 'overrides',
-    'platformAdmin.licenses.overrides.create': 'overridecreate',
-    'platformAdmin.licenses.overrides.detail': 'overridedetail',
-    'platformAdmin.licenses.audit': 'audit',
-    'platformAdmin.emailPreview': 'emailpreview',
 };
 
 // ============================================================================
@@ -167,8 +121,9 @@ export const ROUTE_TO_FEATURE: Record<string, string> = {
 
 /**
  * Maps action keys (for buttons, forms) to feature entitlement keys.
+ * Values are type-checked against the generated FeatureKey union.
  */
-export const ACTION_TO_FEATURE: Record<string, string> = {
+export const ACTION_TO_FEATURE: Record<string, FeatureKey> = {
     // Fee actions
     'create_fee': 'fee_management',
     'edit_fee': 'fee_management',
@@ -265,10 +220,8 @@ export const UNGATED_ROUTES: string[] = [
     'admin.organization.billing.checkoutCancel',
     'admin.organization.billing.planSelection',
 
-    // Onboarding
+    // Onboarding & Settings (basic user functionality)
     'admin.onboarding',
-
-    // Settings (basic user functionality)
     'portal.settings',
     'portal.preferences',
     'admin.settings',
@@ -276,6 +229,34 @@ export const UNGATED_ROUTES: string[] = [
     // Public/join routes
     'public.join',
     'portal.join',
+
+    // Platform Admin Routes — platform admins bypass feature gates entirely
+    'platformAdmin.dashboard',
+    'platformAdmin.organizations.list',
+    'platformAdmin.organizations.detail',
+    'platformAdmin.users.list',
+    'platformAdmin.users.detail',
+    'platformAdmin.users.create',
+    'platformAdmin.admins',
+    'platformAdmin.payments',
+    'platformAdmin.fees',
+    'platformAdmin.audit',
+    'platformAdmin.featureFlags',
+    'platformAdmin.structure',
+    'platformAdmin.ticketing.allEvents',
+    'platformAdmin.ticketing.orderLookup',
+    'platformAdmin.ticketing.webhookStatus',
+    'platformAdmin.ticketing.organization',
+    'platformAdmin.licenses.overview',
+    'platformAdmin.licenses.tiers',
+    'platformAdmin.licenses.tiers.detail',
+    'platformAdmin.licenses.features',
+    'platformAdmin.licenses.features.detail',
+    'platformAdmin.licenses.overrides',
+    'platformAdmin.licenses.overrides.create',
+    'platformAdmin.licenses.overrides.detail',
+    'platformAdmin.licenses.audit',
+    'platformAdmin.emailPreview',
 ];
 
 // ============================================================================
@@ -325,4 +306,37 @@ export function getAllRouteFeatureKeys(): string[] {
  */
 export function getAllActionFeatureKeys(): string[] {
     return [...new Set(Object.values(ACTION_TO_FEATURE))];
+}
+
+// ============================================================================
+// Dev-Mode Registry Validation
+// ============================================================================
+
+/**
+ * Validates that every feature key referenced in the registries exists in the
+ * generated VALID_FEATURE_KEYS set. Call this once on app start in development
+ * to catch mismatches early.
+ *
+ * @returns Array of error messages (empty = all good)
+ */
+export function validateRegistry(): string[] {
+    const errors: string[] = [];
+
+    for (const [routeKey, featureKey] of Object.entries(ROUTE_TO_FEATURE)) {
+        if (!VALID_FEATURE_KEYS.has(featureKey)) {
+            errors.push(
+                `ROUTE_TO_FEATURE['${routeKey}'] references unknown feature key '${featureKey}'`
+            );
+        }
+    }
+
+    for (const [actionKey, featureKey] of Object.entries(ACTION_TO_FEATURE)) {
+        if (!VALID_FEATURE_KEYS.has(featureKey)) {
+            errors.push(
+                `ACTION_TO_FEATURE['${actionKey}'] references unknown feature key '${featureKey}'`
+            );
+        }
+    }
+
+    return errors;
 }
