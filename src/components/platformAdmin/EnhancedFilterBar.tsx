@@ -26,11 +26,15 @@ interface EnhancedFilterBarProps {
   // License tier filter (multi-select)
   tierFilter: string[]
   onTierFilterChange: (values: string[]) => void
+  tierExclusiveMode?: boolean
+  onTierExclusiveModeChange?: (value: boolean) => void
   availableTiers: Array<{ id: string; tier_key: string; tier_name: string }>
 
   // Role visibility filter (multi-select)
   roleFilter: string[]
   onRoleFilterChange: (values: string[]) => void
+  roleExclusiveMode?: boolean
+  onRoleExclusiveModeChange?: (value: boolean) => void
 
   // Integration filter (multi-select)
   integrationFilter: string[]
@@ -99,9 +103,13 @@ export default function EnhancedFilterBar({
   onStatusFilterChange,
   tierFilter,
   onTierFilterChange,
+  tierExclusiveMode = false,
+  onTierExclusiveModeChange,
   availableTiers,
   roleFilter,
   onRoleFilterChange,
+  roleExclusiveMode = false,
+  onRoleExclusiveModeChange,
   integrationFilter,
   onIntegrationFilterChange,
   quantifiableFilter,
@@ -129,20 +137,30 @@ export default function EnhancedFilterBar({
   }, [statusFilter, onStatusFilterChange])
 
   const handleTierToggle = useCallback((tierKey: string) => {
-    if (tierFilter.includes(tierKey)) {
-      onTierFilterChange(tierFilter.filter(v => v !== tierKey))
-    } else {
-      onTierFilterChange([...tierFilter, tierKey])
+    const newFilter = tierFilter.includes(tierKey)
+      ? tierFilter.filter(v => v !== tierKey)
+      : [...tierFilter, tierKey]
+    
+    onTierFilterChange(newFilter)
+    
+    // Reset exclusive mode if we no longer have exactly 1 tier selected
+    if (newFilter.length !== 1 && onTierExclusiveModeChange) {
+      onTierExclusiveModeChange(false)
     }
-  }, [tierFilter, onTierFilterChange])
+  }, [tierFilter, onTierFilterChange, onTierExclusiveModeChange])
 
   const handleRoleToggle = useCallback((value: string) => {
-    if (roleFilter.includes(value)) {
-      onRoleFilterChange(roleFilter.filter(v => v !== value))
-    } else {
-      onRoleFilterChange([...roleFilter, value])
+    const newFilter = roleFilter.includes(value)
+      ? roleFilter.filter(v => v !== value)
+      : [...roleFilter, value]
+    
+    onRoleFilterChange(newFilter)
+    
+    // Reset exclusive mode if we no longer have exactly 1 role selected
+    if (newFilter.length !== 1 && onRoleExclusiveModeChange) {
+      onRoleExclusiveModeChange(false)
     }
-  }, [roleFilter, onRoleFilterChange])
+  }, [roleFilter, onRoleFilterChange, onRoleExclusiveModeChange])
 
   const handleIntegrationToggle = useCallback((value: string) => {
     if (integrationFilter.includes(value)) {
@@ -355,9 +373,22 @@ export default function EnhancedFilterBar({
 
           {/* License Tier Filter */}
           <div>
-            <label className="pa-label" style={{ marginBottom: 'var(--pa-space-2)' }}>
-              License Tiers
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--pa-space-2)' }}>
+              <label className="pa-label">
+                License Tiers
+              </label>
+              {onTierExclusiveModeChange && tierFilter.length === 1 && !tierFilter.includes('unassigned') && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={tierExclusiveMode}
+                    onChange={(e) => onTierExclusiveModeChange(e.target.checked)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <span style={{ color: 'var(--pa-n700)' }}>ONLY this tier</span>
+                </label>
+              )}
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)' }}>
               <Checkbox
                 checked={tierFilter.includes('unassigned')}
@@ -377,9 +408,22 @@ export default function EnhancedFilterBar({
 
           {/* Role Visibility Filter */}
           <div>
-            <label className="pa-label" style={{ marginBottom: 'var(--pa-space-2)' }}>
-              Role Visibility
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--pa-space-2)' }}>
+              <label className="pa-label">
+                Role Visibility
+              </label>
+              {onRoleExclusiveModeChange && roleFilter.length === 1 && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={roleExclusiveMode}
+                    onChange={(e) => onRoleExclusiveModeChange(e.target.checked)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <span style={{ color: 'var(--pa-n700)' }}>ONLY this role</span>
+                </label>
+              )}
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)' }}>
               {ROLE_OPTIONS.map(option => (
                 <Checkbox

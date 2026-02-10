@@ -68,6 +68,7 @@ export const FEATURE_CATEGORIES = [
   'Integrations',
   'Security & Compliance',
   'Support Tools',
+  'Uncategorized',
 ] as const
 
 export type FeatureCategory = typeof FEATURE_CATEGORIES[number]

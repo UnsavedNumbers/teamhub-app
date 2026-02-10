@@ -257,6 +257,96 @@ export async function bulkApplyToTiers(
 }
 
 /**
+ * Bulk set features as System Feature
+ * - Sets is_system_feature = true, rollout_status = 'live'
+ * - Removes all tier assignments (system features are auto-available)
+ * - Role visibility is irrelevant for system features
+ */
+export async function bulkSetSystemFeature(
+  featureIds: string[],
+  _onProgress?: (processed: number, total: number) => void
+): Promise<BulkOperationResult> {
+  if (featureIds.length === 0) {
+    return { success: false, error: 'No features selected' }
+  }
+
+  try {
+    // 1. Update feature_entitlements flags
+    const { error: updateError } = await supabase
+      .from('feature_entitlements')
+      .update({
+        is_system_feature: true,
+        platform_admin_only: false,
+        rollout_status: 'live',
+      })
+      .in('id', featureIds)
+      .eq('is_toggleable', true) // Skip locked features
+
+    if (updateError) throw updateError
+
+    // 2. Remove all tier assignments for these features
+    const { error: deleteError } = await supabase
+      .from('tier_feature_assignments')
+      .delete()
+      .in('feature_entitlement_id', featureIds)
+
+    if (deleteError) throw deleteError
+
+    return { success: true, updated: featureIds.length }
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unknown error',
+    }
+  }
+}
+
+/**
+ * Bulk set features as Platform Admin Only
+ * - Sets platform_admin_only = true, rollout_status = 'live'
+ * - Removes all tier assignments (not available to orgs)
+ * - Role visibility is irrelevant for platform-only features
+ */
+export async function bulkSetPlatformOnly(
+  featureIds: string[],
+  _onProgress?: (processed: number, total: number) => void
+): Promise<BulkOperationResult> {
+  if (featureIds.length === 0) {
+    return { success: false, error: 'No features selected' }
+  }
+
+  try {
+    // 1. Update feature_entitlements flags
+    const { error: updateError } = await supabase
+      .from('feature_entitlements')
+      .update({
+        platform_admin_only: true,
+        is_system_feature: false,
+        rollout_status: 'live',
+      })
+      .in('id', featureIds)
+      .eq('is_toggleable', true) // Skip locked features
+
+    if (updateError) throw updateError
+
+    // 2. Remove all tier assignments for these features
+    const { error: deleteError } = await supabase
+      .from('tier_feature_assignments')
+      .delete()
+      .in('feature_entitlement_id', featureIds)
+
+    if (deleteError) throw deleteError
+
+    return { success: true, updated: featureIds.length }
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unknown error',
+    }
+  }
+}
+
+/**
  * Bulk update role visibility
  */
 export async function bulkUpdateRoleVisibility(

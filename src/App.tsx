@@ -487,33 +487,33 @@ function AppWithTheme() {
               <Route index element={<AdminDashboard />} />
             
               {/* Standardized Entity Routes - Most specific first */}
-              <Route path="sports/:sport_slug/update" element={<SportUpdate />} />
-              <Route path="sports/:sport_slug" element={<SportDetail />} />
-              <Route path="sports" element={<Sports />} />
-              <Route path="programs/sport/:sport_slug" element={<Programs />} />
-              <Route path="programs/:id/update" element={<ProgramUpdate />} />
-              <Route path="programs/:id" element={<ProgramDetail />} />
-              <Route path="programs" element={<Programs />} />
-              <Route path="levels/:id/update" element={<LevelUpdate />} />
-              <Route path="levels/:id" element={<LevelDetail />} />
-              <Route path="levels" element={<LevelsManagement />} />
-              <Route path="seasons/:id/update" element={<SeasonUpdate />} />
-              <Route path="seasons/:id" element={<SeasonDetail />} />
-              <Route path="seasons" element={<SeasonsManagement />} />
-              <Route path="teams/:id/roster" element={<Roster />} />
-              <Route path="teams/:id/update" element={<TeamUpdate />} />
-              <Route path="teams/:id" element={<TeamDetail />} />
-              <Route path="teams" element={<Teams />} />
-              <Route path="athletes/:id/edit" element={<EditAthlete />} />
-              <Route path="athletes/:id" element={<AthleteDetail />} />
-              <Route path="athletes/new" element={<CreateAthlete />} />
+              <Route path="sports/:sport_slug/update" element={<FeatureGateRoute routeKey="admin.sports.update"><SportUpdate /></FeatureGateRoute>} />
+              <Route path="sports/:sport_slug" element={<FeatureGateRoute routeKey="admin.sports.detail"><SportDetail /></FeatureGateRoute>} />
+              <Route path="sports" element={<FeatureGateRoute routeKey="admin.sports.list"><Sports /></FeatureGateRoute>} />
+              <Route path="programs/sport/:sport_slug" element={<FeatureGateRoute routeKey="admin.programs.bySport"><Programs /></FeatureGateRoute>} />
+              <Route path="programs/:id/update" element={<FeatureGateRoute routeKey="admin.programs.update"><ProgramUpdate /></FeatureGateRoute>} />
+              <Route path="programs/:id" element={<FeatureGateRoute routeKey="admin.programs.detail"><ProgramDetail /></FeatureGateRoute>} />
+              <Route path="programs" element={<FeatureGateRoute routeKey="admin.programs.list"><Programs /></FeatureGateRoute>} />
+              <Route path="levels/:id/update" element={<FeatureGateRoute routeKey="admin.levels.update"><LevelUpdate /></FeatureGateRoute>} />
+              <Route path="levels/:id" element={<FeatureGateRoute routeKey="admin.levels.detail"><LevelDetail /></FeatureGateRoute>} />
+              <Route path="levels" element={<FeatureGateRoute routeKey="admin.levels.list"><LevelsManagement /></FeatureGateRoute>} />
+              <Route path="seasons/:id/update" element={<FeatureGateRoute routeKey="admin.seasons.update"><SeasonUpdate /></FeatureGateRoute>} />
+              <Route path="seasons/:id" element={<FeatureGateRoute routeKey="admin.seasons.detail"><SeasonDetail /></FeatureGateRoute>} />
+              <Route path="seasons" element={<FeatureGateRoute routeKey="admin.seasons.list"><SeasonsManagement /></FeatureGateRoute>} />
+              <Route path="teams/:id/roster" element={<FeatureGateRoute routeKey="admin.teams.roster"><Roster /></FeatureGateRoute>} />
+              <Route path="teams/:id/update" element={<FeatureGateRoute routeKey="admin.teams.update"><TeamUpdate /></FeatureGateRoute>} />
+              <Route path="teams/:id" element={<FeatureGateRoute routeKey="admin.teams.detail"><TeamDetail /></FeatureGateRoute>} />
+              <Route path="teams" element={<FeatureGateRoute routeKey="admin.teams.list"><Teams /></FeatureGateRoute>} />
+              <Route path="athletes/:id/edit" element={<FeatureGateRoute routeKey="admin.athletes.edit"><EditAthlete /></FeatureGateRoute>} />
+              <Route path="athletes/:id" element={<FeatureGateRoute routeKey="admin.athletes.detail"><AthleteDetail /></FeatureGateRoute>} />
+              <Route path="athletes/new" element={<FeatureGateRoute routeKey="admin.athletes.create"><CreateAthlete /></FeatureGateRoute>} />
               <Route path="athletes/import" element={<FeatureGateRoute routeKey="admin.athletes.import"><ImportAthletes /></FeatureGateRoute>} />
-              <Route path="athletes" element={<AdminAthletes />} />
-              <Route path="guardians/:familyId/athletes/new" element={<CreateChild />} />
-              <Route path="guardians/new" element={<CreateFamily />} />
-              <Route path="guardians/:id" element={<FamilyDetail />} />
-              <Route path="guardians" element={<AdminFamilies />} />
-              <Route path="guardian-requests" element={<GuardianAttachmentRequests />} />
+              <Route path="athletes" element={<FeatureGateRoute routeKey="admin.athletes.list"><AdminAthletes /></FeatureGateRoute>} />
+              <Route path="guardians/:familyId/athletes/new" element={<FeatureGateRoute routeKey="admin.athletes.create"><CreateChild /></FeatureGateRoute>} />
+              <Route path="guardians/new" element={<FeatureGateRoute routeKey="admin.guardians.list"><CreateFamily /></FeatureGateRoute>} />
+              <Route path="guardians/:id" element={<FeatureGateRoute routeKey="admin.guardians.detail"><FamilyDetail /></FeatureGateRoute>} />
+              <Route path="guardians" element={<FeatureGateRoute routeKey="admin.guardians.list"><AdminFamilies /></FeatureGateRoute>} />
+              <Route path="guardian-requests" element={<FeatureGateRoute routeKey="admin.guardianRequests"><GuardianAttachmentRequests /></FeatureGateRoute>} />
 
               {/* Backward Compatibility Redirects */}
               <Route path="organization/sports/:id" element={<RedirectWithParams to="/admin/sports" />} />

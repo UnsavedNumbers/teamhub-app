@@ -19,6 +19,8 @@ import {
   ChangeStatusModal,
   ChangeVisibilityModal,
   UpdateCategoryModal,
+  SetAsSystemFeatureModal,
+  SetPlatformOnlyModal,
   OfflineBanner,
 } from '../../components/platformAdmin'
 import type { FeatureEntitlementWithCounts } from '../../types/licenseTiers.types'
@@ -29,7 +31,9 @@ import {
   bulkUpdateStatus, 
   bulkUpdateCategory, 
   bulkApplyToTiers, 
-  bulkUpdateRoleVisibility 
+  bulkUpdateRoleVisibility,
+  bulkSetSystemFeature,
+  bulkSetPlatformOnly
 } from '../../data/services/featureBulkOperations'
 import { showSuccess, showError, showInfo } from '../../utils/toast'
 import type { FeatureCategory } from '../../types/licenseTiers.types'
@@ -89,7 +93,9 @@ export default function FeatureCatalog() {
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState<string[]>([])
   const [tierFilter, setTierFilter] = useState<string[]>([])
+  const [tierExclusiveMode, setTierExclusiveMode] = useState(false)
   const [roleFilter, setRoleFilter] = useState<string[]>([])
+  const [roleExclusiveMode, setRoleExclusiveMode] = useState(false)
   const [integrationFilter, setIntegrationFilter] = useState<string[]>([])
   const [quantifiableFilter, setQuantifiableFilter] = useState<string | null>(null)
   const [sourceFilter, setSourceFilter] = useState<string | null>(null)
@@ -120,10 +126,14 @@ export default function FeatureCatalog() {
   const [showChangeStatusModal, setShowChangeStatusModal] = useState(false)
   const [showChangeVisibilityModal, setShowChangeVisibilityModal] = useState(false)
   const [showUpdateCategoryModal, setShowUpdateCategoryModal] = useState(false)
+  const [showSetSystemFeatureModal, setShowSetSystemFeatureModal] = useState(false)
+  const [showSetPlatformOnlyModal, setShowSetPlatformOnlyModal] = useState(false)
   const [bulkOperationLoading, setBulkOperationLoading] = useState(false)
 
   // Abort Controller for Race Conditions
   const abortControllerRef = useRef<AbortController | null>(null)
+  const silentRefreshRef = useRef(false)
+  const fetchRequestIdRef = useRef(0)
 
   // Fetch license tiers for filter
   const fetchTiers = useCallback(async () => {
@@ -146,7 +156,12 @@ export default function FeatureCatalog() {
 
   // Fetch features with enhanced filters
   const fetchFeatures = useCallback(async () => {
-    setLoading(true)
+    fetchRequestIdRef.current += 1
+    const currentRequestId = fetchRequestIdRef.current
+
+    if (!silentRefreshRef.current) {
+      setLoading(true)
+    }
     try {
       let query = supabase
         .from('admin_feature_entitlements_list')
@@ -160,7 +175,11 @@ export default function FeatureCatalog() {
 
       // Category filter
       if (categoryFilter) {
-        query = query.eq('category', categoryFilter)
+        if (categoryFilter === 'Uncategorized') {
+          query = query.or('category.is.null,category.eq.')
+        } else {
+          query = query.eq('category', categoryFilter)
+        }
       }
 
       // Type filter
@@ -183,6 +202,12 @@ export default function FeatureCatalog() {
       if (tierFilter.length > 0) {
         if (tierFilter.includes('unassigned')) {
           query = query.or('tier_assignments_count.is.null,tier_assignments_count.eq.0')
+        } else if (tierExclusiveMode && tierFilter.length === 1) {
+          // Exclusive mode: only features assigned to ONLY this one tier
+          // Use cd (contained by) + cs (contains) to match exactly [tier]
+          query = query
+            .contains('assigned_tier_keys', [tierFilter[0]])
+            .containedBy('assigned_tier_keys', [tierFilter[0]])
         } else {
           // Filter by tier keys - try overlaps operator
           try {
@@ -195,14 +220,27 @@ export default function FeatureCatalog() {
       }
 
       // Role visibility filter
-      if (roleFilter.includes('orgAdmin')) {
-        query = query.eq('visible_to_admin', true)
-      }
-      if (roleFilter.includes('coach')) {
-        query = query.eq('visible_to_coach', true)
-      }
-      if (roleFilter.includes('guardian')) {
-        query = query.eq('visible_to_parent', true)
+      if (roleExclusiveMode && roleFilter.length === 1) {
+        // Exclusive mode: only features visible to ONLY this role
+        const role = roleFilter[0]
+        if (role === 'orgAdmin') {
+          query = query.eq('visible_to_admin', true).eq('visible_to_coach', false).eq('visible_to_parent', false)
+        } else if (role === 'coach') {
+          query = query.eq('visible_to_admin', false).eq('visible_to_coach', true).eq('visible_to_parent', false)
+        } else if (role === 'guardian') {
+          query = query.eq('visible_to_admin', false).eq('visible_to_coach', false).eq('visible_to_parent', true)
+        }
+      } else {
+        // Inclusive mode: features visible to any of the selected roles
+        if (roleFilter.includes('orgAdmin')) {
+          query = query.eq('visible_to_admin', true)
+        }
+        if (roleFilter.includes('coach')) {
+          query = query.eq('visible_to_coach', true)
+        }
+        if (roleFilter.includes('guardian')) {
+          query = query.eq('visible_to_parent', true)
+        }
       }
 
       // Integration filter
@@ -252,6 +290,10 @@ export default function FeatureCatalog() {
 
       const { data, error, count } = await query
 
+      if (fetchRequestIdRef.current !== currentRequestId) {
+        return
+      }
+
       if (error) {
         console.error('Error fetching features:', error)
         setFeatures([])
@@ -267,6 +309,9 @@ export default function FeatureCatalog() {
         setTotalCount(count || 0)
       }
     } catch (err: any) {
+      if (fetchRequestIdRef.current !== currentRequestId) {
+        return
+      }
       // Ignore timeout/cancellation errors from rapid typing
       if (err?.code === '57014' || err?.message?.includes('cancel')) {
         console.log('Query cancelled or timed out, likely due to new search')
@@ -275,9 +320,18 @@ export default function FeatureCatalog() {
       console.error('Error:', err)
       setFeatures([])
     } finally {
-      setLoading(false)
+      if (fetchRequestIdRef.current === currentRequestId) {
+        setLoading(false)
+        silentRefreshRef.current = false
+      }
     }
-  }, [page, rowsPerPage, debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter])
+  }, [page, rowsPerPage, debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, tierExclusiveMode, roleExclusiveMode])
+
+  // Silent refresh: re-fetches data without showing loading skeleton (preserves scroll/position)
+  const silentRefresh = useCallback(async () => {
+    silentRefreshRef.current = true
+    await fetchFeatures()
+  }, [fetchFeatures])
 
   // Debounce search input (400ms delay)
   useEffect(() => {
@@ -450,10 +504,7 @@ export default function FeatureCatalog() {
       await new Promise(resolve => setTimeout(resolve, 500))
       
       await new Promise(resolve => setTimeout(resolve, 500))
-      await Promise.all([
-        runDiscovery(false),
-        fetchFeatures()
-      ])
+      await runDiscovery(false)
       
       setTimeout(() => {
         setSyncProgress({
@@ -539,6 +590,7 @@ export default function FeatureCatalog() {
   }, [features])
 
   const handleBulkApplyToTiers = async (tierIds: string[], action: 'add' | 'remove', roleVisibility: { admin: boolean; coach: boolean; parent: boolean }) => {
+    setBulkOperationLoading(true)
     try {
       const featureIds = Array.from(selectedFeatureIds)
       // For remove action, filter out non-toggleable features
@@ -570,7 +622,10 @@ export default function FeatureCatalog() {
 
       if (result.success) {
         showSuccess(`${result.processed || 0} feature${result.processed === 1 ? '' : 's'} ${action === 'add' ? 'added to' : 'removed from'} tier${tierIds.length === 1 ? '' : 's'}`)
-        await fetchFeatures()
+        setShowApplyToTiersModal(false)
+        setSelectedFeatureIds(new Set())
+        setBulkOperationLoading(false)
+        await silentRefresh()
       } else {
         if (result.code === 'FEATURE_LOCKED') {
           const lockedNames = result.locked_features?.map(f => f.display_name).join(', ') || 'locked features'
@@ -589,18 +644,12 @@ export default function FeatureCatalog() {
         }
       }
     } catch (err: any) {
+      setBulkOperationLoading(false)
       if (err.message !== 'LOCK_HELD' && err.message !== 'Operation failed' && err.message !== 'FEATURE_LOCKED' && err.message !== 'ALL_LOCKED') {
         showError(err.message || t('toast.error.operationFailed'))
       }
       throw err // Re-throw to let modal handle it
     }
-  }
-
-  // Handler for when modal completes all operations
-  const handleApplyToTiersComplete = () => {
-    setShowApplyToTiersModal(false)
-    setSelectedFeatureIds(new Set())
-    setBulkOperationLoading(false)
   }
 
   const handleBulkChangeStatus = async (status: 'Live' | 'Disabled' | 'Draft' | 'Deprecated' | 'Review') => {
@@ -636,7 +685,7 @@ export default function FeatureCatalog() {
       if (result.success) {
         showSuccess(`${result.updated || 0} feature${result.updated === 1 ? '' : 's'} status updated to ${status}`)
         setShowChangeStatusModal(false)
-        await fetchFeatures()
+        await silentRefresh()
         setSelectedFeatureIds(new Set())
       } else {
         if (result.code === 'FEATURE_LOCKED') {
@@ -690,7 +739,7 @@ export default function FeatureCatalog() {
         const roleName = roleType === 'admin' ? 'Org Admin' : roleType === 'coach' ? 'Coach' : 'Guardian'
         showSuccess(`${result.updated || 0} feature${result.updated === 1 ? '' : 's'} visibility updated for ${roleName}`)
         setShowChangeVisibilityModal(false)
-        await fetchFeatures()
+        await silentRefresh()
         setSelectedFeatureIds(new Set())
       } else {
         if (result.code === 'FEATURE_LOCKED') {
@@ -718,7 +767,47 @@ export default function FeatureCatalog() {
       if (result.success) {
         showSuccess(`${result.updated || 0} feature${result.updated === 1 ? '' : 's'} category updated to ${category}`)
         setShowUpdateCategoryModal(false)
-        await fetchFeatures()
+        await silentRefresh()
+        setSelectedFeatureIds(new Set())
+      } else {
+        showError(result.error || 'Operation failed')
+      }
+    } catch (err: any) {
+      showError(err.message || 'Operation failed')
+    } finally {
+      setBulkOperationLoading(false)
+    }
+  }
+
+  const handleBulkSetSystemFeature = async () => {
+    setBulkOperationLoading(true)
+    try {
+      const result = await bulkSetSystemFeature(Array.from(selectedFeatureIds))
+
+      if (result.success) {
+        showSuccess(`${result.updated || 0} feature${result.updated === 1 ? '' : 's'} set as system feature`)
+        setShowSetSystemFeatureModal(false)
+        await silentRefresh()
+        setSelectedFeatureIds(new Set())
+      } else {
+        showError(result.error || 'Operation failed')
+      }
+    } catch (err: any) {
+      showError(err.message || 'Operation failed')
+    } finally {
+      setBulkOperationLoading(false)
+    }
+  }
+
+  const handleBulkSetPlatformOnly = async () => {
+    setBulkOperationLoading(true)
+    try {
+      const result = await bulkSetPlatformOnly(Array.from(selectedFeatureIds))
+
+      if (result.success) {
+        showSuccess(`${result.updated || 0} feature${result.updated === 1 ? '' : 's'} set to platform admin only`)
+        setShowSetPlatformOnlyModal(false)
+        await silentRefresh()
         setSelectedFeatureIds(new Set())
       } else {
         showError(result.error || 'Operation failed')
@@ -942,9 +1031,13 @@ export default function FeatureCatalog() {
           onStatusFilterChange={setStatusFilter}
           tierFilter={tierFilter}
           onTierFilterChange={setTierFilter}
+          tierExclusiveMode={tierExclusiveMode}
+          onTierExclusiveModeChange={setTierExclusiveMode}
           availableTiers={availableTiers}
           roleFilter={roleFilter}
           onRoleFilterChange={setRoleFilter}
+          roleExclusiveMode={roleExclusiveMode}
+          onRoleExclusiveModeChange={setRoleExclusiveMode}
           integrationFilter={integrationFilter}
           onIntegrationFilterChange={setIntegrationFilter}
           quantifiableFilter={quantifiableFilter}
@@ -989,6 +1082,8 @@ export default function FeatureCatalog() {
           onChangeStatus={() => setShowChangeStatusModal(true)}
           onChangeVisibility={() => setShowChangeVisibilityModal(true)}
           onUpdateCategory={() => setShowUpdateCategoryModal(true)}
+          onSetSystemFeature={() => setShowSetSystemFeatureModal(true)}
+          onSetPlatformOnly={() => setShowSetPlatformOnlyModal(true)}
           onEnableAll={handleEnableAll}
           onDisableAll={handleDisableAll}
           onClearSelection={() => {
@@ -1077,7 +1172,6 @@ export default function FeatureCatalog() {
             setShowApplyToTiersModal(false)
             setBulkOperationLoading(false)
           }}
-          onComplete={handleApplyToTiersComplete}
           loading={bulkOperationLoading}
         />
 
@@ -1102,6 +1196,22 @@ export default function FeatureCatalog() {
           selectedFeatures={selectedFeatures}
           onConfirm={handleBulkUpdateCategory}
           onCancel={() => setShowUpdateCategoryModal(false)}
+          loading={bulkOperationLoading}
+        />
+
+        <SetAsSystemFeatureModal
+          open={showSetSystemFeatureModal}
+          selectedFeatures={selectedFeatures}
+          onConfirm={handleBulkSetSystemFeature}
+          onCancel={() => setShowSetSystemFeatureModal(false)}
+          loading={bulkOperationLoading}
+        />
+
+        <SetPlatformOnlyModal
+          open={showSetPlatformOnlyModal}
+          selectedFeatures={selectedFeatures}
+          onConfirm={handleBulkSetPlatformOnly}
+          onCancel={() => setShowSetPlatformOnlyModal(false)}
           loading={bulkOperationLoading}
         />
         </div>
