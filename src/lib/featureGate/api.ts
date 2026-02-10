@@ -35,6 +35,7 @@ export function onCacheInvalidation(listener: CacheInvalidationListener): () => 
  */
 export function clearFeatureGateCache(): void {
     gateCache.clear();
+    _lastGateFailure = 0;
     cacheInvalidationListeners.forEach(fn => fn());
 }
 
@@ -47,7 +48,23 @@ export function clearFeatureGateCacheForOrg(orgId: string): void {
             gateCache.delete(key);
         }
     }
+    _lastGateFailure = 0;
     cacheInvalidationListeners.forEach(fn => fn(orgId));
+}
+
+/**
+ * Negative cache: prevent retry storms when RPCs are unreachable (CORS / network).
+ * After a failure, skip new RPCs for NEGATIVE_CACHE_TTL_MS.
+ */
+const GATE_NEGATIVE_CACHE_TTL_MS = 30_000; // 30 seconds
+let _lastGateFailure = 0;
+
+function isGateInNegativeCooldown(): boolean {
+    return _lastGateFailure > 0 && Date.now() - _lastGateFailure < GATE_NEGATIVE_CACHE_TTL_MS;
+}
+
+function markGateFailure(): void {
+    _lastGateFailure = Date.now();
 }
 
 /**
@@ -66,6 +83,11 @@ export async function fetchFeatureGate(
     context: FeatureGateContext,
     signal?: AbortSignal
 ): Promise<FeatureGateResult> {
+    // Skip RPC if we recently had a failure (CORS / network)
+    if (isGateInNegativeCooldown()) {
+        return { allowed: true, gate_action: null as any, reason_code: null as any, feature_key: featureKey };
+    }
+
     // Check cache first
     const cacheKey = getCacheKey(context.org_id, context.user_id, featureKey);
     const cached = gateCache.get(cacheKey);
@@ -92,6 +114,7 @@ export async function fetchFeatureGate(
         }
 
         if (error) {
+            markGateFailure();
             console.error('[FeatureGate] RPC error:', error);
             return {
                 allowed: false,
@@ -113,6 +136,7 @@ export async function fetchFeatureGate(
         if (err instanceof DOMException && err.name === 'AbortError') {
             throw err;
         }
+        markGateFailure();
         console.error('[FeatureGate] Fetch error:', err);
         return {
             allowed: false,
@@ -135,6 +159,16 @@ export async function fetchFeatureGates(
 ): Promise<Record<string, FeatureGateResult>> {
     if (featureKeys.length === 0) {
         return {};
+    }
+
+    // Skip RPC if we recently had a failure (CORS / network)
+    // Return "allowed: true" so the UI doesn't block navigation during outages
+    if (isGateInNegativeCooldown()) {
+        const fallback: Record<string, FeatureGateResult> = {};
+        for (const key of featureKeys) {
+            fallback[key] = { allowed: true, gate_action: null as any, reason_code: null as any, feature_key: key };
+        }
+        return fallback;
     }
 
     // Check which keys need fetching vs which are cached
@@ -173,6 +207,7 @@ export async function fetchFeatureGates(
         }
 
         if (error) {
+            markGateFailure();
             console.error('[FeatureGate] Batch RPC error:', error);
             return {
                 ...cachedResults,
@@ -202,6 +237,7 @@ export async function fetchFeatureGates(
         if (err instanceof DOMException && err.name === 'AbortError') {
             throw err;
         }
+        markGateFailure();
         console.error('[FeatureGate] Batch fetch error:', err);
         return {
             ...cachedResults,
