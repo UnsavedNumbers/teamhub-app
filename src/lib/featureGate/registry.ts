@@ -53,6 +53,7 @@ export const ROUTE_TO_FEATURE: Record<string, FeatureKey> = {
     'admin.athletes.edit': 'roster_management',
     'admin.athletes.import': 'roster_management',
     'admin.guardians.list': 'roster_management',
+    'admin.guardians.detail': 'roster_management',
     'admin.guardianRequests': 'roster_management',
 
     // -------------------------------------------------------------------------
@@ -69,6 +70,7 @@ export const ROUTE_TO_FEATURE: Record<string, FeatureKey> = {
     'admin.uniforms.list': 'uniform_orders',
     'admin.uniforms.detail': 'uniform_orders',
     'admin.uniforms.create': 'uniform_orders',
+    'admin.uniforms.edit': 'uniform_orders',
     'admin.announcements.list': 'announcements',
     'admin.announcements.detail': 'announcements',
     'admin.announcements.create': 'announcements',
@@ -89,13 +91,17 @@ export const ROUTE_TO_FEATURE: Record<string, FeatureKey> = {
     // -------------------------------------------------------------------------
     'admin.sports.list': 'team_management',
     'admin.sports.detail': 'team_management',
+    'admin.sports.update': 'team_management',
     'admin.programs.list': 'team_management',
     'admin.programs.detail': 'team_management',
+    'admin.programs.update': 'team_management',
     'admin.programs.bySport': 'team_management',
     'admin.levels.list': 'team_management',
     'admin.levels.detail': 'team_management',
+    'admin.levels.update': 'team_management',
     'admin.teams.list': 'team_management',
     'admin.teams.detail': 'team_management',
+    'admin.teams.update': 'team_management',
     'admin.teams.roster': 'roster_management',
     'admin.seasons.list': 'team_management',
     'admin.seasons.detail': 'team_management',
