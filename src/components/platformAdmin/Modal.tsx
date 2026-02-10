@@ -29,27 +29,55 @@ export default function Modal({ open, onClose, title, children, size = 'medium',
 
   if (!open) return null
 
-  const sizeClasses = {
-    small: 'pa-w-[400px]',
-    medium: 'pa-w-[600px]',
-    large: 'pa-w-[800px]',
+  const sizeMap = {
+    small: '400px',
+    medium: '600px',
+    large: '800px',
   }
 
   return (
     <div 
-      className="pa-fixed pa-inset-0 pa-bg-black/40 pa-z-50 pa-grid pa-place-items-center"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(11, 15, 20, 0.5)',
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
       <div 
-        className={`pa-card ${sizeClasses[size]} max-sm:pa-w-[95vw] pa-relative pa-max-h-[90vh] pa-overflow-y-auto ${className}`}
+        className={`pa-card ${className}`}
+        style={{
+          width: '100%',
+          maxWidth: sizeMap[size],
+          margin: 'var(--pa-space-4)',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          backgroundColor: 'white',
+          position: 'relative',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
-          <h3 className="pa-text-lg pa-font-semibold">{title}</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--pa-space-4)' }}>
+          <h3 className="pa-h3" style={{ margin: 0 }}>{title}</h3>
           <button 
-            className="pa-absolute pa-top-3 pa-right-3 pa-text-muted hover:pa-text-foreground"
+            style={{
+              position: 'absolute',
+              top: 'var(--pa-space-3)',
+              right: 'var(--pa-space-3)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
             onClick={onClose}
             aria-label="Close"
           >
@@ -61,4 +89,5 @@ export default function Modal({ open, onClose, title, children, size = 'medium',
     </div>
   )
 }
+
 
