@@ -449,7 +449,8 @@ export default function GalleryDetail() {
     }
   }, [gallery, t])
 
-  if (loading) {
+  // Show loading skeleton while gallery is still being fetched or photos are loading
+  if (!galleryFetched || loading) {
     return (
       <div className="oa-root">
         <div style={{ padding: '24px' }}>
@@ -502,7 +503,7 @@ export default function GalleryDetail() {
           { label: gallery?.name || t('photos.allGalleries') },
         ]}
         actions={
-          <div style={{ display: 'flex', gap: 'var(--oa-space-3)' }}>
+          <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
             <Button variant="secondary" onClick={handleEdit}>
               {t('photos.updateAlbumInfo')}
             </Button>
@@ -564,8 +565,8 @@ export default function GalleryDetail() {
 
             {/* Upload Zone */}
             {!photoStats.limitReached && (
-              <Card title={t('photos.upload.title')} className="oa-card oa-card--no-padding">
-                <div style={{ padding: 'var(--oa-space-6)' }}>
+              <Card title={t('photos.upload.title')} className="oa-card oa-card--no-padding pa-mt-3">
+                <div style={{ padding: 'var(--pa-space-6)' }}>
                   <PhotoUploadZone 
                     galleryId={id} 
                     onComplete={() => {
@@ -581,7 +582,7 @@ export default function GalleryDetail() {
 
             {gallery && !USE_FAKE_DATA && (
               <Card title={t('photos.albums.title')} className="oa-card oa-card--no-padding oa-mt-3">
-                <div style={{ padding: 'var(--oa-space-6)' }}>
+                <div style={{ padding: 'var(--pa-space-6)' }}>
                   <AlbumManager
                     galleryId={gallery.id}
                     onAlbumsUpdated={(next) => setAlbums(next)}
@@ -649,7 +650,7 @@ export default function GalleryDetail() {
                 </div>
               }
             >
-              <div style={{ padding: 'var(--oa-space-6)' }}>
+              <div style={{ padding: 'var(--pa-space-6)' }}>
                 <div ref={photoFeedRef} id="photo-feed" className="oa-mb-4">
                   <PhotoFilterBar
                     filters={filters}
