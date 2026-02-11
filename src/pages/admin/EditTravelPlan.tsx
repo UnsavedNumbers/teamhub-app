@@ -16,7 +16,7 @@ import {
   Button, 
   Input,
   DatePicker 
-} from '../../components/platformAdmin'
+} from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import { FileUpload } from '../../components/common/FileUpload'
@@ -24,6 +24,7 @@ import PlanTravelContacts from '../../components/admin/travel/PlanTravelContacts
 import { getOrganizationTravelContacts } from '../../data/services/organizationTravelContactsService'
 import { TRAVEL_CONTACT_CATEGORIES, type TravelContactCategory, type OrganizationTravelContactRow, type TravelContactCategoryOrg } from '../../types/travelContacts'
 import { getTravelPlanContacts, deleteTravelPlanContactsForPlan, insertTravelPlanContacts } from '../../data/services/travelService'
+import '../../styles/orgAdmin.css'
 
 interface TravelFormData { 
   title: string
@@ -440,12 +441,12 @@ export default function EditTravelPlan() {
   }
 
   if (loading) {
-    return <div className="pa-root"><div className="pa-skeleton" style={{ height: '500px' }} /></div>
+    return <div className="oa-root"><div className="oa-skeleton" style={{ height: '500px' }} /></div>
   }
 
   if (error && !hasFormData) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader
           title="Edit Travel Plan"
           subtitle={t('admin.travel.editSubtitle')}
@@ -454,10 +455,10 @@ export default function EditTravelPlan() {
             { label: 'Edit Travel Plan' },
           ]}
         />
-        <div className="pa-form-container">
+        <div className="oa-form-container">
           <Card>
-            <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>
-            <div className="pa-form-actions">
+            <div className="oa-card oa-mb-4 oa-text-danger" style={{ background: 'var(--oa-danger-bg)', border: 'none' }}>{error}</div>
+            <div className="oa-form-actions">
               <Button variant="secondary" onClick={() => navigate('/admin/travel')}>Back to Travel Plans</Button>
               <OrgAdminButton variant="primary" onClick={() => { setError(null); fetchPlan(); setLoading(true); }}>Retry</OrgAdminButton>
             </div>
@@ -468,7 +469,7 @@ export default function EditTravelPlan() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title="Edit Travel Plan" 
         subtitle={t('admin.travel.editSubtitle')}
@@ -477,21 +478,21 @@ export default function EditTravelPlan() {
           { label: 'Edit Travel Plan' },
         ]}
       />
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card>
           <form onSubmit={handleSubmit(onSubmit)}>
             <fieldset disabled={isPastPlan}>
-            {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
+            {error && <div className="oa-card oa-mb-4 oa-text-danger" style={{ background: 'var(--oa-danger-bg)', border: 'none' }}>{error}</div>}
             
-            <div className="pa-mb-4">
+            <div className="oa-mb-4">
               <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Trip Title" required />} />
             </div>
 
-            <div className="pa-mb-4">
+            <div className="oa-mb-4">
               <Controller name="location" control={control} rules={{ required: 'Location is required' }} render={({ field }) => <Input {...field} label="Location (city/state or details)" required />} />
             </div>
 
-            <div className="pa-form-grid pa-form-grid-2 pa-gap-4 pa-mb-4">
+            <div className="oa-form-grid oa-form-grid-2 oa-gap-4 oa-mb-4">
               <Controller name="destination_city" control={control} render={({ field }) => <Input {...field} label="Destination City" />} />
               <Controller name="destination_state" control={control} render={({ field }) => <Input {...field} label="Destination State" />} />
               <Controller 
@@ -524,8 +525,8 @@ export default function EditTravelPlan() {
               />
             </div>
 
-            <h3 className="pa-h3 pa-mb-4 pa-mt-6">VENUE & HOTEL</h3>
-            <div className="pa-form-grid pa-form-grid-2 pa-gap-4 pa-mb-4">
+            <h3 className="oa-h3 oa-mb-4 oa-mt-6">VENUE & HOTEL</h3>
+            <div className="oa-form-grid oa-form-grid-2 oa-gap-4 oa-mb-4">
               <Controller
                 name="venue_name"
                 control={control}
@@ -595,8 +596,8 @@ export default function EditTravelPlan() {
               <Controller name="hotel_confirmation" control={control} render={({ field }) => <Input {...field} label="Hotel Confirmation" />} />
             </div>
 
-            <h3 className="pa-h3 pa-mb-4">ITINERARY FILE</h3>
-            <div className="pa-mb-6">
+            <h3 className="oa-h3 oa-mb-4">ITINERARY FILE</h3>
+            <div className="oa-mb-6">
               <FileUpload
                 label="Itinerary File"
                 value={itineraryFile}
@@ -615,9 +616,9 @@ export default function EditTravelPlan() {
                 orgContacts={orgContacts} 
             />
 
-            <div className="pa-form-actions">
+            <div className="oa-form-actions">
               <OrgAdminButton variant="primary" onClick={() => navigate('/admin/travel')} disabled={saving} className="w-full sm:w-auto">Cancel</OrgAdminButton>
-              <Button type="submit" loading={saving} disabled={isPastPlan || saving} className="pa-form-submit-btn w-full sm:w-auto">Save Changes</Button>
+              <Button type="submit" loading={saving} disabled={isPastPlan || saving} className="oa-form-submit-btn w-full sm:w-auto">Save Changes</Button>
             </div>
             </fieldset>
           </form>

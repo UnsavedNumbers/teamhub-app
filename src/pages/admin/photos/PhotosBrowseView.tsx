@@ -467,7 +467,7 @@ export function PhotosBrowseView() {
     return (
       <div className="photos-browse-new">
         <div className="browse-loading">
-          <Card className="pa-h-64 pa-animate-pulse" />
+          <Card className="oa-h-64 oa-animate-pulse" />
         </div>
       </div>
     )
@@ -687,7 +687,7 @@ export function PhotosBrowseView() {
                       </span>
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      <div className="pa-flex pa-gap-2">
+                      <div className="oa-flex oa-gap-2">
                         <button 
                           className="table-more-button"
                           onClick={() => handleBrowseGallery(gallery.id)}
@@ -727,10 +727,10 @@ export function PhotosBrowseView() {
         onClose={() => setShowDemoModal(false)}
         title={t('photos.demoMode.title')}
       >
-        <p className="pa-text-sm pa-text-muted pa-mb-4">
+        <p className="oa-text-sm oa-text-muted oa-mb-4">
           {demoAction && t('photos.demoMode.message')}
         </p>
-        <div className="pa-flex pa-justify-end">
+        <div className="oa-flex oa-justify-end">
           <Button variant="primary" onClick={() => setShowDemoModal(false)}>
             {t('common.ok')}
           </Button>
@@ -743,13 +743,13 @@ export function PhotosBrowseView() {
         onClose={() => !deleting && setDeleteModalOpen(false)}
         title={t('photos.deleteGallery')}
       >
-        <p className="pa-text-sm pa-mb-4">
+        <p className="oa-text-sm oa-mb-4">
           {t('photos.bulk.confirmDeleteEmpty', { count: 1 })}
           {galleryToDelete && (
-            <strong className="pa-block pa-mt-2">{galleryToDelete.name || galleryToDelete.title}</strong>
+            <strong className="oa-block oa-mt-2">{galleryToDelete.name || galleryToDelete.title}</strong>
           )}
         </p>
-        <div className="pa-flex pa-justify-end pa-gap-3">
+        <div className="oa-flex oa-justify-end oa-gap-3">
           <Button 
             variant="ghost" 
             onClick={() => setDeleteModalOpen(false)}

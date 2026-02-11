@@ -10,13 +10,14 @@ import {
   Button, 
   Input, 
   Select 
-} from '../../components/platformAdmin'
+} from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { useT } from '../../i18n/useI18n'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { createOrganizationUser } from '../../api/users'
 import { showSuccess } from '../../utils/toast'
+import '../../styles/orgAdmin.css'
 
 interface UserFormData {
   email: string
@@ -148,7 +149,7 @@ export default function CreateUser() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title="Create User" 
         subtitle={t('admin.users.createSubtitle')} 
@@ -157,12 +158,12 @@ export default function CreateUser() {
           { label: 'Create User' },
         ]}
       />
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card>
           <form onSubmit={handleSubmit(onSubmit)}>
-            {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
+            {error && <div className="oa-card oa-mb-4 oa-text-danger" style={{ background: 'var(--oa-danger-bg)', border: 'none' }}>{error}</div>}
             
-            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+            <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-4">
               <Controller 
                 name="email" 
                 control={control} 
@@ -202,7 +203,7 @@ export default function CreateUser() {
               />
             </div>
 
-            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+            <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-4">
               <Controller 
                 name="last_name" 
                 control={control} 
@@ -248,7 +249,7 @@ export default function CreateUser() {
               />
             </div>
 
-            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-6">
+            <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-6">
               <Controller 
                 name="role" 
                 control={control} 
@@ -266,15 +267,15 @@ export default function CreateUser() {
               />
             </div>
 
-            <div className="pa-mb-6">
-              <p className="pa-body-s">
+            <div className="oa-mb-6">
+              <p className="oa-body-s">
                 <strong>Note:</strong> {watch('role') === 'admin' 
                   ? 'Only platform admins can create organization admin users. If you are not a platform admin, this will fail.'
                   : 'The user will be created and added to your organization. If the email already exists, they will be added to your organization.'}
               </p>
             </div>
 
-            <div className="pa-flex pa-justify-end pa-gap-3">
+            <div className="oa-flex oa-justify-end oa-gap-3">
               <OrgAdminButton variant="primary" onClick={() => navigate('/admin/users')}>Cancel</OrgAdminButton>
               <Button type="submit" loading={saving}>Create User</Button>
             </div>

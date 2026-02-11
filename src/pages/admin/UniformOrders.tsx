@@ -11,11 +11,11 @@ import {
   Badge,
   Button,
   EmptyState,
-} from '../../components/platformAdmin'
-import OrgDataTable from '../../components/admin/OrgDataTable'
-import type { ColumnConfig } from '../../components/admin/OrgDataTable'
-import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+  OrgDataTable,
+  type ColumnConfig
+} from '../../components/admin'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 export default function UniformOrders() {
   const [submissions, setSubmissions] = useState<UniformSubmission[]>([])
@@ -96,7 +96,7 @@ export default function UniformOrders() {
   // Show loading state while sports are loading
   if (sportsLoading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader title="Uniforms" actions={null} />
         <AdminLoadingSpinner />
       </div>
@@ -106,11 +106,11 @@ export default function UniformOrders() {
   // Show error state if sports failed to load
   if (sportsError) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader title="Uniforms" actions={null} />
         <Card>
-          <div className="pa-p-8 pa-text-center">
-            <p className="pa-text-danger pa-mb-4">{t('admin.uniforms.prerequisite.loadError', { message: sportsError.message })}</p>
+          <div className="oa-p-8 oa-text-center">
+            <p className="oa-text-danger oa-mb-4">{t('admin.uniforms.prerequisite.loadError', { message: sportsError.message })}</p>
             <Button onClick={refetchSports} variant="primary">
               {t('admin.uniforms.prerequisite.retry')}
             </Button>
@@ -124,7 +124,7 @@ export default function UniformOrders() {
   if ((sports?.length ?? 0) === 0) {
     const returnUrl = encodeURIComponent('/admin/uniforms')
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader title="Uniforms" actions={null} />
         <Card>
           <EmptyState
@@ -143,7 +143,7 @@ export default function UniformOrders() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title={t('admin.uniforms.title')}
         subtitle={t('admin.uniforms.subtitle')} 

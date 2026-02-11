@@ -9,10 +9,11 @@ import { getProgram, getSports } from '../../data/services/sportsService'
 import { getTeams, getActiveSeason, getTeamRoster } from '../../data/services/teamsService'
 import type { Level, Program, Sport, Team } from '../../data/types/organization'
 import OfflineBanner from '../../components/admin/OfflineBanner'
-import { AdminPageHeader, Button, Card, Table, type TableColumn } from '../../components/platformAdmin'
+import { AdminPageHeader, Button, Card, Table, type TableColumn } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
 import { getRandomSportImagePath } from '../../utils/sportImages'
+import '../../styles/orgAdmin.css'
 
 type TeamRow = {
   id: string
@@ -143,6 +144,14 @@ export default function LevelDetail() {
     if (teams.length > 0) return 'Active'
     return 'Planning'
   }, [teams])
+
+  const heroStats = useMemo(
+    () => [
+      { label: 'Total Teams', value: teams.length },
+      { label: 'Total Athletes', value: totalAthletes },
+    ],
+    [teams.length, totalAthletes]
+  )
 
   const loadData = useCallback(async () => {
     if (!isReady || !levelId) {
@@ -293,13 +302,13 @@ export default function LevelDetail() {
         cellType: 'primary',
         render: (row) => {
           if (!row.id) {
-            return <span className="pa-body-m" style={{ fontWeight: 700, color: 'var(--pa-n900)' }}>{row.name}</span>
+            return <span className="oa-body-m" style={{ fontWeight: 700, color: 'var(--oa-n900)' }}>{row.name}</span>
           }
           return (
             <Link
               to={getLink('admin.teams.detail', { id: row.id })}
-              className="pa-body-m"
-              style={{ fontWeight: 700, color: 'var(--pa-n900)', textDecoration: 'none' }}
+              className="oa-body-m"
+              style={{ fontWeight: 700, color: 'var(--oa-n900)', textDecoration: 'none' }}
               onClick={(e) => {
                 if (!row.id) {
                   e.preventDefault()
@@ -324,14 +333,14 @@ export default function LevelDetail() {
         label: 'STATUS',
         render: (row) => (
           <span
-            className="pa-body-s"
+            className="oa-body-s"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              padding: 'calc(var(--pa-space-1) + 1px) var(--pa-space-2)',
-              borderRadius: 'var(--pa-radius-pill)',
-              background: row.status === 'active' ? 'var(--pa-theme-surface-highlight)' : 'var(--pa-surface-panel)',
-              color: row.status === 'active' ? 'var(--pa-theme-text-accent)' : 'var(--pa-n500)',
+              padding: 'calc(var(--oa-space-1) + 1px) var(--oa-space-2)',
+              borderRadius: 'var(--oa-radius-pill)',
+              background: row.status === 'active' ? 'var(--oa-theme-surface-highlight)' : 'var(--oa-surface-panel)',
+              color: row.status === 'active' ? 'var(--oa-theme-text-accent)' : 'var(--oa-n500)',
               fontWeight: 800,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
@@ -367,23 +376,23 @@ export default function LevelDetail() {
 
   if (loading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
         <div style={{ padding: '24px' }}>
-          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
-          <div className="pa-skeleton" style={{ height: '280px', borderRadius: '8px', marginBottom: '32px' }} />
+          <div className="oa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div className="oa-skeleton" style={{ height: '280px', borderRadius: '8px', marginBottom: '32px' }} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="pa-skeleton" style={{ height: '160px' }} />
+              <div key={i} className="oa-skeleton" style={{ height: '160px' }} />
             ))}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
             {Array.from({ length: 2 }).map((_, i) => (
               <div key={i}>
-                <div className="pa-skeleton" style={{ height: '40px', marginBottom: '16px' }} />
+                <div className="oa-skeleton" style={{ height: '40px', marginBottom: '16px' }} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {Array.from({ length: 3 }).map((_, j) => (
-                    <div key={j} className="pa-skeleton" style={{ height: '60px' }} />
+                    <div key={j} className="oa-skeleton" style={{ height: '60px' }} />
                   ))}
                 </div>
               </div>
@@ -396,7 +405,7 @@ export default function LevelDetail() {
 
   if (!level) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
         <AdminPageHeader
           title="Level Not Found"
@@ -407,8 +416,8 @@ export default function LevelDetail() {
           ]}
         />
         {error && (
-          <Card className="pa-mb-4" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
-            <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+          <Card className="oa-mb-4" style={{ borderLeft: '3px solid var(--oa-danger)' }}>
+            <div className="oa-body-m oa-text-danger" style={{ padding: 'var(--oa-space-3) var(--oa-space-4)' }}>
               {error}
             </div>
           </Card>
@@ -418,14 +427,14 @@ export default function LevelDetail() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <OfflineBanner />
 
       <div
         style={{
-          maxWidth: 'calc(var(--pa-space-9) * 22.5)',
+          maxWidth: 'calc(var(--oa-space-9) * 22.5)',
           margin: '0 auto',
-          padding: 'var(--pa-space-6) var(--pa-space-4)',
+          padding: 'var(--oa-space-6) var(--oa-space-4)',
         }}
       >
         <AdminPageHeader
@@ -437,7 +446,7 @@ export default function LevelDetail() {
             { label: level.name },
           ]}
           actions={
-            <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
+            <div className="oa-flex oa-flex-col sm:oa-flex-row oa-gap-2">
               <Link to={levelsRoute} className="w-full sm:w-auto">
                 <Button variant="ghost" disabled={loading} className="w-full sm:w-auto min-h-[44px]">
                   Back to Levels
@@ -470,24 +479,24 @@ export default function LevelDetail() {
         />
 
         {successMessage && (
-          <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-success)' }}>
-            <div className="pa-body-m" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)', color: 'var(--pa-n900)' }}>
+          <Card className="oa-mb-6" style={{ borderLeft: '3px solid var(--oa-success)' }}>
+            <div className="oa-body-m" style={{ padding: 'var(--oa-space-3) var(--oa-space-4)', color: 'var(--oa-n900)' }}>
               {successMessage}
             </div>
           </Card>
         )}
 
         {actionError && (
-          <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
-            <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+          <Card className="oa-mb-6" style={{ borderLeft: '3px solid var(--oa-danger)' }}>
+            <div className="oa-body-m oa-text-danger" style={{ padding: 'var(--oa-space-3) var(--oa-space-4)' }}>
               {actionError}
             </div>
           </Card>
         )}
 
         {error && (
-          <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
-            <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+          <Card className="oa-mb-6" style={{ borderLeft: '3px solid var(--oa-danger)' }}>
+            <div className="oa-body-m oa-text-danger" style={{ padding: 'var(--oa-space-3) var(--oa-space-4)' }}>
               {error}
             </div>
           </Card>
@@ -496,13 +505,13 @@ export default function LevelDetail() {
         {/* Hero band */}
         <div
           style={{
-            height: 'calc(var(--pa-space-9) * 3)',
-            borderRadius: 'var(--pa-radius-l)',
+            height: 'calc(var(--oa-space-9) * 3)',
+            borderRadius: 'var(--oa-radius-l)',
             overflow: 'hidden',
             position: 'relative',
-            background: 'var(--pa-n900)',
-            marginBottom: 'var(--pa-space-6)',
-            border: '1px solid var(--pa-n100)',
+            background: 'var(--oa-n900)',
+            marginBottom: 'var(--oa-space-6)',
+            border: '1px solid var(--oa-n100)',
           }}
           aria-label="Level hero"
         >
@@ -520,71 +529,78 @@ export default function LevelDetail() {
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(to top, var(--pa-n900), transparent)',
+              background: 'linear-gradient(to top, var(--oa-n900), transparent)',
               opacity: 0.9,
             }}
           />
           <div
+            className="oa-flex oa-items-center"
             style={{
               position: 'absolute',
-              left: 'var(--pa-space-6)',
-              bottom: 'var(--pa-space-6)',
-              right: 'var(--pa-space-6)',
+              inset: 0,
+              padding: '0 var(--oa-space-6)',
             }}
           >
             <div
-              className="pa-overline"
+              className="oa-grid"
               style={{
-                color: 'rgba(255,255,255,0.75)',
-                marginBottom: 'var(--pa-space-2)',
-                letterSpacing: '0.16em',
+                width: '100%',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                gap: 'var(--oa-space-6)',
               }}
             >
-              {program ? `Program: ${program.name}` : 'Level'}
-              {sport && ` • Sport: ${sport.name}`}
-            </div>
-            <div
-              className="pa-display-xl"
-              style={{
-                color: 'var(--pa-white)',
-                fontWeight: 900,
-                letterSpacing: '-0.03em',
-                lineHeight: 1,
-              }}
-            >
-              {level.name}
+              {heroStats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="oa-display-xl"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    color: 'var(--oa-white)',
+                    fontWeight: 900,
+                    letterSpacing: '-0.03em',
+                    lineHeight: 1,
+                    gap: '0.4em',
+                  }}
+                >
+                  <span style={{ textAlign: 'right' }}>
+                    {stat.value === null ? '—' : stat.value.toLocaleString()}
+                  </span>
+                  <span style={{ fontWeight: 400, opacity: 0.7 }}>{stat.label}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
         {/* Main grid */}
         <div
-          className="pa-grid"
+          className="oa-grid"
           style={{
             gridTemplateColumns: 'minmax(0, 1fr)',
             alignItems: 'start',
           }}
         >
           <div
-            className="pa-grid"
+            className="oa-grid"
             style={{
               gridTemplateColumns: 'minmax(0, 1fr)',
-              gap: 'var(--pa-space-6)',
+              gap: 'var(--oa-space-6)',
             }}
           >
             {/* Action bar */}
             <Card className="oa-card">
-              <div className="pa-flex pa-justify-between pa-items-center" style={{ gap: 'var(--pa-space-4)' }}>
-                <div className="pa-flex pa-items-center" style={{ gap: 'var(--pa-space-3)' }}>
+              <div className="oa-flex oa-justify-between oa-items-center" style={{ gap: 'var(--oa-space-4)' }}>
+                <div className="oa-flex oa-items-center" style={{ gap: 'var(--oa-space-3)' }}>
                   <span
-                    className="pa-body-s"
+                    className="oa-body-s"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      padding: 'var(--pa-space-2) var(--pa-space-3)',
-                      borderRadius: 'var(--pa-radius-pill)',
-                      background: 'var(--pa-theme-action-primary)',
-                      color: 'var(--pa-theme-text-on-action)',
+                      padding: 'var(--oa-space-2) var(--oa-space-3)',
+                      borderRadius: 'var(--oa-radius-pill)',
+                      background: 'var(--oa-theme-action-primary)',
+                      color: 'var(--oa-theme-text-on-action)',
                       fontWeight: 900,
                       letterSpacing: '0.14em',
                       textTransform: 'uppercase',
@@ -592,12 +608,12 @@ export default function LevelDetail() {
                   >
                     Status: {statusLabel}
                   </span>
-                  <span className="pa-body-m" style={{ color: 'var(--pa-n500)' }}>
+                  <span className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>
                     {updatedLabel}
                   </span>
                 </div>
 
-                <div className="pa-flex pa-items-center pa-gap-2" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <div className="oa-flex oa-items-center oa-gap-2" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {levelId ? (
                     <Link
                       to={`${getLink('admin.levels.update', { id: levelId })}?returnUrl=${encodeURIComponent(detailRoute)}`}
@@ -613,8 +629,8 @@ export default function LevelDetail() {
                         icon="edit"
                         disabled={!levelId || loading}
                         style={{
-                          border: '2px solid var(--pa-theme-action-primary)',
-                          color: 'var(--pa-theme-text-accent)',
+                          border: '2px solid var(--oa-theme-action-primary)',
+                          color: 'var(--oa-theme-text-accent)',
                           background: 'transparent',
                         }}
                         title={!levelId ? 'Level ID is required' : undefined}
@@ -628,8 +644,8 @@ export default function LevelDetail() {
                       icon="edit"
                       disabled
                       style={{
-                        border: '2px solid var(--pa-theme-action-primary)',
-                        color: 'var(--pa-theme-text-accent)',
+                        border: '2px solid var(--oa-theme-action-primary)',
+                        color: 'var(--oa-theme-text-accent)',
                         background: 'transparent',
                       }}
                       title="Level ID is required"
@@ -640,7 +656,7 @@ export default function LevelDetail() {
                   {program && program.id && program.sport_id ? (
                     <Link
                       to={`${formsRoute}?type=team&program_id=${program.id}&level_id=${levelId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
-                      className={isOffline || USE_FAKE_DATA ? 'pa-disabled-link' : ''}
+                      className={isOffline || USE_FAKE_DATA ? 'oa-disabled-link' : ''}
                       onClick={(e) => {
                         if (isOffline || USE_FAKE_DATA) {
                           e.preventDefault()
@@ -687,12 +703,12 @@ export default function LevelDetail() {
 
             {/* Level details */}
             <Card title="Level Information" className="oa-card">
-              <div style={{ display: 'grid', gap: 'var(--pa-space-4)' }}>
+              <div style={{ display: 'grid', gap: 'var(--oa-space-4)' }}>
                 <div>
-                  <div className="pa-overline" style={{ color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-1)' }}>
+                  <div className="oa-overline" style={{ color: 'var(--oa-n500)', marginBottom: 'var(--oa-space-1)' }}>
                     Level Type
                   </div>
-                  <div className="pa-body-m" style={{ fontWeight: 700, color: 'var(--pa-n900)' }}>
+                  <div className="oa-body-m" style={{ fontWeight: 700, color: 'var(--oa-n900)' }}>
                     {level.level_type === 'age_based'
                       ? 'Age-based'
                       : level.level_type === 'grade_based'
@@ -704,20 +720,20 @@ export default function LevelDetail() {
                 </div>
 
                 <div>
-                  <div className="pa-overline" style={{ color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-1)' }}>
+                  <div className="oa-overline" style={{ color: 'var(--oa-n500)', marginBottom: 'var(--oa-space-1)' }}>
                     Eligibility Criteria
                   </div>
-                  <div className="pa-body-m" style={{ color: 'var(--pa-n900)' }}>
+                  <div className="oa-body-m" style={{ color: 'var(--oa-n900)' }}>
                     {formatEligibility(level)}
                   </div>
                 </div>
 
                 {level.description && (
                   <div>
-                    <div className="pa-overline" style={{ color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-1)' }}>
+                    <div className="oa-overline" style={{ color: 'var(--oa-n500)', marginBottom: 'var(--oa-space-1)' }}>
                       Description
                     </div>
-                    <div className="pa-body-m" style={{ color: 'var(--pa-n700)' }}>
+                    <div className="oa-body-m" style={{ color: 'var(--oa-n700)' }}>
                       {level.description}
                     </div>
                   </div>
@@ -753,11 +769,11 @@ export default function LevelDetail() {
                 columns={columns}
                 data={teamRows}
                 emptyState={
-                  <div style={{ padding: 'var(--pa-space-8) var(--pa-space-5)' }}>
-                    <div className="pa-h3" style={{ textAlign: 'center', marginBottom: 'var(--pa-space-2)' }}>
+                  <div style={{ padding: 'var(--oa-space-8) var(--oa-space-5)' }}>
+                    <div className="oa-h3" style={{ textAlign: 'center', marginBottom: 'var(--oa-space-2)' }}>
                       No teams yet
                     </div>
-                    <div className="pa-body-m" style={{ textAlign: 'center', color: 'var(--pa-n600)' }}>
+                    <div className="oa-body-m" style={{ textAlign: 'center', color: 'var(--oa-n600)' }}>
                       Add a team to this level to start organizing rosters.
                     </div>
                   </div>
@@ -768,38 +784,38 @@ export default function LevelDetail() {
 
           {/* Right panel (stacks below on small screens) */}
           <div
-            className="pa-grid"
+            className="oa-grid"
             style={{
               gridTemplateColumns: 'minmax(0, 1fr)',
-              gap: 'var(--pa-space-6)',
+              gap: 'var(--oa-space-6)',
             }}
           >
             {/* Totals */}
             <Card
               className="oa-card"
               style={{
-                background: 'var(--pa-theme-action-primary)',
-                color: 'var(--pa-theme-text-on-action)',
-                borderColor: 'var(--pa-theme-border-accent)',
+                background: 'var(--oa-theme-action-primary)',
+                color: 'var(--oa-theme-text-on-action)',
+                borderColor: 'var(--oa-theme-border-accent)',
               }}
             >
               <div
-                className="pa-overline"
+                className="oa-overline"
                 style={{
                   color: 'rgba(255,255,255,0.75)',
                   letterSpacing: '0.18em',
-                  marginBottom: 'var(--pa-space-4)',
+                  marginBottom: 'var(--oa-space-4)',
                 }}
               >
                 Level Totals
               </div>
 
-              <div style={{ display: 'grid', gap: 'var(--pa-space-4)' }}>
+              <div style={{ display: 'grid', gap: 'var(--oa-space-4)' }}>
                 <div>
-                  <div className="pa-display-xl" style={{ color: 'var(--pa-theme-text-on-action)' }}>
+                  <div className="oa-display-xl" style={{ color: 'var(--oa-theme-text-on-action)' }}>
                     {teams.length.toLocaleString()}
                   </div>
-                  <div className="pa-overline" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                  <div className="oa-overline" style={{ color: 'rgba(255,255,255,0.75)' }}>
                     Total Teams
                   </div>
                 </div>
@@ -807,50 +823,19 @@ export default function LevelDetail() {
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.18)' }} />
 
                 <div>
-                  <div className="pa-display-xl" style={{ color: 'var(--pa-theme-text-on-action)' }}>
+                  <div className="oa-display-xl" style={{ color: 'var(--oa-theme-text-on-action)' }}>
                     {totalAthletes === null ? '—' : totalAthletes.toLocaleString()}
                   </div>
-                  <div className="pa-overline" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                  <div className="oa-overline" style={{ color: 'rgba(255,255,255,0.75)' }}>
                     Total Athletes
                   </div>
                 </div>
 
                 {isOffline && (
-                  <div className="pa-body-s" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                  <div className="oa-body-s" style={{ color: 'rgba(255,255,255,0.75)' }}>
                     Offline: roster totals may be unavailable.
                   </div>
                 )}
-              </div>
-            </Card>
-
-            {/* Helper links */}
-            <Card>
-              <div className="pa-flex pa-flex-col pa-gap-2">
-                <div className="pa-body-m" style={{ fontWeight: 700, color: 'var(--pa-n900)' }}>
-                  Quick Actions
-                </div>
-                <div className="pa-flex pa-gap-2" style={{ flexWrap: 'wrap' }}>
-                  {program && program.id ? (
-                    <Link
-                      to={getLink('admin.programs.detail', { id: program.id })}
-                      onClick={(e) => {
-                        if (!program.id) {
-                          e.preventDefault()
-                          setActionError('Program ID is required')
-                        }
-                      }}
-                    >
-                      <Button variant="ghost" disabled={!program.id || loading}>
-                        View Program
-                      </Button>
-                    </Link>
-                  ) : null}
-                  <Link to={levelsRoute}>
-                    <Button variant="secondary" disabled={loading}>
-                      All Levels
-                    </Button>
-                  </Link>
-                </div>
               </div>
             </Card>
           </div>

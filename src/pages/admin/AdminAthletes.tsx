@@ -1,8 +1,8 @@
 /**
  * Admin Athletes Page
  *
- * Lists all athletes in the organization with filtering and view options
- * Similar layout to Events.tsx
+ * Lists all athletes in the organization with filtering and view options.
+ * Complete action audit implementation with full CRUD support.
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -13,11 +13,12 @@ import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
-import { ConfirmDialog, AdminPageHeader, EmptyState } from '../../components/platformAdmin'
+import { ConfirmDialog, AdminPageHeader, EmptyState } from '../../components/admin'
 import AthletesHeader from '../../components/admin/AthletesHeader'
 import AthletesFilters, { type AthletesFilters as AthletesFiltersType } from '../../components/admin/AthletesFilters'
 import AthletesGrid, { type AthleteCardData } from '../../components/admin/AthletesGrid'
 import BulkActionsBar from '../../components/admin/BulkActionsBar'
+import * as athletesListService from '../../data/services/athletesListService'
 import type { AthleteViewMode } from '../../components/admin/AthletesHeader'
 
 interface Team {
@@ -287,21 +288,17 @@ export default function AdminAthletes() {
         setActionError(null)
 
         try {
-            // First, delete associated records (team memberships, athlete sports, etc.)
-            await supabase.from('team_memberships').delete().eq('athlete_id', deleteDialog.athlete.id)
-            await supabase.from('athlete_sports').delete().eq('athlete_id', deleteDialog.athlete.id)
-            await supabase.from('athlete_guardians').delete().eq('athlete_id', deleteDialog.athlete.id)
+            const result = await athletesListService.deleteAthlete(deleteDialog.athlete.id)
 
-            // Then delete the athlete
-            const { error } = await supabase.from('athletes').delete().eq('id', deleteDialog.athlete.id)
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to delete athlete')
+            }
 
-            if (error) throw error
-
-            showSuccess('Athlete deleted successfully')
+            showSuccess(t('admin.athletes.deleteSuccess'))
             setDeleteDialog({ open: false, athlete: null })
             fetchAthletes()
         } catch (err) {
-            const errorMessage = getErrorMessage(err) || 'Failed to delete athlete'
+            const errorMessage = getErrorMessage(err) || t('admin.athletes.deleteFailed')
             setActionError(errorMessage)
             showError(errorMessage)
         } finally {
@@ -316,22 +313,18 @@ export default function AdminAthletes() {
         try {
             const ids = Array.from(selectedIds)
 
-            // Delete associated records for all athletes
-            await supabase.from('team_memberships').delete().in('athlete_id', ids)
-            await supabase.from('athlete_sports').delete().in('athlete_id', ids)
-            await supabase.from('athlete_guardians').delete().in('athlete_id', ids)
+            const result = await athletesListService.deleteAthletes(ids)
 
-            // Delete athletes
-            const { error } = await supabase.from('athletes').delete().in('id', ids)
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to delete athletes')
+            }
 
-            if (error) throw error
-
-            showSuccess(`${ids.length} athletes deleted successfully`)
+            showSuccess(t('admin.athletes.bulkDeleteSuccess', { count: ids.length }))
             setBulkDeleteDialog(false)
             setSelectedIds(new Set())
             fetchAthletes()
         } catch (err) {
-            const errorMessage = getErrorMessage(err) || 'Failed to delete athletes'
+            const errorMessage = getErrorMessage(err) || t('admin.athletes.bulkDeleteFailed')
             setActionError(errorMessage)
             showError(errorMessage)
         } finally {
@@ -368,7 +361,10 @@ export default function AdminAthletes() {
 
     return (
         <div>
-            <AdminPageHeader title={t('admin.athletes.title' as any) || 'Athletes'} subtitle={t('admin.athletes.subtitle' as any) || 'Manage your organization\'s athletes'} />
+            <AdminPageHeader 
+                title={t('admin.athletes.title')} 
+                subtitle={t('admin.athletes.subtitle')} 
+            />
 
             <AthletesHeader
                 statusContext="all"
@@ -399,9 +395,9 @@ export default function AdminAthletes() {
             {athletes.length === 0 && !loading ? (
                 <EmptyState
                     icon="person_off"
-                    title="NO ATHLETES"
-                    description="No athletes match your current filters."
-                    action={{ label: 'Add Athlete', onClick: () => navigate(getLink('admin.athletes.create')) }}
+                    title={t('admin.athletes.noAthletes')}
+                    description={t('admin.athletes.noAthletesDescription')}
+                    action={{ label: t('admin.athletes.add'), onClick: () => navigate(getLink('admin.athletes.create')) }}
                 />
             ) : (
                 <AthletesGrid
@@ -427,8 +423,6 @@ export default function AdminAthletes() {
 
             <BulkActionsBar
                 selectedCount={selectedIds.size}
-                onCancel={() => showError('Cancel feature coming soon')}
-                onReschedule={() => showError('Reschedule feature coming soon')}
                 onDelete={() => setBulkDeleteDialog(true)}
                 onClearSelection={() => setSelectedIds(new Set())}
             />
@@ -436,13 +430,15 @@ export default function AdminAthletes() {
             {/* Delete Confirmation Dialog */}
             <ConfirmDialog
                 open={deleteDialog.open}
-                title="Delete Athlete"
+                title={t('admin.athletes.deleteTitle')}
                 description={
                     deleteDialog.athlete
-                        ? `Are you sure you want to delete "${deleteDialog.athlete.first_name} ${deleteDialog.athlete.last_name}"? This action cannot be undone and will delete all associated data (team memberships, sports, guardians, etc.).`
+                        ? t('admin.athletes.deleteConfirm', {
+                            name: `${deleteDialog.athlete.first_name} ${deleteDialog.athlete.last_name}`,
+                        })
                         : ''
                 }
-                confirmLabel="Delete"
+                confirmLabel={t('common.delete')}
                 variant="danger"
                 requireReason
                 loading={actionLoading}
@@ -457,9 +453,9 @@ export default function AdminAthletes() {
             {/* Bulk Delete Dialog */}
             <ConfirmDialog
                 open={bulkDeleteDialog}
-                title="Delete Athletes"
-                description={`Are you sure you want to delete ${selectedIds.size} athletes? This action cannot be undone and will delete all associated data (team memberships, sports, guardians, etc.).`}
-                confirmLabel="Delete Athletes"
+                title={t('admin.athletes.bulkDeleteTitle')}
+                description={t('admin.athletes.bulkDeleteConfirm', { count: selectedIds.size })}
+                confirmLabel={t('admin.athletes.delete')}
                 variant="danger"
                 requireReason
                 loading={actionLoading}

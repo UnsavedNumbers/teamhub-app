@@ -734,6 +734,13 @@ const admin = {
             icon: 'child_care',
             requiresOrg: true,
         },
+        edit: {
+            path: '/admin/athletes/:id/edit',
+            params: ['id'] as const,
+            label: 'Edit Athlete',
+            icon: 'edit',
+            requiresOrg: true,
+        },
         import: {
             path: '/admin/athletes/import',
             label: 'Import Athletes',

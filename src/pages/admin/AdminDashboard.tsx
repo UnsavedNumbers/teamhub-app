@@ -16,8 +16,9 @@ import {
   AdminPageHeader,
   Button,
   Select,
-} from '../../components/platformAdmin'
+} from '../../components/admin'
 import { cn } from '../../utils/cn'
+import '../../styles/orgAdmin.css'
 
 // ─── Unsplash imagery (free, production-safe, sports-themed) ────────────
 const IMG = {
@@ -162,13 +163,13 @@ function StatTower({ value, label, accent, onClick }: {
 
 function DashboardSkeleton() {
   return (
-    <div className="pa-root">
-      <div className="pa-skeleton pa-mb-8" style={{ width: '40%', height: '40px' }} />
-      <div className="pa-skeleton pa-mb-6" style={{ height: '340px', borderRadius: 16 }} />
+    <div className="oa-root">
+      <div className="oa-skeleton oa-mb-8" style={{ width: '40%', height: '40px' }} />
+      <div className="oa-skeleton oa-mb-6" style={{ height: '340px', borderRadius: 16 }} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 20 }}>
-        <div className="pa-skeleton" style={{ height: '200px', borderRadius: 16 }} />
-        <div className="pa-skeleton" style={{ height: '200px', borderRadius: 16 }} />
-        <div className="pa-skeleton" style={{ height: '200px', borderRadius: 16 }} />
+        <div className="oa-skeleton" style={{ height: '200px', borderRadius: 16 }} />
+        <div className="oa-skeleton" style={{ height: '200px', borderRadius: 16 }} />
+        <div className="oa-skeleton" style={{ height: '200px', borderRadius: 16 }} />
       </div>
     </div>
   )
@@ -208,7 +209,7 @@ function StadiumDashboard({ stats, recentActivity, upcomingEvents, t, navigate, 
           <p className="dash-stadium-sub">{t('admin.dashboard.heroTagline')}</p>
           <div className="dash-stadium-hero-actions">
             <Button variant="primary" onClick={() => navigate(getLink('admin.events.create'))}>
-              <span className="material-symbols-outlined pa-icon-sm" aria-hidden>add</span>
+              <span className="material-symbols-outlined oa-icon-sm" aria-hidden>add</span>
               {t('admin.dashboard.actionNewEvent')}
             </Button>
             <Button variant="ghost" onClick={() => navigate(getLink('admin.teams.list'))}
@@ -660,12 +661,12 @@ export default function AdminDashboard() {
   const props: VariantProps = { stats, recentActivity, upcomingEvents, t, navigate, orgName }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader
         title={t('admin.dashboard.title')}
         subtitle={orgName || t('admin.dashboard.subtitle')}
         actions={
-          <div className="pa-flex pa-items-center pa-gap-3" style={{ flexWrap: 'wrap' }}>
+          <div className="oa-flex oa-items-center oa-gap-3" style={{ flexWrap: 'wrap' }}>
             <Select
               options={layoutOptions}
               value={layout}

@@ -12,9 +12,10 @@ import {
 } from '../../data/services/paymentsService'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
-import { AdminPageHeader, Card, Button, ConfirmDialog } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, ConfirmDialog } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { showSuccess, showError } from '../../utils/toast'
+import '../../styles/orgAdmin.css'
 
 interface PaymentDetailData {
   id: string
@@ -550,17 +551,17 @@ export default function PaymentDetail() {
 
   if (loading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <div style={{ padding: '24px' }}>
-          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div className="oa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="pa-skeleton" style={{ height: '100px' }} />
+              <div key={i} className="oa-skeleton" style={{ height: '100px' }} />
             ))}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
             {Array.from({ length: 2 }).map((_, i) => (
-              <div key={i} className="pa-skeleton" style={{ height: '300px' }} />
+              <div key={i} className="oa-skeleton" style={{ height: '300px' }} />
             ))}
           </div>
         </div>
@@ -571,11 +572,11 @@ export default function PaymentDetail() {
   if (error || !assignment) {
     console.log('[PaymentDetail] Rendering error state:', { error, hasAssignment: !!assignment })
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader title="Payment" />
-        <Card className="pa-text-center pa-py-12">
-          <p className="pa-text-red-600 dark:pa-text-red-400 pa-text-sm pa-font-bold pa-mb-4">{error || 'Payment not found'}</p>
-          <div className="pa-flex pa-flex-wrap pa-justify-center pa-gap-3">
+        <Card className="oa-text-center oa-py-12">
+          <p className="oa-text-red-600 dark:oa-text-red-400 oa-text-sm oa-font-bold oa-mb-4">{error || 'Payment not found'}</p>
+          <div className="oa-flex oa-flex-wrap oa-justify-center oa-gap-3">
             <Button variant="primary" onClick={() => { setError(null); fetchData() }}>
               Retry
             </Button>
@@ -598,12 +599,12 @@ export default function PaymentDetail() {
     : new Date(assignment.created_at)
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <div
         style={{
           maxWidth: '1200px',
           margin: '0 auto',
-          padding: 'var(--pa-space-8) var(--pa-space-5)',
+          padding: 'var(--oa-space-8) var(--oa-space-5)',
         }}
       >
         {/* Custom Header with Back Button and Title */}
@@ -632,8 +633,8 @@ export default function PaymentDetail() {
         </div>
 
         {error && (
-          <Card className="mb-6" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
-            <div className="text-sm font-medium text-red-600 dark:text-red-400" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+          <Card className="mb-6" style={{ borderLeft: '3px solid var(--oa-danger)' }}>
+            <div className="text-sm font-medium text-red-600 dark:text-red-400" style={{ padding: 'var(--oa-space-3) var(--oa-space-4)' }}>
               {error}
             </div>
           </Card>

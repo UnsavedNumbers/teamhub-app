@@ -111,7 +111,7 @@ export default function CompTicketsPage() {
   }
 
   return (
-    <div className="pa-page-container">
+    <div className="oa-page-container">
       <AdminPageHeader
         title={t('ticketing.compTickets.title')}
         breadcrumbs={[

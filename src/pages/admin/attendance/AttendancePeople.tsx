@@ -29,7 +29,7 @@ export default function AttendancePeople() {
         render: (row: AttendancePersonSummary & { id: string }) => {
             const color = row.attendance_rate >= 85 ? 'text-green-600' : row.attendance_rate >= 70 ? 'text-amber-600' : 'text-red-600'
             const val = row.attendance_rate.toFixed(1)
-            return <span className={`pa-font-bold ${color}`}>{val}%</span>
+            return <span className={`oa-font-bold ${color}`}>{val}%</span>
         }
     },
     { id: 'total', label: 'Total Events', render: (row: AttendancePersonSummary & { id: string }) => String(row.total_events) },

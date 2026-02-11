@@ -9,10 +9,11 @@ import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { getUniformKit, updateUniformKit } from '../../data/services/uniformsService'
-import { AdminPageHeader, Card } from '../../components/platformAdmin'
+import { AdminPageHeader, Card } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { SportUniformForm } from '../../components/uniforms/SportUniformForm'
 import type { CreateUniformKitDTO } from '../../types/uniforms'
+import '../../styles/orgAdmin.css'
 
 export default function EditUniform() {
   const { id } = useParams<{ id: string }>()
@@ -96,7 +97,7 @@ export default function EditUniform() {
 
   if (loading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader title="Edit Uniform" />
         <Card>
           <div>Loading uniform...</div>
@@ -107,10 +108,10 @@ export default function EditUniform() {
 
   if (error) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader title="Edit Uniform" />
         <Card>
-          <div className="pa-alert pa-alert--error">{error}</div>
+          <div className="oa-alert oa-alert--error">{error}</div>
           <OrgAdminButton onClick={() => navigate('/admin/uniforms')} variant="primary">
             Back to Uniforms
           </OrgAdminButton>
@@ -121,7 +122,7 @@ export default function EditUniform() {
 
   if (!initialData) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader title="Edit Uniform" />
         <Card>
           <div>Uniform not found</div>
@@ -131,14 +132,14 @@ export default function EditUniform() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title="Edit Uniform"
         subtitle={t('admin.uniforms.editSubtitle')}
         actions={null}
       />
 
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <SportUniformForm
           onSubmit={handleSubmit}
           initialData={initialData}

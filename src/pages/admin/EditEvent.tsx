@@ -19,10 +19,10 @@ import {
   Input, 
   Select,
   DatePicker,
-  TimePicker,
-  Checkbox
-} from '../../components/platformAdmin'
-import { ConfirmDialog } from '../../components/platformAdmin/ConfirmDialog'
+  Checkbox,
+  ConfirmDialog
+} from '../../components/admin'
+import { TimePicker } from '../../components/platformAdmin/TimePicker'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { FanVisibilityToggle } from '../../components/admin/FanVisibilityToggle'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
@@ -37,6 +37,7 @@ import {
 import { uploadTicketBanner } from '../../data/services/organizationService'
 import { validateDeleteEvent, validateCancelEvent, validateUpdateEvent, EVENT_ERRORS } from '../../utils/eventValidation'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import '../../styles/orgAdmin.css'
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string; team_id: string }
@@ -876,11 +877,11 @@ export default function EditEvent() {
       label: EVENT_TYPE_LABELS[key]
   }))
 
-  if (loading) return <div className="pa-skeleton oa-skeleton--tall" />
+  if (loading) return <div className="oa-skeleton oa-skeleton--tall" />
 
   if (notFound) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader 
           title="Event Not Found" 
           breadcrumbs={[
@@ -889,12 +890,12 @@ export default function EditEvent() {
           ]}
         />
         <Card>
-          <div className="pa-text-center pa-py-8">
+          <div className="oa-text-center oa-py-8">
             <span className="material-symbols-outlined oa-status-icon-lg">
               event_busy
             </span>
-            <h2 className="pa-heading-2 pa-mb-2">Event Not Found</h2>
-            <p className="pa-body pa-mb-6">{error || 'The event you are looking for does not exist or has been deleted.'}</p>
+            <h2 className="oa-heading-2 oa-mb-2">Event Not Found</h2>
+            <p className="oa-body oa-mb-6">{error || 'The event you are looking for does not exist or has been deleted.'}</p>
             <Button onClick={() => navigate(getLink('admin.events.list'))}>Back to Events</Button>
           </div>
         </Card>
@@ -903,7 +904,7 @@ export default function EditEvent() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title="Edit Event" 
         subtitle={t('admin.events.editSubtitle')}
@@ -912,23 +913,23 @@ export default function EditEvent() {
           { label: 'Edit Event' },
         ]}
       />
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         {/* Offline indicator */}
         {isOffline && (
-          <div className="oa-alert oa-alert--warning pa-mb-4">
-            <div className="pa-flex pa-items-center pa-gap-2">
+          <div className="oa-alert oa-alert--warning oa-mb-4">
+            <div className="oa-flex oa-items-center oa-gap-2">
               <span className="material-symbols-outlined" aria-hidden="true">wifi_off</span>
-              <span className="pa-body-s">You are offline. Changes cannot be saved until you reconnect.</span>
+              <span className="oa-body-s">You are offline. Changes cannot be saved until you reconnect.</span>
             </div>
           </div>
         )}
 
         {/* Demo mode indicator */}
         {USE_FAKE_DATA && (
-          <div className="oa-alert oa-alert--info pa-mb-4">
-            <div className="pa-flex pa-items-center pa-gap-2">
+          <div className="oa-alert oa-alert--info oa-mb-4">
+            <div className="oa-flex oa-items-center oa-gap-2">
               <span className="material-symbols-outlined" aria-hidden="true">info</span>
-              <span className="pa-body-s">Demo mode: Changes will not be saved to the database.</span>
+              <span className="oa-body-s">Demo mode: Changes will not be saved to the database.</span>
             </div>
           </div>
         )}
@@ -937,12 +938,12 @@ export default function EditEvent() {
           <form onSubmit={handleSubmit(onSubmit)}>
             <fieldset disabled={isPastEvent}>
             {error && (
-              <div className="oa-alert oa-alert--error pa-mb-4">
+              <div className="oa-alert oa-alert--error oa-mb-4">
                 <div>{error}</div>
               </div>
             )}
             {hasExistingRSVPs && watchRSVPEnabled && (
-              <div className="oa-alert oa-alert--warning pa-mb-4">
+              <div className="oa-alert oa-alert--warning oa-mb-4">
                 Warning: This event has existing RSVP responses. Changing RSVP type will delete them.
               </div>
             )}
@@ -955,10 +956,10 @@ export default function EditEvent() {
                 </div>
               </div>
               <div className="oa-form-section-body">
-                <div className="pa-mb-4">
+                <div className="oa-mb-4">
                   <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
                 </div>
-                <div className="pa-form-grid pa-form-grid-3 pa-mb-4 pa-gap-4">
+                <div className="oa-form-grid oa-form-grid-3 oa-mb-4 oa-gap-4">
                   <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.eventType')} options={eventTypeOptions} />} />
                   <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.team')} options={teams.map(t => ({ value: t.id, label: t.name }))} required error={errors.team_id?.message || undefined} />} />
                   <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.season')} options={seasons.map(s => ({ value: s.id, label: s.name }))} required disabled={!watchTeamId} />} />
@@ -974,7 +975,7 @@ export default function EditEvent() {
                 </div>
               </div>
               <div className="oa-form-section-body">
-                <div className="pa-form-grid pa-form-grid-4 pa-form-grid-tablet-2col">
+                <div className="oa-form-grid oa-form-grid-4 oa-form-grid-tablet-2col">
                   <Controller 
                     name="start_time" 
                     control={control} 
@@ -992,7 +993,7 @@ export default function EditEvent() {
                       />
                     )} 
                   />
-                  <div className="pa-max-w-xs">
+                  <div className="oa-max-w-xs">
                     <Controller 
                       name="start_time" 
                       control={control} 
@@ -1009,7 +1010,7 @@ export default function EditEvent() {
                       )} 
                     />
                   </div>
-                  <div className="pa-max-w-xs">
+                  <div className="oa-max-w-xs">
                     <Controller 
                       name="end_time" 
                       control={control} 
@@ -1025,7 +1026,7 @@ export default function EditEvent() {
                       )} 
                     />
                   </div>
-                  <div className="pa-max-w-xs">
+                  <div className="oa-max-w-xs">
                     <Controller 
                       name="arrival_time" 
                       control={control} 
@@ -1055,8 +1056,8 @@ export default function EditEvent() {
                   {showLocationDetails ? 'Simple Location' : 'Detailed Location'}
                 </Button>
               </div>
-              <div className="oa-form-section-body pa-space-y-4">
-                <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col">
+              <div className="oa-form-section-body oa-space-y-4">
+                <div className="oa-form-grid oa-form-grid-2 oa-form-grid-tablet-2col">
                   <Controller name="location.venue_name" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.venueName')} placeholder="e.g. Field 1" />} />
                   <Controller
                     name="location.address_line1"
@@ -1086,7 +1087,7 @@ export default function EditEvent() {
 
                 {showLocationDetails && (
                   <>
-                    <div className="pa-form-grid pa-form-grid-3 pa-form-grid-tablet-2col pa-gap-4">
+                    <div className="oa-form-grid oa-form-grid-3 oa-form-grid-tablet-2col oa-gap-4">
                       <Controller name="location.city" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.city')} />} />
                       <Controller name="location.state" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.state')} />} />
                       <Controller name="location.postal_code" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.postalCode')} />} />
@@ -1109,7 +1110,7 @@ export default function EditEvent() {
                 </div>
               </div>
               <div className="oa-form-section-body">
-                <div className="oa-checkbox-stack pa-mb-4">
+                <div className="oa-checkbox-stack oa-mb-4">
                   <Controller name="rsvp_enabled" control={control} render={({ field: { value, onChange } }) => (
                     <Checkbox checked={!!value} onChange={(e) => { 
                       onChange(e.target.checked)
@@ -1124,7 +1125,7 @@ export default function EditEvent() {
                 </div>
 
                 {watchRSVPEnabled && (
-                  <div className="pa-mb-4">
+                  <div className="oa-mb-4">
                     <Controller 
                       name="rsvp_type" 
                       control={control} 
@@ -1147,11 +1148,11 @@ export default function EditEvent() {
                 )}
 
                 {showRecurring && (
-                  <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col pa-gap-4">
-                    <div className="pa-select-wrapper">
+                  <div className="oa-form-grid oa-form-grid-2 oa-form-grid-tablet-2col oa-gap-4">
+                    <div className="oa-select-wrapper">
                       <Controller name="recurring.frequency" control={control} render={({ field }) => <Select {...field} label="Frequency" options={[{value:'weekly', label:'Weekly'}]} />} />
                     </div>
-                    <div className="pa-max-w-sm">
+                    <div className="oa-max-w-sm">
                       <Controller name="recurring.end_date" control={control} render={({ field }) => <DatePicker {...field} label="Recurs Until" />} />
                     </div>
                   </div>
@@ -1184,14 +1185,14 @@ export default function EditEvent() {
                   </div>
 
                   {watchTicketingEnabled && (
-                    <div className="pa-card oa-ticket-card pa-mt-4">
+                    <div className="oa-card oa-ticket-card oa-mt-4">
                       {hasPaidOrders && (
-                        <div className="oa-alert oa-alert--warning pa-mb-4">
-                          <span className="pa-body-s">{t('admin.events.ticketing.editBanner')}</span>
+                        <div className="oa-alert oa-alert--warning oa-mb-4">
+                          <span className="oa-body-s">{t('admin.events.ticketing.editBanner')}</span>
                         </div>
                       )}
 
-                      <div className="pa-mb-4">
+                      <div className="oa-mb-4">
                         <Controller
                           name="ticketing.event_type"
                           control={control}
@@ -1211,10 +1212,10 @@ export default function EditEvent() {
                             />
                           )}
                         />
-                        <p className="pa-text-xs pa-text-muted pa-mt-1">{t('admin.events.ticketing.eventType.helper')}</p>
+                        <p className="oa-text-xs oa-text-muted oa-mt-1">{t('admin.events.ticketing.eventType.helper')}</p>
                       </div>
 
-                      <div className="pa-mb-4">
+                      <div className="oa-mb-4">
                         <Controller
                           name="ticketing.sales_immediate"
                           control={control}
@@ -1236,7 +1237,7 @@ export default function EditEvent() {
                       </div>
 
                       {!watchTicketSalesImmediate && (
-                        <div className="pa-form-grid pa-form-grid-2 pa-mb-4">
+                        <div className="oa-form-grid oa-form-grid-2 oa-mb-4">
                           <Controller
                             name="ticketing.sales_start_at"
                             control={control}
@@ -1293,27 +1294,27 @@ export default function EditEvent() {
                         </div>
                       )}
 
-                      <div className="pa-mb-4">
-                         <label className="pa-label">Event Description (public)</label>
+                      <div className="oa-mb-4">
+                         <label className="oa-label">Event Description (public)</label>
                         <Controller
                           name="ticketing.event_description"
                           control={control}
                           rules={{ maxLength: { value: 500, message: 'Max 500 characters' } }}
                           render={({ field }) => (
                             <textarea
-                              className="pa-input pa-textarea oa-textarea-expand"
+                              className="oa-input oa-textarea oa-textarea-expand"
                               {...field}
                               placeholder="Describe this event for public ticket buyers..."
                               rows={3}
                             />
                           )}
                         />
-                         {errors.ticketing?.event_description && <span className="pa-error-message">{errors.ticketing.event_description.message}</span>}
+                         {errors.ticketing?.event_description && <span className="oa-error-message">{errors.ticketing.event_description.message}</span>}
                       </div>
 
-                      <div className="pa-mb-4">
-                         <label className="pa-label">Ticket Banner Image</label>
-                        <div className="pa-flex pa-flex-col pa-gap-4">
+                      <div className="oa-mb-4">
+                         <label className="oa-label">Ticket Banner Image</label>
+                        <div className="oa-flex oa-flex-col oa-gap-4">
                             <FileUpload
                                 onFileSelect={setBannerFile}
                                 value={bannerFile}
@@ -1328,13 +1329,13 @@ export default function EditEvent() {
                             />
                             
                             {watch('ticketing.ticket_banner_url') && !bannerFile && (
-                                <div className="pa-bg-surface-section pa-p-3 pa-rounded-lg pa-border pa-border-border-subtle">
-                                    <p className="pa-text-xs pa-font-bold pa-uppercase pa-text-muted pa-mb-2">Current Banner</p>
-                                    <div className="pa-relative pa-w-full pa-h-32 pa-rounded-md pa-overflow-hidden pa-bg-gray-100 dark:pa-bg-gray-800">
+                                <div className="oa-bg-surface-section oa-p-3 oa-rounded-lg oa-border oa-border-border-subtle">
+                                    <p className="oa-text-xs oa-font-bold oa-uppercase oa-text-muted oa-mb-2">Current Banner</p>
+                                    <div className="oa-relative oa-w-full oa-h-32 oa-rounded-md oa-overflow-hidden oa-bg-gray-100 dark:oa-bg-gray-800">
                                         <img 
                                             src={watch('ticketing.ticket_banner_url')} 
                                             alt="Current Banner" 
-                                            className="pa-w-full pa-h-full pa-object-cover" 
+                                            className="oa-w-full oa-h-full oa-object-cover" 
                                         />
                                     </div>
                                 </div>
@@ -1342,7 +1343,7 @@ export default function EditEvent() {
                         </div>
                       </div>
 
-                      <div className="pa-mb-4">
+                      <div className="oa-mb-4">
                         <Controller
                           name="ticketing.status"
                           control={control}
@@ -1360,9 +1361,9 @@ export default function EditEvent() {
                         />
                       </div>
 
-                      <div className="pa-mb-4">
-                        <div className="pa-flex pa-items-center pa-justify-between pa-mb-2">
-                          <label className="pa-label">{t('admin.events.ticketing.ticketTypes.label')}</label>
+                      <div className="oa-mb-4">
+                        <div className="oa-flex oa-items-center oa-justify-between oa-mb-2">
+                          <label className="oa-label">{t('admin.events.ticketing.ticketTypes.label')}</label>
                           {!hasPaidOrders && (
                             <Button
                               type="button"
@@ -1374,15 +1375,15 @@ export default function EditEvent() {
                           )}
                         </div>
                         {ticketTypeFields.length === 0 ? (
-                          <p className="pa-text-sm pa-text-muted">{t('admin.events.ticketing.ticketTypes.none')}</p>
+                          <p className="oa-text-sm oa-text-muted">{t('admin.events.ticketing.ticketTypes.none')}</p>
                         ) : (
-                          <div className="pa-space-y-3">
+                          <div className="oa-space-y-3">
                             {ticketTypeFields.map((field, index) => {
                               const soldCount = watch(`ticketing.ticket_types.${index}.soldCount`) ?? 0
                               const canRemove = !hasPaidOrders || soldCount === 0
                               return (
                                 <div key={field.id} className="oa-ticket-type-card">
-                                  <div className="pa-form-grid pa-form-grid-3 pa-mb-2">
+                                  <div className="oa-form-grid oa-form-grid-3 oa-mb-2">
                                     <Controller
                                       name={`ticketing.ticket_types.${index}.name`}
                                       control={control}
@@ -1464,7 +1465,7 @@ export default function EditEvent() {
                                         )}
                                       />
                                       {soldCount > 0 && (
-                                        <span className="pa-body-s pa-text-muted">
+                                        <span className="oa-body-s oa-text-muted">
                                           Sold: {soldCount}
                                         </span>
                                       )}
@@ -1479,7 +1480,7 @@ export default function EditEvent() {
                                       )}
                                     </div>
                                   </div>
-                                  <div className="pa-mb-2">
+                                  <div className="oa-mb-2">
                                     <Controller
                                       name={`ticketing.ticket_types.${index}.description`}
                                       control={control}
@@ -1514,14 +1515,14 @@ export default function EditEvent() {
                 </div>
               </div>
               <div className="oa-form-section-body">
-                <div className="pa-form-grid pa-form-grid-2 pa-gap-4">
+                <div className="oa-form-grid oa-form-grid-2 oa-gap-4">
                   <div className="oa-notes-group">
-                    <label className="pa-label">{t('admin.events.fields.generalNotes')}</label>
+                    <label className="oa-label">{t('admin.events.fields.generalNotes')}</label>
                     <Controller name="notes" control={control} render={({ field }) => (
-                      <textarea className="pa-input pa-textarea oa-textarea-expand" {...field} placeholder="General Notes..." />
+                      <textarea className="oa-input oa-textarea oa-textarea-expand" {...field} placeholder="General Notes..." />
                     )} />
                   </div>
-                  <div className="pa-space-y-2">
+                  <div className="oa-space-y-2">
                     <Controller name="uniform_notes" control={control} render={({ field }) => <Input {...field} label="Uniform Notes" placeholder="e.g. Home Kit" />} />
                     <Controller name="equipment_notes" control={control} render={({ field }) => <Input {...field} label="Equipment Notes" placeholder="e.g. Bring water" />} />
                     <Controller name="external_link" control={control} render={({ field }) => <Input {...field} label="External Link" placeholder="https://..." type="url" />} />
@@ -1553,10 +1554,10 @@ export default function EditEvent() {
 
           {/* Recurring Event Edit Mode Selection */}
           {isRecurring && (
-            <div className="oa-alert oa-alert--info pa-mb-4">
-              <div className="pa-label pa-mb-2">This is a recurring event. What would you like to edit?</div>
-              <div className="pa-flex pa-gap-3">
-                <label className="pa-flex pa-items-center pa-gap-2">
+            <div className="oa-alert oa-alert--info oa-mb-4">
+              <div className="oa-label oa-mb-2">This is a recurring event. What would you like to edit?</div>
+              <div className="oa-flex oa-gap-3">
+                <label className="oa-flex oa-items-center oa-gap-2">
                   <input
                     type="radio"
                     name="recurringEditMode"
@@ -1564,9 +1565,9 @@ export default function EditEvent() {
                     checked={recurringEditMode === 'this_only'}
                     onChange={(e) => setRecurringEditMode(e.target.value as RecurringEditMode)}
                   />
-                  <span className="pa-body-s">This occurrence only</span>
+                  <span className="oa-body-s">This occurrence only</span>
                 </label>
-                <label className="pa-flex pa-items-center pa-gap-2">
+                <label className="oa-flex oa-items-center oa-gap-2">
                   <input
                     type="radio"
                     name="recurringEditMode"
@@ -1574,9 +1575,9 @@ export default function EditEvent() {
                     checked={recurringEditMode === 'this_and_future'}
                     onChange={(e) => setRecurringEditMode(e.target.value as RecurringEditMode)}
                   />
-                  <span className="pa-body-s">This and future occurrences</span>
+                  <span className="oa-body-s">This and future occurrences</span>
                 </label>
-                <label className="pa-flex pa-items-center pa-gap-2">
+                <label className="oa-flex oa-items-center oa-gap-2">
                   <input
                     type="radio"
                     name="recurringEditMode"
@@ -1584,22 +1585,22 @@ export default function EditEvent() {
                     checked={recurringEditMode === 'all'}
                     onChange={(e) => setRecurringEditMode(e.target.value as RecurringEditMode)}
                   />
-                  <span className="pa-body-s">All occurrences</span>
+                  <span className="oa-body-s">All occurrences</span>
                 </label>
               </div>
             </div>
           )}
 
             {/* SECTION 6: ACTIONS */}
-            <div className="pa-mb-4">
+            <div className="oa-mb-4">
               {!isPastEvent && (
-                <div className="pa-flex pa-flex-col sm:pa-flex-row pa-justify-between pa-items-stretch sm:pa-items-center pa-gap-3 pa-mb-4">
-                  <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
+                <div className="oa-flex oa-flex-col sm:oa-flex-row oa-justify-between oa-items-stretch sm:oa-items-center oa-gap-3 oa-mb-4">
+                  <div className="oa-flex oa-flex-col sm:oa-flex-row oa-gap-2">
                     <Button
                       variant="ghost"
                       onClick={() => setCancelDialog(true)}
                       disabled={saving || actionLoading}
-                      className="w-full sm:w-auto min-h-[44px] pa-text-warning"
+                      className="w-full sm:w-auto min-h-[44px] oa-text-warning"
                     >
                       <span className="material-symbols-outlined oa-action-icon">cancel</span>
                       Cancel Event
@@ -1608,7 +1609,7 @@ export default function EditEvent() {
                       variant="ghost"
                       onClick={() => setDeleteDialog(true)}
                       disabled={saving || actionLoading}
-                      className="w-full sm:w-auto min-h-[44px] pa-text-danger"
+                      className="w-full sm:w-auto min-h-[44px] oa-text-danger"
                     >
                       <span className="material-symbols-outlined oa-action-icon">delete</span>
                       Delete Event
@@ -1616,14 +1617,14 @@ export default function EditEvent() {
                   </div>
                 </div>
               )}
-              <div className="pa-form-actions">
+              <div className="oa-form-actions">
                 <OrgAdminButton variant="primary" onClick={() => navigate(getLink('admin.events.list'))} disabled={saving || actionLoading} className="w-full sm:w-auto">Cancel</OrgAdminButton>
                 <Button 
                   type="submit" 
                   loading={saving}
                   disabled={isPastEvent || isOffline || USE_FAKE_DATA || saving || actionLoading}
                   title={isPastEvent ? 'Past events cannot be edited' : isOffline ? 'Cannot save while offline' : USE_FAKE_DATA ? 'Demo mode: changes not saved' : undefined}
-                  className="pa-form-submit-btn w-full sm:w-auto"
+                  className="oa-form-submit-btn w-full sm:w-auto"
                 >
                   Update Event
                 </Button>

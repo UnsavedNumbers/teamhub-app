@@ -109,13 +109,13 @@ export default function AttendanceReports() {
   }
 
   return (
-    <div className="pa-grid pa-grid-cols-1 md:pa-grid-cols-2 pa-gap-4">
+    <div className="oa-grid oa-grid-cols-1 md:oa-grid-cols-2 oa-gap-4">
       <Card>
         <CardHeader>
           <CardTitle>Organization Summary</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="pa-mb-4 pa-text-sm pa-text-neutral-500">
+          <p className="oa-mb-4 oa-text-sm oa-text-neutral-500">
             Generate a full breakdown of attendance by team and season (last 90 days).
           </p>
           <OrgAdminButton
@@ -126,7 +126,7 @@ export default function AttendanceReports() {
             {loading ? 'Loading...' : 'Download CSV'}
           </OrgAdminButton>
           {events.length > 0 && (
-            <p className="pa-mt-2 pa-text-xs pa-text-neutral-400">
+            <p className="oa-mt-2 oa-text-xs oa-text-neutral-400">
               {events.length} events available
             </p>
           )}
@@ -138,7 +138,7 @@ export default function AttendanceReports() {
           <CardTitle>Missing Attendance Report</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="pa-mb-4 pa-text-sm pa-text-neutral-500">
+          <p className="oa-mb-4 oa-text-sm oa-text-neutral-500">
             List of all events where attendance has not been submitted.
           </p>
           <OrgAdminButton
@@ -149,7 +149,7 @@ export default function AttendanceReports() {
             {loading ? 'Loading...' : 'Download CSV'}
           </OrgAdminButton>
           {events.length > 0 && (
-            <p className="pa-mt-2 pa-text-xs pa-text-neutral-400">
+            <p className="oa-mt-2 oa-text-xs oa-text-neutral-400">
               {events.filter(e => e.status === 'missing').length} events missing attendance
             </p>
           )}
@@ -161,10 +161,10 @@ export default function AttendanceReports() {
           <CardTitle>At-Risk Players</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="pa-mb-4 pa-text-sm pa-text-neutral-500">
+          <p className="oa-mb-4 oa-text-sm oa-text-neutral-500">
             List of players with attendance below the "Watch" threshold (70%).
           </p>
-          <div className="pa-flex pa-gap-2">
+          <div className="oa-flex oa-gap-2">
             <OrgAdminButton
               variant="primary"
               onClick={handleAtRiskCSV}
@@ -181,7 +181,7 @@ export default function AttendanceReports() {
             </Button>
           </div>
           {people.length > 0 && (
-            <p className="pa-mt-2 pa-text-xs pa-text-neutral-400">
+            <p className="oa-mt-2 oa-text-xs oa-text-neutral-400">
               {people.filter(p => p.risk_level === 'at_risk' || p.risk_level === 'watch').length} at-risk players
             </p>
           )}

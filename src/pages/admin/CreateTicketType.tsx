@@ -12,6 +12,7 @@ import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
 import EmptyState from '@/components/platformAdmin/EmptyState'
 import { DatePicker, TimePicker, Input, Checkbox, Button } from '@/components/platformAdmin'
 import type { SupabaseExtended as Database } from '@/lib/supabase.extended.types'
+import '../../styles/orgAdmin.css'
 
 type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert']
 
@@ -136,7 +137,7 @@ export default function CreateTicketType() {
 
   if (!id) {
     return (
-      <div className="pa-page-container">
+      <div className="oa-page-container">
         <EmptyState
           icon="event"
           title="Missing event"
@@ -150,7 +151,7 @@ export default function CreateTicketType() {
 
   if (eventLoading) {
     return (
-      <div className="pa-flex pa-justify-center pa-pt-12">
+      <div className="oa-flex oa-justify-center oa-pt-12">
         <AdminLoadingSpinner />
       </div>
     )
@@ -158,7 +159,7 @@ export default function CreateTicketType() {
 
   if (!event) {
     return (
-      <div className="pa-page-container">
+      <div className="oa-page-container">
         <EmptyState
           icon="event_busy"
           title={eventError ? 'Unable to load event' : 'Event not found'}
@@ -171,7 +172,7 @@ export default function CreateTicketType() {
   }
 
   return (
-    <div className="pa-page-container">
+    <div className="oa-page-container">
       <AdminPageHeader
         title="Add Ticket Type"
         subtitle={`For ${event.title}`}
@@ -182,14 +183,14 @@ export default function CreateTicketType() {
         }
       />
 
-      <div className="pa-card pa-max-w-3xl">
+      <div className="oa-card oa-max-w-3xl">
         {formError && (
-          <div className="pa-card pa-card--bordered pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
+          <div className="oa-card oa-card--bordered oa-mb-4 oa-text-danger" style={{ background: 'var(--oa-danger-bg)', border: 'none' }}>
             {formError}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="pa-space-y-6">
+        <form onSubmit={handleSubmit} className="oa-space-y-6">
           <Input
             label="Ticket type name"
             value={name}
@@ -199,9 +200,9 @@ export default function CreateTicketType() {
           />
 
           <div>
-            <label className="pa-label pa-mb-2 block">Description (optional)</label>
+            <label className="oa-label oa-mb-2 block">Description (optional)</label>
             <textarea
-              className="pa-input pa-textarea"
+              className="oa-input oa-textarea"
               rows={3}
               placeholder="Provide guests with some context about this ticket type."
               value={description}
@@ -209,7 +210,7 @@ export default function CreateTicketType() {
             />
           </div>
 
-          <div className="pa-form-grid pa-form-grid-2 pa-gap-4">
+          <div className="oa-form-grid oa-form-grid-2 oa-gap-4">
             <Input
               label="Price ($)"
               type="number"
@@ -230,10 +231,10 @@ export default function CreateTicketType() {
             />
           </div>
 
-          <div className="pa-form-grid pa-form-grid-2 pa-gap-4">
-            <div className="pa-space-y-2">
-              <span className="pa-label">Sales start</span>
-              <div className="pa-form-grid pa-form-grid-2 pa-gap-3">
+          <div className="oa-form-grid oa-form-grid-2 oa-gap-4">
+            <div className="oa-space-y-2">
+              <span className="oa-label">Sales start</span>
+              <div className="oa-form-grid oa-form-grid-2 oa-gap-3">
                 <DatePicker
                   label="Date"
                   value={salesStartDate}
@@ -249,9 +250,9 @@ export default function CreateTicketType() {
                 />
               </div>
             </div>
-            <div className="pa-space-y-2">
-              <span className="pa-label">Sales end</span>
-              <div className="pa-form-grid pa-form-grid-2 pa-gap-3">
+            <div className="oa-space-y-2">
+              <span className="oa-label">Sales end</span>
+              <div className="oa-form-grid oa-form-grid-2 oa-gap-3">
                 <DatePicker
                   label="Date"
                   value={salesEndDate}
@@ -276,7 +277,7 @@ export default function CreateTicketType() {
             helperText="Inactive ticket types are hidden from guest sales"
           />
 
-          <div className="pa-flex pa-justify-end pa-gap-3">
+          <div className="oa-flex oa-justify-end oa-gap-3">
             <Button
               variant="secondary"
               as={Link}

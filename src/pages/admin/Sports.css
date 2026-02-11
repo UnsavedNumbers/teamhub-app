@@ -72,27 +72,27 @@ html.dark .sports-page .sports-program-count-badge:hover {
 }
 
 /* Row actions (including Delete) always visible — no hover-only reveal */
-.sports-page .pa-stacked-list-row-actions {
+.sports-page .oa-stacked-list-row-actions {
   opacity: 1;
   visibility: visible;
 }
 
 /* Delete button: keep label visible (white on red), don’t override to red text */
-.sports-page .pa-stacked-list-row-actions .pa-btn--danger,
-.sports-page .pa-stacked-list-row-actions .pa-btn--danger:hover:not(:disabled) {
+.sports-page .oa-stacked-list-row-actions .oa-btn--danger,
+.sports-page .oa-stacked-list-row-actions .oa-btn--danger:hover:not(:disabled) {
   color: var(--org-status-error-text, var(--pa-white)) !important;
 }
 
-.sports-page .pa-stacked-list-row-actions .pa-btn--danger .material-symbols-outlined {
+.sports-page .oa-stacked-list-row-actions .oa-btn--danger .material-symbols-outlined {
   color: inherit;
 }
 
-html.dark .sports-page .pa-stacked-list-row-actions .pa-btn--danger,
-html.dark .sports-page .pa-stacked-list-row-actions .pa-btn--danger:hover:not(:disabled) {
+html.dark .sports-page .oa-stacked-list-row-actions .oa-btn--danger,
+html.dark .sports-page .oa-stacked-list-row-actions .oa-btn--danger:hover:not(:disabled) {
   color: var(--org-status-error-text, #fff) !important;
 }
 
-html.dark .sports-page .pa-stacked-list-row-actions .pa-btn--danger .material-symbols-outlined {
+html.dark .sports-page .oa-stacked-list-row-actions .oa-btn--danger .material-symbols-outlined {
   color: inherit;
 }
 

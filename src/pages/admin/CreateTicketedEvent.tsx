@@ -12,6 +12,7 @@ import { FileUpload } from '@/components/common/FileUpload'
 import { useRouteLink } from '@/utils/routes'
 import type { TicketedEventType, TicketedEventStatus } from '@/types/ticketing'
 import { uploadTicketBanner } from '@/data/services/organizationService'
+import '../../styles/orgAdmin.css'
 
 export default function CreateTicketedEvent() {
   const navigate = useNavigate()
@@ -86,46 +87,46 @@ export default function CreateTicketedEvent() {
   }
 
   return (
-    <div className="pa-page-container">
-      <div className="pa-page-header">
-        <h1 className="pa-page-title">Create Ticketed Event</h1>
+    <div className="oa-page-container">
+      <div className="oa-page-header">
+        <h1 className="oa-page-title">Create Ticketed Event</h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="pa-form">
-        <div className="pa-form-group">
-          <label className="pa-form-label">Event Title *</label>
+      <form onSubmit={handleSubmit} className="oa-form">
+        <div className="oa-form-group">
+          <label className="oa-form-label">Event Title *</label>
           <input
             type="text"
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            className="pa-form-input"
+            className="oa-form-input"
             required
           />
         </div>
 
-        <div className="pa-form-group">
-          <label className="pa-form-label">Internal Methods / Description</label>
+        <div className="oa-form-group">
+          <label className="oa-form-label">Internal Methods / Description</label>
           <textarea
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="pa-form-input"
+            className="oa-form-input"
             rows={2}
           />
         </div>
 
-        <div className="pa-form-group">
-          <label className="pa-form-label">Public Event Description</label>
+        <div className="oa-form-group">
+          <label className="oa-form-label">Public Event Description</label>
            <textarea
             value={formData.event_description}
             onChange={(e) => setFormData({ ...formData, event_description: e.target.value })}
-            className="pa-form-input"
+            className="oa-form-input"
             rows={4}
             maxLength={500}
             placeholder="Description shown to public users..."
           />
         </div>
 
-        <div className="pa-form-group">
+        <div className="oa-form-group">
           <FileUpload
             label="Ticket Banner Image"
             onFileSelect={setBannerFile}
@@ -139,86 +140,86 @@ export default function CreateTicketedEvent() {
           />
         </div>
 
-        <div className="pa-form-row">
-          <div className="pa-form-group">
-            <label className="pa-form-label">Start Date/Time *</label>
+        <div className="oa-form-row">
+          <div className="oa-form-group">
+            <label className="oa-form-label">Start Date/Time *</label>
             <input
               type="datetime-local"
               value={formData.starts_at}
               onChange={(e) => setFormData({ ...formData, starts_at: e.target.value })}
-              className="pa-form-input"
+              className="oa-form-input"
               required
             />
           </div>
 
-          <div className="pa-form-group">
-            <label className="pa-form-label">End Date/Time *</label>
+          <div className="oa-form-group">
+            <label className="oa-form-label">End Date/Time *</label>
             <input
               type="datetime-local"
               value={formData.ends_at}
               onChange={(e) => setFormData({ ...formData, ends_at: e.target.value })}
-              className="pa-form-input"
+              className="oa-form-input"
               required
             />
           </div>
         </div>
 
-        <div className="pa-form-row">
-          <div className="pa-form-group">
-            <label className="pa-form-label">Venue Name</label>
+        <div className="oa-form-row">
+          <div className="oa-form-group">
+            <label className="oa-form-label">Venue Name</label>
             <input
               type="text"
               value={formData.venue_name}
               onChange={(e) => setFormData({ ...formData, venue_name: e.target.value })}
-              className="pa-form-input"
+              className="oa-form-input"
             />
           </div>
 
-          <div className="pa-form-group">
-            <label className="pa-form-label">City</label>
+          <div className="oa-form-group">
+            <label className="oa-form-label">City</label>
             <input
               type="text"
               value={formData.venue_city}
               onChange={(e) => setFormData({ ...formData, venue_city: e.target.value })}
-              className="pa-form-input"
+              className="oa-form-input"
             />
           </div>
 
-          <div className="pa-form-group">
-            <label className="pa-form-label">State</label>
+          <div className="oa-form-group">
+            <label className="oa-form-label">State</label>
             <input
               type="text"
               value={formData.venue_state}
               onChange={(e) => setFormData({ ...formData, venue_state: e.target.value })}
-              className="pa-form-input"
+              className="oa-form-input"
             />
           </div>
         </div>
 
-        <div className="pa-form-group">
-          <label className="pa-form-label">Status</label>
+        <div className="oa-form-group">
+          <label className="oa-form-label">Status</label>
           <select
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value as TicketedEventStatus })}
-            className="pa-form-input"
+            className="oa-form-input"
           >
             <option value="draft">Draft</option>
             <option value="published">Published</option>
           </select>
         </div>
 
-        <div className="pa-form-actions">
+        <div className="oa-form-actions">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="pa-button pa-button-secondary"
+            className="oa-button oa-button-secondary"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={createMutation.isPending}
-            className="pa-button pa-button-primary"
+            className="oa-button oa-button-primary"
           >
             {createMutation.isPending ? 'Creating...' : 'Create Event'}
           </button>

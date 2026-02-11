@@ -45,7 +45,7 @@ export function AdminPhotosLayout() {
   void currentView
 
   return (
-    <div className="pa-root admin-photos-layout">
+    <div className="oa-root admin-photos-layout">
       <AdminPageHeader 
         title={t('photos.title')}
         actions={
@@ -54,7 +54,7 @@ export function AdminPhotosLayout() {
           </Button>
         }
       />
-      <div className="pa-container">
+      <div className="oa-container">
         <div className="photos-view-switcher">
           <div className="view-switcher-buttons">
             {visibleViews.map((view) => {
@@ -93,10 +93,10 @@ export function AdminPhotosLayout() {
           onClose={() => setShowDemoModal(false)}
           title={t('photos.demoMode.title')}
         >
-          <p className="pa-text-sm pa-text-muted pa-mb-4">
+          <p className="oa-text-sm oa-text-muted oa-mb-4">
             {t('photos.demoMode.createBlocked')}
           </p>
-          <div className="pa-flex pa-justify-end">
+          <div className="oa-flex oa-justify-end">
             <Button variant="primary" onClick={() => setShowDemoModal(false)}>
               {t('common.ok')}
             </Button>

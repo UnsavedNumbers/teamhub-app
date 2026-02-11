@@ -11,7 +11,7 @@ import { createLevel, updateLevel } from '../../data/services/levelsService'
 import { getTeams, createTeam, updateTeam } from '../../data/services/teamsService'
 import { getSeasons, createSeason, updateSeason } from '../../data/services/seasonsService'
 import type { Sport, Program, Level, Team, Season, GenderCategory, LevelType } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, Input, Select, DatePicker, Checkbox } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, Input, Select, DatePicker, Checkbox } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { FileUpload } from '../../components/common/FileUpload'
 import OfflineBanner from '../../components/admin/OfflineBanner'
@@ -20,6 +20,7 @@ import { CreateSeasonModal } from '../../components/admin/CreateSeasonModal'
 import { getNextLevel, getParentContextKey, getListPageRoute, getEntityLabelKey, type FormType, type PromptState, isValidPromptState, validateEntityExists } from '../../utils/hierarchyCreation'
 import { savePromptState, loadPromptState, clearPromptState } from '../../utils/sessionStorageHelpers'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 interface RadioOption {
   value: string
@@ -51,12 +52,12 @@ function RadioGroup({
   onChange: (value: string) => void
 }) {
   return (
-    <div className="pa-form-group">
-      <label className={`pa-label ${required ? 'pa-label--required' : ''}`}>{label}</label>
-      {helper && <div className="pa-helper">{helper}</div>}
-      <div className="pa-radio-group">
+    <div className="oa-form-group">
+      <label className={`oa-label ${required ? 'oa-label--required' : ''}`}>{label}</label>
+      {helper && <div className="oa-helper">{helper}</div>}
+      <div className="oa-radio-group">
         {options.map((option) => (
-          <label key={option.value} className="pa-radio-option">
+          <label key={option.value} className="oa-radio-option">
             <input
               type="radio"
               name={name}
@@ -65,15 +66,15 @@ function RadioGroup({
               onChange={() => onChange(option.value)}
             />
             <div>
-              <div className="pa-body-m pa-radio-label">{option.label}</div>
+              <div className="oa-body-m oa-radio-label">{option.label}</div>
               {option.helper && (
-                <div className="pa-helper pa-radio-helper">{option.helper}</div>
+                <div className="oa-helper oa-radio-helper">{option.helper}</div>
               )}
             </div>
           </label>
         ))}
       </div>
-      {error && <div className="pa-helper pa-helper--error">{error}</div>}
+      {error && <div className="oa-helper oa-helper--error">{error}</div>}
     </div>
   )
 }
@@ -810,7 +811,7 @@ export default function OrganizationStructureForms() {
 
   if (loading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
         <AdminPageHeader
           title={pageTitle}
@@ -820,7 +821,7 @@ export default function OrganizationStructureForms() {
             { label: activeFormLabel },
           ]}
         />
-        <div className="pa-skeleton pa-skeleton--form" />
+        <div className="oa-skeleton oa-skeleton--form" />
       </div>
     )
   }
@@ -830,7 +831,7 @@ export default function OrganizationStructureForms() {
     const sportExists = sports.some(s => s.id === contextSportId)
     if (!sportExists) {
       return (
-        <div className="pa-root">
+        <div className="oa-root">
           <OfflineBanner />
           <AdminPageHeader
             title={pageTitle}
@@ -840,8 +841,8 @@ export default function OrganizationStructureForms() {
               { label: activeFormLabel },
             ]}
           />
-          <Card className="pa-mb-6">
-            <div className="pa-text-muted pa-mb-4">
+          <Card className="oa-mb-6">
+            <div className="oa-text-muted oa-mb-4">
               {t('admin.structureForms.empty.noSportsForProgram')}
             </div>
             <Link to={`${getLink('admin.organization.forms')}?type=sport`}>
@@ -857,7 +858,7 @@ export default function OrganizationStructureForms() {
     const programExists = programs.some(p => p.id === contextProgramId)
     if (!programExists) {
       return (
-        <div className="pa-root">
+        <div className="oa-root">
           <OfflineBanner />
           <AdminPageHeader
             title={pageTitle}
@@ -867,8 +868,8 @@ export default function OrganizationStructureForms() {
               { label: activeFormLabel },
             ]}
           />
-          <Card className="pa-mb-6">
-            <div className="pa-text-muted pa-mb-4">
+          <Card className="oa-mb-6">
+            <div className="oa-text-muted oa-mb-4">
               {t('admin.structureForms.empty.noProgramsForLevel')}
             </div>
             <Link to={`${getLink('admin.organization.forms')}?type=program`}>
@@ -884,7 +885,7 @@ export default function OrganizationStructureForms() {
     const levelExists = levels.some(l => l.id === contextLevelId)
     if (!levelExists) {
       return (
-        <div className="pa-root">
+        <div className="oa-root">
           <OfflineBanner />
           <AdminPageHeader
             title={pageTitle}
@@ -894,8 +895,8 @@ export default function OrganizationStructureForms() {
               { label: activeFormLabel },
             ]}
           />
-          <Card className="pa-mb-6">
-            <div className="pa-text-muted pa-mb-4">
+          <Card className="oa-mb-6">
+            <div className="oa-text-muted oa-mb-4">
               {t('admin.structureForms.empty.noLevelsForTeam')}
             </div>
             <Link to={`${getLink('admin.organization.forms')}?type=level`}>
@@ -910,7 +911,7 @@ export default function OrganizationStructureForms() {
   // Check prerequisites only when creating new (not editing)
   if (!editType && activeFormType === 'program' && sports.length === 0) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
         <AdminPageHeader
           title={pageTitle}
@@ -920,8 +921,8 @@ export default function OrganizationStructureForms() {
             { label: activeFormLabel },
           ]}
         />
-        <Card className="pa-mb-6">
-          <div className="pa-text-muted pa-mb-4">
+        <Card className="oa-mb-6">
+          <div className="oa-text-muted oa-mb-4">
             {t('admin.structureForms.empty.noSportsForProgram')}
           </div>
           <Link to={`${getLink('admin.organization.forms')}?type=sport`}>
@@ -934,7 +935,7 @@ export default function OrganizationStructureForms() {
 
   if (!editType && activeFormType === 'level' && programs.length === 0) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
         <AdminPageHeader
           title={pageTitle}
@@ -944,8 +945,8 @@ export default function OrganizationStructureForms() {
             { label: activeFormLabel },
           ]}
         />
-        <Card className="pa-mb-6">
-          <div className="pa-text-muted pa-mb-4">
+        <Card className="oa-mb-6">
+          <div className="oa-text-muted oa-mb-4">
             {t('admin.structureForms.empty.noProgramsForLevel')}
           </div>
           <Link to={`${getLink('admin.organization.forms')}?type=program`}>
@@ -958,7 +959,7 @@ export default function OrganizationStructureForms() {
 
   if (!editType && activeFormType === 'team' && levels.length === 0) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
         <AdminPageHeader
           title={pageTitle}
@@ -968,8 +969,8 @@ export default function OrganizationStructureForms() {
             { label: activeFormLabel },
           ]}
         />
-        <Card className="pa-mb-6">
-          <div className="pa-text-muted pa-mb-4">
+        <Card className="oa-mb-6">
+          <div className="oa-text-muted oa-mb-4">
             {t('admin.structureForms.empty.noLevelsForTeam')}
           </div>
           <Link to={`${getLink('admin.organization.forms')}?type=level`}>
@@ -981,7 +982,7 @@ export default function OrganizationStructureForms() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <OfflineBanner />
       <AdminPageHeader
         title={pageTitle}
@@ -1004,25 +1005,25 @@ export default function OrganizationStructureForms() {
       ) : null}
 
       {actionError && (
-        <Card className="pa-mb-4" noPadding>
-          <div className="pa-alert-card pa-alert-card--error">
-            <div className="pa-body-m pa-text-danger">{actionError}</div>
+        <Card className="oa-mb-4" noPadding>
+          <div className="oa-alert-card oa-alert-card--error">
+            <div className="oa-body-m oa-text-danger">{actionError}</div>
           </div>
         </Card>
       )}
 
       {loadError && (
-        <Card className="pa-mb-4" noPadding>
-          <div className="pa-alert-card pa-alert-card--error">
-            <div className="pa-body-m pa-text-danger">{loadError}</div>
+        <Card className="oa-mb-4" noPadding>
+          <div className="oa-alert-card oa-alert-card--error">
+            <div className="oa-body-m oa-text-danger">{loadError}</div>
           </div>
         </Card>
       )}
 
       {!activeFormType && (
-        <div className="pa-form-container">
-          <Card title={t('admin.structureForms.selector.title')} className="pa-mb-6">
-            <div className="pa-flex pa-flex-col pa-gap-3">
+        <div className="oa-form-container">
+          <Card title={t('admin.structureForms.selector.title')} className="oa-mb-6">
+            <div className="oa-flex oa-flex-col oa-gap-3">
               <Link to={`${getLink('admin.organization.forms')}?type=sport`}>
                 <OrgAdminButton variant="primary" className="w-full sm:w-auto">{t('admin.structureForms.actions.addItem', { item: formLabels.sport })}</OrgAdminButton>
               </Link>
@@ -1044,18 +1045,18 @@ export default function OrganizationStructureForms() {
       )}
 
       {activeFormType === 'sport' && (
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card
           title={t(editType === 'sport' ? 'admin.structureForms.pageTitle.edit' : 'admin.structureForms.pageTitle.add', { item: formLabels.sport })}
-          className="pa-mb-6"
+          className="oa-mb-6"
         >
-          <div className="pa-flex pa-flex-col pa-gap-4">
+          <div className="oa-flex oa-flex-col oa-gap-4">
             {editType === 'sport' && editId ? (
               // Edit mode
               <div>
-                <div className="pa-label pa-mb-2">{t('admin.structureForms.fields.sportName.label')}</div>
-                <div className="pa-text-base">{sportForm.name}</div>
-                <div className="pa-text-sm pa-text-muted pa-mt-1">
+                <div className="oa-label oa-mb-2">{t('admin.structureForms.fields.sportName.label')}</div>
+                <div className="oa-text-base">{sportForm.name}</div>
+                <div className="oa-text-sm oa-text-muted oa-mt-1">
                   System sports cannot be modified. They are predefined for consistency across all organizations.
                 </div>
               </div>
@@ -1063,16 +1064,16 @@ export default function OrganizationStructureForms() {
               // Create mode
               <>
                 {availableSystemSports.length === 0 ? (
-                  <div className="pa-text-muted">
-                    <p className="pa-mb-2">All available sports have been added to your organization.</p>
+                  <div className="oa-text-muted">
+                    <p className="oa-mb-2">All available sports have been added to your organization.</p>
                     {systemSports.length === 0 && (
-                      <p className="pa-text-sm pa-text-muted">
+                      <p className="oa-text-sm oa-text-muted">
                         No system sports are available. Please contact support if you need additional sports.
                       </p>
                     )}
                   </div>
                 ) : (
-                  <div className="pa-grid pa-grid-2">
+                  <div className="oa-grid oa-grid-2">
                     <Select
                       label={t('admin.structureForms.fields.sportName.label')}
                       value={sportForm.name}
@@ -1092,7 +1093,7 @@ export default function OrganizationStructureForms() {
                   </div>
                 )}
                 {availableSystemSports.length > 0 && (
-                  <div className="pa-form-group">
+                  <div className="oa-form-group">
                     <FileUpload
                       label="Sport Icon (Optional)"
                       accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
@@ -1110,20 +1111,20 @@ export default function OrganizationStructureForms() {
                   </div>
                 )}
                 {USE_FAKE_DATA && (
-                  <div className="pa-alert-card pa-alert-card--info pa-mt-4">
-                    <div className="pa-flex pa-items-center pa-gap-2">
-                      <span className="material-symbols-outlined pa-alert-icon">info</span>
-                      <span className="pa-body-s">
+                  <div className="oa-alert-card oa-alert-card--info oa-mt-4">
+                    <div className="oa-flex oa-items-center oa-gap-2">
+                      <span className="material-symbols-outlined oa-alert-icon">info</span>
+                      <span className="oa-body-s">
                         Demo mode: Sign in to add sports to your organization.
                       </span>
                     </div>
                   </div>
                 )}
                 {isOffline && (
-                  <div className="pa-alert-card pa-alert-card--warning pa-mt-4">
-                    <div className="pa-flex pa-items-center pa-gap-2">
-                      <span className="material-symbols-outlined pa-alert-icon">wifi_off</span>
-                      <span className="pa-body-s">
+                  <div className="oa-alert-card oa-alert-card--warning oa-mt-4">
+                    <div className="oa-flex oa-items-center oa-gap-2">
+                      <span className="material-symbols-outlined oa-alert-icon">wifi_off</span>
+                      <span className="oa-body-s">
                         You are offline. Please reconnect to add sports.
                       </span>
                     </div>
@@ -1132,7 +1133,7 @@ export default function OrganizationStructureForms() {
               </>
             )}
             {editType !== 'sport' && (
-              <div className="pa-form-actions">
+              <div className="oa-form-actions">
                 <Button
                   variant="ghost"
                   onClick={handleCancel}
@@ -1259,13 +1260,13 @@ export default function OrganizationStructureForms() {
       )}
 
       {activeFormType === 'program' && (
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card
           title={t(editType === 'program' ? 'admin.structureForms.pageTitle.edit' : 'admin.structureForms.pageTitle.add', { item: formLabels.program })}
-          className="pa-mb-6"
+          className="oa-mb-6"
         >
-          <div className="pa-flex pa-flex-col pa-gap-4">
-            <div className="pa-grid pa-grid-2 pa-gap-4">
+          <div className="oa-flex oa-flex-col oa-gap-4">
+            <div className="oa-grid oa-grid-2 oa-gap-4">
               <Select
                 label={t('admin.structureForms.fields.programSport.label')}
                 required
@@ -1302,7 +1303,7 @@ export default function OrganizationStructureForms() {
               error={programGenderError}
             />
             
-            <div className="pa-form-actions">
+            <div className="oa-form-actions">
               <Button
                 variant="ghost"
                 onClick={handleCancel}
@@ -1407,13 +1408,13 @@ export default function OrganizationStructureForms() {
       )}
 
       {activeFormType === 'level' && (
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card
           title={t(editType === 'level' ? 'admin.structureForms.pageTitle.edit' : 'admin.structureForms.pageTitle.add', { item: formLabels.level })}
-          className="pa-mb-6"
+          className="oa-mb-6"
         >
-          <div className="pa-flex pa-flex-col pa-gap-4">
-            <div className="pa-grid pa-grid-2 pa-gap-4">
+          <div className="oa-flex oa-flex-col oa-gap-4">
+            <div className="oa-grid oa-grid-2 oa-gap-4">
               <Select
                 label={t('admin.structureForms.fields.levelProgram.label')}
                 required
@@ -1449,7 +1450,7 @@ export default function OrganizationStructureForms() {
             />
 
             {levelForm.type === 'age_based' && (
-              <div className="pa-grid pa-grid-2 pa-gap-4">
+              <div className="oa-grid oa-grid-2 oa-gap-4">
                 <Input
                   label={t('admin.structureForms.fields.levelAgeMin.label')}
                   type="number"
@@ -1472,7 +1473,7 @@ export default function OrganizationStructureForms() {
             )}
 
             {levelForm.type === 'grade_based' && (
-              <div className="pa-grid pa-grid-2 pa-gap-4">
+              <div className="oa-grid oa-grid-2 oa-gap-4">
                 <Input
                   label={t('admin.structureForms.fields.levelGradeMin.label')}
                   type="number"
@@ -1506,7 +1507,7 @@ export default function OrganizationStructureForms() {
               />
             )}
             
-            <div className="pa-form-actions">
+            <div className="oa-form-actions">
               <Button
                 variant="ghost"
                 onClick={handleCancel}
@@ -1627,13 +1628,13 @@ export default function OrganizationStructureForms() {
       )}
 
       {activeFormType === 'team' && (
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card
           title={t(editType === 'team' ? 'admin.structureForms.pageTitle.edit' : 'admin.structureForms.pageTitle.add', { item: formLabels.team })}
-          className="pa-mb-6"
+          className="oa-mb-6"
         >
-          <div className="pa-flex pa-flex-col pa-gap-4">
-            <div className="pa-grid pa-grid-2 pa-gap-4">
+          <div className="oa-flex oa-flex-col oa-gap-4">
+            <div className="oa-grid oa-grid-2 oa-gap-4">
               <Select
                 label={t('admin.structureForms.fields.teamLevel.label')}
                 required
@@ -1644,8 +1645,8 @@ export default function OrganizationStructureForms() {
                 error={teamLevelError}
               />
               {!isEditingTeam && (
-                <div className="pa-form-row-with-action">
-                  <div className="pa-flex-1">
+                <div className="oa-form-row-with-action">
+                  <div className="oa-flex-1">
                     <Select
                       label={t('admin.structureForms.fields.teamSeason.label')}
                       required
@@ -1659,7 +1660,7 @@ export default function OrganizationStructureForms() {
                   </div>
                   <Button
                     variant="ghost"
-                    className="pa-form-row-action-btn"
+                    className="oa-form-row-action-btn"
                     onClick={() => setShowCreateSeasonModal(true)}
                     disabled={submitting.team || refreshingSeasons}
                   >
@@ -1684,7 +1685,7 @@ export default function OrganizationStructureForms() {
               label={t('admin.structureForms.fields.teamActive.label')}
             />
             
-            <div className="pa-form-actions">
+            <div className="oa-form-actions">
               <Button
                 variant="ghost"
                 onClick={handleCancel}
@@ -1852,12 +1853,12 @@ export default function OrganizationStructureForms() {
       )}
 
       {activeFormType === 'season' && (
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card
           title={t(editType === 'season' ? 'admin.structureForms.pageTitle.edit' : 'admin.structureForms.pageTitle.add', { item: formLabels.season })}
-          className="pa-mb-6"
+          className="oa-mb-6"
         >
-          <div className="pa-flex pa-flex-col pa-gap-4">
+          <div className="oa-flex oa-flex-col oa-gap-4">
             <Input
               label={t('admin.structureForms.fields.seasonName.label')}
               placeholder={t('admin.structureForms.fields.seasonName.placeholder')}
@@ -1868,7 +1869,7 @@ export default function OrganizationStructureForms() {
               error={seasonNameError}
             />
             
-            <div className="pa-grid pa-grid-2 pa-gap-4">
+            <div className="oa-grid oa-grid-2 oa-gap-4">
               <DatePicker
                 label={t('admin.structureForms.fields.seasonStart.label')}
                 value={seasonForm.startDate}
@@ -1892,7 +1893,7 @@ export default function OrganizationStructureForms() {
               label={t('admin.structureForms.fields.seasonActive.label')}
             />
             
-            <div className="pa-form-actions">
+            <div className="oa-form-actions">
               <Button
                 variant="ghost"
                 onClick={handleCancel}
@@ -1986,7 +1987,7 @@ export default function OrganizationStructureForms() {
       )}
       {!currentOrganization && (
         <Card>
-          <div className="pa-text-muted">{t('admin.structureForms.empty.missingOrganization')}</div>
+          <div className="oa-text-muted">{t('admin.structureForms.empty.missingOrganization')}</div>
         </Card>
       )}
     </div>

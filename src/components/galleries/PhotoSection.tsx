@@ -28,6 +28,7 @@ interface PhotoSectionProps {
   previewCount?: number
   title?: string
   showRelated?: boolean
+  context?: 'portal' | 'admin'
 }
 
 /**
@@ -53,8 +54,9 @@ export function PhotoSection({
   previewCount = 5,
   title,
   showRelated = true,
+  context = 'portal',
 }: PhotoSectionProps) {
-  const { context, isReady } = useUserContext()
+  const { context: userContext, isReady } = useUserContext()
   const navigate = useNavigate()
   const t = useT()
   const perms = useGalleryPermissions(entityType)
@@ -67,13 +69,13 @@ export function PhotoSection({
 
   useEffect(() => {
     const load = async () => {
-      if (!context || !isReady || !entityId) return
+      if (!userContext || !isReady || !entityId) return
       setLoading(true)
       setError(null)
       setNoOrgAssigned(false)
       try {
         const { data: galleryData, error: galleryError } = await ensureEntityGallery(
-          context,
+          userContext,
           entityType,
           entityId,
           undefined, // name
@@ -98,7 +100,7 @@ export function PhotoSection({
 
         setGallery(galleryData as Gallery)
 
-        const photosResp = await getPhotosForGallery(context, {
+        const photosResp = await getPhotosForGallery(userContext, {
           gallery_id: galleryData.id,
           limit: previewCount,
           order_by: 'created_at',
@@ -116,11 +118,11 @@ export function PhotoSection({
       }
     }
     load()
-  }, [context, isReady, entityId, entityType, previewCount, orgId])
+  }, [userContext, isReady, entityId, entityType, previewCount, orgId])
 
   const handleUploadComplete = async () => {
-    if (!context || !gallery) return
-    const photosResp = await getPhotosForGallery(context, {
+    if (!userContext || !gallery) return
+    const photosResp = await getPhotosForGallery(userContext, {
       gallery_id: gallery.id,
       limit: previewCount,
       order_by: 'created_at',
@@ -145,7 +147,11 @@ export function PhotoSection({
     if (gallery) {
       setIsExiting(true)
       setTimeout(() => {
-        navigate(ROUTES.PORTAL_PHOTO_GALLERY(gallery.id))
+        if (context === 'admin') {
+          navigate(ROUTES.ADMIN_PHOTO_DETAIL(gallery.id))
+        } else {
+          navigate(ROUTES.PORTAL_PHOTO_GALLERY(gallery.id))
+        }
       }, 150)
     }
   }
@@ -380,7 +386,7 @@ export function PhotoSection({
             borderTop: '1px solid #e2e8f0',
           }}
         >
-          <RelatedGalleriesSection entityType={entityType} entityId={entityId} />
+          <RelatedGalleriesSection entityType={entityType} entityId={entityId} context={context} />
         </div>
       )}
 

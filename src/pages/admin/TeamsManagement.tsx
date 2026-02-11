@@ -15,10 +15,7 @@ import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
 import { supabase } from '../../lib/supabase'
-import { AdminPageHeader, Button, ConfirmDialog, EmptyState, Card, Select, Badge, InlineNotice } from '../../components/platformAdmin'
-import OrgDataTable from '../../components/admin/OrgDataTable'
-import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
-import type { ColumnConfig } from '../../components/admin/OrgDataTable'
+import { AdminPageHeader, Button, ConfirmDialog, EmptyState, Card, Select, Badge, InlineNotice, OrgDataTable, type ColumnConfig } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 
@@ -290,7 +287,7 @@ export default function TeamsManagement() {
         id: 'name',
         label: 'Team Name',
         sortable: true,
-        render: (row) => <div className="pa-font-bold pa-text-slate-900">{row.name}</div>
+        render: (row) => <div className="oa-font-bold oa-text-slate-900">{row.name}</div>
     },
     {
         id: 'details',
@@ -299,9 +296,9 @@ export default function TeamsManagement() {
             const sport = sportById.get(row.sport_id ?? '')
             const program = programById.get(row.program_id || '')
             return (
-                <div className="pa-flex pa-flex-col">
-                    <span className="pa-text-sm pa-font-medium pa-text-slate-700">{program?.name || '—'}</span>
-                    <span className="pa-text-xs pa-text-slate-400">{sport?.name || '—'}</span>
+                <div className="oa-flex oa-flex-col">
+                    <span className="oa-text-sm oa-font-medium oa-text-slate-700">{program?.name || '—'}</span>
+                    <span className="oa-text-xs oa-text-slate-400">{sport?.name || '—'}</span>
                 </div>
             )
         }
@@ -324,7 +321,7 @@ export default function TeamsManagement() {
         label: 'Size',
         sortable: true,
         render: (row) => (
-            <span className="pa-text-sm pa-text-slate-500 pa-font-medium">
+            <span className="oa-text-sm oa-text-slate-500 oa-font-medium">
                 {row.max_roster_size ? `${row.max_roster_size} max` : '—'}
             </span>
         )
@@ -369,13 +366,13 @@ export default function TeamsManagement() {
 
   if (loading) {
     return (
-      <div className="pa-root">
-        <div className="pa-skeleton pa-mb-4" style={{ width: '25%', height: '32px' }} />
-        <div className="pa-skeleton pa-mb-12" style={{ width: '33%', height: '16px' }} />
-        <div className="pa-skeleton pa-mb-8" style={{ width: '100%', height: '160px' }} />
-        <div className="pa-flex pa-flex-col pa-gap-2">
+      <div className="oa-root">
+        <div className="oa-skeleton oa-mb-4" style={{ width: '25%', height: '32px' }} />
+        <div className="oa-skeleton oa-mb-12" style={{ width: '33%', height: '16px' }} />
+        <div className="oa-skeleton oa-mb-8" style={{ width: '100%', height: '160px' }} />
+        <div className="oa-flex oa-flex-col oa-gap-2">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="pa-skeleton" style={{ width: '100%', height: '64px' }} />
+            <div key={i} className="oa-skeleton" style={{ width: '100%', height: '64px' }} />
           ))}
         </div>
       </div>
@@ -385,7 +382,7 @@ export default function TeamsManagement() {
   // Show empty state if prerequisites don't exist (check full chain: programs → levels → teams)
   if (programs.length === 0) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
         <AdminPageHeader
           title="Teams"
@@ -413,7 +410,7 @@ export default function TeamsManagement() {
 
   if (levels.length === 0) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
         <AdminPageHeader
           title="Teams"
@@ -440,7 +437,7 @@ export default function TeamsManagement() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <OfflineBanner />
       <AdminPageHeader
         title="Teams"
@@ -468,7 +465,7 @@ export default function TeamsManagement() {
             </Button>
           }
           onClose={() => setError(null)}
-          className="pa-mb-6"
+          className="oa-mb-6"
         />
       )}
 
@@ -477,7 +474,7 @@ export default function TeamsManagement() {
           tone="success"
           title={successMessage}
           onClose={handleDismissSuccess}
-          className="pa-mb-4"
+          className="oa-mb-4"
         />
       )}
 
@@ -486,16 +483,16 @@ export default function TeamsManagement() {
           tone="error"
           title={actionError}
           onClose={handleDismissError}
-          className="pa-mb-4"
+          className="oa-mb-4"
         />
       )}
 
       {/* Filter Bar */}
-      <Card className="pa-mb-6 pa-filter-section pa-w-full">
-        <div className="pa-filter-row">
-          <div className="pa-filter-control">
+      <Card className="oa-mb-6 oa-filter-section oa-w-full">
+        <div className="oa-filter-row">
+          <div className="oa-filter-control">
             <Select
-              label="Filter by season"
+              label="Season"
               value={filterSeasonId}
               onChange={(e) => setFilterSeasonId(e.target.value)}
               disabled={loading || navigating}
@@ -505,9 +502,9 @@ export default function TeamsManagement() {
               ]}
             />
           </div>
-          <div className="pa-filter-control">
+          <div className="oa-filter-control">
             <Select
-              label="Filter by sport"
+              label="Sport"
               value={filterSportId}
               onChange={(e) => {
                 setFilterSportId(e.target.value)
@@ -521,9 +518,9 @@ export default function TeamsManagement() {
               ]}
             />
           </div>
-          <div className="pa-filter-control">
+          <div className="oa-filter-control">
             <Select
-              label="Filter by program"
+              label="Program"
               value={filterProgramId}
               onChange={(e) => {
                 setFilterProgramId(e.target.value)
@@ -536,9 +533,9 @@ export default function TeamsManagement() {
               ]}
             />
           </div>
-          <div className="pa-filter-control">
+          <div className="oa-filter-control">
             <Select
-              label="Filter by level"
+              label="Level"
               value={filterLevelId}
               onChange={(e) => setFilterLevelId(e.target.value)}
               disabled={loading || navigating}
@@ -548,9 +545,9 @@ export default function TeamsManagement() {
               ]}
             />
           </div>
-          <div className="pa-filter-control">
+          <div className="oa-filter-control">
             <Select
-              label="Filter by status"
+              label="Status"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               disabled={loading || navigating}
@@ -561,9 +558,9 @@ export default function TeamsManagement() {
               ]}
             />
           </div>
-          <div className="pa-filter-actions">
+          <div className="oa-filter-actions">
             <Button
-              className="pa-w-full sm:pa-w-auto"
+              className="oa-w-full sm:oa-w-auto"
               disabled={!canCreateTeam || navigating || loading}
               title={!canCreateTeam ? 'Add a Level first' : undefined}
               onClick={handleAddTeam}

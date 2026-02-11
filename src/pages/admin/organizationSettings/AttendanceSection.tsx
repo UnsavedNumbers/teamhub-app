@@ -140,15 +140,15 @@ export default function AttendanceSection({
   }
 
   return (
-    <div className="pa-form-container">
+    <div className="oa-form-container">
       <div>
-        <h3 className="pa-h3 pa-mb-1">Attendance Settings</h3>
-        <p className="pa-text-sm pa-text-slate-500">
+        <h3 className="oa-h3 oa-mb-1">Attendance Settings</h3>
+        <p className="oa-text-sm oa-text-slate-500">
           Configure attendance requirements and visibility rules
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="pa-form-grid">
+      <form onSubmit={handleSubmit(onSubmit)} className="oa-form-grid">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
             {error}
@@ -161,10 +161,10 @@ export default function AttendanceSection({
           </div>
         )}
 
-        <div className="pa-checkbox-group">
-          <h4 className="pa-h4 pa-mb-3">Attendance Requirements</h4>
+        <div className="oa-checkbox-group">
+          <h4 className="oa-h4 oa-mb-3">Attendance Requirements</h4>
 
-          <div className="pa-checkbox-row">
+          <div className="oa-checkbox-row">
             <Controller
               name="required_for_practice"
               control={control}
@@ -179,7 +179,7 @@ export default function AttendanceSection({
             />
           </div>
 
-          <div className="pa-checkbox-row">
+          <div className="oa-checkbox-row">
             <Controller
               name="required_for_game"
               control={control}
@@ -194,7 +194,7 @@ export default function AttendanceSection({
             />
           </div>
 
-          <div className="pa-checkbox-row">
+          <div className="oa-checkbox-row">
             <Controller
               name="required_for_meeting"
               control={control}
@@ -211,7 +211,7 @@ export default function AttendanceSection({
         </div>
 
         <div>
-          <h4 className="pa-h4 pa-mb-3">Submission & Locking</h4>
+          <h4 className="oa-h4 oa-mb-3">Submission & Locking</h4>
 
           <Controller
             name="submission_deadline_hours"
@@ -246,8 +246,8 @@ export default function AttendanceSection({
           />
         </div>
 
-        <div className="pa-checkbox-group">
-          <div className="pa-checkbox-row">
+        <div className="oa-checkbox-group">
+          <div className="oa-checkbox-row">
             <Controller
               name="allow_admin_override"
               control={control}
@@ -262,7 +262,7 @@ export default function AttendanceSection({
             />
           </div>
 
-          <div className="pa-checkbox-row">
+          <div className="oa-checkbox-row">
             <Controller
               name="enable_coach_reminders"
               control={control}
@@ -278,10 +278,10 @@ export default function AttendanceSection({
           </div>
         </div>
 
-        <div className="pa-checkbox-group">
-          <h4 className="pa-h4 pa-mb-3">Parent Visibility</h4>
+        <div className="oa-checkbox-group">
+          <h4 className="oa-h4 oa-mb-3">Parent Visibility</h4>
 
-          <div className="pa-checkbox-row">
+          <div className="oa-checkbox-row">
             <Controller
               name="parent_can_view_own_child"
               control={control}
@@ -296,7 +296,7 @@ export default function AttendanceSection({
             />
           </div>
 
-          <div className="pa-checkbox-row">
+          <div className="oa-checkbox-row">
             <Controller
               name="parent_can_view_team_attendance"
               control={control}
@@ -311,7 +311,7 @@ export default function AttendanceSection({
             />
           </div>
 
-          <div className="pa-checkbox-row">
+          <div className="oa-checkbox-row">
             <Controller
               name="parent_can_submit_attendance"
               control={control}
@@ -327,7 +327,7 @@ export default function AttendanceSection({
           </div>
         </div>
 
-        <div className="pa-form-actions">
+        <div className="oa-form-actions">
           <Button
             type="button"
             variant="ghost"

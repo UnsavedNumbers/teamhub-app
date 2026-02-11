@@ -6,16 +6,16 @@ import { useTeamParams } from '../../hooks/useRouteParams'
 import { getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 import { 
   AdminPageHeader,
   Card, 
   Button, 
   Select, 
-  ConfirmDialog
-} from '../../components/platformAdmin'
-import OrgDataTable from '../../components/admin/OrgDataTable'
-import type { ColumnConfig } from '../../components/admin/OrgDataTable'
-import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+  ConfirmDialog,
+  OrgDataTable,
+  type ColumnConfig
+} from '../../components/admin'
 
 interface Season {
   id: string
@@ -314,7 +314,7 @@ export default function Roster() {
         title="Team Roster"
         breadcrumbs={breadcrumbs}
         actions={
-          <div className="pa-flex pa-gap-2">
+          <div className="oa-flex oa-gap-2">
             <Button onClick={() => navigate(`/admin/athletes/import?teamId=${teamId}&seasonId=${selectedSeason}`)} variant="secondary" icon="upload_file">
               Import Athletes
             </Button>
@@ -325,7 +325,7 @@ export default function Roster() {
         }
       />
 
-      <Card className="pa-mb-4">
+      <Card className="oa-mb-4">
         <Select 
           label="Season"
           value={selectedSeason}
@@ -361,13 +361,13 @@ export default function Roster() {
           onClick={() => setShowAddModal(false)}
         >
           <div 
-            className="pa-card" 
-            style={{ width: '100%', maxWidth: '450px', padding: 'var(--pa-space-5)' }}
+            className="oa-card" 
+            style={{ width: '100%', maxWidth: '450px', padding: 'var(--oa-space-5)' }}
             onClick={e => e.stopPropagation()}
           >
-            <h2 className="pa-h2 pa-mb-4">ADD PLAYER</h2>
-            <p className="pa-body-m pa-mb-5">Player selection logic would be implemented here.</p>
-            <div className="pa-flex pa-justify-end">
+            <h2 className="oa-h2 oa-mb-4">ADD PLAYER</h2>
+            <p className="oa-body-m oa-mb-5">Player selection logic would be implemented here.</p>
+            <div className="oa-flex oa-justify-end">
               <Button onClick={() => setShowAddModal(false)}>Close</Button>
             </div>
           </div>

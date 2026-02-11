@@ -14,6 +14,7 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
 import EmptyState from '@/components/platformAdmin/EmptyState'
 import PublicUrlShare from '@/components/ticketing/PublicUrlShare'
+import '../../styles/orgAdmin.css'
 
 async function hashToken(token: string): Promise<string> {
   const encoder = new TextEncoder()
@@ -138,7 +139,7 @@ export default function TicketedEventDetail() {
 
   if (!id) {
     return (
-      <div className="pa-page-container">
+      <div className="oa-page-container">
         <EmptyState
           icon="event"
           title="Event missing"
@@ -152,20 +153,20 @@ export default function TicketedEventDetail() {
 
   if (eventLoading && !event) {
     return (
-      <div className="pa-page-container">
+      <div className="oa-page-container">
         <div style={{ padding: '24px' }}>
-          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div className="oa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '32px' }}>
-            <div className="pa-skeleton" style={{ height: '250px' }} />
+            <div className="oa-skeleton" style={{ height: '250px' }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="pa-skeleton" style={{ height: '60px' }} />
+                <div key={i} className="oa-skeleton" style={{ height: '60px' }} />
               ))}
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="pa-skeleton" style={{ height: '200px' }} />
+              <div key={i} className="oa-skeleton" style={{ height: '200px' }} />
             ))}
           </div>
         </div>
@@ -175,7 +176,7 @@ export default function TicketedEventDetail() {
 
   if (!event) {
     return (
-      <div className="pa-page-container">
+      <div className="oa-page-container">
         <EmptyState
           icon="event_busy"
           title={eventError ? 'Unable to load event' : 'Event not found'}
@@ -194,7 +195,7 @@ export default function TicketedEventDetail() {
     : [event.venue_city, event.venue_state].filter(Boolean).join(', ') || 'TBD'
 
   return (
-    <div className="pa-page-container">
+    <div className="oa-page-container">
       <AdminPageHeader
         title={event.title}
         subtitle={`Status: ${event.status}`}
@@ -217,33 +218,33 @@ export default function TicketedEventDetail() {
         {event.description && <p className="oa-page-description">{event.description}</p>}
       </AdminPageHeader>
 
-      <div className="pa-space-y-6">
-        <div className="pa-grid pa-grid-cols-1 md:pa-grid-cols-2 pa-gap-6">
-          <div className="pa-card">
-            <h2 className="pa-card-title">Event Details</h2>
-            <div className="pa-info-grid">
+      <div className="oa-space-y-6">
+        <div className="oa-grid oa-grid-cols-1 md:oa-grid-cols-2 oa-gap-6">
+          <div className="oa-card">
+            <h2 className="oa-card-title">Event Details</h2>
+            <div className="oa-info-grid">
               <div>
-                <span className="pa-info-label">Date</span>
+                <span className="oa-info-label">Date</span>
                 <span>{eventDateRange}</span>
               </div>
               <div>
-                <span className="pa-info-label">Venue</span>
+                <span className="oa-info-label">Venue</span>
                 <span>{venueLabel}</span>
               </div>
               <div>
-                <span className="pa-info-label">Timezone</span>
+                <span className="oa-info-label">Timezone</span>
                 <span>{event.timezone}</span>
               </div>
               <div>
-                <span className="pa-info-label">Sales window</span>
+                <span className="oa-info-label">Sales window</span>
                 <span>{salesWindow}</span>
               </div>
               <div>
-                <span className="pa-info-label">Team</span>
+                <span className="oa-info-label">Team</span>
                 <span>{event.team_id ? event.team_id : 'Organization wide'}</span>
               </div>
               <div>
-                <span className="pa-info-label">Last updated</span>
+                <span className="oa-info-label">Last updated</span>
                 <span>{new Date(event.updated_at).toLocaleString()}</span>
               </div>
             </div>
@@ -257,18 +258,18 @@ export default function TicketedEventDetail() {
               description="Share this link with guests so they can buy tickets."
             />
           ) : (
-            <div className="pa-card pa-flex pa-flex-col pa-gap-3 pa-justify-center pa-p-8">
-              <h2 className="pa-card-title">Public link</h2>
-              <p className="pa-text-muted">
+            <div className="oa-card oa-flex oa-flex-col oa-gap-3 oa-justify-center oa-p-8">
+              <h2 className="oa-card-title">Public link</h2>
+              <p className="oa-text-muted">
                 Publish this event to unlock the public sharing toolkit and allow guests to reserve tickets.
               </p>
             </div>
           )}
         </div>
 
-        <div className="pa-card">
+        <div className="oa-card">
           <div className="flex justify-between items-center gap-2 mb-4">
-            <h2 className="pa-card-title">Ticket Types</h2>
+            <h2 className="oa-card-title">Ticket Types</h2>
             <OrgAdminButton
               as={Link}
               to={addTicketTypePath}
@@ -280,11 +281,11 @@ export default function TicketedEventDetail() {
           </div>
 
           {ticketTypesLoading ? (
-            <div className="pa-flex pa-justify-center pa-py-9">
-              <span className="pa-spinner" style={{ width: '32px', height: '32px', borderWidth: '3px' }} />
+            <div className="oa-flex oa-justify-center oa-py-9">
+              <span className="oa-spinner" style={{ width: '32px', height: '32px', borderWidth: '3px' }} />
             </div>
           ) : ticketTypesList.length === 0 ? (
-            <div className="pa-p-8">
+            <div className="oa-p-8">
               <EmptyState
                 icon="confirmation_number"
                 title="No ticket types yet"
@@ -294,8 +295,8 @@ export default function TicketedEventDetail() {
               />
             </div>
           ) : (
-            <div className="pa-table-container">
-              <table className="pa-table">
+            <div className="oa-table-container">
+              <table className="oa-table">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -315,7 +316,7 @@ export default function TicketedEventDetail() {
                           : 'Unlimited'}
                       </td>
                       <td>
-                        <span className={`pa-badge pa-badge-${type.is_active ? 'success' : 'default'}`}>
+                        <span className={`oa-badge oa-badge-${type.is_active ? 'success' : 'default'}`}>
                           {type.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
