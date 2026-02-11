@@ -9,18 +9,18 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-.sport-detail-page .sport-detail-hero-link--ghost .pa-btn {
+.sport-detail-page .sport-detail-hero-link--ghost .oa-btn {
   color: rgba(255, 255, 255, 0.95);
   border-color: rgba(255, 255, 255, 0.35);
 }
 
-.sport-detail-page .sport-detail-hero-link--ghost .pa-btn:hover:not(:disabled) {
+.sport-detail-page .sport-detail-hero-link--ghost .oa-btn:hover:not(:disabled) {
   color: #fff;
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.5);
 }
 
-.sport-detail-page .sport-detail-hero-link--ghost .pa-btn:focus-visible {
+.sport-detail-page .sport-detail-hero-link--ghost .oa-btn:focus-visible {
   outline-color: rgba(255, 255, 255, 0.7);
 }
 
@@ -39,32 +39,32 @@
 }
 
 /* Danger (Remove Icon) button always visible in light mode — solid background + white text */
-.sport-detail-page .pa-btn--danger {
+.sport-detail-page .oa-btn--danger {
   background: var(--org-status-error, var(--pa-danger, #c62828)) !important;
   color: var(--org-status-error-text, var(--pa-white)) !important;
   border: none;
 }
 
-.sport-detail-page .pa-btn--danger:hover:not(:disabled) {
+.sport-detail-page .oa-btn--danger:hover:not(:disabled) {
   background: var(--org-status-error-hover, #b71c1c) !important;
   color: var(--org-status-error-text, var(--pa-white)) !important;
 }
 
-.sport-detail-page .pa-btn--danger .material-symbols-outlined {
+.sport-detail-page .oa-btn--danger .material-symbols-outlined {
   color: inherit;
 }
 
-html.dark .sport-detail-page .pa-btn--danger {
+html.dark .sport-detail-page .oa-btn--danger {
   background: var(--org-status-error, var(--pa-danger)) !important;
   color: var(--org-status-error-text, #fff) !important;
 }
 
-html.dark .sport-detail-page .pa-btn--danger:hover:not(:disabled) {
+html.dark .sport-detail-page .oa-btn--danger:hover:not(:disabled) {
   background: var(--org-status-error-hover, #b71c1c) !important;
   color: var(--org-status-error-text, #fff) !important;
 }
 
-html.dark .sport-detail-page .pa-btn--danger .material-symbols-outlined {
+html.dark .sport-detail-page .oa-btn--danger .material-symbols-outlined {
   color: inherit;
 }
 

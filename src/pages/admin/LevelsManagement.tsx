@@ -13,12 +13,13 @@ import { getLevels, deleteLevel } from '../../data/services/levelsService'
 import { getPrograms } from '../../data/services/sportsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Level, Program, Team } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, Select, ConfirmDialog, EmptyState, Badge, InlineNotice } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, Select, ConfirmDialog, EmptyState, Badge, InlineNotice } from '../../components/admin'
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import { cn } from '../../utils/cn'
+import '../../styles/orgAdmin.css'
 
 export default function LevelsManagement() {
   const { context, isReady } = useUserContext()
@@ -218,7 +219,7 @@ export default function LevelsManagement() {
         label: 'Level Name',
         sortable: true,
         render: (row) => (
-             <div className="pa-font-bold pa-text-slate-900">{row.name}</div>
+             <div className="oa-font-bold oa-text-slate-900">{row.name}</div>
         )
     },
     {
@@ -234,14 +235,14 @@ export default function LevelsManagement() {
         id: 'level_type',
         label: 'Type',
         sortable: true,
-        render: (row) => <span className="pa-text-sm pa-text-slate-500">{levelTypeLabel(row.level_type)}</span>
+        render: (row) => <span className="oa-text-sm oa-text-slate-500">{levelTypeLabel(row.level_type)}</span>
     },
     {
         id: 'eligibility',
         label: 'Eligibility',
         render: (row) => {
             const eligibility = row.age_min && row.age_max ? `${row.age_min}-${row.age_max} years` : row.grade_min && row.grade_max ? `Grades ${row.grade_min}-${row.grade_max}` : row.description || '—'
-            return <span className="pa-text-sm pa-text-slate-500">{eligibility}</span>
+            return <span className="oa-text-sm oa-text-slate-500">{eligibility}</span>
         }
     },
     {
@@ -260,7 +261,7 @@ export default function LevelsManagement() {
         render: (row) => {
             const teamCount = teams.filter((t) => t.level_id === row.id).length
             return (
-                <div className="pa-flex pa-items-center pa-justify-end pa-gap-2">
+                <div className="oa-flex oa-items-center oa-justify-end oa-gap-2">
                     <Button
                         variant="ghost"
                         size="dense"
@@ -325,14 +326,14 @@ export default function LevelsManagement() {
 
   if (loading && !refreshing) {
     return (
-      <div className="pa-root">
-        <div className="pa-skeleton pa-mb-8" style={{ width: '100%', height: '300px' }} />
+      <div className="oa-root">
+        <div className="oa-skeleton oa-mb-8" style={{ width: '100%', height: '300px' }} />
       </div>
     )
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <OfflineBanner />
       <AdminPageHeader
         title="Levels"
@@ -359,7 +360,7 @@ export default function LevelsManagement() {
             </Button>
           }
           onClose={() => setError(null)}
-          className="pa-mb-6"
+          className="oa-mb-6"
         />
       )}
 
@@ -368,7 +369,7 @@ export default function LevelsManagement() {
           tone="success"
           title={successMessage}
           onClose={() => setSuccessMessage(null)}
-          className="pa-mb-6"
+          className="oa-mb-6"
         />
       )}
 
@@ -377,7 +378,7 @@ export default function LevelsManagement() {
           tone="error"
           title={actionError}
           onClose={() => setActionError(null)}
-          className="pa-mb-6"
+          className="oa-mb-6"
         />
       )}
 
@@ -391,7 +392,7 @@ export default function LevelsManagement() {
           >
             <Link
               to={`${getLink('admin.organization.forms')}?type=program&returnUrl=${encodeURIComponent(getLink('admin.organization.levels'))}`}
-              className={loading || refreshing ? 'pa-pointer-events-none pa-opacity-50' : ''}
+              className={loading || refreshing ? 'oa-pointer-events-none oa-opacity-50' : ''}
             >
               <Button disabled={loading || refreshing}>
                 Add a Program
@@ -401,9 +402,9 @@ export default function LevelsManagement() {
         </Card>
       ) : (
         <>
-          <Card className="pa-mb-6 pa-filter-section">
-            <div className="pa-filter-row">
-              <div className="pa-filter-control">
+          <Card className="oa-mb-6 oa-filter-section">
+            <div className="oa-filter-row">
+              <div className="oa-filter-control">
                 <Select
                   label="Filter by program"
                   value={filterProgramId}
@@ -418,10 +419,10 @@ export default function LevelsManagement() {
                   ]}
                 />
               </div>
-              <div className="pa-filter-actions">
+              <div className="oa-filter-actions">
                 <Link
                   to={`${getLink('admin.organization.forms')}?type=level&returnUrl=${encodeURIComponent(getLink('admin.levels.list'))}`}
-                  className={cn({ 'pa-pointer-events-none pa-opacity-50': isOffline || USE_FAKE_DATA || !canCreateLevel || loading || refreshing })}
+                  className={cn({ 'oa-pointer-events-none oa-opacity-50': isOffline || USE_FAKE_DATA || !canCreateLevel || loading || refreshing })}
                   onClick={(e) => {
                     if (isOffline || USE_FAKE_DATA || !canCreateLevel || loading || refreshing) {
                       e.preventDefault()

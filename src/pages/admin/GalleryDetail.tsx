@@ -27,12 +27,13 @@ import { buildPhotoQuery } from '@/utils/buildPhotoQuery'
 import { USE_FAKE_DATA } from '@/data/config'
 import { showError, showSuccess } from '@/utils/toast'
 import { PhotoUploadZone } from '@/components/admin/galleries/PhotoUploadZone'
-import { PhotoGalleryGrid } from '@/components/admin/galleries/PhotoGalleryGrid'
+import { OrgAdminGalleryView } from '@/components/orgAdmin/OrgAdminGalleryView'
 import { GalleryEditModal } from '@/components/admin/galleries/GalleryEditModal'
 import { TaggingSlideout } from '@/components/gallery/TaggingSlideout'
 import { BulkTaggingModal } from '@/components/gallery/BulkTaggingModal'
 import { AlbumManager } from '@/components/gallery/AlbumManager'
 import { getLink } from '@/utils/routes'
+import '../../styles/orgAdmin.css'
 
 const MAX_PHOTOS_PER_GALLERY = 25
 const GRID_PAGE_SIZE_MOBILE = 30
@@ -78,6 +79,7 @@ export default function GalleryDetail() {
   const [taggingPhotoIndex, setTaggingPhotoIndex] = useState<number>(-1)
   const [lightboxIndex, setLightboxIndex] = useState(-1)
   const [bulkTaggingPhotos, setBulkTaggingPhotos] = useState<GalleryPhoto[]>([])
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const mountedRef = useRef(true)
   const loadingMoreRef = useRef(false)
   const photoFeedRef = useRef<HTMLDivElement>(null)
@@ -415,18 +417,18 @@ export default function GalleryDetail() {
 
   if (loading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <div style={{ padding: '24px' }}>
-          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
-          <div className="pa-skeleton" style={{ height: '400px', borderRadius: '8px', marginBottom: '32px' }} />
+          <div className="oa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div className="oa-skeleton" style={{ height: '400px', borderRadius: '8px', marginBottom: '32px' }} />
           <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="pa-skeleton" style={{ height: '40px', width: '100px' }} />
+              <div key={i} className="oa-skeleton" style={{ height: '40px', width: '100px' }} />
             ))}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
             {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="pa-skeleton" style={{ height: '150px' }} />
+              <div key={i} className="oa-skeleton" style={{ height: '150px' }} />
             ))}
           </div>
         </div>
@@ -438,13 +440,13 @@ export default function GalleryDetail() {
   if (!gallery) {
     return (
       <div className="org-structure-page">
-        <div className="pa-p-6">
+        <div className="oa-p-6">
           <InlineNotice
             tone="error"
             title={t('photos.errors.galleryNotFound')}
             message={t('photos.errors.galleryNotFound')}
           />
-          <div className="pa-mt-4">
+          <div className="oa-mt-4">
             <Button variant="secondary" onClick={() => navigate(getLink('admin.photos.list'))}>
               {t('common.goBack')}
             </Button>
@@ -466,7 +468,7 @@ export default function GalleryDetail() {
           { label: gallery?.name || t('photos.allGalleries') },
         ]}
         actions={
-          <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
+          <div style={{ display: 'flex', gap: 'var(--oa-space-3)' }}>
             <Button variant="secondary" onClick={handleEdit}>
               {t('photos.updateAlbumInfo')}
             </Button>
@@ -477,13 +479,13 @@ export default function GalleryDetail() {
         }
       >
         {entityMeta?.link && (
-          <div className="pa-text-sm pa-text-muted">
+          <div className="oa-text-sm oa-text-muted">
             <Link to={entityMeta.link}>{t('photos.linkedTo')} {entityMeta.label}</Link>
           </div>
         )}
       </AdminPageHeader>
 
-      <div className="pa-space-y-6">
+      <div className="oa-space-y-6">
 
         <>
           {/* Stats */}
@@ -495,15 +497,15 @@ export default function GalleryDetail() {
               </div>
                 <div className="org-stat-box">
                   <span className="org-stat-label">{t('photos.pendingApproval.badge')}</span>
-                  <span className="org-stat-value" style={{ color: 'var(--pa-theme-action-primary)' }}>{String(photoStats.pending).padStart(2, '0')}</span>
+                  <span className="org-stat-value" style={{ color: 'var(--oa-theme-action-primary)' }}>{String(photoStats.pending).padStart(2, '0')}</span>
                 </div>
                 <div className="org-stat-box">
                   <span className="org-stat-label">{t('common.approved')}</span>
-                  <span className="org-stat-value" style={{ color: 'var(--pa-success)' }}>{String(photoStats.approved).padStart(2, '0')}</span>
+                  <span className="org-stat-value" style={{ color: 'var(--oa-success)' }}>{String(photoStats.approved).padStart(2, '0')}</span>
                 </div>
                 <div className="org-stat-box">
                   <span className="org-stat-label">{t('photos.stats.flagged')}</span>
-                  <span className="org-stat-value" style={{ color: 'var(--pa-danger)' }}>{String(photoStats.flagged).padStart(2, '0')}</span>
+                  <span className="org-stat-value" style={{ color: 'var(--oa-danger)' }}>{String(photoStats.flagged).padStart(2, '0')}</span>
                 </div>
               </div>
             </section>
@@ -529,7 +531,7 @@ export default function GalleryDetail() {
             {/* Upload Zone */}
             {!photoStats.limitReached && (
               <Card title={t('photos.upload.title')} className="oa-card oa-card--no-padding">
-                <div style={{ padding: 'var(--pa-space-6)' }}>
+                <div style={{ padding: 'var(--oa-space-6)' }}>
                   <PhotoUploadZone 
                     galleryId={id} 
                     onComplete={() => {
@@ -544,8 +546,8 @@ export default function GalleryDetail() {
             )}
 
             {gallery && !USE_FAKE_DATA && (
-              <Card title={t('photos.albums.title')} className="oa-card oa-card--no-padding pa-mt-3">
-                <div style={{ padding: 'var(--pa-space-6)' }}>
+              <Card title={t('photos.albums.title')} className="oa-card oa-card--no-padding oa-mt-3">
+                <div style={{ padding: 'var(--oa-space-6)' }}>
                   <AlbumManager
                     galleryId={gallery.id}
                     onAlbumsUpdated={(next) => setAlbums(next)}
@@ -557,14 +559,40 @@ export default function GalleryDetail() {
             {/* Photo Feed Section */}
             <Card 
               title={t('photos.photoFeed')}
-              className="oa-card oa-card--no-padding pa-mt-3"
+              className="oa-card oa-card--no-padding oa-mt-3"
               actions={
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  {selectedIds.length > 0 && (
+                    <>
+                      <span className="oa-text-sm oa-text-muted oa-mr-2">{selectedIds.length} selected</span>
+                      <Button variant="danger" size="small" onClick={() => handleDeletePhotos(selectedIds)}>
+                        Delete
+                      </Button>
+                      <Button variant="secondary" size="small" onClick={() => {
+                        const selectedPhotos = photos.filter(p => selectedIds.includes(p.id))
+                        setBulkTaggingPhotos(selectedPhotos)
+                        setSelectedIds([])
+                      }}>
+                        Tag
+                      </Button>
+                      <Button variant="secondary" size="small" onClick={() => {
+                        // Approve
+                         moderatePhotos(context!, selectedIds, 'approve').then(() => {
+                           loadPhotos(true)
+                           showSuccess(t('photos.success.photosApproved'))
+                           setSelectedIds([])
+                         })
+                      }}>
+                        Approve
+                      </Button>
+                    </>
+                  )}
+                  <div style={{ width: '1px', height: '24px', background: 'var(--oa-border-subtle)', margin: '0 8px' }}></div>
                   <button 
                     onClick={() => setViewMode('grid')}
                     style={{ 
                       padding: '8px', 
-                      color: viewMode === 'grid' ? 'var(--pa-theme-action-primary)' : 'var(--pa-text-muted)',
+                      color: viewMode === 'grid' ? 'var(--oa-theme-action-primary)' : 'var(--oa-text-muted)',
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer'
@@ -576,7 +604,7 @@ export default function GalleryDetail() {
                     onClick={() => setViewMode('list')}
                     style={{ 
                       padding: '8px', 
-                      color: viewMode === 'list' ? 'var(--pa-theme-action-primary)' : 'var(--pa-text-muted)',
+                      color: viewMode === 'list' ? 'var(--oa-theme-action-primary)' : 'var(--oa-text-muted)',
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer'
@@ -587,8 +615,8 @@ export default function GalleryDetail() {
                 </div>
               }
             >
-              <div style={{ padding: 'var(--pa-space-6)' }}>
-                <div ref={photoFeedRef} id="photo-feed" className="pa-mb-4">
+              <div style={{ padding: 'var(--oa-space-6)' }}>
+                <div ref={photoFeedRef} id="photo-feed" className="oa-mb-4">
                   <PhotoFilterBar
                     filters={filters}
                     searchValue={localSearchQuery}
@@ -602,25 +630,20 @@ export default function GalleryDetail() {
                   />
                 </div>
                 {photos.length === 0 ? (
-                  <div className="pa-text-center pa-py-12 pa-text-muted">
+                  <div className="oa-text-center oa-py-12 oa-text-muted">
                     <p>{t('photos.stats.emptyGallery')}</p>
-                    <p className="pa-text-sm pa-mt-1">{t('photos.upload.title')}</p>
+                    <p className="oa-text-sm oa-mt-1">{t('photos.upload.title')}</p>
                   </div>
                 ) : (
                   <>
-                    <PhotoGalleryGrid
+                    <OrgAdminGalleryView
+                      gallery={gallery}
                       photos={photos}
-                      coverPhotoId={gallery?.cover_photo_id || undefined}
-                      onDelete={handleDeletePhotos}
-                      showPendingBadge={gallery?.require_approval || false}
+                      loading={loading}
                       viewMode={viewMode}
-                      onPhotoClick={(photo, index) => {
-                        setTaggingPhoto(photo)
-                        setTaggingPhotoIndex(index)
-                      }}
-                      onBulkTag={(selectedPhotos) => {
-                        setBulkTaggingPhotos(selectedPhotos)
-                      }}
+                      onViewModeChange={setViewMode}
+                      renderToolbar={() => null} // We use the page's filter bar
+                      onDelete={handleDeletePhotos}
                       onModerate={async (ids, action) => {
                         if (!context || !gallery) return
                         if (USE_FAKE_DATA) {
@@ -640,13 +663,20 @@ export default function GalleryDetail() {
                         loadPhotos(true)
                         loadGallery()
                       }}
+                      onPhotoClick={(photo, index) => {
+                        setTaggingPhoto(photo)
+                        setTaggingPhotoIndex(index)
+                      }}
+                      selectionMode="multiple"
+                      selectedIds={selectedIds}
+                      onSelectionChange={setSelectedIds}
                     />
                     {viewMode === 'list' && (
-                      <div className="pa-flex pa-justify-between pa-items-center pa-mt-6">
-                        <div className="pa-flex pa-items-center pa-gap-2 whitespace-nowrap">
-                          <span className="pa-text-sm pa-text-muted mr-2">{t('common.table.rowsPerPage')}</span>
+                      <div className="oa-flex oa-justify-between oa-items-center oa-mt-6">
+                        <div className="oa-flex oa-items-center oa-gap-2 whitespace-nowrap">
+                          <span className="oa-text-sm oa-text-muted mr-2">{t('common.table.rowsPerPage')}</span>
                           <select
-                            className="pa-input pa-w-28"
+                            className="oa-input oa-w-28"
                             value={rowsPerPage}
                             onChange={(e) => {
                               setRowsPerPage(Number(e.target.value))
@@ -659,7 +689,7 @@ export default function GalleryDetail() {
                           </select>
                         </div>
                         {(page > 1 || hasMore) && (
-                          <div className="pa-flex pa-items-center pa-gap-2">
+                          <div className="oa-flex oa-items-center oa-gap-2">
                             <Button
                               variant="secondary"
                               size="small"
@@ -668,7 +698,7 @@ export default function GalleryDetail() {
                             >
                               {t('common.table.previousPage')}
                             </Button>
-                            <span className="pa-text-sm">{page}</span>
+                            <span className="oa-text-sm">{page}</span>
                             <Button
                               variant="secondary"
                               size="small"
@@ -682,7 +712,7 @@ export default function GalleryDetail() {
                       </div>
                     )}
                     {viewMode === 'grid' && loadingMore && (
-                      <div className="pa-text-center pa-mt-6 pa-text-muted">{t('common.loading')}</div>
+                      <div className="oa-text-center oa-mt-6 oa-text-muted">{t('common.loading')}</div>
                     )}
                   </>
                 )}

@@ -168,11 +168,11 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
       label: t('admin.staff.user'),
       render: (row) => (
         <div>
-          <div className="pa-body-m" style={{ fontWeight: 600 }}>
+          <div className="oa-body-m" style={{ fontWeight: 600 }}>
             {row.user?.display_name || `${row.user?.first_name || ''} ${row.user?.last_name || ''}`.trim() || t('common.unknown')}
           </div>
           {row.user?.email && (
-            <div className="pa-body-s pa-text-muted">{row.user.email}</div>
+            <div className="oa-body-s oa-text-muted">{row.user.email}</div>
           )}
         </div>
       ),
@@ -190,19 +190,19 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
           })
         
         return (
-          <div className="pa-flex pa-gap-1 pa-flex-wrap">
+          <div className="oa-flex oa-gap-1 oa-flex-wrap">
             {activePerms.length > 0 ? (
               activePerms.map((perm) => (
                 <span
                   key={perm}
-                  className="pa-badge pa-badge--neutral"
+                  className="oa-badge oa-badge--neutral"
                   style={{ fontSize: '11px', textTransform: 'capitalize' }}
                 >
                   {perm}
                 </span>
               ))
             ) : (
-              <span className="pa-text-muted">{t('admin.staff.noPermissions')}</span>
+              <span className="oa-text-muted">{t('admin.staff.noPermissions')}</span>
             )}
           </div>
         )
@@ -212,7 +212,7 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
       id: 'status',
       label: t('admin.staff.status'),
       render: (row) => (
-        <span className={`pa-badge ${row.is_active ? 'pa-badge--success' : 'pa-badge--neutral'}`}>
+        <span className={`oa-badge ${row.is_active ? 'oa-badge--success' : 'oa-badge--neutral'}`}>
           {row.is_active ? t('admin.staff.active') : t('admin.staff.inactive')}
         </span>
       ),
@@ -227,7 +227,7 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
       label: t('admin.staff.actions'),
       align: 'right',
       render: (row) => (
-        <div className="pa-flex pa-gap-2" style={{ justifyContent: 'flex-end' }}>
+        <div className="oa-flex oa-gap-2" style={{ justifyContent: 'flex-end' }}>
           <Button
             variant="ghost"
             size="compact"
@@ -261,10 +261,10 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
 
   return (
     <div>
-      <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
+      <div className="oa-flex oa-justify-between oa-items-center oa-mb-4">
         <div>
-          <h2 className="pa-heading-m">{t('admin.staff.title')}</h2>
-          <p className="pa-body-s pa-text-muted">
+          <h2 className="oa-heading-m">{t('admin.staff.title')}</h2>
+          <p className="oa-body-s oa-text-muted">
             {t('admin.staff.description')}
           </p>
         </div>
@@ -294,7 +294,7 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
             </Button>
           }
           onClose={() => setError(null)}
-          className="pa-mb-4"
+          className="oa-mb-4"
         />
       )}
 

@@ -3,8 +3,8 @@ import { OrgAdminButton } from './OrgAdminButton'
 
 interface BulkActionsBarProps {
     selectedCount: number
-    onCancel: () => void
-    onReschedule: () => void
+    onCancel?: () => void
+    onReschedule?: () => void
     onDelete: () => void
     onClearSelection: () => void
 }
@@ -17,6 +17,9 @@ export default function BulkActionsBar({
     onClearSelection,
 }: BulkActionsBarProps) {
     if (selectedCount === 0) return null
+
+    // Determine context by which handlers are provided
+    const isEventContext = !!onCancel || !!onReschedule
 
     return (
         <div
@@ -34,7 +37,7 @@ export default function BulkActionsBar({
                     {/* Left: Selection Count */}
                     <div className={cn('flex items-center gap-3')}>
                         <span className="font-bold text-lg">
-                            {selectedCount} {selectedCount === 1 ? 'event' : 'events'} selected
+                            {selectedCount} {selectedCount === 1 ? (isEventContext ? 'event' : 'athlete') : (isEventContext ? 'events' : 'athletes')} selected
                         </span>
                         <button
                             onClick={onClearSelection}
@@ -47,24 +50,31 @@ export default function BulkActionsBar({
 
                     {/* Right: Actions */}
                     <div className={cn('flex items-center gap-2 flex-nowrap')}>
-                        <OrgAdminButton
-                            onClick={onCancel}
-                            variant="ghost"
-                            icon="cancel"
-                            className="hover:bg-white/10 whitespace-nowrap"
-                            style={{ color: 'inherit' }}
-                        >
-                            Cancel Events
-                        </OrgAdminButton>
-                        <OrgAdminButton
-                            onClick={onReschedule}
-                            variant="ghost"
-                            icon="schedule"
-                            className="hover:bg-white/10 whitespace-nowrap"
-                            style={{ color: 'inherit' }}
-                        >
-                            Reschedule
-                        </OrgAdminButton>
+                        {/* Event-specific actions */}
+                        {isEventContext && onCancel && (
+                            <OrgAdminButton
+                                onClick={onCancel}
+                                variant="ghost"
+                                icon="cancel"
+                                className="hover:bg-white/10 whitespace-nowrap"
+                                style={{ color: 'inherit' }}
+                            >
+                                Cancel Events
+                            </OrgAdminButton>
+                        )}
+                        {isEventContext && onReschedule && (
+                            <OrgAdminButton
+                                onClick={onReschedule}
+                                variant="ghost"
+                                icon="schedule"
+                                className="hover:bg-white/10 whitespace-nowrap"
+                                style={{ color: 'inherit' }}
+                            >
+                                Reschedule
+                            </OrgAdminButton>
+                        )}
+                        
+                        {/* Delete - works for all contexts */}
                         <OrgAdminButton
                             onClick={onDelete}
                             variant="danger"

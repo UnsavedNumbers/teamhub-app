@@ -11,14 +11,14 @@ import { getLink, RouteKeys } from '../../utils/routes'
 import { 
   AdminPageHeader, 
   Badge, 
-  StatCard, 
   Button,
   Card,
-} from '../../components/platformAdmin'
-import OrgDataTable from '../../components/admin/OrgDataTable'
-import type { ColumnConfig } from '../../components/admin/OrgDataTable'
+  OrgDataTable,
+  type ColumnConfig
+} from '../../components/admin'
 import { FeatureGatedButton } from '../../components/FeatureGatedButton'
 import { cn } from '../../utils/cn'
+import '../../styles/orgAdmin.css'
 
 interface PaymentDisplay {
   id: string
@@ -257,21 +257,21 @@ export default function Payments() {
     { 
         id: 'child_name', 
         label: 'Athlete',
-        render: (row) => <span className="pa-font-bold pa-text-slate-900">{row.child_name}</span>
+        render: (row) => <span className="oa-font-bold oa-text-slate-900">{row.child_name}</span>
     },
     { id: 'fee_title', label: 'Fee' },
     { 
         id: 'total_display', 
         label: 'Total', 
         align: 'right',
-        render: (row) => <span className="pa-font-semibold">{row.total_display}</span>
+        render: (row) => <span className="oa-font-semibold">{row.total_display}</span>
     },
     { id: 'paid_display', label: 'Paid', align: 'right' },
     { 
       id: 'remaining_display', 
       label: 'Remaining', 
       align: 'right',
-      render: (row) => <span className="pa-font-semibold">{row.remaining_display}</span>
+      render: (row) => <span className="oa-font-semibold">{row.remaining_display}</span>
     },
     { 
       id: 'status', 
@@ -292,7 +292,7 @@ export default function Payments() {
     { 
       id: 'created_at', 
       label: 'Assigned',
-      render: (row) => <span className="pa-text-sm pa-text-slate-500">{new Date(row.created_at).toLocaleDateString()}</span>
+      render: (row) => <span className="oa-text-sm oa-text-slate-500">{new Date(row.created_at).toLocaleDateString()}</span>
     },
   ]
 
@@ -306,15 +306,15 @@ export default function Payments() {
   // Show loading state while checking Stripe
   if (stripeCheckLoading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader 
           title={t('admin.payments.title')}
           subtitle={t('admin.payments.subtitle')} 
         />
         <Card>
           <div style={{ padding: '48px', textAlign: 'center' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-n400)', animation: 'spin 1s linear infinite' }}>progress_activity</span>
-            <p style={{ marginTop: '16px', color: 'var(--pa-n500)' }}>{t('common.loading')}</p>
+            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--oa-n400)', animation: 'spin 1s linear infinite' }}>progress_activity</span>
+            <p style={{ marginTop: '16px', color: 'var(--oa-n500)' }}>{t('common.loading')}</p>
           </div>
         </Card>
       </div>
@@ -324,7 +324,7 @@ export default function Payments() {
   // Show onboarding wall if Stripe Connect is not set up
   if (!stripeConnected) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader 
           title={t('admin.payments.title')}
           subtitle={t('admin.payments.subtitle')} 
@@ -408,7 +408,7 @@ export default function Payments() {
                   fontWeight: 900, 
                   color: '#fff',
                   marginBottom: '16px',
-                  fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                  fontFamily: 'var(--oa-font-display, Oswald, sans-serif)',
                   letterSpacing: '-0.03em',
                   lineHeight: 1.1,
                   textTransform: 'uppercase',
@@ -447,7 +447,7 @@ export default function Payments() {
                     fontSize: '16px', 
                     fontWeight: 800, 
                     color: '#fff', 
-                    fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                    fontFamily: 'var(--oa-font-display, Oswald, sans-serif)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.02em',
                     marginBottom: '12px',
@@ -470,7 +470,7 @@ export default function Payments() {
                     fontSize: '16px', 
                     fontWeight: 800, 
                     color: '#fff', 
-                    fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                    fontFamily: 'var(--oa-font-display, Oswald, sans-serif)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.02em',
                     marginBottom: '12px',
@@ -493,7 +493,7 @@ export default function Payments() {
                     fontSize: '16px', 
                     fontWeight: 800, 
                     color: '#fff', 
-                    fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                    fontFamily: 'var(--oa-font-display, Oswald, sans-serif)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.02em',
                     marginBottom: '12px',
@@ -527,7 +527,7 @@ export default function Payments() {
                   fontWeight: 700, 
                   color: '#fbbf24', 
                   marginBottom: '6px', 
-                  fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                  fontFamily: 'var(--oa-font-display, Oswald, sans-serif)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                 }}>
@@ -553,7 +553,7 @@ export default function Payments() {
                 fontWeight: 900, 
                 color: '#0B0F14', 
                 marginBottom: '10px',
-                fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                fontFamily: 'var(--oa-font-display, Oswald, sans-serif)',
                 textTransform: 'uppercase',
                 letterSpacing: '-0.01em',
               }}>
@@ -591,7 +591,7 @@ export default function Payments() {
 
   // Show full payments UI when Stripe is connected
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title={t('admin.payments.title')}
         subtitle={t('admin.payments.subtitle')} 
@@ -612,34 +612,34 @@ export default function Payments() {
 
       {/* Show error message if athlete check failed */}
       {athleteCheckError && (
-        <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
-            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{athleteCheckError}</div>
+        <Card className="oa-mb-4" noPadding>
+          <div className="oa-p-4" style={{ background: 'var(--oa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--oa-danger, #ef4444)' }}>
+            <div className="oa-text-sm oa-font-medium" style={{ color: 'var(--oa-danger-dark, #991b1b)' }}>{athleteCheckError}</div>
           </div>
         </Card>
       )}
 
       {/* Show error message if payments fetch failed */}
       {paymentsError && (
-        <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
-            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{paymentsError}</div>
+        <Card className="oa-mb-4" noPadding>
+          <div className="oa-p-4" style={{ background: 'var(--oa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--oa-danger, #ef4444)' }}>
+            <div className="oa-text-sm oa-font-medium" style={{ color: 'var(--oa-danger-dark, #991b1b)' }}>{paymentsError}</div>
           </div>
         </Card>
       )}
 
       {/* Show info message when no athletes with guardians found */}
       {hasAthletes === false && !athleteCheckError && (
-        <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-4" style={{ background: 'var(--pa-info-bg, #eff6ff)', borderLeft: '4px solid var(--pa-info, #3b82f6)' }}>
-            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-info-dark, #1e40af)' }}>
+        <Card className="oa-mb-4" noPadding>
+          <div className="oa-p-4" style={{ background: 'var(--oa-info-bg, #eff6ff)', borderLeft: '4px solid var(--oa-info, #3b82f6)' }}>
+            <div className="oa-text-sm oa-font-medium" style={{ color: 'var(--oa-info-dark, #1e40af)' }}>
                 No athletes with guardians found. To assign fees, athletes must have a guardian linked to them (the guardian is responsible for payment).
             </div>
           </div>
         </Card>
       )}
 
-      <div className={cn('pa-grid', 'pa-grid-2', 'pa-gap-6', 'pa-mb-8')}>
+      <div className={cn('oa-grid', 'oa-grid-2', 'oa-gap-6', 'oa-mb-8')}>
         <StatCard 
           label="COLLECTED" 
           value={`$${stats.collected.toLocaleString()}`}
@@ -652,7 +652,7 @@ export default function Payments() {
         />
       </div>
 
-      <div className={cn('pa-flex', 'pa-gap-2', 'pa-mb-6', 'pa-mt-2')}>
+      <div className={cn('oa-flex', 'oa-gap-2', 'oa-mb-6', 'oa-mt-2')}>
         {(['all', 'unpaid', 'partial', 'paid'] as const).map((f) => (
           <Button
             key={f}

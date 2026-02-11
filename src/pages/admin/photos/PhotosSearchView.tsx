@@ -339,7 +339,7 @@ export function PhotosSearchView() {
     return (
       <div className="photos-search">
         <div className="search-loading">
-          <Card className="pa-card pa-h-64 pa-animate-pulse" />
+          <Card className="oa-card oa-h-64 oa-animate-pulse" />
         </div>
       </div>
     )
@@ -368,7 +368,7 @@ export function PhotosSearchView() {
               disabled={loading}
             />
           </div>
-          <div className="pa-flex pa-gap-2">
+          <div className="oa-flex oa-gap-2">
             {hasActiveFilters && (
               <Button 
                 variant="ghost" 
@@ -492,18 +492,18 @@ export function PhotosSearchView() {
             </div>
 
             {paginatedGalleries.length === 0 ? (
-              <Card className="pa-card pa-p-8 pa-text-center">
-                <span className="material-symbols-outlined pa-text-5xl pa-text-muted pa-mb-4">
+              <Card className="oa-card oa-p-8 oa-text-center">
+                <span className="material-symbols-outlined oa-text-5xl oa-text-muted oa-mb-4">
                   photo_library
                 </span>
-                <p className="pa-text-lg pa-font-medium pa-mb-2">
+                <p className="oa-text-lg oa-font-medium oa-mb-2">
                   {t('photos.search.noResults')}
                 </p>
                 {hasActiveFilters && (
                   <Button 
                     variant="secondary" 
                     onClick={handleClearFilters}
-                    className="pa-mt-4"
+                    className="oa-mt-4"
                   >
                     {t('photos.search.clearFilters')}
                   </Button>
@@ -527,17 +527,17 @@ export function PhotosSearchView() {
                     id: 'type', 
                     label: t('common.type'),
                     render: (row) => (
-                      <span className="pa-text-sm pa-text-muted">{row.type}</span>
+                      <span className="oa-text-sm oa-text-muted">{row.type}</span>
                     )
                   },
                   { 
                     id: 'photoCount', 
                     label: t('photos.stats.totalPhotos'),
                     render: (row) => (
-                      <span className="pa-text-sm">
+                      <span className="oa-text-sm">
                         {row.photoCount}
                         {row.pendingCount > 0 && (
-                          <span className="pa-ml-2 pa-text-xs pa-text-warning">
+                          <span className="oa-ml-2 oa-text-xs oa-text-warning">
                             (+{row.pendingCount} {t('photos.pendingApproval.badge').toLowerCase()})
                           </span>
                         )}
@@ -548,7 +548,7 @@ export function PhotosSearchView() {
                     id: 'lastModified', 
                     label: t('common.modified'),
                     render: (row) => (
-                      <span className="pa-text-sm pa-text-muted">{row.lastModified}</span>
+                      <span className="oa-text-sm oa-text-muted">{row.lastModified}</span>
                     )
                   },
                   {
@@ -564,7 +564,7 @@ export function PhotosSearchView() {
                     id: 'actions',
                     label: '',
                     render: (row) => (
-                      <div className="pa-flex pa-gap-2 pa-justify-end" onClick={(e) => e.stopPropagation()}>
+                      <div className="oa-flex oa-gap-2 oa-justify-end" onClick={(e) => e.stopPropagation()}>
                         <button 
                           className="table-more-button"
                           onClick={() => handleViewGallery(row.id)}

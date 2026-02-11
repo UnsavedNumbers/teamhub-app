@@ -7,9 +7,10 @@ import {
   AdminPageHeader,
   Card, 
   Badge,
-} from '../../components/platformAdmin'
+} from '../../components/admin'
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
+import '../../styles/orgAdmin.css'
 
 export default function AdminTryoutDetail() {
   const { tryoutId } = useParams<{ tryoutId: string }>()
@@ -50,22 +51,22 @@ export default function AdminTryoutDetail() {
 
   if (loading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <div style={{ padding: '24px' }}>
-          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div className="oa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="pa-skeleton" style={{ height: '120px' }} />
+              <div key={i} className="oa-skeleton" style={{ height: '120px' }} />
             ))}
           </div>
-          <div className="pa-skeleton" style={{ height: '400px', borderRadius: '8px' }} />
+          <div className="oa-skeleton" style={{ height: '400px', borderRadius: '8px' }} />
         </div>
       </div>
     )
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title={tryout?.title || 'Tryout Details'} 
         breadcrumbs={[
@@ -74,23 +75,23 @@ export default function AdminTryoutDetail() {
         ]}
       />
       
-      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-3 pa-gap-4 pa-mb-6">
+      <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-2 lg:oa-grid-cols-3 oa-gap-4 oa-mb-6">
         <Card>
-          <div className="pa-stat-label">Date</div>
-          <div className="pa-stat-value">{new Date(tryout?.tryout_date || '').toLocaleDateString()}</div>
+          <div className="oa-stat-label">Date</div>
+          <div className="oa-stat-value">{new Date(tryout?.tryout_date || '').toLocaleDateString()}</div>
         </Card>
         <Card>
-          <div className="pa-stat-label">Registrations</div>
-          <div className="pa-stat-value">{registrations.length}</div>
+          <div className="oa-stat-label">Registrations</div>
+          <div className="oa-stat-value">{registrations.length}</div>
         </Card>
         <Card>
-          <div className="pa-stat-label">Status</div>
-          <div className="pa-stat-value">{tryout?.status.toUpperCase()}</div>
+          <div className="oa-stat-label">Status</div>
+          <div className="oa-stat-value">{tryout?.status.toUpperCase()}</div>
         </Card>
       </div>
 
       <Card>
-        <h3 className="pa-h3 pa-mb-4">Registrations</h3>
+        <h3 className="oa-h3 oa-mb-4">Registrations</h3>
         <OrgDataTable
           columns={columns}
           rows={registrations}

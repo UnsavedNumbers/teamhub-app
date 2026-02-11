@@ -11,6 +11,7 @@ import type { UserContext } from '../fake/userContext'
 import type { Season, CreateSeasonDTO, UpdateSeasonDTO } from '../types/organization'
 import { getSeasonById, getSeasonsForOrg } from '../fake/fakeTeams'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
 
 async function simulateDelay(): Promise<void> {
   if (FAKE_DATA_DELAY_MS > 0) {
@@ -121,7 +122,7 @@ export async function getSeason(
 }
 
 export async function createSeason(
-  _context: UserContext,
+  context: UserContext,
   dto: CreateSeasonDTO
 ): Promise<{ data: Season | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
@@ -170,18 +171,43 @@ export async function createSeason(
     }
 
     const row = data as any
-    return {
-      data: {
-        id: row.id,
-        org_id: row.org_id,
-        team_id: row.team_id ?? null,
+    const season: Season = {
+      id: row.id,
+      org_id: row.org_id,
+      team_id: row.team_id ?? null,
+      name: row.name,
+      start_date: row.start_date,
+      end_date: row.end_date,
+      is_active: row.is_active ?? false,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    }
+
+    // Best-effort logging; do not block season creation.
+    const logResult = await logEvent({
+      category: 'SEASON',
+      eventType: 'SEASON_CREATED',
+      actorUserId: context.userId,
+      actorRole: deriveActorRoleFromRoles(context.roles),
+      orgId: row.org_id,
+      targetEntityType: 'season',
+      targetEntityId: row.id,
+      metadata: {
         name: row.name,
         start_date: row.start_date,
         end_date: row.end_date,
         is_active: row.is_active ?? false,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
+        sport_id: row.sport_id ?? null,
+        program_id: row.program_id ?? null,
+        source: 'seasonsService.createSeason',
       },
+    })
+    if (logResult.error) {
+      console.error('[seasonsService] Failed to log SEASON_CREATED event:', logResult.error)
+    }
+
+    return {
+      data: season,
       error: null,
     }
   } catch (err) {
@@ -226,19 +252,45 @@ export async function updateSeason(
 
     if (error) throw error
     const row = data as any
+    const season: Season = {
+      id: row.id,
+      org_id: row.org_id,
+      team_id: row.team_id ?? null,
+      name: row.name,
+      start_date: row.start_date,
+      end_date: row.end_date,
+      is_active: row.is_active ?? false,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    }
+
+    // Best-effort logging; do not block season updates.
+    const logResult = await logEvent({
+      category: 'SEASON',
+      eventType: 'SEASON_UPDATED',
+      actorUserId: context.userId,
+      actorRole: deriveActorRoleFromRoles(context.roles),
+      orgId: row.org_id,
+      targetEntityType: 'season',
+      targetEntityId: row.id,
+      metadata: {
+        updates: {
+          name: dto.name,
+          start_date: dto.start_date,
+          end_date: dto.end_date,
+          is_active: dto.is_active,
+          sport_id: dto.sport_id ?? null,
+          program_id: dto.program_id ?? null,
+        },
+        source: 'seasonsService.updateSeason',
+      },
+    })
+    if (logResult.error) {
+      console.error('[seasonsService] Failed to log SEASON_UPDATED event:', logResult.error)
+    }
 
     return {
-      data: {
-        id: row.id,
-        org_id: row.org_id,
-        team_id: row.team_id ?? null,
-        name: row.name,
-        start_date: row.start_date,
-        end_date: row.end_date,
-        is_active: row.is_active ?? false,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-      },
+      data: season,
       error: null,
     }
   } catch (err) {
@@ -280,6 +332,13 @@ export async function deleteSeason(
   }
 
   try {
+    const { data: existingSeason } = await supabase
+      .from('seasons')
+      .select('id, org_id, name, start_date, end_date, is_active')
+      .eq('id', seasonId)
+      .eq('org_id', context.orgId)
+      .maybeSingle()
+
     const { error } = await supabase
       .from('seasons')
       .delete()
@@ -287,6 +346,28 @@ export async function deleteSeason(
       .eq('org_id', context.orgId)
 
     if (error) throw error
+
+    // Best-effort logging; do not block season deletion.
+    const logResult = await logEvent({
+      category: 'SEASON',
+      eventType: 'SEASON_DELETED',
+      actorUserId: context.userId,
+      actorRole: deriveActorRoleFromRoles(context.roles),
+      orgId: context.orgId,
+      targetEntityType: 'season',
+      targetEntityId: seasonId,
+      metadata: {
+        name: existingSeason?.name ?? null,
+        start_date: existingSeason?.start_date ?? null,
+        end_date: existingSeason?.end_date ?? null,
+        is_active: existingSeason?.is_active ?? null,
+        source: 'seasonsService.deleteSeason',
+      },
+    })
+    if (logResult.error) {
+      console.error('[seasonsService] Failed to log SEASON_DELETED event:', logResult.error)
+    }
+
     return { error: null }
   } catch (err) {
     return { error: err instanceof Error ? err : new Error('Delete season failed') }

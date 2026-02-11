@@ -9,7 +9,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getSeason, deleteSeason } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, ConfirmDialog } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, ConfirmDialog } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import { supabase } from '../../lib/supabase'
@@ -19,6 +19,7 @@ import './SeasonDetail.css'
 import { GalleryManagementSection } from '@/components/admin/galleries/GalleryManagementSection'
 import { useI18n } from '@/i18n/useI18n'
 import type { Gallery } from '@/data/services/galleryService'
+import '../../styles/orgAdmin.css'
 
 interface SeasonStats {
   teamsCount: number
@@ -311,23 +312,23 @@ export default function SeasonDetail() {
 
   if (loading) {
     return (
-      <div className="pa-root season-detail-page">
-        <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
-        <div className="pa-skeleton" style={{ height: '280px', borderRadius: '8px', marginBottom: '32px' }} />
+      <div className="oa-root season-detail-page">
+        <div className="oa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+        <div className="oa-skeleton" style={{ height: '280px', borderRadius: '8px', marginBottom: '32px' }} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px', marginBottom: '32px' }}>
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="pa-skeleton" style={{ height: '300px' }} />
+            <div key={i} className="oa-skeleton" style={{ height: '300px' }} />
           ))}
         </div>
-        <div className="pa-skeleton" style={{ height: '400px', borderRadius: '8px', marginBottom: '32px' }} />
-        <div className="pa-skeleton" style={{ height: '100px', borderRadius: '8px' }} />
+        <div className="oa-skeleton" style={{ height: '400px', borderRadius: '8px', marginBottom: '32px' }} />
+        <div className="oa-skeleton" style={{ height: '100px', borderRadius: '8px' }} />
       </div>
     )
   }
 
   if (error || !season) {
     return (
-      <div className="pa-root season-detail-page">
+      <div className="oa-root season-detail-page">
         <OfflineBanner />
         <AdminPageHeader
           title={t('admin.seasonDetail.notFoundTitle')}
@@ -338,8 +339,8 @@ export default function SeasonDetail() {
             { label: t('admin.seasonDetail.breadcrumbDetails') },
           ]}
         />
-        <Card className="pa-mb-4">
-          <div className="pa-text-danger">{error || t('admin.seasonDetail.notFoundTitle')}</div>
+        <Card className="oa-mb-4">
+          <div className="oa-text-danger">{error || t('admin.seasonDetail.notFoundTitle')}</div>
         </Card>
         <Button onClick={() => navigate(getLink('admin.seasons.list'))}>
           {t('admin.seasonDetail.backToSeasons')}
@@ -352,7 +353,7 @@ export default function SeasonDetail() {
   const dateRange = formatDateRange()
 
   return (
-    <div className="pa-root season-detail-page">
+    <div className="oa-root season-detail-page">
       <OfflineBanner />
 
       <div className="season-detail-content">
@@ -406,7 +407,7 @@ export default function SeasonDetail() {
             </div>
             <div className="season-detail-programs-list">
               {statsLoading ? (
-                <div className="pa-body-m pa-text-muted">{t('admin.seasonDetail.loading')}</div>
+                <div className="oa-body-m oa-text-muted">{t('admin.seasonDetail.loading')}</div>
               ) : stats && Object.keys(stats.programsByLevel).length > 0 ? (
                 Object.entries(stats.programsByLevel).map(([level, count]) => (
                   <div key={level} className="season-detail-programs-row">
@@ -417,7 +418,7 @@ export default function SeasonDetail() {
                   </div>
                 ))
               ) : (
-                <div className="pa-body-m pa-text-muted">{t('admin.seasonDetail.noPrograms')}</div>
+                <div className="oa-body-m oa-text-muted">{t('admin.seasonDetail.noPrograms')}</div>
               )}
             </div>
             <button

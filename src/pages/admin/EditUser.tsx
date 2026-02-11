@@ -10,7 +10,7 @@ import {
   Button, 
   Input, 
   Select 
-} from '../../components/platformAdmin'
+} from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
@@ -19,6 +19,7 @@ import { getOrganizationUsers } from '../../data/services/usersService'
 import { showSuccess } from '../../utils/toast'
 import { mapDbRoleToFrontendRole } from '../../utils/roleHelpers'
 import { formatDate } from '../../utils/dateFormatters'
+import '../../styles/orgAdmin.css'
 
 interface UserFormData {
   first_name: string
@@ -231,13 +232,13 @@ export default function EditUser() {
 
   if (loading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader 
           title="Edit User" 
           subtitle="Loading user data..." 
         />
         <Card>
-          <div className="pa-p-6 pa-text-center">Loading...</div>
+          <div className="oa-p-6 oa-text-center">Loading...</div>
         </Card>
       </div>
     )
@@ -245,7 +246,7 @@ export default function EditUser() {
 
   if (error && !user) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader 
           title="Edit User" 
           subtitle="Error loading user" 
@@ -255,8 +256,8 @@ export default function EditUser() {
           ]}
         />
         <Card>
-          <div className="pa-p-6">
-            <div className="pa-text-danger pa-mb-4">{error}</div>
+          <div className="oa-p-6">
+            <div className="oa-text-danger oa-mb-4">{error}</div>
             <Button onClick={() => navigate('/admin/organization/users')}>Back to Users</Button>
           </div>
         </Card>
@@ -269,7 +270,7 @@ export default function EditUser() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title="Edit User" 
         subtitle={`Edit ${user.display_name || user.email}`}
@@ -278,31 +279,31 @@ export default function EditUser() {
           { label: 'Edit User' },
         ]}
       />
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card>
           <form onSubmit={handleSubmit(onSubmit)}>
             {error && (
-              <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
+              <div className="oa-card oa-mb-4 oa-text-danger" style={{ background: 'var(--oa-danger-bg)', border: 'none' }}>
                 {error}
               </div>
             )}
 
             {/* Read-only email */}
-            <div className="pa-mb-4">
-              <label className="pa-label">Email</label>
-              <div className="pa-input pa-input--disabled" style={{ background: 'var(--pa-neutral-light)', cursor: 'not-allowed' }}>
+            <div className="oa-mb-4">
+              <label className="oa-label">Email</label>
+              <div className="oa-input oa-input--disabled" style={{ background: 'var(--oa-neutral-light)', cursor: 'not-allowed' }}>
                 {user.email}
               </div>
-              <p className="pa-body-s pa-text-muted pa-mt-1">Email cannot be changed. Use a separate flow to change email.</p>
+              <p className="oa-body-s oa-text-muted oa-mt-1">Email cannot be changed. Use a separate flow to change email.</p>
             </div>
 
             {/* Read-only joined date */}
-            <div className="pa-mb-4">
-              <label className="pa-label">Joined</label>
-              <div className="pa-body-m">{formatDate(user.created_at, 'long')}</div>
+            <div className="oa-mb-4">
+              <label className="oa-label">Joined</label>
+              <div className="oa-body-m">{formatDate(user.created_at, 'long')}</div>
             </div>
             
-            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+            <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-4">
               <Controller 
                 name="first_name" 
                 control={control} 
@@ -339,7 +340,7 @@ export default function EditUser() {
               />
             </div>
 
-            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+            <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-4">
               <Controller 
                 name="phone" 
                 control={control} 
@@ -383,14 +384,14 @@ export default function EditUser() {
               />
             </div>
 
-            <div className="pa-card pa-mb-6" style={{ background: 'var(--pa-info-bg)', border: 'none' }}>
-              <p className="pa-body-s">
+            <div className="oa-card oa-mb-6" style={{ background: 'var(--oa-info-bg)', border: 'none' }}>
+              <p className="oa-body-s">
                 <strong>Note:</strong> Changing the role will update the user's permissions in this organization. 
                 {user.roles.includes('org_admin') && ' Note: This user is currently an organization admin.'}
               </p>
             </div>
 
-            <div className="pa-flex pa-justify-end pa-gap-3">
+            <div className="oa-flex oa-justify-end oa-gap-3">
               <OrgAdminButton variant="primary" onClick={() => navigate('/admin/organization/users')}>Cancel</OrgAdminButton>
               <Button type="submit" loading={saving}>Save Changes</Button>
             </div>

@@ -26,7 +26,7 @@ let _batchContextWarned = false;
  * @returns Map of feature key to gate result, with loading state
  */
 export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchResult {
-    const { currentOrganization, isLoading: isOrganizationLoading } = useOrganization();
+    const { currentOrganization, organizations, isLoading: isOrganizationLoading } = useOrganization();
     const { user, profile } = useAuth();
 
     const [gates, setGates] = useState<Map<string, FeatureGateResult>>(new Map());
@@ -40,6 +40,11 @@ export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchR
             isMountedRef.current = false;
         };
     }, []);
+
+    const skipOrgScopedChecks = useMemo(() => {
+        if (!user?.id || !profile) return false;
+        return !profile.isPlatformAdmin && !isOrganizationLoading && !currentOrganization?.id;
+    }, [user?.id, profile, isOrganizationLoading, currentOrganization?.id]);
 
     // Build context — with dev-mode validation
     const context: FeatureGateContext | null = useMemo(() => {
@@ -58,6 +63,7 @@ export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchR
             import.meta.env.DEV &&
             featureKeys.length > 0 &&
             !orgId &&
+            organizations.length > 0 &&
             !isOrganizationLoading &&
             !profile.isPlatformAdmin
         ) {
@@ -77,7 +83,7 @@ export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchR
             license_tier: null,
             is_platform_admin: profile.isPlatformAdmin ?? false,
         };
-    }, [user?.id, profile, currentOrganization?.id, isOrganizationLoading, featureKeys.length]);
+    }, [user?.id, profile, currentOrganization?.id, organizations.length, isOrganizationLoading, featureKeys.length]);
 
     // Stable key string for dependency checking (sorted to avoid re-renders from order changes)
     const keysString = useMemo(() =>
@@ -99,6 +105,15 @@ export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchR
         if (!context) {
             if (isMountedRef.current) {
                 setLoading(true);
+            }
+            return;
+        }
+
+        // User has no organization context yet; skip org-scoped checks until org is selected/available
+        if (skipOrgScopedChecks) {
+            if (isMountedRef.current) {
+                setGates(new Map());
+                setLoading(false);
             }
             return;
         }
@@ -130,7 +145,7 @@ export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchR
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [keysString, context]);
+    }, [keysString, context, skipOrgScopedChecks]);
 
     // Fetch on mount and when dependencies change, with abort on cleanup
     useEffect(() => {

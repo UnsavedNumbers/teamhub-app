@@ -11,6 +11,8 @@ import {
     getOrganizationSlug as getFakeOrganizationSlug,
     checkOrganizationSlugAvailability as checkFakeOrganizationSlugAvailability,
 } from '../fake/organizationFakeService'
+import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
+import type { EventActorRole } from '../../types/eventLog.types'
 
 
 export interface OrganizationUpdateDTO {
@@ -51,6 +53,39 @@ interface OrganizationRow {
     longitude?: number | null
     logo_url?: string | null
     profile_visible_to_fans?: boolean
+}
+
+async function getCurrentActorContext(orgId: string): Promise<{ userId: string | null; actorRole: EventActorRole }> {
+    const { data: authData } = await supabase.auth.getUser()
+    const userId = authData.user?.id ?? null
+
+    if (!userId) {
+        return { userId: null, actorRole: 'system' }
+    }
+
+    // Prefer server-side actor role resolution if available.
+    try {
+        const { data: roleFromRpc, error: rpcError } = await supabase.rpc('get_user_actor_role', {
+            p_user_id: userId,
+        })
+        if (!rpcError && roleFromRpc) {
+            return { userId, actorRole: roleFromRpc as EventActorRole }
+        }
+    } catch {
+        // Fall back to org membership lookup.
+    }
+
+    const { data: membership } = await supabase
+        .from('organization_members')
+        .select('role')
+        .eq('org_id', orgId)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+    return {
+        userId,
+        actorRole: membership?.role ? deriveActorRoleFromRoles([membership.role]) : 'system',
+    }
 }
 
 export async function getOrganizationDetails(orgId: string): Promise<{ data: Organization | null; error: Error | null }> {
@@ -395,6 +430,28 @@ export async function uploadOrganizationLogo(
 
         // Get the full public URL for the logo
         const { data } = supabase.storage.from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET).getPublicUrl(filePath)
+
+        const actor = await getCurrentActorContext(orgId)
+        const logResult = await logEvent({
+            category: 'SYSTEM',
+            eventType: 'ORG_LOGO_UPLOADED',
+            actorUserId: actor.userId ?? undefined,
+            actorRole: actor.actorRole,
+            orgId,
+            targetEntityType: 'organization',
+            targetEntityId: orgId,
+            metadata: {
+                storage_path: filePath,
+                file_name: file.name,
+                file_size: file.size,
+                file_type: file.type,
+                source: 'organizationService.uploadOrganizationLogo',
+            },
+        })
+        if (logResult.error) {
+            console.error('[organizationService] Failed to log ORG_LOGO_UPLOADED event:', logResult.error)
+        }
+
         return { path: data.publicUrl, error: null }
     } catch (err) {
         console.error('[organizationService] Error uploading logo:', err)
@@ -426,6 +483,28 @@ export async function uploadTicketBanner(
         if (uploadError) throw uploadError
 
         const { data } = supabase.storage.from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET).getPublicUrl(filePath)
+
+        const actor = await getCurrentActorContext(orgId)
+        const logResult = await logEvent({
+            category: 'SYSTEM',
+            eventType: 'EVENT_BANNER_UPLOADED',
+            actorUserId: actor.userId ?? undefined,
+            actorRole: actor.actorRole,
+            orgId,
+            targetEntityType: 'event',
+            targetEntityId: eventId,
+            metadata: {
+                storage_path: filePath,
+                file_name: file.name,
+                file_size: file.size,
+                file_type: file.type,
+                source: 'organizationService.uploadTicketBanner',
+            },
+        })
+        if (logResult.error) {
+            console.error('[organizationService] Failed to log EVENT_BANNER_UPLOADED event:', logResult.error)
+        }
+
         return { path: data.publicUrl, error: null }
     } catch (err) {
         console.error('[organizationService] Error uploading ticket banner:', err)

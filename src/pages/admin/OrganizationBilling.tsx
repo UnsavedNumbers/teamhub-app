@@ -20,7 +20,7 @@ import {
   Card,
   Button,
   Badge,
-} from '../../components/platformAdmin'
+} from '../../components/admin'
 import '../../styles/orgAdmin.css'
 
 export default function OrganizationBilling() {
@@ -245,8 +245,8 @@ export default function OrganizationBilling() {
 
   if (!orgId) {
     return (
-      <div className="pa-root">
-        <Card className="oa-card pa-text-danger">
+      <div className="oa-root">
+        <Card className="oa-card oa-text-danger">
           {t('errors.missingOrganization')}
         </Card>
       </div>
@@ -254,13 +254,13 @@ export default function OrganizationBilling() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader title={t('billing.pageTitle')} />
 
       {error && (
         <div
-          className="pa-card pa-mb-4 pa-text-danger"
-          style={{ background: 'var(--pa-danger-bg)', border: 'none' }}
+          className="oa-card oa-mb-4 oa-text-danger"
+          style={{ background: 'var(--oa-danger-bg)', border: 'none' }}
         >
           {error}
         </div>
@@ -268,29 +268,29 @@ export default function OrganizationBilling() {
 
       <div className="oa-form-container" style={{ maxWidth: '896px', margin: '0 auto' }}>
         {/* Organization Subscription */}
-        <Card className="oa-card pa-mb-6">
-          <div className="pa-flex pa-flex-col md:pa-flex-row md:pa-items-center pa-justify-between pa-gap-6">
+        <Card className="oa-card oa-mb-6">
+          <div className="oa-flex oa-flex-col md:oa-flex-row md:oa-items-center oa-justify-between oa-gap-6">
             <div>
-              <div className="pa-flex pa-items-center pa-gap-3 pa-mb-2">
-                <span className="pa-body-s pa-text-slate-500 pa-font-medium">
+              <div className="oa-flex oa-items-center oa-gap-3 oa-mb-2">
+                <span className="oa-body-s oa-text-slate-500 oa-font-medium">
                   Organization Subscription
                 </span>
                 <Badge variant={statusBadgeVariant}>{statusBadgeText}</Badge>
               </div>
-              <h1 className="pa-h1 pa-mb-4 pa-uppercase">
+              <h1 className="oa-h1 oa-mb-4 oa-uppercase">
                 Annual Organization License
               </h1>
-              <p className="pa-body-s pa-text-slate-600 pa-mb-1">
-                <span className="pa-font-semibold">Tier:</span> {currentPlanLabel}
+              <p className="oa-body-s oa-text-slate-600 oa-mb-1">
+                <span className="oa-font-semibold">Tier:</span> {currentPlanLabel}
               </p>
             </div>
-            <div className="pa-shrink-0">
+            <div className="oa-shrink-0">
               <Button
                 variant="primary"
                 onClick={handleOpenPortal}
                 loading={portalLoading}
                 disabled={loading || portalLoading}
-                className="pa-uppercase pa-font-semibold"
+                className="oa-uppercase oa-font-semibold"
               >
                 Manage Billing
               </Button>
@@ -299,9 +299,9 @@ export default function OrganizationBilling() {
         </Card>
 
         {/* Billing Summary */}
-        <Card className="oa-card pa-mb-6">
-          <div className="pa-flex pa-items-center pa-justify-between pa-mb-4">
-            <h2 className="pa-h3 pa-font-semibold">
+        <Card className="oa-card oa-mb-6">
+          <div className="oa-flex oa-items-center oa-justify-between oa-mb-4">
+            <h2 className="oa-h3 oa-font-semibold">
               Billing Summary
             </h2>
             <Button
@@ -313,20 +313,20 @@ export default function OrganizationBilling() {
               Download Statement
             </Button>
           </div>
-          <div className="pa-flex pa-flex-wrap pa-gap-6">
+          <div className="oa-flex oa-flex-wrap oa-gap-6">
             <div>
-              <p className="pa-body-xs pa-text-slate-500 pa-mb-1">
+              <p className="oa-body-xs oa-text-slate-500 oa-mb-1">
                 Base Plan
               </p>
-              <p className="pa-body-s pa-font-medium">
+              <p className="oa-body-s oa-font-medium">
                 {summary?.plan ? `${currentPlanLabel} / yr` : '—'}
               </p>
             </div>
             <div>
-              <p className="pa-body-xs pa-text-slate-500 pa-mb-1">
+              <p className="oa-body-xs oa-text-slate-500 oa-mb-1">
                 Next Payment Due
               </p>
-              <p className="pa-body-s pa-font-medium">
+              <p className="oa-body-s oa-font-medium">
                 {summary?.currentPeriodEnd ? formatDate(summary.currentPeriodEnd) : '—'}
               </p>
             </div>
@@ -334,68 +334,68 @@ export default function OrganizationBilling() {
         </Card>
 
         {/* Ticket Sales Revenue */}
-        <Card className="oa-card pa-mb-6">
-          <h2 className="pa-h3 pa-font-semibold pa-mb-4">
+        <Card className="oa-card oa-mb-6">
+          <h2 className="oa-h3 oa-font-semibold oa-mb-4">
             Ticket Sales Revenue – {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </h2>
           {ticketRevenueLoading ? (
-            <div className="pa-text-center pa-py-4">
-              <p className="pa-body-s pa-text-slate-500">Loading revenue data...</p>
+            <div className="oa-text-center oa-py-4">
+              <p className="oa-body-s oa-text-slate-500">Loading revenue data...</p>
             </div>
           ) : ticketRevenue ? (
             ticketRevenue.totalTickets === 0 ? (
-              <div className="pa-text-center pa-py-4">
-                <p className="pa-body-s pa-text-slate-500 pa-mb-2">No ticket sales this period</p>
-                <p className="pa-body-xs pa-text-slate-400">
+              <div className="oa-text-center oa-py-4">
+                <p className="oa-body-s oa-text-slate-500 oa-mb-2">No ticket sales this period</p>
+                <p className="oa-body-xs oa-text-slate-400">
                   Gross Ticket Sales: $0.00<br />
                   Platform Fees: $0.00<br />
                   Your Revenue: $0.00
                 </p>
               </div>
             ) : (
-              <div className="pa-flex pa-flex-col pa-gap-4">
-                <div className="pa-flex pa-items-center pa-justify-between pa-pb-3 pa-border-b pa-border-slate-200">
-                  <span className="pa-body-s pa-text-slate-600">Gross Ticket Sales:</span>
-                  <span className="pa-body-s pa-font-semibold">{formatCurrency(ticketRevenue.grossCents)}</span>
+              <div className="oa-flex oa-flex-col oa-gap-4">
+                <div className="oa-flex oa-items-center oa-justify-between oa-pb-3 oa-border-b oa-border-slate-200">
+                  <span className="oa-body-s oa-text-slate-600">Gross Ticket Sales:</span>
+                  <span className="oa-body-s oa-font-semibold">{formatCurrency(ticketRevenue.grossCents)}</span>
                 </div>
-                <div className="pa-flex pa-items-center pa-justify-between pa-pb-3 pa-border-b pa-border-slate-200">
-                  <span className="pa-body-s pa-text-slate-600">Platform Fees:</span>
-                  <span className="pa-body-s pa-font-semibold pa-text-slate-500">-{formatCurrency(ticketRevenue.platformFeeCents)}</span>
+                <div className="oa-flex oa-items-center oa-justify-between oa-pb-3 oa-border-b oa-border-slate-200">
+                  <span className="oa-body-s oa-text-slate-600">Platform Fees:</span>
+                  <span className="oa-body-s oa-font-semibold oa-text-slate-500">-{formatCurrency(ticketRevenue.platformFeeCents)}</span>
                 </div>
-                <div className="pa-flex pa-items-center pa-justify-between pa-pb-3 pa-border-b pa-border-slate-200">
-                  <span className="pa-body-s pa-text-slate-600">Your Revenue:</span>
-                  <span className="pa-body-s pa-font-semibold pa-text-green-600">{formatCurrency(ticketRevenue.orgRevenueCents)}</span>
+                <div className="oa-flex oa-items-center oa-justify-between oa-pb-3 oa-border-b oa-border-slate-200">
+                  <span className="oa-body-s oa-text-slate-600">Your Revenue:</span>
+                  <span className="oa-body-s oa-font-semibold oa-text-green-600">{formatCurrency(ticketRevenue.orgRevenueCents)}</span>
                 </div>
-                <div className="pa-flex pa-items-center pa-justify-between pa-pt-2">
-                  <span className="pa-body-xs pa-text-slate-500">Total Tickets Sold:</span>
-                  <span className="pa-body-xs pa-font-medium">{ticketRevenue.totalTickets}</span>
+                <div className="oa-flex oa-items-center oa-justify-between oa-pt-2">
+                  <span className="oa-body-xs oa-text-slate-500">Total Tickets Sold:</span>
+                  <span className="oa-body-xs oa-font-medium">{ticketRevenue.totalTickets}</span>
                 </div>
-                <div className="pa-mt-2 pa-pt-3 pa-border-t pa-border-slate-200">
-                  <p className="pa-body-xs pa-text-slate-400">
+                <div className="oa-mt-2 oa-pt-3 oa-border-t oa-border-slate-200">
+                  <p className="oa-body-xs oa-text-slate-400">
                     Payouts typically arrive in 2–7 business days
                   </p>
                 </div>
               </div>
             )
           ) : (
-            <div className="pa-text-center pa-py-4">
-              <p className="pa-body-s pa-text-slate-500">Unable to load revenue data</p>
+            <div className="oa-text-center oa-py-4">
+              <p className="oa-body-s oa-text-slate-500">Unable to load revenue data</p>
             </div>
           )}
         </Card>
 
         {/* Renewal & Payment */}
-        <Card className="oa-card pa-mb-6">
-          <h2 className="pa-h3 pa-font-semibold pa-mb-4">
+        <Card className="oa-card oa-mb-6">
+          <h2 className="oa-h3 oa-font-semibold oa-mb-4">
             Renewal & Payment
           </h2>
-          <div className="pa-flex pa-flex-col pa-gap-4">
-            <div className="pa-flex pa-items-center pa-justify-between">
+          <div className="oa-flex oa-flex-col oa-gap-4">
+            <div className="oa-flex oa-items-center oa-justify-between">
               <div>
-                <p className="pa-body-s pa-font-semibold pa-mb-0">
+                <p className="oa-body-s oa-font-semibold oa-mb-0">
                   Payment method managed in Stripe
                 </p>
-                <p className="pa-body-xs pa-text-slate-500">
+                <p className="oa-body-xs oa-text-slate-500">
                   Update payment method in customer portal
                 </p>
               </div>
@@ -403,12 +403,12 @@ export default function OrganizationBilling() {
                 Update
               </Button>
             </div>
-            <div className="pa-flex pa-items-center pa-justify-between">
+            <div className="oa-flex oa-items-center oa-justify-between">
               <div>
-                <p className="pa-body-s pa-font-semibold pa-mb-0">
+                <p className="oa-body-s oa-font-semibold oa-mb-0">
                   {isAutoRenewing ? 'Auto-Renewal is On' : 'Auto-Renewal is Off'}
                 </p>
-                <p className="pa-body-xs pa-text-slate-500">
+                <p className="oa-body-xs oa-text-slate-500">
                   {isAutoRenewing
                     ? summary?.currentPeriodEnd
                       ? `Renews on ${formatDate(summary.currentPeriodEnd)}.`
@@ -425,7 +425,7 @@ export default function OrganizationBilling() {
                 variant="ghost"
                 size="compact"
                 onClick={handleOpenPortal}
-                className="pa-text-danger pa-self-start"
+                className="oa-text-danger oa-self-start"
               >
                 Cancel Subscription
               </Button>
@@ -436,22 +436,22 @@ export default function OrganizationBilling() {
         {/* Status Message */}
         {statusMessage && (
           <Card
-            className="oa-card pa-mb-8"
+            className="oa-card oa-mb-8"
             style={{
               background:
                 summary?.status === 'past_due' || summary?.status === 'expired'
-                  ? 'var(--pa-warning-bg)'
-                  : 'var(--pa-info-bg)',
+                  ? 'var(--oa-warning-bg)'
+                  : 'var(--oa-info-bg)',
             }}
           >
-            <div className="pa-flex pa-items-start pa-gap-3">
+            <div className="oa-flex oa-items-start oa-gap-3">
               <span
                 className="material-symbols-outlined"
                 style={{
                   color:
                     summary?.status === 'past_due' || summary?.status === 'expired'
-                      ? 'var(--pa-warning)'
-                      : 'var(--pa-info)',
+                      ? 'var(--oa-warning)'
+                      : 'var(--oa-info)',
                   fontSize: '20px',
                   flexShrink: 0,
                 }}
@@ -460,7 +460,7 @@ export default function OrganizationBilling() {
                   ? 'warning'
                   : 'info'}
               </span>
-              <div className="pa-body-m pa-font-medium">
+              <div className="oa-body-m oa-font-medium">
                 {statusMessage}
               </div>
             </div>
@@ -474,7 +474,7 @@ export default function OrganizationBilling() {
 
         {/* Billing History */}
         <Card className="oa-card">
-          <h3 className="pa-h3 pa-mb-6">{t('billing.viewBillingHistory')}</h3>
+          <h3 className="oa-h3 oa-mb-6">{t('billing.viewBillingHistory')}</h3>
           <BillingHistoryTimeline
             events={history}
             loading={historyLoading}
@@ -503,30 +503,30 @@ function TicketRevenueReporting({ orgId }: { orgId: string | undefined }) {
     <>
       {/* Revenue by Event */}
       {revenueByEvent && revenueByEvent.length > 0 && (
-        <Card className="oa-card pa-mb-6">
-          <h3 className="pa-h3 pa-font-semibold pa-mb-4">Revenue by Event</h3>
+        <Card className="oa-card oa-mb-6">
+          <h3 className="oa-h3 oa-font-semibold oa-mb-4">Revenue by Event</h3>
           {eventsLoading ? (
-            <div className="pa-text-center pa-py-4">
-              <p className="pa-body-s pa-text-slate-500">Loading event revenue...</p>
+            <div className="oa-text-center oa-py-4">
+              <p className="oa-body-s oa-text-slate-500">Loading event revenue...</p>
             </div>
           ) : (
-            <div className="pa-space-y-3">
+            <div className="oa-space-y-3">
               {revenueByEvent.slice(0, 5).map((event) => (
-                <div key={event.ticketed_event_id} className="pa-flex pa-items-center pa-justify-between pa-pb-3 pa-border-b pa-border-slate-200 last:pa-border-0">
+                <div key={event.ticketed_event_id} className="oa-flex oa-items-center oa-justify-between oa-pb-3 oa-border-b oa-border-slate-200 last:oa-border-0">
                   <div>
-                    <p className="pa-body-s pa-font-semibold">{event.event_title}</p>
-                    <p className="pa-body-xs pa-text-slate-500">
+                    <p className="oa-body-s oa-font-semibold">{event.event_title}</p>
+                    <p className="oa-body-xs oa-text-slate-500">
                       {event.order_count} order{event.order_count !== 1 ? 's' : ''} • {event.ticket_count} ticket{event.ticket_count !== 1 ? 's' : ''}
                     </p>
                   </div>
-                  <div className="pa-text-right">
-                    <p className="pa-body-s pa-font-semibold pa-text-green-600">{formatCurrency(event.org_revenue_cents)}</p>
-                    <p className="pa-body-xs pa-text-slate-400">-{formatCurrency(event.platform_fee_cents)} fees</p>
+                  <div className="oa-text-right">
+                    <p className="oa-body-s oa-font-semibold oa-text-green-600">{formatCurrency(event.org_revenue_cents)}</p>
+                    <p className="oa-body-xs oa-text-slate-400">-{formatCurrency(event.platform_fee_cents)} fees</p>
                   </div>
                 </div>
               ))}
               {revenueByEvent.length > 5 && (
-                <p className="pa-body-xs pa-text-slate-400 pa-text-center pa-pt-2">
+                <p className="oa-body-xs oa-text-slate-400 oa-text-center oa-pt-2">
                   Showing top 5 events. {revenueByEvent.length - 5} more events.
                 </p>
               )}
@@ -537,42 +537,42 @@ function TicketRevenueReporting({ orgId }: { orgId: string | undefined }) {
 
       {/* Monthly Summary */}
       {monthlyRevenue && monthlyRevenue.length > 0 && (
-        <Card className="oa-card pa-mb-6">
-          <h3 className="pa-h3 pa-font-semibold pa-mb-4">Monthly Summary</h3>
+        <Card className="oa-card oa-mb-6">
+          <h3 className="oa-h3 oa-font-semibold oa-mb-4">Monthly Summary</h3>
           {monthlyLoading ? (
-            <div className="pa-text-center pa-py-4">
-              <p className="pa-body-s pa-text-slate-500">Loading monthly data...</p>
+            <div className="oa-text-center oa-py-4">
+              <p className="oa-body-s oa-text-slate-500">Loading monthly data...</p>
             </div>
           ) : (
-            <div className="pa-space-y-4">
+            <div className="oa-space-y-4">
               {currentMonth && (
-                <div className="pa-p-4 pa-bg-slate-50 dark:pa-bg-slate-800 pa-rounded-lg">
-                  <p className="pa-body-xs pa-text-slate-500 pa-mb-2">
+                <div className="oa-p-4 oa-bg-slate-50 dark:oa-bg-slate-800 oa-rounded-lg">
+                  <p className="oa-body-xs oa-text-slate-500 oa-mb-2">
                     {new Date(`${currentMonth.month}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                   </p>
-                  <div className="pa-flex pa-items-center pa-justify-between pa-mb-2">
-                    <span className="pa-body-s pa-text-slate-600">Your Revenue</span>
-                    <span className="pa-body-s pa-font-semibold pa-text-green-600">{formatCurrency(currentMonth.org_revenue_cents)}</span>
+                  <div className="oa-flex oa-items-center oa-justify-between oa-mb-2">
+                    <span className="oa-body-s oa-text-slate-600">Your Revenue</span>
+                    <span className="oa-body-s oa-font-semibold oa-text-green-600">{formatCurrency(currentMonth.org_revenue_cents)}</span>
                   </div>
-                  <div className="pa-flex pa-items-center pa-justify-between pa-text-xs pa-text-slate-500">
+                  <div className="oa-flex oa-items-center oa-justify-between oa-text-xs oa-text-slate-500">
                     <span>{currentMonth.order_count} orders</span>
                     <span>Platform fees: {formatCurrency(currentMonth.platform_fee_cents)}</span>
                   </div>
                 </div>
               )}
               {lastMonth && (
-                <div className="pa-p-4 pa-bg-white dark:pa-bg-slate-900 pa-rounded-lg pa-border pa-border-slate-200 dark:pa-border-slate-700">
-                  <p className="pa-body-xs pa-text-slate-500 pa-mb-2">
+                <div className="oa-p-4 oa-bg-white dark:oa-bg-slate-900 oa-rounded-lg oa-border oa-border-slate-200 dark:oa-border-slate-700">
+                  <p className="oa-body-xs oa-text-slate-500 oa-mb-2">
                     {new Date(`${lastMonth.month}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                   </p>
-                  <div className="pa-flex pa-items-center pa-justify-between">
-                    <span className="pa-body-s pa-text-slate-600">Your Revenue</span>
-                    <span className="pa-body-s pa-font-semibold">{formatCurrency(lastMonth.org_revenue_cents)}</span>
+                  <div className="oa-flex oa-items-center oa-justify-between">
+                    <span className="oa-body-s oa-text-slate-600">Your Revenue</span>
+                    <span className="oa-body-s oa-font-semibold">{formatCurrency(lastMonth.org_revenue_cents)}</span>
                   </div>
                 </div>
               )}
               {currentMonth && (
-                <p className="pa-body-xs pa-text-slate-400 pa-text-center pa-pt-2">
+                <p className="oa-body-xs oa-text-slate-400 oa-text-center oa-pt-2">
                   Platform fees collected: {formatCurrency(currentMonth.platform_fee_cents)} this month from {currentMonth.ticket_count} tickets sold
                 </p>
               )}

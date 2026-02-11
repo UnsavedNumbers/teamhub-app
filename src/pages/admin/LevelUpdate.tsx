@@ -6,9 +6,10 @@ import { USE_FAKE_DATA } from '../../data/config'
 import { getLevels, updateLevel } from '../../data/services/levelsService'
 import { getPrograms } from '../../data/services/sportsService'
 import type { Level, LevelType, Program } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, Input, Select } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, Input, Select } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 export default function LevelUpdate() {
   const { id } = useParams<{ id: string }>()
@@ -133,26 +134,26 @@ export default function LevelUpdate() {
 
   if (loading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
-        <div className="pa-skeleton" style={{ height: '400px' }} />
+        <div className="oa-skeleton" style={{ height: '400px' }} />
       </div>
     )
   }
 
   if (!level) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
         <Card>
-          <div className="pa-body-m pa-text-danger">Level not found</div>
+          <div className="oa-body-m oa-text-danger">Level not found</div>
         </Card>
       </div>
     )
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <OfflineBanner />
       
       <AdminPageHeader
@@ -166,17 +167,17 @@ export default function LevelUpdate() {
       />
 
       {error && (
-        <Card className="pa-mb-6" noPadding>
-          <div className="pa-alert-card pa-alert-card--error">
-            <div className="pa-body-m pa-text-danger">{error}</div>
+        <Card className="oa-mb-6" noPadding>
+          <div className="oa-alert-card oa-alert-card--error">
+            <div className="oa-body-m oa-text-danger">{error}</div>
           </div>
         </Card>
       )}
 
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card>
-          <form onSubmit={handleSubmit} className="pa-form-grid">
-          <div className="pa-form-group">
+          <form onSubmit={handleSubmit} className="oa-form-grid">
+          <div className="oa-form-group">
             <Select
               label="Program"
               value={programId}
@@ -187,7 +188,7 @@ export default function LevelUpdate() {
             />
           </div>
 
-          <div className="pa-form-group">
+          <div className="oa-form-group">
             <Input
               label="Level Name"
               value={name}
@@ -198,7 +199,7 @@ export default function LevelUpdate() {
             />
           </div>
 
-          <div className="pa-form-group">
+          <div className="oa-form-group">
             <Select
               label="Level Type"
               value={type}
@@ -211,7 +212,7 @@ export default function LevelUpdate() {
 
           {type === 'age_based' && (
             <>
-              <div className="pa-form-group">
+              <div className="oa-form-group">
                 <Input
                   label="Minimum Age"
                   type="number"
@@ -222,7 +223,7 @@ export default function LevelUpdate() {
                   placeholder="e.g., 10"
                 />
               </div>
-              <div className="pa-form-group">
+              <div className="oa-form-group">
                 <Input
                   label="Maximum Age"
                   type="number"
@@ -238,7 +239,7 @@ export default function LevelUpdate() {
 
           {type === 'grade_based' && (
             <>
-              <div className="pa-form-group">
+              <div className="oa-form-group">
                 <Input
                   label="Minimum Grade"
                   type="number"
@@ -249,7 +250,7 @@ export default function LevelUpdate() {
                   placeholder="e.g., 6"
                 />
               </div>
-              <div className="pa-form-group">
+              <div className="oa-form-group">
                 <Input
                   label="Maximum Grade"
                   type="number"
@@ -264,7 +265,7 @@ export default function LevelUpdate() {
           )}
 
           {type === 'skill_based' && (
-            <div className="pa-form-group">
+            <div className="oa-form-group">
               <Input
                 label="Skill Description"
                 value={skillDescription}
@@ -276,7 +277,7 @@ export default function LevelUpdate() {
             </div>
           )}
 
-          <div className="pa-form-actions">
+          <div className="oa-form-actions">
             <Button
               type="submit"
               disabled={!programId || !name.trim() || !type || submitting || isOffline || USE_FAKE_DATA}

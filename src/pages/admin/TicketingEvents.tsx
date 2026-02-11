@@ -1,4 +1,4 @@
-ï»¿
+
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -29,6 +29,7 @@ import { getPublicBaseUrl } from '@/utils/publicUrls'
 import { cn } from '@/utils/cn'
 import { getLink, RouteKeys, useRouteLink } from '@/utils/routes'
 import { showError, showSuccess } from '@/utils/toast'
+import '../../styles/orgAdmin.css'
 
 type ViewMode = 'grid' | 'list' | 'table' | 'calendar'
 
@@ -74,7 +75,7 @@ const formatDateTimeRange = (start: string, end: string, timezone?: string | nul
   const dateFormatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', timeZone: timezone || undefined })
   const timeFormatter = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZone: timezone || undefined })
   if (sameDay) {
-    return `${dateFormatter.format(startDate)} Â· ${timeFormatter.format(startDate)} - ${timeFormatter.format(endDate)}`
+    return `${dateFormatter.format(startDate)} · ${timeFormatter.format(startDate)} - ${timeFormatter.format(endDate)}`
   }
   return `${dateFormatter.format(startDate)} ${timeFormatter.format(startDate)} - ${dateFormatter.format(endDate)} ${timeFormatter.format(endDate)}`
 }
@@ -192,7 +193,7 @@ function ActiveFilterChips({
   if (chips.length === 0) return null
 
   return (
-    <div className="pa-flex pa-flex-wrap pa-gap-2 pa-mt-3 oa-filter-chips">
+    <div className="oa-flex oa-flex-wrap oa-gap-2 oa-mt-3 oa-filter-chips">
       {chips.map((chip) => (
         <span
           key={`${chip.key}-${chip.value || 'all'}`}
@@ -204,7 +205,7 @@ function ActiveFilterChips({
             onClick={() => onRemove(chip.key, chip.value)}
             aria-label="Remove filter"
           >
-            Ã—
+            ×
           </button>
         </span>
       ))}
@@ -263,7 +264,7 @@ function PublicTicketingHero({ orgId }: { orgId?: string }) {
       </div>
       <div className="oa-ticketing-hero-link">
         <div className="oa-ticketing-hero-url" role="status" aria-live="polite">
-          {isLoading ? 'Loading public linkâ€¦' : slugMissing ? 'Set your organization slug to enable public sales.' : publicUrl}
+          {isLoading ? 'Loading public link…' : slugMissing ? 'Set your organization slug to enable public sales.' : publicUrl}
         </div>
         <div className="oa-ticketing-hero-actions">
           {slugMissing ? (
@@ -366,16 +367,16 @@ function FilterDrawer({
     <>
       <div className={cn('oa-filter-backdrop', open && 'is-open')} onClick={onClose} />
       <div className={cn('oa-filter-panel', open && 'is-open')}>
-        <div className="pa-flex pa-items-center pa-justify-between pa-mb-4">
-          <div className="pa-text-lg pa-font-semibold">Filters</div>
+        <div className="oa-flex oa-items-center oa-justify-between oa-mb-4">
+          <div className="oa-text-lg oa-font-semibold">Filters</div>
           <Button variant="ghost" icon="close" onClick={onClose} />
         </div>
 
-        <div className="pa-space-y-4">
+        <div className="oa-space-y-4">
           <div>
-            <label className="pa-label">Date preset</label>
+            <label className="oa-label">Date preset</label>
             <select
-              className="pa-input"
+              className="oa-input"
               value={draft.datePreset || ''}
               onChange={(e) => setDraft((prev) => ({ ...prev, datePreset: e.target.value || null, page: 1 }))}
             >
@@ -385,7 +386,7 @@ function FilterDrawer({
               ))}
             </select>
           </div>
-          <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 pa-gap-3">
+          <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-2 oa-gap-3">
             <div>
               <DatePicker
                 label="Start date"
@@ -404,8 +405,8 @@ function FilterDrawer({
           </div>
 
           <div>
-            <label className="pa-label">Programs</label>
-            <div className="pa-flex pa-flex-wrap pa-gap-2">
+            <label className="oa-label">Programs</label>
+            <div className="oa-flex oa-flex-wrap oa-gap-2">
               {programs.map((p) => (
                 <Button
                   key={p.id}
@@ -416,13 +417,13 @@ function FilterDrawer({
                   {p.name}
                 </Button>
               ))}
-              {programs.length === 0 && <div className="pa-text-sm pa-text-muted">No programs</div>}
+              {programs.length === 0 && <div className="oa-text-sm oa-text-muted">No programs</div>}
             </div>
           </div>
 
           <div>
-            <label className="pa-label">Seasons</label>
-            <div className="pa-flex pa-flex-wrap pa-gap-2">
+            <label className="oa-label">Seasons</label>
+            <div className="oa-flex oa-flex-wrap oa-gap-2">
               {seasons.map((s) => (
                 <Button
                   key={s.id}
@@ -433,13 +434,13 @@ function FilterDrawer({
                   {s.name}
                 </Button>
               ))}
-              {seasons.length === 0 && <div className="pa-text-sm pa-text-muted">No seasons</div>}
+              {seasons.length === 0 && <div className="oa-text-sm oa-text-muted">No seasons</div>}
             </div>
           </div>
 
           <div>
-            <label className="pa-label">Venues</label>
-            <div className="pa-flex pa-flex-wrap pa-gap-2">
+            <label className="oa-label">Venues</label>
+            <div className="oa-flex oa-flex-wrap oa-gap-2">
               {venues.map((v) => (
                 <Button
                   key={v.id}
@@ -450,15 +451,15 @@ function FilterDrawer({
                   {v.name}
                 </Button>
               ))}
-              {venues.length === 0 && <div className="pa-text-sm pa-text-muted">No venues</div>}
+              {venues.length === 0 && <div className="oa-text-sm oa-text-muted">No venues</div>}
             </div>
           </div>
 
-          <div className="pa-grid pa-grid-cols-2 pa-gap-3">
+          <div className="oa-grid oa-grid-cols-2 oa-gap-3">
             <div>
-              <label className="pa-label">Event status</label>
+              <label className="oa-label">Event status</label>
               <select
-                className="pa-input"
+                className="oa-input"
                 value={draft.status || ''}
                 onChange={(e) => setDraft((prev) => ({ ...prev, status: (e.target.value as TicketedEvent['status']) || null }))}
               >
@@ -469,9 +470,9 @@ function FilterDrawer({
               </select>
             </div>
             <div>
-              <label className="pa-label">Sale status</label>
+              <label className="oa-label">Sale status</label>
               <select
-                className="pa-input"
+                className="oa-input"
                 value={draft.saleStatus || ''}
                 onChange={(e) => setDraft((prev) => ({ ...prev, saleStatus: (e.target.value as TicketSaleStatus) || null }))}
               >
@@ -484,9 +485,9 @@ function FilterDrawer({
           </div>
         </div>
 
-        <div className="pa-flex pa-justify-between pa-gap-2 pa-mt-6">
+        <div className="oa-flex oa-justify-between oa-gap-2 oa-mt-6">
           <Button variant="ghost" onClick={clearLocal}>Clear</Button>
-          <div className="pa-flex pa-gap-2">
+          <div className="oa-flex oa-gap-2">
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
             <Button variant="primary" icon="check" onClick={apply}>Apply</Button>
           </div>
@@ -567,7 +568,7 @@ function GridView({ events, onView, onDuplicate, onDelete }: { events: TicketedE
 
 function ListView({ events, onView, onDuplicate, onDelete }: { events: TicketedEvent[]; onView: (id: string) => void; onDuplicate: (id: string) => void; onDelete: (id: string) => void }) {
   return (
-    <div className="pa-card pa-shadow-sm oa-ticket-list">
+    <div className="oa-card oa-shadow-sm oa-ticket-list">
       {events.map((event) => (
         <div key={event.id} className="oa-ticket-list__row">
           <div className="oa-ticket-list__info">
@@ -581,17 +582,17 @@ function ListView({ events, onView, onDuplicate, onDelete }: { events: TicketedE
               <div className="oa-ticket-list__title">{event.title}</div>
               <div className="oa-ticket-list__meta">
                 {formatDateTimeRange(event.starts_at, event.ends_at, event.timezone)}
-                {event.venue?.name ? ` Â· ${event.venue.name}` : ''}
+                {event.venue?.name ? ` · ${event.venue.name}` : ''}
               </div>
               <div className="oa-ticket-list__meta oa-ticket-list__meta--sub">
-                {event.program?.name ? `${event.program.name}` : ''}{event.opponent ? ` Â· ${event.is_home ? 'Home' : 'Away'} vs ${event.opponent}` : ''}
+                {event.program?.name ? `${event.program.name}` : ''}{event.opponent ? ` · ${event.is_home ? 'Home' : 'Away'} vs ${event.opponent}` : ''}
               </div>
             </div>
           </div>
           <div className="oa-ticket-list__actions">
             {event.ticket_progress_pct !== null && event.ticket_progress_pct !== undefined && (
               <div className="oa-ticket-list__stat">
-                {event.tickets_sold || 0}/{event.capacity_total || 'â€”'}
+                {event.tickets_sold || 0}/{event.capacity_total || '—'}
               </div>
             )}
             <div className="oa-ticket-list__price">{formatCurrency(event.revenue_cents || 0)}</div>
@@ -630,17 +631,17 @@ function TableView({
 }) {
   const columns = useMemo(() => {
     const cols: any[] = [
-      { id: 'title', label: 'Event', sortable: true, render: (row: TicketedEvent) => <div className="pa-font-semibold">{row.title}</div> },
-      { id: 'starts_at', label: 'Date', sortable: true, render: (row: TicketedEvent) => <span className="pa-text-sm pa-text-muted">{formatDateTimeRange(row.starts_at, row.ends_at, row.timezone)}</span> },
-      { id: 'program', label: 'Program', render: (row: TicketedEvent) => row.program?.name || 'â€”' },
-      { id: 'season', label: 'Season', render: (row: TicketedEvent) => row.season?.name || 'â€”' },
-      { id: 'venue', label: 'Venue', render: (row: TicketedEvent) => row.venue?.name || row.venue_name || 'â€”' },
+      { id: 'title', label: 'Event', sortable: true, render: (row: TicketedEvent) => <div className="oa-font-semibold">{row.title}</div> },
+      { id: 'starts_at', label: 'Date', sortable: true, render: (row: TicketedEvent) => <span className="oa-text-sm oa-text-muted">{formatDateTimeRange(row.starts_at, row.ends_at, row.timezone)}</span> },
+      { id: 'program', label: 'Program', render: (row: TicketedEvent) => row.program?.name || '—' },
+      { id: 'season', label: 'Season', render: (row: TicketedEvent) => row.season?.name || '—' },
+      { id: 'venue', label: 'Venue', render: (row: TicketedEvent) => row.venue?.name || row.venue_name || '—' },
       { id: 'status', label: 'Status', render: (row: TicketedEvent) => <Badge variant={eventStatusVariant[row.status] || 'neutral'}>{row.status}</Badge> },
-      { id: 'sale_status', label: 'Sale', render: (row: TicketedEvent) => row.sale_status ? <Badge variant={saleStatusTone[row.sale_status].variant}>{saleStatusTone[row.sale_status].label}</Badge> : 'â€”' },
+      { id: 'sale_status', label: 'Sale', render: (row: TicketedEvent) => row.sale_status ? <Badge variant={saleStatusTone[row.sale_status].variant}>{saleStatusTone[row.sale_status].label}</Badge> : '—' },
       { id: 'tickets', label: 'Tickets', sortable: true, render: (row: TicketedEvent) => `${row.tickets_sold || 0}${row.capacity_total ? ` / ${row.capacity_total}` : ''}` },
       { id: 'revenue', label: 'Revenue', sortable: true, render: (row: TicketedEvent) => formatCurrency(row.revenue_cents || 0) },
       { id: 'actions', label: '', render: (row: TicketedEvent) => (
-        <div className="pa-flex pa-gap-1">
+        <div className="oa-flex oa-gap-1">
           <Button size="dense" variant="secondary" icon="open_in_new" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onView(row.id) }}>Open</Button>
           <Button size="dense" variant="secondary" icon="content_copy" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDuplicate(row.id) }} />
           <Button size="dense" variant="danger" icon="delete" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDelete(row.id) }} />
@@ -738,12 +739,12 @@ function PaginationControls({
 }) {
   const totalPages = Math.max(1, Math.ceil(total / perPage))
   return (
-    <div className="pa-flex pa-justify-between pa-items-center pa-mt-4 pa-flex-wrap pa-gap-2">
-      <div className="pa-text-sm pa-text-muted">
-        Page {page} of {totalPages} Â· {total} results
+    <div className="oa-flex oa-justify-between oa-items-center oa-mt-4 oa-flex-wrap oa-gap-2">
+      <div className="oa-text-sm oa-text-muted">
+        Page {page} of {totalPages} · {total} results
       </div>
-      <div className="pa-flex pa-gap-2 pa-items-center">
-        <select className="pa-input" value={perPage} onChange={(e) => onPerPageChange(Number(e.target.value))}>
+      <div className="oa-flex oa-gap-2 oa-items-center">
+        <select className="oa-input" value={perPage} onChange={(e) => onPerPageChange(Number(e.target.value))}>
           {[10, 12, 20, 30].map((n) => (
             <option key={n} value={n}>{n} / page</option>
           ))}
@@ -928,7 +929,7 @@ export default function TicketingEvents() {
   }
 
   return (
-    <div className="pa-page-container oa-ticketing-dashboard">
+    <div className="oa-page-container oa-ticketing-dashboard">
       <AdminPageHeader
         title="Ticketed Events"
         subtitle="Search, filter, and manage every ticketed event across programs and seasons."
@@ -940,7 +941,7 @@ export default function TicketingEvents() {
       />
 
       {orgId && (
-        <div className="pa-mb-4">
+        <div className="oa-mb-4">
           <PublicTicketingHero orgId={orgId} />
         </div>
       )}
@@ -951,12 +952,12 @@ export default function TicketingEvents() {
         revenue={meta?.total_revenue_cents}
       />
 
-      <div className="pa-card pa-shadow-sm oa-ticketing-toolbar">
+      <div className="oa-card oa-shadow-sm oa-ticketing-toolbar">
         <div className="oa-ticketing-toolbar__left">
           <div className="oa-search">
             <span className="material-symbols-outlined oa-search__icon">search</span>
             <input
-              className="pa-input oa-search__input"
+              className="oa-input oa-search__input"
               placeholder="Search events, opponents, venues..."
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
@@ -968,7 +969,7 @@ export default function TicketingEvents() {
         </div>
         <div className="oa-ticketing-toolbar__right">
           <select
-            className="pa-input oa-sort-select"
+            className="oa-input oa-sort-select"
             value={filters.sortBy || 'starts_at'}
             onChange={(e) => updateFilters({ sortBy: e.target.value, page: 1 })}
           >
@@ -1004,21 +1005,21 @@ export default function TicketingEvents() {
 
       {/* Bulk toolbar (table view only) */}
       {filters.view === 'table' && selectedIds.size > 0 && (
-        <div className="pa-card pa-shadow-sm pa-border pa-border-primary pa-p-3 pa-flex pa-gap-3 pa-items-center pa-mt-3">
-          <div className="pa-font-semibold">{selectedIds.size} selected</div>
-          <select className="pa-input" onChange={(e) => handleBulkStatus(e.target.value as TicketedEvent['status'])} defaultValue="">
+        <div className="oa-card oa-shadow-sm oa-border oa-border-primary oa-p-3 oa-flex oa-gap-3 oa-items-center oa-mt-3">
+          <div className="oa-font-semibold">{selectedIds.size} selected</div>
+          <select className="oa-input" onChange={(e) => handleBulkStatus(e.target.value as TicketedEvent['status'])} defaultValue="">
             <option value="">Set status...</option>
             {EVENT_STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
-          <select className="pa-input" onChange={(e) => handleBulkMove(e.target.value || undefined, undefined)} defaultValue="">
+          <select className="oa-input" onChange={(e) => handleBulkMove(e.target.value || undefined, undefined)} defaultValue="">
             <option value="">Move to program...</option>
             {programs.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
-          <select className="pa-input" onChange={(e) => handleBulkMove(undefined, e.target.value || undefined)} defaultValue="">
+          <select className="oa-input" onChange={(e) => handleBulkMove(undefined, e.target.value || undefined)} defaultValue="">
             <option value="">Move to season...</option>
             {seasons.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
@@ -1028,21 +1029,21 @@ export default function TicketingEvents() {
         </div>
       )}
 
-      <div className="pa-mt-4">
+      <div className="oa-mt-4">
         {isLoading && (
-          <div className="pa-grid pa-grid-cols-1 md:pa-grid-cols-2 xl:pa-grid-cols-3 pa-gap-3">
+          <div className="oa-grid oa-grid-cols-1 md:oa-grid-cols-2 xl:oa-grid-cols-3 oa-gap-3">
             {[...Array(6)].map((_, idx) => (
-              <div key={idx} className="pa-card pa-shadow-sm pa-p-4">
-                <div className="pa-skeleton oa-skeleton-line oa-skeleton-line--short" />
-                <div className="pa-skeleton oa-skeleton-line oa-skeleton-line--medium" />
-                <div className="pa-skeleton oa-skeleton-line oa-skeleton-line--full" />
+              <div key={idx} className="oa-card oa-shadow-sm oa-p-4">
+                <div className="oa-skeleton oa-skeleton-line oa-skeleton-line--short" />
+                <div className="oa-skeleton oa-skeleton-line oa-skeleton-line--medium" />
+                <div className="oa-skeleton oa-skeleton-line oa-skeleton-line--full" />
               </div>
             ))}
           </div>
         )}
 
         {!isLoading && emptyState && (
-          <div className="pa-card pa-shadow-sm pa-p-6">
+          <div className="oa-card oa-shadow-sm oa-p-6">
             <EmptyState
               icon="search_off"
               title={hasActiveFilters ? 'No events match these filters' : 'No ticketed events yet'}
@@ -1108,7 +1109,7 @@ export default function TicketingEvents() {
 
       {isMobile && (
         <button
-          className="pa-btn pa-btn--primary oa-ticketing-fab"
+          className="oa-btn oa-btn--primary oa-ticketing-fab"
           onClick={() => navigate(createEventPath)}
         >
           <span className="material-symbols-outlined">add</span> Create

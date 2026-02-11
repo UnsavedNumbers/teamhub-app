@@ -38,11 +38,11 @@ export default function TicketingOrderDetail() {
   // Verify order belongs to current org
   if (order && orgId && order.org_id !== orgId) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader title="Order Not Found" />
         <div className="oa-card">
-          <p className="pa-text-danger">This order does not belong to your organization.</p>
-          <OrgAdminButton onClick={() => navigate('/admin/ticketing/orders')} className="pa-mt-4">
+          <p className="oa-text-danger">This order does not belong to your organization.</p>
+          <OrgAdminButton onClick={() => navigate('/admin/ticketing/orders')} className="oa-mt-4">
             {t('ticketing.orderDetail.backToOrders')}
           </OrgAdminButton>
         </div>
@@ -109,11 +109,11 @@ export default function TicketingOrderDetail() {
   // Validate orderId format
   if (orderId && !orderId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader title="Invalid Order ID" />
         <div className="oa-card">
-          <p className="pa-text-danger">The order ID format is invalid.</p>
-          <OrgAdminButton onClick={() => navigate('/admin/ticketing/orders')} className="pa-mt-4">
+          <p className="oa-text-danger">The order ID format is invalid.</p>
+          <OrgAdminButton onClick={() => navigate('/admin/ticketing/orders')} className="oa-mt-4">
             {t('ticketing.orderDetail.backToOrders')}
           </OrgAdminButton>
         </div>
@@ -123,15 +123,15 @@ export default function TicketingOrderDetail() {
 
   if (isLoading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <div style={{ padding: '24px' }}>
-          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div className="oa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '32px' }}>
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="pa-skeleton" style={{ height: '100px' }} />
+              <div key={i} className="oa-skeleton" style={{ height: '100px' }} />
             ))}
           </div>
-          <div className="pa-skeleton" style={{ height: '400px', borderRadius: '8px' }} />
+          <div className="oa-skeleton" style={{ height: '400px', borderRadius: '8px' }} />
         </div>
       </div>
     )
@@ -139,11 +139,11 @@ export default function TicketingOrderDetail() {
 
   if (error || !order) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader title="Order Not Found" />
         <div className="oa-card">
-          <p className="pa-text-danger pa-mb-4">{getErrorMessage(error) || 'Order not found'}</p>
-          <div className="pa-flex pa-gap-2">
+          <p className="oa-text-danger oa-mb-4">{getErrorMessage(error) || 'Order not found'}</p>
+          <div className="oa-flex oa-gap-2">
             <OrgAdminButton onClick={() => refetch()} variant="secondary">
               {t('common.retry')}
             </OrgAdminButton>
@@ -181,11 +181,11 @@ export default function TicketingOrderDetail() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <div className="oa-order-detail">
 
         {/* Back Navigation */}
-        <div className="pa-mb-6">
+        <div className="oa-mb-6">
           <OrgAdminButton
             variant="secondary"
             icon="arrow_back"
@@ -197,25 +197,25 @@ export default function TicketingOrderDetail() {
 
         {/* Stuck Order Warning */}
         {isStuckOrder && (
-          <div className="oa-card pa-mb-6" style={{ background: 'var(--pa-warning-bg)' }}>
-            <div className="pa-flex pa-items-start pa-gap-3">
-              <span className="material-symbols-outlined" style={{ color: 'var(--pa-warning)', fontSize: '20px', flexShrink: 0 }}>
+          <div className="oa-card oa-mb-6" style={{ background: 'var(--oa-warning-bg)' }}>
+            <div className="oa-flex oa-items-start oa-gap-3">
+              <span className="material-symbols-outlined" style={{ color: 'var(--oa-warning)', fontSize: '20px', flexShrink: 0 }}>
                 warning
               </span>
-              <div className="pa-flex pa-items-center pa-justify-between pa-w-full pa-gap-4">
-                <div className="pa-body-m pa-font-medium">
-                  <p className="pa-font-semibold pa-mb-1">{t('ticketing.orderDetail.stuckOrderDetected')}</p>
-                  <p className="pa-body-s pa-text-slate-600">
+              <div className="oa-flex oa-items-center oa-justify-between oa-w-full oa-gap-4">
+                <div className="oa-body-m oa-font-medium">
+                  <p className="oa-font-semibold oa-mb-1">{t('ticketing.orderDetail.stuckOrderDetected')}</p>
+                  <p className="oa-body-s oa-text-slate-600">
                     {t('ticketing.orderDetail.stuckOrderDescription')}
                   </p>
-                  <p className="pa-body-xs pa-text-orange-600 pa-mt-2 pa-font-semibold">
+                  <p className="oa-body-xs oa-text-orange-600 oa-mt-2 oa-font-semibold">
                     {t('ticketing.orderDetail.stuckOrderWarning')}
                   </p>
                 </div>
                 <button
                   onClick={handleCompleteOrder}
                   disabled={isCompleting}
-                  className="pa-btn pa-btn--primary pa-shrink-0"
+                  className="oa-btn oa-btn--primary oa-shrink-0"
                 >
                   {isCompleting ? t('ticketing.orderDetail.processing') : t('ticketing.orderDetail.completeOrder')}
                 </button>
@@ -225,7 +225,7 @@ export default function TicketingOrderDetail() {
         )}
 
         {/* Main Card */}
-        <div className="oa-card oa-order-detail__card pa-mb-6">
+        <div className="oa-card oa-order-detail__card oa-mb-6">
           {/* Header */}
           <div className="oa-order-detail__header">
             <div className="oa-order-detail__header-left">
@@ -249,7 +249,7 @@ export default function TicketingOrderDetail() {
             {/* Left Column - Order Metadata */}
             <div className="oa-order-detail__column oa-order-detail__column--left">
               {/* Order Details Section */}
-              <section className="pa-mb-10">
+              <section className="oa-mb-10">
                 <h3 className="oa-order-detail__section-title">{t('ticketing.orderDetail.orderDetails')}</h3>
                 <div className="oa-order-detail__meta-item">
                   <span className="oa-order-detail__meta-label">{t('ticketing.orderDetail.purchaser')}</span>
@@ -360,7 +360,7 @@ export default function TicketingOrderDetail() {
               <button
                 onClick={handleRefund}
                 disabled={isRefunding}
-                className="pa-btn pa-btn--danger"
+                className="oa-btn oa-btn--danger"
               >
                 {isRefunding ? t('ticketing.orderDetail.processing') : t('ticketing.orderDetail.refundOrder')}
               </button>
@@ -370,12 +370,12 @@ export default function TicketingOrderDetail() {
 
         {/* Refund Info */}
         {!canRefund && order.status !== 'pending_payment' && (
-          <div className="oa-card" style={{ background: 'var(--pa-info-bg)' }}>
-            <div className="pa-flex pa-items-start pa-gap-3">
-              <span className="material-symbols-outlined" style={{ color: 'var(--pa-info)', fontSize: '20px', flexShrink: 0 }}>
+          <div className="oa-card" style={{ background: 'var(--oa-info-bg)' }}>
+            <div className="oa-flex oa-items-start oa-gap-3">
+              <span className="material-symbols-outlined" style={{ color: 'var(--oa-info)', fontSize: '20px', flexShrink: 0 }}>
                 info
               </span>
-              <div className="pa-body-m pa-font-medium">
+              <div className="oa-body-m oa-font-medium">
                 {order.status === 'refunded'
                   ? t('ticketing.orderDetail.refundedMessage')
                   : t('ticketing.orderDetail.cannotRefundMessage')}

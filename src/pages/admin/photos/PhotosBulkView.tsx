@@ -161,7 +161,7 @@ export function PhotosBulkView() {
   if (loading) {
     return (
       <div className="bulk-loading">
-        <Card className="pa-card pa-h-64 pa-animate-pulse" />
+        <Card className="oa-card oa-h-64 oa-animate-pulse" />
       </div>
     )
   }
@@ -316,7 +316,7 @@ export function PhotosBulkView() {
         <Card className="bulk-galleries-card">
           <h3>{t('photos.bulk.selectGalleries')}</h3>
           {selectableGalleries.length === 0 ? (
-            <p className="pa-text-muted pa-text-center pa-py-8">
+            <p className="oa-text-muted oa-text-center oa-py-8">
               {t('photos.browse.noGalleries')}
             </p>
           ) : (
@@ -350,10 +350,10 @@ export function PhotosBulkView() {
         onClose={() => setShowDeleteConfirm(false)}
         title={t('photos.bulk.deleteEmpty')}
       >
-        <p className="pa-text-sm pa-text-muted pa-mb-4">
+        <p className="oa-text-sm oa-text-muted oa-mb-4">
           {t('photos.bulk.confirmDeleteEmpty', { count: selectedIds.size })}
         </p>
-        <div className="pa-flex pa-justify-end pa-gap-2">
+        <div className="oa-flex oa-justify-end oa-gap-2">
           <Button variant="secondary" onClick={() => setShowDeleteConfirm(false)}>
             {t('common.cancel')}
           </Button>

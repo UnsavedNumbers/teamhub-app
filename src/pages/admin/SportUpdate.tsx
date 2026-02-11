@@ -5,9 +5,10 @@ import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
 import { getSports, updateSport } from '../../data/services/sportsService'
 import type { Sport } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, Input } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, Input } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 export default function SportUpdate() {
   const { sport_id } = useParams<{ sport_id: string }>()
@@ -92,26 +93,26 @@ export default function SportUpdate() {
 
   if (loading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
-        <div className="pa-skeleton" style={{ height: '400px' }} />
+        <div className="oa-skeleton" style={{ height: '400px' }} />
       </div>
     )
   }
 
   if (!sport) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
         <Card>
-          <div className="pa-body-m pa-text-danger">Sport not found</div>
+          <div className="oa-body-m oa-text-danger">Sport not found</div>
         </Card>
       </div>
     )
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <OfflineBanner />
       
       <AdminPageHeader
@@ -125,17 +126,17 @@ export default function SportUpdate() {
       />
 
       {error && (
-        <Card className="pa-mb-6" noPadding>
-          <div className="pa-alert-card pa-alert-card--error">
-            <div className="pa-body-m pa-text-danger">{error}</div>
+        <Card className="oa-mb-6" noPadding>
+          <div className="oa-alert-card oa-alert-card--error">
+            <div className="oa-body-m oa-text-danger">{error}</div>
           </div>
         </Card>
       )}
 
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card>
-          <form onSubmit={handleSubmit} className="pa-form-grid">
-          <div className="pa-form-group">
+          <form onSubmit={handleSubmit} className="oa-form-grid">
+          <div className="oa-form-group">
             <Input
               label="Sport Name"
               value={name}
@@ -146,7 +147,7 @@ export default function SportUpdate() {
             />
           </div>
 
-          <div className="pa-form-actions">
+          <div className="oa-form-actions">
             <Button
               type="submit"
               disabled={!name.trim() || submitting || isOffline || USE_FAKE_DATA}

@@ -6,11 +6,12 @@ import { USE_FAKE_DATA } from '../../data/config'
 import { getPrograms, getSportIconUrl, getSports, deleteSportIcon, updateSportCustomization, uploadSportIcon } from '../../data/services/sportsService'
 import type { Program, Sport } from '../../data/types/organization'
 import OfflineBanner from '../../components/admin/OfflineBanner'
-import { AdminPageHeader, Button, Card } from '../../components/platformAdmin'
+import { AdminPageHeader, Button, Card } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { FileUpload } from '../../components/common/FileUpload'
 import { getLink } from '../../utils/routes'
 import './SportDetail.css'
+import '../../styles/orgAdmin.css'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -118,19 +119,19 @@ export default function SportDetail() {
 
   if (loading) {
     return (
-      <div className="pa-root sport-detail-page">
+      <div className="oa-root sport-detail-page">
         <OfflineBanner />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '24px' }}>
-          <div className="pa-skeleton" style={{ height: '60px' }} />
-          <div className="pa-skeleton" style={{ height: '400px', borderRadius: '8px' }} />
+          <div className="oa-skeleton" style={{ height: '60px' }} />
+          <div className="oa-skeleton" style={{ height: '400px', borderRadius: '8px' }} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="pa-skeleton" style={{ height: '120px' }} />
+              <div key={i} className="oa-skeleton" style={{ height: '120px' }} />
             ))}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
             {Array.from({ length: 2 }).map((_, i) => (
-              <div key={i} className="pa-skeleton" style={{ height: '300px' }} />
+              <div key={i} className="oa-skeleton" style={{ height: '300px' }} />
             ))}
           </div>
         </div>
@@ -139,7 +140,7 @@ export default function SportDetail() {
   }
 
   return (
-    <div className="pa-root sport-detail-page">
+    <div className="oa-root sport-detail-page">
       <OfflineBanner />
       
       {/* Hero section with cover image — theme overlay for contrast */}
@@ -147,8 +148,8 @@ export default function SportDetail() {
         className="sport-detail-hero"
         style={{
           position: 'relative',
-          marginBottom: 'var(--pa-space-6)',
-          borderRadius: 'var(--pa-radius-lg)',
+          marginBottom: 'var(--oa-space-6)',
+          borderRadius: 'var(--oa-radius-lg)',
           overflow: 'hidden',
           minHeight: '200px',
         }}
@@ -183,13 +184,13 @@ export default function SportDetail() {
           style={{ 
             position: 'relative', 
             zIndex: 2, 
-            padding: 'var(--pa-space-6)',
-            '--pa-text-primary': '#fff',
-            '--pa-text-secondary': 'rgba(255,255,255,0.85)',
-            '--pa-text-muted': 'rgba(255,255,255,0.7)',
-            '--pa-n900': '#fff',
-            '--pa-n700': 'rgba(255,255,255,0.85)',
-            '--pa-n500': 'rgba(255,255,255,0.7)',
+            padding: 'var(--oa-space-6)',
+            '--oa-text-primary': '#fff',
+            '--oa-text-secondary': 'rgba(255,255,255,0.85)',
+            '--oa-text-muted': 'rgba(255,255,255,0.7)',
+            '--oa-n900': '#fff',
+            '--oa-n700': 'rgba(255,255,255,0.85)',
+            '--oa-n500': 'rgba(255,255,255,0.7)',
           } as React.CSSProperties}
         >
           <AdminPageHeader
@@ -201,7 +202,7 @@ export default function SportDetail() {
               { label: sport?.name || 'Sport' },
             ]}
             actions={
-              <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
+              <div className="oa-flex oa-flex-col sm:oa-flex-row oa-gap-2">
                 <Link to={sportsRoute} className="sport-detail-hero-link sport-detail-hero-link--ghost w-full sm:w-auto">
                   <Button variant="ghost" className="w-full sm:w-auto min-h-[44px]">Back to Sports</Button>
                 </Link>
@@ -219,10 +220,10 @@ export default function SportDetail() {
 
       {successMessage && (
         <Card 
-          className="pa-mb-6 sport-detail-alert sport-detail-alert--success" 
-          style={{ background: 'var(--pa-success-bg, rgba(46, 125, 50, 0.08))' }}
+          className="oa-mb-6 sport-detail-alert sport-detail-alert--success" 
+          style={{ background: 'var(--oa-success-bg, rgba(46, 125, 50, 0.08))' }}
         >
-          <div className="pa-body-m sport-detail-alert-text sport-detail-alert-text--success" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+          <div className="oa-body-m sport-detail-alert-text sport-detail-alert-text--success" style={{ padding: 'var(--oa-space-3) var(--oa-space-4)' }}>
             {successMessage}
           </div>
         </Card>
@@ -230,10 +231,10 @@ export default function SportDetail() {
 
       {actionError && (
         <Card 
-          className="pa-mb-6 sport-detail-alert sport-detail-alert--error" 
-          style={{ background: 'var(--pa-danger-bg, rgba(198, 40, 40, 0.08))' }}
+          className="oa-mb-6 sport-detail-alert sport-detail-alert--error" 
+          style={{ background: 'var(--oa-danger-bg, rgba(198, 40, 40, 0.08))' }}
         >
-          <div className="pa-body-m sport-detail-alert-text sport-detail-alert-text--error" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+          <div className="oa-body-m sport-detail-alert-text sport-detail-alert-text--error" style={{ padding: 'var(--oa-space-3) var(--oa-space-4)' }}>
             {actionError}
           </div>
         </Card>
@@ -241,33 +242,33 @@ export default function SportDetail() {
 
       {error && (
         <Card 
-          className="pa-mb-6 sport-detail-alert sport-detail-alert--error" 
-          style={{ background: 'var(--pa-danger-bg, rgba(198, 40, 40, 0.08))' }}
+          className="oa-mb-6 sport-detail-alert sport-detail-alert--error" 
+          style={{ background: 'var(--oa-danger-bg, rgba(198, 40, 40, 0.08))' }}
         >
-          <div className="pa-body-m sport-detail-alert-text sport-detail-alert-text--error" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+          <div className="oa-body-m sport-detail-alert-text sport-detail-alert-text--error" style={{ padding: 'var(--oa-space-3) var(--oa-space-4)' }}>
             {error}
           </div>
         </Card>
       )}
 
       {!sport ? null : (
-        <div className="sport-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--pa-space-6)' }}>
+        <div className="sport-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--oa-space-6)' }}>
           {false && (
           <div className="oa-card sport-detail-card">
             <div className="oa-card-header">
               <h3 className="oa-card-title">Customization</h3>
             </div>
-            <div className="pa-flex pa-flex-col sm:pa-flex-row pa-items-start pa-gap-4" style={{ alignItems: 'flex-start' }}>
+            <div className="oa-flex oa-flex-col sm:oa-flex-row oa-items-start oa-gap-4" style={{ alignItems: 'flex-start' }}>
               <div style={{ width: '96px', flexShrink: 0 }}>
-                <div className="pa-text-sm pa-text-muted sport-detail-label" style={{ marginBottom: '8px' }}>Icon</div>
+                <div className="oa-text-sm oa-text-muted sport-detail-label" style={{ marginBottom: '8px' }}>Icon</div>
                 <div
                   className="sport-detail-icon-box"
                   style={{
                     width: '96px',
                     height: '96px',
                     borderRadius: '12px',
-                    border: '1px solid var(--org-border-default, var(--pa-n200))',
-                    background: 'var(--org-surface-section, var(--pa-n50))',
+                    border: '1px solid var(--org-border-default, var(--oa-n200))',
+                    background: 'var(--org-surface-section, var(--oa-n50))',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -279,14 +280,14 @@ export default function SportDetail() {
                   ) : isMaterialIcon ? (
                     <span className="material-symbols-outlined" style={{ fontSize: '48px', color: pendingColor }}>{sport?.icon}</span>
                   ) : (
-                    <span className="material-symbols-outlined" style={{ fontSize: '36px', color: 'var(--pa-n400)' }}>sports</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: '36px', color: 'var(--oa-n400)' }}>sports</span>
                   )}
                 </div>
               </div>
 
-              <div className="pa-flex-1">
-                <div className="pa-text-sm pa-text-muted sport-detail-label" style={{ marginBottom: '8px' }}>Sport Color</div>
-                <div className="pa-flex pa-items-center pa-gap-3" style={{ marginBottom: '12px' }}>
+              <div className="oa-flex-1">
+                <div className="oa-text-sm oa-text-muted sport-detail-label" style={{ marginBottom: '8px' }}>Sport Color</div>
+                <div className="oa-flex oa-items-center oa-gap-3" style={{ marginBottom: '12px' }}>
                   <input
                     type="color"
                     value={pendingColor}
@@ -299,7 +300,7 @@ export default function SportDetail() {
                     style={{ width: '44px', height: '36px' }}
                     disabled={isOffline || USE_FAKE_DATA}
                   />
-                  <div className="pa-text-sm pa-text-muted">{pendingColor}</div>
+                  <div className="oa-text-sm oa-text-muted">{pendingColor}</div>
                   <Button
                     variant="secondary"
                     disabled={!isColorDirty || savingColor || isOffline || USE_FAKE_DATA}
@@ -338,7 +339,7 @@ export default function SportDetail() {
                   </Button>
                 </div>
 
-                <div className="pa-form-group">
+                <div className="oa-form-group">
                   <FileUpload
                     label="Upload Icon"
                     accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
@@ -356,7 +357,7 @@ export default function SportDetail() {
                   />
                 </div>
 
-                <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2" style={{ marginTop: '12px' }}>
+                <div className="oa-flex oa-flex-col sm:oa-flex-row oa-gap-2" style={{ marginTop: '12px' }}>
                   <Button
                     disabled={!iconFile || uploadingIcon || isOffline || USE_FAKE_DATA}
                     loading={uploadingIcon}
@@ -451,22 +452,22 @@ export default function SportDetail() {
               </h3>
             </div>
             {programs.length === 0 ? (
-              <div className="sport-detail-empty pa-text-muted" style={{ padding: 'var(--pa-space-5)' }}>
+              <div className="sport-detail-empty oa-text-muted" style={{ padding: 'var(--oa-space-5)' }}>
                 No programs yet for this sport. Create one to start building out levels and teams.
               </div>
             ) : (
-              <div className="pa-stacked-list sport-detail-program-list">
+              <div className="oa-stacked-list sport-detail-program-list">
                 {programs.map((p) => (
                   <Link
                     key={p.id}
                     to={getLink('admin.programs.detail', { id: p.id })}
-                    className="pa-stacked-list-row sport-detail-program-row"
+                    className="oa-stacked-list-row sport-detail-program-row"
                     style={{ textDecoration: 'none', color: 'inherit' }}
                   >
-                    <div className="pa-stacked-list-row-content">
+                    <div className="oa-stacked-list-row-content">
                       <div>
-                        <div className="pa-stacked-list-row-title sport-detail-program-name">{p.name}</div>
-                        <div className="pa-stacked-list-row-meta sport-detail-program-meta">{p.gender_category}</div>
+                        <div className="oa-stacked-list-row-title sport-detail-program-name">{p.name}</div>
+                        <div className="oa-stacked-list-row-meta sport-detail-program-meta">{p.gender_category}</div>
                       </div>
                     </div>
                   </Link>

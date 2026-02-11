@@ -239,20 +239,20 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="pa-root pa-app oa-theme-active">
+    <div className="oa-root oa-app oa-theme-active">
       {/* Mobile header - shown when viewport ≤1023px (matches CSS) */}
       {showMobileNav && (
-        <header className="pa-mobile-header">
-          <Link to={getLink(RouteKeys.ADMIN_DASHBOARD)} className="pa-mobile-brand">
+        <header className="oa-mobile-header">
+          <Link to={getLink(RouteKeys.ADMIN_DASHBOARD)} className="oa-mobile-brand">
             <img 
               src={resolvedTheme === 'dark' ? '/images/logo-light.png' : '/images/logo-dark.png'} 
               alt={currentOrganization?.name || 'Organization'}
-              className="pa-mobile-logo"
+              className="oa-mobile-logo"
               style={{ height: '28px', width: 'auto' }}
             />
           </Link>
           <button
-            className="pa-mobile-menu-toggle"
+            className="oa-mobile-menu-toggle"
             onClick={() => setMobileSidebarOpen(prev => !prev)}
             aria-expanded={mobileSidebarOpen}
             aria-label="Toggle navigation menu"
@@ -267,14 +267,14 @@ export default function AdminLayout() {
 
       {/* Sidebar - hidden when viewport ≤1023px */}
       {!showMobileNav && (
-        <aside className="pa-sidebar">
+        <aside className="oa-sidebar">
         {/* Brand */}
-        <div className="pa-sidebar-header">
-          <Link to={getLink(RouteKeys.ADMIN_DASHBOARD)} className="pa-sidebar-brand">
+        <div className="oa-sidebar-header">
+          <Link to={getLink(RouteKeys.ADMIN_DASHBOARD)} className="oa-sidebar-brand">
             <img 
               src={resolvedTheme === 'dark' ? '/images/logo-light.png' : '/images/logo-dark.png'} 
               alt="Youth Sports" 
-              className="pa-sidebar-logo-img"
+              className="oa-sidebar-logo-img"
               style={{ height: '32px', width: 'auto' }}
             />
           </Link>
@@ -282,7 +282,7 @@ export default function AdminLayout() {
         </div>
 
         {/* Navigation */}
-        <nav className="pa-sidebar-nav">
+        <nav className="oa-sidebar-nav">
           {menuItems.map((item) => {
             const isDisabled = item.requiresOrg && !hasOrg
             const active = isActive(item.path ?? '')
@@ -294,9 +294,9 @@ export default function AdminLayout() {
             if (!hasChildren) {
               if (isDisabled) {
                 return (
-                  <div key={item.label} className="pa-nav-item-top">
+                  <div key={item.label} className="oa-nav-item-top">
                     <div
-                      className="pa-nav-link-top"
+                      className="oa-nav-link-top"
                       style={{ opacity: 0.4, cursor: 'not-allowed' }}
                       title="Requires organization setup"
                     >
@@ -312,10 +312,10 @@ export default function AdminLayout() {
               const shouldShowActive = !isDashboard && active
 
               return (
-                <div key={item.label} className="pa-nav-item-top">
+                <div key={item.label} className="oa-nav-item-top">
                   <Link
                     to={item.path ?? ''}
-                    className={`pa-nav-link-top ${shouldShowActive ? 'active' : ''} ${isDashboard ? 'pa-nav-dashboard' : ''}`}
+                    className={`oa-nav-link-top ${shouldShowActive ? 'active' : ''} ${isDashboard ? 'oa-nav-dashboard' : ''}`}
                   >
                     <span className="material-symbols-outlined">{item.icon}</span>
                     <span>{item.label}</span>
@@ -329,32 +329,32 @@ export default function AdminLayout() {
             if (visibleChildren.length === 0 && isDisabled) return null
 
             return (
-              <div key={item.label} className="pa-nav-section">
+              <div key={item.label} className="oa-nav-section">
                 <button
                   onClick={() => toggleSection(item.label)}
-                  className={`pa-nav-link-top ${isExpanded ? 'expanded' : ''}`}
+                  className={`oa-nav-link-top ${isExpanded ? 'expanded' : ''}`}
                   aria-expanded={isExpanded}
                   disabled={isDisabled}
                   style={{ opacity: isDisabled ? 0.4 : 1 }}
                 >
                   <span className="material-symbols-outlined">{item.icon}</span>
                   <span>{item.label}</span>
-                  <span className="material-symbols-outlined pa-nav-toggle-icon">
+                  <span className="material-symbols-outlined oa-nav-toggle-icon">
                     {isExpanded ? 'expand_less' : 'expand_more'}
                   </span>
                 </button>
 
                 {isExpanded && visibleChildren.length > 0 && (
-                  <ul className="pa-nav-list">
+                  <ul className="oa-nav-list">
                     {children.map((child: any) => {
                       const childDisabled = child.requiresOrg && !hasOrg
                       const childActive = isActiveExact(child.path ?? '')
 
                       if (childDisabled) {
                         return (
-                          <li key={child.path ?? child.text} className="pa-nav-item">
+                          <li key={child.path ?? child.text} className="oa-nav-item">
                             <div
-                              className="pa-nav-link"
+                              className="oa-nav-link"
                               style={{ opacity: 0.4, cursor: 'not-allowed' }}
                               title="Requires organization setup"
                             >
@@ -366,10 +366,10 @@ export default function AdminLayout() {
                       }
 
                       return (
-                        <li key={child.path ?? child.text} className="pa-nav-item">
+                        <li key={child.path ?? child.text} className="oa-nav-item">
                           <Link
                             to={child.path ?? ''}
-                            className={`pa-nav-link ${childActive ? 'active' : ''}`}
+                            className={`oa-nav-link ${childActive ? 'active' : ''}`}
                           >
                             <span className="material-symbols-outlined">{child.icon}</span>
                             <span>{child.text}</span>
@@ -385,11 +385,11 @@ export default function AdminLayout() {
         </nav>
 
         {/* Footer */}
-        <div className="pa-sidebar-footer">
-          <div className="pa-sidebar-user">
-            <span className="pa-sidebar-email">{profile?.email || 'Unknown'}</span>
+        <div className="oa-sidebar-footer">
+          <div className="oa-sidebar-user">
+            <span className="oa-sidebar-email">{profile?.email || 'Unknown'}</span>
             <button
-              className="pa-btn pa-btn--secondary pa-btn--compact"
+              className="oa-btn oa-btn--secondary oa-btn--compact"
               onClick={handleSignOut}
               style={{
                 width: '100%',
@@ -406,7 +406,7 @@ export default function AdminLayout() {
       )}
 
       {/* Main */}
-      <div className="pa-main">
+      <div className="oa-main">
         {/* Global Navigation Header */}
         <GlobalNav variant="admin" />
 
@@ -414,7 +414,7 @@ export default function AdminLayout() {
         {summary && <LicenseWarningBanner summary={summary} />}
 
         {/* Content */}
-        <main className="pa-content">
+        <main className="oa-content">
           <Outlet />
         </main>
       </div>

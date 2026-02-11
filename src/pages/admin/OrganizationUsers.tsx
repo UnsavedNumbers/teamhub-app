@@ -8,12 +8,12 @@ import {
   Button, 
   Badge,
   InlineNotice,
-} from '../../components/platformAdmin'
-import OrgDataTable from '../../components/admin/OrgDataTable'
-import type { ColumnConfig } from '../../components/admin/OrgDataTable'
-import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+  OrgDataTable,
+  type ColumnConfig
+} from '../../components/admin'
 import { mapDbRoleToFrontendRole } from '../../utils/roleHelpers'
 import { formatDate } from '../../utils/dateFormatters'
+import '../../styles/orgAdmin.css'
 
 interface OrgUser {
   id: string
@@ -79,9 +79,9 @@ export default function OrganizationUsers() {
       label: 'Email',
       render: (row) => (
         <div>
-          <div className="pa-body-m" style={{ fontWeight: 600 }}>{row.email}</div>
+          <div className="oa-body-m" style={{ fontWeight: 600 }}>{row.email}</div>
           {row.display_name && (
-            <div className="pa-body-s pa-text-muted">{row.display_name}</div>
+            <div className="oa-body-s oa-text-muted">{row.display_name}</div>
           )}
         </div>
       )
@@ -95,7 +95,7 @@ export default function OrganizationUsers() {
       id: 'roles', 
       label: 'Roles',
       render: (row) => (
-        <div className="pa-flex pa-gap-2">
+        <div className="oa-flex oa-gap-2">
           {row.roles.map((role: string) => {
             // Map database role to frontend role for display
             const dbRole = role as 'org_admin' | 'coach' | 'parent'
@@ -137,7 +137,7 @@ export default function OrganizationUsers() {
   ]
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title={t('admin.users.title')}
         subtitle={t('admin.users.subtitle')} 
@@ -153,7 +153,7 @@ export default function OrganizationUsers() {
           tone="success"
           title={successMessage}
           onClose={() => setSuccessMessage(null)}
-          className="pa-mb-4"
+          className="oa-mb-4"
         />
       )}
 
@@ -174,7 +174,7 @@ export default function OrganizationUsers() {
             </Button>
           }
           onClose={() => setError(null)}
-          className="pa-mb-4"
+          className="oa-mb-4"
         />
       )}
 
