@@ -19,10 +19,10 @@ import {
   Button,
   Input,
   Select,
-  DatePicker,
   Checkbox
 } from '../../components/admin'
 import { TimePicker } from '../../components/platformAdmin/TimePicker'
+import { DateTimePicker } from '../../components/platformAdmin/DateTimePicker'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { FanVisibilityToggle } from '../../components/admin/FanVisibilityToggle'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
@@ -418,7 +418,7 @@ export default function CreateEvent() {
           .from('organization_visibility_settings')
           .select('fan_visibility_defaults')
           .eq('org_id', context.orgId)
-          .single()
+          .maybeSingle()
         
         if (error) {
           console.error('Error fetching org visibility defaults:', error)
@@ -926,7 +926,7 @@ export default function CreateEvent() {
                     control={control} 
                     rules={{ required: t('admin.events.validation.startTimeRequired') }} 
                     render={({ field }) => (
-                      <DatePicker 
+                      <DateTimePicker 
                         label="Event Date" 
                         value={field.value ? field.value.split('T')[0] : ''}
                         onChange={(date) => {
@@ -1213,7 +1213,7 @@ export default function CreateEvent() {
                             validate: () => true
                           }}
                           render={({ field }) => (
-                            <DatePicker
+                            <DateTimePicker
                               label={t('admin.events.ticketing.salesWindow.startDate' as any)}
                               value={field.value ? field.value.split('T')[0] : ''}
                               min={new Date().toISOString().slice(0, 10)}
@@ -1266,7 +1266,7 @@ export default function CreateEvent() {
                             }
                           }}
                           render={({ field }) => (
-                            <DatePicker
+                            <DateTimePicker
                               label={t('admin.events.ticketing.salesWindow.endDate' as any)}
                               value={field.value ? field.value.split('T')[0] : ''}
                               max={watch('start_time')?.split('T')[0]}
@@ -1474,7 +1474,7 @@ export default function CreateEvent() {
                       <Controller name="recurring.frequency" control={control} render={({ field }) => <Select {...field} label="Frequency" options={[{value:'weekly', label:'Weekly'}]} />} />
                     </div>
                     <div className="oa-max-w-sm">
-                      <Controller name="recurring.end_date" control={control} render={({ field }) => <DatePicker {...field} label="Recurs Until" />} />
+                      <Controller name="recurring.end_date" control={control} render={({ field }) => <DateTimePicker {...field} label="Recurs Until" />} />
                     </div>
                   </div>
                 )}
