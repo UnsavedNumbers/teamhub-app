@@ -14,6 +14,7 @@ import type { VideoNoteScope } from '@/types/video'
 import Icon from '@/components/portal/Icon'
 import Button from '@/components/portal/Button'
 import { cn } from '@/utils/cn'
+import { t } from '@/i18n'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -63,10 +64,10 @@ function parseTs(input: string): number | null {
 }
 
 const SCOPES: { value: VideoNoteScope; label: string }[] = [
-  { value: 'private', label: 'Private (only me)' },
-  { value: 'coaches', label: 'Coaches only' },
-  { value: 'guardians', label: 'Share with guardians' },
-  { value: 'all', label: 'Everyone' },
+  { value: 'private', label: t('videoLibrary.notes.scopes.private') },
+  { value: 'coaches', label: t('videoLibrary.notes.scopes.coaches') },
+  { value: 'guardians', label: t('videoLibrary.notes.scopes.guardians') },
+  { value: 'all', label: t('videoLibrary.notes.scopes.all') },
 ]
 
 // ─── Component ─────────────────────────────────────────────────────────────
@@ -106,7 +107,7 @@ export default function NoteComposer({
     }
     const parsed = parseTs(value)
     if (parsed === null) {
-      setTsError('Invalid format (M:SS)')
+      setTsError(t('videoLibrary.notes.invalidTimestamp'))
       return
     }
     setTimestampSeconds(parsed)
@@ -158,7 +159,7 @@ export default function NoteComposer({
               value={timestampInput}
               onChange={(e) => handleTimestampChange(e.target.value)}
               placeholder="00:00"
-              aria-label="Timestamp (MM:SS)"
+              aria-label={t('videoLibrary.notes.timestampLabel')}
               disabled={disabled}
               className={cn(
                 'w-full px-3 py-2 rounded-lg border text-sm font-mono text-center',
@@ -179,7 +180,7 @@ export default function NoteComposer({
             className="shrink-0 px-3 py-2 rounded-lg bg-[var(--org-btn-secondary-bg)] text-white text-sm font-bold flex items-center gap-1.5 hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             <Icon name="schedule" size="text-base" />
-            Capture Time
+            {t('videoLibrary.notes.captureTime')}
           </button>
         </div>
 
@@ -187,7 +188,7 @@ export default function NoteComposer({
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Type your coaching observation…"
+          placeholder={t('videoLibrary.notes.placeholder')}
           rows={3}
           disabled={disabled}
           className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm resize-none focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent placeholder:text-gray-400"
@@ -204,7 +205,7 @@ export default function NoteComposer({
             size="text-sm"
             className={cn('transition-transform duration-200', showOptions && 'rotate-180')}
           />
-          Assign &amp; Visibility
+          {t('videoLibrary.notes.assignAndVisibility')}
         </button>
 
         {showOptions && (
@@ -213,7 +214,7 @@ export default function NoteComposer({
             {linkedAthletes.length > 0 && (
               <div>
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                  Assign to Athletes
+                  {t('videoLibrary.notes.assignToAthletes')}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {linkedAthletes.map((a) => (
@@ -240,7 +241,7 @@ export default function NoteComposer({
             {/* Scope */}
             <div>
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                Visibility
+                {t('videoLibrary.notes.visibility')}
               </label>
               <select
                 value={scope}
@@ -265,7 +266,7 @@ export default function NoteComposer({
             disabled={disabled || !content.trim() || isSaving}
             className="text-sm"
           >
-            {isSaving ? 'Saving…' : `Add Note at ${formatTs(timestampSeconds)}`}
+            {isSaving ? t('common.saving') : t('videoLibrary.notes.addAtTimestamp', { timestamp: formatTs(timestampSeconds) })}
           </Button>
         </div>
       </div>

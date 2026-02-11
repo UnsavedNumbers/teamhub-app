@@ -12,6 +12,7 @@ import Button from '@/components/portal/Button'
 import { cn } from '@/utils/cn'
 import { showSuccess, showError } from '@/utils/toast'
 import { t } from '@/i18n'
+import { getLink } from '@/utils/routes'
 
 interface VideoShareModalProps {
   isOpen: boolean
@@ -19,14 +20,6 @@ interface VideoShareModalProps {
   videoId: string
   videoTitle: string
 }
-
-const EXPIRATION_OPTIONS: { value: ShareExpiration; label: string }[] = [
-  { value: '1h', label: '1 hour' },
-  { value: '24h', label: '24 hours' },
-  { value: '7d', label: '7 days' },
-  { value: '30d', label: '30 days' },
-  { value: 'never', label: 'Never expires' },
-]
 
 export default function VideoShareModal({
   isOpen,
@@ -45,6 +38,13 @@ export default function VideoShareModal({
   const [isCreating, setIsCreating] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create')
+  const expirationOptions: { value: ShareExpiration; label: string }[] = [
+    { value: '1h', label: t('videoLibrary.shareLink.expirationOptions.1h') },
+    { value: '24h', label: t('videoLibrary.shareLink.expirationOptions.24h') },
+    { value: '7d', label: t('videoLibrary.shareLink.expirationOptions.7d') },
+    { value: '30d', label: t('videoLibrary.shareLink.expirationOptions.30d') },
+    { value: 'never', label: t('videoLibrary.shareLink.expirationOptions.never') },
+  ]
 
   // Filter active (non-revoked, non-expired) shares
   const activeShares = useMemo(() => {
@@ -70,29 +70,37 @@ export default function VideoShareModal({
       })
 
       if (share) {
-        const shareUrl = `${window.location.origin}/share/video/${share.token}`
-        await navigator.clipboard.writeText(shareUrl)
-        showSuccess(t('videoLibrary.shareLink.linkCopied'))
+        const shareUrl = `${window.location.origin}${getLink('share.video', { token: share.token })}`
+        const copied = await navigator.clipboard.writeText(shareUrl).then(() => true).catch(() => false)
+        if (copied) {
+          showSuccess(t('videoLibrary.shareLink.linkCopied'))
+        } else {
+          showError(t('common.error.clipboardFailed'))
+        }
         setEmailRecipients('')
         setActiveTab('manage')
       } else {
-        showError('Failed to create share link')
+        showError(t('videoLibrary.shareLink.createFailed'))
       }
     } finally {
       setIsCreating(false)
     }
-  }, [expiration, allowDownload, emailRecipients, createShare])
+  }, [expiration, allowDownload, emailRecipients, createShare, t])
 
   const handleCopyLink = useCallback(async (share: typeof shares[0]) => {
-    const shareUrl = `${window.location.origin}/share/video/${share.token}`
-    await navigator.clipboard.writeText(shareUrl)
-    setCopiedId(share.id)
-    showSuccess(t('videoLibrary.shareLink.linkCopied'))
-    setTimeout(() => setCopiedId(null), 2000)
-  }, [])
+    const shareUrl = `${window.location.origin}${getLink('share.video', { token: share.token })}`
+    const copied = await navigator.clipboard.writeText(shareUrl).then(() => true).catch(() => false)
+    if (copied) {
+      setCopiedId(share.id)
+      showSuccess(t('videoLibrary.shareLink.linkCopied'))
+      setTimeout(() => setCopiedId(null), 2000)
+    } else {
+      showError(t('common.error.clipboardFailed'))
+    }
+  }, [t])
 
   const handleRevoke = useCallback(async (shareId: string) => {
-    if (!window.confirm('Are you sure you want to revoke this share link? Anyone with this link will no longer have access.')) {
+    if (!window.confirm(t('videoLibrary.shareLink.revokeConfirm'))) {
       return
     }
 
@@ -100,21 +108,21 @@ export default function VideoShareModal({
     if (success) {
       showSuccess(t('videoLibrary.shareLink.revoked'))
     } else {
-      showError('Failed to revoke share link')
+      showError(t('videoLibrary.shareLink.revokeFailed'))
     }
-  }, [revokeShare])
+  }, [revokeShare, t])
 
   const formatExpiration = (expiresAt: string | null): string => {
-    if (!expiresAt) return 'Never'
+    if (!expiresAt) return t('videoLibrary.shareLink.expirationNever')
     const date = new Date(expiresAt)
     const now = new Date()
     const diffMs = date.getTime() - now.getTime()
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
-    if (diffHours < 1) return 'Expires soon'
-    if (diffHours < 24) return `${diffHours}h remaining`
-    if (diffDays < 7) return `${diffDays}d remaining`
+    if (diffHours < 1) return t('videoLibrary.shareLink.expiringSoon')
+    if (diffHours < 24) return t('videoLibrary.shareLink.hoursRemaining', { count: diffHours })
+    if (diffDays < 7) return t('videoLibrary.shareLink.daysRemaining', { count: diffDays })
     return date.toLocaleDateString()
   }
 
@@ -148,7 +156,7 @@ export default function VideoShareModal({
                 : "text-gray-500 hover:text-gray-700"
             )}
           >
-            Create Link
+            {t('videoLibrary.shareLink.tabs.create')}
           </button>
           <button
             onClick={() => setActiveTab('manage')}
@@ -159,7 +167,7 @@ export default function VideoShareModal({
                 : "text-gray-500 hover:text-gray-700"
             )}
           >
-            Manage
+            {t('videoLibrary.shareLink.tabs.manage')}
             {activeShares.length > 0 && (
               <span className="ml-2 px-1.5 py-0.5 text-[10px] font-bold bg-[var(--org-btn-primary-bg)] text-white rounded-full">
                 {activeShares.length}
@@ -186,7 +194,7 @@ export default function VideoShareModal({
                   onChange={(e) => setExpiration(e.target.value as ShareExpiration)}
                   className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
                 >
-                  {EXPIRATION_OPTIONS.map(option => (
+                  {expirationOptions.map(option => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -210,17 +218,17 @@ export default function VideoShareModal({
               {/* Email Recipients (Optional) */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
-                  Email Recipients (Optional)
+                  {t('videoLibrary.shareLink.emailRecipients')}
                 </label>
                 <input
                   type="text"
                   value={emailRecipients}
                   onChange={(e) => setEmailRecipients(e.target.value)}
-                  placeholder="email1@example.com, email2@example.com"
+                  placeholder={t('videoLibrary.shareLink.emailRecipientsPlaceholder')}
                   className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Comma-separated email addresses to notify (optional)
+                  {t('videoLibrary.shareLink.emailRecipientsHint')}
                 </p>
               </div>
 
@@ -234,7 +242,7 @@ export default function VideoShareModal({
                 {isCreating ? (
                   <>
                     <Icon name="sync" size="text-lg" className="mr-2 animate-spin" />
-                    Creating...
+                    {t('videoLibrary.shareLink.creating')}
                   </>
                 ) : (
                   <>
@@ -255,12 +263,12 @@ export default function VideoShareModal({
               ) : activeShares.length === 0 ? (
                 <div className="text-center py-8">
                   <Icon name="link_off" size="text-4xl" className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">No active share links</p>
+                  <p className="text-sm text-gray-500">{t('videoLibrary.shareLink.noActiveLinks')}</p>
                   <button
                     onClick={() => setActiveTab('create')}
                     className="mt-2 text-sm font-bold text-[var(--org-btn-primary-bg)] hover:underline"
                   >
-                    Create one
+                    {t('videoLibrary.shareLink.createOne')}
                   </button>
                 </div>
               ) : (
@@ -277,7 +285,7 @@ export default function VideoShareModal({
                           </span>
                           {share.allow_download && (
                             <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded font-bold">
-                              DOWNLOAD
+                              {t('videoLibrary.shareLink.downloadBadge')}
                             </span>
                           )}
                         </div>
@@ -290,7 +298,7 @@ export default function VideoShareModal({
                             <>
                               <span className="text-gray-300">•</span>
                               <span className="text-xs text-gray-500">
-                                {share.access_count} view{share.access_count !== 1 ? 's' : ''}
+                                {t('videoLibrary.shareLink.views', { count: share.access_count })}
                               </span>
                             </>
                           )}
@@ -318,7 +326,7 @@ export default function VideoShareModal({
                     </div>
                     {share.email_recipients && share.email_recipients.length > 0 && (
                       <div className="text-xs text-gray-400">
-                        Shared with: {share.email_recipients.join(', ')}
+                        {t('videoLibrary.shareLink.sharedWith')}: {share.email_recipients.join(', ')}
                       </div>
                     )}
                   </div>

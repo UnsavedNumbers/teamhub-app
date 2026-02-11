@@ -12,6 +12,7 @@ import Icon from '@/components/portal/Icon'
 import Button from '@/components/portal/Button'
 import { cn } from '@/utils/cn'
 import { t } from '@/i18n'
+import { showError } from '@/utils/toast'
 
 interface VideoCommentsPanelProps {
   videoId: string
@@ -104,31 +105,42 @@ export default function VideoCommentsPanel({
     
     setPosting(true)
     try {
-      await createComment(newComment.trim())
-      setNewComment('')
+      const created = await createComment(newComment.trim())
+      if (created) {
+        setNewComment('')
+      } else {
+        showError(t('videoLibrary.comments.createFailed'))
+      }
     } finally {
       setPosting(false)
     }
-  }, [newComment, createComment, disabled])
+  }, [newComment, createComment, disabled, t])
 
   const handleReply = useCallback(async (parentId: string) => {
     if (!replyContent.trim() || disabled) return
     
     setPosting(true)
     try {
-      await createComment(replyContent.trim(), { parentId })
-      setReplyContent('')
-      setReplyingTo(null)
-      setExpandedReplies(prev => new Set([...prev, parentId]))
+      const created = await createComment(replyContent.trim(), { parentId })
+      if (created) {
+        setReplyContent('')
+        setReplyingTo(null)
+        setExpandedReplies(prev => new Set([...prev, parentId]))
+      } else {
+        showError(t('videoLibrary.comments.createFailed'))
+      }
     } finally {
       setPosting(false)
     }
-  }, [replyContent, createComment, disabled])
+  }, [replyContent, createComment, disabled, t])
 
   const handleDelete = useCallback(async (commentId: string) => {
     if (!window.confirm(t('videoLibrary.comments.deleteConfirm'))) return
-    await deleteComment(commentId)
-  }, [deleteComment])
+    const deleted = await deleteComment(commentId)
+    if (!deleted) {
+      showError(t('videoLibrary.comments.deleteFailed'))
+    }
+  }, [deleteComment, t])
 
   const toggleReplies = useCallback((commentId: string) => {
     setExpandedReplies(prev => {
@@ -150,10 +162,10 @@ export default function VideoCommentsPanel({
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
+    if (diffMins < 1) return t('videoLibrary.comments.time.justNow')
+    if (diffMins < 60) return t('videoLibrary.comments.time.minutesAgo', { count: diffMins })
+    if (diffHours < 24) return t('videoLibrary.comments.time.hoursAgo', { count: diffHours })
+    if (diffDays < 7) return t('videoLibrary.comments.time.daysAgo', { count: diffDays })
     return date.toLocaleDateString()
   }
 
@@ -186,7 +198,7 @@ export default function VideoCommentsPanel({
             {/* Header */}
             <div className="flex items-center gap-2 mb-1">
               <span className={cn("font-bold", isReply ? "text-xs" : "text-sm")}>
-                {comment.author?.full_name || 'User'}
+                {comment.author?.full_name || t('videoLibrary.comments.userFallback')}
               </span>
               <span className={cn("text-gray-400", isReply ? "text-[10px]" : "text-xs")}>
                 {formatRelativeTime(comment.created_at)}
@@ -205,7 +217,7 @@ export default function VideoCommentsPanel({
               isDeleted && "italic text-gray-400"
             )}>
               {isDeleted 
-                ? '[This comment has been removed]' 
+                ? t('videoLibrary.comments.deletedMessage')
                 : comment.content
               }
             </p>
@@ -316,8 +328,8 @@ export default function VideoCommentsPanel({
             onChange={(e) => setSortBy(e.target.value as SortOption)}
             className="text-xs px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
           >
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
+            <option value="newest">{t('videoLibrary.comments.sortNewest')}</option>
+            <option value="oldest">{t('videoLibrary.comments.sortOldest')}</option>
           </select>
         )}
       </div>

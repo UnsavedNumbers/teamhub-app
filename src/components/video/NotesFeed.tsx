@@ -9,6 +9,7 @@ import { useState, useRef, useEffect } from 'react'
 import type { VideoNote } from '@/types/video'
 import Icon from '@/components/portal/Icon'
 import { cn } from '@/utils/cn'
+import { t } from '@/i18n'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -84,14 +85,14 @@ export default function NotesFeed({
       {/* Sort toggle */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-800">
         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-          {notes.length} note{notes.length !== 1 ? 's' : ''}
+          {t('videoLibrary.notes.count', { count: notes.length })}
         </span>
         <button
           type="button"
           onClick={() => setSortMode(sortMode === 'timestamp' ? 'newest' : 'timestamp')}
           className="text-[10px] font-bold text-[var(--org-btn-secondary-bg)] hover:underline uppercase tracking-wider"
         >
-          {sortMode === 'timestamp' ? '↕ By Time' : '↕ Newest'}
+          {sortMode === 'timestamp' ? t('videoLibrary.notes.sortByTime') : t('videoLibrary.notes.sortNewest')}
         </button>
       </div>
 
@@ -100,7 +101,7 @@ export default function NotesFeed({
         {sorted.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
             <Icon name="speaker_notes_off" size="text-3xl" className="mb-2" />
-            <p className="text-sm">No notes yet</p>
+            <p className="text-sm">{t('videoLibrary.notes.noNotes')}</p>
           </div>
         ) : (
           sorted.map((note) => {
@@ -136,7 +137,7 @@ export default function NotesFeed({
                     {/* Author & date */}
                     <div className="flex items-center gap-1.5 mb-0.5">
                       <span className="text-[11px] font-bold text-gray-900 dark:text-white truncate">
-                        {note.author?.full_name || 'Coach'}
+                        {note.author?.full_name || t('videoLibrary.notes.authorFallback')}
                       </span>
                       <span className="text-[10px] text-gray-400">
                         {new Date(note.created_at).toLocaleDateString()}
