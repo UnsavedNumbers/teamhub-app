@@ -800,6 +800,15 @@ const admin = {
         requiresOrg: true,
     },
 
+    // Notifications
+    notifications: {
+        path: '/admin/notifications',
+        label: 'Notifications',
+        icon: 'notifications',
+        description: 'Admin notifications',
+        requiresOrg: true,
+    },
+
     // Payments
     payments: {
         list: {

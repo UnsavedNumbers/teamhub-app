@@ -281,6 +281,28 @@ html.dark .oa-card .pa-card-title {
 }
 
 /* Empty State / Table integration in cards */
+.oa-card {
+    background: var(--org-surface-primary, var(--pa-white));
+    border: 1px solid var(--org-border-default, var(--pa-n100));
+    border-radius: var(--oa-radius-m, var(--pa-radius-m));
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    transition: box-shadow var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+html.dark .oa-card {
+    background: var(--org-surface-panel, var(--pa-surface));
+    border-color: var(--pa-border-subtle);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.oa-card:hover {
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+html.dark .oa-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
 .oa-card .pa-table-container,
 .oa-card .pa-stacked-list {
     margin: 0;
@@ -1664,49 +1686,100 @@ html.dark .oa-theme-active .pa-table-pagination-info {
 }
 
 /* Org Admin Table Pagination */
-.oa-table-pagination {
-    padding: var(--pa-space-4);
-    background: var(--pa-n0, #ffffff);
-    border-top: 1px solid var(--org-border-default, var(--pa-n200));
+/* Empty State */
+.oa-table-empty {
+    padding: var(--pa-space-8) var(--pa-space-6);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--pa-space-3);
 }
 
-html.dark .oa-table-pagination {
-    background: var(--pa-surface);
-    border-color: var(--pa-border-subtle);
+.oa-empty-icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--org-surface-secondary, var(--pa-n50));
+    color: var(--pa-n300);
+}
+
+html.dark .oa-empty-icon {
+    background: rgba(39, 39, 42, 0.3);
+    color: var(--pa-text-muted);
+}
+
+.oa-empty-icon .material-symbols-outlined {
+    font-size: 48px;
+}
+
+.oa-empty-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--pa-n900);
+    margin: 0;
+}
+
+html.dark .oa-empty-title {
+    color: var(--pa-text-primary);
+}
+
+.oa-empty-text {
+    font-size: 0.875rem;
+    color: var(--pa-n600);
+    margin: 0;
+}
+
+html.dark .oa-empty-text {
+    color: var(--pa-text-secondary);
+}
+
+/* =====================================================================
+   PAGINATION & CONTROLS (copied from platform admin)
+   ===================================================================== */
+
+.oa-table-pagination {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--pa-space-3);
+    padding: var(--pa-space-3);
 }
 
 .oa-table-pagination-controls {
-    display: flex;
+    display: flex !important;
     align-items: center;
     gap: var(--pa-space-2);
-}
-
-.oa-table-pagination-controls .oa-select {
-    flex-shrink: 0;
-    min-width: 80px;
-    width: auto;
-}
-
-.oa-table-pagination-label {
-    flex-shrink: 0;
     white-space: nowrap;
 }
 
-/* Responsive pagination - stack on mobile */
-@media (max-width: 639px) {
-    .oa-table-pagination {
-        padding: var(--pa-space-3);
-        gap: var(--pa-space-2);
-    }
-    
-    .oa-table-pagination-controls {
-        flex-wrap: wrap;
-        width: 100%;
-    }
-    
-    .oa-table-pagination-controls .oa-select {
-        width: 100%;
-    }
+.oa-table-pagination-label {
+    font-family: var(--pa-font-body);
+    font-size: 0.875rem;
+    color: var(--pa-n500);
+    margin: 0 !important;
+    margin-right: var(--pa-space-2) !important;
+    white-space: nowrap;
+}
+
+html.dark .oa-table-pagination-label {
+    color: var(--pa-text-secondary);
+}
+
+.oa-table-pagination-info {
+    font-family: var(--pa-font-body);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--pa-n600);
+    text-align: center !important;
+    margin: 0 !important;
+}
+
+html.dark .oa-table-pagination-info {
+    color: var(--pa-text-secondary);
 }
 
 /* Rows per page select in pagination */
@@ -1770,119 +1843,191 @@ html.dark .oa-theme-active .pa-table-pagination .pa-body-s {
    ===================================================================== */
 
 /* Table Container */
-.oa-table-container {
-    width: 100%;
+/* =====================================================================
+   ORG ADMIN DATA TABLE - Complete table component with oa-* classes
+   Based on platform admin table design
+   ===================================================================== */
+
+/* Table wrapper for scrolling */
+.oa-table-desktop {
+    display: block;
     overflow-x: auto;
 }
 
+.oa-table-mobile {
+    display: none;
+}
+
+/* Base table */
 .oa-table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: auto;
+    border-spacing: 0;
 }
 
 /* Table Header */
-.oa-table-header {
-    background: var(--org-surface-secondary, #f9fafb);
-    border-bottom: 2px solid var(--org-border-default, var(--pa-n200));
+.oa-table thead {
+    background: var(--org-surface-secondary, var(--pa-n50));
 }
 
-html.dark .oa-table-header {
-    background: rgba(39, 39, 42, 0.3);
+html.dark .oa-table thead {
+    background: var(--org-surface-panel, var(--pa-surface));
+    border-bottom: 1px solid var(--pa-border-subtle);
+}
+
+.oa-table thead tr {
+    height: 40px;
+}
+
+.oa-table th {
+    font-family: var(--pa-font-body);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.27;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pa-n500);
+    text-align: left;
+    padding: var(--pa-space-3) var(--pa-space-4);
+    border-bottom: 1px solid var(--org-border-default, var(--pa-n100));
+    white-space: nowrap;
+    vertical-align: middle;
+    position: relative;
+}
+
+html.dark .oa-table th {
+    color: var(--pa-text-muted);
     border-bottom-color: var(--pa-border-subtle);
 }
 
-.oa-table-header-row {
-    display: table-row;
+.oa-table th:first-child,
+.oa-table td:first-child {
+    padding-left: var(--pa-space-5);
 }
 
-.oa-table-header-cell {
-    padding: var(--pa-space-3) var(--pa-space-4);
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--pa-n600);
-    text-align: left;
-    user-select: none;
+.oa-table th:last-child,
+.oa-table td:last-child {
+    padding-right: var(--pa-space-5);
 }
 
-html.dark .oa-table-header-cell {
-    color: rgba(226, 232, 240, 0.7);
-}
-
-.oa-table-header-cell--sortable {
+/* Sortable header */
+.oa-table th.oa-sortable {
     cursor: pointer;
     user-select: none;
+    transition: background var(--pa-motion-fast) var(--pa-ease-out);
 }
 
-.oa-table-header-cell--sortable:hover {
+.oa-table th.oa-sortable:hover {
+    background: var(--org-surface-tertiary, var(--pa-n100));
+    color: var(--pa-n700);
+}
+
+.oa-table th.oa-sortable:focus-visible {
+    outline: 2px solid var(--pa-theme-focus-ring);
+    outline-offset: -2px;
+}
+
+/* Sort icon */
+.oa-table th .oa-sort-icon {
+    display: inline-block;
+    margin-left: var(--pa-space-1);
+    opacity: 0;
+    transition: opacity var(--pa-motion-normal) var(--pa-ease-out);
+    vertical-align: middle;
+}
+
+.oa-table th.oa-sortable:hover .oa-sort-icon,
+.oa-table th.oa-sorted .oa-sort-icon {
+    opacity: 1;
+}
+
+.oa-table th.oa-sorted {
+    color: var(--pa-n900);
+}
+
+.oa-table th.oa-sorted .oa-sort-icon {
+    color: var(--pa-n900);
+}
+
+/* Table Body Rows */
+.oa-table tbody tr {
+    height: 52px;
+    background: var(--org-surface-primary, var(--pa-white));
+    transition: background var(--pa-motion-fast) var(--pa-ease-out);
+    position: relative;
+}
+
+html.dark .oa-table tbody tr {
+    background: var(--org-surface-panel, var(--pa-surface-panel));
+}
+
+.oa-table tbody tr:hover {
+    background: var(--org-surface-tertiary, var(--pa-n50));
+}
+
+html.dark .oa-table tbody tr:hover {
+    background: var(--pa-border-default);
+}
+
+.oa-table tbody tr.oa-clickable {
+    cursor: pointer;
+}
+
+.oa-table tbody tr.oa-clickable:active {
     background: var(--org-surface-tertiary, var(--pa-n100));
 }
 
-html.dark .oa-table-header-cell--sortable:hover {
-    background: rgba(51, 65, 85, 0.5);
+html.dark .oa-table tbody tr.oa-clickable:active {
+    background: var(--pa-border-emphasis);
 }
 
-.oa-table-header-content {
-    display: flex;
-    align-items: center;
-    gap: var(--pa-space-2);
+.oa-table tbody tr.oa-selected {
+    background: var(--org-surface-tertiary, var(--pa-n100));
 }
 
-.oa-table-sort-icon {
-    font-size: 1rem;
-    color: var(--org-btn-primary-bg, var(--pa-n900));
-    flex-shrink: 0;
+html.dark .oa-table tbody tr.oa-selected {
+    background: var(--pa-border-default);
 }
 
-html.dark .oa-table-sort-icon {
-    color: var(--org-btn-primary-bg, var(--pa-white));
+.oa-table tbody tr.oa-selected::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--pa-n900);
 }
 
-/* Table Body */
-.oa-table-body {
-    display: table-row-group;
+html.dark .oa-table tbody tr.oa-selected::before {
+    background: #60a5fa;
 }
 
-.oa-table-row {
+.oa-table tbody tr:focus-visible {
+    outline: 2px solid var(--pa-n700);
+    outline-offset: -2px;
+    z-index: 1;
+}
+
+/* Table Cells */
+.oa-table td {
+    font-family: var(--pa-font-body);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.43;
+    color: var(--pa-text-primary);
+    padding: var(--pa-space-4);
     border-bottom: 1px solid var(--org-border-default, var(--pa-n100));
-    transition: background-color 0.15s ease;
+    vertical-align: middle;
 }
 
-html.dark .oa-table-row {
+html.dark .oa-table td {
+    color: var(--pa-text-primary);
     border-bottom-color: var(--pa-border-subtle);
 }
 
-.oa-table-row--clickable {
-    cursor: pointer;
-}
-
-.oa-table-row--clickable:hover {
-    background: var(--org-surface-tertiary, var(--pa-n25));
-}
-
-html.dark .oa-table-row--clickable:hover {
-    background: rgba(51, 65, 85, 0.3);
-}
-
-.oa-table-row--selected {
-    background: var(--org-surface-tertiary, rgba(43, 52, 61, 0.1));
-}
-
-html.dark .oa-table-row--selected {
-    background: rgba(100, 116, 139, 0.2);
-}
-
-.oa-table-cell {
-    padding: var(--pa-space-4);
-    font-size: 0.875rem;
-    color: var(--pa-text-primary);
-    text-align: left;
-}
-
-html.dark .oa-table-cell {
-    color: var(--pa-text-primary);
+.oa-table tbody tr:last-child td {
+    border-bottom: none;
 }
 
 /* Empty State */
@@ -2027,6 +2172,74 @@ html.dark .oa-input:focus,
 html.dark .oa-select:focus {
     border-color: var(--pa-text-primary);
     outline-color: rgba(148, 163, 184, 0.2);
+}
+
+/* =====================================================================
+   RESPONSIVE STYLES FOR ORG ADMIN DATA TABLE
+   ===================================================================== */
+
+/* Mobile: < 768px - Stack pagination vertically */
+@media (max-width: 767px) {
+    .oa-table-desktop {
+        display: none;
+    }
+
+    .oa-table-mobile {
+        display: block;
+    }
+
+    .oa-table-pagination {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .oa-table-pagination-controls {
+        flex-direction: column;
+    }
+}
+
+/* Tablet: 768px - 1023px - Horizontal pagination */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .oa-table-desktop {
+        display: block;
+    }
+
+    .oa-table-mobile {
+        display: none;
+    }
+
+    .oa-table-pagination {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .oa-table-pagination-controls {
+        flex-direction: row;
+        align-items: center;
+    }
+}
+
+/* Desktop: >= 1024px - Horizontal pagination */
+@media (min-width: 1024px) {
+    .oa-table-desktop {
+        display: block;
+    }
+
+    .oa-table-mobile {
+        display: none;
+    }
+
+    .oa-table-pagination {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .oa-table-pagination-controls {
+        flex-direction: row;
+        align-items: center;
+    }
 }
 
 /* OrgDataTable Button Styling */
