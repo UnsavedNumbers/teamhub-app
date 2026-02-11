@@ -1282,16 +1282,17 @@ html.dark .pa-btn:disabled {
 /* Primary (Theme Action with fallback to neutral) */
 .pa-btn--primary {
     background: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--pa-n900)));
-    color: var(--org-btn-primary-text, var(--pa-theme-text-on-action, var(--pa-white)));
+    color: var(--org-btn-primary-text, var(--pa-theme-text-on-action, var(--pa-white))) !important;
 }
 
 .pa-btn--primary:hover:not(:disabled) {
     background: var(--org-btn-primary-hover, var(--pa-theme-action-hover, var(--pa-n700)));
-    color: var(--org-btn-primary-text, var(--pa-theme-text-on-action, var(--pa-white)));
+    color: var(--org-btn-primary-text, var(--pa-theme-text-on-action, var(--pa-white))) !important;
 }
 
 .pa-btn--primary:active:not(:disabled) {
     background: var(--org-btn-primary-active, var(--pa-theme-action-active, var(--pa-n800)));
+    color: var(--org-btn-primary-text, var(--pa-theme-text-on-action, var(--pa-white))) !important;
     transform: translateY(1px);
 }
 
