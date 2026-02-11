@@ -10,7 +10,6 @@
 
 import { getServiceClient } from './supabase';
 import { TEST_USERS, getUserId } from './auth';
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 // ── Test Run ID ────────────────────────────────────────────────────
 /**
@@ -39,7 +38,10 @@ export interface SeededData {
     teamId: string;
     teamName: string;
     seasonId: string;
+    /** Public event (visibility = 'public') */
     eventId: string;
+    /** Private/members-only event (visibility = 'members') */
+    privateEventId: string;
     athleteId: string;
     athleteName: string;
     guardianshipId: string;
@@ -51,6 +53,13 @@ export interface SeededData {
     ticketedEventId?: string;
     /** Map of user labels to user IDs */
     userIds: Record<string, string>;
+    /** Organization membership IDs (for role escalation tests) */
+    membershipIds: {
+        orgAdmin: string;
+        coach: string;
+        parent: string;
+        staff: string;
+    };
 }
 
 // ── Main seed function ─────────────────────────────────────────────
@@ -79,16 +88,29 @@ export async function seedTestData(): Promise<SeededData> {
     const orgId = org.id;
 
     // 3. Create organization memberships for test users
-    //    org_admin -> orgAdmin user
-    //    coach -> coach user
-    //    parent -> parent user
+    //    org_admin → orgAdmin user
+    //    coach    → coach user
+    //    parent   → parent user
+    //    staff    → staff user (coach-multi@test.com)
     const memberships = [
         { org_id: orgId, user_id: userIds.orgAdmin, role: 'org_admin' },
         { org_id: orgId, user_id: userIds.coach, role: 'coach' },
         { org_id: orgId, user_id: userIds.parent, role: 'parent' },
+        { org_id: orgId, user_id: userIds.staff, role: 'staff' },
     ];
-    const { error: memErr } = await svc.from('organization_members').insert(memberships);
+    const { data: memData, error: memErr } = await svc
+        .from('organization_members')
+        .insert(memberships)
+        .select('id, user_id, role');
     if (memErr) throw new Error(`Seed memberships failed: ${memErr.message}`);
+
+    // Build membership ID map
+    const membershipIds = {
+        orgAdmin: memData!.find((m: any) => m.role === 'org_admin')!.id,
+        coach: memData!.find((m: any) => m.role === 'coach')!.id,
+        parent: memData!.find((m: any) => m.role === 'parent')!.id,
+        staff: memData!.find((m: any) => m.role === 'staff')!.id,
+    };
 
     // 4. Create a season (required for events + team_memberships)
     const { data: season, error: seasonErr } = await svc
@@ -119,13 +141,13 @@ export async function seedTestData(): Promise<SeededData> {
     if (teamErr) throw new Error(`Seed team failed: ${teamErr.message}`);
     const teamId = team.id;
 
-    // 6. Create an event
+    // 6a. Create a PUBLIC event
     const { data: event, error: eventErr } = await svc
         .from('events')
         .insert({
             team_id: teamId,
             season_id: seasonId,
-            title: testName('event'),
+            title: testName('event_public'),
             type: 'practice',
             start_time: '2026-06-15T10:00:00Z',
             end_time: '2026-06-15T12:00:00Z',
@@ -135,8 +157,27 @@ export async function seedTestData(): Promise<SeededData> {
         })
         .select('id')
         .single();
-    if (eventErr) throw new Error(`Seed event failed: ${eventErr.message}`);
+    if (eventErr) throw new Error(`Seed public event failed: ${eventErr.message}`);
     const eventId = event.id;
+
+    // 6b. Create a PRIVATE event (members only)
+    const { data: privEvent, error: privEventErr } = await svc
+        .from('events')
+        .insert({
+            team_id: teamId,
+            season_id: seasonId,
+            title: testName('event_private'),
+            type: 'practice',
+            start_time: '2026-07-15T10:00:00Z',
+            end_time: '2026-07-15T12:00:00Z',
+            location: 'Private Field',
+            created_by_user_id: userIds.orgAdmin,
+            visibility: 'private',
+        })
+        .select('id')
+        .single();
+    if (privEventErr) throw new Error(`Seed private event failed: ${privEventErr.message}`);
+    const privateEventId = privEvent.id;
 
     // 7. Create an athlete
     const athleteName = testName('athlete');
@@ -164,7 +205,7 @@ export async function seedTestData(): Promise<SeededData> {
         });
     if (tmErr) throw new Error(`Seed team_membership failed: ${tmErr.message}`);
 
-    // 9. Create athlete_guardian link (parent -> athlete)
+    // 9. Create athlete_guardian link (parent → athlete)
     const { data: guardianship, error: guardErr } = await svc
         .from('athlete_guardians')
         .insert({
@@ -283,6 +324,7 @@ export async function seedTestData(): Promise<SeededData> {
         teamName,
         seasonId,
         eventId,
+        privateEventId,
         athleteId,
         athleteName,
         guardianshipId,
@@ -292,5 +334,6 @@ export async function seedTestData(): Promise<SeededData> {
         feeAssignmentId,
         ticketedEventId,
         userIds,
+        membershipIds,
     };
 }
