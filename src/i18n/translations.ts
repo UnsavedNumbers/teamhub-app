@@ -2157,6 +2157,17 @@ export const en = {
                 },
             },
         },
+        programs: {
+            statusCard: {
+                statusLabel: 'Status',
+            },
+            stats: {
+                levels: 'Levels',
+                teams: 'Teams',
+                athletes: 'Athletes',
+                coaches: 'Coaches',
+            },
+        },
         structureForms: {
             pageTitle: {
                 default: 'Organization Structure',
@@ -5908,6 +5919,17 @@ export const es = {
                         imperial: '{{value}} lbs',
                     },
                 },
+            },
+        },
+        programs: {
+            statusCard: {
+                statusLabel: 'Estado',
+            },
+            stats: {
+                levels: 'Niveles',
+                teams: 'Equipos',
+                athletes: 'Atletas',
+                coaches: 'Entrenadores',
             },
         },
         structureForms: {

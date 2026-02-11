@@ -16,6 +16,7 @@ import { getLink } from '../../utils/routes'
 import { getRandomSportImagePath } from '../../utils/sportImages'
 import { cn } from '../../utils/cn'
 import { PhotoSection } from '@/components/galleries/PhotoSection'
+import { useI18n } from '../../i18n/useI18n'
 
 type LevelRow = {
   id: string
@@ -45,6 +46,10 @@ function formatUpdatedRelative(iso: string | null | undefined): string {
   if (absHr < 24) return `Updated ${rtf.format(-diffHr, 'hour')}`
   const diffDay = Math.floor(diffHr / 24)
   return `Updated ${rtf.format(-diffDay, 'day')}`
+}
+
+function formatMetric(value: number | null): string {
+  return value === null ? '—' : value.toLocaleString()
 }
 
 function downloadCsv(filename: string, rows: Array<Record<string, unknown>>): boolean {
@@ -81,6 +86,7 @@ export default function ProgramDetail() {
   const { isOffline } = useOffline()
   const location = useLocation()
   const navigate = useNavigate()
+  const { t } = useI18n()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -120,6 +126,16 @@ export default function ProgramDetail() {
     if (levels.length > 0) return 'Active'
     return 'Planning'
   }, [levels.length, teams])
+
+  const heroStats = useMemo(
+    () => [
+      { label: t('admin.programs.stats.levels'), value: levels.length },
+      { label: t('admin.programs.stats.teams'), value: teams.length },
+      { label: t('admin.programs.stats.athletes'), value: totalAthletes },
+      { label: t('admin.programs.stats.coaches'), value: totalCoaches },
+    ],
+    [levels.length, teams.length, totalAthletes, totalCoaches, t]
+  )
 
   const loadProgramData = useCallback(async () => {
     if (!isReady) return
@@ -564,13 +580,14 @@ export default function ProgramDetail() {
                 }}
               >
                 <div
-                  className="pa-flex pa-items-center"
-                  style={{ gap: 'var(--pa-space-8)', flexShrink: 0 }}
+                  className="pa-grid"
+                  style={{
+                    width: '100%',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                    gap: 'var(--pa-space-6)',
+                  }}
                 >
-                  {[
-                    { label: 'Athletes', value: totalAthletes },
-                    { label: 'Coaches', value: totalCoaches },
-                  ].map((stat) => (
+                  {heroStats.map((stat) => (
                     <div
                       key={stat.label}
                       className="pa-display-xl"
@@ -585,7 +602,7 @@ export default function ProgramDetail() {
                       }}
                     >
                       <span style={{ textAlign: 'right' }}>
-                        {stat.value === null ? '—' : stat.value.toLocaleString()}
+                        {formatMetric(stat.value)}
                       </span>
                       <span style={{ fontWeight: 400, opacity: 0.7 }}>{stat.label}</span>
                     </div>
@@ -611,116 +628,121 @@ export default function ProgramDetail() {
               >
                 {/* Action bar */}
                 <Card className="oa-card">
-                  <div className="pa-flex pa-justify-between pa-items-center" style={{ gap: 'var(--pa-space-4)' }}>
-                    <div className="pa-flex pa-items-center" style={{ gap: 'var(--pa-space-3)' }}>
-                      <span className="pa-badge pa-badge--info pa-body-s" style={{ fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-                        Status: {statusLabel}
-                      </span>
-                      <span className="pa-body-m pa-text-muted">
-                        {updatedLabel}
+                  <div className="pa-flex pa-flex-col pa-gap-4">
+                    <div className="pa-flex pa-justify-between pa-items-center pa-gap-2">
+                      <span className="pa-badge pa-badge--info" style={{ fontWeight: 700 }}>
+                        {t('admin.programs.statusCard.statusLabel')}: {statusLabel}
                       </span>
                     </div>
-
-                    <div className="pa-flex pa-flex-col sm:pa-flex-row pa-items-stretch sm:pa-items-center pa-gap-2" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      <Link
-                        to={`${getLink('admin.programs.update', { id: programId })}?returnUrl=${encodeURIComponent(detailRoute)}`}
-                        onClick={(e) => {
-                          if (!programId) {
-                            e.preventDefault()
-                            setActionError('Program ID is required to edit program.')
-                          }
-                        }}
-                        className="w-full sm:w-auto"
-                      >
-                        <Button
-                          variant="ghost"
-                          icon="edit"
-                          disabled={loading || !programId}
-                          aria-label={`Edit ${program?.name || 'program'}`}
-                          className="w-full sm:w-auto min-h-[44px]"
+                    <div className="pa-flex pa-justify-between pa-gap-2 pa-flex-wrap">
+                      <div className="pa-flex pa-gap-2 pa-flex-wrap">
+                        <Link
+                          to={`${getLink('admin.programs.update', { id: programId })}?returnUrl=${encodeURIComponent(detailRoute)}`}
+                          onClick={(e) => {
+                            if (!programId) {
+                              e.preventDefault()
+                              setActionError('Program ID is required to edit program.')
+                            }
+                          }}
+                          className="w-full sm:w-auto"
                         >
-                          Edit Program
-                        </Button>
-                      </Link>
+                          <Button
+                            variant="ghost"
+                            icon="edit"
+                            disabled={loading || !programId}
+                            aria-label={`Edit ${program?.name || 'program'}`}
+                            className="w-full sm:w-auto min-h-[44px]"
+                          >
+                            Edit Program
+                          </Button>
+                        </Link>
 
-                      <Link to={levelsRoute} className="w-full sm:w-auto">
-                        <Button variant="ghost" disabled={loading} aria-label="Navigate to all levels" className="w-full sm:w-auto min-h-[44px]">
-                          View Levels
-                        </Button>
-                      </Link>
+                        <Link to={levelsRoute} className="w-full sm:w-auto">
+                          <Button
+                            variant="ghost"
+                            disabled={loading}
+                            aria-label="Navigate to all levels"
+                            className="w-full sm:w-auto min-h-[44px]"
+                          >
+                            View Levels
+                          </Button>
+                        </Link>
+                      </div>
 
-                      <Link
-                        to={`${formsRoute}?type=level&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
-                        className={cn(isOffline || USE_FAKE_DATA ? 'pa-disabled-link' : '', 'w-full sm:w-auto')}
-                        onClick={(e) => {
-                          if (isOffline || USE_FAKE_DATA) {
-                            e.preventDefault()
-                            setActionError(
+                      <div className="pa-flex pa-gap-2 pa-flex-wrap">
+                        <Link
+                          to={`${formsRoute}?type=level&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
+                          className={cn(isOffline || USE_FAKE_DATA ? 'pa-disabled-link' : '', 'w-full sm:w-auto')}
+                          onClick={(e) => {
+                            if (isOffline || USE_FAKE_DATA) {
+                              e.preventDefault()
+                              setActionError(
+                                isOffline
+                                  ? 'You appear to be offline. Please reconnect and try again.'
+                                  : 'This action is not available in demo mode. Please sign in to add levels.'
+                              )
+                            } else if (!programId || !program.sport_id) {
+                              e.preventDefault()
+                              setActionError('Program and sport information is required to add a level.')
+                            }
+                          }}
+                        >
+                          <OrgAdminButton
+                            variant="primary"
+                            icon="add_circle"
+                            disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
+                            title={
                               isOffline
-                                ? 'You appear to be offline. Please reconnect and try again.'
-                                : 'This action is not available in demo mode. Please sign in to add levels.'
-                            )
-                          } else if (!programId || !program.sport_id) {
-                            e.preventDefault()
-                            setActionError('Program and sport information is required to add a level.')
-                          }
-                        }}
-                      >
-                        <OrgAdminButton
-                          variant="primary"
-                          icon="add_circle"
-                          disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
-                          title={
-                            isOffline
-                              ? 'Offline - cannot add levels'
-                              : USE_FAKE_DATA
-                                ? 'Sign in to add levels'
-                                : !programId || !program.sport_id
-                                  ? 'Missing required information'
-                                  : undefined
-                          }
-                          aria-label="Add a new level to this program"
-                          className="w-full sm:w-auto min-h-[44px]"
-                        >
-                          Add Level
-                        </OrgAdminButton>
-                      </Link>
+                                ? 'Offline - cannot add levels'
+                                : USE_FAKE_DATA
+                                  ? 'Sign in to add levels'
+                                  : !programId || !program.sport_id
+                                    ? 'Missing required information'
+                                    : undefined
+                            }
+                            aria-label="Add a new level to this program"
+                            className="w-full sm:w-auto min-h-[44px]"
+                          >
+                            Add Level
+                          </OrgAdminButton>
+                        </Link>
 
-                      <Link
-                        to={`${formsRoute}?type=team&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
-                        className="w-full sm:w-auto"
-                        onClick={(e) => {
-                          if (isOffline || USE_FAKE_DATA) {
-                            e.preventDefault()
-                            setActionError(
-                              isOffline
-                                ? 'You appear to be offline. Please reconnect and try again.'
-                                : 'This action is not available in demo mode. Please sign in to add teams.'
-                            )
-                          } else if (!programId || !program.sport_id) {
-                            e.preventDefault()
-                            setActionError('Program and sport information is required to add a team.')
-                          }
-                        }}
-                      >
-                        <Button
-                          variant="secondary"
-                          disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
-                          title={
-                            isOffline
-                              ? 'Offline - cannot add teams'
-                              : USE_FAKE_DATA
-                                ? 'Sign in to add teams'
-                                : !programId || !program.sport_id
-                                  ? 'Missing required information'
-                                  : undefined
-                          }
-                          aria-label="Add a new team to this program"
-                          className="w-full sm:w-auto min-h-[44px]"
+                        <Link
+                          to={`${formsRoute}?type=team&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
+                          className="w-full sm:w-auto"
+                          onClick={(e) => {
+                            if (isOffline || USE_FAKE_DATA) {
+                              e.preventDefault()
+                              setActionError(
+                                isOffline
+                                  ? 'You appear to be offline. Please reconnect and try again.'
+                                  : 'This action is not available in demo mode. Please sign in to add teams.'
+                              )
+                            } else if (!programId || !program.sport_id) {
+                              e.preventDefault()
+                              setActionError('Program and sport information is required to add a team.')
+                            }
+                          }}
                         >
-                          Add Team
-                        </Button>
-                      </Link>
+                          <Button
+                            variant="secondary"
+                            disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
+                            title={
+                              isOffline
+                                ? 'Offline - cannot add teams'
+                                : USE_FAKE_DATA
+                                  ? 'Sign in to add teams'
+                                  : !programId || !program.sport_id
+                                    ? 'Missing required information'
+                                    : undefined
+                            }
+                            aria-label="Add a new team to this program"
+                            className="w-full sm:w-auto min-h-[44px]"
+                          >
+                            Add Team
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </Card>

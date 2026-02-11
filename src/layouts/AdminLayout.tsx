@@ -107,9 +107,9 @@ export default function AdminLayout() {
         { routeKey: 'admin.payments.list', text: t('admin.navigation.payments'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_PAYMENTS), requiresOrg: true },
         { routeKey: 'admin.events.list', text: t('admin.navigation.events'), icon: 'event', path: getPath(RouteKeys.ADMIN_EVENTS), requiresOrg: true },
         { routeKey: 'admin.attendance', text: t('admin.navigation.attendance'), icon: 'how_to_reg', path: getLink('admin.attendance'), requiresOrg: true },
-        { routeKey: 'admin.notifications', text: t('admin.navigation.notifications'), icon: 'notifications', path: '/admin/notifications', requiresOrg: true },
+        { routeKey: 'admin.notifications', text: t('admin.navigation.notifications'), icon: 'notifications', path: getLink('admin.notifications'), requiresOrg: true },
         { routeKey: 'admin.announcements.list', text: t('admin.navigation.announcements'), icon: 'campaign', path: getPath(RouteKeys.ADMIN_ANNOUNCEMENTS), requiresOrg: true },
-        { routeKey: 'admin.travel.list', text: t('admin.navigation.travel'), icon: 'flight', path: '/admin/travel', requiresOrg: true },
+        { routeKey: 'admin.travel.list', text: t('admin.navigation.travel'), icon: 'flight', path: getLink('admin.travel.list'), requiresOrg: true },
         { routeKey: 'admin.uniforms.list', text: t('admin.navigation.uniforms'), icon: 'checkroom', path: getPath(RouteKeys.ADMIN_UNIFORMS), requiresOrg: true },
       ],
     },
@@ -126,11 +126,11 @@ export default function AdminLayout() {
     {
       label: t('admin.navigation.videos'),
       icon: 'smart_display',
-      path: '/admin/videos',
+      path: getLink('admin.videos.list'),
       requiresOrg: true,
       children: [
-        { routeKey: 'admin.videos.list', text: t('admin.navigation.videoLibrary'), icon: 'video_library', path: '/admin/videos', requiresOrg: true },
-        { routeKey: 'admin.videos.upload', text: t('admin.navigation.uploadVideo'), icon: 'upload', path: '/admin/videos?upload=1', requiresOrg: true },
+        { routeKey: 'admin.videos.list', text: t('admin.navigation.videoLibrary'), icon: 'video_library', path: getLink('admin.videos.list'), requiresOrg: true },
+        { routeKey: 'admin.videos.upload', text: t('admin.navigation.uploadVideo'), icon: 'upload', path: getLink('admin.videos.upload'), requiresOrg: true },
       ],
     },
     {

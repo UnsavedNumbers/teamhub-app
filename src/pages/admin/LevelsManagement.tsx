@@ -116,6 +116,7 @@ export default function LevelsManagement() {
 
   const programById = useMemo(() => new Map(programs.map((p) => [p.id, p])), [programs])
   const filteredLevels = useMemo(() => filterProgramId ? levels.filter((l) => l.program_id === filterProgramId) : levels, [levels, filterProgramId])
+
   const canCreateLevel = programs.length > 0
 
   const handleDeleteLevel = useCallback((levelId: string, levelName: string, e?: React.MouseEvent) => {

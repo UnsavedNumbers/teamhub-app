@@ -140,7 +140,7 @@ export default function OrgDataTable<T extends { id: string }>({
       <div
         className={cn('oa-flex', 'oa-flex-col', 'oa-items-stretch', 'oa-gap-3', 'oa-table-pagination')}
         style={{
-          padding: 'var(--oa-space-3)',
+          padding: 'var(--pa-space-3)',
         }}
       >
         {/* Rows per page */}
@@ -155,7 +155,7 @@ export default function OrgDataTable<T extends { id: string }>({
             className="oa-input oa-select"
             value={rowsPerPage}
             onChange={(e) => onRowsPerPageChange?.(Number(e.target.value))}
-            style={{ height: '44px', padding: '0 var(--oa-space-3)', minWidth: '4.5rem' }}
+            style={{ height: '44px', padding: '0 var(--pa-space-3)', minWidth: '4.5rem' }}
           >
             <option value={10}>10</option>
             <option value={25}>25</option>
@@ -192,13 +192,13 @@ export default function OrgDataTable<T extends { id: string }>({
         </div>
       </div>
 
-      {/* Table */}
-      <div className="oa-table-container">
-        <table className="oa-table">
-          <thead className="oa-table-header">
-            <tr className="oa-table-header-row">
+      {/* Desktop Table View */}
+      <div className="oa-table-desktop" style={{ overflowX: 'auto' }}>
+        <table className="oa-table" style={{ width: '100%' }}>
+          <thead>
+            <tr>
               {selectable && (
-                <th className="oa-table-header-cell" style={{ width: '48px' }}>
+                <th style={{ width: '48px', textAlign: 'center', padding: 'var(--pa-space-2)' }}>
                   <input
                     type="checkbox"
                     checked={selectAllMode === 'all' || selectAllMode === 'page'}
@@ -210,20 +210,33 @@ export default function OrgDataTable<T extends { id: string }>({
               {safeColumns.map((column) => (
                 <th
                   key={String(column.id)}
-                  className={cn('oa-table-header-cell', {
-                    'oa-table-header-cell--sortable': !!column.sortable,
+                  className={cn({
+                    'oa-sortable': !!column.sortable,
+                    'oa-sorted': orderBy === String(column.id),
                   })}
                   style={{
                     minWidth: column.minWidth,
                     textAlign: column.align ?? 'left',
+                    cursor: column.sortable && onSort ? 'pointer' : 'default',
                   }}
                   onClick={() => column.sortable && onSort?.(String(column.id))}
                 >
-                  <div className="oa-table-header-content">
+                  <div className={cn('oa-flex', 'oa-items-center', 'oa-gap-2')}
+                    style={{
+                      justifyContent: column.align === 'right' ? 'flex-end' : column.align === 'center' ? 'center' : 'flex-start',
+                    }}
+                  >
                     <span>{column.label}</span>
-                    {column.sortable && orderBy === String(column.id) && (
-                      <span className="material-symbols-outlined oa-table-sort-icon">
-                        {order === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+                    {column.sortable && onSort && (
+                      <span
+                        className={cn('material-symbols-outlined', 'oa-sort-icon')}
+                        style={{ fontSize: '16px' }}
+                      >
+                        {orderBy === column.id
+                          ? order === 'asc'
+                            ? 'arrow_upward'
+                            : 'arrow_downward'
+                          : 'unfold_more'}
                       </span>
                     )}
                   </div>
@@ -231,7 +244,7 @@ export default function OrgDataTable<T extends { id: string }>({
               ))}
             </tr>
           </thead>
-          <tbody className="oa-table-body">
+          <tbody>
             {safeRows.map((row) => {
               const isSelected = effectiveSelectedIds.has(row.id)
               const rowClass = getRowClassName?.(row)
@@ -241,18 +254,28 @@ export default function OrgDataTable<T extends { id: string }>({
                 <tr
                   key={row.id}
                   className={cn(
-                    'oa-table-row',
                     {
-                      'oa-table-row--clickable': !!onRowClick,
-                      'oa-table-row--selected': isSelected,
+                      'oa-clickable': !!onRowClick,
+                      'oa-selected': isSelected,
                     },
                     rowClass
                   )}
-                  style={rowStyle}
+                  style={(() => {
+                    const baseStyle = rowStyle
+                    const selectedStyle = isSelected
+                      ? { backgroundColor: 'var(--org-surface-tertiary, var(--pa-n100))' }
+                      : null
+
+                    return {
+                      ...baseStyle,
+                      cursor: onRowClick ? 'pointer' : 'default',
+                      ...(selectedStyle || {}),
+                    }
+                  })()}
                   onClick={() => !selectable && onRowClick?.(row)}
                 >
                   {selectable && (
-                    <td className="oa-table-cell" onClick={(e) => e.stopPropagation()}>
+                    <td style={{ width: '48px', textAlign: 'center', padding: 'var(--pa-space-2)' }} onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={isSelected}
@@ -264,12 +287,19 @@ export default function OrgDataTable<T extends { id: string }>({
                   {safeColumns.map((column) => (
                     <td
                       key={String(column.id)}
-                      className="oa-table-cell"
                       style={{ textAlign: column.align ?? 'left' }}
                     >
-                      {column.render
-                        ? column.render(row)
-                        : String((row as any)[column.id] ?? '')}
+                      {column.align === 'right' ? (
+                        <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
+                          {column.render
+                            ? column.render(row)
+                            : String((row as any)[column.id] ?? '')}
+                        </div>
+                      ) : column.render ? (
+                        column.render(row)
+                      ) : (
+                        String((row as any)[column.id] ?? '')
+                      )}
                     </td>
                   ))}
                 </tr>
@@ -283,8 +313,8 @@ export default function OrgDataTable<T extends { id: string }>({
       <div
         className={cn('oa-flex', 'oa-flex-col', 'oa-items-stretch', 'oa-gap-3', 'oa-table-pagination')}
         style={{
-          padding: 'var(--oa-space-3)',
-          borderTop: '1px solid var(--org-border-default, var(--oa-n200))',
+          padding: 'var(--pa-space-3)',
+          borderTop: '1px solid var(--org-border-default, var(--pa-n100))',
         }}
       >
         {/* Rows per page */}
@@ -299,7 +329,7 @@ export default function OrgDataTable<T extends { id: string }>({
             className="oa-input oa-select"
             value={rowsPerPage}
             onChange={(e) => onRowsPerPageChange?.(Number(e.target.value))}
-            style={{ height: '44px', padding: '0 var(--oa-space-3)', minWidth: '4.5rem' }}
+            style={{ height: '44px', padding: '0 var(--pa-space-3)', minWidth: '4.5rem' }}
           >
             <option value={10}>10</option>
             <option value={25}>25</option>
