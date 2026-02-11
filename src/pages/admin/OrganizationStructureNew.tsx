@@ -395,14 +395,10 @@ function QuickActionButton({
 }) {
   return (
     <button
-      className="org-action-btn"
+      className={`org-action-btn ${disabled ? 'org-action-btn--disabled' : ''}`}
       onClick={onClick}
       disabled={disabled}
       title={tooltip}
-      style={{
-        opacity: disabled ? 0.5 : 1,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-      }}
     >
       <div className="org-action-content">
         <span className="material-symbols-outlined org-action-icon">{icon}</span>

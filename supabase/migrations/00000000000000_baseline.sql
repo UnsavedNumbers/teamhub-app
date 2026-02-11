@@ -21,63 +21,63 @@ SET row_security = off;
 -- Name: auth; Type: SCHEMA; Schema: -; Owner: -
 --
 
-CREATE SCHEMA auth;
+CREATE SCHEMA IF NOT EXISTS auth;
 
 
 --
 -- Name: extensions; Type: SCHEMA; Schema: -; Owner: -
 --
 
-CREATE SCHEMA extensions;
+CREATE SCHEMA IF NOT EXISTS extensions;
 
 
 --
 -- Name: graphql; Type: SCHEMA; Schema: -; Owner: -
 --
 
-CREATE SCHEMA graphql;
+CREATE SCHEMA IF NOT EXISTS graphql;
 
 
 --
 -- Name: graphql_public; Type: SCHEMA; Schema: -; Owner: -
 --
 
-CREATE SCHEMA graphql_public;
+CREATE SCHEMA IF NOT EXISTS graphql_public;
 
 
 --
 -- Name: pgbouncer; Type: SCHEMA; Schema: -; Owner: -
 --
 
-CREATE SCHEMA pgbouncer;
+CREATE SCHEMA IF NOT EXISTS pgbouncer;
 
 
 --
 -- Name: realtime; Type: SCHEMA; Schema: -; Owner: -
 --
 
-CREATE SCHEMA realtime;
+CREATE SCHEMA IF NOT EXISTS realtime;
 
 
 --
 -- Name: storage; Type: SCHEMA; Schema: -; Owner: -
 --
 
-CREATE SCHEMA storage;
+CREATE SCHEMA IF NOT EXISTS storage;
 
 
 --
 -- Name: supabase_migrations; Type: SCHEMA; Schema: -; Owner: -
 --
 
-CREATE SCHEMA supabase_migrations;
+CREATE SCHEMA IF NOT EXISTS supabase_migrations;
 
 
 --
 -- Name: vault; Type: SCHEMA; Schema: -; Owner: -
 --
 
-CREATE SCHEMA vault;
+CREATE SCHEMA IF NOT EXISTS vault;
 
 
 --
