@@ -454,7 +454,7 @@ export default function Programs() {
                     <div className="oa-flex-1">
                       {sport && (
                         <div className="oa-mb-1">
-                          <Badge variant="neutral" className="oa-uppercase oa-text-[10px] oa-font-bold" style={{ padding: '2px 6px' }}>
+                          <Badge variant="neutral" className="oa-uppercase oa-text-[10px] oa-font-bold oa-px-2 oa-py-0.5">
                             {sport.name}
                           </Badge>
                         </div>

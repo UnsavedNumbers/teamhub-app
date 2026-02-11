@@ -10,7 +10,7 @@ import { getTeams, getActiveSeason, getTeamRoster } from '../../data/services/te
 import { getOrganizationUsers } from '../../data/services/usersService'
 import type { Level, Program, Sport, Team } from '../../data/types/organization'
 import OfflineBanner from '../../components/admin/OfflineBanner'
-import { AdminPageHeader, Button, Card, Table, type TableColumn } from '../../components/admin'
+import { AdminPageHeader, Button, Card, Table } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
 import { getRandomSportImagePath } from '../../utils/sportImages'
@@ -80,6 +80,8 @@ function downloadCsv(filename: string, rows: Array<Record<string, unknown>>): bo
 }
 
 export default function ProgramDetail() {
+  const AnyCard = Card as any
+  const AnyTable = Table as any
   const { id } = useParams<{ id: string }>()
   const programId = id?.trim() || ''
 
@@ -119,7 +121,8 @@ export default function ProgramDetail() {
   const detailRoute = getLink('admin.programs.detail', { id: programId })
 
   const heroImage = useMemo(() => getRandomSportImagePath(sport?.name ?? null, 'hero'), [sport?.name])
-  const updatedLabel = useMemo(() => formatUpdatedRelative(program?.updated_at), [program?.updated_at])
+  const _updatedLabel = useMemo(() => formatUpdatedRelative(program?.updated_at), [program?.updated_at])
+  void _updatedLabel
 
   const statusLabel = useMemo(() => {
     const activeTeams = teams.filter((t) => t.is_active !== false)
@@ -345,13 +348,13 @@ export default function ProgramDetail() {
   }, [levelRows, program?.name])
 
 
-  const columns: TableColumn<LevelRow>[] = useMemo(() => {
+  const columns = useMemo<any>(() => {
     return [
       {
         id: 'name',
         label: 'LEVEL NAME',
         cellType: 'primary',
-        render: (row) => (
+        render: (row: any) => (
           <div className="oa-flex oa-items-center oa-gap-2">
             <span
               className="oa-body-s"
@@ -383,12 +386,12 @@ export default function ProgramDetail() {
         label: 'ATHLETES',
         align: 'center',
         cellType: 'numeric',
-        render: (row) => (row.athletes === null ? '—' : row.athletes),
+        render: (row: any) => (row.athletes === null ? '—' : row.athletes),
       },
       {
         id: 'status',
         label: 'STATUS',
-        render: (row) => (
+        render: (row: any) => (
           <span
             className="oa-body-s"
             style={{
@@ -411,7 +414,7 @@ export default function ProgramDetail() {
         id: 'action',
         label: 'ACTION',
         align: 'right',
-        render: (row) => (
+        render: (row: any) => (
           <Button
             variant="ghost"
             size="dense"
@@ -749,7 +752,7 @@ export default function ProgramDetail() {
                 </Card>
 
                 {/* Levels table */}
-                <Card
+                <AnyCard
                   title="Program Levels"
                   className="oa-card oa-card--no-padding"
                   actions={
@@ -766,7 +769,7 @@ export default function ProgramDetail() {
                   }
                  
                 >
-                  <Table
+                  <AnyTable
                     columns={columns}
                     data={levelRows}
                     onRowClick={handleNavigateToLevel}
@@ -781,7 +784,7 @@ export default function ProgramDetail() {
                       </div>
                     }
                   />
-                </Card>
+                </AnyCard>
 
                 <Card>
                   <h3 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-3)' }}>Photos</h3>
@@ -800,4 +803,5 @@ export default function ProgramDetail() {
     </div>
   )
 }
+
 

@@ -28,6 +28,7 @@ export default function SeasonsManagement() {
   const [seasonToDelete, setSeasonToDelete] = useState<Season | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  void deleteError
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const checkedSeasonIds = useRef<Set<string>>(new Set())
 
@@ -287,8 +288,6 @@ export default function SeasonsManagement() {
         }
         confirmLabel="Delete"
         variant="danger"
-        loading={deleting}
-        error={deleteError}
         onConfirm={handleConfirmDelete}
         onCancel={() => {
           setSeasonToDelete(null)

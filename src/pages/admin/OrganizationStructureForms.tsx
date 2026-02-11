@@ -1979,10 +1979,7 @@ export default function OrganizationStructureForms() {
 
       {(!currentOrganization || (!activeFormType && !loading)) && !activeFormType && currentOrganization && (
         <Card>
-           {/* This is a fallback block just in case, but normally the logic above covers it. 
-               The original code had a strange condition block at the end. 
-               I'll simplify the original missing org check below.
-           */}
+          <div />
         </Card>
       )}
       {!currentOrganization && (

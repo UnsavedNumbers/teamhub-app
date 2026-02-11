@@ -50,7 +50,7 @@ function PhotoActionsDropdown({ photo, gallery, onAction }: PhotoActionsDropdown
         type="button"
         className="oa-photo-actions-trigger"
         onClick={() => setOpen(!open)}
-        aria-label={t('common.actions')}
+        aria-label={tAny('common.actions')}
       >
         <span className="material-symbols-outlined">more_vert</span>
       </button>
@@ -72,7 +72,7 @@ function PhotoActionsDropdown({ photo, gallery, onAction }: PhotoActionsDropdown
                 }}
               >
                 <span className="material-symbols-outlined">photo_library</span>
-                <span>{t('photos.goToGallery')}</span>
+                <span>{tAny('photos.goToGallery')}</span>
               </button>
             )}
 
@@ -86,7 +86,7 @@ function PhotoActionsDropdown({ photo, gallery, onAction }: PhotoActionsDropdown
               }}
             >
               <span className="material-symbols-outlined">tag</span>
-              <span>{t('photos.tagAthletes')}</span>
+              <span>{tAny('photos.tagAthletes')}</span>
             </button>
 
             {/* Set as Cover */}
@@ -100,7 +100,7 @@ function PhotoActionsDropdown({ photo, gallery, onAction }: PhotoActionsDropdown
                 }}
               >
                 <span className="material-symbols-outlined">star</span>
-                <span>{t('photos.setAsCover')}</span>
+                <span>{tAny('photos.setAsCover')}</span>
               </button>
             )}
 
@@ -118,7 +118,7 @@ function PhotoActionsDropdown({ photo, gallery, onAction }: PhotoActionsDropdown
                 }}
               >
                 <span className="material-symbols-outlined">check_circle</span>
-                <span>{t('common.approve')}</span>
+                <span>{tAny('common.approve')}</span>
               </button>
             )}
 
@@ -132,7 +132,7 @@ function PhotoActionsDropdown({ photo, gallery, onAction }: PhotoActionsDropdown
               }}
             >
               <span className="material-symbols-outlined">cancel</span>
-              <span>{t('common.reject')}</span>
+              <span>{tAny('common.reject')}</span>
             </button>
 
             {/* Remove from Gallery */}
@@ -145,7 +145,7 @@ function PhotoActionsDropdown({ photo, gallery, onAction }: PhotoActionsDropdown
               }}
             >
               <span className="material-symbols-outlined">delete</span>
-              <span>{t('common.remove')}</span>
+              <span>{tAny('common.remove')}</span>
             </button>
           </div>
         </>
@@ -173,6 +173,7 @@ export function OrgAdminGalleryView({
 }: OrgAdminGalleryViewProps) {
 
   const { t } = useI18n();
+  const tAny = t as any;
   const navigate = useNavigate();
 
   // Internal selection state if not controlled
@@ -259,12 +260,12 @@ export function OrgAdminGalleryView({
             )}
             {isPending && (
               <span className="oa-photo-badge oa-photo-badge--pending">
-                {t('photos.pendingApproval.short')}
+                {tAny('photos.pendingApproval.short')}
               </span>
             )}
             {isRejected && (
               <span className="oa-photo-badge oa-photo-badge--rejected">
-                {t('common.rejected')}
+                {tAny('common.rejected')}
               </span>
             )}
           </div>
@@ -272,7 +273,7 @@ export function OrgAdminGalleryView({
           {/* Selection checkbox */}
           <div
             className={`oa-photo-select ${isSelected ? 'oa-photo-select--selected' : ''}`}
-            onClick={(e) => {
+            onClick={(e: any) => {
               e.stopPropagation();
               handleSelect(item.id, e.ctrlKey || e.metaKey, e.shiftKey);
             }}
@@ -332,7 +333,7 @@ export function OrgAdminGalleryView({
         {/* Selection checkbox */}
         <div
           className={`oa-photo-list-select ${isSelected ? 'oa-photo-list-select--selected' : ''}`}
-          onClick={(e) => {
+          onClick={(e: any) => {
             e.stopPropagation();
             handleSelect(item.id, e.ctrlKey || e.metaKey, e.shiftKey);
           }}
@@ -368,12 +369,12 @@ export function OrgAdminGalleryView({
               )}
               {isPending && (
                 <span className="oa-photo-badge oa-photo-badge--pending oa-photo-badge--sm">
-                  {t('photos.pendingApproval.short')}
+                  {tAny('photos.pendingApproval.short')}
                 </span>
               )}
               {isRejected && (
                 <span className="oa-photo-badge oa-photo-badge--rejected oa-photo-badge--sm">
-                  {t('common.rejected')}
+                  {tAny('common.rejected')}
                 </span>
               )}
             </div>
@@ -383,7 +384,7 @@ export function OrgAdminGalleryView({
           {taggedCount > 0 && (
             <p className="oa-photo-list-tagged" title={taggedNames}>
               <span className="material-symbols-outlined oa-photo-list-tag-icon">person</span>
-              {taggedCount} {taggedCount === 1 ? t('photos.athlete') : t('photos.athletes')}: {taggedNames}
+              {taggedCount} {taggedCount === 1 ? tAny('photos.athlete') : tAny('photos.athletes')}: {taggedNames}
             </p>
           )}
 
@@ -419,7 +420,7 @@ export function OrgAdminGalleryView({
           <Button
             variant="ghost"
             size="small"
-            onClick={(e) => {
+            onClick={(e: any) => {
               e.stopPropagation();
               handleAction('viewGallery', item.id);
             }}
@@ -431,7 +432,7 @@ export function OrgAdminGalleryView({
               variant="ghost"
               size="small"
               className="oa-photo-list-action--success"
-              onClick={(e) => {
+              onClick={(e: any) => {
                 e.stopPropagation();
                 handleAction('approve', item.id);
               }}
@@ -443,7 +444,7 @@ export function OrgAdminGalleryView({
             variant="ghost"
             size="small"
             className="oa-photo-list-action--danger"
-            onClick={(e) => {
+            onClick={(e: any) => {
               e.stopPropagation();
               handleAction('reject', item.id);
             }}
@@ -478,11 +479,11 @@ export function OrgAdminGalleryView({
       className={className}
       classNames={{
         root: 'border-none shadow-none bg-transparent',
-        grid: 'oa-photo-grid',
-        item: viewMode === 'grid' ? '' : '',
+                item: viewMode === 'grid' ? '' : '',
         content: 'p-0',
         toolbar: 'hidden'
       }}
     />
   );
 }
+

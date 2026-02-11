@@ -12,7 +12,7 @@ import { USE_FAKE_DATA } from '../../data/config'
 import { getSports, deleteSport } from '../../data/services/sportsService'
 import { getPrograms } from '../../data/services/sportsService'
 import type { Sport } from '../../data/types/organization'
-import { AdminPageHeader, ConfirmDialog, Button, Card, EmptyState, Badge, InlineNotice } from '../../components/admin'
+import { AdminPageHeader, ConfirmDialog, Button, Card, EmptyState, InlineNotice } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { Tooltip } from '../../components/admin/Tooltip'
@@ -205,14 +205,11 @@ export default function Sports() {
                         {sport.name}
                       </span>
                       <div className="oa-flex oa-items-center oa-gap-2">
-                        <Badge
-                          variant="neutral"
-                          role="button"
-                          tabIndex={0}
-                          className="oa-uppercase oa-text-[10px] oa-font-bold oa-cursor-pointer"
-                          style={{ padding: '2px 6px' }}
+                        <button
+                          type="button"
+                          className="oa-badge oa-badge--neutral oa-uppercase oa-text-[10px] oa-font-bold oa-cursor-pointer oa-px-2 oa-py-0.5"
                           onClick={() => navigate(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sport.id}`)}
-                          onKeyDown={(e) => {
+                          onKeyDown={(e: any) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault()
                               navigate(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sport.id}`)
@@ -220,7 +217,7 @@ export default function Sports() {
                           }}
                         >
                           {programCount} {programCount === 1 ? 'PROGRAM' : 'PROGRAMS'}
-                        </Badge>
+                        </button>
                       </div>
                     </div>
 

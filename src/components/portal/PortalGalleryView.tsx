@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Gallery, LazyImage } from '@/components/shared/Gallery';
 import { useGallerySelection } from '@/components/shared/Gallery/hooks';
 import { GalleryItem } from '@/components/shared/Gallery/types';
@@ -32,7 +32,7 @@ export function PortalGalleryView({
   selectedIds: controlledSelectedIds,
   onSelectionChange: controlledOnSelectionChange,
 }: PortalGalleryViewProps) {
-  
+  void gallery
   const { t } = useI18n();
 
   // Internal selection state
@@ -118,7 +118,6 @@ export function PortalGalleryView({
       
       className={className}
       classNames={{
-        grid: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 p-4',
         item: 'rounded-2xl overflow-hidden',
         root: 'border-none shadow-none bg-transparent',
         toolbar: 'hidden', // Hide default toolbar, assumed handled purely by page

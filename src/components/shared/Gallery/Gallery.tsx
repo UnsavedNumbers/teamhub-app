@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { GalleryProps, GalleryItem, ToolbarContext } from './types';
 import { GalleryLoadingState } from './GalleryLoadingState';
 import { GalleryErrorState } from './GalleryErrorState';

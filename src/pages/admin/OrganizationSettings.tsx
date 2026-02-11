@@ -1620,7 +1620,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           }}>
             <div className="oa-caption oa-text-muted oa-mb-2">{t('admin.organizationSettings.payments.info.payoutStatus')}</div>
             <div className="oa-flex oa-items-center oa-gap-2">
-              <Badge variant={connectStatus.payoutsEnabled ? 'success' : 'danger'} style={{ fontSize: '14px' }}>
+              <Badge variant={connectStatus.payoutsEnabled ? 'success' : 'danger'} className="oa-text-sm">
                 {connectStatus.payoutsEnabled
                   ? t('admin.organizationSettings.payments.info.payoutStatusActive')
                   : t('admin.organizationSettings.payments.info.payoutStatusPaused')}
@@ -1644,7 +1644,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                     ? 'danger'
                     : 'warning'
               }
-              style={{ fontSize: '14px', textTransform: 'capitalize' }}
+              className="oa-text-sm oa-capitalize"
             >
               {t(`admin.organizationSettings.payments.onboardingStatus.${connectStatus.onboardingStatus}`)}
             </Badge>
