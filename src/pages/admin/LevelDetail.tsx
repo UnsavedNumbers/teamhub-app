@@ -369,7 +369,27 @@ export default function LevelDetail() {
     return (
       <div className="pa-root">
         <OfflineBanner />
-        <div className="pa-skeleton" style={{ height: 'calc(var(--pa-space-9) * 9)' }} />
+        <div style={{ padding: '24px' }}>
+          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div className="pa-skeleton" style={{ height: '280px', borderRadius: '8px', marginBottom: '32px' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="pa-skeleton" style={{ height: '160px' }} />
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i}>
+                <div className="pa-skeleton" style={{ height: '40px', marginBottom: '16px' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {Array.from({ length: 3 }).map((_, j) => (
+                    <div key={j} className="pa-skeleton" style={{ height: '60px' }} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }

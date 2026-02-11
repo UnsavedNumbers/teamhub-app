@@ -702,13 +702,15 @@ export function PhotosBrowseView() {
                         >
                           <span className="material-symbols-outlined">edit</span>
                         </button>
-                        <button 
-                          className="table-more-button"
-                          onClick={() => handleDeleteGallery(gallery)}
-                          title={t('photos.deleteGallery')}
-                        >
-                          <span className="material-symbols-outlined">delete</span>
-                        </button>
+                        {!gallery.is_system_generated && (
+                          <button 
+                            className="table-more-button"
+                            onClick={() => handleDeleteGallery(gallery)}
+                            title={t('photos.deleteGallery')}
+                          >
+                            <span className="material-symbols-outlined">delete</span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

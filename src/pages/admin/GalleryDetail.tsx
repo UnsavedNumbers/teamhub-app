@@ -413,14 +413,22 @@ export default function GalleryDetail() {
     }
   }, [gallery, t])
 
-  // Show loading skeleton for entire page
   if (loading) {
     return (
-      <div className="org-structure-page">
-        <div className="pa-animate-pulse pa-space-y-4 pa-p-6">
-          <div className="pa-h-8 pa-w-64 pa-bg-muted pa-rounded" />
-          <div className="pa-h-4 pa-w-48 pa-bg-muted pa-rounded" />
-          <Card className="pa-card pa-h-40" />
+      <div className="pa-root">
+        <div style={{ padding: '24px' }}>
+          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div className="pa-skeleton" style={{ height: '400px', borderRadius: '8px', marginBottom: '32px' }} />
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="pa-skeleton" style={{ height: '40px', width: '100px' }} />
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="pa-skeleton" style={{ height: '150px' }} />
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -693,7 +701,7 @@ export default function GalleryDetail() {
             setGallery(g)
             setEditOpen(false)
           }}
-          onDelete={handleDeleteGallery}
+          onDelete={gallery.is_system_generated ? undefined : handleDeleteGallery}
         />
       )}
 

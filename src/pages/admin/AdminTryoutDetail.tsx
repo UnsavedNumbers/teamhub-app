@@ -48,7 +48,21 @@ export default function AdminTryoutDetail() {
     { id: 'notes', label: 'Notes', render: (row) => row.notes || '—' }
   ]
 
-  if (loading) return <div className="pa-skeleton" style={{height:'300px'}} />
+  if (loading) {
+    return (
+      <div className="pa-root">
+        <div style={{ padding: '24px' }}>
+          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="pa-skeleton" style={{ height: '120px' }} />
+            ))}
+          </div>
+          <div className="pa-skeleton" style={{ height: '400px', borderRadius: '8px' }} />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="pa-root">

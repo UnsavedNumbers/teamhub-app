@@ -10,6 +10,7 @@ import { getLink } from '../../utils/routes'
 import { useT } from '../../i18n/useI18n'
 import { Button, Card, Table, type TableColumn, Tabs, TabsList, TabsTrigger, TabsContent, StatCard, Badge, ConfirmDialog } from '../../components/platformAdmin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getDisplayName, calculateAge, getGenderLabel, formatSports, getAthleteInitials } from '../../utils/athleteHelpers'
 import { formatPhoneDisplay } from '../../utils/phoneFormatting'
 import { GuardianMatchIndicator } from '../../components/admin/GuardianMatchIndicator'
@@ -753,7 +754,21 @@ export default function AthleteDetail() {
   if (loading) {
     return (
       <div className="pa-root">
-        <div className="pa-skeleton" style={{ height: '400px' }} />
+        <OfflineBanner />
+        <div style={{ padding: '24px' }}>
+          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div className="pa-skeleton" style={{ height: '320px', borderRadius: '8px', marginBottom: '24px' }} />
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: '1px solid var(--pa-n200)' }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="pa-skeleton" style={{ height: '40px', width: '120px' }} />
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="pa-skeleton" style={{ height: '200px' }} />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }

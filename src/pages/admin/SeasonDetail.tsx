@@ -312,7 +312,15 @@ export default function SeasonDetail() {
   if (loading) {
     return (
       <div className="pa-root season-detail-page">
-        <div className="pa-skeleton season-detail-skeleton" />
+        <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+        <div className="pa-skeleton" style={{ height: '280px', borderRadius: '8px', marginBottom: '32px' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px', marginBottom: '32px' }}>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="pa-skeleton" style={{ height: '300px' }} />
+          ))}
+        </div>
+        <div className="pa-skeleton" style={{ height: '400px', borderRadius: '8px', marginBottom: '32px' }} />
+        <div className="pa-skeleton" style={{ height: '100px', borderRadius: '8px' }} />
       </div>
     )
   }
@@ -322,19 +330,19 @@ export default function SeasonDetail() {
       <div className="pa-root season-detail-page">
         <OfflineBanner />
         <AdminPageHeader
-          title="Season Not Found"
-          subtitle={error || 'The season you are looking for does not exist'}
+          title={t('admin.seasonDetail.notFoundTitle')}
+          subtitle={error || t('admin.seasonDetail.notFoundSubtitle')}
           breadcrumbs={[
-            { label: 'Organizations', path: getLink('admin.organization.structure') },
-            { label: 'Seasons', path: getLink('admin.seasons.list') },
-            { label: 'Details' },
+            { label: t('admin.seasonDetail.breadcrumbOrganizations'), path: getLink('admin.organization.structure') },
+            { label: t('admin.seasonDetail.breadcrumbSeasons'), path: getLink('admin.seasons.list') },
+            { label: t('admin.seasonDetail.breadcrumbDetails') },
           ]}
         />
         <Card className="pa-mb-4">
-          <div className="pa-text-danger">{error || 'Season not found'}</div>
+          <div className="pa-text-danger">{error || t('admin.seasonDetail.notFoundTitle')}</div>
         </Card>
         <Button onClick={() => navigate(getLink('admin.seasons.list'))}>
-          Back to Seasons
+          {t('admin.seasonDetail.backToSeasons')}
         </Button>
       </div>
     )
@@ -358,7 +366,7 @@ export default function SeasonDetail() {
                 role="status"
               >
                 <span className="material-symbols-outlined" aria-hidden>check_circle</span>
-                Status: {season.is_active ? 'Active' : 'Upcoming'}
+                {t('admin.seasonDetail.statusLabel')} {season.is_active ? t('admin.seasonDetail.statusActive') : t('admin.seasonDetail.statusUpcoming')}
               </span>
               <h1 className="season-detail-hero-title">{season.name}</h1>
               <p className="season-detail-hero-dates">{dateRange}</p>
@@ -369,7 +377,7 @@ export default function SeasonDetail() {
                 <span className="material-symbols-outlined season-detail-progress-icon" aria-hidden>
                   timer
                 </span>
-                <span className="season-detail-progress-label">Season Progress</span>
+                <span className="season-detail-progress-label">{t('admin.seasonDetail.seasonProgress')}</span>
                 <div
                   className="season-detail-progress-track"
                   style={{ ['--season-progress' as string]: `${progress}%` }}
@@ -377,7 +385,7 @@ export default function SeasonDetail() {
                   aria-valuenow={progress}
                   aria-valuemin={0}
                   aria-valuemax={100}
-                  aria-label="Season progress"
+                  aria-label={t('admin.seasonDetail.seasonProgress')}
                 >
                   <div className="season-detail-progress-fill" />
                 </div>
@@ -391,25 +399,25 @@ export default function SeasonDetail() {
           {/* Sports & Programs Card */}
           <Card className="season-detail-programs-card">
             <div className="season-detail-card-header">
-              <h3 className="season-detail-card-title">Sports & Programs</h3>
+              <h3 className="season-detail-card-title">{t('admin.seasonDetail.sportsAndPrograms')}</h3>
               <span className="material-symbols-outlined season-detail-card-icon" aria-hidden>
                 sports_football
               </span>
             </div>
             <div className="season-detail-programs-list">
               {statsLoading ? (
-                <div className="pa-body-m pa-text-muted">Loading...</div>
+                <div className="pa-body-m pa-text-muted">{t('admin.seasonDetail.loading')}</div>
               ) : stats && Object.keys(stats.programsByLevel).length > 0 ? (
                 Object.entries(stats.programsByLevel).map(([level, count]) => (
                   <div key={level} className="season-detail-programs-row">
                     <span className="season-detail-programs-name">{level}</span>
                     <span className="season-detail-programs-count">
-                      {count} {count === 1 ? 'team' : 'teams'}
+                      {count === 1 ? t('admin.seasonDetail.teamCount', { count }) : t('admin.seasonDetail.teamsCount', { count })}
                     </span>
                   </div>
                 ))
               ) : (
-                <div className="pa-body-m pa-text-muted">No programs available</div>
+                <div className="pa-body-m pa-text-muted">{t('admin.seasonDetail.noPrograms')}</div>
               )}
             </div>
             <button
@@ -417,7 +425,7 @@ export default function SeasonDetail() {
               onClick={() => navigate(getLink('admin.organization.structure'))}
               className="season-detail-view-programs"
             >
-              VIEW PROGRAMS{' '}
+              {t('admin.seasonDetail.viewPrograms')}{' '}
               <span className="material-symbols-outlined" aria-hidden>arrow_forward</span>
             </button>
           </Card>
@@ -425,7 +433,7 @@ export default function SeasonDetail() {
           {/* Teams Card */}
           <Card className="season-detail-teams-card">
             <div className="season-detail-card-header">
-              <h3 className="season-detail-card-title">Teams</h3>
+              <h3 className="season-detail-card-title">{t('admin.seasonDetail.teamsTitle')}</h3>
               <span className="material-symbols-outlined season-detail-card-icon" aria-hidden>
                 groups
               </span>
@@ -434,17 +442,17 @@ export default function SeasonDetail() {
               <span className="season-detail-teams-value">
                 {statsLoading ? '—' : stats?.teamsCount ?? 0}
               </span>
-              <span className="season-detail-teams-label">Active Teams</span>
+              <span className="season-detail-teams-label">{t('admin.seasonDetail.activeTeams')}</span>
             </div>
             <div className="season-detail-teams-sub">
-              {statsLoading ? '—' : stats?.teamsCount ? `Active in ${season.name}` : 'No teams yet'}
+              {statsLoading ? '—' : stats?.teamsCount ? t('admin.seasonDetail.activeInSeason', { season: season.name }) : t('admin.seasonDetail.noTeamsYet')}
             </div>
             <button
               type="button"
               onClick={() => setTeamsSlideOverOpen(true)}
               className="season-detail-view-programs"
             >
-              VIEW TEAMS{' '}
+              {t('admin.seasonDetail.viewTeams')}{' '}
               <span className="material-symbols-outlined" aria-hidden>arrow_forward</span>
             </button>
           </Card>
@@ -452,32 +460,32 @@ export default function SeasonDetail() {
           {/* Season Stats Card */}
           <Card>
             <div className="season-detail-card-header">
-              <h3 className="season-detail-card-title">Season Stats</h3>
+              <h3 className="season-detail-card-title">{t('admin.seasonDetail.seasonStats')}</h3>
               <span className="material-symbols-outlined season-detail-card-icon" aria-hidden>
                 insights
               </span>
             </div>
             <div className="season-detail-stats-grid">
               <div className="season-detail-stat-box">
-                <p className="season-detail-stat-label">Registered</p>
+                <p className="season-detail-stat-label">{t('admin.seasonDetail.statRegistered')}</p>
                 <p className="season-detail-stat-value">
                   {statsLoading ? '—' : formatNumber(stats?.registeredAthletes ?? 0)}
                 </p>
               </div>
               <div className="season-detail-stat-box">
-                <p className="season-detail-stat-label">Games</p>
+                <p className="season-detail-stat-label">{t('admin.seasonDetail.statGames')}</p>
                 <p className="season-detail-stat-value">
                   {statsLoading ? '—' : stats?.gamesCount ?? 0}
                 </p>
               </div>
               <div className="season-detail-stat-box">
-                <p className="season-detail-stat-label">Venues</p>
+                <p className="season-detail-stat-label">{t('admin.seasonDetail.statVenues')}</p>
                 <p className="season-detail-stat-value">
                   {statsLoading ? '—' : stats?.venuesCount ?? 0}
                 </p>
               </div>
               <div className="season-detail-stat-box">
-                <p className="season-detail-stat-label">Staff</p>
+                <p className="season-detail-stat-label">{t('admin.seasonDetail.statStaff')}</p>
                 <p className="season-detail-stat-value">
                   {statsLoading ? '—' : stats?.staffCount ?? 0}
                 </p>
@@ -562,7 +570,7 @@ export default function SeasonDetail() {
             <span className="material-symbols-outlined" aria-hidden>
               settings_suggest
             </span>
-            <span>Administrator controls for {season.name} season management</span>
+            <span>{t('admin.seasonDetail.actionBarDescription', { season: season.name })}</span>
           </div>
           <div className="season-detail-action-buttons">
             <Button
@@ -576,14 +584,14 @@ export default function SeasonDetail() {
               }
               icon="edit"
             >
-              Edit Season
+              {t('admin.seasonDetail.editSeason')}
             </Button>
             <Button
               variant="danger"
               onClick={() => setShowArchiveDialog(true)}
               icon="archive"
             >
-              Archive Season
+              {t('admin.seasonDetail.archiveSeason')}
             </Button>
           </div>
         </div>
@@ -599,10 +607,10 @@ export default function SeasonDetail() {
 
       <ConfirmDialog
         open={showArchiveDialog}
-        title="Archive Season"
-        description={`Are you sure you want to archive "${season.name}"? This action cannot be undone.`}
-        confirmLabel="Archive"
-        cancelLabel="Cancel"
+        title={t('admin.seasonDetail.archiveTitle')}
+        description={t('admin.seasonDetail.archiveDescription', { name: season.name })}
+        confirmLabel={t('admin.seasonDetail.archiveConfirm')}
+        cancelLabel={t('admin.seasonDetail.archiveCancel')}
         variant="danger"
         loading={archiving}
         onConfirm={handleArchive}

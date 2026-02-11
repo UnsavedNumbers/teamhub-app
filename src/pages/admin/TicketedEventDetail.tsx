@@ -153,9 +153,20 @@ export default function TicketedEventDetail() {
   if (eventLoading && !event) {
     return (
       <div className="pa-page-container">
-        <div className="pa-card">
-          <div className="pa-flex pa-justify-center pa-py-9">
-            <span className="pa-spinner" style={{ width: '32px', height: '32px', borderWidth: '3px' }} />
+        <div style={{ padding: '24px' }}>
+          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '32px' }}>
+            <div className="pa-skeleton" style={{ height: '250px' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="pa-skeleton" style={{ height: '60px' }} />
+              ))}
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="pa-skeleton" style={{ height: '200px' }} />
+            ))}
           </div>
         </div>
       </div>

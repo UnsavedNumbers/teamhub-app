@@ -124,12 +124,14 @@ export default function TicketingOrderDetail() {
   if (isLoading) {
     return (
       <div className="pa-root">
-        <AdminPageHeader title="Loading Order..." />
-        <div className="oa-card">
-          <div className="pa-text-center pa-py-8">
-            <div className="pa-spinner" style={{ width: '32px', height: '32px', borderWidth: '3px', margin: '0 auto' }} />
-            <p className="pa-mt-4">{t('common.loading')}</p>
+        <div style={{ padding: '24px' }}>
+          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="pa-skeleton" style={{ height: '100px' }} />
+            ))}
           </div>
+          <div className="pa-skeleton" style={{ height: '400px', borderRadius: '8px' }} />
         </div>
       </div>
     )
