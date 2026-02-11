@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { AdminPageHeader, Card, Input, Button, Select, DatePicker, ErrorState } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Input, Button, Select, DatePicker, ErrorState } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
@@ -8,6 +8,7 @@ import { createAthleteBasic, getFamilyDetails } from '../../data/services/family
 import { useT } from '../../i18n/useI18n'
 import type { Gender } from '../../types/family'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 export default function CreateChild() {
   const navigate = useNavigate()
@@ -82,10 +83,10 @@ export default function CreateChild() {
   if (!isReady) return <AdminLoadingSpinner />
   
   // If we are just fetching family name details, show lightweight loading
-  if (initializing) return <div className="pa-loader" />
+  if (initializing) return <div className="oa-loader" />
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader
         title={t('admin.createChild.title')}
         subtitle={familyName ? t('admin.createChild.subtitle', { familyName }) : ''}
@@ -96,14 +97,14 @@ export default function CreateChild() {
         ]}
       />
 
-      <div className="pa-form-container">
+      <div className="oa-form-container">
           <form onSubmit={handleSubmit}>
             <Card>
-              <h2 className="pa-h2 pa-mb-6">Player Details</h2>
+              <h2 className="oa-h2 oa-mb-6">Player Details</h2>
               
               {error && <ErrorState title="Creation Failed" message={error.message} onRetry={() => setError(null)} />}
 
-              <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+              <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-4">
                 <Input
                   label="First Name"
                   value={formData.first_name}
@@ -118,7 +119,7 @@ export default function CreateChild() {
                 />
               </div>
 
-              <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+              <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-4">
                 <DatePicker
                   label="Date of Birth"
                   value={formData.date_of_birth}
@@ -137,7 +138,7 @@ export default function CreateChild() {
                 />
               </div>
 
-              <div className="pa-mb-6">
+              <div className="oa-mb-6">
                   <Input
                     label="Jersey Number (Optional)"
                     value={formData.jersey_number}
@@ -146,9 +147,9 @@ export default function CreateChild() {
                   />
               </div>
 
-              <h3 className="pa-h3 pa-mt-8 pa-mb-4">Medical & Emergency</h3>
+              <h3 className="oa-h3 oa-mt-8 oa-mb-4">Medical & Emergency</h3>
               
-              <div className="pa-mb-4">
+              <div className="oa-mb-4">
                 <Input
                   label="Allergies"
                   value={formData.allergies}
@@ -157,7 +158,7 @@ export default function CreateChild() {
                 />
               </div>
 
-              <div className="pa-mb-4">
+              <div className="oa-mb-4">
                 <Input
                   label="Medical Notes"
                   value={formData.medical_notes}
@@ -166,7 +167,7 @@ export default function CreateChild() {
                 />
               </div>
 
-              <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+              <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-4">
                   <Input
                     label="Emergency Contact Name"
                     value={formData.emergency_contact_name}
@@ -179,7 +180,7 @@ export default function CreateChild() {
                   />
               </div>
 
-              <div className="pa-flex pa-justify-end pa-gap-4 pa-mt-8">
+              <div className="oa-flex oa-justify-end oa-gap-4 oa-mt-8">
                 <OrgAdminButton
                   variant="primary"
                   onClick={() => navigate(getLink('admin.guardians.detail', { id: familyId! }))}

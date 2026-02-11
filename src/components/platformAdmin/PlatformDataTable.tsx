@@ -173,6 +173,62 @@ export default function PlatformDataTable<T extends { id: string }>({
 
   return (
     <div className="pa-card" style={{ padding: 0, overflow: 'hidden' }}>
+      {/* Top Pagination */}
+      <div
+        className={cn('pa-flex', 'pa-flex-col', 'pa-items-stretch', 'pa-gap-3', 'pa-table-pagination')}
+        style={{
+          padding: 'var(--pa-space-3)',
+        }}
+      >
+        {/* Rows per page */}
+        <div
+          className={cn('pa-flex', 'pa-items-center', 'pa-gap-2', 'pa-table-pagination-controls')}
+          style={{ whiteSpace: 'nowrap' }}
+        >
+          <span className="pa-body-s pa-table-pagination-label">
+            {t('common.table.rowsPerPage')}
+          </span>
+          <select
+            className="pa-input pa-select"
+            value={rowsPerPage}
+            onChange={(e) => onRowsPerPageChange(Number(e.target.value))}
+            style={{ height: '44px', padding: '0 var(--pa-space-3)', minWidth: '4.5rem' }}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </div>
+
+        {/* Page info */}
+        <span className="pa-body-s pa-text-center pa-table-pagination-info">
+          {t('common.table.pageSummary', { start: startRow, end: endRow, total: totalCount })}
+        </span>
+
+        {/* Page controls */}
+        <div className={cn('pa-flex', 'pa-gap-2', 'pa-justify-center')}>
+          <button
+            className="pa-btn pa-btn--ghost pa-btn--dense"
+            onClick={() => onPageChange(page - 1)}
+            disabled={page === 0}
+            aria-label={t('common.table.previousPage')}
+            style={{ minHeight: '44px', minWidth: '44px' }}
+          >
+            <span className="material-symbols-outlined">chevron_left</span>
+          </button>
+          <button
+            className="pa-btn pa-btn--ghost pa-btn--dense"
+            onClick={() => onPageChange(page + 1)}
+            disabled={page >= totalPages - 1}
+            aria-label={t('common.table.nextPage')}
+            style={{ minHeight: '44px', minWidth: '44px' }}
+          >
+            <span className="material-symbols-outlined">chevron_right</span>
+          </button>
+        </div>
+      </div>
+
       {/* Desktop Table View - hidden on mobile */}
       <div className="pa-table-desktop" style={{ overflowX: 'auto' }}>
         <table className="pa-table" style={{ width: '100%' }}>
@@ -381,10 +437,9 @@ export default function PlatformDataTable<T extends { id: string }>({
 
       {/* Pagination */}
       <div
-        className={cn('pa-flex', 'pa-flex-col', 'pa-items-stretch', 'pa-gap-3', 'pa-bg-n50', 'pa-table-pagination')}
+        className={cn('pa-flex', 'pa-flex-col', 'pa-items-stretch', 'pa-gap-3', 'pa-table-pagination')}
         style={{
           padding: 'var(--pa-space-3)',
-          borderTop: '1px solid var(--pa-n100)',
         }}
       >
         {/* Rows per page */}
@@ -392,7 +447,7 @@ export default function PlatformDataTable<T extends { id: string }>({
           className={cn('pa-flex', 'pa-items-center', 'pa-gap-2', 'pa-table-pagination-controls')}
           style={{ whiteSpace: 'nowrap' }}
         >
-          <span className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+          <span className="pa-body-s pa-table-pagination-label">
             {t('common.table.rowsPerPage')}
           </span>
           <select
@@ -409,7 +464,7 @@ export default function PlatformDataTable<T extends { id: string }>({
         </div>
 
         {/* Page info */}
-        <span className="pa-body-s pa-text-center" style={{ color: 'var(--pa-n700)' }}>
+        <span className="pa-body-s pa-text-center pa-table-pagination-info">
           {t('common.table.pageSummary', { start: startRow, end: endRow, total: totalCount })}
         </span>
 

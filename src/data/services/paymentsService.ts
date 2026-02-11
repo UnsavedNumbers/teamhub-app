@@ -429,6 +429,50 @@ export async function getUnpaidFeeAssignments(
 }
 
 /**
+ * Get ALL unpaid fee assignments for the organization (admin view)
+ */
+export async function getUnpaidFeeAssignmentsForOrg(
+    context: UserContext
+): Promise<{ data: Array<FakeFeeAssignment & { fee?: FakeFee }>; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+
+            const unpaid = fakeFeeAssignments
+                .filter((fa) => fa.status === 'unpaid' || fa.status === 'partial')
+                .map((fa) => ({
+                    ...fa,
+                    fee: getFeeById(fa.fee_id),
+                }))
+
+            return { data: unpaid, error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('fee_assignments')
+            .select('*, fee:fees(*)')
+            .eq('org_id', context.orgId)
+            .in('status', ['unpaid', 'partial'])
+            .order('created_at', { ascending: false })
+
+        if (error) throw error
+
+        const unpaid = (data ?? []).map((row: any) => ({
+            ...(row as FakeFeeAssignment),
+            fee: row.fee as FakeFee,
+        }))
+
+        return { data: unpaid, error: null }
+    } catch (err) {
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch unpaid assignments') }
+    }
+}
+
+/**
  * Get fee assignments for a specific team (team-scoped)
  * Filters by team's season(s) and athletes on the team
  */

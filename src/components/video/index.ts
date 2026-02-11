@@ -19,9 +19,11 @@ export { default as VideoTagPicker } from './VideoTagPicker'
 export { default as VideoBulkActionsBar } from './VideoBulkActionsBar'
 export { default as VideoThumbnailSelector } from './VideoThumbnailSelector'
 export { default as VideoFilterPanel } from './VideoFilterPanel'
+export { default as VideoFilterBottomSheet } from './VideoFilterBottomSheet'
 export { default as VideoSortDropdown } from './VideoSortDropdown'
 export { default as VideoDownloadButton } from './VideoDownloadButton'
 
 // Types re-export
 export type { VideoFilters, Tag, Team, User } from './VideoFilterPanel'
+export type { VideoFilters as MobileVideoFilters } from './VideoFilterBottomSheet'
 export type { SortOption, SortField, SortDirection } from './VideoSortDropdown'

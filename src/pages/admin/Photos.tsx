@@ -20,6 +20,7 @@ import { getGalleriesForUser, type Gallery } from '@/data/services/galleryServic
 import { getMockGalleriesForOrg } from '@/data/fake/mockGalleries'
 import { getLink } from '@/utils/routes'
 import './Photos.css'
+import '../../styles/orgAdmin.css'
 
 // Cache for galleries (5 minutes)
 const CACHE_KEY = 'admin_photos_galleries'
@@ -190,8 +191,8 @@ export default function AdminPhotos() {
   }
 
   return (
-    <div className="pa-root admin-photos-page">
-      <div className="pa-container">
+    <div className="oa-root admin-photos-page">
+      <div className="oa-container">
         <PageHeader
           title={t('photos.title')}
           description={t('photos.subtitle')}
@@ -275,12 +276,12 @@ export default function AdminPhotos() {
         </div>
 
         {loading ? (
-          <Card className="pa-card pa-h-64 pa-animate-pulse" />
+          <Card className="oa-card oa-h-64 oa-animate-pulse" />
         ) : filtered.length === 0 ? (
           <div className="empty-state">
-            <p className="pa-text-base pa-font-semibold">{t('photos.filters.noResults')}</p>
-            <p className="pa-text-sm pa-text-muted">{t('photos.empty.message')}</p>
-            <Button variant="primary" onClick={handleCreateGallery} className="pa-mt-4">
+            <p className="oa-text-base oa-font-semibold">{t('photos.filters.noResults')}</p>
+            <p className="oa-text-sm oa-text-muted">{t('photos.empty.message')}</p>
+            <Button variant="primary" onClick={handleCreateGallery} className="oa-mt-4">
               {t('photos.createGallery')}
             </Button>
           </div>
@@ -297,7 +298,7 @@ export default function AdminPhotos() {
                   {gallery.cover_url ? (
                     <img src={gallery.cover_url} alt={gallery.name} />
                   ) : (
-                    <div className="pa-flex pa-items-center pa-justify-center pa-w-full pa-h-full pa-text-muted pa-text-sm">
+                    <div className="oa-flex oa-items-center oa-justify-center oa-w-full oa-h-full oa-text-muted oa-text-sm">
                       {t('photos.stats.emptyGallery')}
                     </div>
                   )}
@@ -321,11 +322,11 @@ export default function AdminPhotos() {
                     {t('common.modified')} {new Date(gallery.updated_at || gallery.created_at).toLocaleDateString()}
                   </div>
                   <div className="gallery-footer">
-                    <div className="pa-flex pa-items-center pa-gap-2">
-                      <span className="material-symbols-outlined pa-text-muted">
+                    <div className="oa-flex oa-items-center oa-gap-2">
+                      <span className="material-symbols-outlined oa-text-muted">
                         {(gallery.photo_count || 0) === 0 ? 'upload' : 'image'}
                       </span>
-                      <span className="pa-text-sm pa-font-semibold">
+                      <span className="oa-text-sm oa-font-semibold">
                         {(gallery.photo_count || 0) === 0 
                           ? t('photos.addFirstPhoto')
                           : `${gallery.photo_count} ${gallery.photo_count === 1 ? t('photos.photo') : t('photos.photos')}`
@@ -333,7 +334,7 @@ export default function AdminPhotos() {
                       </span>
                     </div>
                     {(gallery.photo_count || 0) > 0 && (
-                      <span className="material-symbols-outlined pa-text-muted">arrow_forward</span>
+                      <span className="material-symbols-outlined oa-text-muted">arrow_forward</span>
                     )}
                   </div>
                 </div>
@@ -344,8 +345,8 @@ export default function AdminPhotos() {
               <div className="add-icon">
                 <span className="material-symbols-outlined">add</span>
               </div>
-              <div className="pa-text-base pa-font-semibold">{t('photos.createGallery')}</div>
-              <div className="pa-text-sm pa-text-muted">
+              <div className="oa-text-base oa-font-semibold">{t('photos.createGallery')}</div>
+              <div className="oa-text-sm oa-text-muted">
                 {t('photos.subtitle')}
               </div>
             </Card>
@@ -360,10 +361,10 @@ export default function AdminPhotos() {
           onClose={() => setShowDemoModal(false)}
           title={t('photos.demoMode.title')}
         >
-          <p className="pa-text-sm pa-text-muted pa-mb-4">
+          <p className="oa-text-sm oa-text-muted oa-mb-4">
             {t('photos.demoMode.createBlocked')}
           </p>
-          <div className="pa-flex pa-justify-end">
+          <div className="oa-flex oa-justify-end">
             <Button variant="primary" onClick={() => setShowDemoModal(false)}>
               {t('common.ok')}
             </Button>

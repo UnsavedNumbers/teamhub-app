@@ -123,7 +123,7 @@ export function PhotosDashboardView() {
   if (loading) {
     return (
       <div className="dashboard-loading">
-        <Card className="pa-card pa-h-64 pa-animate-pulse" />
+        <Card className="oa-card oa-h-64 oa-animate-pulse" />
       </div>
     )
   }
@@ -200,8 +200,8 @@ export function PhotosDashboardView() {
       <div className="dashboard-activity">
         <h2 className="dashboard-section-title">{t('photos.dashboard.recentActivity')}</h2>
         {recentActivity.length === 0 ? (
-          <Card className="pa-card">
-            <p className="pa-text-sm pa-text-muted pa-text-center pa-py-8">
+          <Card className="oa-card">
+            <p className="oa-text-sm oa-text-muted oa-text-center oa-py-8">
               {t('photos.dashboard.noRecentActivity')}
             </p>
           </Card>

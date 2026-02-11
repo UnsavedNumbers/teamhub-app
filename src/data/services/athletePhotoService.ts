@@ -13,6 +13,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
+import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
 
 const supabaseAny = supabase as any
 
@@ -415,6 +416,29 @@ export async function uploadAthletePhoto(
         if (updateError) {
             console.error('[athletePhotoService] Error updating database:', updateError)
             // Don't fail - photo is uploaded, DB update can be retried
+        }
+
+        // Best-effort upload event log.
+        const logResult = await logEvent({
+            category: 'SYSTEM',
+            eventType: 'ATHLETE_PHOTO_UPLOADED',
+            actorUserId: context.userId,
+            actorRole: deriveActorRoleFromRoles(context.roles),
+            orgId: context.orgId,
+            targetEntityType: 'athlete',
+            targetEntityId: athleteId,
+            metadata: {
+                original_path: originalPath,
+                size_512_path: path512,
+                size_256_path: path256,
+                original_file_name: file.name,
+                original_file_size: file.size,
+                original_file_type: file.type,
+                source: 'athletePhotoService.uploadAthletePhoto',
+            },
+        })
+        if (logResult.error) {
+            console.error('[athletePhotoService] Failed to log ATHLETE_PHOTO_UPLOADED event:', logResult.error)
         }
 
         return { error: null }

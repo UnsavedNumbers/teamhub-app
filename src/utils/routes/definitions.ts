@@ -128,7 +128,7 @@ const portal = {
         icon: 'qr_code_scanner',
     },
     myTickets: {
-        path: '/account/tickets',
+        path: '/portal/account/tickets',
         label: 'My Tickets',
         icon: 'confirmation_number',
         description: 'Your event tickets',
@@ -242,6 +242,20 @@ const portal = {
         params: ['id'] as const,
         label: 'Manage Gallery',
         icon: 'edit',
+    },
+
+    // Videos
+    videos: {
+        path: '/portal/videos',
+        label: 'Videos',
+        icon: 'smart_display',
+        description: 'Video library & feedback',
+    },
+    videoDetail: {
+        path: '/portal/videos/:id',
+        params: ['id'] as const,
+        label: 'Video Details',
+        icon: 'smart_display',
     },
 
     // Role Selection
@@ -720,6 +734,13 @@ const admin = {
             icon: 'child_care',
             requiresOrg: true,
         },
+        edit: {
+            path: '/admin/athletes/:id/edit',
+            params: ['id'] as const,
+            label: 'Edit Athlete',
+            icon: 'edit',
+            requiresOrg: true,
+        },
         import: {
             path: '/admin/athletes/import',
             label: 'Import Athletes',
@@ -783,6 +804,15 @@ const admin = {
         label: 'Attendance',
         icon: 'how_to_reg',
         description: 'Check-ins & tracking',
+        requiresOrg: true,
+    },
+
+    // Notifications
+    notifications: {
+        path: '/admin/notifications',
+        label: 'Notifications',
+        icon: 'notifications',
+        description: 'Admin notifications',
         requiresOrg: true,
     },
 
@@ -1434,6 +1464,18 @@ const root = {
 } as const satisfies Record<string, RouteDefinition>
 
 // ============================================================================
+// SHARE ROUTES - Public shared content
+// ============================================================================
+const share = {
+    video: {
+        path: '/share/video/:token',
+        params: ['token'] as const,
+        label: 'Shared Video',
+        icon: 'play_circle',
+    },
+} as const satisfies Record<string, RouteDefinition>
+
+// ============================================================================
 // EXPORTED ROUTE DEFINITIONS
 // ============================================================================
 export const routes = {
@@ -1443,6 +1485,7 @@ export const routes = {
     admin,
     platformAdmin,
     fan,
+    share,
 } as const
 
 // Type for the routes object

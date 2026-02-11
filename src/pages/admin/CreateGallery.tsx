@@ -10,6 +10,7 @@ import { getLink } from '@/utils/routes'
 import { createGalleryForEntity, mapEntityToGalleryType, type GalleryEntityType } from '@/data/services/galleryService'
 import { getSeasons } from '@/data/services/seasonsService'
 import { mapFanVisibilityToGalleryVisibility } from '@/utils/fanVisibilityHelpers'
+import '../../styles/orgAdmin.css'
 
 type EntityTypeOption = 'organization' | 'season'
 type SeasonRecord = { id: string; name?: string | null }

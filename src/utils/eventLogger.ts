@@ -19,6 +19,23 @@ import type {
 let isLoggingContext = false
 
 /**
+ * Derive event actor role from app role list.
+ * `staff` is mapped to `coach` because event_actor_role does not include `staff`.
+ */
+export function deriveActorRoleFromRoles(roles?: Array<string | null | undefined>): EventActorRole {
+  const normalized = new Set(
+    (roles || [])
+      .filter((role): role is string => Boolean(role))
+      .map((role) => role.toLowerCase())
+  )
+
+  if (normalized.has('platform_admin')) return 'platform_admin'
+  if (normalized.has('org_admin')) return 'org_admin'
+  if (normalized.has('coach') || normalized.has('staff')) return 'coach'
+  return 'parent'
+}
+
+/**
  * Extract IP address from request headers
  */
 function extractIpAddress(headers: Headers | Record<string, string>): string | null {
@@ -236,7 +253,23 @@ export async function logAdminEvent(
  * Helper: Log system events
  */
 export async function logSystemEvent(
-  eventType: 'SCHEDULED_JOB_STARTED' | 'SCHEDULED_JOB_COMPLETED' | 'SCHEDULED_JOB_FAILED' | 'WEBHOOK_RECEIVED' | 'WEBHOOK_PROCESSED' | 'WEBHOOK_FAILED' | 'DATABASE_BACKUP' | 'SYSTEM_ALERT',
+  eventType:
+    | 'SCHEDULED_JOB_STARTED'
+    | 'SCHEDULED_JOB_COMPLETED'
+    | 'SCHEDULED_JOB_FAILED'
+    | 'WEBHOOK_RECEIVED'
+    | 'WEBHOOK_PROCESSED'
+    | 'WEBHOOK_FAILED'
+    | 'DATABASE_BACKUP'
+    | 'SYSTEM_ALERT'
+    | 'PHOTO_UPLOADED'
+    | 'ATHLETE_PHOTO_UPLOADED'
+    | 'VIDEO_UPLOAD_STARTED'
+    | 'VIDEO_UPLOAD_COMPLETED'
+    | 'VIDEO_UPLOAD_FAILED'
+    | 'VIDEO_UPLOAD_CANCELLED'
+    | 'ORG_LOGO_UPLOADED'
+    | 'EVENT_BANNER_UPLOADED',
   metadata?: Record<string, unknown>
 ): Promise<EventLogResponse> {
   return logEvent({

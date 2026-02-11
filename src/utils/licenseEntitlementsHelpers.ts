@@ -9,6 +9,8 @@ import { supabase } from '../lib/supabase'
 import type { SupabaseExtended as Database } from '../lib/supabase.extended.types'
 import type { LicenseTier } from '../types/licenseTiers.types'
 
+const db = supabase as any
+
 /**
  * Get current authenticated user for audit logging
  */
@@ -34,7 +36,7 @@ export async function logAuditEvent(params: {
   try {
     const user = await getCurrentUser()
 
-    type AuditInsert = Database['public']['Tables']['entitlement_audit_log']['Insert']
+    type AuditInsert = Record<string, unknown>
     const insertData = {
       actor_id: user.id,
       actor_email: user.email || null,
@@ -45,7 +47,7 @@ export async function logAuditEvent(params: {
       after_state: params.afterState ? JSON.stringify(params.afterState) : null,
       reason: params.reason || null,
     } as AuditInsert
-    const { error } = await supabase.from('entitlement_audit_log').insert(insertData)
+    const { error } = await db.from('entitlement_audit_log').insert(insertData)
 
     if (error) {
       console.error('Failed to log audit event:', error)
@@ -125,7 +127,7 @@ export async function validateFeatureDependencies(
 
   try {
     // Check for required dependencies
-    const { data: dependencies, error } = await supabase
+    const { data: dependencies, error } = await db
       .from('feature_dependencies')
       .select(`
         depends_on_feature_id,

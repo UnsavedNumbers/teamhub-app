@@ -46,20 +46,20 @@ export default function AttendanceSettingsTab() {
   if (!settings) return <div>Error loading settings</div>
 
   return (
-    <div className="pa-space-y-4">
+    <div className="oa-space-y-4">
       <Card>
         <CardHeader><CardTitle>General Configuration</CardTitle></CardHeader>
-        <CardContent className="pa-space-y-4">
-             <div className="pa-flex pa-items-center pa-justify-between">
+        <CardContent className="oa-space-y-4">
+             <div className="oa-flex oa-items-center oa-justify-between">
              <label>Enable Coach Reminders</label>
              <input type="checkbox" checked={settings.enable_coach_reminders} onChange={() => toggle('enable_coach_reminders')} />
            </div>
            
-           <div className="pa-flex pa-items-center pa-justify-between">
+           <div className="oa-flex oa-items-center oa-justify-between">
              <label>Submission Deadline (Hours)</label>
              <input 
                 type="number" 
-                className="pa-input pa-w-24" 
+                className="oa-input oa-w-24" 
                 value={settings.submission_deadline_hours}
                 onChange={(e) => setSettings({...settings, submission_deadline_hours: parseInt(e.target.value) || 0})}
              />
@@ -69,25 +69,25 @@ export default function AttendanceSettingsTab() {
       
       <Card>
         <CardHeader><CardTitle>Required Events</CardTitle></CardHeader>
-        <CardContent className="pa-space-y-4">
-            <div className="pa-flex pa-items-center pa-justify-between">
+        <CardContent className="oa-space-y-4">
+            <div className="oa-flex oa-items-center oa-justify-between">
              <label>Practices</label>
              <input type="checkbox" checked={settings.required_for_practice} onChange={() => toggle('required_for_practice')} />
            </div>
            
-           <div className="pa-flex pa-items-center pa-justify-between">
+           <div className="oa-flex oa-items-center oa-justify-between">
              <label>Games</label>
              <input type="checkbox" checked={settings.required_for_game} onChange={() => toggle('required_for_game')} />
            </div>
 
-           <div className="pa-flex pa-items-center pa-justify-between">
+           <div className="oa-flex oa-items-center oa-justify-between">
              <label>Meetings</label>
              <input type="checkbox" checked={settings.required_for_meeting} onChange={() => toggle('required_for_meeting')} />
            </div>
         </CardContent>
       </Card>
       
-      <div className="pa-flex pa-justify-end">
+      <div className="oa-flex oa-justify-end">
         <Button onClick={handleSave} disabled={saving}>
             {saving ? 'Saving...' : 'Save Settings'}
         </Button>

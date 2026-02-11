@@ -20,6 +20,7 @@ import { showSuccess } from '../../utils/toast'
 type TabType = 'flags' | 'overrides' | 'audit'
 
 export default function FeatureFlags() {
+  const db = supabase as any
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabType>('flags')
   const [flags, setFlags] = useState<AdminFeatureFlag[]>([])
@@ -27,7 +28,7 @@ export default function FeatureFlags() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [environmentFilter, setEnvironmentFilter] = useState<FeatureFlagEnvironment>(getEnvironment())
+  const [environmentFilter, setEnvironmentFilter] = useState<FeatureFlagEnvironment | 'all'>('all')
   const [showDeleted, setShowDeleted] = useState(false)
   
   // Pagination
@@ -48,11 +49,17 @@ export default function FeatureFlags() {
   const [dialogError, setDialogError] = useState<string | null>(null)
   
   // Form states
+  const [flagType, setFlagType] = useState<'platform' | 'org'>('platform')
   const [newFlag, setNewFlag] = useState<CreateFeatureFlagRequest>({
     key: '',
     value_type: 'boolean',
     description: '',
     environment: getEnvironment(),
+  })
+  const [newOrgFlag, setNewOrgFlag] = useState<{ org_id: string | null; feature_key: string; enabled: boolean }>({
+    org_id: null,
+    feature_key: '',
+    enabled: false,
   })
   const [defaultValue, setDefaultValue] = useState<{ boolean?: boolean; integer?: number; double?: number }>({})
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null)
@@ -62,24 +69,31 @@ export default function FeatureFlags() {
   
   // TODO: Fetch actual role
   const [adminRole] = useState<PlatformAdminRole>('super_admin')
-  const currentEnvironment = getEnvironment()
 
   const fetchFlags = useCallback(async () => {
     setLoading(true)
     setError(null)
 
     try {
-      // Use the simpler admin_feature_flags view that exists in production
-      // Columns: id, org_id, organization_name, feature_key, enabled, created_at, updated_at
+      // Use admin_feature_flags_list view for platform-wide feature flags
       let query = supabase
-        .from('admin_feature_flags')
+        .from('admin_feature_flags_list')
         .select('*', { count: 'exact' })
 
+      // Only filter by environment if not "all"
+      if (environmentFilter !== 'all') {
+        query = query.eq('environment', environmentFilter)
+      }
+
       if (search) {
-        query = query.or(`feature_key.ilike.%${search}%,organization_name.ilike.%${search}%`)
+        query = query.or(`key.ilike.%${search}%,description.ilike.%${search}%`)
       }
       
-      query = query.order('feature_key', { ascending: true })
+      if (!showDeleted) {
+        query = query.is('deleted_at', null)
+      }
+      
+      query = query.order('environment', { ascending: true }).order('key', { ascending: true })
       
       const from = page * rowsPerPage
       const to = from + rowsPerPage - 1
@@ -93,26 +107,22 @@ export default function FeatureFlags() {
         setFlags([])
         setTotalCount(0)
       } else {
-        // Map to AdminFeatureFlag type for compatibility
+        // Map to AdminFeatureFlag type
         const mappedFlags = (data || []).map((row: any) => ({
           id: row.id,
-          key: row.feature_key,
-          value_type: 'boolean' as FeatureFlagValueType,
-          description: `Organization: ${row.organization_name}`,
-          environment: currentEnvironment,
-          deleted_at: null,
-          version: 1,
+          key: row.key,
+          value_type: row.value_type,
+          description: row.description,
+          environment: row.environment,
+          deleted_at: row.deleted_at,
+          version: row.version,
           created_at: row.created_at,
           updated_at: row.updated_at,
-          default_value_boolean: row.enabled,
-          default_value_integer: null,
-          default_value_double: null,
-          org_override_count: 0,
-          user_override_count: 0,
-          // Keep original fields for reference
-          org_id: row.org_id,
-          organization_name: row.organization_name,
-          enabled: row.enabled,
+          default_value_boolean: row.default_value_boolean,
+          default_value_integer: row.default_value_integer,
+          default_value_double: row.default_value_double,
+          org_override_count: row.org_override_count,
+          user_override_count: row.user_override_count,
         })) as AdminFeatureFlag[]
         setFlags(mappedFlags)
         setTotalCount(count || 0)
@@ -125,13 +135,13 @@ export default function FeatureFlags() {
     } finally {
       setLoading(false)
     }
-  }, [page, rowsPerPage, search, currentEnvironment])
+  }, [page, rowsPerPage, search, environmentFilter, showDeleted])
   
   const fetchOverrides = useCallback(async () => {
     try {
       // The admin_feature_flag_overrides view may not exist in production
       // Skip fetching overrides if the view doesn't exist
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('admin_feature_flag_overrides')
         .select('*')
         .order('created_at', { ascending: false })
@@ -147,7 +157,7 @@ export default function FeatureFlags() {
         setOverrides([])
       } else {
         // Map rows to include id field
-        const mapped = (data || []).map(row => mapFeatureFlagOverride(row))
+        const mapped = (data || []).map((row: any) => mapFeatureFlagOverride(row))
         setOverrides(mapped)
       }
     } catch (err) {
@@ -166,40 +176,79 @@ export default function FeatureFlags() {
 
 
   const handleCreateFlag = async (_reason: string) => {
-    if (!newFlag.key.trim()) {
-      setDialogError('Flag key is required')
-      return
-    }
-    
-    setDialogLoading(true)
-    setDialogError(null)
-    
-    try {
-      const { data, error } = await supabase.rpc('admin_create_feature_flag', {
-        p_key: newFlag.key.trim().toLowerCase(),
-        p_value_type: newFlag.value_type,
-        p_description: newFlag.description || null,
-        p_environment: newFlag.environment,
-      } as any)
-      
-      if (error) {
-        setDialogError(error.message)
+    if (flagType === 'platform') {
+      if (!newFlag.key.trim()) {
+        setDialogError('Flag key is required')
         return
       }
       
-      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
-        setDialogError((data as RpcResponse)?.error || 'Unknown error')
+      setDialogLoading(true)
+      setDialogError(null)
+      
+      try {
+        const { data, error } = await supabase.rpc('admin_create_feature_flag', {
+          p_key: newFlag.key.trim().toLowerCase(),
+          p_value_type: newFlag.value_type,
+          p_description: newFlag.description || null,
+          p_environment: newFlag.environment,
+        } as any)
+        
+        if (error) {
+          setDialogError(error.message)
+          return
+        }
+        
+        if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+          setDialogError((data as RpcResponse)?.error || 'Unknown error')
+          return
+        }
+        
+        setCreateDialog(false)
+        setNewFlag({ key: '', value_type: 'boolean', description: '', environment: getEnvironment() })
+        showSuccess('Feature flag created successfully')
+        await fetchFlags()
+      } catch (err) {
+        setDialogError(err instanceof Error ? err.message : 'Unknown error')
+      } finally {
+        setDialogLoading(false)
+      }
+    } else {
+      // Org-specific flag
+      if (!newOrgFlag.org_id) {
+        setDialogError('Organization is required')
+        return
+      }
+      if (!newOrgFlag.feature_key.trim()) {
+        setDialogError('Feature key is required')
         return
       }
       
-      setCreateDialog(false)
-      setNewFlag({ key: '', value_type: 'boolean', description: '', environment: getEnvironment() })
-      showSuccess('Feature flag created successfully')
-      fetchFlags()
-    } catch (err) {
-      setDialogError(err instanceof Error ? err.message : 'Unknown error')
-    } finally {
-      setDialogLoading(false)
+      setDialogLoading(true)
+      setDialogError(null)
+      
+      try {
+        const { error } = await supabase
+          .from('feature_flags')
+          .insert({
+            org_id: newOrgFlag.org_id,
+            feature_key: newOrgFlag.feature_key.trim().toLowerCase(),
+            enabled: newOrgFlag.enabled,
+          })
+        
+        if (error) {
+          setDialogError(error.message)
+          return
+        }
+        
+        setCreateDialog(false)
+        setNewOrgFlag({ org_id: null, feature_key: '', enabled: false })
+        showSuccess('Org feature flag created successfully')
+        await fetchFlags()
+      } catch (err) {
+        setDialogError(err instanceof Error ? err.message : 'Unknown error')
+      } finally {
+        setDialogLoading(false)
+      }
     }
   }
   
@@ -503,7 +552,7 @@ export default function FeatureFlags() {
       sortable: true,
       render: (row) => (
       <div>
-          <div className="pa-body-m" style={{ fontWeight: 600 }}>
+          <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
             {row.key}
             </div>
           {row.description && (
@@ -512,6 +561,20 @@ export default function FeatureFlags() {
         </div>
           )}
       </div>
+      ),
+    },
+    {
+      id: 'environment',
+      label: 'Environment',
+      sortable: true,
+      render: (row) => (
+        <Badge variant={
+          row.environment === 'prod' ? 'danger' : 
+          row.environment === 'staging' ? 'warning' : 
+          'info'
+        }>
+          {row.environment.toUpperCase()}
+        </Badge>
       ),
     },
     {
@@ -525,7 +588,9 @@ export default function FeatureFlags() {
       id: 'default_value',
       label: 'Platform Default',
       render: (row) => (
-        <div className="pa-body-m">{getValueDisplay(row)}</div>
+        <div className="pa-body-m" style={{ fontFamily: 'var(--pa-font-mono)' }}>
+          {getValueDisplay(row)}
+        </div>
       ),
     },
     {
@@ -533,20 +598,28 @@ export default function FeatureFlags() {
       label: 'Overrides',
       render: (row) => (
         <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
-          {row.org_override_count} orgs, {row.user_override_count} users
+          {row.org_override_count > 0 || row.user_override_count > 0 ? (
+            <>
+              {row.org_override_count > 0 && <div>{row.org_override_count} org{row.org_override_count > 1 ? 's' : ''}</div>}
+              {row.user_override_count > 0 && <div>{row.user_override_count} user{row.user_override_count > 1 ? 's' : ''}</div>}
+            </>
+          ) : (
+            <span style={{ color: 'var(--pa-n400)' }}>None</span>
+          )}
         </div>
       ),
     },
     {
       id: 'actions',
-      label: 'Actions',
+      label: '',
       align: 'right',
       render: (row) => (
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
           <Button
             variant="ghost"
             size="small"
-            onClick={() => {
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation()
               setEditDefaultDialog({ open: true, flag: row })
               setDefaultValue({
                 boolean: row.default_value_boolean ?? undefined,
@@ -554,45 +627,33 @@ export default function FeatureFlags() {
                 double: row.default_value_double ?? undefined,
               })
             }}
+            title="Edit default value"
           >
-            Set Default
-          </Button>
-          <Button
-            variant="ghost"
-            size="small"
-            onClick={() => setOrgOverrideDialog({ open: true, flag: row })}
-          >
-            Org Override
-          </Button>
-          <Button
-            variant="ghost"
-            size="small"
-            onClick={() => setUserOverrideDialog({ open: true, flag: row })}
-          >
-            User Override
-          </Button>
-          <Button
-            variant="ghost"
-            size="small"
-            onClick={() => navigate(`/platform-admin/feature-flags/${row.id}`)}
-          >
-            View Details
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
           </Button>
           {row.deleted_at ? (
             <Button
               variant="ghost"
               size="small"
-              onClick={() => setRestoreDialog({ open: true, flag: row })}
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation()
+                setRestoreDialog({ open: true, flag: row })
+              }}
+              title="Restore flag"
             >
-              Restore
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>restore</span>
             </Button>
           ) : (
             <Button
               variant="ghost"
               size="small"
-              onClick={() => setDeleteDialog({ open: true, flag: row })}
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation()
+                setDeleteDialog({ open: true, flag: row })
+              }}
+              title="Delete flag"
             >
-              Delete
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
             </Button>
           )}
         </div>
@@ -656,15 +717,18 @@ export default function FeatureFlags() {
     <div>
       <PageHeader
         title="Feature Flags"
-        subtitle={`Manage feature flags and overrides. Current environment: ${currentEnvironment.toUpperCase()}`}
+        subtitle="Manage feature flags across all environments"
+        actions={
+          <Button
+            variant="primary"
+            onClick={() => setCreateDialog(true)}
+            disabled={!canPerformAction(adminRole, 'toggle_feature_flag')}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '20px', marginRight: '8px' }}>add</span>
+            Create Flag
+          </Button>
+        }
       />
-      
-      {/* Environment Badge */}
-      <div style={{ marginBottom: 'var(--pa-space-4)' }}>
-        <Badge variant="info" style={{ fontSize: '12px', padding: '6px 12px' }}>
-          Environment: {currentEnvironment.toUpperCase()}
-        </Badge>
-      </div>
       
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: 'var(--pa-space-4)', borderBottom: '2px solid var(--pa-n100)' }}>
@@ -680,7 +744,7 @@ export default function FeatureFlags() {
             color: activeTab === 'flags' ? 'var(--pa-n900)' : 'var(--pa-n700)',
           }}
         >
-          Flags
+          All Flags ({totalCount})
         </button>
         <button
           onClick={() => setActiveTab('overrides')}
@@ -694,7 +758,7 @@ export default function FeatureFlags() {
             color: activeTab === 'overrides' ? 'var(--pa-n900)' : 'var(--pa-n700)',
           }}
         >
-          Overrides
+          Overrides ({overrides.length})
         </button>
       </div>
       
@@ -703,37 +767,29 @@ export default function FeatureFlags() {
       <FilterBar
         searchValue={search}
         onSearchChange={setSearch}
-          searchPlaceholder="Search flags..."
+          searchPlaceholder="Search by key or description..."
         onClearAll={() => setSearch('')}
       />
         <Select
           value={environmentFilter}
-          onChange={(e) => setEnvironmentFilter(e.target.value as FeatureFlagEnvironment)}
+          onChange={(e) => setEnvironmentFilter(e.target.value as FeatureFlagEnvironment | 'all')}
           style={{ minWidth: '150px' }}
           options={[
+            { value: 'all', label: 'All Environments' },
             { value: 'dev', label: 'Dev' },
             { value: 'staging', label: 'Staging' },
-            { value: 'prod', label: 'Prod' },
+            { value: 'prod', label: 'Production' },
           ]}
         />
         {activeTab === 'flags' && (
-          <>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={showDeleted}
-                onChange={(e) => setShowDeleted(e.target.checked)}
-              />
-              <span className="pa-body-s">Show deleted</span>
-            </label>
-            <Button
-              variant="primary"
-              onClick={() => setCreateDialog(true)}
-              disabled={!canPerformAction(adminRole, 'toggle_feature_flag')}
-            >
-              Create Flag
-            </Button>
-          </>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={showDeleted}
+              onChange={(e) => setShowDeleted(e.target.checked)}
+            />
+            <span className="pa-body-s">Show deleted</span>
+          </label>
         )}
       </div>
       
@@ -748,17 +804,30 @@ export default function FeatureFlags() {
             />
           )}
           {!error && (
-            <PlatformDataTable
-              columns={flagColumns}
-              rows={flags}
-              loading={loading}
-              emptyMessage="No feature flags found. Try adjusting your filters."
-              page={page}
-              rowsPerPage={rowsPerPage}
-              totalCount={totalCount}
-              onPageChange={setPage}
-              onRowsPerPageChange={setRowsPerPage}
-            />
+            <>
+              <div className="pa-body-xs" style={{ 
+                color: 'var(--pa-n600)', 
+                marginBottom: 'var(--pa-space-2)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>info</span>
+                Click any row to view detailed information and manage overrides
+              </div>
+              <PlatformDataTable
+                columns={flagColumns}
+                rows={flags}
+                loading={loading}
+                emptyMessage="No feature flags found. Try adjusting your filters."
+                page={page}
+                rowsPerPage={rowsPerPage}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                onRowsPerPageChange={setRowsPerPage}
+                onRowClick={(row) => navigate(`/platform-admin/feature-flags/${row.id}`)}
+              />
+            </>
           )}
         </>
       )}
@@ -784,7 +853,9 @@ export default function FeatureFlags() {
         <div
           onClick={() => {
             setCreateDialog(false)
+            setFlagType('platform')
             setNewFlag({ key: '', value_type: 'boolean', description: '', environment: getEnvironment() })
+            setNewOrgFlag({ org_id: null, feature_key: '', enabled: false })
             setDialogError(null)
           }}
           style={{
@@ -815,10 +886,63 @@ export default function FeatureFlags() {
                 Create a new feature flag. The key must be unique within the environment and contain only lowercase letters, numbers, and underscores.
               </p>
               <div className="pa-form-group">
+                <label className="pa-label">Flag Type *</label>
+                <Select
+                  value={flagType}
+                  onChange={(e) => setFlagType(e.target.value as 'platform' | 'org')}
+                  disabled={dialogLoading}
+                  options={[
+                    { value: 'platform', label: 'Platform-wide (affects all orgs)' },
+                    { value: 'org', label: 'Organization-specific' },
+                  ]}
+                />
+              </div>
+              {flagType === 'org' && (
+                <div className="pa-form-group">
+                  <label className="pa-label">Organization *</label>
+                  <EntitySelect
+                    value={newOrgFlag.org_id}
+                    onChange={(value) => setNewOrgFlag({ ...newOrgFlag, org_id: value })}
+                    fetchOptions={async (query) => {
+                      const { data, error } = await supabase
+                        .from('organizations')
+                        .select('id, name')
+                        .ilike('name', `%${query}%`)
+                        .limit(20)
+                      
+                      if (error) throw error
+                      return (data || []).map((org: any) => ({
+                        id: org.id,
+                        label: org.name,
+                      }))
+                    }}
+                    getOptionById={async (id) => {
+                      const { data, error } = await supabase
+                        .from('organizations')
+                        .select('id, name')
+                        .eq('id', id)
+                        .single()
+                      
+                      if (error) return null
+                      return data ? { id: data.id, label: data.name } : null
+                    }}
+                    placeholder="Select organization..."
+                    disabled={dialogLoading}
+                  />
+                </div>
+              )}
+              <div className="pa-form-group">
                 <label className="pa-label">Flag Key *</label>
                 <Input
-                  value={newFlag.key}
-                  onChange={(e) => setNewFlag({ ...newFlag, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
+                  value={flagType === 'platform' ? newFlag.key : newOrgFlag.feature_key}
+                  onChange={(e) => {
+                    const key = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '')
+                    if (flagType === 'platform') {
+                      setNewFlag({ ...newFlag, key })
+                    } else {
+                      setNewOrgFlag({ ...newOrgFlag, feature_key: key })
+                    }
+                  }}
                   placeholder="e.g., payments_enabled"
                   disabled={dialogLoading}
                 />
@@ -826,43 +950,61 @@ export default function FeatureFlags() {
                   Lowercase letters, numbers, and underscores only
           </div>
               </div>
-              <div className="pa-form-group">
-                <label className="pa-label">Value Type *</label>
-                <Select
-                  value={newFlag.value_type}
-                  onChange={(e) => setNewFlag({ ...newFlag, value_type: e.target.value as FeatureFlagValueType })}
-                  disabled={dialogLoading}
-                  options={[
-                    { value: 'boolean', label: 'Boolean' },
-                    { value: 'integer', label: 'Integer' },
-                    { value: 'double', label: 'Double' },
-                  ]}
-                />
-              </div>
-              <div className="pa-form-group">
-                <label className="pa-label">Description</label>
-                <textarea
-                  className="pa-input pa-textarea"
-                  value={newFlag.description}
-                  onChange={(e) => setNewFlag({ ...newFlag, description: e.target.value })}
-                  placeholder="Describe what this flag controls..."
-                  disabled={dialogLoading}
-                  style={{ minHeight: '80px' }}
-                />
-              </div>
-              <div className="pa-form-group">
-                <label className="pa-label">Environment *</label>
-                <Select
-                  value={newFlag.environment}
-                  onChange={(e) => setNewFlag({ ...newFlag, environment: e.target.value as FeatureFlagEnvironment })}
-                  disabled={dialogLoading}
-                  options={[
-                    { value: 'dev', label: 'Dev' },
-                    { value: 'staging', label: 'Staging' },
-                    { value: 'prod', label: 'Prod' },
-                  ]}
-                />
-              </div>
+              {flagType === 'platform' && (
+                <>
+                  <div className="pa-form-group">
+                    <label className="pa-label">Value Type *</label>
+                    <Select
+                      value={newFlag.value_type}
+                      onChange={(e) => setNewFlag({ ...newFlag, value_type: e.target.value as FeatureFlagValueType })}
+                      disabled={dialogLoading}
+                      options={[
+                        { value: 'boolean', label: 'Boolean' },
+                        { value: 'integer', label: 'Integer' },
+                        { value: 'double', label: 'Double' },
+                      ]}
+                    />
+                  </div>
+                  <div className="pa-form-group">
+                    <label className="pa-label">Description</label>
+                    <textarea
+                      className="pa-input pa-textarea"
+                      value={newFlag.description}
+                      onChange={(e) => setNewFlag({ ...newFlag, description: e.target.value })}
+                      placeholder="Describe what this flag controls..."
+                      disabled={dialogLoading}
+                      style={{ minHeight: '80px' }}
+                    />
+                  </div>
+                  <div className="pa-form-group">
+                    <label className="pa-label">Environment *</label>
+                    <Select
+                      value={newFlag.environment}
+                      onChange={(e) => setNewFlag({ ...newFlag, environment: e.target.value as FeatureFlagEnvironment })}
+                      disabled={dialogLoading}
+                      options={[
+                        { value: 'dev', label: 'Dev' },
+                        { value: 'staging', label: 'Staging' },
+                        { value: 'prod', label: 'Prod' },
+                      ]}
+                    />
+                  </div>
+                </>
+              )}
+              {flagType === 'org' && (
+                <div className="pa-form-group">
+                  <label className="pa-label">Enabled</label>
+                  <Select
+                    value={String(newOrgFlag.enabled)}
+                    onChange={(e) => setNewOrgFlag({ ...newOrgFlag, enabled: e.target.value === 'true' })}
+                    disabled={dialogLoading}
+                    options={[
+                      { value: 'false', label: 'Disabled' },
+                      { value: 'true', label: 'Enabled' },
+                    ]}
+                  />
+                </div>
+              )}
               {dialogError && (
                 <div
                       className="pa-card"
@@ -892,7 +1034,9 @@ export default function FeatureFlags() {
                 variant="blue"
                 onClick={() => {
                   setCreateDialog(false)
+                  setFlagType('platform')
                   setNewFlag({ key: '', value_type: 'boolean', description: '', environment: getEnvironment() })
+                  setNewOrgFlag({ org_id: null, feature_key: '', enabled: false })
                   setDialogError(null)
                 }}
                 disabled={dialogLoading}
@@ -902,7 +1046,7 @@ export default function FeatureFlags() {
               <Button
                 variant="primary"
                 onClick={() => handleCreateFlag('')}
-                disabled={dialogLoading || !newFlag.key.trim()}
+                disabled={dialogLoading || (flagType === 'platform' ? !newFlag.key.trim() : (!newOrgFlag.feature_key.trim() || !newOrgFlag.org_id))}
               >
                 {dialogLoading ? 'Creating...' : 'Create'}
               </Button>

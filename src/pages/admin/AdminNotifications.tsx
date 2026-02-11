@@ -13,8 +13,8 @@ import {
   Button,
   Badge,
   EmptyState,
-  AdminFilterPanel,
-} from '../../components/platformAdmin'
+} from '../../components/admin'
+import { AdminFilterPanel } from '../../components/platformAdmin'
 import type { FilterSectionConfig } from '../../components/platformAdmin/AdminFilterPanel'
 import { showSuccess, showError } from '../../utils/toast'
 import { cn } from '../../utils/cn'
@@ -32,9 +32,9 @@ const getIcon = (action: string) => {
 
 const getPresentationColor = (presentation: string) => {
   switch (presentation) {
-    case 'urgent': return 'pa-text-danger'
-    case 'warning': return 'pa-text-warning'
-    default: return 'pa-text-primary'
+    case 'urgent': return 'oa-text-danger'
+    case 'warning': return 'oa-text-warning'
+    default: return 'oa-text-primary'
   }
 }
 
@@ -296,12 +296,12 @@ export default function AdminNotifications() {
   }, [teams, notifications, statusCounts, typeCounts, roleCounts])
 
   return (
-    <div className="pa-root pa-bg-gray-50/30 dark:pa-bg-slate-950">
+    <div className="oa-root oa-bg-gray-50/30 dark:oa-bg-slate-950">
       <AdminPageHeader
         title="Notifications"
         subtitle="Stay informed about important updates and activities across your organization"
         actions={
-          <div className="pa-flex pa-gap-3">
+          <div className="oa-flex oa-gap-3">
             <Link to="/admin/settings">
                  <Button variant="ghost" icon="settings">
                     Settings
@@ -319,10 +319,10 @@ export default function AdminNotifications() {
         }
       />
 
-      <div className="pa-flex pa-flex-col lg:pa-flex-row pa-gap-6 pa-p-6">
+      <div className="oa-flex oa-flex-col lg:oa-flex-row oa-gap-6 oa-p-6">
           {/* Sidebar Filters - Completely Redesigned */}
-          <aside className="pa-w-full lg:pa-w-80 pa-shrink-0">
-              <div className="pa-sticky pa-top-6">
+          <aside className="oa-w-full lg:oa-w-80 oa-shrink-0">
+              <div className="oa-sticky oa-top-6">
                   <AdminFilterPanel 
                   sections={filterSections}
                   selectedValues={selectedFilters}
@@ -336,16 +336,16 @@ export default function AdminNotifications() {
           </aside>
 
           {/* Content - Enhanced Cards */}
-          <div className="pa-flex-1 pa-flex pa-flex-col pa-gap-8 pa-min-w-0">
+          <div className="oa-flex-1 oa-flex oa-flex-col oa-gap-8 oa-min-w-0">
             {loading ? (
-                <div className="pa-flex pa-justify-center pa-items-center pa-py-20">
-                    <div className="pa-flex pa-flex-col pa-items-center pa-gap-4">
-                        <div className="pa-w-12 pa-h-12 pa-rounded-full pa-border-4 pa-border-gray-200 dark:pa-border-slate-800 pa-border-t-[var(--org-btn-primary-bg)] pa-animate-spin"></div>
-                        <p className="pa-text-sm pa-text-slate-500 pa-font-medium">Loading notifications...</p>
+                <div className="oa-flex oa-justify-center oa-items-center oa-py-20">
+                    <div className="oa-flex oa-flex-col oa-items-center oa-gap-4">
+                        <div className="oa-w-12 oa-h-12 oa-rounded-full oa-border-4 oa-border-gray-200 dark:oa-border-slate-800 oa-border-t-[var(--org-btn-primary-bg)] oa-animate-spin"></div>
+                        <p className="oa-text-sm oa-text-slate-500 oa-font-medium">Loading notifications...</p>
                     </div>
                 </div>
             ) : filteredNotifications.length === 0 ? (
-                <Card className="pa-border-2 pa-border-dashed">
+                <Card className="oa-border-2 oa-border-dashed">
                     <EmptyState 
                         icon="notifications_off" 
                         title="No Notifications Found" 
@@ -355,15 +355,15 @@ export default function AdminNotifications() {
                 </Card>
             ) : (
                 groupedNotifications.map((group, idx) => (
-                    <div key={idx} className="pa-animate-in pa-fade-in pa-slide-in-from-bottom-2 pa-duration-300" style={{ animationDelay: `${idx * 50}ms` }}>
-                        <div className="pa-flex pa-items-center pa-gap-3 pa-mb-4">
-                            <div className="pa-h-px pa-flex-1 pa-bg-gradient-to-r pa-from-transparent pa-via-gray-200 dark:pa-via-slate-700 pa-to-transparent"></div>
-                            <h3 className="pa-text-xs pa-font-black pa-uppercase pa-tracking-[0.2em] pa-text-slate-500 dark:pa-text-slate-400 pa-px-3 pa-py-1 pa-bg-white dark:pa-bg-slate-900 pa-rounded-full pa-border pa-border-gray-200 dark:pa-border-slate-800">
+                    <div key={idx} className="oa-animate-in oa-fade-in oa-slide-in-from-bottom-2 oa-duration-300" style={{ animationDelay: `${idx * 50}ms` }}>
+                        <div className="oa-flex oa-items-center oa-gap-3 oa-mb-4">
+                            <div className="oa-h-px oa-flex-1 oa-bg-gradient-to-r oa-from-transparent oa-via-gray-200 dark:oa-via-slate-700 oa-to-transparent"></div>
+                            <h3 className="oa-text-xs oa-font-black oa-uppercase oa-tracking-[0.2em] oa-text-slate-500 dark:oa-text-slate-400 oa-px-3 oa-py-1 oa-bg-white dark:oa-bg-slate-900 oa-rounded-full oa-border oa-border-gray-200 dark:oa-border-slate-800">
                                 {group.label}
                             </h3>
-                            <div className="pa-h-px pa-flex-1 pa-bg-gradient-to-r pa-from-transparent pa-via-gray-200 dark:pa-via-slate-700 pa-to-transparent"></div>
+                            <div className="oa-h-px oa-flex-1 oa-bg-gradient-to-r oa-from-transparent oa-via-gray-200 dark:oa-via-slate-700 oa-to-transparent"></div>
                         </div>
-                        <div className="pa-flex pa-flex-col pa-gap-3">
+                        <div className="oa-flex oa-flex-col oa-gap-3">
                             {group.items.map((notification, nIdx) => {
                                 const isUnread = !notification.read_at
                                 const icon = getIcon(notification.action)
@@ -374,84 +374,84 @@ export default function AdminNotifications() {
                                         key={notification.id} 
                                         noPadding 
                                         className={cn(
-                                            'pa-group pa-transition-all pa-duration-200 pa-cursor-pointer hover:pa-shadow-lg hover:pa-translate-y-[-2px]',
+                                            'oa-group oa-transition-all oa-duration-200 oa-cursor-pointer hover:oa-shadow-lg hover:oa-translate-y-[-2px]',
                                             isUnread 
-                                                ? 'pa-border-l-4 pa-border-l-[var(--org-btn-primary-bg)] pa-bg-gradient-to-r pa-from-[var(--org-btn-primary-bg)]/5 pa-to-transparent' 
-                                                : 'pa-opacity-90 hover:pa-opacity-100'
+                                                ? 'oa-border-l-4 oa-border-l-[var(--org-btn-primary-bg)] oa-bg-gradient-to-r oa-from-[var(--org-btn-primary-bg)]/5 oa-to-transparent' 
+                                                : 'oa-opacity-90 hover:oa-opacity-100'
                                         )}
                                         style={{ animationDelay: `${(idx * 50) + (nIdx * 30)}ms` }}
                                     >
-                                        <div className="pa-p-5 sm:pa-p-6 pa-flex pa-flex-col sm:pa-flex-row pa-gap-4 sm:pa-items-start">
+                                        <div className="oa-p-5 sm:oa-p-6 oa-flex oa-flex-col sm:oa-flex-row oa-gap-4 sm:oa-items-start">
                                             {/* Icon with gradient background */}
                                             <div className={cn(
-                                                "pa-relative pa-flex pa-items-center pa-justify-center pa-w-14 pa-h-14 pa-rounded-2xl pa-shrink-0 pa-transition-transform pa-duration-200 group-hover:pa-scale-110",
+                                                "oa-relative oa-flex oa-items-center oa-justify-center oa-w-14 oa-h-14 oa-rounded-2xl oa-shrink-0 oa-transition-transform oa-duration-200 group-hover:oa-scale-110",
                                                 isUnread 
-                                                    ? "pa-bg-gradient-to-br pa-from-[var(--org-btn-primary-bg)] pa-to-[#7dd3fc] pa-shadow-lg pa-shadow-[var(--org-btn-primary-bg)]/20" 
-                                                    : "pa-bg-gray-100 dark:pa-bg-slate-800"
+                                                    ? "oa-bg-gradient-to-br oa-from-[var(--org-btn-primary-bg)] oa-to-[#7dd3fc] oa-shadow-lg oa-shadow-[var(--org-btn-primary-bg)]/20" 
+                                                    : "oa-bg-gray-100 dark:oa-bg-slate-800"
                                             )}>
                                                 {isUnread && (
-                                                    <div className="pa-absolute pa-inset-0 pa-rounded-2xl pa-bg-gradient-to-br pa-from-white/20 pa-to-transparent"></div>
+                                                    <div className="oa-absolute oa-inset-0 oa-rounded-2xl oa-bg-gradient-to-br oa-from-white/20 oa-to-transparent"></div>
                                                 )}
                                                 <span className={cn(
-                                                    "material-symbols-outlined pa-text-2xl pa-relative pa-z-10",
-                                                    isUnread ? "pa-text-white" : "pa-text-slate-400"
+                                                    "material-symbols-outlined oa-text-2xl oa-relative oa-z-10",
+                                                    isUnread ? "oa-text-white" : "oa-text-slate-400"
                                                 )}>
                                                     {icon}
                                                 </span>
                                             </div>
 
                                             {/* Content */}
-                                            <div className="pa-flex-1 pa-min-w-0">
-                                                <div className="pa-flex pa-flex-wrap pa-items-center pa-gap-2 pa-mb-2">
+                                            <div className="oa-flex-1 oa-min-w-0">
+                                                <div className="oa-flex oa-flex-wrap oa-items-center oa-gap-2 oa-mb-2">
                                                     <h4 className={cn(
-                                                        "pa-text-base pa-font-bold pa-leading-tight",
-                                                        isUnread ? "pa-text-slate-900 dark:pa-text-white" : "pa-text-slate-600 dark:pa-text-slate-400"
+                                                        "oa-text-base oa-font-bold oa-leading-tight",
+                                                        isUnread ? "oa-text-slate-900 dark:oa-text-white" : "oa-text-slate-600 dark:oa-text-slate-400"
                                                     )}>
                                                         {notification.title}
                                                     </h4>
                                                     {isUnread && (
-                                                        <span className="pa-inline-flex pa-items-center pa-gap-1 pa-px-2 pa-py-0.5 pa-bg-[var(--org-btn-primary-bg)] pa-text-white pa-text-[10px] pa-font-black pa-uppercase pa-tracking-wider pa-rounded-md pa-shadow-sm pa-animate-in pa-zoom-in">
-                                                            <span className="pa-w-1.5 pa-h-1.5 pa-rounded-full pa-bg-white pa-animate-pulse"></span>
+                                                        <span className="oa-inline-flex oa-items-center oa-gap-1 oa-px-2 oa-py-0.5 oa-bg-[var(--org-btn-primary-bg)] oa-text-white oa-text-[10px] oa-font-black oa-uppercase oa-tracking-wider oa-rounded-md oa-shadow-sm oa-animate-in oa-zoom-in">
+                                                            <span className="oa-w-1.5 oa-h-1.5 oa-rounded-full oa-bg-white oa-animate-pulse"></span>
                                                             NEW
                                                         </span>
                                                     )}
                                                     {notification.presentation_type === 'urgent' && (
-                                                        <Badge variant="danger" className="pa-animate-pulse">URGENT</Badge>
+                                                        <Badge variant="danger" className="oa-animate-pulse">URGENT</Badge>
                                                     )}
                                                     {notification.role_context && (
-                                                        <Badge variant="neutral" className="pa-text-[10px]">
+                                                        <Badge variant="neutral" className="oa-text-[10px]">
                                                             {notification.role_context.toUpperCase()}
                                                         </Badge>
                                                     )}
                                                 </div>
-                                                <p className="pa-text-sm pa-text-slate-600 dark:pa-text-slate-300 pa-leading-relaxed pa-mb-3">
+                                                <p className="oa-text-sm oa-text-slate-600 dark:oa-text-slate-300 oa-leading-relaxed oa-mb-3">
                                                     {notification.body}
                                                 </p>
-                                                <div className="pa-flex pa-flex-wrap pa-items-center pa-gap-4">
-                                                    <div className="pa-flex pa-items-center pa-gap-1.5 pa-text-xs pa-text-slate-400">
-                                                        <span className="material-symbols-outlined pa-text-[14px]">schedule</span>
+                                                <div className="oa-flex oa-flex-wrap oa-items-center oa-gap-4">
+                                                    <div className="oa-flex oa-items-center oa-gap-1.5 oa-text-xs oa-text-slate-400">
+                                                        <span className="material-symbols-outlined oa-text-[14px]">schedule</span>
                                                         {new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </div>
                                                     {notification.link_url && (
                                                         <Link 
                                                             to={notification.link_url} 
-                                                            className="pa-inline-flex pa-items-center pa-gap-1 pa-text-xs pa-font-bold pa-text-[var(--org-btn-primary-bg)] hover:pa-underline pa-transition-colors"
+                                                            className="oa-inline-flex oa-items-center oa-gap-1 oa-text-xs oa-font-bold oa-text-[var(--org-btn-primary-bg)] hover:oa-underline oa-transition-colors"
                                                         >
                                                             View Details 
-                                                            <span className="material-symbols-outlined pa-text-[14px] group-hover:pa-translate-x-1 pa-transition-transform">arrow_forward</span>
+                                                            <span className="material-symbols-outlined oa-text-[14px] group-hover:oa-translate-x-1 oa-transition-transform">arrow_forward</span>
                                                         </Link>
                                                     )}
                                                 </div>
                                             </div>
 
                                             {/* Actions */}
-                                            <div className="pa-flex pa-items-start pa-gap-2">
+                                            <div className="oa-flex oa-items-start oa-gap-2">
                                                 {isUnread && (
                                                     <button
                                                         onClick={(e) => handleMarkRead(notification.id, e)}
-                                                        className="pa-inline-flex pa-items-center pa-gap-1.5 pa-px-3 pa-py-2 pa-text-xs pa-font-bold pa-text-slate-600 dark:pa-text-slate-300 hover:pa-text-[var(--org-btn-primary-bg)] pa-bg-white dark:pa-bg-slate-800 pa-border pa-border-gray-200 dark:pa-border-slate-700 pa-rounded-lg hover:pa-border-[var(--org-btn-primary-bg)] hover:pa-shadow-sm pa-transition-all"
+                                                        className="oa-inline-flex oa-items-center oa-gap-1.5 oa-px-3 oa-py-2 oa-text-xs oa-font-bold oa-text-slate-600 dark:oa-text-slate-300 hover:oa-text-[var(--org-btn-primary-bg)] oa-bg-white dark:oa-bg-slate-800 oa-border oa-border-gray-200 dark:oa-border-slate-700 oa-rounded-lg hover:oa-border-[var(--org-btn-primary-bg)] hover:oa-shadow-sm oa-transition-all"
                                                     >
-                                                        <span className="material-symbols-outlined pa-text-[16px]">done</span>
+                                                        <span className="material-symbols-outlined oa-text-[16px]">done</span>
                                                         Dismiss
                                                     </button>
                                                 )}

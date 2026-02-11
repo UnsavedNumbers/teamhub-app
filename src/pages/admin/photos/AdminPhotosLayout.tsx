@@ -6,6 +6,7 @@ import { USE_FAKE_DATA } from '@/data/config'
 import { useState } from 'react'
 import { Modal } from '@/components/platformAdmin'
 import { useHideEmptyGalleries } from './useHideEmptyGalleries'
+import { useFeatureFlags } from '@/utils/featureFlags'
 import './AdminPhotosLayout.css'
 
 const VIEWS = [
@@ -22,6 +23,7 @@ export function AdminPhotosLayout() {
   const location = useLocation()
   const [showDemoModal, setShowDemoModal] = useState(false)
   const { hideEmpty, setHideEmpty } = useHideEmptyGalleries()
+  const { isEnabled } = useFeatureFlags(['photos_bulk_operations'])
 
   const handleCreateGallery = () => {
     if (USE_FAKE_DATA) {
@@ -31,11 +33,19 @@ export function AdminPhotosLayout() {
     navigate(getLink('admin.photos.create'))
   }
 
-  const currentView = VIEWS.find(v => location.pathname === v.path || (v.key === 'dashboard' && location.pathname === '/admin/photos')) || VIEWS[0]
+  // Filter views based on feature flags
+  const visibleViews = VIEWS.filter(view => {
+    if (view.key === 'bulk' && !isEnabled('photos_bulk_operations')) {
+      return false
+    }
+    return true
+  })
+
+  const currentView = visibleViews.find(v => location.pathname === v.path || (v.key === 'dashboard' && location.pathname === '/admin/photos')) || visibleViews[0]
   void currentView
 
   return (
-    <div className="pa-root admin-photos-layout">
+    <div className="oa-root admin-photos-layout">
       <AdminPageHeader 
         title={t('photos.title')}
         actions={
@@ -44,10 +54,10 @@ export function AdminPhotosLayout() {
           </Button>
         }
       />
-      <div className="pa-container">
+      <div className="oa-container">
         <div className="photos-view-switcher">
           <div className="view-switcher-buttons">
-            {VIEWS.map((view) => {
+            {visibleViews.map((view) => {
               const isActive = location.pathname === view.path || (view.key === 'dashboard' && location.pathname === '/admin/photos')
               return (
                 <Button
@@ -83,10 +93,10 @@ export function AdminPhotosLayout() {
           onClose={() => setShowDemoModal(false)}
           title={t('photos.demoMode.title')}
         >
-          <p className="pa-text-sm pa-text-muted pa-mb-4">
+          <p className="oa-text-sm oa-text-muted oa-mb-4">
             {t('photos.demoMode.createBlocked')}
           </p>
-          <div className="pa-flex pa-justify-end">
+          <div className="oa-flex oa-justify-end">
             <Button variant="primary" onClick={() => setShowDemoModal(false)}>
               {t('common.ok')}
             </Button>

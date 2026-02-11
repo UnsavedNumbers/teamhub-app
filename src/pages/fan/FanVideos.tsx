@@ -28,11 +28,11 @@ interface FanVideo {
   title: string
   description: string | null
   thumbnail_url: string | null
-  duration: number | null
+  duration_seconds: number | null
   created_at: string
   org_id: string
   team_id: string | null
-  video_type: string | null
+  category: string | null
   view_count: number
   mux_playback_id: string | null
   org_name?: string
@@ -123,16 +123,16 @@ export default function FanVideos() {
           title,
           description,
           thumbnail_url,
-          duration,
+          duration_seconds,
           created_at,
           org_id,
           team_id,
-          video_type,
+          category,
           view_count,
           mux_playback_id,
           organizations!inner(name),
           teams(name),
-          video_athletes(
+          video_athlete_links(
             athletes(
               id,
               profiles(first_name, last_name, avatar_url)
@@ -193,17 +193,17 @@ export default function FanVideos() {
         title: v.title,
         description: v.description,
         thumbnail_url: v.thumbnail_url,
-        duration: v.duration,
+        duration_seconds: v.duration_seconds,
         created_at: v.created_at,
         org_id: v.org_id,
         team_id: v.team_id,
-        video_type: v.video_type,
+        category: v.category,
         view_count: v.view_count || 0,
         mux_playback_id: v.mux_playback_id,
         org_name: (v.organizations as Record<string, unknown>)?.name as string | undefined,
         team_name: (v.teams as Record<string, unknown>)?.name as string | undefined,
         tagged_athletes:
-          ((v.video_athletes as unknown[]) || [])
+          ((v.video_athlete_links as unknown[]) || [])
             .map((va: unknown) => {
               const videoAthlete = va as {
                 athletes?: { id?: string; profiles?: { first_name?: string; last_name?: string; avatar_url?: string } }
@@ -476,9 +476,9 @@ function VideoCard({ video, onClick, formatDuration, formatDate }: VideoCardProp
         )}
 
         {/* Duration Badge */}
-        {video.duration && (
+        {video.duration_seconds && (
           <div className="absolute bottom-2 right-2 bg-black/75 text-white px-2 py-0.5 rounded text-xs font-mono">
-            {formatDuration(video.duration)}
+            {formatDuration(video.duration_seconds)}
           </div>
         )}
 
@@ -489,10 +489,10 @@ function VideoCard({ video, onClick, formatDuration, formatDate }: VideoCardProp
           </div>
         </div>
 
-        {/* Video Type Badge */}
-        {video.video_type && (
+        {/* Category Badge */}
+        {video.category && (
           <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium capitalize">
-            {video.video_type}
+            {video.category}
           </div>
         )}
       </div>

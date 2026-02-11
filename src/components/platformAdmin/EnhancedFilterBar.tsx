@@ -10,7 +10,7 @@
  * - Source filter (radio)
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { Select, Checkbox, Button } from './index'
 
 interface EnhancedFilterBarProps {
@@ -26,11 +26,15 @@ interface EnhancedFilterBarProps {
   // License tier filter (multi-select)
   tierFilter: string[]
   onTierFilterChange: (values: string[]) => void
+  tierExclusiveMode?: boolean
+  onTierExclusiveModeChange?: (value: boolean) => void
   availableTiers: Array<{ id: string; tier_key: string; tier_name: string }>
 
   // Role visibility filter (multi-select)
   roleFilter: string[]
   onRoleFilterChange: (values: string[]) => void
+  roleExclusiveMode?: boolean
+  onRoleExclusiveModeChange?: (value: boolean) => void
 
   // Integration filter (multi-select)
   integrationFilter: string[]
@@ -51,6 +55,10 @@ interface EnhancedFilterBarProps {
   // Platform admin only filter (radio)
   platformAdminOnlyFilter: 'all' | 'yes' | 'no'
   onPlatformAdminOnlyFilterChange: (value: 'all' | 'yes' | 'no') => void
+
+  // Hierarchy filter (radio)
+  hierarchyFilter: 'all' | 'parents' | 'children'
+  onHierarchyFilterChange: (value: 'all' | 'parents' | 'children') => void
 
   // Clear all
   onClearAll: () => void
@@ -99,9 +107,13 @@ export default function EnhancedFilterBar({
   onStatusFilterChange,
   tierFilter,
   onTierFilterChange,
+  tierExclusiveMode = false,
+  onTierExclusiveModeChange,
   availableTiers,
   roleFilter,
   onRoleFilterChange,
+  roleExclusiveMode = false,
+  onRoleExclusiveModeChange,
   integrationFilter,
   onIntegrationFilterChange,
   quantifiableFilter,
@@ -112,55 +124,60 @@ export default function EnhancedFilterBar({
   onSystemFeatureFilterChange,
   platformAdminOnlyFilter,
   onPlatformAdminOnlyFilterChange,
+  hierarchyFilter,
+  onHierarchyFilterChange,
   onClearAll,
 }: EnhancedFilterBarProps) {
-  const [localSearch, setLocalSearch] = useState(searchValue)
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  // Sync local search with prop
-  useEffect(() => {
-    setLocalSearch(searchValue)
-  }, [searchValue])
-
-  const handleSearchChange = (value: string) => {
-    setLocalSearch(value)
+  const handleSearchChange = useCallback((value: string) => {
     onSearchChange(value)
-  }
+  }, [onSearchChange])
 
-  const handleStatusToggle = (value: string) => {
+  const handleStatusToggle = useCallback((value: string) => {
     if (statusFilter.includes(value)) {
       onStatusFilterChange(statusFilter.filter(v => v !== value))
     } else {
       onStatusFilterChange([...statusFilter, value])
     }
-  }
+  }, [statusFilter, onStatusFilterChange])
 
-  const handleTierToggle = (tierKey: string) => {
-    if (tierFilter.includes(tierKey)) {
-      onTierFilterChange(tierFilter.filter(v => v !== tierKey))
-    } else {
-      onTierFilterChange([...tierFilter, tierKey])
+  const handleTierToggle = useCallback((tierKey: string) => {
+    const newFilter = tierFilter.includes(tierKey)
+      ? tierFilter.filter(v => v !== tierKey)
+      : [...tierFilter, tierKey]
+    
+    onTierFilterChange(newFilter)
+    
+    // Reset exclusive mode if we no longer have exactly 1 tier selected
+    if (newFilter.length !== 1 && onTierExclusiveModeChange) {
+      onTierExclusiveModeChange(false)
     }
-  }
+  }, [tierFilter, onTierFilterChange, onTierExclusiveModeChange])
 
-  const handleRoleToggle = (value: string) => {
-    if (roleFilter.includes(value)) {
-      onRoleFilterChange(roleFilter.filter(v => v !== value))
-    } else {
-      onRoleFilterChange([...roleFilter, value])
+  const handleRoleToggle = useCallback((value: string) => {
+    const newFilter = roleFilter.includes(value)
+      ? roleFilter.filter(v => v !== value)
+      : [...roleFilter, value]
+    
+    onRoleFilterChange(newFilter)
+    
+    // Reset exclusive mode if we no longer have exactly 1 role selected
+    if (newFilter.length !== 1 && onRoleExclusiveModeChange) {
+      onRoleExclusiveModeChange(false)
     }
-  }
+  }, [roleFilter, onRoleFilterChange, onRoleExclusiveModeChange])
 
-  const handleIntegrationToggle = (value: string) => {
+  const handleIntegrationToggle = useCallback((value: string) => {
     if (integrationFilter.includes(value)) {
       onIntegrationFilterChange(integrationFilter.filter(v => v !== value))
     } else {
       onIntegrationFilterChange([...integrationFilter, value])
     }
-  }
+  }, [integrationFilter, onIntegrationFilterChange])
 
   const hasActiveFilters =
-    localSearch !== '' ||
+    searchValue !== '' ||
     statusFilter.length > 0 ||
     tierFilter.length > 0 ||
     roleFilter.length > 0 ||
@@ -205,7 +222,7 @@ export default function EnhancedFilterBar({
     activeFilters.push({ key: 'platformAdminOnly', label: `Platform admin only: ${platformAdminOnlyFilter === 'yes' ? 'Yes' : 'No'}` })
   }
 
-  const handleRemoveFilter = (key: string) => {
+  const handleRemoveFilter = useCallback((key: string) => {
     switch (key) {
       case 'status':
         onStatusFilterChange([])
@@ -226,7 +243,7 @@ export default function EnhancedFilterBar({
         onSourceFilterChange(null)
         break
     }
-  }
+  }, [onStatusFilterChange, onTierFilterChange, onRoleFilterChange, onIntegrationFilterChange, onQuantifiableFilterChange, onSourceFilterChange])
 
   return (
     <div className="pa-mb-4">
@@ -253,15 +270,15 @@ export default function EnhancedFilterBar({
               <input
                 type="text"
                 className="pa-input"
-                value={localSearch}
+                value={searchValue}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder={searchPlaceholder}
                 style={{
                   paddingLeft: '40px',
-                  paddingRight: localSearch ? '40px' : undefined,
+                  paddingRight: searchValue ? '40px' : undefined,
                 }}
               />
-              {localSearch && (
+              {searchValue && (
                 <button
                   onClick={() => handleSearchChange('')}
                   style={{
@@ -362,9 +379,22 @@ export default function EnhancedFilterBar({
 
           {/* License Tier Filter */}
           <div>
-            <label className="pa-label" style={{ marginBottom: 'var(--pa-space-2)' }}>
-              License Tiers
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--pa-space-2)' }}>
+              <label className="pa-label">
+                License Tiers
+              </label>
+              {onTierExclusiveModeChange && tierFilter.length === 1 && !tierFilter.includes('unassigned') && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={tierExclusiveMode}
+                    onChange={(e) => onTierExclusiveModeChange(e.target.checked)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <span style={{ color: 'var(--pa-n700)' }}>ONLY this tier</span>
+                </label>
+              )}
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)' }}>
               <Checkbox
                 checked={tierFilter.includes('unassigned')}
@@ -384,9 +414,22 @@ export default function EnhancedFilterBar({
 
           {/* Role Visibility Filter */}
           <div>
-            <label className="pa-label" style={{ marginBottom: 'var(--pa-space-2)' }}>
-              Role Visibility
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--pa-space-2)' }}>
+              <label className="pa-label">
+                Role Visibility
+              </label>
+              {onRoleExclusiveModeChange && roleFilter.length === 1 && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={roleExclusiveMode}
+                    onChange={(e) => onRoleExclusiveModeChange(e.target.checked)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <span style={{ color: 'var(--pa-n700)' }}>ONLY this role</span>
+                </label>
+              )}
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)' }}>
               {ROLE_OPTIONS.map(option => (
                 <Checkbox
@@ -504,6 +547,30 @@ export default function EnhancedFilterBar({
                 checked={platformAdminOnlyFilter === 'no'}
                 onChange={() => onPlatformAdminOnlyFilterChange('no')}
                 label="No"
+              />
+            </div>
+          </div>
+
+          {/* Hierarchy Filter */}
+          <div>
+            <label className="pa-label" style={{ marginBottom: 'var(--pa-space-2)' }}>
+              Feature Hierarchy
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)' }}>
+              <Checkbox
+                checked={hierarchyFilter === 'all'}
+                onChange={() => onHierarchyFilterChange('all')}
+                label="All"
+              />
+              <Checkbox
+                checked={hierarchyFilter === 'parents'}
+                onChange={() => onHierarchyFilterChange('parents')}
+                label="Parents Only"
+              />
+              <Checkbox
+                checked={hierarchyFilter === 'children'}
+                onChange={() => onHierarchyFilterChange('children')}
+                label="Children Only"
               />
             </div>
           </div>

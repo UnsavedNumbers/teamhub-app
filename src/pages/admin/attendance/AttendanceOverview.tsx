@@ -130,20 +130,20 @@ export default function AttendanceOverview() {
   }, [isReady, fetchStats])
 
   return (
-    <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-3 pa-gap-4">
+    <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-2 lg:oa-grid-cols-3 oa-gap-4">
       <Card>
         <CardHeader>
           <CardTitle className="text-base sm:text-lg">Attendance Rate</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="pa-text-2xl sm:pa-text-3xl pa-font-bold">...</div>
+            <div className="oa-text-2xl sm:oa-text-3xl oa-font-bold">...</div>
           ) : stats.attendanceRate !== null ? (
-            <div className="pa-text-2xl sm:pa-text-3xl pa-font-bold">{stats.attendanceRate}%</div>
+            <div className="oa-text-2xl sm:oa-text-3xl oa-font-bold">{stats.attendanceRate}%</div>
           ) : (
-            <div className="pa-text-2xl sm:pa-text-3xl pa-font-bold">—</div>
+            <div className="oa-text-2xl sm:oa-text-3xl oa-font-bold">—</div>
           )}
-          <div className="pa-text-sm pa-text-neutral-500">Overall average (last 30 days)</div>
+          <div className="oa-text-sm oa-text-neutral-500">Overall average (last 30 days)</div>
         </CardContent>
       </Card>
       
@@ -153,11 +153,11 @@ export default function AttendanceOverview() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="pa-text-2xl sm:pa-text-3xl pa-font-bold">...</div>
+            <div className="oa-text-2xl sm:oa-text-3xl oa-font-bold">...</div>
           ) : (
-            <div className="pa-text-2xl sm:pa-text-3xl pa-font-bold">{stats.missingReports}</div>
+            <div className="oa-text-2xl sm:oa-text-3xl oa-font-bold">{stats.missingReports}</div>
           )}
-          <div className="pa-text-sm pa-text-neutral-500">Events with no attendance</div>
+          <div className="oa-text-sm oa-text-neutral-500">Events with no attendance</div>
         </CardContent>
       </Card>
 
@@ -167,29 +167,29 @@ export default function AttendanceOverview() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="pa-text-2xl sm:pa-text-3xl pa-font-bold">...</div>
+            <div className="oa-text-2xl sm:oa-text-3xl oa-font-bold">...</div>
           ) : (
-            <div className="pa-text-2xl sm:pa-text-3xl pa-font-bold">{stats.atRiskAthletes}</div>
+            <div className="oa-text-2xl sm:oa-text-3xl oa-font-bold">{stats.atRiskAthletes}</div>
           )}
-          <div className="pa-text-sm pa-text-neutral-500">Below 70% attendance</div>
+          <div className="oa-text-sm oa-text-neutral-500">Below 70% attendance</div>
         </CardContent>
       </Card>
 
-      <div className="pa-col-span-1 sm:pa-col-span-2 lg:pa-col-span-3">
+      <div className="oa-col-span-1 sm:oa-col-span-2 lg:oa-col-span-3">
         <Card>
           <CardHeader><CardTitle className="text-base sm:text-lg">Recent Activity</CardTitle></CardHeader>
           <CardContent>
             {loading ? (
-              <p className="pa-text-neutral-500">Loading...</p>
+              <p className="oa-text-neutral-500">Loading...</p>
             ) : stats.recentActivity.length === 0 ? (
-              <p className="pa-text-neutral-500">No recent activity data available.</p>
+              <p className="oa-text-neutral-500">No recent activity data available.</p>
             ) : (
-              <div className="pa-space-y-3">
+              <div className="oa-space-y-3">
                 {stats.recentActivity.map(activity => (
-                  <div key={activity.id} className="pa-flex pa-items-center pa-justify-between pa-py-2 pa-border-b pa-border-slate-100 last:pa-border-0">
+                  <div key={activity.id} className="oa-flex oa-items-center oa-justify-between oa-py-2 oa-border-b oa-border-slate-100 last:oa-border-0">
                     <div>
-                      <div className="pa-text-sm pa-font-medium">{activity.message}</div>
-                      <div className="pa-text-xs pa-text-neutral-500">{formatDate(activity.timestamp, 'datetime')}</div>
+                      <div className="oa-text-sm oa-font-medium">{activity.message}</div>
+                      <div className="oa-text-xs oa-text-neutral-500">{formatDate(activity.timestamp, 'datetime')}</div>
                     </div>
                   </div>
                 ))}

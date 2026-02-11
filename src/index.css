@@ -44,6 +44,7 @@ select:-webkit-autofill:focus {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-size-adjust: 100%;
 
   /* Glass effect variables for mega menu */
   --gn-glass-bg: rgba(255, 255, 255, 0.85);
@@ -144,6 +145,20 @@ select:-webkit-autofill:focus {
 .org-focus-ring:focus-visible {
   outline: 2px solid var(--org-focus-ring, var(--pa-theme-focus-ring, rgba(19, 127, 236, 0.5)));
   outline-offset: 2px;
+}
+
+/* Global Font Smoothing - Apply to all text elements */
+*,
+*::before,
+*::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure consistent font weight rendering - prevent synthetic bold */
+b,
+strong {
+  font-weight: 700;
 }
 
 /* Dark mode overrides */

@@ -242,6 +242,7 @@ export function mapFeatureEntitlement(row: SupabaseExtended['public']['Tables'][
     featureType: (row.feature_type ?? 'module') as 'module' | 'permission' | 'limit' | 'visibility' | 'integration',
     description: row.description ?? '',
     rolloutStatus: (row.rollout_status ?? 'hidden') as 'live' | 'beta' | 'hidden',
+    unavailableGateAction: (row.unavailable_gate_action as 'hide' | 'disable' | 'overlay' | 'modal' | 'paywall' | 'custom') ?? null,
     createdAt: row.created_at ?? new Date().toISOString(),
     updatedAt: row.updated_at ?? new Date().toISOString(),
     archivedAt: row.archived_at,
@@ -250,6 +251,7 @@ export function mapFeatureEntitlement(row: SupabaseExtended['public']['Tables'][
     lockReason: (row as any).lock_reason ?? null,
     isSystemFeature: (row as any).is_system_feature ?? false,
     platformAdminOnly: (row as any).platform_admin_only ?? false,
+    parentFeatureKey: (row as any).parent_feature_key ?? null,
   }
 }
 
@@ -280,7 +282,7 @@ export function mapLicenseMetrics(row: any): LicenseMetrics {
 // Feature Flag Mappers
 // ============================================================================
 
-export function mapFeatureFlag(row: SupabaseExtended['public']['Views']['admin_feature_flags_list']['Row']): FeatureFlag {
+export function mapFeatureFlag(row: any): FeatureFlag {
   return {
     id: row.id,
     key: row.key,
@@ -299,7 +301,7 @@ export function mapFeatureFlag(row: SupabaseExtended['public']['Views']['admin_f
   }
 }
 
-export function mapFeatureFlagOverride(row: SupabaseExtended['public']['Views']['admin_feature_flag_overrides']['Row']): FeatureFlagOverride {
+export function mapFeatureFlagOverride(row: any): FeatureFlagOverride {
   // Generate id from composite key
   const id = `${row.feature_flag_id}:${row.scope_id}:${row.environment}`
   
@@ -320,7 +322,7 @@ export function mapFeatureFlagOverride(row: SupabaseExtended['public']['Views'][
   }
 }
 
-export function mapFeatureFlagAuditLog(row: SupabaseExtended['public']['Views']['admin_feature_flag_audit']['Row']): FeatureFlagAuditLog {
+export function mapFeatureFlagAuditLog(row: any): FeatureFlagAuditLog {
   return {
     id: row.id,
     actorId: row.actor_id,

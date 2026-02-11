@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { AdminPageHeader, PlatformDataTable, Button, ErrorState, Badge } from '../../components/platformAdmin'
+import { AdminPageHeader, Button, ErrorState, Badge } from '../../components/admin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
-import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getAthletes } from '../../data/services/familyService'
 import { useT } from '../../i18n/useI18n'
@@ -11,6 +12,7 @@ import { getLink } from '../../utils/routes'
 import { calculateAge } from '../../utils/athleteHelpers'
 import { supabase } from '../../lib/supabase'
 import { cn } from '../../utils/cn'
+import '../../styles/orgAdmin.css'
 
 type SortColumn = 'first_name' | 'date_of_birth' | 'has_active_guardian' | ''
 type SortOrder = 'asc' | 'desc'
@@ -273,7 +275,7 @@ export default function AdminChildren() {
       id: 'first_name',
       label: 'Name',
       sortable: true,
-      render: (c) => <span className="pa-text-primary" style={{ fontWeight: 600 }}>{c?.first_name} {c?.last_name}</span>
+      render: (c) => <span className="oa-text-primary" style={{ fontWeight: 600 }}>{c?.first_name} {c?.last_name}</span>
     },
     {
       id: 'has_active_guardian',
@@ -282,14 +284,14 @@ export default function AdminChildren() {
       render: (c) => {
         const hasActive = c?.has_active_guardian ?? false
         return (
-          <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-2')}>
+          <div className={cn('oa-flex', 'oa-items-center', 'oa-gap-2')}>
             {hasActive ? (
-                <Badge variant="success" className="pa-flex pa-items-center pa-gap-1">
+                <Badge variant="success" className="oa-flex oa-items-center oa-gap-1">
                     <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check_circle</span>
                     Connected
                 </Badge>
             ) : (
-                <Badge variant="neutral" className="pa-flex pa-items-center pa-gap-1">
+                <Badge variant="neutral" className="oa-flex oa-items-center oa-gap-1">
                     <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>cancel</span>
                     Not connected
                 </Badge>
@@ -313,21 +315,21 @@ export default function AdminChildren() {
       render: (c) => {
         const sports = c?.sports || []
         if (sports.length === 0) {
-          return <span className="pa-text-muted">—</span>
+          return <span className="oa-text-muted">—</span>
         }
         return (
-          <div className={cn('pa-flex', 'pa-flex-wrap', 'pa-gap-1', 'pa-items-center')}>
+          <div className={cn('oa-flex', 'oa-flex-wrap', 'oa-gap-1', 'oa-items-center')}>
             {sports.map((sport: { sport_id: string; sport_name: string; sport_type: 'plays' | 'interested' }, idx: number) => (
               <span key={sport.sport_id}>
                 <Link
                   to={getLink('admin.sports.detail', { sport_slug: sport.sport_id })}
-                  className="pa-link"
+                  className="oa-link"
                   onClick={(e) => handleSportClick(e, sport.sport_id)}
-                  style={{ fontSize: 'var(--pa-font-size-s)' }}
+                  style={{ fontSize: 'var(--oa-font-size-s)' }}
                 >
                   {sport.sport_name}
                 </Link>
-                {idx < sports.length - 1 && <span style={{ marginLeft: 'var(--pa-space-1)' }}>,</span>}
+                {idx < sports.length - 1 && <span style={{ marginLeft: 'var(--oa-space-1)' }}>,</span>}
               </span>
             ))}
           </div>
@@ -340,21 +342,21 @@ export default function AdminChildren() {
       render: (c) => {
         const teams = c?.teams || []
         if (teams.length === 0) {
-          return <span className="pa-text-muted">—</span>
+          return <span className="oa-text-muted">—</span>
         }
         return (
-          <div className={cn('pa-flex', 'pa-flex-wrap', 'pa-gap-1', 'pa-items-center')}>
+          <div className={cn('oa-flex', 'oa-flex-wrap', 'oa-gap-1', 'oa-items-center')}>
             {teams.map((team: { team_id: string; team_name: string }, idx: number) => (
               <span key={team.team_id}>
                 <Link
                   to={getLink('admin.teams.detail', { id: team.team_id })}
-                  className="pa-link"
+                  className="oa-link"
                   onClick={(e) => handleTeamClick(e, team.team_id)}
-                  style={{ fontSize: 'var(--pa-font-size-s)' }}
+                  style={{ fontSize: 'var(--oa-font-size-s)' }}
                 >
                   {team.team_name}
                 </Link>
-                {idx < teams.length - 1 && <span style={{ marginLeft: 'var(--pa-space-1)' }}>,</span>}
+                {idx < teams.length - 1 && <span style={{ marginLeft: 'var(--oa-space-1)' }}>,</span>}
               </span>
             ))}
           </div>
@@ -366,12 +368,12 @@ export default function AdminChildren() {
   if (!isReady) return <AdminLoadingSpinner />
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title={t('admin.children.title')}
         subtitle={t('admin.children.subtitle')}
         actions={
-          <div className={cn('pa-flex', 'pa-gap-2')}>
+          <div className={cn('oa-flex', 'oa-gap-2')}>
             <Button 
               onClick={handleImportClick} 
               icon="upload_file" 
@@ -398,7 +400,7 @@ export default function AdminChildren() {
             onRetry={handleRetry}
         />
       ) : (
-        <PlatformDataTable
+        <OrgDataTable
           data={sortedAndPaginatedData}
           columns={columns}
           loading={loading}

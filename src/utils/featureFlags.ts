@@ -95,6 +95,23 @@ export function invalidateFlagCache(key?: string): void {
   } else {
     flagCache.clear()
   }
+  // Also clear negative cache on explicit invalidation
+  _lastBatchFailure = 0
+}
+
+/**
+ * Negative cache: prevent retry storms when the RPC is unreachable (CORS, network).
+ * After a batch failure we skip new RPCs for NEGATIVE_CACHE_TTL_MS.
+ */
+const NEGATIVE_CACHE_TTL_MS = 30_000 // 30 seconds
+let _lastBatchFailure = 0
+
+function isInNegativeCooldown(): boolean {
+  return _lastBatchFailure > 0 && Date.now() - _lastBatchFailure < NEGATIVE_CACHE_TTL_MS
+}
+
+function markBatchFailure(): void {
+  _lastBatchFailure = Date.now()
 }
 
 // ============================================================================
@@ -220,25 +237,51 @@ export async function resolveFeatureFlag(
       }
     }
     
+    // Skip RPC if we recently had a batch failure (CORS / network)
+    if (isInNegativeCooldown()) {
+      return null
+    }
+
     // Get current user if not provided
     let finalUserId = userId
     if (!finalUserId) {
-      const { data: { user } } = await supabase.auth.getUser()
-      finalUserId = user?.id || null
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        finalUserId = user?.id || null
+      } catch (err) {
+        // Session lock timeout, AbortError, or other auth error - use null
+        // This is safe for admin pages without org context
+        finalUserId = null
+      }
     }
     
     // Get environment if not provided
     const finalEnvironment = environment || getEnvironment()
     
     // Call resolution RPC
-    const { data, error } = await supabase.rpc('resolve_feature_flag', {
-      p_feature_key: key,
-      p_user_id: finalUserId ?? undefined,
-      p_org_id: orgId ?? undefined,
-      p_environment: finalEnvironment,
-    } as any)
+    let data: any
+    let error: any
+    try {
+      const response = await supabase.rpc('resolve_feature_flag', {
+        p_feature_key: key,
+        p_user_id: finalUserId ?? undefined,
+        p_org_id: orgId ?? undefined,
+        p_environment: finalEnvironment,
+      } as any)
+      data = response.data
+      error = response.error
+    } catch (rpcErr) {
+      // AbortError from navigator lock contention is benign - return null
+      if (rpcErr instanceof DOMException && rpcErr.name === 'AbortError') {
+        return null
+      }
+      // RPC call failed - mark negative cache to prevent retry storm
+      markBatchFailure()
+      error = rpcErr
+    }
     
     if (error) {
+      markBatchFailure()
       console.error(`Error resolving feature flag "${key}":`, error)
       return null
     }
@@ -260,7 +303,10 @@ export async function resolveFeatureFlag(
     
     return resolved
   } catch (error) {
-    console.error(`Error resolving feature flag "${key}":`, error)
+    // Suppress AbortError from navigator lock contention (benign race condition)
+    if (!(error instanceof DOMException && error.name === 'AbortError')) {
+      console.error(`Error resolving feature flag "${key}":`, error)
+    }
     return null
   }
 }
@@ -281,25 +327,50 @@ export async function resolveFeatureFlags(
   environment?: FeatureFlagEnvironment
 ): Promise<Record<string, ResolvedFeatureFlag>> {
   try {
+    // Skip RPC if we recently had a batch failure (CORS / network)
+    if (isInNegativeCooldown()) {
+      return {}
+    }
+
     // Get current user if not provided
     let finalUserId = userId
     if (!finalUserId) {
-      const { data: { user } } = await supabase.auth.getUser()
-      finalUserId = user?.id || null
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        finalUserId = user?.id || null
+      } catch (err) {
+        // Session lock timeout, AbortError, or other auth error - use null
+        finalUserId = null
+      }
     }
     
     // Get environment if not provided
     const finalEnvironment = environment || getEnvironment()
     
     // Call batch resolution RPC
-    const { data, error } = await supabase.rpc('resolve_feature_flags', {
-      p_feature_keys: keys,
-      p_user_id: finalUserId ?? undefined,
-      p_org_id: orgId ?? undefined,
-      p_environment: finalEnvironment,
-    } as any)
+    let data: any
+    let error: any
+    try {
+      const response = await supabase.rpc('resolve_feature_flags', {
+        p_feature_keys: keys,
+        p_user_id: finalUserId ?? undefined,
+        p_org_id: orgId ?? undefined,
+        p_environment: finalEnvironment,
+      } as any)
+      data = response.data
+      error = response.error
+    } catch (rpcErr) {
+      // AbortError from navigator lock contention is benign - return empty
+      if (rpcErr instanceof DOMException && rpcErr.name === 'AbortError') {
+        return {}
+      }
+      // RPC call failed - mark negative cache to prevent retry storm
+      markBatchFailure()
+      error = rpcErr
+    }
     
     if (error) {
+      markBatchFailure()
       console.error('Error resolving feature flags:', error)
       return {}
     }
@@ -323,7 +394,10 @@ export async function resolveFeatureFlags(
     
     return result
   } catch (error) {
-    console.error('Error resolving feature flags:', error)
+    // Suppress AbortError from navigator lock contention (benign race condition)
+    if (!(error instanceof DOMException && error.name === 'AbortError')) {
+      console.error('Error resolving feature flags:', error)
+    }
     return {}
   }
 }
@@ -346,11 +420,15 @@ export function getFeatureFlagValue(
     return cached.value
   }
   
-  // Try to resolve (async, but we'll use fallback immediately)
-  // This is best-effort - we don't wait for resolution
-  resolveFeatureFlag(key).catch((error) => {
-    console.warn(`Failed to resolve feature flag "${key}":`, error)
-  })
+  // NOTE: Do NOT fire an async resolveFeatureFlag() here.
+  // This function is called synchronously during React render
+  // (e.g. from useFeatureFlags().isEnabled()). Firing an async
+  // supabase.auth.getUser() call from inside render causes
+  // navigator-lock contention and AbortErrors when multiple flags
+  // are checked in parallel. The useFeatureFlags hook already
+  // resolves flags asynchronously on mount; a cache miss here
+  // simply means the hook hasn't finished yet, so return the
+  // fallback.
   
   // Use provided fallback or hardcoded fallback
   if (fallback !== undefined) {
@@ -381,11 +459,9 @@ export function getFeatureFlagValue(
   
   // Last resort: default based on common patterns
   if (key.includes('enabled') || key.includes('allow')) {
-    console.warn(`Using default fallback false for flag "${key}"`)
     return false
   }
   
-  console.warn(`No fallback found for flag "${key}", using default 0`)
   return 0
 }
 
@@ -393,7 +469,7 @@ export function getFeatureFlagValue(
 // React Hook
 // ============================================================================
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useOrganization } from '../contexts/OrganizationContext'
 import { useAuth } from '../hooks/useAuth'
 
@@ -415,68 +491,78 @@ export function useFeatureFlags(flagKeys?: string[]) {
   const { user } = useAuth()
   const [flags, setFlags] = useState<Record<string, ResolvedFeatureFlag>>({})
   const [loading, setLoading] = useState(true)
-  
-  // Resolve flags
-  const resolveFlags = useCallback(async () => {
+
+  // Track mount state for safe async setState
+  const isMountedRef = useRef(true)
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => { isMountedRef.current = false }
+  }, [])
+
+  // Stabilise the flagKeys array: compare by sorted join instead of reference
+  const keysString = useMemo(
+    () => (flagKeys ? [...flagKeys].sort().join(',') : ''),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [flagKeys?.join(',')]
+  )
+
+  // Resolve flags — depends only on primitives, not on array references
+  const resolveFlags = useCallback(async (signal?: AbortSignal) => {
     if (!user) {
-      setLoading(false)
+      if (isMountedRef.current) setLoading(false)
       return
     }
-    
-    setLoading(true)
-    
+
+    if (isMountedRef.current) setLoading(true)
+
     try {
-      // If specific keys provided, resolve only those
-      // Otherwise, resolve all known flags from fallbacks
+      // Determine keys to resolve
       let keysToResolve: string[]
-      if (flagKeys) {
-        keysToResolve = flagKeys
+      if (keysString) {
+        keysToResolve = keysString.split(',')
       } else {
-        // Import fallbacks synchronously (they're constants)
         const { FALLBACK_FLAGS } = await import('./featureFlagFallbacks')
         keysToResolve = Object.keys(FALLBACK_FLAGS)
       }
-      
+
       if (keysToResolve.length === 0) {
-        setLoading(false)
+        if (isMountedRef.current) setLoading(false)
         return
       }
-      
+
+      // Bail if already aborted
+      if (signal?.aborted) return
+
       const resolved = await resolveFeatureFlags(
         keysToResolve,
         user.id,
         currentOrganization?.id || null
       )
-      
-      setFlags(resolved)
+
+      if (isMountedRef.current && !signal?.aborted) {
+        setFlags(resolved)
+      }
     } catch (error) {
+      // Silently ignore AbortError (component unmounted or deps changed)
+      if (error instanceof DOMException && error.name === 'AbortError') return
       console.error('Error resolving feature flags:', error)
     } finally {
-      setLoading(false)
+      if (isMountedRef.current) setLoading(false)
     }
-  }, [user, currentOrganization?.id, flagKeys])
-  
-  // Resolve flags on mount and when dependencies change
+  }, [user?.id, currentOrganization?.id, keysString]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Single effect that fetches on mount / deps change with abort support
   useEffect(() => {
-    resolveFlags()
+    const ac = new AbortController()
+    resolveFlags(ac.signal)
+    return () => { ac.abort() }
   }, [resolveFlags])
-  
-  // Subscribe to realtime updates
+
+  // Subscribe to realtime updates (once per org)
   useEffect(() => {
-    const unsubscribe = subscribeToFlagChanges()
-    
-    // Re-resolve flags when cache is invalidated (handled by realtime subscription)
-    // We'll also re-resolve when org changes
-    return unsubscribe
+    return subscribeToFlagChanges()
   }, [currentOrganization?.id])
-  
-  // Re-resolve when org changes
-  useEffect(() => {
-    if (user && currentOrganization) {
-      resolveFlags()
-    }
-  }, [currentOrganization?.id, user, resolveFlags])
-  
+
   /**
    * Get flag value (synchronous, from cache)
    */
@@ -487,19 +573,19 @@ export function useFeatureFlags(flagKeys?: string[]) {
     }
     return getFeatureFlagValue(key, fallback)
   }, [flags])
-  
+
   /**
    * Check if flag is enabled (for boolean flags)
    */
   const isEnabled = useCallback((key: string): boolean => {
     return getFlag(key, false) === true
   }, [getFlag])
-  
+
   return {
     flags,
     loading,
     getFlag,
     isEnabled,
-    refresh: resolveFlags,
+    refresh: () => resolveFlags(),
   }
 }

@@ -10,7 +10,7 @@ import {
   AdminPageHeader, 
   Card, 
   Button 
-} from '../../components/platformAdmin'
+} from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 
 interface PlanCard {
@@ -46,8 +46,8 @@ export default function PlanSelection() {
 
   if (!orgId) {
     return (
-      <div className="pa-root">
-        <div className="pa-card pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
+      <div className="oa-root">
+        <div className="oa-card oa-text-danger" style={{ background: 'var(--oa-danger-bg)', border: 'none' }}>
           {t('errors.missingOrganization')}
         </div>
       </div>
@@ -57,8 +57,8 @@ export default function PlanSelection() {
   // Wait for license to load
   if (licenseLoading) {
     return (
-      <div className="pa-root">
-        <div className="pa-card" style={{ textAlign: 'center', padding: '2rem' }}>
+      <div className="oa-root">
+        <div className="oa-card" style={{ textAlign: 'center', padding: '2rem' }}>
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
           <p className="mt-4 text-slate-600 dark:text-slate-400">{t('common.loading')}</p>
         </div>
@@ -73,29 +73,29 @@ export default function PlanSelection() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title={t('billing.planSelectionTitle')} 
         actions={<OrgAdminButton variant="primary" onClick={() => navigate('/admin/organization/billing')}>{t('common.goBack')}</OrgAdminButton>} 
       />
 
-      {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
+      {error && <div className="oa-card oa-mb-4 oa-text-danger" style={{ background: 'var(--oa-danger-bg)', border: 'none' }}>{error}</div>}
 
-      <div className="pa-grid pa-grid-3 pa-gap-6">
+      <div className="oa-grid oa-grid-3 oa-gap-6">
         {planCards.map(plan => {
           const isCurrent = licensePlan === plan.id
           return (
-            <Card key={plan.id} style={{ borderColor: isCurrent ? 'var(--pa-n900)' : 'transparent', borderWidth: isCurrent ? '2px' : '1px' }}>
-              <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
-                <h3 className="pa-h3">{plan.name.toUpperCase()}</h3>
-                {isCurrent && <div className="pa-badge pa-badge--neutral">CURRENT</div>}
+            <Card key={plan.id} style={{ borderColor: isCurrent ? 'var(--oa-n900)' : 'transparent', borderWidth: isCurrent ? '2px' : '1px' }}>
+              <div className="oa-flex oa-justify-between oa-items-center oa-mb-4">
+                <h3 className="oa-h3">{plan.name.toUpperCase()}</h3>
+                {isCurrent && <div className="oa-badge oa-badge--neutral">CURRENT</div>}
               </div>
-              <div className="pa-h1 pa-mb-4" style={{ fontWeight: 900 }}>{plan.price}</div>
-              <div className="pa-body-m pa-text-muted pa-mb-6">{plan.description}</div>
-              <div className="pa-flex pa-flex-col pa-gap-2 pa-mb-8">
+              <div className="oa-h1 oa-mb-4" style={{ fontWeight: 900 }}>{plan.price}</div>
+              <div className="oa-body-m oa-text-muted oa-mb-6">{plan.description}</div>
+              <div className="oa-flex oa-flex-col oa-gap-2 oa-mb-8">
                 {plan.features.map(f => (
-                  <div key={f} className="pa-body-s pa-flex pa-items-center pa-gap-2">
-                    <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--pa-success)' }}>check_circle</span>
+                  <div key={f} className="oa-body-s oa-flex oa-items-center oa-gap-2">
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--oa-success)' }}>check_circle</span>
                     {f}
                   </div>
                 ))}

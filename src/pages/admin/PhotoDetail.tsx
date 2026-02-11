@@ -6,10 +6,22 @@ import { useI18n } from '@/i18n/useI18n'
 import { USE_FAKE_DATA } from '@/data/config'
 import { showError, showSuccess } from '@/utils/toast'
 import { getLink } from '@/utils/routes'
-import { getGalleryById, getPhotosForGallery, deletePhotos, moderatePhotos, getPendingPhotosCount, type Gallery, type GalleryPhoto } from '@/data/services/galleryService'
+import {
+  getGalleryById,
+  getPhotosForGallery,
+  deletePhotos,
+  moderatePhotos,
+  getPendingPhotosCount,
+  setGalleryCover,
+  type Gallery,
+  type GalleryPhoto
+} from '@/data/services/galleryService'
 import { PhotoUploadZone } from '@/components/admin/galleries/PhotoUploadZone'
-import { PhotoGalleryGrid } from '@/components/admin/galleries/PhotoGalleryGrid'
+import { OrgAdminGalleryView } from '@/components/orgAdmin/OrgAdminGalleryView'
 import { GalleryEditModal } from '@/components/admin/galleries/GalleryEditModal'
+import '../../styles/orgAdmin.css'
+
+type ViewMode = 'grid' | 'list'
 
 export default function PhotoDetail() {
   const { galleryId, photoId } = useParams<{ galleryId: string; photoId: string }>()
@@ -23,6 +35,8 @@ export default function PhotoDetail() {
   const [pendingCount, setPendingCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
 
   useEffect(() => {
     let mounted = true
@@ -96,24 +110,85 @@ export default function PhotoDetail() {
       ])
       setPhotos(photosResult.data || [])
       setPendingCount(pendingResult.data)
+      setSelectedIds([])
     } catch (err) {
       showError(err instanceof Error ? err.message : tAny('photos.moderation.' + (action === 'approve' ? 'approveError' : 'rejectError')))
     }
   }
 
+  const handleDelete = async (ids: string[]) => {
+    if (USE_FAKE_DATA) {
+      showError(t('photos.demoMode.deleteBlocked'))
+      return
+    }
+
+    if (!window.confirm(t('photos.confirmDelete'))) return
+
+    const { error } = await deletePhotos(context!, gallery?.id || '', ids)
+    if (error) {
+      showError(error.message)
+      return
+    }
+
+    showSuccess(t('photos.success.photosDeleted', { count: ids.length }))
+    setSelectedIds([])
+
+    if (!galleryId) return
+    const [photosResult, pendingResult] = await Promise.all([
+      getPhotosForGallery(context!, { gallery_id: galleryId }),
+      getPendingPhotosCount(context!, galleryId)
+    ])
+    setPhotos(photosResult.data || [])
+    setPendingCount(pendingResult.data)
+  }
+
+  const handleSetCover = async (photoId: string) => {
+    if (USE_FAKE_DATA) {
+      showError(t('photos.demoMode.deleteBlocked'))
+      return
+    }
+
+    if (!context || !galleryId) return
+
+    try {
+      const { error } = await setGalleryCover(context, galleryId, photoId)
+      if (error) throw error
+      showSuccess(t('photos.success.coverSet'))
+      // Reload gallery to get updated cover photo
+      const { data: galleryData } = await getGalleryById(context, galleryId)
+      if (galleryData) {
+        setGallery(galleryData)
+      }
+    } catch (err) {
+      showError(err instanceof Error ? err.message : t('photos.errors.setCover'))
+    }
+  }
+
+  const handleTagPhoto = (photoId: string) => {
+    // TODO: Implement tag photo modal
+    showError('Photo tagging coming soon')
+  }
+
   if (loading) {
     return (
-      <div className="pa-root">
-        <div className="pa-container pa-flex pa-items-center pa-justify-center pa-min-h-[400px]">
-          <div className="pa-animate-spin pa-text-4xl">⏳</div>
+      <div className="oa-root">
+        <div style={{ padding: '24px' }}>
+          <div className="oa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+            <div className="oa-skeleton" style={{ height: '600px', borderRadius: '8px' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="oa-skeleton" style={{ height: '200px' }} />
+              <div className="oa-skeleton" style={{ height: '200px' }} />
+            </div>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="pa-root">
-      <div className="pa-container pa-space-y-4">
+    <div className="oa-root">
+      <div className="oa-container oa-space-y-4">
         <PageHeader
           title={gallery?.name || t('photos.viewGallery')}
           description={gallery?.description || ''}
@@ -144,7 +219,7 @@ export default function PhotoDetail() {
         />
 
         {/* Stats */}
-        <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-4 pa-gap-3">
+        <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-4 oa-gap-3">
           <StatCard label={t('photos.stats.totalPhotos')} value={String(photos.length)} />
           <StatCard label={t('common.approved')} value={String(photos.filter((p) => (p.approval_status || p.status) === 'approved').length)} />
           <StatCard label={t('photos.pendingApproval.badge')} value={String(pendingCount)} />
@@ -152,9 +227,9 @@ export default function PhotoDetail() {
         </div>
 
         {/* Upload Zone */}
-        <Card className="pa-card pa-mt-3">
-          <div className="pa-flex pa-items-center pa-justify-between pa-mb-3">
-            <h4 className="pa-text-base pa-font-semibold">{t('photos.upload.title')}</h4>
+        <Card className="oa-card oa-mt-3">
+          <div className="oa-flex oa-items-center oa-justify-between oa-mb-3">
+            <h4 className="oa-text-base oa-font-semibold">{t('photos.upload.title')}</h4>
             {gallery && gallery.allow_contributions && (
               <Badge variant="info">{gallery.gallery_type}</Badge>
             )}
@@ -175,36 +250,68 @@ export default function PhotoDetail() {
           />
         </Card>
 
-        {/* Photos Grid */}
-        <Card className="pa-card pa-space-y-3 pa-mt-3">
-          <div className="pa-flex pa-justify-between pa-items-center">
-            <h4 className="pa-text-base pa-font-semibold">{t('photos.title')}</h4>
-            <span className="pa-text-sm pa-text-muted">{t('photos.stats.photosCount', { count: photos.length })}</span>
+        {/* Photos Grid/List */}
+        <Card className="oa-card oa-space-y-3 oa-mt-3">
+          <div className="oa-flex oa-justify-between oa-items-center" style={{ minHeight: '32px' }}>
+            {selectedIds.length > 0 ? (
+               <div className="oa-flex oa-gap-2 oa-items-center">
+                  <span className="oa-text-sm oa-text-muted">{selectedIds.length} selected</span>
+                  <Button variant="danger" size="small" onClick={() => handleDelete(selectedIds)}>
+                    {t('common.delete')}
+                  </Button>
+                  <Button variant="secondary" size="small" onClick={() => handleModerate(selectedIds, 'approve')}>
+                    {t('common.approve')}
+                  </Button>
+                  <Button variant="secondary" size="small" onClick={() => handleModerate(selectedIds, 'reject')}>
+                    {t('common.reject')}
+                  </Button>
+                  <Button variant="ghost" size="small" onClick={() => setSelectedIds([])}>
+                     {t('common.cancel')}
+                  </Button>
+               </div>
+            ) : (
+                <>
+                  <h4 className="oa-text-base oa-font-semibold">{t('photos.title')}</h4>
+                  <div className="oa-flex oa-gap-3 oa-items-center">
+                    <span className="oa-text-sm oa-text-muted">{t('photos.stats.photosCount', { count: photos.length })}</span>
+                    {/* View Mode Toggle */}
+                    <div className="oa-flex oa-gap-1 oa-border oa-border-radius-s oa-p-1">
+                      <button
+                        type="button"
+                        className={`oa-view-toggle-btn ${viewMode === 'grid' ? 'oa-view-toggle-btn--active' : ''}`}
+                        onClick={() => setViewMode('grid')}
+                        aria-label={t('photos.gridView')}
+                      >
+                        <span className="material-symbols-outlined">grid_view</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`oa-view-toggle-btn ${viewMode === 'list' ? 'oa-view-toggle-btn--active' : ''}`}
+                        onClick={() => setViewMode('list')}
+                        aria-label={t('photos.listView')}
+                      >
+                        <span className="material-symbols-outlined">view_list</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+            )}
           </div>
 
-          <PhotoGalleryGrid
+          <OrgAdminGalleryView
+            gallery={gallery}
             photos={photos}
-            coverPhotoId={gallery?.cover_photo_id || undefined}
-            onDelete={async (ids) => {
-              if (USE_FAKE_DATA) {
-                showError(t('photos.demoMode.deleteBlocked'))
-                return
-              }
-              const { error } = await deletePhotos(context, gallery?.id || '', ids)
-              if (error) showError(error.message)
-              else {
-                showSuccess(t('photos.success.photosDeleted', { count: ids.length }))
-                if (!galleryId) return
-                const [photosResult, pendingResult] = await Promise.all([
-                  getPhotosForGallery(context, { gallery_id: galleryId }),
-                  getPendingPhotosCount(context, galleryId)
-                ])
-                setPhotos(photosResult.data || [])
-                setPendingCount(pendingResult.data)
-              }
-            }}
-            showPendingBadge={gallery?.require_approval || false}
+            loading={loading}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            selectionMode="multiple"
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            renderToolbar={() => null}
+            onDelete={handleDelete}
             onModerate={handleModerate}
+            onTagPhoto={handleTagPhoto}
+            onSetCover={handleSetCover}
           />
         </Card>
 
