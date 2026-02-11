@@ -7164,6 +7164,15 @@ html.dark .oa-ticket-card__progress {
     color: var(--pa-text-muted);
 }
 
+.oa-ticket-card__progress-value {
+    color: var(--pa-info, #3b82f6);
+    font-weight: 600;
+}
+
+html.dark .oa-ticket-card__progress-value {
+    color: var(--pa-info, #60a5fa);
+}
+
 .oa-ticket-card__progress-meta {
     font-size: 12px;
     color: var(--pa-text-muted);
