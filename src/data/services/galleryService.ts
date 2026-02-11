@@ -514,6 +514,8 @@ export interface RecentActivityItem {
   gallery_cover_url: string | null
   timestamp: string
   photo_count?: number
+  /** Status of the most recent photo in this activity (from gallery_photos.status) */
+  status?: PhotoStatus
 }
 
 /**
@@ -540,6 +542,7 @@ export async function getRecentGalleryActivity(
       .select(`
         id,
         gallery_id,
+        status,
         created_at,
         gallery:galleries!gallery_photos_gallery_id_fkey!inner(
           id,
@@ -578,13 +581,15 @@ export async function getRecentGalleryActivity(
             gallery_cover_url: coverUrl,
             timestamp: photo.created_at,
             photo_count: 1,
+            status: photo.status as PhotoStatus | undefined,
           })
         } else {
           const item = galleryMap.get(galleryId)!
           item.photo_count = (item.photo_count || 0) + 1
-          // Keep the most recent timestamp
+          // Keep the most recent timestamp and status
           if (new Date(photo.created_at) > new Date(item.timestamp)) {
             item.timestamp = photo.created_at
+            item.status = photo.status as PhotoStatus | undefined
           }
         }
       }
@@ -1138,41 +1143,84 @@ export async function getPhotoById(
 }
 
 /**
+ * Result of getGalleryPhotoCounts: exact counts by status for a gallery.
+ */
+export interface GalleryPhotoCounts {
+  total: number
+  pending: number
+  approved: number
+  rejected: number
+}
+
+/**
+ * Get exact photo counts for a gallery (total and by status).
+ * Uses count queries so counts are correct regardless of pagination.
+ */
+export async function getGalleryPhotoCounts(
+  _context: UserContext,
+  galleryId: string
+): Promise<{ data: GalleryPhotoCounts; error: Error | null }> {
+  const empty: GalleryPhotoCounts = { total: 0, pending: 0, approved: 0, rejected: 0 }
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: empty, error: null }
+  }
+
+  try {
+    if (!isValidUUID(galleryId)) {
+      return { data: empty, error: new Error('Invalid gallery ID') }
+    }
+
+    const toNum = (c: number | null | undefined): number =>
+      typeof c === 'number' && Number.isFinite(c) ? c : 0
+
+    const base = () =>
+      supabase
+        .from('gallery_photos')
+        .select('id', { count: 'exact' })
+        .eq('gallery_id', galleryId)
+        .limit(0)
+
+    const [totalRes, pendingRes, approvedRes, rejectedRes] = await Promise.all([
+      base().then((r) => ({ count: r.count, error: r.error })),
+      base().eq('status', 'pending').then((r) => ({ count: r.count, error: r.error })),
+      base().eq('status', 'approved').then((r) => ({ count: r.count, error: r.error })),
+      base().eq('status', 'rejected').then((r) => ({ count: r.count, error: r.error })),
+    ])
+
+    if (totalRes.error) throw totalRes.error
+    if (pendingRes.error) throw pendingRes.error
+    if (approvedRes.error) throw approvedRes.error
+    if (rejectedRes.error) throw rejectedRes.error
+
+    return {
+      data: {
+        total: toNum(totalRes.count),
+        pending: toNum(pendingRes.count),
+        approved: toNum(approvedRes.count),
+        rejected: toNum(rejectedRes.count),
+      },
+      error: null,
+    }
+  } catch (err) {
+    console.error('[galleryService] Error getting gallery photo counts:', err)
+    return {
+      data: empty,
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
  * Get pending photos count for moderation
  */
 export async function getPendingPhotosCount(
   _context: UserContext,
   galleryId: string
 ): Promise<{ data: number; error: Error | null }> {
-  if (USE_FAKE_DATA) {
-    await simulateDelay()
-    return { data: 0, error: null }
-  }
-
-  try {
-    if (!isValidUUID(galleryId)) {
-      return { data: 0, error: new Error('Invalid gallery ID') }
-    }
-
-    const { count, error } = await supabase
-      .from('gallery_photos')
-      .select('*', { count: 'exact', head: true })
-      .eq('gallery_id', galleryId)
-      .eq('status', 'pending')
-
-    if (error) throw error
-
-    return {
-      data: count || 0,
-      error: null,
-    }
-  } catch (err) {
-    console.error('[galleryService] Error getting pending count:', err)
-    return {
-      data: 0,
-      error: err instanceof Error ? err : new Error('Unknown error'),
-    }
-  }
+  const { data, error } = await getGalleryPhotoCounts(_context, galleryId)
+  if (error) return { data: 0, error }
+  return { data: data.pending, error: null }
 }
 
 // ============================================================================
