@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { getLink } from '../../src/utils/routes'
 
 // ============================================
 // Page Object: Calendar
@@ -8,11 +9,11 @@ class CalendarPage {
   constructor(private page: Page) {}
 
   async goto() {
-    await this.page.goto('/portal/calendar')
+    await this.page.goto(getLink('portal.calendar'))
   }
 
   async gotoEventDetail(eventId: string) {
-    await this.page.goto(`/portal/calendar/events/${eventId}`)
+    await this.page.goto(getLink('portal.eventDetail', { eventId }))
   }
 
   get loadingSpinner() {
@@ -68,7 +69,7 @@ test.describe('Calendar', () => {
     })
 
     test('login page has email and password fields', async ({ page }) => {
-      await page.goto('/portal/login')
+      await page.goto(getLink('auth.login'))
       await expect(page.getByLabel(/email/i)).toBeVisible()
       await expect(page.getByLabel(/password/i)).toBeVisible()
       await expect(page.getByRole('button', { name: /continue|signing in/i })).toBeVisible()
@@ -77,7 +78,7 @@ test.describe('Calendar', () => {
 
   test.describe('login page accessibility', () => {
     test('login form is keyboard accessible', async ({ page }) => {
-      await page.goto('/portal/login')
+      await page.goto(getLink('auth.login'))
       const emailInput = page.getByLabel(/email/i)
       const passwordInput = page.getByLabel(/password/i)
       await expect(emailInput).toBeVisible()
