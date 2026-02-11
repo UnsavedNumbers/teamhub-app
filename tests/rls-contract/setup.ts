@@ -33,6 +33,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
     if (seeded) {
-        await teardown(seeded);
+        await teardownTestData(seeded);
     }
 }, 60_000);
