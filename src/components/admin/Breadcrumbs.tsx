@@ -10,7 +10,7 @@ export interface BreadcrumbItem {
   onClick?: () => void
 }
 
-interface BreadcrumbsProps {
+export interface BreadcrumbsProps {
   items: BreadcrumbItem[]
 }
 

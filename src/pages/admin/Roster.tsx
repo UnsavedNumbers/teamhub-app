@@ -16,6 +16,7 @@ import {
   OrgDataTable,
   type ColumnConfig
 } from '../../components/admin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 
 interface Season {
   id: string

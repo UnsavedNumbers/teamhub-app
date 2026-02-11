@@ -14,6 +14,7 @@ import {
   OrgDataTable,
   type ColumnConfig
 } from '../../components/admin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
