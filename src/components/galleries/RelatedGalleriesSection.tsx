@@ -9,6 +9,7 @@ interface RelatedGalleriesSectionProps {
   entityType: Extract<GalleryEntityType, 'athlete' | 'team' | 'event' | 'travel_plan' | 'program'>
   entityId: string
   title?: string
+  context?: 'portal' | 'admin'
 }
 
 /**
@@ -26,6 +27,7 @@ interface RelatedGalleriesSectionProps {
 export function RelatedGalleriesSection({
   entityType,
   entityId,
+  context = 'portal',
 }: RelatedGalleriesSectionProps) {
   const navigate = useNavigate()
   const t = useT()
@@ -54,7 +56,11 @@ export function RelatedGalleriesSection({
   const hasGalleries = Object.keys(groupedGalleries).length > 0
 
   const openGallery = (galleryId: string) => {
-    navigate(ROUTES.PORTAL_PHOTO_GALLERY(galleryId))
+    if (context === 'admin') {
+      navigate(ROUTES.ADMIN_PHOTO_DETAIL(galleryId))
+    } else {
+      navigate(ROUTES.PORTAL_PHOTO_GALLERY(galleryId))
+    }
   }
 
   if (isLoading) {

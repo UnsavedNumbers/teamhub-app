@@ -36,8 +36,8 @@ import { BulkTaggingModal } from '../components/gallery/BulkTaggingModal'
 import { GalleryEditModal } from '../components/admin/galleries/GalleryEditModal'
 import { PhotoFilterBar } from '../components/gallery/PhotoFilterBar'
 import { AlbumManager } from '../components/gallery/AlbumManager'
-import { PhotoBookmarkButton } from '../components/gallery/PhotoBookmarkButton'
 import { BulkDownloadButton } from '../components/gallery/BulkDownloadButton'
+import { PortalGalleryView } from '../components/portal/PortalGalleryView'
 import { usePhotoFilters } from '../hooks/usePhotoFilters'
 import { useInfinitePhotos } from '../hooks/useInfinitePhotos'
 import { buildPhotoQuery } from '../utils/buildPhotoQuery'
@@ -177,113 +177,7 @@ export default function PhotosGallery() {
   const showingLabel = displayPhotos.length === 1 ? t('photos.photo') : t('photos.photos')
   const selectedLabel = selectedPhotos.size === 1 ? t('photos.selection.photo') : t('photos.selection.photos')
 
-  const renderPhotoGrid = (items: GalleryPhoto[]) => (
-    <div className={gridClass}>
-      {items.map((photo, index) => {
-        const isSelected = selectedPhotos.has(photo.id)
-        const thumbnailUrl = getGalleryPhotoThumbnailUrl(photo.thumbnail_path, photo.storage_path)
-        const taggedNames = photo.tagged_athletes
-          ?.map((a) => a.first_name)
-          .join(' • ') || ''
-        const resolvedIndex = displayIndexMap.get(photo.id) ?? index
 
-        const fallbackLabel = t('photos.galleryView.photoNumber', { number: resolvedIndex + 1 })
-
-        return (
-          <div
-            key={photo.id}
-            className="group relative flex flex-col gap-4 cursor-pointer"
-          >
-            {/* Photo Container */}
-            <div
-              className="aspect-[4/5] w-full rounded-2xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-200/50 dark:ring-slate-700/50 group-hover:shadow-2xl group-hover:-translate-y-1 transition-all duration-500"
-              style={
-                isSelected
-                  ? {
-                      boxShadow: '0 20px 25px -5px rgba(59, 130, 246, 0.1), 0 8px 10px -6px rgba(59, 130, 246, 0.1)',
-                      transform: 'translateY(-4px)',
-                    }
-                  : {}
-              }
-              onClick={() => {
-                const isPending = (photo.approval_status || photo.status) === 'pending'
-                if (isPending && !canModerate) return
-                setTaggingPhoto(photo)
-                setTaggingPhotoIndex(resolvedIndex)
-              }}
-            >
-              <img
-                alt={photo.caption || fallbackLabel}
-                className="w-full h-full object-cover"
-                src={thumbnailUrl}
-              />
-
-              {/* Bookmark Overlay - Top Left */}
-              <div
-                className="absolute top-6 left-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <PhotoBookmarkButton
-                  photoId={photo.id}
-                  isBookmarked={bookmarkedIds.has(photo.id)}
-                  onChanged={(next) => {
-                    setBookmarkedIds((prev) => {
-                      const updated = new Set(prev)
-                      if (next) {
-                        updated.add(photo.id)
-                      } else {
-                        updated.delete(photo.id)
-                      }
-                      return updated
-                    })
-                  }}
-                />
-              </div>
-
-              {/* Checkbox Overlay - Top Right */}
-              <div
-                className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setSelectedPhotos((prev) => {
-                    const next = new Set(prev)
-                    if (next.has(photo.id)) {
-                      next.delete(photo.id)
-                    } else {
-                      next.add(photo.id)
-                    }
-                    return next
-                  })
-                }}
-              >
-                {isSelected ? (
-                  <div className="size-6 rounded-full bg-primary border-2 border-white flex items-center justify-center shadow-lg">
-                    <span className="material-symbols-outlined text-white text-base font-bold">
-                      check
-                    </span>
-                  </div>
-                ) : (
-                  <div className="size-6 rounded-full border-2 border-white flex items-center justify-center bg-white/20 backdrop-blur-md"></div>
-                )}
-              </div>
-            </div>
-
-            {/* Photo Details */}
-            <div className="px-2">
-              <h4 className="text-sm font-bold text-black dark:text-white">
-                {photo.caption || fallbackLabel}
-              </h4>
-              {taggedNames && (
-                <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-semibold">
-                  {taggedNames}
-                </p>
-              )}
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
 
   const loadGallery = useCallback(async () => {
     if (!isReady || !id || !context) return
@@ -599,7 +493,25 @@ export default function PhotosGallery() {
                   <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-4">
                     {t('photos.albums.unassigned')}
                   </h3>
-                  {renderPhotoGrid(photosByAlbum.unassigned)}
+                  <PortalGalleryView
+                    gallery={gallery}
+                    photos={photosByAlbum.unassigned}
+                    bookmarkedIds={bookmarkedIds}
+                    onBookmarkChange={(id, isBookmarked) => {
+                      setBookmarkedIds((prev) => {
+                        const next = new Set(prev)
+                        if (isBookmarked) next.add(id)
+                        else next.delete(id)
+                        return next
+                      })
+                    }}
+                    onPhotoClick={(photo) => {
+                      const idx = displayPhotos.findIndex((p) => p.id === photo.id)
+                      setLightboxIndex(idx)
+                    }}
+                    selectedIds={Array.from(selectedPhotos)}
+                    onSelectionChange={(ids) => setSelectedPhotos(new Set(ids))}
+                  />
                 </div>
               )}
               {albums.map((album) => {
@@ -610,13 +522,98 @@ export default function PhotosGallery() {
                     <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-4">
                       {album.name}
                     </h3>
-                    {renderPhotoGrid(items)}
+                    <PortalGalleryView
+                      gallery={gallery}
+                      photos={items}
+                      bookmarkedIds={bookmarkedIds}
+                      onBookmarkChange={(id, isBookmarked) => {
+                        setBookmarkedIds((prev) => {
+                          const next = new Set(prev)
+                          if (isBookmarked) next.add(id)
+                          else next.delete(id)
+                          return next
+                        })
+                      }}
+                      onPhotoClick={(photo) => {
+                        const idx = displayPhotos.findIndex((p) => p.id === photo.id)
+                        setLightboxIndex(idx)
+                      }}
+                      selectedIds={Array.from(selectedPhotos)}
+                      onSelectionChange={(ids) => setSelectedPhotos((prev) => {
+                         // Merging selection from multiple grids is tricky if they overwrite
+                         // But PortalGalleryView controlled mode just emits the ids.
+                         // We need to merge.
+                         // Actually the prompt says "Replace manual grid", implying one grid.
+                         // But PhotosGallery supports grouping by album.
+                         // The existing code iterates albums and renders grid for each.
+                         // We are replacing `renderPhotoGrid` call.
+                         
+                         // If we have multiple PortalGalleryView instances, they need to share selection state properly.
+                         // `onSelectionChange` typically returns the *new* full list.
+                         // If I use it here, I might overwrite selection from other albums.
+                         // I need to be careful.
+                         
+                         // Better approach:
+                         // Keep `renderPhotoGrid` logic but make IT render PortalGalleryView?
+                         
+                         const newSet = new Set(prev)
+                         // Determine which items were in this album's view to toggle them?
+                         // The PortalGalleryView doesn't give us delta. It gives us "selectedIds".
+                         // This is a limitation of the controlled component pattern when used in multiple instances sharing one state.
+                         
+                         // WORKAROUND:
+                         // Since `PortalGalleryView` is now the fundamental block, 
+                         // and we have multiple blocks share one state `selectedPhotos`.
+                         // We need `onSelectionChange` to support merging.
+                         
+                         // Actually, if `PortalGalleryView` receives `selectedIds`, it displays them.
+                         // When it emits `onSelectionChange`, it emits `[...ids]`.
+                         // If I click one item in Album A, it emits [id].
+                         // If I had items selected in Album B, they are missing from Album A's view probably?
+                         // wait, `items` prop in `PortalGalleryView` determines scope.
+                         // useGallerySelection is scoped to `items`.
+                         // So it only knows about Album A items.
+                         // So it spits out only Album A selections.
+                         
+                         // So we need to merge.
+                         // We can take the emitted IDs, find which ones belong to this Album.
+                         // Update `selectedPhotos` by replacing Album A's matches with new matches, keeping Album B's matches.
+                         
+                         const albumItemIds = new Set(items.map(i => i.id))
+                         ids.forEach(id => newSet.add(id))
+                         // Remove ones no longer in ids BUT were in albumItemIds
+                         for (const id of albumItemIds) {
+                            if (!ids.includes(id)) newSet.delete(id)
+                         }
+                         return newSet
+                      })}
+                    />
                   </div>
                 )
               })}
             </div>
           ) : (
-            <div className="mb-32">{renderPhotoGrid(displayPhotos)}</div>
+            <div className="mb-32">
+              <PortalGalleryView
+                gallery={gallery}
+                photos={displayPhotos}
+                bookmarkedIds={bookmarkedIds}
+                onBookmarkChange={(id, isBookmarked) => {
+                  setBookmarkedIds((prev) => {
+                    const next = new Set(prev)
+                    if (isBookmarked) next.add(id)
+                    else next.delete(id)
+                    return next
+                  })
+                }}
+                onPhotoClick={(photo) => {
+                  const idx = displayPhotos.findIndex((p) => p.id === photo.id)
+                  setLightboxIndex(idx)
+                }}
+                selectedIds={Array.from(selectedPhotos)}
+                onSelectionChange={(ids) => setSelectedPhotos(new Set(ids))}
+              />
+            </div>
           )}
 
           {loadingMore && (

@@ -15,6 +15,8 @@ interface BulkActionsToolbarProps {
   onUpdateCategory: () => void
   onEnableAll: () => void
   onDisableAll: () => void
+  onSetSystemFeature: () => void
+  onSetPlatformOnly: () => void
   onClearSelection: () => void
   onSelectAllPage?: () => void
   onSelectAllResults?: () => void
@@ -31,6 +33,8 @@ export default function BulkActionsToolbar({
   onUpdateCategory,
   onEnableAll,
   onDisableAll,
+  onSetSystemFeature,
+  onSetPlatformOnly,
   onClearSelection,
   onSelectAllPage,
   onSelectAllResults,
@@ -145,6 +149,32 @@ export default function BulkActionsToolbar({
             label
           </span>
           Update Category
+        </Button>
+
+        <div style={{ width: '1px', height: '24px', background: 'var(--pa-n300)', margin: '0 var(--pa-space-2)' }} />
+
+        <Button
+          variant="secondary"
+          size="dense"
+          onClick={onSetSystemFeature}
+          style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+            verified
+          </span>
+          Set as System Feature
+        </Button>
+
+        <Button
+          variant="secondary"
+          size="dense"
+          onClick={onSetPlatformOnly}
+          style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+            admin_panel_settings
+          </span>
+          Set to Platform Only
         </Button>
 
         <div style={{ width: '1px', height: '24px', background: 'var(--pa-n300)', margin: '0 var(--pa-space-2)' }} />

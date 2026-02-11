@@ -197,6 +197,135 @@
   color: var(--org-btn-primary-bg);
 }
 
+.season-detail-page .season-detail-galleries-card {
+  grid-column: 1 / -1;
+  padding: 0;
+  border: 1px solid var(--org-border-default);
+  border-radius: var(--pa-radius-m);
+  overflow: hidden;
+  box-shadow: var(--pa-shadow-3);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: var(--pa-space-1);
+}
+
+.season-detail-page .season-detail-galleries-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pa-space-4);
+  padding: var(--pa-space-6);
+  background: linear-gradient(135deg, var(--org-btn-primary-bg), var(--org-card-accent-border));
+  color: var(--org-btn-primary-text);
+}
+
+@media (min-width: 640px) {
+  .season-detail-page .season-detail-galleries-hero {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.season-detail-page .season-detail-galleries-hero-text {
+  flex: 1;
+}
+
+.season-detail-page .season-detail-galleries-hero-heading {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--org-btn-primary-text);
+}
+
+.season-detail-page .season-detail-galleries-title {
+  margin: var(--pa-space-1) 0;
+  font-family: var(--pa-font-display);
+  font-size: clamp(24px, 6vw, 32px);
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: var(--pa-space-2);
+}
+
+.season-detail-page .season-detail-galleries-subtitle,
+.season-detail-page .season-detail-galleries-body-copy {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
+}
+
+.season-detail-page .season-detail-galleries-body-copy {
+  opacity: 0.9;
+}
+
+.season-detail-page .season-detail-galleries-hero-actions {
+  display: flex;
+  gap: var(--pa-space-3);
+  align-items: center;
+}
+
+.season-detail-page .season-detail-galleries-status {
+  padding: var(--pa-space-1) var(--pa-space-3);
+  border-radius: var(--pa-radius-full);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.season-detail-page .season-detail-galleries-status[data-state='inactive'] {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.season-detail-page .season-detail-galleries-body {
+  padding: var(--pa-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pa-space-4);
+}
+
+.season-detail-page .season-detail-galleries-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--pa-space-3);
+}
+
+.season-detail-page .season-detail-galleries-stat {
+  padding: var(--pa-space-3);
+  border-radius: var(--pa-radius-xs);
+  border: 1px solid var(--org-border-default);
+  background: var(--pa-n50);
+}
+
+html.dark .season-detail-page .season-detail-galleries-stat {
+  background: var(--pa-surface-panel);
+}
+
+.season-detail-page .season-detail-galleries-stat-label {
+  margin: 0;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--org-text-muted);
+}
+
+.season-detail-page .season-detail-galleries-stat-value {
+  margin: var(--pa-space-2) 0 0;
+  font-size: clamp(20px, 4vw, 26px);
+  font-family: var(--pa-font-display);
+  font-weight: 700;
+  color: var(--org-text-primary);
+}
+
+.season-detail-page .season-detail-galleries-stat-caption {
+  margin: var(--pa-space-1) 0 0;
+  font-size: 0.85rem;
+  color: var(--org-text-muted);
+}
+
 /* Sports & Programs card: flex so VIEW PROGRAMS sits at bottom */
 .season-detail-page .season-detail-programs-card {
   display: flex;

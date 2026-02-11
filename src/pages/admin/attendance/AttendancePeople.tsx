@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react'
-import { Card, PlatformDataTable, Badge } from '../../../components/platformAdmin'
-import type { ColumnConfig } from '../../../components/platformAdmin/PlatformDataTable'
+import { Card, Badge } from '../../../components/platformAdmin'
+import OrgDataTable from '../../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../../components/admin/OrgDataTable'
 import { useUserContext } from '../../../hooks/useUserContext'
 import { getAttendancePeople } from '../../../data/services/attendanceService'
 import type { AttendancePersonSummary } from '../../../types/attendance'
@@ -28,7 +29,7 @@ export default function AttendancePeople() {
         render: (row: AttendancePersonSummary & { id: string }) => {
             const color = row.attendance_rate >= 85 ? 'text-green-600' : row.attendance_rate >= 70 ? 'text-amber-600' : 'text-red-600'
             const val = row.attendance_rate.toFixed(1)
-            return <span className={`pa-font-bold ${color}`}>{val}%</span>
+            return <span className={`oa-font-bold ${color}`}>{val}%</span>
         }
     },
     { id: 'total', label: 'Total Events', render: (row: AttendancePersonSummary & { id: string }) => String(row.total_events) },
@@ -49,7 +50,7 @@ export default function AttendancePeople() {
 
   return (
     <Card>
-      <PlatformDataTable
+      <OrgDataTable
         columns={columns}
         rows={rowsWithId}
         loading={loading}

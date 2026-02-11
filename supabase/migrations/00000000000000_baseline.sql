@@ -9362,25 +9362,7 @@ BEGIN
     scope_id_val := NULL;
   END IF;
   
-  -- Build old and new value JSONB
-  IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
-    old_val := jsonb_build_object(
-      'value_boolean', OLD.value_boolean,
-      'value_integer', OLD.value_integer,
-      'value_double', OLD.value_double,
-      'version', OLD.version
-    );
-  END IF;
-  
-  IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
-    new_val := jsonb_build_object(
-      'value_boolean', NEW.value_boolean,
-      'value_integer', NEW.value_integer,
-      'value_double', NEW.value_double,
-      'version', NEW.version
-    );
-  END IF;
-  
+  -- Build old and new value JSONB based on table type
   -- For feature_flags table, capture different fields
   IF TG_TABLE_NAME = 'feature_flags' THEN
     IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
@@ -9404,6 +9386,25 @@ BEGIN
         'version', NEW.version
       );
     END IF;
+  ELSE
+    -- For override/default tables, capture value fields
+    IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
+      old_val := jsonb_build_object(
+        'value_boolean', OLD.value_boolean,
+        'value_integer', OLD.value_integer,
+        'value_double', OLD.value_double,
+        'version', OLD.version
+      );
+    END IF;
+    
+    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+      new_val := jsonb_build_object(
+        'value_boolean', NEW.value_boolean,
+        'value_integer', NEW.value_integer,
+        'value_double', NEW.value_double,
+        'version', NEW.version
+      );
+    END IF;
   END IF;
   
   -- Insert audit log entry
@@ -9419,7 +9420,11 @@ BEGIN
   ) VALUES (
     auth.uid(),
     action_val,
-    COALESCE(NEW.id, OLD.id),
+    -- For feature_flags table use id, for override/default tables use feature_flag_id
+    CASE 
+      WHEN TG_TABLE_NAME = 'feature_flags' THEN COALESCE(NEW.id, OLD.id)
+      ELSE COALESCE(NEW.feature_flag_id, OLD.feature_flag_id)
+    END,
     scope_type_val,
     scope_id_val,
     old_val,

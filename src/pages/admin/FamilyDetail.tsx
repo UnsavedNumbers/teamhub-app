@@ -5,12 +5,12 @@ import {
     Card, 
     Button, 
     Badge, 
-    PlatformDataTable, 
     ConfirmDialog,
     ErrorState
-} from '../../components/platformAdmin'
+} from '../../components/admin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
-import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { useUserContext } from '../../hooks/useUserContext'
 import { 
     getFamilyDetails, 
@@ -20,6 +20,7 @@ import {
 import { useT } from '../../i18n/useI18n'
 import type { FamilyWithDetails, Child, FamilyMember } from '../../types/family'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 export default function FamilyDetail() {
     const navigate = useNavigate()
@@ -84,10 +85,10 @@ export default function FamilyDetail() {
             id: 'first_name',
             label: 'Name',
             render: (c) => (
-                <div className="pa-flex pa-flex-col">
-                    <span className="pa-text-primary" style={{ fontWeight: 600 }}>{c?.first_name} {c?.last_name}</span>
+                <div className="oa-flex oa-flex-col">
+                    <span className="oa-text-primary" style={{ fontWeight: 600 }}>{c?.first_name} {c?.last_name}</span>
                     {c?.date_of_birth && (
-                        <span className="pa-text-xs pa-text-muted">DOB: {new Date(c.date_of_birth).toLocaleDateString()}</span>
+                        <span className="oa-text-xs oa-text-muted">DOB: {new Date(c.date_of_birth).toLocaleDateString()}</span>
                     )}
                 </div>
             )
@@ -95,16 +96,16 @@ export default function FamilyDetail() {
         {
             id: 'gender',
             label: 'Gender',
-            render: (c) => <span className="pa-capitalize">{c?.gender || '-'}</span>
+            render: (c) => <span className="oa-capitalize">{c?.gender || '-'}</span>
         },
         {
             id: 'id',
             label: 'Actions',
             align: 'right',
             render: (c) => c?.id ? (
-                <div className="pa-flex pa-gap-2 pa-justify-end" onClick={(e) => e.stopPropagation()}>
+                <div className="oa-flex oa-gap-2 oa-justify-end" onClick={(e) => e.stopPropagation()}>
                      <button 
-                        className="pa-btn-icon pa-text-danger"
+                        className="oa-btn-icon oa-text-danger"
                         onClick={() => setChildToDelete(c.id)}
                         title={t('admin.families.deleteChild')}
                      >
@@ -120,7 +121,7 @@ export default function FamilyDetail() {
         {
             id: 'user_id',
             label: 'User ID', 
-            render: (m) => <span className="pa-font-mono pa-text-xs">{m?.user_id ? `${m.user_id.substring(0,8)}...` : '-'}</span>
+            render: (m) => <span className="oa-font-mono oa-text-xs">{m?.user_id ? `${m.user_id.substring(0,8)}...` : '-'}</span>
         },
         {
             id: 'role',
@@ -135,12 +136,29 @@ export default function FamilyDetail() {
     ]
 
     if (!isReady) return <AdminLoadingSpinner />
-    if (loading) return <div className="pa-loader" />
+    if (loading) {
+      return (
+        <div className="oa-root">
+          <div style={{ padding: '24px' }}>
+            <div className="oa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+            <div className="oa-skeleton" style={{ height: '320px', borderRadius: '8px', marginBottom: '24px' }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i}>
+                  <div className="oa-skeleton" style={{ height: '40px', marginBottom: '16px' }} />
+                  <div className="oa-skeleton" style={{ height: '200px' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )
+    }
     if (error) return <ErrorState title="Error Loading Family" message={error.message} onRetry={fetchDetail} />
     if (!family) return <ErrorState title="Not Found" message="Family not found." />
 
     return (
-        <div className="pa-root">
+        <div className="oa-root">
             <AdminPageHeader 
                 title={family.name?.toUpperCase() || 'FAMILY'} 
                 breadcrumbs={[
@@ -154,20 +172,20 @@ export default function FamilyDetail() {
                 }
             />
 
-            <div className="pa-form-container">
-                <div className="pa-grid pa-grid-cols-1 lg:pa-grid-cols-12 pa-gap-6">
+            <div className="oa-form-container">
+                <div className="oa-grid oa-grid-cols-1 lg:oa-grid-cols-12 oa-gap-6">
                     
                     {/* Children Section */}
-                    <div className="lg:pa-col-span-8">
+                    <div className="lg:oa-col-span-8">
                         <Card>
-                            <div className="pa-flex pa-flex-col sm:pa-flex-row pa-justify-between pa-items-stretch sm:pa-items-center pa-gap-3 pa-mb-4">
-                                <h3 className="pa-h3">{t('admin.families.children')}</h3>
+                            <div className="oa-flex oa-flex-col sm:oa-flex-row oa-justify-between oa-items-stretch sm:oa-items-center oa-gap-3 oa-mb-4">
+                                <h3 className="oa-h3">{t('admin.families.children')}</h3>
                                 <Button size="compact" variant="primary" onClick={() => navigate(getLink('admin.guardians.createAthlete', { familyId: family.id }))} className="w-full sm:w-auto min-h-[44px]">
                                     <span className="material-symbols-outlined">add</span>
                                     {t('admin.families.addChild')}
                                 </Button>
                             </div>
-                            <PlatformDataTable
+                            <OrgDataTable
                                 data={family.children || []}
                                 columns={childColumns}
                                 page={0}
@@ -181,12 +199,12 @@ export default function FamilyDetail() {
                     </div>
 
                     {/* Members Section */}
-                    <div className="lg:pa-col-span-4">
+                    <div className="lg:oa-col-span-4">
                         <Card>
-                            <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
-                                <h3 className="pa-h3">Guardians</h3>
+                            <div className="oa-flex oa-justify-between oa-items-center oa-mb-4">
+                                <h3 className="oa-h3">Guardians</h3>
                             </div>
-                             <PlatformDataTable
+                             <OrgDataTable
                                 data={family.members || []}
                                 columns={memberColumns}
                                 page={0}

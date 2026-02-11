@@ -10,12 +10,14 @@ import { getTeams, getActiveSeason, getTeamRoster } from '../../data/services/te
 import { getOrganizationUsers } from '../../data/services/usersService'
 import type { Level, Program, Sport, Team } from '../../data/types/organization'
 import OfflineBanner from '../../components/admin/OfflineBanner'
-import { AdminPageHeader, Button, Card, Table, type TableColumn } from '../../components/platformAdmin'
+import { AdminPageHeader, Button, Card, Table, type TableColumn } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
 import { getRandomSportImagePath } from '../../utils/sportImages'
 import { cn } from '../../utils/cn'
 import { PhotoSection } from '@/components/galleries/PhotoSection'
+import { useI18n } from '../../i18n/useI18n'
+import '../../styles/orgAdmin.css'
 
 type LevelRow = {
   id: string
@@ -45,6 +47,10 @@ function formatUpdatedRelative(iso: string | null | undefined): string {
   if (absHr < 24) return `Updated ${rtf.format(-diffHr, 'hour')}`
   const diffDay = Math.floor(diffHr / 24)
   return `Updated ${rtf.format(-diffDay, 'day')}`
+}
+
+function formatMetric(value: number | null): string {
+  return value === null ? '—' : value.toLocaleString()
 }
 
 function downloadCsv(filename: string, rows: Array<Record<string, unknown>>): boolean {
@@ -81,6 +87,7 @@ export default function ProgramDetail() {
   const { isOffline } = useOffline()
   const location = useLocation()
   const navigate = useNavigate()
+  const { t } = useI18n()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -120,6 +127,16 @@ export default function ProgramDetail() {
     if (levels.length > 0) return 'Active'
     return 'Planning'
   }, [levels.length, teams])
+
+  const heroStats = useMemo(
+    () => [
+      { label: t('admin.programs.stats.levels'), value: levels.length },
+      { label: t('admin.programs.stats.teams'), value: teams.length },
+      { label: t('admin.programs.stats.athletes'), value: totalAthletes },
+      { label: t('admin.programs.stats.coaches'), value: totalCoaches },
+    ],
+    [levels.length, teams.length, totalAthletes, totalCoaches, t]
+  )
 
   const loadProgramData = useCallback(async () => {
     if (!isReady) return
@@ -335,18 +352,18 @@ export default function ProgramDetail() {
         label: 'LEVEL NAME',
         cellType: 'primary',
         render: (row) => (
-          <div className="pa-flex pa-items-center pa-gap-2">
+          <div className="oa-flex oa-items-center oa-gap-2">
             <span
-              className="pa-body-s"
+              className="oa-body-s"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 'var(--pa-space-6)',
-                height: 'var(--pa-space-6)',
-                borderRadius: 'var(--pa-radius-xs)',
-                background: 'var(--pa-surface-panel)',
-                color: 'var(--pa-theme-text-accent)',
+                width: 'var(--oa-space-6)',
+                height: 'var(--oa-space-6)',
+                borderRadius: 'var(--oa-radius-xs)',
+                background: 'var(--oa-surface-panel)',
+                color: 'var(--oa-theme-text-accent)',
                 fontWeight: 800,
                 fontStyle: 'italic',
               }}
@@ -354,7 +371,7 @@ export default function ProgramDetail() {
             >
               {row.name.split(' ')[0]?.slice(0, 4).toUpperCase() || 'LVL'}
             </span>
-            <span className="pa-body-m" style={{ fontWeight: 700, color: 'var(--pa-n900)' }}>
+            <span className="oa-body-m" style={{ fontWeight: 700, color: 'var(--oa-n900)' }}>
               {row.name}
             </span>
           </div>
@@ -373,14 +390,14 @@ export default function ProgramDetail() {
         label: 'STATUS',
         render: (row) => (
           <span
-            className="pa-body-s"
+            className="oa-body-s"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              padding: 'calc(var(--pa-space-1) + 1px) var(--pa-space-2)',
-              borderRadius: 'var(--pa-radius-pill)',
-              background: row.status === 'active' ? 'var(--pa-theme-surface-highlight)' : 'var(--pa-surface-panel)',
-              color: row.status === 'active' ? 'var(--pa-theme-text-accent)' : 'var(--pa-n500)',
+              padding: 'calc(var(--oa-space-1) + 1px) var(--oa-space-2)',
+              borderRadius: 'var(--oa-radius-pill)',
+              background: row.status === 'active' ? 'var(--oa-theme-surface-highlight)' : 'var(--oa-surface-panel)',
+              color: row.status === 'active' ? 'var(--oa-theme-text-accent)' : 'var(--oa-n500)',
               fontWeight: 800,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
@@ -413,22 +430,43 @@ export default function ProgramDetail() {
 
   if (loading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
-        <div className="pa-skeleton" style={{ height: 'calc(var(--pa-space-9) * 9)' }} />
+        <div style={{ padding: '24px' }}>
+          <div className="oa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div className="oa-skeleton" style={{ height: '300px', borderRadius: '8px', marginBottom: '32px' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            <div>
+              <div className="oa-skeleton" style={{ height: '40px', marginBottom: '16px' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="oa-skeleton" style={{ height: '80px' }} />
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="oa-skeleton" style={{ height: '40px', marginBottom: '16px' }} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="oa-skeleton" style={{ height: '100px' }} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <OfflineBanner />
 
       <div
         style={{
-          maxWidth: 'calc(var(--pa-space-9) * 22.5)',
+          maxWidth: 'calc(var(--oa-space-9) * 22.5)',
           margin: '0 auto',
-          padding: 'var(--pa-space-6) var(--pa-space-4)',
+          padding: 'var(--oa-space-6) var(--oa-space-4)',
         }}
       >
         <AdminPageHeader
@@ -440,7 +478,7 @@ export default function ProgramDetail() {
             { label: program?.name || 'Program' },
           ]}
           actions={
-            <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
+            <div className="oa-flex oa-flex-col sm:oa-flex-row oa-gap-2">
               <Link to={programsRoute} className="w-full sm:w-auto">
                 <Button variant="ghost" disabled={loading} aria-label="Navigate back to programs list" className="w-full sm:w-auto min-h-[44px]">
                   Back to Programs
@@ -473,27 +511,27 @@ export default function ProgramDetail() {
         />
 
         {successMessage && (
-          <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-success)' }}>
-            <div className="pa-body-m" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)', color: 'var(--pa-n900)' }}>
+          <Card className="oa-mb-6" style={{ borderLeft: '3px solid var(--oa-success)' }}>
+            <div className="oa-body-m" style={{ padding: 'var(--oa-space-3) var(--oa-space-4)', color: 'var(--oa-n900)' }}>
               {successMessage}
             </div>
           </Card>
         )}
 
         {actionError && (
-          <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
-            <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+          <Card className="oa-mb-6" style={{ borderLeft: '3px solid var(--oa-danger)' }}>
+            <div className="oa-body-m oa-text-danger" style={{ padding: 'var(--oa-space-3) var(--oa-space-4)' }}>
               {actionError}
             </div>
           </Card>
         )}
 
         {error && (
-          <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
-            <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+          <Card className="oa-mb-6" style={{ borderLeft: '3px solid var(--oa-danger)' }}>
+            <div className="oa-body-m oa-text-danger" style={{ padding: 'var(--oa-space-3) var(--oa-space-4)' }}>
               {error}
             </div>
-            <div style={{ padding: '0 var(--pa-space-4) var(--pa-space-3)' }}>
+            <div style={{ padding: '0 var(--oa-space-4) var(--oa-space-3)' }}>
               <Button variant="ghost" size="dense" onClick={loadProgramData} disabled={loading}>
                 Retry
               </Button>
@@ -506,13 +544,13 @@ export default function ProgramDetail() {
             {/* Hero band */}
             <div
               style={{
-                height: 'calc(var(--pa-space-9) * 3)',
-                borderRadius: 'var(--pa-radius-l)',
+                height: 'calc(var(--oa-space-9) * 3)',
+                borderRadius: 'var(--oa-radius-l)',
                 overflow: 'hidden',
                 position: 'relative',
-                background: 'var(--pa-n900)',
-                marginBottom: 'var(--pa-space-6)',
-                border: '1px solid var(--pa-n100)',
+                background: 'var(--oa-n900)',
+                marginBottom: 'var(--oa-space-6)',
+                border: '1px solid var(--oa-n100)',
               }}
               aria-label="Program hero"
             >
@@ -530,33 +568,34 @@ export default function ProgramDetail() {
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  background: 'linear-gradient(to top, var(--pa-n900), transparent)',
+                  background: 'linear-gradient(to top, var(--oa-n900), transparent)',
                   opacity: 0.9,
                 }}
               />
               <div
-                className="pa-flex pa-items-center"
+                className="oa-flex oa-items-center"
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  padding: '0 var(--pa-space-6)',
+                  padding: '0 var(--oa-space-6)',
                 }}
               >
                 <div
-                  className="pa-flex pa-items-center"
-                  style={{ gap: 'var(--pa-space-8)', flexShrink: 0 }}
+                  className="oa-grid"
+                  style={{
+                    width: '100%',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                    gap: 'var(--oa-space-6)',
+                  }}
                 >
-                  {[
-                    { label: 'Athletes', value: totalAthletes },
-                    { label: 'Coaches', value: totalCoaches },
-                  ].map((stat) => (
+                  {heroStats.map((stat) => (
                     <div
                       key={stat.label}
-                      className="pa-display-xl"
+                      className="oa-display-xl"
                       style={{
                         display: 'flex',
                         alignItems: 'baseline',
-                        color: 'var(--pa-white)',
+                        color: 'var(--oa-white)',
                         fontWeight: 900,
                         letterSpacing: '-0.03em',
                         lineHeight: 1,
@@ -564,7 +603,7 @@ export default function ProgramDetail() {
                       }}
                     >
                       <span style={{ textAlign: 'right' }}>
-                        {stat.value === null ? '—' : stat.value.toLocaleString()}
+                        {formatMetric(stat.value)}
                       </span>
                       <span style={{ fontWeight: 400, opacity: 0.7 }}>{stat.label}</span>
                     </div>
@@ -575,131 +614,136 @@ export default function ProgramDetail() {
 
             {/* Main grid */}
             <div
-              className="pa-grid"
+              className="oa-grid"
               style={{
                 gridTemplateColumns: 'minmax(0, 1fr)',
                 alignItems: 'start',
               }}
             >
               <div
-                className="pa-grid"
+                className="oa-grid"
                 style={{
                   gridTemplateColumns: 'minmax(0, 1fr)',
-                  gap: 'var(--pa-space-6)',
+                  gap: 'var(--oa-space-6)',
                 }}
               >
                 {/* Action bar */}
                 <Card className="oa-card">
-                  <div className="pa-flex pa-justify-between pa-items-center" style={{ gap: 'var(--pa-space-4)' }}>
-                    <div className="pa-flex pa-items-center" style={{ gap: 'var(--pa-space-3)' }}>
-                      <span className="pa-badge pa-badge--info pa-body-s" style={{ fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-                        Status: {statusLabel}
-                      </span>
-                      <span className="pa-body-m pa-text-muted">
-                        {updatedLabel}
+                  <div className="oa-flex oa-flex-col oa-gap-4">
+                    <div className="oa-flex oa-justify-between oa-items-center oa-gap-2">
+                      <span className="oa-badge oa-badge--info" style={{ fontWeight: 700 }}>
+                        {t('admin.programs.statusCard.statusLabel')}: {statusLabel}
                       </span>
                     </div>
-
-                    <div className="pa-flex pa-flex-col sm:pa-flex-row pa-items-stretch sm:pa-items-center pa-gap-2" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      <Link
-                        to={`${getLink('admin.programs.update', { id: programId })}?returnUrl=${encodeURIComponent(detailRoute)}`}
-                        onClick={(e) => {
-                          if (!programId) {
-                            e.preventDefault()
-                            setActionError('Program ID is required to edit program.')
-                          }
-                        }}
-                        className="w-full sm:w-auto"
-                      >
-                        <Button
-                          variant="ghost"
-                          icon="edit"
-                          disabled={loading || !programId}
-                          aria-label={`Edit ${program?.name || 'program'}`}
-                          className="w-full sm:w-auto min-h-[44px]"
+                    <div className="oa-flex oa-justify-between oa-gap-2 oa-flex-wrap">
+                      <div className="oa-flex oa-gap-2 oa-flex-wrap">
+                        <Link
+                          to={`${getLink('admin.programs.update', { id: programId })}?returnUrl=${encodeURIComponent(detailRoute)}`}
+                          onClick={(e) => {
+                            if (!programId) {
+                              e.preventDefault()
+                              setActionError('Program ID is required to edit program.')
+                            }
+                          }}
+                          className="w-full sm:w-auto"
                         >
-                          Edit Program
-                        </Button>
-                      </Link>
+                          <Button
+                            variant="ghost"
+                            icon="edit"
+                            disabled={loading || !programId}
+                            aria-label={`Edit ${program?.name || 'program'}`}
+                            className="w-full sm:w-auto min-h-[44px]"
+                          >
+                            Edit Program
+                          </Button>
+                        </Link>
 
-                      <Link to={levelsRoute} className="w-full sm:w-auto">
-                        <Button variant="ghost" disabled={loading} aria-label="Navigate to all levels" className="w-full sm:w-auto min-h-[44px]">
-                          View Levels
-                        </Button>
-                      </Link>
+                        <Link to={levelsRoute} className="w-full sm:w-auto">
+                          <Button
+                            variant="ghost"
+                            disabled={loading}
+                            aria-label="Navigate to all levels"
+                            className="w-full sm:w-auto min-h-[44px]"
+                          >
+                            View Levels
+                          </Button>
+                        </Link>
+                      </div>
 
-                      <Link
-                        to={`${formsRoute}?type=level&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
-                        className={cn(isOffline || USE_FAKE_DATA ? 'pa-disabled-link' : '', 'w-full sm:w-auto')}
-                        onClick={(e) => {
-                          if (isOffline || USE_FAKE_DATA) {
-                            e.preventDefault()
-                            setActionError(
+                      <div className="oa-flex oa-gap-2 oa-flex-wrap">
+                        <Link
+                          to={`${formsRoute}?type=level&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
+                          className={cn(isOffline || USE_FAKE_DATA ? 'oa-disabled-link' : '', 'w-full sm:w-auto')}
+                          onClick={(e) => {
+                            if (isOffline || USE_FAKE_DATA) {
+                              e.preventDefault()
+                              setActionError(
+                                isOffline
+                                  ? 'You appear to be offline. Please reconnect and try again.'
+                                  : 'This action is not available in demo mode. Please sign in to add levels.'
+                              )
+                            } else if (!programId || !program.sport_id) {
+                              e.preventDefault()
+                              setActionError('Program and sport information is required to add a level.')
+                            }
+                          }}
+                        >
+                          <OrgAdminButton
+                            variant="primary"
+                            icon="add_circle"
+                            disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
+                            title={
                               isOffline
-                                ? 'You appear to be offline. Please reconnect and try again.'
-                                : 'This action is not available in demo mode. Please sign in to add levels.'
-                            )
-                          } else if (!programId || !program.sport_id) {
-                            e.preventDefault()
-                            setActionError('Program and sport information is required to add a level.')
-                          }
-                        }}
-                      >
-                        <OrgAdminButton
-                          variant="primary"
-                          icon="add_circle"
-                          disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
-                          title={
-                            isOffline
-                              ? 'Offline - cannot add levels'
-                              : USE_FAKE_DATA
-                                ? 'Sign in to add levels'
-                                : !programId || !program.sport_id
-                                  ? 'Missing required information'
-                                  : undefined
-                          }
-                          aria-label="Add a new level to this program"
-                          className="w-full sm:w-auto min-h-[44px]"
-                        >
-                          Add Level
-                        </OrgAdminButton>
-                      </Link>
+                                ? 'Offline - cannot add levels'
+                                : USE_FAKE_DATA
+                                  ? 'Sign in to add levels'
+                                  : !programId || !program.sport_id
+                                    ? 'Missing required information'
+                                    : undefined
+                            }
+                            aria-label="Add a new level to this program"
+                            className="w-full sm:w-auto min-h-[44px]"
+                          >
+                            Add Level
+                          </OrgAdminButton>
+                        </Link>
 
-                      <Link
-                        to={`${formsRoute}?type=team&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
-                        className="w-full sm:w-auto"
-                        onClick={(e) => {
-                          if (isOffline || USE_FAKE_DATA) {
-                            e.preventDefault()
-                            setActionError(
-                              isOffline
-                                ? 'You appear to be offline. Please reconnect and try again.'
-                                : 'This action is not available in demo mode. Please sign in to add teams.'
-                            )
-                          } else if (!programId || !program.sport_id) {
-                            e.preventDefault()
-                            setActionError('Program and sport information is required to add a team.')
-                          }
-                        }}
-                      >
-                        <Button
-                          variant="secondary"
-                          disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
-                          title={
-                            isOffline
-                              ? 'Offline - cannot add teams'
-                              : USE_FAKE_DATA
-                                ? 'Sign in to add teams'
-                                : !programId || !program.sport_id
-                                  ? 'Missing required information'
-                                  : undefined
-                          }
-                          aria-label="Add a new team to this program"
-                          className="w-full sm:w-auto min-h-[44px]"
+                        <Link
+                          to={`${formsRoute}?type=team&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
+                          className="w-full sm:w-auto"
+                          onClick={(e) => {
+                            if (isOffline || USE_FAKE_DATA) {
+                              e.preventDefault()
+                              setActionError(
+                                isOffline
+                                  ? 'You appear to be offline. Please reconnect and try again.'
+                                  : 'This action is not available in demo mode. Please sign in to add teams.'
+                              )
+                            } else if (!programId || !program.sport_id) {
+                              e.preventDefault()
+                              setActionError('Program and sport information is required to add a team.')
+                            }
+                          }}
                         >
-                          Add Team
-                        </Button>
-                      </Link>
+                          <Button
+                            variant="secondary"
+                            disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
+                            title={
+                              isOffline
+                                ? 'Offline - cannot add teams'
+                                : USE_FAKE_DATA
+                                  ? 'Sign in to add teams'
+                                  : !programId || !program.sport_id
+                                    ? 'Missing required information'
+                                    : undefined
+                            }
+                            aria-label="Add a new team to this program"
+                            className="w-full sm:w-auto min-h-[44px]"
+                          >
+                            Add Team
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -727,11 +771,11 @@ export default function ProgramDetail() {
                     data={levelRows}
                     onRowClick={handleNavigateToLevel}
                     emptyState={
-                      <div style={{ padding: 'var(--pa-space-8) var(--pa-space-5)' }}>
-                        <div className="pa-h3" style={{ textAlign: 'center', marginBottom: 'var(--pa-space-2)' }}>
+                      <div style={{ padding: 'var(--oa-space-8) var(--oa-space-5)' }}>
+                        <div className="oa-h3" style={{ textAlign: 'center', marginBottom: 'var(--oa-space-2)' }}>
                           No levels yet
                         </div>
-                        <div className="pa-body-m" style={{ textAlign: 'center', color: 'var(--pa-n600)' }}>
+                        <div className="oa-body-m" style={{ textAlign: 'center', color: 'var(--oa-n600)' }}>
                           Add a level to start organizing teams and eligibility.
                         </div>
                       </div>
@@ -740,11 +784,12 @@ export default function ProgramDetail() {
                 </Card>
 
                 <Card>
-                  <h3 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-3)' }}>Photos</h3>
+                  <h3 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-3)' }}>Photos</h3>
                   <PhotoSection
                     entityType="program"
                     entityId={programId}
                     title="Program Photos"
+                    context="admin"
                   />
                 </Card>
               </div>

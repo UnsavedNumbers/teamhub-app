@@ -8,8 +8,10 @@ import { getAthletePhotoUrl } from '../../data/services/athletePhotoService'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
 import { useT } from '../../i18n/useI18n'
-import { Button, Card, Table, type TableColumn, Tabs, TabsList, TabsTrigger, TabsContent, StatCard, Badge, ConfirmDialog } from '../../components/platformAdmin'
+import { Button, Card, Table, type TableColumn, Badge, ConfirmDialog } from '../../components/admin'
+import { Tabs, TabsList, TabsTrigger, TabsContent, StatCard } from '../../components/platformAdmin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getDisplayName, calculateAge, getGenderLabel, formatSports, getAthleteInitials } from '../../utils/athleteHelpers'
 import { formatPhoneDisplay } from '../../utils/phoneFormatting'
 import { GuardianMatchIndicator } from '../../components/admin/GuardianMatchIndicator'
@@ -20,6 +22,7 @@ import { PhotoSection } from '@/components/galleries/PhotoSection'
 import type { Athlete, Guardian, GuardianMatch, PendingGuardianInvite } from '../../types/family'
 import type { AthleteSportWithDetails } from '../../data/services/athleteSportsService'
 import type { SportCode } from '../../types/sports'
+import '../../styles/orgAdmin.css'
 
 interface TeamMembership {
   id: string
@@ -588,7 +591,7 @@ export default function AthleteDetail() {
         <button
           onClick={() => handleTeamClick(row.team_id)}
           disabled={navigating}
-          className="pa-link"
+          className="oa-link"
           style={{
             fontWeight: 700,
             textDecoration: 'none',
@@ -708,7 +711,7 @@ export default function AthleteDetail() {
         const expiresDate = new Date(invite.expires_at)
         const isExpired = expiresDate < new Date()
         return (
-          <span style={{ color: isExpired ? 'var(--pa-danger)' : 'inherit' }}>
+          <span style={{ color: isExpired ? 'var(--oa-danger)' : 'inherit' }}>
             {isExpired ? t('admin.athletes.guardians.expired') : expiresDate.toLocaleDateString()}
           </span>
         )
@@ -719,7 +722,7 @@ export default function AthleteDetail() {
       label: t('admin.athletes.table.action').toUpperCase(),
       align: 'right',
       render: (invite) => (
-        <div style={{ display: 'flex', gap: 'var(--pa-space-2)', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 'var(--oa-space-2)', justifyContent: 'flex-end' }}>
           <Button
             variant="secondary"
             size="compact"
@@ -752,19 +755,33 @@ export default function AthleteDetail() {
   // Early returns - after all hooks
   if (loading) {
     return (
-      <div className="pa-root">
-        <div className="pa-skeleton" style={{ height: '400px' }} />
+      <div className="oa-root">
+        <OfflineBanner />
+        <div style={{ padding: '24px' }}>
+          <div className="oa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div className="oa-skeleton" style={{ height: '320px', borderRadius: '8px', marginBottom: '24px' }} />
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: '1px solid var(--oa-n200)' }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="oa-skeleton" style={{ height: '40px', width: '120px' }} />
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="oa-skeleton" style={{ height: '200px' }} />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
 
   if (!athlete || error) {
     return (
-      <div className="pa-root">
-        <div className="pa-page-header">
-          <h1 className="pa-page-title">{t('admin.athletes.notFound')}</h1>
-          {error && <p className="pa-body-m" style={{ color: 'var(--pa-danger)', marginTop: 'var(--pa-space-2)' }}>{error}</p>}
-          <div style={{ marginTop: 'var(--pa-space-4)' }}>
+      <div className="oa-root">
+        <div className="oa-page-header">
+          <h1 className="oa-page-title">{t('admin.athletes.notFound')}</h1>
+          {error && <p className="oa-body-m" style={{ color: 'var(--oa-danger)', marginTop: 'var(--oa-space-2)' }}>{error}</p>}
+          <div style={{ marginTop: 'var(--oa-space-4)' }}>
             <OrgAdminButton variant="primary" onClick={() => navigate(getLink('admin.athletes.list'))}>
               {t('admin.athletes.backToList')}
             </OrgAdminButton>
@@ -781,7 +798,7 @@ export default function AthleteDetail() {
   const { plays, interested } = formatSports(athlete.sports)
   const initials = getAthleteInitials(athlete.first_name, athlete.last_name)
   const updatedLabel = formatUpdatedRelative(athlete.updated_at)
-  const primaryColor = 'var(--pa-theme-action-primary, var(--org-btn-primary-bg, #137fec))'
+  const primaryColor = 'var(--oa-theme-action-primary, var(--org-btn-primary-bg, #137fec))'
 
   // Stats
   const activeTeams = teams.filter(t => t.status === 'active').length
@@ -790,14 +807,14 @@ export default function AthleteDetail() {
   const interestedCount = interested.length
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <div
         style={{
           maxWidth: '1200px',
           margin: '0 auto',
           width: '100%',
-          padding: 'var(--pa-space-6) var(--pa-space-4)',
-          paddingBottom: 'var(--pa-space-10)',
+          padding: 'var(--oa-space-6) var(--oa-space-4)',
+          paddingBottom: 'var(--oa-space-10)',
         }}
         className="md:px-8"
       >
@@ -807,8 +824,8 @@ export default function AthleteDetail() {
             display: 'flex',
             flexWrap: 'wrap',
             alignItems: 'center',
-            gap: 'var(--pa-space-2)',
-            marginBottom: 'var(--pa-space-6)',
+            gap: 'var(--oa-space-2)',
+            marginBottom: 'var(--oa-space-6)',
           }}
         >
           <button
@@ -831,7 +848,7 @@ export default function AthleteDetail() {
           >
             ORGANIZATIONS
           </button>
-          <span style={{ color: 'var(--pa-n400)', fontSize: '12px', fontWeight: 700, lineHeight: 'normal' }}>/</span>
+          <span style={{ color: 'var(--oa-n400)', fontSize: '12px', fontWeight: 700, lineHeight: 'normal' }}>/</span>
           <button
             onClick={() => handleBreadcrumbClick(getLink('admin.athletes.list'))}
             disabled={navigating}
@@ -852,10 +869,10 @@ export default function AthleteDetail() {
           >
             {t('admin.athletes.breadcrumb').toUpperCase()}
           </button>
-          <span style={{ color: 'var(--pa-n400)', fontSize: '12px', fontWeight: 700, lineHeight: 'normal' }}>/</span>
+          <span style={{ color: 'var(--oa-n400)', fontSize: '12px', fontWeight: 700, lineHeight: 'normal' }}>/</span>
           <span
             style={{
-              color: 'var(--pa-n600)',
+              color: 'var(--oa-n600)',
               fontSize: '12px',
               fontWeight: 700,
               textTransform: 'uppercase',
@@ -873,8 +890,8 @@ export default function AthleteDetail() {
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 'var(--pa-space-6)',
-            marginBottom: 'var(--pa-space-8)',
+            gap: 'var(--oa-space-6)',
+            marginBottom: 'var(--oa-space-8)',
           }}
         >
           {/* Top Row: Avatar, Name, Edit Button */}
@@ -882,7 +899,7 @@ export default function AthleteDetail() {
             style={{
               display: 'flex',
               alignItems: 'flex-start',
-              gap: 'var(--pa-space-6)',
+              gap: 'var(--oa-space-6)',
               flexWrap: 'wrap',
             }}
           >
@@ -891,10 +908,10 @@ export default function AthleteDetail() {
               style={{
                 width: '120px',
                 height: '120px',
-                background: 'var(--pa-white)',
-                borderRadius: 'var(--pa-radius-l)',
-                border: '2px solid var(--pa-n200)',
-                boxShadow: 'var(--pa-shadow-2)',
+                background: 'var(--oa-white)',
+                borderRadius: 'var(--oa-radius-l)',
+                border: '2px solid var(--oa-n200)',
+                boxShadow: 'var(--oa-shadow-2)',
                 overflow: 'hidden',
                 flexShrink: 0,
               }}
@@ -931,15 +948,15 @@ export default function AthleteDetail() {
 
             {/* Name and Info */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-4)', flexWrap: 'wrap', marginBottom: 'var(--pa-space-3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oa-space-4)', flexWrap: 'wrap', marginBottom: 'var(--oa-space-3)' }}>
                 <h1
                   style={{
-                    fontFamily: 'var(--pa-font-display)',
+                    fontFamily: 'var(--oa-font-display)',
                     fontSize: 'clamp(2rem, 4vw, 3rem)',
                     fontWeight: 900,
                     lineHeight: 1.1,
                     letterSpacing: '-0.02em',
-                    color: 'var(--pa-n900)',
+                    color: 'var(--oa-n900)',
                     margin: 0,
                   }}
                   className="dark:text-white"
@@ -958,7 +975,7 @@ export default function AthleteDetail() {
               </div>
 
               {/* Info Badges Row */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--pa-space-2)', alignItems: 'center' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oa-space-2)', alignItems: 'center' }}>
                 {age !== null && (
                   <Badge variant="neutral" size="small">
                     Age {age}
@@ -996,8 +1013,8 @@ export default function AthleteDetail() {
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: 'var(--pa-space-4)',
-              marginBottom: 'var(--pa-space-8)',
+              gap: 'var(--oa-space-4)',
+              marginBottom: 'var(--oa-space-8)',
             }}
           >
           <StatCard
@@ -1037,11 +1054,11 @@ export default function AthleteDetail() {
               {pendingInvites.length > 0 && (
                 <span 
                   style={{ 
-                    marginLeft: 'var(--pa-space-2)', 
+                    marginLeft: 'var(--oa-space-2)', 
                     width: '8px', 
                     height: '8px', 
                     borderRadius: '50%', 
-                    background: 'var(--pa-warning-500, #f59e0b)',
+                    background: 'var(--oa-warning-500, #f59e0b)',
                     display: 'inline-block'
                   }} 
                 />
@@ -1052,29 +1069,29 @@ export default function AthleteDetail() {
           </TabsList>
 
           <TabsContent value="overview">
-            <div style={{ display: 'grid', gap: 'var(--pa-space-6)' }}>
+            <div style={{ display: 'grid', gap: 'var(--oa-space-6)' }}>
               {/* Guardian Status Banner */}
               {athlete && (
                 <Card style={{ 
                   background: athlete.has_active_guardian 
-                    ? 'var(--pa-n50, #f5f6f7)' 
-                    : 'var(--pa-n25, #fafafa)', 
-                  border: `1px solid ${athlete.has_active_guardian ? 'var(--pa-n200, #d8dde3)' : 'var(--pa-n200, #d8dde3)'}`,
-                  padding: 'var(--pa-space-4)'
+                    ? 'var(--oa-n50, #f5f6f7)' 
+                    : 'var(--oa-n25, #fafafa)', 
+                  border: `1px solid ${athlete.has_active_guardian ? 'var(--oa-n200, #d8dde3)' : 'var(--oa-n200, #d8dde3)'}`,
+                  padding: 'var(--oa-space-4)'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oa-space-3)' }}>
                     <span 
                       className="material-symbols-outlined" 
                       style={{ 
                         fontSize: '20px',
                         color: athlete.has_active_guardian 
-                          ? 'var(--pa-success, #10b981)' 
-                          : 'var(--pa-n500, #7a8794)'
+                          ? 'var(--oa-success, #10b981)' 
+                          : 'var(--oa-n500, #7a8794)'
                       }}
                     >
                       {athlete.has_active_guardian ? 'check_circle' : 'info'}
                     </span>
-                    <p className="pa-body-m" style={{ margin: 0, color: 'var(--pa-n700, #2b343d)' }}>
+                    <p className="oa-body-m" style={{ margin: 0, color: 'var(--oa-n700, #2b343d)' }}>
                       {athlete.has_active_guardian 
                         ? 'This athlete has an active guardian account connected.'
                         : 'This athlete does not have an active guardian account connected.'}
@@ -1086,21 +1103,21 @@ export default function AthleteDetail() {
               {/* Pending Guardian Invites Alert */}
               {pendingInvites.length > 0 && (
                 <Card style={{ 
-                  background: 'var(--pa-warning-50, #fffbeb)', 
-                  border: '1px solid var(--pa-warning-200, #fde68a)' 
+                  background: 'var(--oa-warning-50, #fffbeb)', 
+                  border: '1px solid var(--oa-warning-200, #fde68a)' 
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--pa-space-3)' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--oa-space-3)' }}>
                     <span 
                       className="material-symbols-rounded" 
-                      style={{ color: 'var(--pa-warning-600, #d97706)', fontSize: '24px' }}
+                      style={{ color: 'var(--oa-warning-600, #d97706)', fontSize: '24px' }}
                     >
                       mail
                     </span>
                     <div style={{ flex: 1 }}>
-                      <h3 className="pa-body-l" style={{ fontWeight: 700, margin: 0, color: 'var(--pa-warning-800, #92400e)' }}>
+                      <h3 className="oa-body-l" style={{ fontWeight: 700, margin: 0, color: 'var(--oa-warning-800, #92400e)' }}>
                         {t('admin.athletes.guardians.pendingInvitesTitle', { count: pendingInvites.length })}
                       </h3>
-                      <p className="pa-body-s" style={{ color: 'var(--pa-warning-700, #b45309)', marginTop: 'var(--pa-space-1)', marginBottom: 'var(--pa-space-3)' }}>
+                      <p className="oa-body-s" style={{ color: 'var(--oa-warning-700, #b45309)', marginTop: 'var(--oa-space-1)', marginBottom: 'var(--oa-space-3)' }}>
                         {pendingInvites.map(i => i.email).join(', ')}
                       </p>
                       <Button
@@ -1117,51 +1134,51 @@ export default function AthleteDetail() {
 
               {/* Basic Information */}
               <Card>
-                <h2 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-4)' }}>{t('admin.athletes.basicInfo.title')}</h2>
-                <div style={{ display: 'grid', gap: 'var(--pa-space-4)' }}>
+                <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>{t('admin.athletes.basicInfo.title')}</h2>
+                <div style={{ display: 'grid', gap: 'var(--oa-space-4)' }}>
                   <div>
-                    <label className="pa-label">{t('admin.athletes.basicInfo.fullName')}</label>
-                    <p className="pa-body-m">{athlete.first_name} {athlete.last_name}</p>
+                    <label className="oa-label">{t('admin.athletes.basicInfo.fullName')}</label>
+                    <p className="oa-body-m">{athlete.first_name} {athlete.last_name}</p>
                   </div>
                   {athlete.preferred_name && (
                     <div>
-                      <label className="pa-label">{t('admin.athletes.basicInfo.preferredName')}</label>
-                      <p className="pa-body-m">{athlete.preferred_name}</p>
+                      <label className="oa-label">{t('admin.athletes.basicInfo.preferredName')}</label>
+                      <p className="oa-body-m">{athlete.preferred_name}</p>
                     </div>
                   )}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--pa-space-4)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--oa-space-4)' }}>
                     {age !== null && (
                       <div>
-                        <label className="pa-label">{t('admin.athletes.basicInfo.age')}</label>
-                        <p className="pa-body-m">{t('admin.athletes.basicInfo.yearsOld', { age })}</p>
+                        <label className="oa-label">{t('admin.athletes.basicInfo.age')}</label>
+                        <p className="oa-body-m">{t('admin.athletes.basicInfo.yearsOld', { age })}</p>
                       </div>
                     )}
                     {genderLabel !== 'Not specified' && (
                       <div>
-                        <label className="pa-label">{t('admin.athletes.basicInfo.gender')}</label>
-                        <p className="pa-body-m">{genderLabel}</p>
+                        <label className="oa-label">{t('admin.athletes.basicInfo.gender')}</label>
+                        <p className="oa-body-m">{genderLabel}</p>
                       </div>
                     )}
                     {athlete.date_of_birth && (
                       <div>
-                        <label className="pa-label">{t('admin.athletes.basicInfo.dateOfBirth')}</label>
-                        <p className="pa-body-m">{new Date(athlete.date_of_birth).toLocaleDateString()}</p>
+                        <label className="oa-label">{t('admin.athletes.basicInfo.dateOfBirth')}</label>
+                        <p className="oa-body-m">{new Date(athlete.date_of_birth).toLocaleDateString()}</p>
                       </div>
                     )}
                     {athlete.jersey_number && (
                       <div>
-                        <label className="pa-label">{t('admin.athletes.basicInfo.jerseyNumber')}</label>
-                        <p className="pa-body-m">#{athlete.jersey_number}</p>
+                        <label className="oa-label">{t('admin.athletes.basicInfo.jerseyNumber')}</label>
+                        <p className="oa-body-m">#{athlete.jersey_number}</p>
                       </div>
                     )}
                   </div>
                   {(athlete.phone || athlete.email) && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--pa-space-4)', marginTop: 'var(--pa-space-4)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--oa-space-4)', marginTop: 'var(--oa-space-4)' }}>
                       {athlete.phone && (
                         <div>
-                          <label className="pa-label">Phone</label>
-                          <p className="pa-body-m">
-                            <a href={`tel:${athlete.phone}`} className="pa-link">
+                          <label className="oa-label">Phone</label>
+                          <p className="oa-body-m">
+                            <a href={`tel:${athlete.phone}`} className="oa-link">
                               {formatPhoneDisplay(athlete.phone)}
                             </a>
                           </p>
@@ -1169,9 +1186,9 @@ export default function AthleteDetail() {
                       )}
                       {athlete.email && (
                         <div>
-                          <label className="pa-label">Email</label>
-                          <p className="pa-body-m">
-                            <a href={`mailto:${athlete.email}`} className="pa-link">
+                          <label className="oa-label">Email</label>
+                          <p className="oa-body-m">
+                            <a href={`mailto:${athlete.email}`} className="oa-link">
                               {athlete.email}
                             </a>
                           </p>
@@ -1185,12 +1202,12 @@ export default function AthleteDetail() {
               {/* Sports Summary */}
               {(plays.length > 0 || interested.length > 0) && (
                 <Card>
-                  <h2 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-4)' }}>{t('admin.athletes.sports.title')}</h2>
-                  <div style={{ display: 'grid', gap: 'var(--pa-space-3)' }}>
+                  <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>{t('admin.athletes.sports.title')}</h2>
+                  <div style={{ display: 'grid', gap: 'var(--oa-space-3)' }}>
                     {plays.length > 0 && (
                       <div>
-                        <label className="pa-label">{t('admin.athletes.sports.plays')}</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--pa-space-2)', marginTop: 'var(--pa-space-2)' }}>
+                        <label className="oa-label">{t('admin.athletes.sports.plays')}</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oa-space-2)', marginTop: 'var(--oa-space-2)' }}>
                           {plays.map((sport) => (
                             <Badge key={sport} variant="success">{sport}</Badge>
                           ))}
@@ -1199,8 +1216,8 @@ export default function AthleteDetail() {
                     )}
                     {interested.length > 0 && (
                       <div>
-                        <label className="pa-label">{t('admin.athletes.sports.interested')}</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--pa-space-2)', marginTop: 'var(--pa-space-2)' }}>
+                        <label className="oa-label">{t('admin.athletes.sports.interested')}</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oa-space-2)', marginTop: 'var(--oa-space-2)' }}>
                           {interested.map((sport) => (
                             <Badge key={sport} variant="neutral">{sport}</Badge>
                           ))}
@@ -1214,19 +1231,19 @@ export default function AthleteDetail() {
               {/* Emergency Contact */}
               {(athlete.emergency_contact_name || athlete.emergency_contact_phone) && (
                 <Card>
-                  <h2 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-4)' }}>{t('admin.athletes.emergencyContact.title')}</h2>
-                  <div style={{ display: 'grid', gap: 'var(--pa-space-4)' }}>
+                  <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>{t('admin.athletes.emergencyContact.title')}</h2>
+                  <div style={{ display: 'grid', gap: 'var(--oa-space-4)' }}>
                     {athlete.emergency_contact_name && (
                       <div>
-                        <label className="pa-label">{t('admin.athletes.emergencyContact.name')}</label>
-                        <p className="pa-body-m">{athlete.emergency_contact_name}</p>
+                        <label className="oa-label">{t('admin.athletes.emergencyContact.name')}</label>
+                        <p className="oa-body-m">{athlete.emergency_contact_name}</p>
                       </div>
                     )}
                     {athlete.emergency_contact_phone && (
                       <div>
-                        <label className="pa-label">{t('admin.athletes.emergencyContact.phone')}</label>
-                        <p className="pa-body-m">
-                          <a href={`tel:${athlete.emergency_contact_phone}`} className="pa-link">
+                        <label className="oa-label">{t('admin.athletes.emergencyContact.phone')}</label>
+                        <p className="oa-body-m">
+                          <a href={`tel:${athlete.emergency_contact_phone}`} className="oa-link">
                             {athlete.emergency_contact_phone}
                           </a>
                         </p>
@@ -1239,30 +1256,30 @@ export default function AthleteDetail() {
           </TabsContent>
 
           <TabsContent value="sport_profiles">
-            <div style={{ marginBottom: 'var(--pa-space-4)' }}>
+            <div style={{ marginBottom: 'var(--oa-space-4)' }}>
               <Card>
-                <h2 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-4)' }}>Select Sport</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 'var(--pa-space-3)' }}>
+                <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>Select Sport</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 'var(--oa-space-3)' }}>
                   {(['soccer', 'basketball', 'baseball', 'football'] as SportCode[]).map((sport) => (
                     <button
                       key={sport}
                       onClick={() => setSelectedSport(sport)}
-                      className="pa-btn"
+                      className="oa-btn"
                       style={{
-                        padding: 'var(--pa-space-4)',
-                        border: selectedSport === sport ? '2px solid var(--pa-theme-action-primary)' : '1px solid var(--pa-border-default)',
-                        background: selectedSport === sport ? 'var(--pa-theme-action-primary-bg)' : 'transparent',
-                        borderRadius: 'var(--pa-radius-md)',
+                        padding: 'var(--oa-space-4)',
+                        border: selectedSport === sport ? '2px solid var(--oa-theme-action-primary)' : '1px solid var(--oa-border-default)',
+                        background: selectedSport === sport ? 'var(--oa-theme-action-primary-bg)' : 'transparent',
+                        borderRadius: 'var(--oa-radius-md)',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        gap: 'var(--pa-space-2)',
+                        gap: 'var(--oa-space-2)',
                         transition: 'all 0.2s ease',
                         cursor: 'pointer'
                       }}
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>sports</span>
-                      <span className="pa-body-s" style={{ fontWeight: 700, textTransform: 'capitalize' }}>
+                      <span className="oa-body-s" style={{ fontWeight: 700, textTransform: 'capitalize' }}>
                         {sport.replace('_', ' ')}
                       </span>
                     </button>
@@ -1272,50 +1289,50 @@ export default function AthleteDetail() {
             </div>
 
             {sportProfileLoading ? (
-              <div className="pa-skeleton" style={{ height: '200px' }} />
+              <div className="oa-skeleton" style={{ height: '200px' }} />
             ) : (
-              <div style={{ display: 'grid', gap: 'var(--pa-space-6)' }}>
+              <div style={{ display: 'grid', gap: 'var(--oa-space-6)' }}>
                 <Card>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--pa-space-4)' }}>
-                    <h2 className="pa-card-title" style={{ margin: 0 }}>Profile Data</h2>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--oa-space-4)' }}>
+                    <h2 className="oa-card-title" style={{ margin: 0 }}>Profile Data</h2>
                     <Badge variant={sportProfile?.completeness_score === 100 ? 'success' : 'warning'}>
                       {sportProfile?.completeness_score || 0}% Complete
                     </Badge>
                   </div>
                   
                   {profileFields.length > 0 ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--pa-space-4)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--oa-space-4)' }}>
                       {profileFields.map((field) => (
                         <div key={field.field_key}>
-                          <p className="pa-label">{field.field_label}</p>
-                          <p className="pa-body-m">
+                          <p className="oa-label">{field.field_label}</p>
+                          <p className="oa-body-m">
                             {sportProfile?.profile_data[field.field_key]?.toString() || '—'}
                           </p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="pa-body-m" style={{ color: 'var(--pa-n500)' }}>
+                    <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>
                       No profile fields configured for this sport
                     </p>
                   )}
                 </Card>
 
                 <Card>
-                  <h2 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-4)' }}>Equipment Data</h2>
+                  <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>Equipment Data</h2>
                   {equipmentFields.length > 0 ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--pa-space-4)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--oa-space-4)' }}>
                       {equipmentFields.map((field) => (
                         <div key={field.field_key}>
-                          <p className="pa-label">{field.field_label}</p>
-                          <p className="pa-body-m">
+                          <p className="oa-label">{field.field_label}</p>
+                          <p className="oa-body-m">
                             {sportProfile?.equipment_data[field.field_key]?.toString() || '—'}
                           </p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="pa-body-m" style={{ color: 'var(--pa-n500)' }}>
+                    <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>
                       No equipment fields configured for this sport
                     </p>
                   )}
@@ -1326,9 +1343,9 @@ export default function AthleteDetail() {
 
           <TabsContent value="teams">
             <Card>
-              <h2 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-4)' }}>{t('admin.athletes.teams.title')}</h2>
+              <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>{t('admin.athletes.teams.title')}</h2>
               {teams.length === 0 ? (
-                <p className="pa-body-m" style={{ color: 'var(--pa-n500)' }}>{t('admin.athletes.teams.empty')}</p>
+                <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.teams.empty')}</p>
               ) : (
                 <Table columns={teamColumns} data={teams} />
               )}
@@ -1337,15 +1354,15 @@ export default function AthleteDetail() {
 
           <TabsContent value="sports">
             <Card>
-              <h2 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-4)' }}>{t('admin.athletes.sports.title')}</h2>
+              <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>{t('admin.athletes.sports.title')}</h2>
               {sports.length === 0 ? (
-                <p className="pa-body-m" style={{ color: 'var(--pa-n500)' }}>{t('admin.athletes.sports.empty')}</p>
+                <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.sports.empty')}</p>
               ) : (
-                <div style={{ display: 'grid', gap: 'var(--pa-space-4)' }}>
+                <div style={{ display: 'grid', gap: 'var(--oa-space-4)' }}>
                   {plays.length > 0 && (
                     <div>
-                      <h3 className="pa-body-l" style={{ fontWeight: 700, marginBottom: 'var(--pa-space-3)' }}>{t('admin.athletes.sports.plays')}</h3>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--pa-space-2)' }}>
+                      <h3 className="oa-body-l" style={{ fontWeight: 700, marginBottom: 'var(--oa-space-3)' }}>{t('admin.athletes.sports.plays')}</h3>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oa-space-2)' }}>
                         {sports.filter(s => s.sport_type === 'plays').map((sport) => (
                           <Badge key={sport.sport_id} variant="success">{sport.sport_name}</Badge>
                         ))}
@@ -1354,8 +1371,8 @@ export default function AthleteDetail() {
                   )}
                   {interested.length > 0 && (
                     <div>
-                      <h3 className="pa-body-l" style={{ fontWeight: 700, marginBottom: 'var(--pa-space-3)' }}>{t('admin.athletes.sports.interested')}</h3>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--pa-space-2)' }}>
+                      <h3 className="oa-body-l" style={{ fontWeight: 700, marginBottom: 'var(--oa-space-3)' }}>{t('admin.athletes.sports.interested')}</h3>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oa-space-2)' }}>
                         {sports.filter(s => s.sport_type === 'interested').map((sport) => (
                           <Badge key={sport.sport_id} variant="neutral">{sport.sport_name}</Badge>
                         ))}
@@ -1368,15 +1385,15 @@ export default function AthleteDetail() {
           </TabsContent>
 
           <TabsContent value="guardians">
-            <div style={{ display: 'grid', gap: 'var(--pa-space-6)' }}>
+            <div style={{ display: 'grid', gap: 'var(--oa-space-6)' }}>
               {/* Pending Invites Section */}
               {pendingInvites.length > 0 && (
                 <Card>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--pa-space-4)' }}>
-                    <h2 className="pa-card-title" style={{ margin: 0 }}>{t('admin.athletes.guardians.pendingInvites')}</h2>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--oa-space-4)' }}>
+                    <h2 className="oa-card-title" style={{ margin: 0 }}>{t('admin.athletes.guardians.pendingInvites')}</h2>
                     <Badge variant="warning">{pendingInvites.length}</Badge>
                   </div>
-                  <p className="pa-body-s" style={{ color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-4)' }}>
+                  <p className="oa-body-s" style={{ color: 'var(--oa-n500)', marginBottom: 'var(--oa-space-4)' }}>
                     {t('admin.athletes.guardians.pendingInvitesDesc')}
                   </p>
                   <Table columns={pendingInviteColumns} data={pendingInvites} />
@@ -1385,8 +1402,8 @@ export default function AthleteDetail() {
 
               {/* Active Guardians Section */}
               <Card>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--pa-space-4)' }}>
-                  <h2 className="pa-card-title" style={{ margin: 0 }}>{t('admin.athletes.guardians.title')}</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--oa-space-4)' }}>
+                  <h2 className="oa-card-title" style={{ margin: 0 }}>{t('admin.athletes.guardians.title')}</h2>
                   <OrgAdminButton
                     variant="primary"
                     icon="person_add"
@@ -1397,9 +1414,9 @@ export default function AthleteDetail() {
                   </OrgAdminButton>
                 </div>
                 {guardians.length === 0 && pendingInvites.length === 0 ? (
-                  <p className="pa-body-m" style={{ color: 'var(--pa-n500)' }}>{t('admin.athletes.guardians.empty')}</p>
+                  <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.guardians.empty')}</p>
                 ) : guardians.length === 0 ? (
-                  <p className="pa-body-m" style={{ color: 'var(--pa-n500)' }}>{t('admin.athletes.guardians.noActiveGuardians')}</p>
+                  <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.guardians.noActiveGuardians')}</p>
                 ) : (
                   <Table columns={guardianColumns} data={guardians} />
                 )}
@@ -1408,28 +1425,28 @@ export default function AthleteDetail() {
           </TabsContent>
 
           <TabsContent value="medical">
-            <div style={{ display: 'grid', gap: 'var(--pa-space-6)' }}>
+            <div style={{ display: 'grid', gap: 'var(--oa-space-6)' }}>
               <Card>
-                <h2 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-4)' }}>{t('admin.athletes.medical.title')}</h2>
+                <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>{t('admin.athletes.medical.title')}</h2>
                 {athlete.medical_notes ? (
                   <div>
-                    <label className="pa-label">{t('admin.athletes.medical.notes')}</label>
-                    <p className="pa-body-m" style={{ whiteSpace: 'pre-wrap', marginTop: 'var(--pa-space-2)' }}>{athlete.medical_notes}</p>
+                    <label className="oa-label">{t('admin.athletes.medical.notes')}</label>
+                    <p className="oa-body-m" style={{ whiteSpace: 'pre-wrap', marginTop: 'var(--oa-space-2)' }}>{athlete.medical_notes}</p>
                   </div>
                 ) : (
-                  <p className="pa-body-m" style={{ color: 'var(--pa-n500)' }}>{t('admin.athletes.medical.noNotes')}</p>
+                  <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.medical.noNotes')}</p>
                 )}
               </Card>
 
               <Card>
-                <h2 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-4)' }}>{t('admin.athletes.medical.allergies')}</h2>
+                <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>{t('admin.athletes.medical.allergies')}</h2>
                 {athlete.allergies ? (
                   <div>
-                    <label className="pa-label">{t('admin.athletes.medical.knownAllergies')}</label>
-                    <p className="pa-body-m" style={{ whiteSpace: 'pre-wrap', marginTop: 'var(--pa-space-2)' }}>{athlete.allergies}</p>
+                    <label className="oa-label">{t('admin.athletes.medical.knownAllergies')}</label>
+                    <p className="oa-body-m" style={{ whiteSpace: 'pre-wrap', marginTop: 'var(--oa-space-2)' }}>{athlete.allergies}</p>
                   </div>
                 ) : (
-                  <p className="pa-body-m" style={{ color: 'var(--pa-n500)' }}>{t('admin.athletes.medical.noAllergies')}</p>
+                  <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.medical.noAllergies')}</p>
                 )}
               </Card>
             </div>
@@ -1437,12 +1454,13 @@ export default function AthleteDetail() {
 
           <TabsContent value="galleries">
             <Card>
-              <h2 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-3)' }}>Photos</h2>
+              <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-3)' }}>Photos</h2>
               <PhotoSection
                 entityType="athlete"
                 entityId={athlete.id}
                 orgId={athlete.org_id}
                 title="Athlete Photos"
+                context="admin"
               />
             </Card>
           </TabsContent>
@@ -1453,24 +1471,24 @@ export default function AthleteDetail() {
       {showLinkGuardianModal && (
         <div
           onClick={handleCloseLinkGuardianModal}
-          className="pa-modal-overlay"
+          className="oa-modal-overlay"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="pa-modal"
+            className="oa-modal"
           >
             {/* Header */}
-            <div className="pa-modal-header">
-              <h2 className="pa-h2">{t('admin.athletes.guardians.linkTitle')}</h2>
+            <div className="oa-modal-header">
+              <h2 className="oa-h2">{t('admin.athletes.guardians.linkTitle')}</h2>
             </div>
 
             {/* Content */}
-            <div className="pa-modal-content">
-              <div className="pa-form-group">
-                <label className="pa-label">
+            <div className="oa-modal-content">
+              <div className="oa-form-group">
+                <label className="oa-label">
                   {t('admin.athletes.guardians.emailLabel')}
                 </label>
-                <div className="pa-input-wrapper">
+                <div className="oa-input-wrapper">
                   <input
                     ref={emailInputRef}
                     type="email"
@@ -1482,19 +1500,19 @@ export default function AthleteDetail() {
                     }}
                     placeholder={t('admin.athletes.guardians.emailPlaceholder')}
                     disabled={isLinkingGuardian}
-                    className={linkGuardianError && emailTouched ? 'pa-input pa-input--error' : 'pa-input'}
+                    className={linkGuardianError && emailTouched ? 'oa-input oa-input--error' : 'oa-input'}
                     autoFocus
                   />
                 </div>
                 {linkGuardianError && emailTouched && (
-                  <p className="pa-body-s pa-helper pa-helper--error">
+                  <p className="oa-body-s oa-helper oa-helper--error">
                     {linkGuardianError}
                   </p>
                 )}
 
                 {/* Match Indicator */}
                 {emailTouched && guardianEmail && !linkGuardianError && (
-                  <div className="pa-mt-3">
+                  <div className="oa-mt-3">
                     <GuardianMatchIndicator
                       match={guardianMatch}
                       isLoading={isCheckingGuardian}
@@ -1506,7 +1524,7 @@ export default function AthleteDetail() {
             </div>
 
             {/* Actions */}
-            <div className="pa-modal-footer">
+            <div className="oa-modal-footer">
               <Button
                 variant="secondary"
                 onClick={handleCloseLinkGuardianModal}

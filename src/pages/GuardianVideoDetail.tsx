@@ -29,7 +29,7 @@ export default function GuardianVideoDetail() {
     enabled: !!videoId
   })
   
-  const { isFavorited, toggleFavorite } = useVideoFavorites(videoId || '')
+  useVideoFavorites({ enabled: !!videoId })
   
   const { notes, isLoading: _notesLoading } = useVideoNotes({
     videoId,
@@ -189,8 +189,7 @@ export default function GuardianVideoDetail() {
         <div className="flex gap-2">
           <VideoFavoriteButton
             videoId={videoId!}
-            isFavorited={isFavorited}
-            onToggle={toggleFavorite}
+            orgId={video.org_id}
           />
           <Button onClick={handleMarkReviewed} className="flex items-center gap-2">
             <Icon name="check_circle" size="text-sm" />

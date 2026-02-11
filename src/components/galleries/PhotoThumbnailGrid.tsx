@@ -44,9 +44,9 @@ export function PhotoThumbnailGrid({
       }}
     >
       {shown.map((photo, idx) => {
-        const isHero = idx === 0 && shown.length > 1
         const isLast = idx === shown.length - 1 && remaining > 0
         const isHovered = hoveredIndex === idx
+        const isHero = idx === 0
 
         return (
           <div
@@ -55,14 +55,13 @@ export function PhotoThumbnailGrid({
             style={{
               position: 'relative',
               width: '100%',
-              aspectRatio: isHero ? '4/3' : '1',
+              aspectRatio: '1',
               borderRadius: '12px',
               overflow: 'hidden',
               cursor: isLast ? 'pointer' : 'default',
               boxShadow: isHovered ? '0 8px 24px rgba(0, 0, 0, 0.15)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
               transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
               transform: isHovered ? 'translateY(-4px) scale(1.02)' : 'translateY(0) scale(1)',
-              gridRow: isHero ? 'span 2' : 'auto',
             }}
             onMouseEnter={() => setHoveredIndex(idx)}
             onMouseLeave={() => setHoveredIndex(null)}

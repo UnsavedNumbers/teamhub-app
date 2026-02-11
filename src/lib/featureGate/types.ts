@@ -33,6 +33,7 @@ export type ReasonCode =
     | 'not_found'             // Feature key doesn't exist
     | 'no_organization'       // No org context provided
     | 'limit_exceeded'        // Usage limit has been reached
+    | 'parent_feature_unavailable' // Denied because parent feature is unavailable
     | 'error';                // Resolution error occurred
 
 /**
@@ -46,6 +47,7 @@ export interface FeatureGateResult {
     limit_value?: number;
     current_usage?: number;
     user_role?: string;
+    parent_feature_key?: string; // Set when denied due to parent hierarchy
     error?: string;
 }
 

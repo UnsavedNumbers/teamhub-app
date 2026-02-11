@@ -2,13 +2,14 @@ import { useState, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
-import { AdminPageHeader, Button, Card, Badge, Select } from '../../components/platformAdmin'
+import { AdminPageHeader, Button, Card, Badge, Select } from '../../components/admin'
 import { FileUpload } from '../../components/common/FileUpload'
 import { useUserContext } from '../../hooks/useUserContext'
 import { supabase } from '../../lib/supabase'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { getLink } from '../../utils/routes'
 import { cn } from '../../utils/cn'
+import '../../styles/orgAdmin.css'
 
 // Type for RPC result
 interface ImportAthletesResult {
@@ -391,10 +392,10 @@ export default function ImportAthletes() {
   // --- Render Sections ---
 
   const renderUpload = () => (
-    <div className="pa-flex pa-flex-col pa-gap-8 pa-max-w-[800px] pa-mx-auto pa-w-full">
+    <div className="oa-flex oa-flex-col oa-gap-8 oa-max-w-[800px] oa-mx-auto oa-w-full">
       <Card>
-        <div className="pa-p-4">
-            <h2 className="pa-overline pa-mb-4">STEP 1: UPLOAD FILE</h2>
+        <div className="oa-p-4">
+            <h2 className="oa-overline oa-mb-4">STEP 1: UPLOAD FILE</h2>
             <FileUpload
                 accept=".csv,.xlsx,.xls"
                 maxSize={5 * 1024 * 1024}
@@ -411,10 +412,10 @@ export default function ImportAthletes() {
       </Card>
 
       <Card>
-        <div className="pa-p-4 pa-flex pa-flex-col pa-gap-4">
-            <h2 className="pa-overline">DOWNLOAD TEMPLATE</h2>
-            <p className="pa-body-m pa-text-muted">Use our provided template to ensure your athlete data is formatted correctly for a smooth import.</p>
-            <div className="pa-flex pa-gap-3">
+        <div className="oa-p-4 oa-flex oa-flex-col oa-gap-4">
+            <h2 className="oa-overline">DOWNLOAD TEMPLATE</h2>
+            <p className="oa-body-m oa-text-muted">Use our provided template to ensure your athlete data is formatted correctly for a smooth import.</p>
+            <div className="oa-flex oa-gap-3">
                 <Button variant="secondary" onClick={() => window.open('/templates/athlete_import_template.csv')}>
                     CSV Template
                 </Button>
@@ -428,20 +429,20 @@ export default function ImportAthletes() {
   )
 
   const renderMapping = () => (
-    <div className="pa-flex pa-flex-col pa-gap-8">
+    <div className="oa-flex oa-flex-col oa-gap-8">
       <Card noPadding>
-        <div className="pa-p-6 pa-border-b pa-border-slate-100">
-            <h2 className="pa-overline pa-mb-1">STEP 2: COLUMN MAPPING</h2>
-            <p className="pa-body-s pa-text-muted">Map your file's columns to the corresponding Youth Sports fields.</p>
+        <div className="oa-p-6 oa-border-b oa-border-slate-100">
+            <h2 className="oa-overline oa-mb-1">STEP 2: COLUMN MAPPING</h2>
+            <p className="oa-body-s oa-text-muted">Map your file's columns to the corresponding Youth Sports fields.</p>
         </div>
-        <div className="pa-overflow-x-auto">
-            <table className="pa-table">
+        <div className="oa-overflow-x-auto">
+            <table className="oa-table">
                 <thead>
                     <tr>
                         <th style={{ width: '30%' }}>SOURCE COLUMN</th>
                         <th style={{ width: '30%' }}>TARGET FIELD</th>
                         <th style={{ width: '30%' }}>SAMPLE DATA</th>
-                        <th style={{ width: '10%' }} className="pa-text-right">STATUS</th>
+                        <th style={{ width: '10%' }} className="oa-text-right">STATUS</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -452,7 +453,7 @@ export default function ImportAthletes() {
                         
                         return (
                             <tr key={sourceCol}>
-                                <td className="pa-font-bold pa-text-slate-900">{sourceCol}</td>
+                                <td className="oa-font-bold oa-text-slate-900">{sourceCol}</td>
                                 <td>
                                     <Select
                                         value={mappedTarget || ''}
@@ -464,8 +465,8 @@ export default function ImportAthletes() {
                                         ]}
                                     />
                                 </td>
-                                <td className="pa-text-sm pa-text-slate-400 pa-italic">{getSampleData(sourceCol)}</td>
-                                <td className="pa-text-right">
+                                <td className="oa-text-sm oa-text-slate-400 oa-italic">{getSampleData(sourceCol)}</td>
+                                <td className="oa-text-right">
                                     <Badge variant={mappedTarget ? (isRequired ? 'success' : 'neutral') : 'warning'}>
                                         {status}
                                     </Badge>
@@ -476,10 +477,10 @@ export default function ImportAthletes() {
                 </tbody>
             </table>
         </div>
-        <div className="pa-p-6 pa-border-t pa-border-slate-100 pa-flex pa-justify-between pa-items-center">
+        <div className="oa-p-6 oa-border-t oa-border-slate-100 oa-flex oa-justify-between oa-items-center">
             <Button variant="secondary" onClick={() => setStep('upload')}>Back to Upload</Button>
-            <div className="pa-flex pa-items-center pa-gap-4">
-                {!isMappingComplete && <span className="pa-text-sm pa-text-danger pa-font-medium">Map all required fields to continue</span>}
+            <div className="oa-flex oa-items-center oa-gap-4">
+                {!isMappingComplete && <span className="oa-text-sm oa-text-danger oa-font-medium">Map all required fields to continue</span>}
                 <Button 
                     disabled={!isMappingComplete} 
                     onClick={() => { processRows(rawRows, columnMapping); setStep('validation'); }}
@@ -493,40 +494,40 @@ export default function ImportAthletes() {
   )
 
   const renderValidation = () => (
-    <div className="pa-flex pa-flex-col pa-gap-8">
+    <div className="oa-flex oa-flex-col oa-gap-8">
       {/* Stats Bar */}
-      <div className="pa-grid pa-grid-4 pa-gap-4">
+      <div className="oa-grid oa-grid-4 oa-gap-4">
         <Card noPadding>
-            <div className="pa-p-5 pa-text-center">
-                <p className="pa-overline pa-mb-1 pa-text-muted">TOTAL ROWS</p>
-                <p className="pa-h2 pa-m-0">{stats.total}</p>
+            <div className="oa-p-5 oa-text-center">
+                <p className="oa-overline oa-mb-1 oa-text-muted">TOTAL ROWS</p>
+                <p className="oa-h2 oa-m-0">{stats.total}</p>
             </div>
         </Card>
-        <Card noPadding style={{ borderLeft: '4px solid var(--pa-success)' }}>
-            <div className="pa-p-5 pa-text-center">
-                <p className="pa-overline pa-mb-1 pa-text-success">READY</p>
-                <p className="pa-h2 pa-m-0">{stats.ready}</p>
+        <Card noPadding style={{ borderLeft: '4px solid var(--oa-success)' }}>
+            <div className="oa-p-5 oa-text-center">
+                <p className="oa-overline oa-mb-1 oa-text-success">READY</p>
+                <p className="oa-h2 oa-m-0">{stats.ready}</p>
             </div>
         </Card>
-        <Card noPadding style={{ borderLeft: '4px solid var(--pa-warning)' }}>
-            <div className="pa-p-5 pa-text-center">
-                <p className="pa-overline pa-mb-1 pa-text-warning">WARNINGS</p>
-                <p className="pa-h2 pa-m-0">{stats.warnings}</p>
+        <Card noPadding style={{ borderLeft: '4px solid var(--oa-warning)' }}>
+            <div className="oa-p-5 oa-text-center">
+                <p className="oa-overline oa-mb-1 oa-text-warning">WARNINGS</p>
+                <p className="oa-h2 oa-m-0">{stats.warnings}</p>
             </div>
         </Card>
-        <Card noPadding style={{ borderLeft: '4px solid var(--pa-danger)' }}>
-            <div className="pa-p-5 pa-text-center">
-                <p className="pa-overline pa-mb-1 pa-text-danger">ERRORS</p>
-                <p className="pa-h2 pa-m-0">{stats.errors}</p>
+        <Card noPadding style={{ borderLeft: '4px solid var(--oa-danger)' }}>
+            <div className="oa-p-5 oa-text-center">
+                <p className="oa-overline oa-mb-1 oa-text-danger">ERRORS</p>
+                <p className="oa-h2 oa-m-0">{stats.errors}</p>
             </div>
         </Card>
       </div>
 
-      <div className="pa-flex pa-flex-col lg:pa-flex-row pa-gap-8">
-        <div className="pa-flex-1">
+      <div className="oa-flex oa-flex-col lg:oa-flex-row oa-gap-8">
+        <div className="oa-flex-1">
             <Card noPadding>
-                <div className="pa-p-4 pa-border-b pa-border-slate-100 pa-flex pa-justify-between pa-items-center">
-                    <h2 className="pa-overline">DATA PREVIEW</h2>
+                <div className="oa-p-4 oa-border-b oa-border-slate-100 oa-flex oa-justify-between oa-items-center">
+                    <h2 className="oa-overline">DATA PREVIEW</h2>
                     <Button 
                         variant={showErrorsOnly ? 'danger' : 'secondary'} 
                         size="dense" 
@@ -535,8 +536,8 @@ export default function ImportAthletes() {
                         {showErrorsOnly ? 'Showing Errors Only' : 'Filter by Errors'}
                     </Button>
                 </div>
-                <div className="pa-overflow-x-auto">
-                    <table className="pa-table pa-text-sm">
+                <div className="oa-overflow-x-auto">
+                    <table className="oa-table oa-text-sm">
                         <thead>
                             <tr>
                                 <th style={{ width: '40px' }}>STATUS</th>
@@ -550,31 +551,31 @@ export default function ImportAthletes() {
                         <tbody>
                             {paginatedRows.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="pa-p-8 pa-text-center pa-text-muted">No rows match your current filters</td>
+                                    <td colSpan={6} className="oa-p-8 oa-text-center oa-text-muted">No rows match your current filters</td>
                                 </tr>
                             ) : paginatedRows.map((row) => (
-                                <tr key={row.row_number} className={cn({ 'pa-bg-danger-surface': row.status === 'error', 'pa-bg-warning-surface': row.status === 'warning' })}>
-                                    <td className="pa-text-center">
+                                <tr key={row.row_number} className={cn({ 'oa-bg-danger-surface': row.status === 'error', 'oa-bg-warning-surface': row.status === 'warning' })}>
+                                    <td className="oa-text-center">
                                         <span className={cn('material-symbols-outlined', { 
-                                            'pa-text-success': row.status === 'ready',
-                                            'pa-text-warning': row.status === 'warning',
-                                            'pa-text-danger': row.status === 'error'
+                                            'oa-text-success': row.status === 'ready',
+                                            'oa-text-warning': row.status === 'warning',
+                                            'oa-text-danger': row.status === 'error'
                                         })}>
                                             {row.status === 'ready' ? 'check_circle' : row.status === 'warning' ? 'warning' : 'error'}
                                         </span>
                                     </td>
                                     <td>
-                                        <div className="pa-font-bold">{row.mapped_data.athlete_first_name} {row.mapped_data.athlete_last_name}</div>
-                                        {(row.errors.length > 0) && <div className="pa-text-[10px] pa-text-danger pa-font-bold">{row.errors.join(' • ')}</div>}
+                                        <div className="oa-font-bold">{row.mapped_data.athlete_first_name} {row.mapped_data.athlete_last_name}</div>
+                                        {(row.errors.length > 0) && <div className="oa-text-[10px] oa-text-danger oa-font-bold">{row.errors.join(' • ')}</div>}
                                     </td>
                                     <td>{row.mapped_data.athlete_email || '—'}</td>
                                     <td>{row.mapped_data.athlete_date_of_birth}</td>
                                     <td>
-                                        <div className="pa-flex pa-flex-wrap pa-gap-1">
+                                        <div className="oa-flex oa-flex-wrap oa-gap-1">
                                             {Object.entries(row.mapped_data).filter(([k,v]) => v && !['athlete_first_name', 'athlete_last_name', 'athlete_email', 'athlete_date_of_birth'].includes(k)).slice(0, 2).map(([k]) => (
-                                                <Badge key={k} variant="neutral" className="pa-text-[9px] pa-font-black">{k.replace('athlete_', '').toUpperCase()}</Badge>
+                                                <Badge key={k} variant="neutral" className="oa-text-[9px] oa-font-black">{k.replace('athlete_', '').toUpperCase()}</Badge>
                                             ))}
-                                            {Object.keys(row.mapped_data).length > 6 && <span className="pa-text-[10px] pa-text-muted">+more</span>}
+                                            {Object.keys(row.mapped_data).length > 6 && <span className="oa-text-[10px] oa-text-muted">+more</span>}
                                         </div>
                                     </td>
                                     <td>
@@ -585,9 +586,9 @@ export default function ImportAthletes() {
                         </tbody>
                     </table>
                 </div>
-                <div className="pa-p-4 pa-border-t pa-border-slate-100 pa-flex pa-justify-between pa-items-center">
-                    <span className="pa-text-xs pa-text-muted">Showing {paginatedRows.length} of {filteredRows.length} rows</span>
-                    <div className="pa-flex pa-gap-1">
+                <div className="oa-p-4 oa-border-t oa-border-slate-100 oa-flex oa-justify-between oa-items-center">
+                    <span className="oa-text-xs oa-text-muted">Showing {paginatedRows.length} of {filteredRows.length} rows</span>
+                    <div className="oa-flex oa-gap-1">
                         <Button 
                             variant="ghost" 
                             size="dense" 
@@ -607,27 +608,27 @@ export default function ImportAthletes() {
             </Card>
         </div>
 
-        <div className="pa-w-full lg:pa-w-80 pa-flex pa-flex-col pa-gap-6">
+        <div className="oa-w-full lg:oa-w-80 oa-flex oa-flex-col oa-gap-6">
             <Card>
-                <div className="pa-p-4 pa-flex pa-flex-col pa-gap-4">
-                    <h3 className="pa-overline">IMPORT SETTINGS</h3>
+                <div className="oa-p-4 oa-flex oa-flex-col oa-gap-4">
+                    <h3 className="oa-overline">IMPORT SETTINGS</h3>
                     
-                    <div className="pa-flex pa-flex-col pa-gap-3">
-                        <label className="pa-flex pa-items-center pa-gap-2 pa-cursor-pointer">
+                    <div className="oa-flex oa-flex-col oa-gap-3">
+                        <label className="oa-flex oa-items-center oa-gap-2 oa-cursor-pointer">
                             <input 
                                 type="checkbox" 
                                 checked={importOptions.skipDuplicates} 
                                 onChange={(e) => setImportOptions(prev => ({ ...prev, skipDuplicates: e.target.checked }))}
                             />
-                            <span className="pa-text-sm pa-font-bold">Skip Duplicates</span>
+                            <span className="oa-text-sm oa-font-bold">Skip Duplicates</span>
                         </label>
-                        <label className="pa-flex pa-items-center pa-gap-2 pa-cursor-pointer">
+                        <label className="oa-flex oa-items-center oa-gap-2 oa-cursor-pointer">
                             <input 
                                 type="checkbox" 
                                 checked={importOptions.autoAssignTeams} 
                                 onChange={(e) => setImportOptions(prev => ({ ...prev, autoAssignTeams: e.target.checked }))}
                             />
-                            <span className="pa-text-sm pa-font-bold">Auto-assign Teams</span>
+                            <span className="oa-text-sm oa-font-bold">Auto-assign Teams</span>
                         </label>
                     </div>
 
@@ -654,9 +655,9 @@ export default function ImportAthletes() {
                 </div>
             </Card>
 
-            <div className="pa-flex pa-flex-col pa-gap-3">
+            <div className="oa-flex oa-flex-col oa-gap-3">
                 <Button 
-                    className="pa-w-full" 
+                    className="oa-w-full" 
                     icon="cloud_upload"
                     loading={loading}
                     disabled={loading || stats.errors > 0}
@@ -666,13 +667,13 @@ export default function ImportAthletes() {
                 </Button>
                 <Button 
                     variant="secondary" 
-                    className="pa-w-full" 
+                    className="oa-w-full" 
                     onClick={() => setStep('mapping')}
                     disabled={loading}
                 >
                     Edit Mappings
                 </Button>
-                {stats.errors > 0 && <p className="pa-text-[10px] pa-text-danger pa-text-center pa-font-bold">Fix errors in data preview to continue import</p>}
+                {stats.errors > 0 && <p className="oa-text-[10px] oa-text-danger oa-text-center oa-font-bold">Fix errors in data preview to continue import</p>}
             </div>
         </div>
       </div>
@@ -680,7 +681,7 @@ export default function ImportAthletes() {
   )
 
   return (
-    <div className="pa-root pa-bg-neutral-light pa-min-h-screen">
+    <div className="oa-root oa-bg-neutral-light oa-min-h-screen">
       <AdminPageHeader
         title="Import Athletes"
         subtitle="Bring your roster into Youth Sports from CSV or Excel."
@@ -690,14 +691,14 @@ export default function ImportAthletes() {
         ]}
       />
 
-      <div className="pa-content">
+      <div className="oa-content">
         {step === 'upload' && renderUpload()}
         {step === 'mapping' && renderMapping()}
         {step === 'validation' && renderValidation()}
       </div>
 
       {loading && (
-        <div className="pa-fixed pa-inset-0 pa-bg-white/80 pa-flex pa-items-center pa-justify-center pa-z-50">
+        <div className="oa-fixed oa-inset-0 oa-bg-white/80 oa-flex oa-items-center oa-justify-center oa-z-50">
             <AdminLoadingSpinner />
         </div>
       )}

@@ -12,6 +12,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
+import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
 const supabaseAny = supabase as any
 
 // ============================================================================
@@ -1857,10 +1858,35 @@ export async function uploadPhotoToGallery(
       throw insertError
     }
 
+    // Best-effort audit log for upload actions.
+    const uploadedPhoto = data as GalleryPhoto
+    const logResult = await logEvent({
+      category: 'SYSTEM',
+      eventType: 'PHOTO_UPLOADED',
+      actorUserId: context.userId,
+      actorRole: deriveActorRoleFromRoles(context.roles),
+      orgId: context.orgId,
+      targetEntityType: 'gallery_photo',
+      targetEntityId: uploadedPhoto.id,
+      metadata: {
+        gallery_id: galleryId,
+        album_id: albumId || null,
+        file_name: file.name,
+        file_size: file.size,
+        file_type: file.type,
+        status,
+        storage_path: storagePath,
+        source: 'galleryService.uploadPhotoToGallery',
+      },
+    })
+    if (logResult.error) {
+      console.error('[galleryService] Failed to log PHOTO_UPLOADED event:', logResult.error)
+    }
+
     // Trigger thumbnail generation (non-blocking)
     try {
       const { error: thumbError } = await supabase.functions.invoke('generate-photo-thumbnails', {
-        body: { photo_id: (data as GalleryPhoto).id },
+        body: { photo_id: uploadedPhoto.id },
       })
       if (thumbError) {
         console.error('[galleryService] Thumbnail generation failed:', thumbError)
@@ -1873,7 +1899,7 @@ export async function uploadPhotoToGallery(
     try {
       const { data: gallery } = await supabase.from('galleries').select('cover_photo_id').eq('id', galleryId).maybeSingle();
       if (gallery && !gallery.cover_photo_id) {
-        generateGalleryCover(galleryId, (data as GalleryPhoto).id).catch(console.error);
+        generateGalleryCover(galleryId, uploadedPhoto.id).catch(console.error);
       }
     } catch (e) {
       console.warn('Failed to check/trigger cover generation', e);

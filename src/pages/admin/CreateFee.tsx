@@ -16,7 +16,7 @@ import {
   Select,
   DatePicker,
   Checkbox
-} from '../../components/platformAdmin'
+} from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { useT } from '../../i18n/useI18n'
 import '../../styles/orgAdmin.css'
@@ -303,10 +303,10 @@ export default function CreateFee() {
     }
   }
 
-  if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />
+  if (loading) return <div className="oa-skeleton" style={{ height: '500px' }} />
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title="Create Fee" 
         subtitle={t('admin.payments.createFeeSubtitle' as TranslationKey)}
@@ -316,21 +316,21 @@ export default function CreateFee() {
         ]}
       />
       
-      <div className="pa-grid pa-gap-6" style={{ maxWidth: '800px', margin: '0' }}>
+      <div className="oa-grid oa-gap-6" style={{ maxWidth: '800px', margin: '0' }}>
       <form onSubmit={handleSubmit(onSubmit)}>
         
         {error && (
-            <div className="pa-card pa-mb-4 pa-p-4 pa-text-danger" 
-                 style={{ background: 'var(--pa-danger-bg)', border: '1px solid var(--pa-danger-text)' }}>
+            <div className="oa-card oa-mb-4 oa-p-4 oa-text-danger" 
+                 style={{ background: 'var(--oa-danger-bg)', border: '1px solid var(--oa-danger-text)' }}>
                 {error}
             </div>
         )}
 
         {/* 1. Basic Info */}
-        <Card className="pa-mb-6">
-            <h3 className="pa-text-lg pa-font-bold pa-mb-4">Fee Details</h3>
+        <Card className="oa-mb-6">
+            <h3 className="oa-text-lg oa-font-bold oa-mb-4">Fee Details</h3>
             
-            <div className="pa-mb-4">
+            <div className="oa-mb-4">
                 <Controller 
                     name="title" 
                     control={control} 
@@ -341,7 +341,7 @@ export default function CreateFee() {
                 />
             </div>
 
-            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+            <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-4">
                 <Controller 
                     name="amount" 
                     control={control} 
@@ -360,7 +360,7 @@ export default function CreateFee() {
                 />
             </div>
 
-            <div className="pa-mb-4">
+            <div className="oa-mb-4">
                 <Controller 
                     name="due_date" 
                     control={control} 
@@ -370,7 +370,7 @@ export default function CreateFee() {
                 />
             </div>
 
-            <div className="pa-mb-4">
+            <div className="oa-mb-4">
                 <Controller 
                     name="description" 
                     control={control} 
@@ -382,11 +382,11 @@ export default function CreateFee() {
         </Card>
 
         {/* 2. Assignments */}
-        <Card className="pa-mb-6">
-            <h3 className="pa-text-lg pa-font-bold pa-mb-4">Assignments</h3>
+        <Card className="oa-mb-6">
+            <h3 className="oa-text-lg oa-font-bold oa-mb-4">Assignments</h3>
             
             {/* Scope Selector */}
-            <div className="pa-form-group pa-mb-6">
+            <div className="oa-form-group oa-mb-6">
                 <label className="oa-filter-label">Who is this fee for?</label>
                 <input type="hidden" {...register('scope')} />
                 <div className="oa-toggle-group">
@@ -405,13 +405,13 @@ export default function CreateFee() {
                         Specific Players
                     </button>
                 </div>
-                <div className="pa-text-sm pa-text-slate-500 pa-mt-2">
+                <div className="oa-text-sm oa-text-slate-500 oa-mt-2">
                     {watchScope === 'team' ? 'Assign to all active players.' : 'Select specific athletes for this fee.'}
                 </div>
             </div>
 
             {/* Team Selection */}
-            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+            <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-4">
                 <Controller 
                     name="team_id" 
                     control={control} 
@@ -439,10 +439,10 @@ export default function CreateFee() {
 
             {/* Roster Selection (Condition: Scope != team) */}
             {watchScope !== 'team' && watchTeamId && watchSeasonId && (
-                <div className="pa-mt-4 pa-p-4 pa-bg-gray-50 pa-rounded">
-                    <div className="pa-flex pa-justify-between pa-items-center pa-mb-2">
-                        <h4 className="pa-font-bold pa-text-sm">Select Athletes</h4>
-                        <div className="pa-flex pa-gap-2">
+                <div className="oa-mt-4 oa-p-4 oa-bg-gray-50 oa-rounded">
+                    <div className="oa-flex oa-justify-between oa-items-center oa-mb-2">
+                        <h4 className="oa-font-bold oa-text-sm">Select Athletes</h4>
+                        <div className="oa-flex oa-gap-2">
                             <Button size="small" variant="text" onClick={() => handleSelectAll(true)} type="button">All</Button>
                             <Button size="small" variant="text" onClick={() => handleSelectAll(false)} type="button">None</Button>
                         </div>
@@ -452,19 +452,19 @@ export default function CreateFee() {
                         placeholder="Search athletes..." 
                         value={rosterSearch} 
                         onChange={(e) => setRosterSearch(e.target.value)} 
-                        className="pa-mb-2"
+                        className="oa-mb-2"
                     />
 
                     {fetchingRoster ? (
-                        <div className="pa-p-4 pa-text-center pa-text-muted">Loading roster...</div>
+                        <div className="oa-p-4 oa-text-center oa-text-muted">Loading roster...</div>
                     ) : (
-                        <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="pa-border pa-rounded pa-bg-white">
+                        <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="oa-border oa-rounded oa-bg-white">
                             {filteredRoster.length === 0 ? (
-                                <div className="pa-p-4 pa-text-center pa-text-muted">No athletes found</div>
+                                <div className="oa-p-4 oa-text-center oa-text-muted">No athletes found</div>
                             ) : (
                                 filteredRoster.map(athlete => (
-                                    <label key={athlete.id} className="pa-flex pa-items-center pa-p-2 hover:pa-bg-n50 pa-cursor-pointer">
-                                        <div className="pa-mr-3">
+                                    <label key={athlete.id} className="oa-flex oa-items-center oa-p-2 hover:oa-bg-n50 oa-cursor-pointer">
+                                        <div className="oa-mr-3">
                                             <input 
                                                 type="checkbox" 
                                                 {...control.register(`selected_athlete_ids.${athlete.id}`)} 
@@ -472,14 +472,14 @@ export default function CreateFee() {
                                             />
                                         </div>
                                         <div>
-                                            <div className="pa-font-bold">{athlete.first_name} {athlete.last_name}</div>
+                                            <div className="oa-font-bold">{athlete.first_name} {athlete.last_name}</div>
                                         </div>
                                     </label>
                                 ))
                             )}
                         </div>
                     )}
-                    <div className="pa-mt-2 pa-text-right pa-text-sm pa-text-muted">
+                    <div className="oa-mt-2 oa-text-right oa-text-sm oa-text-muted">
                         {selectedCount} selected
                     </div>
                 </div>
@@ -487,9 +487,9 @@ export default function CreateFee() {
         </Card>
 
         {/* 3. Settings */}
-        <Card className="pa-mb-6">
-            <h3 className="pa-text-lg pa-font-bold pa-mb-4">Payment Options</h3>
-            <div className="pa-grid pa-gap-3">
+        <Card className="oa-mb-6">
+            <h3 className="oa-text-lg oa-font-bold oa-mb-4">Payment Options</h3>
+            <div className="oa-grid oa-gap-3">
                 <Controller name="allow_partial_payment" control={control} render={({ field }) => (
                     <Checkbox checked={field.value} onChange={field.onChange} label="Allow partial payments" />
                 )} />
@@ -505,11 +505,11 @@ export default function CreateFee() {
             </div>
         </Card>
 
-        <div className="pa-form-actions pa-mb-12">
+        <div className="oa-form-actions oa-mb-12">
             <OrgAdminButton variant="primary" onClick={() => navigate('/admin/payments')} type="button" className="w-full sm:w-auto">
                 Cancel
             </OrgAdminButton>
-            <Button type="submit" loading={saving} disabled={!watchTeamId || !watchSeasonId} className="pa-form-submit-btn w-full sm:w-auto">
+            <Button type="submit" loading={saving} disabled={!watchTeamId || !watchSeasonId} className="oa-form-submit-btn w-full sm:w-auto">
                 Create Fee
             </Button>
         </div>

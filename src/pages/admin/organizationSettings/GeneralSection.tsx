@@ -127,15 +127,15 @@ export default function GeneralSection({
   }
 
   return (
-    <div className="pa-form-container">
+    <div className="oa-form-container">
       <div>
-        <h3 className="pa-h3 pa-mb-1">General Settings</h3>
-        <p className="pa-text-sm pa-text-slate-500">
+        <h3 className="oa-h3 oa-mb-1">General Settings</h3>
+        <p className="oa-text-sm oa-text-slate-500">
           Basic organization information and configuration
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="pa-form-grid">
+      <form onSubmit={handleSubmit(onSubmit)} className="oa-form-grid">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
             {error}
@@ -192,7 +192,7 @@ export default function GeneralSection({
           )}
         />
 
-        <div className="pa-form-actions">
+        <div className="oa-form-actions">
           <Button
             type="button"
             variant="ghost"

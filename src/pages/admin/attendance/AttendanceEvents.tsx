@@ -1,9 +1,10 @@
 
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, PlatformDataTable, Badge } from '../../../components/platformAdmin'
+import { Card, Badge } from '../../../components/platformAdmin'
+import OrgDataTable from '../../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../../components/admin/OrgDataTable'
 import { OrgAdminButton } from '../../../components/admin/OrgAdminButton'
-import type { ColumnConfig } from '../../../components/platformAdmin/PlatformDataTable'
 import { useUserContext } from '../../../hooks/useUserContext'
 import { getAttendanceEvents } from '../../../data/services/attendanceService'
 import type { AttendanceEventSummary } from '../../../types/attendance'
@@ -63,7 +64,7 @@ export default function AttendanceEvents() {
 
   return (
     <Card>
-      <PlatformDataTable
+      <OrgDataTable
         columns={columns}
         rows={rowsWithId}
         loading={loading}
