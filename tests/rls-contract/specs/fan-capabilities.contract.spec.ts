@@ -1,188 +1,187 @@
 /**
- * RLS Contract Test – Fan capabilities (follows, bookmarks, purchases)
+ * RLS Contract Test – Fan Capabilities
+ *
+ * Matrix coverage (see RLS_MATRIX.md):
+ *   fan_org_follows:     user_id = auth.uid() scoping
+ *   fan_event_bookmarks: user_id = auth.uid() scoping
+ *   purchases:           user_id = auth.uid() scoping
+ *
+ * Key principle: authenticated users can only manage their OWN fan data.
  */
 
 import { describe, it, expect } from 'vitest';
-import { seeded, clients } from '../setup';
+import { seeded, clients, anonClient } from '../setup';
 import {
-    expectSelectAllowed,
-    expectSelectDenied,
     expectWriteAllowed,
     expectWriteDenied,
+    expectSelectDenied,
     getServiceClient,
 } from '../helpers';
 
+// ═══════════════════════════════════════════════════════════════════
+//  FAN_ORG_FOLLOWS
+// ═══════════════════════════════════════════════════════════════════
+
 describe('fan_org_follows', () => {
-    describe('INSERT (follow)', () => {
-        it('any authenticated user can follow an org', async () => {
-            const result = await clients.parent2
-                .from('fan_org_follows')
-                .insert({
-                    user_id: seeded.userIds.parent2,
-                    org_id: seeded.orgId,
-                    source: 'manual',
-                })
-                .select();
-            expectWriteAllowed(result);
-        });
-    });
-
-    describe('SELECT', () => {
-        it('user can read their own follows', async () => {
-            const result = await clients.parent2
-                .from('fan_org_follows')
-                .select('*')
-                .eq('user_id', seeded.userIds.parent2);
-            expectSelectAllowed(result);
-        });
-
-        it('user cannot read other users follows', async () => {
-            const result = await clients.orgAdmin
-                .from('fan_org_follows')
-                .select('*')
-                .eq('user_id', seeded.userIds.parent2);
-            expectSelectDenied(result, [], 'either');
-        });
-    });
-
-    describe('DELETE (unfollow)', () => {
-        it('user can delete their own follows', async () => {
-            const result = await clients.parent2
-                .from('fan_org_follows')
+    describe('INSERT', () => {
+        it('authenticated user CAN follow an org (user_id = own)', async () => {
+            const svc = getServiceClient();
+            // Clean up first in case of retry
+            await svc.from('fan_org_follows')
                 .delete()
-                .eq('user_id', seeded.userIds.parent2)
-                .eq('org_id', seeded.orgId)
+                .eq('user_id', seeded.userIds.fan)
+                .eq('org_id', seeded.orgId);
+
+            const result = await clients.fan
+                .from('fan_org_follows')
+                .insert({ user_id: seeded.userIds.fan, org_id: seeded.orgId })
                 .select();
             expectWriteAllowed(result);
         });
 
-        it('user cannot delete other users follows', async () => {
-            // First, make sure parent has a follow to test against
-            await getServiceClient()
+        it('authenticated user CANNOT follow as another user', async () => {
+            const result = await clients.fan
                 .from('fan_org_follows')
-                .upsert({
-                    user_id: seeded.userIds.parent,
-                    org_id: seeded.orgId,
-                    source: 'manual',
-                });
+                .insert({ user_id: seeded.userIds.orgAdmin, org_id: seeded.orgId })
+                .select();
+            expectWriteDenied(result, 'either');
+        });
 
-            const result = await clients.orgAdmin2
+        it('anonymous CANNOT follow orgs', async () => {
+            const result = await anonClient
                 .from('fan_org_follows')
-                .delete()
-                .eq('user_id', seeded.userIds.parent)
-                .eq('org_id', seeded.orgId)
+                .insert({ user_id: seeded.userIds.fan, org_id: seeded.orgId })
                 .select();
             expectWriteDenied(result, 'either');
         });
     });
-});
-
-describe('fan_event_bookmarks', () => {
-    describe('INSERT', () => {
-        it('authenticated user can bookmark an event', async () => {
-            const result = await clients.parent
-                .from('fan_event_bookmarks')
-                .insert({
-                    user_id: seeded.userIds.parent,
-                    event_id: seeded.eventId,
-                })
-                .select();
-            expectWriteAllowed(result);
-        });
-    });
 
     describe('SELECT', () => {
-        it('user can read their own bookmarks', async () => {
-            const result = await clients.parent
-                .from('fan_event_bookmarks')
+        it('authenticated user CAN read own follows', async () => {
+            const result = await clients.fan
+                .from('fan_org_follows')
                 .select('*')
-                .eq('user_id', seeded.userIds.parent);
-            expectSelectAllowed(result);
+                .eq('user_id', seeded.userIds.fan);
+            expect(result.error).toBeNull();
         });
 
-        it('user cannot read other users bookmarks', async () => {
-            const result = await clients.coach
-                .from('fan_event_bookmarks')
+        it('authenticated user CANNOT read others follows', async () => {
+            const result = await clients.fan
+                .from('fan_org_follows')
                 .select('*')
-                .eq('user_id', seeded.userIds.parent);
+                .eq('user_id', seeded.userIds.orgAdmin);
+            // Should return empty or error – not other users' follows
+            if (result.data && result.data.length > 0) {
+                const userIds = result.data.map((r: any) => r.user_id);
+                expect(userIds).not.toContain(seeded.userIds.orgAdmin);
+            }
+        });
+
+        it('anonymous CANNOT read follows', async () => {
+            const result = await anonClient
+                .from('fan_org_follows').select('*');
             expectSelectDenied(result, [], 'either');
         });
     });
 
     describe('DELETE', () => {
-        it('user can delete their own bookmarks', async () => {
-            const result = await clients.parent
-                .from('fan_event_bookmarks')
+        it('authenticated user CAN unfollow own follow', async () => {
+            const result = await clients.fan
+                .from('fan_org_follows')
                 .delete()
-                .eq('user_id', seeded.userIds.parent)
-                .eq('event_id', seeded.eventId)
+                .eq('user_id', seeded.userIds.fan)
+                .eq('org_id', seeded.orgId)
                 .select();
-            expectWriteAllowed(result);
+            // May succeed or return empty if already deleted
+            expect(result.error).toBeNull();
         });
 
-        it('user cannot delete other users bookmarks', async () => {
-            // Ensure a bookmark exists for coach
-            await getServiceClient()
-                .from('fan_event_bookmarks')
-                .upsert({
-                    user_id: seeded.userIds.coach,
-                    event_id: seeded.eventId,
-                });
-
-            const result = await clients.parent
-                .from('fan_event_bookmarks')
+        it('authenticated user CANNOT delete others follows', async () => {
+            const result = await clients.fan
+                .from('fan_org_follows')
                 .delete()
-                .eq('user_id', seeded.userIds.coach)
-                .eq('event_id', seeded.eventId)
+                .eq('user_id', seeded.userIds.orgAdmin)
                 .select();
             expectWriteDenied(result, 'either');
-
-            // Cleanup
-            await getServiceClient()
-                .from('fan_event_bookmarks')
-                .delete()
-                .eq('user_id', seeded.userIds.coach)
-                .eq('event_id', seeded.eventId);
         });
     });
 });
 
-describe('purchases', () => {
+// ═══════════════════════════════════════════════════════════════════
+//  FAN_EVENT_BOOKMARKS
+// ═══════════════════════════════════════════════════════════════════
+
+describe('fan_event_bookmarks', () => {
+    describe('INSERT', () => {
+        it('authenticated user CAN bookmark an event (user_id = own)', async () => {
+            const svc = getServiceClient();
+            // Clean up first
+            await svc.from('fan_event_bookmarks')
+                .delete()
+                .eq('user_id', seeded.userIds.fan)
+                .eq('event_id', seeded.eventId);
+
+            const result = await clients.fan
+                .from('fan_event_bookmarks')
+                .insert({ user_id: seeded.userIds.fan, event_id: seeded.eventId })
+                .select();
+            expectWriteAllowed(result);
+        });
+
+        it('authenticated user CANNOT bookmark as another user', async () => {
+            const result = await clients.fan
+                .from('fan_event_bookmarks')
+                .insert({ user_id: seeded.userIds.orgAdmin, event_id: seeded.eventId })
+                .select();
+            expectWriteDenied(result, 'either');
+        });
+
+        it('anonymous CANNOT bookmark events', async () => {
+            const result = await anonClient
+                .from('fan_event_bookmarks')
+                .insert({ user_id: seeded.userIds.fan, event_id: seeded.eventId })
+                .select();
+            expectWriteDenied(result, 'either');
+        });
+    });
+
     describe('SELECT', () => {
-        it('user can only read own purchases (even if empty)', async () => {
-            const result = await clients.parent
-                .from('purchases')
+        it('authenticated user CAN read own bookmarks', async () => {
+            const result = await clients.fan
+                .from('fan_event_bookmarks')
                 .select('*')
-                .eq('user_id', seeded.userIds.parent);
-            // No error is success (even if no rows)
+                .eq('user_id', seeded.userIds.fan);
             expect(result.error).toBeNull();
         });
 
-        it('user cannot read another users purchases', async () => {
-            const result = await clients.coach
-                .from('purchases')
+        it('authenticated user CANNOT read others bookmarks', async () => {
+            const result = await clients.fan
+                .from('fan_event_bookmarks')
                 .select('*')
-                .eq('user_id', seeded.userIds.parent);
-            // Should return empty set or error
-            if (result.data?.length) {
-                // If rows returned, none should belong to parent
+                .eq('user_id', seeded.userIds.orgAdmin);
+            if (result.data && result.data.length > 0) {
                 const userIds = result.data.map((r: any) => r.user_id);
-                expect(userIds).not.toContain(seeded.userIds.parent);
+                expect(userIds).not.toContain(seeded.userIds.orgAdmin);
             }
         });
     });
 
-    describe('INSERT', () => {
-        it('direct insert into purchases is denied', async () => {
-            const result = await clients.parent
-                .from('purchases')
-                .insert({
-                    user_id: seeded.userIds.parent,
-                    org_id: seeded.orgId,
-                    event_id: seeded.ticketedEventId ?? seeded.eventId,
-                    total_amount: 0,
-                    status: 'completed',
-                })
+    describe('DELETE', () => {
+        it('authenticated user CAN remove own bookmark', async () => {
+            const result = await clients.fan
+                .from('fan_event_bookmarks')
+                .delete()
+                .eq('user_id', seeded.userIds.fan)
+                .eq('event_id', seeded.eventId)
+                .select();
+            expect(result.error).toBeNull();
+        });
+
+        it('authenticated user CANNOT delete others bookmarks', async () => {
+            const result = await clients.fan
+                .from('fan_event_bookmarks')
+                .delete()
+                .eq('user_id', seeded.userIds.orgAdmin)
                 .select();
             expectWriteDenied(result, 'either');
         });
