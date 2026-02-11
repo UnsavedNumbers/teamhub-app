@@ -9,11 +9,15 @@ vi.mock('qrcode.react', () => ({
 
 const mockTicket: Ticket & { ticket_types?: Pick<TicketType, 'name' | 'description'> } = {
   id: 't1',
+  org_id: 'o1',
   order_id: 'o1',
   ticketed_event_id: 'e1',
   ticket_type_id: 'tt1',
   entry_code: 'ABC123XY',
+  qr_token_hash: 'hash',
   status: 'active',
+  used_at: null,
+  used_by_user_id: null,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
 }
@@ -35,7 +39,7 @@ describe('TicketCard', () => {
 
   test('renders entry code', () => {
     render(<TicketCard ticket={mockTicket} event={mockEvent} />)
-    expect(screen.getByText(/ABC-123-XY|ABC123XY/)).toBeInTheDocument()
+    expect(screen.getByText(/ABC1-23XY|ABC123XY/)).toBeInTheDocument()
   })
 
   test('renders venue info', () => {

@@ -128,7 +128,7 @@ const portal = {
         icon: 'qr_code_scanner',
     },
     myTickets: {
-        path: '/account/tickets',
+        path: '/portal/account/tickets',
         label: 'My Tickets',
         icon: 'confirmation_number',
         description: 'Your event tickets',
@@ -242,6 +242,20 @@ const portal = {
         params: ['id'] as const,
         label: 'Manage Gallery',
         icon: 'edit',
+    },
+
+    // Videos
+    videos: {
+        path: '/portal/videos',
+        label: 'Videos',
+        icon: 'smart_display',
+        description: 'Video library & feedback',
+    },
+    videoDetail: {
+        path: '/portal/videos/:id',
+        params: ['id'] as const,
+        label: 'Video Details',
+        icon: 'smart_display',
     },
 
     // Role Selection

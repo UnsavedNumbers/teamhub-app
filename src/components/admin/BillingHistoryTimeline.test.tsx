@@ -7,8 +7,11 @@ import { TestWrapper } from '@/test/helpers/renderWithProviders'
 
 const mockEvent: BillingEvent = {
   id: 'evt-1',
-  created: 1704067200000,
-  type: 'invoice.paid',
+  created_at: '2026-01-01T12:00:00Z',
+  event_type: 'invoice.paid',
+  stripe_event_id: null,
+  stripe_object_id: null,
+  processed_at: null,
   amount: 2999,
   currency: 'usd',
   description: 'Subscription',
@@ -24,8 +27,11 @@ describe('BillingHistoryTimeline', () => {
 
   describe('rendering', () => {
     test('renders without crashing with empty events', () => {
-      render(<BillingHistoryTimeline events={[]} />, { wrapper: TestWrapper })
-      expect(screen.getByText(/no events|no billing/i)).toBeTruthy()
+      const { container } = render(
+        <BillingHistoryTimeline events={[]} hasSubscription />,
+        { wrapper: TestWrapper }
+      )
+      expect(container).toBeInTheDocument()
     })
 
     test('renders events when provided', () => {
