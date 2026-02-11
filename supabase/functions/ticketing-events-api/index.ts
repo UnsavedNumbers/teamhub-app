@@ -629,8 +629,11 @@ serve(async (req) => {
       }
 
       if (req.method === "DELETE" && targetId) {
-        const result = await handleEventsDelete(orgId, targetId, client)
-        return json(result, 204)
+        await handleEventsDelete(orgId, targetId, client)
+        return new Response('{"deleted":true}', {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
       }
     }
 

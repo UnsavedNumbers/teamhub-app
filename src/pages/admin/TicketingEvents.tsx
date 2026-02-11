@@ -529,9 +529,9 @@ function GridView({ events, onView, onDuplicate, onDelete }: { events: TicketedE
                   <div className="oa-ticket-card__progress">
                     <div className="oa-ticket-card__progress-label">
                       <span>Ticket progress</span>
-                      <span>{Math.round(progressValue)}%</span>
+                      <span className="oa-ticket-card__progress-value">{Math.round(progressValue)}%</span>
                     </div>
-                    <ProgressBar value={progressValue} />
+                    <ProgressBar value={progressValue} fillColor="var(--pa-info, #3b82f6)" showPercentage={false} />
                     <div className="oa-ticket-card__progress-meta">
                       {event.tickets_sold || 0}{event.capacity_total ? ` / ${event.capacity_total} sold` : ''}
                     </div>
@@ -809,12 +809,22 @@ export default function TicketingEvents() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteTicketingEvent(orgId!, id),
+    mutationFn: async (id: string) => {
+      try {
+        return await deleteTicketingEvent(orgId!, id)
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err)
+        if (msg.includes('Response with null body status cannot have body')) {
+          return true
+        }
+        throw err
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ticketing-events-admin', orgId] })
       showSuccess('Event deleted')
     },
-    onError: (err: any) => showError(err?.message || 'Delete failed'),
+    onError: (err: unknown) => showError(err instanceof Error ? err.message : 'Delete failed'),
   })
 
   const duplicateMutation = useMutation({

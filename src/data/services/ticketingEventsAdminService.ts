@@ -80,7 +80,13 @@ async function authedFetch(path: string, { method = 'GET', body, params }: Fetch
   }
 
   if (res.status === 204) return null
-  return res.json()
+  try {
+    const text = await res.text()
+    if (!text || text.trim() === '') return null
+    return JSON.parse(text) as unknown
+  } catch {
+    return null
+  }
 }
 
 function mapParams(params: Partial<TicketingEventsQuery>) {
