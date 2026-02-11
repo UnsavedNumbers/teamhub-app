@@ -33,8 +33,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: [],
-    include: ['src/**/__tests__/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+    setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
+    exclude: ['node_modules', 'backups', 'supabase'],
     css: true,
   },
 })
