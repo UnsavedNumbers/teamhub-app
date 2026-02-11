@@ -11,6 +11,8 @@ interface ProgressBarProps {
   showPercentage?: boolean
   /** Custom className */
   className?: string
+  /** Override fill color (e.g. 'var(--pa-info)' or '#3b82f6') */
+  fillColor?: string
 }
 
 /**
@@ -25,6 +27,7 @@ export function ProgressBar({
   error,
   showPercentage = true,
   className = '',
+  fillColor,
 }: ProgressBarProps) {
   // Clamp value between 0 and 100
   const clampedValue = Math.max(0, Math.min(100, value))
@@ -61,7 +64,7 @@ export function ProgressBar({
             height: '100%',
             backgroundColor: error 
               ? 'var(--pa-danger)' 
-              : 'var(--pa-primary)',
+              : fillColor ?? 'var(--pa-primary, #3b82f6)',
             borderRadius: '4px',
             transition: 'width 0.3s ease-out',
             position: 'absolute',

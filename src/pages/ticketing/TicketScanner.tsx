@@ -35,7 +35,7 @@ export default function TicketScanner() {
   
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [entryCode, setEntryCode] = useState('')
-  const [validationResult, setValidationResult] = useState<ValidateScanResponse | null>(null)
+  const [validationResult, setValidationResult] = useState<ValidateScanResponse | { status: 'validating'; code?: string } | null>(null)
   const [validationHistory, setValidationHistory] = useState<ValidationResult[]>([])
   const [pendingValidation, setPendingValidation] = useState<{ code: string; eventId: string } | null>(null)
   const [sessionCounts, setSessionCounts] = useState({ validated: 0, remainingCapacity: null as number | null })
@@ -112,11 +112,7 @@ export default function TicketScanner() {
     }
 
     setIsValidating(true)
-    setValidationResult({ 
-      result: 'invalid', 
-      reason: 'not_found',
-      message: 'Validating...',
-    } as any)
+    setValidationResult({ status: 'validating', code: qrToken })
 
     try {
       const { data, error } = await validateTicketScan(
@@ -212,11 +208,7 @@ export default function TicketScanner() {
     }
 
     setIsValidating(true)
-    setValidationResult({ 
-      result: 'invalid', 
-      reason: 'not_found',
-      message: 'Validating...',
-    } as any)
+    setValidationResult({ status: 'validating', code: entryCode })
 
     try {
       const { data, error } = await validateTicketScan(
@@ -226,6 +218,8 @@ export default function TicketScanner() {
         },
         token,
       )
+      console.log('data-------------', data)
+      console.log('error----------', error)
 
       if (error || !data) {
         setValidationResult({
@@ -298,7 +292,7 @@ export default function TicketScanner() {
 
   // Handle event mismatch confirmation
   const handleAdmitAnyway = useCallback(async () => {
-    if (!validationResult?.event_mismatch) {
+    if (!validationResult || 'status' in validationResult || !validationResult.event_mismatch) {
       return
     }
 
@@ -350,7 +344,7 @@ export default function TicketScanner() {
       setValidationHistory((prev) => [
         {
           timestamp: new Date(),
-          code: validationResult.qr_token_raw!.slice(-8),
+          code: qrToken.slice(-8),
           result: data.result,
           message: data.message,
           ticketTypeName: data.ticket_type_name || undefined,
@@ -553,7 +547,7 @@ export default function TicketScanner() {
             {validationResult && (
               <ValidationResultBanner
                 result={validationResult}
-                onAdmitAnyway={validationResult.event_mismatch ? handleAdmitAnyway : undefined}
+                onAdmitAnyway={'event_mismatch' in validationResult && validationResult.event_mismatch ? handleAdmitAnyway : undefined}
                 onDismiss={() => {
                   setValidationResult(null)
                   scannerRef.current?.resume()
