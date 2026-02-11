@@ -569,7 +569,7 @@ export default function CreateTravelPlan() {
                     {...field} 
                     label="Start Date" 
                     required 
-                    minValue={getTodayDate()}
+                    min={getTodayDate()}
                   />
                 )} 
               />
@@ -601,7 +601,7 @@ export default function CreateTravelPlan() {
                       {...field} 
                       label="End Date" 
                       required 
-                      minValue={minEndDate}
+                      min={minEndDate}
                       error={fieldState.error?.message}
                     />
                   )

@@ -37,6 +37,56 @@ const getEdgeFunctionUrl = (functionName: string): string => {
   return `${supabaseUrl}/functions/v1/${functionName}`
 }
 
+const TOKEN_REFRESH_SKEW_SECONDS = 30
+const DEFAULT_THUMBNAIL_TOKEN_EXPIRATION = 7200
+
+async function getFreshAccessToken(preferredToken?: string): Promise<string | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    const now = Math.floor(Date.now() / 1000)
+    const expiresSoon = !!session?.expires_at && session.expires_at <= (now + TOKEN_REFRESH_SKEW_SECONDS)
+
+    if (expiresSoon) {
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession()
+      if (!refreshError && refreshed.session?.access_token) {
+        return refreshed.session.access_token
+      }
+    }
+
+    return session?.access_token || preferredToken || null
+  } catch {
+    return preferredToken || null
+  }
+}
+
+async function callMuxSignedPlayback(
+  payload: Record<string, unknown>,
+  preferredToken?: string
+): Promise<Response | null> {
+  const sendRequest = async (token: string): Promise<Response> =>
+    fetch(getEdgeFunctionUrl('mux-signed-playback'), {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+  const accessToken = await getFreshAccessToken(preferredToken)
+  if (!accessToken) return null
+
+  let response = await sendRequest(accessToken)
+  if (response.status !== 401) return response
+
+  const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession()
+  const refreshedToken = !refreshError ? refreshed.session?.access_token : null
+  if (!refreshedToken || refreshedToken === accessToken) return response
+
+  response = await sendRequest(refreshedToken)
+  return response
+}
+
 /**
  * Fetches a signed thumbnail URL from the mux-signed-playback edge function.
  * Database thumbnail_url is unsigned; Mux requires a signed token for image access.
@@ -44,22 +94,15 @@ const getEdgeFunctionUrl = (functionName: string): string => {
 async function getSignedThumbnailUrl(
   accessToken: string,
   options: { video_id: string } | { playback_id: string },
-  expiration = 300
+  expiration = DEFAULT_THUMBNAIL_TOKEN_EXPIRATION
 ): Promise<string | null> {
   try {
-    const response = await fetch(getEdgeFunctionUrl('mux-signed-playback'), {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...options,
-        type: 'thumbnail',
-        expiration,
-      }),
-    })
-    if (!response.ok) return null
+    const response = await callMuxSignedPlayback({
+      ...options,
+      type: 'thumbnail',
+      expiration,
+    }, accessToken)
+    if (!response || !response.ok) return null
     const data: GetPlaybackTokenResponse = await response.json()
     return data.thumbnail_url ?? null
   } catch {
@@ -182,12 +225,12 @@ export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
       let fetchedVideos = (data || []) as unknown as Video[]
       
       // Attach signed thumbnail URLs: DB thumbnail_url has no token; Mux requires signed URLs.
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.access_token) {
+      const accessToken = await getFreshAccessToken()
+      if (accessToken) {
         const withSignedThumbnails = await Promise.all(
           fetchedVideos.map(async (video): Promise<Video> => {
             if (!video.mux_playback_id) return video
-            const signedUrl = await getSignedThumbnailUrl(session.access_token!, { video_id: video.id })
+            const signedUrl = await getSignedThumbnailUrl(accessToken, { video_id: video.id })
             return signedUrl ? { ...video, thumbnail_url: signedUrl } : video
           })
         )
@@ -290,9 +333,9 @@ export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideo
 
       let result: Video = videoData
       if (result.mux_playback_id) {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.access_token) {
-          const signedUrl = await getSignedThumbnailUrl(session.access_token, { video_id: result.id })
+        const accessToken = await getFreshAccessToken()
+        if (accessToken) {
+          const signedUrl = await getSignedThumbnailUrl(accessToken, { video_id: result.id })
           if (signedUrl) result = { ...result, thumbnail_url: signedUrl }
         }
       }
@@ -484,19 +527,16 @@ export function usePlaybackToken(options: UsePlaybackTokenOptions): UsePlaybackT
     setError(null)
     
     try {
-      const response = await fetch(getEdgeFunctionUrl('mux-signed-playback'), {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          video_id: videoId,
-          playback_id: playbackId,
-          type,
-          expiration,
-        }),
-      })
+      const response = await callMuxSignedPlayback({
+        video_id: videoId,
+        playback_id: playbackId,
+        type,
+        expiration,
+      }, session.access_token)
+
+      if (!response) {
+        throw new Error('Not authenticated')
+      }
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))

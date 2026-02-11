@@ -316,204 +316,208 @@ export default function CreateFee() {
         ]}
       />
       
-      <div className="oa-grid oa-gap-6" style={{ maxWidth: '800px', margin: '0' }}>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        
-        {error && (
-            <div className="oa-card oa-mb-4 oa-p-4 oa-text-danger" 
-                 style={{ background: 'var(--oa-danger-bg)', border: '1px solid var(--oa-danger-text)' }}>
-                {error}
+      <div className="oa-form-container">
+        <form onSubmit={handleSubmit(onSubmit)}>
+          {error && (
+            <div className="oa-alert oa-alert--error oa-mb-4">
+              {error}
             </div>
-        )}
+          )}
 
-        {/* 1. Basic Info */}
-        <Card className="oa-mb-6">
-            <h3 className="oa-text-lg oa-font-bold oa-mb-4">Fee Details</h3>
-            
-            <div className="oa-mb-4">
-                <Controller 
-                    name="title" 
-                    control={control} 
-                    rules={{ required: 'Title is required' }} 
-                    render={({ field }) => (
-                        <Input {...field} label="Fee Title" placeholder="e.g. 2024 Spring Registration" error={errors.title?.message} required />
-                    )} 
+          <Card title="Fee Details" className="oa-mb-6">
+            <div className="oa-form-section-body">
+              <p className="oa-form-section-subtitle oa-mb-4">
+                Define the fee amount, type, due date, and description.
+              </p>
+
+              <div className="oa-mb-4">
+                <Controller
+                  name="title"
+                  control={control}
+                  rules={{ required: 'Title is required' }}
+                  render={({ field }) => (
+                    <Input {...field} label="Fee Title" placeholder="e.g. 2026 Spring Registration" error={errors.title?.message} required />
+                  )}
                 />
+              </div>
+
+              <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-4">
+                <Controller
+                  name="amount"
+                  control={control}
+                  rules={{ required: 'Amount is required', min: 0 }}
+                  render={({ field }) => (
+                    <Input {...field} label="Amount ($)" type="number" step="0.01" error={errors.amount?.message} required />
+                  )}
+                />
+                <Controller
+                  name="fee_type"
+                  control={control}
+                  rules={{ required: 'Type is required' }}
+                  render={({ field }) => (
+                    <Select {...field} label="Fee Type" options={FEE_TYPES} error={errors.fee_type?.message} required />
+                  )}
+                />
+              </div>
+
+              <div className="oa-mb-4">
+                <Controller
+                  name="due_date"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker {...field} label="Due Date" helper="Optional" />
+                  )}
+                />
+              </div>
+
+              <div className="oa-mb-4">
+                <Controller
+                  name="description"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} label="Description (Optional)" placeholder="Additional details..." />
+                  )}
+                />
+              </div>
             </div>
+          </Card>
 
-            <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-4">
-                <Controller 
-                    name="amount" 
-                    control={control} 
-                    rules={{ required: 'Amount is required', min: 0 }} 
-                    render={({ field }) => (
-                        <Input {...field} label="Amount ($)" type="number" step="0.01" error={errors.amount?.message} required />
-                    )} 
-                />
-                 <Controller 
-                    name="fee_type" 
-                    control={control} 
-                    rules={{ required: 'Type is required' }} 
-                    render={({ field }) => (
-                        <Select {...field} label="Fee Type" options={FEE_TYPES} error={errors.fee_type?.message} required />
-                    )} 
-                />
-            </div>
+          <Card title="Assignments" className="oa-mb-6">
+            <div className="oa-form-section-body">
+              <p className="oa-form-section-subtitle oa-mb-4">
+                Choose whether this fee applies to everyone on the team or only selected players.
+              </p>
 
-            <div className="oa-mb-4">
-                <Controller 
-                    name="due_date" 
-                    control={control} 
-                    render={({ field }) => (
-                        <DatePicker {...field} label="Due Date" helper="Optional" />
-                    )} 
-                />
-            </div>
-
-            <div className="oa-mb-4">
-                <Controller 
-                    name="description" 
-                    control={control} 
-                    render={({ field }) => (
-                        <Input {...field} label="Description (Optional)" placeholder="Additional details..." />
-                    )} 
-                />
-            </div>
-        </Card>
-
-        {/* 2. Assignments */}
-        <Card className="oa-mb-6">
-            <h3 className="oa-text-lg oa-font-bold oa-mb-4">Assignments</h3>
-            
-            {/* Scope Selector */}
-            <div className="oa-form-group oa-mb-6">
+              <div className="oa-form-group oa-mb-6">
                 <label className="oa-filter-label">Who is this fee for?</label>
                 <input type="hidden" {...register('scope')} />
                 <div className="oa-toggle-group">
-                    <button
-                        type="button"
-                        onClick={() => setValue('scope', 'team', { shouldValidate: false })}
-                        className={cn('oa-toggle-btn', watchScope === 'team' && 'active')}
-                    >
-                        Entire Team
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setValue('scope', 'selected_players', { shouldValidate: false })}
-                        className={cn('oa-toggle-btn', watchScope !== 'team' && 'active')}
-                    >
-                        Specific Players
-                    </button>
+                  <button
+                    type="button"
+                    onClick={() => setValue('scope', 'team', { shouldValidate: false })}
+                    className={cn('oa-toggle-btn', watchScope === 'team' && 'active')}
+                  >
+                    Entire Team
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setValue('scope', 'selected_players', { shouldValidate: false })}
+                    className={cn('oa-toggle-btn', watchScope !== 'team' && 'active')}
+                  >
+                    Specific Players
+                  </button>
                 </div>
-                <div className="oa-text-sm oa-text-slate-500 oa-mt-2">
-                    {watchScope === 'team' ? 'Assign to all active players.' : 'Select specific athletes for this fee.'}
+                <div className="oa-text-sm oa-text-muted oa-mt-2">
+                  {watchScope === 'team' ? 'Assign to all active players.' : 'Select specific athletes for this fee.'}
                 </div>
-            </div>
+              </div>
 
-            {/* Team Selection */}
-            <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-4">
-                <Controller 
-                    name="team_id" 
-                    control={control} 
-                    rules={{ required: 'Team is required' }} 
-                    render={({ field }) => (
-                        <Select {...field} label="Select Team" options={teams.map(t => ({value:t.id, label:t.name}))} error={errors.team_id?.message} required />
-                    )} 
+              <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-4">
+                <Controller
+                  name="team_id"
+                  control={control}
+                  rules={{ required: 'Team is required' }}
+                  render={({ field }) => (
+                    <Select {...field} label="Select Team" options={teams.map((t) => ({ value: t.id, label: t.name }))} error={errors.team_id?.message} required />
+                  )}
                 />
-                <Controller 
-                    name="season_id" 
-                    control={control} 
-                    rules={{ required: 'Season is required' }} 
-                    render={({ field }) => (
-                        <Select 
-                            {...field} 
-                            label="Select Season" 
-                            options={seasons.map(s => ({value:s.id, label:s.name}))} 
-                            disabled={!watchTeamId}
-                            error={errors.season_id?.message} 
-                            required 
-                        />
-                    )} 
-                />
-            </div>
-
-            {/* Roster Selection (Condition: Scope != team) */}
-            {watchScope !== 'team' && watchTeamId && watchSeasonId && (
-                <div className="oa-mt-4 oa-p-4 oa-bg-gray-50 oa-rounded">
-                    <div className="oa-flex oa-justify-between oa-items-center oa-mb-2">
-                        <h4 className="oa-font-bold oa-text-sm">Select Athletes</h4>
-                        <div className="oa-flex oa-gap-2">
-                            <Button size="small" variant="text" onClick={() => handleSelectAll(true)} type="button">All</Button>
-                            <Button size="small" variant="text" onClick={() => handleSelectAll(false)} type="button">None</Button>
-                        </div>
-                    </div>
-                    
-                    <Input 
-                        placeholder="Search athletes..." 
-                        value={rosterSearch} 
-                        onChange={(e) => setRosterSearch(e.target.value)} 
-                        className="oa-mb-2"
+                <Controller
+                  name="season_id"
+                  control={control}
+                  rules={{ required: 'Season is required' }}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      label="Select Season"
+                      options={seasons.map((s) => ({ value: s.id, label: s.name }))}
+                      disabled={!watchTeamId}
+                      error={errors.season_id?.message}
+                      required
                     />
+                  )}
+                />
+              </div>
 
-                    {fetchingRoster ? (
-                        <div className="oa-p-4 oa-text-center oa-text-muted">Loading roster...</div>
-                    ) : (
-                        <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="oa-border oa-rounded oa-bg-white">
-                            {filteredRoster.length === 0 ? (
-                                <div className="oa-p-4 oa-text-center oa-text-muted">No athletes found</div>
-                            ) : (
-                                filteredRoster.map(athlete => (
-                                    <label key={athlete.id} className="oa-flex oa-items-center oa-p-2 hover:oa-bg-n50 oa-cursor-pointer">
-                                        <div className="oa-mr-3">
-                                            <input 
-                                                type="checkbox" 
-                                                {...control.register(`selected_athlete_ids.${athlete.id}`)} 
-                                                style={{ width: '18px', height: '18px' }}
-                                            />
-                                        </div>
-                                        <div>
-                                            <div className="oa-font-bold">{athlete.first_name} {athlete.last_name}</div>
-                                        </div>
-                                    </label>
-                                ))
-                            )}
-                        </div>
-                    )}
-                    <div className="oa-mt-2 oa-text-right oa-text-sm oa-text-muted">
-                        {selectedCount} selected
+              {watchScope !== 'team' && watchTeamId && watchSeasonId && (
+                <div className="oa-mt-4 oa-p-4 oa-bg-surface-section oa-rounded">
+                  <div className="oa-flex oa-justify-between oa-items-center oa-mb-2">
+                    <h4 className="oa-font-bold oa-text-sm">Select Athletes</h4>
+                    <div className="oa-flex oa-gap-2">
+                      <Button size="compact" variant="ghost" onClick={() => handleSelectAll(true)} type="button">All</Button>
+                      <Button size="compact" variant="ghost" onClick={() => handleSelectAll(false)} type="button">None</Button>
                     </div>
-                </div>
-            )}
-        </Card>
+                  </div>
 
-        {/* 3. Settings */}
-        <Card className="oa-mb-6">
-            <h3 className="oa-text-lg oa-font-bold oa-mb-4">Payment Options</h3>
-            <div className="oa-grid oa-gap-3">
+                  <Input
+                    placeholder="Search athletes..."
+                    value={rosterSearch}
+                    onChange={(e) => setRosterSearch(e.target.value)}
+                    className="oa-mb-2"
+                  />
+
+                  {fetchingRoster ? (
+                    <div className="oa-p-4 oa-text-center oa-text-muted">Loading roster...</div>
+                  ) : (
+                    <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="oa-border oa-rounded oa-bg-surface">
+                      {filteredRoster.length === 0 ? (
+                        <div className="oa-p-4 oa-text-center oa-text-muted">No athletes found</div>
+                      ) : (
+                        filteredRoster.map((athlete) => (
+                          <label key={athlete.id} className="oa-flex oa-items-center oa-p-2 hover:oa-bg-n50 oa-cursor-pointer">
+                            <div className="oa-mr-3">
+                              <input
+                                type="checkbox"
+                                {...register(`selected_athlete_ids.${athlete.id}`)}
+                                style={{ width: '18px', height: '18px' }}
+                              />
+                            </div>
+                            <div>
+                              <div className="oa-font-bold">{athlete.first_name} {athlete.last_name}</div>
+                            </div>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  )}
+                  <div className="oa-mt-2 oa-text-right oa-text-sm oa-text-muted">
+                    {selectedCount} selected
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card title="Payment Options" className="oa-mb-6">
+            <div className="oa-form-section-body">
+              <p className="oa-form-section-subtitle oa-mb-4">
+                Configure optional payment flexibility and assistance settings.
+              </p>
+              <div className="oa-grid oa-gap-3">
                 <Controller name="allow_partial_payment" control={control} render={({ field }) => (
-                    <Checkbox checked={field.value} onChange={field.onChange} label="Allow partial payments" />
+                  <Checkbox checked={field.value} onChange={field.onChange} label="Allow partial payments" />
                 )} />
                 <Controller name="allow_installments" control={control} render={({ field }) => (
-                    <Checkbox checked={field.value} onChange={field.onChange} label="Allow installment plans" />
+                  <Checkbox checked={field.value} onChange={field.onChange} label="Allow installment plans" />
                 )} />
                 <Controller name="allow_discounts" control={control} render={({ field }) => (
-                    <Checkbox checked={field.value} onChange={field.onChange} label="Enable discount codes" />
+                  <Checkbox checked={field.value} onChange={field.onChange} label="Enable discount codes" />
                 )} />
-                 <Controller name="allow_scholarships" control={control} render={({ field }) => (
-                    <Checkbox checked={field.value} onChange={field.onChange} label="Enable scholarship applications" />
+                <Controller name="allow_scholarships" control={control} render={({ field }) => (
+                  <Checkbox checked={field.value} onChange={field.onChange} label="Enable scholarship applications" />
                 )} />
+              </div>
             </div>
-        </Card>
+          </Card>
 
-        <div className="oa-form-actions oa-mb-12">
+          <div className="oa-form-actions oa-mb-12">
             <OrgAdminButton variant="primary" onClick={() => navigate('/admin/payments')} type="button" className="w-full sm:w-auto">
-                Cancel
+              Cancel
             </OrgAdminButton>
             <Button type="submit" loading={saving} disabled={!watchTeamId || !watchSeasonId} className="oa-form-submit-btn w-full sm:w-auto">
-                Create Fee
+              Create Fee
             </Button>
-        </div>
-      </form>
+          </div>
+        </form>
       </div>
     </div>
   )

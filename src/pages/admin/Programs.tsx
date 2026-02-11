@@ -331,7 +331,7 @@ export default function Programs() {
           title="Programs"
           breadcrumbs={[{ label: 'Organizations', path: structureRoute }, { label: 'Programs' }]}
         />
-        <Card className="oa-mb-4" noPadding>
+        <Card className="oa-mb-4">
           <div className="oa-p-6 oa-text-center">
             <div className="oa-text-danger oa-mb-4">{error}</div>
             <Button variant="ghost" onClick={loadProgramsData}>Retry</Button>
@@ -441,7 +441,7 @@ export default function Programs() {
             </EmptyState>
           </Card>
         ) : (
-          <Card className="oa-stacked-list" noPadding>
+          <Card className="oa-stacked-list">
             {filteredPrograms.map((program) => {
               const sport = sportById.get(program.sport_id)
               const levelsList = programLevels(program.id)
@@ -537,3 +537,4 @@ export default function Programs() {
     </div>
   )
 }
+

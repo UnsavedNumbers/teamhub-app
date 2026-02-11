@@ -696,7 +696,7 @@ export default function TeamDetail() {
                     {roster.length} athlete{roster.length !== 1 ? 's' : ''} on team
                   </p>
                 </div>
-                <Button variant="secondary" size="small" onClick={() => navigate('/admin/athletes')}>
+                <Button variant="secondary" size="compact" onClick={() => navigate('/admin/athletes')}>  
                   View organization roster
                 </Button>
               </div>

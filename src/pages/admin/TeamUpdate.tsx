@@ -146,7 +146,7 @@ export default function TeamUpdate() {
       />
 
       {error && (
-        <Card className="oa-mb-6" noPadding>
+        <Card className="oa-mb-6">
           <div className="oa-alert-card oa-alert-card--error">
             <div className="oa-body-m oa-text-danger">{error}</div>
           </div>
@@ -210,3 +210,4 @@ export default function TeamUpdate() {
     </div>
   )
 }
+

@@ -207,7 +207,7 @@ export default function AdminFamilies() {
       />
 
       {/* Info Banner */}
-      <Card noPadding className={cn('oa-mb-6', 'oa-overflow-hidden')}>
+      <Card className={cn('oa-mb-6', 'oa-overflow-hidden')}>
         <div className={cn('oa-flex', 'oa-items-start', 'oa-gap-3', 'oa-p-4')} style={{ background: 'var(--oa-info-bg, #eff6ff)' }}>
           <span className="material-symbols-outlined" style={{ color: 'var(--oa-info-text, #1d4ed8)', fontSize: '20px', marginTop: '2px' }}>info</span>
           <div>

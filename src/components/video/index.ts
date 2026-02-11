@@ -11,6 +11,12 @@ export { default as VideoUploader } from './VideoUploader'
 export { default as VideoNoteCard } from './VideoNoteCard'
 export { default as VideoNoteComposer } from './VideoNoteComposer'
 
+// Notes Panel Components
+export { default as NotesPanel } from './NotesPanel'
+export { default as NoteComposer } from './NoteComposer'
+export { default as NotesFeed } from './NotesFeed'
+export { AccordionItem, AccordionGroup } from './Accordion'
+
 // Video Library Feature Components
 export { default as VideoCommentsPanel } from './VideoCommentsPanel'
 export { default as VideoFavoriteButton } from './VideoFavoriteButton'

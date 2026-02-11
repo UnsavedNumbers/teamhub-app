@@ -720,7 +720,7 @@ export default function PaymentDetail() {
             </div>
 
             {/* Itemization */}
-            <Card noPadding>
+            <Card>
               <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center rounded-t-2xl">
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">ITEMIZATION</h3>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -958,3 +958,4 @@ export default function PaymentDetail() {
     </div>
   )
 }
+

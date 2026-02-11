@@ -16,19 +16,19 @@
  * - Full error handling
  */
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { 
   VideoPlayer, 
-  VideoNoteCard, 
-  VideoNoteComposer,
   VideoCommentsPanel,
   VideoFavoriteButton,
   VideoShareModal,
   VideoDownloadButton,
   VideoThumbnailSelector,
-  VideoTagPicker
+  VideoTagPicker,
+  NotesPanel,
 } from '@/components/video'
+import { AccordionItem } from '@/components/video/Accordion'
 import {
   useVideo,
   useVideoNotes,
@@ -39,9 +39,7 @@ import {
 } from '@/hooks/useVideos'
 import { useVideoFavorites } from '@/hooks/useVideosExtended'
 import type {
-  VideoNote,
   VideoCategory,
-  VideoNoteScope,
   VideoAthleteLink,
   VideoVisibility,
   VideoLinkType,
@@ -125,6 +123,11 @@ function AthleteSelectorModal({
   const [linkType, setLinkType] = useState<VideoLinkType>('appears')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen) return
+    setSelectedIds(Array.from(new Set(currentLinks.map(link => link.athlete_id))))
+  }, [isOpen, currentLinks])
 
   useEffect(() => {
     if (isOpen && teamId) {
@@ -524,7 +527,7 @@ function BookmarksPanel({
   }
 
   return (
-    <Card className="p-6">
+    <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-black uppercase tracking-widest">
           {t('videoLibrary.bookmarks.title')}
@@ -534,7 +537,7 @@ function BookmarksPanel({
             onClick={() => setShowAddForm(true)}
             disabled={disabled}
             className={cn(
-              "text-sm font-bold text-[var(--org-btn-primary-bg)] hover:underline flex items-center gap-1",
+              "text-sm font-bold text-[var(--org-btn-secondary-bg)] hover:underline flex items-center gap-1",
               disabled && "opacity-50 cursor-not-allowed"
             )}
             title={disabled ? t('videoLibrary.demoMode.message') : undefined}
@@ -630,7 +633,7 @@ function BookmarksPanel({
           ))}
         </div>
       )}
-    </Card>
+    </div>
   )
 }
 
@@ -669,9 +672,10 @@ export default function CoachVideoDetail() {
   
   // State
   const [currentTime, setCurrentTime] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(false)
+  const [_isPlaying, setIsPlaying] = useState(false)
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
-  const [sortBy, setSortBy] = useState<'timestamp' | 'created'>('timestamp')
+  const [notesPanelOpen, setNotesPanelOpen] = useState(false)
+  const videoPlayerRef = useRef<HTMLElement | null>(null)
   
   // Modals
   const [isEditingDetails, setIsEditingDetails] = useState(false)
@@ -714,7 +718,7 @@ export default function CoachVideoDetail() {
   
   useVideoFavorites({ orgId: currentOrganization?.id, enabled: !!videoId })
   
-  const { notes, isLoading: notesLoading, createNote, deleteNote, refresh: refreshNotes } = useVideoNotes({
+  const { notes, isLoading: notesLoading, createNote, refresh: refreshNotes } = useVideoNotes({
     videoId,
     enabled: !!videoId
   })
@@ -752,16 +756,6 @@ export default function CoachVideoDetail() {
     }
   }
   
-  // Sort notes
-  const sortedNotes = useMemo(() => {
-    return [...notes].sort((a, b) => {
-      if (sortBy === 'timestamp') {
-        return (a.timestamp_start || 0) - (b.timestamp_start || 0)
-      }
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    })
-  }, [notes, sortBy])
-  
   // Create markers for timeline
   const markers = useMemo(() => {
     return notes
@@ -769,47 +763,29 @@ export default function CoachVideoDetail() {
       .map(note => ({
         time: note.timestamp_start!,
         label: note.title || note.content.substring(0, 30),
-        color: 'var(--org-btn-primary-bg)'
+        color: 'var(--org-btn-secondary-bg)'
       }))
   }, [notes])
-  
-  // Handle note creation
-  const handleCreateNote = useCallback(async (data: {
-    content: string
-    title?: string
-    timestamp_start?: number
-    scope: VideoNoteScope
-    target_athlete_ids?: string[]
-  }) => {
-    if (!videoId) return
-    
-    await createNote({
-      content: data.content,
-      title: data.title,
-      timestamp_start: data.timestamp_start ?? currentTime,
-      scope: data.scope,
-      target_athlete_ids: data.target_athlete_ids
-    })
-    
-    refreshNotes()
-  }, [videoId, currentTime, createNote, refreshNotes])
-  
-  // Handle note deletion
-  const handleDeleteNote = useCallback(async (note: VideoNote) => {
-    if (window.confirm(t('videoLibrary.notes.deleteConfirm'))) {
-      await deleteNote(note.id)
-      refreshNotes()
-    }
-  }, [deleteNote, refreshNotes, t])
   
   // Handle seeking to timestamp
   const handleSeekToNote = useCallback((timestamp: number) => {
     setCurrentTime(timestamp)
+    // Seek the video player
+    const player = videoPlayerRef.current as HTMLMediaElement | null
+    if (player) {
+      player.currentTime = timestamp
+    }
     const note = notes.find(n => n.timestamp_start === timestamp)
     if (note) {
       setActiveNoteId(note.id)
     }
   }, [notes])
+  
+  // Capture current video playhead time (for NotesPanel)
+  const handleCaptureTime = useCallback((): number => {
+    const player = videoPlayerRef.current as HTMLMediaElement | null
+    return player?.currentTime ?? currentTime
+  }, [currentTime])
   
   // Handle time update from player
   const handleTimeUpdate = useCallback((time: number) => {
@@ -1082,312 +1058,283 @@ export default function CoachVideoDetail() {
         }
       />
       
-      {/* Video Player */}
-      <Card className="mb-8 overflow-hidden">
-        {video.status === 'ready' ? (
-          <VideoPlayer
-            videoId={video.id}
-            status={video.status}
-            poster={video.thumbnail_url || undefined}
-            onTimeUpdate={handleTimeUpdate}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            markers={markers}
-            onMarkerClick={(marker) => handleSeekToNote(marker.time)}
-          />
-        ) : video.status === 'processing' ? (
-          <div className="aspect-video flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800">
-            <Icon name="hourglass_empty" size="text-6xl" className="text-gray-400 mb-4 animate-spin" />
-            <p className="text-xl font-bold text-gray-600 dark:text-gray-400 mb-2">
-              {t('videoLibrary.processing.processing')}
-            </p>
-            <p className="text-sm text-gray-500">
-              {t('videoLibrary.processing.processingMessage')}
-            </p>
-          </div>
-        ) : (
-          <div className="aspect-video flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800">
-            <Icon name="error" size="text-6xl" className="text-gray-400 mb-4" />
-            <p className="text-xl font-bold text-gray-600 dark:text-gray-400">
-              {video.status === 'pending_upload' ? t('videoLibrary.processing.pendingUpload')
-                : video.status === 'uploading' ? t('videoLibrary.processing.uploading')
-                : video.status === 'errored' ? t('videoLibrary.processing.failed')
-                : video.status === 'deleted' ? t('videoLibrary.processing.deleted')
-                : t('videoLibrary.processing.processing')}
-            </p>
-          </div>
-        )}
-      </Card>
-      
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-12 gap-8">
-        {/* Left Column - Video Details, Athletes, Tags, Bookmarks */}
-        <div className="col-span-12 lg:col-span-5 space-y-6">
-          {/* Video Details */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-sm font-black uppercase tracking-widest">
-                {t('videoLibrary.details.title')}
-              </h3>
-              <span className="bg-gray-100 dark:bg-gray-800 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded">
-                {video.category ? categoryLabels[video.category].toUpperCase() : 'VIDEO'}
+      {/* Video Player + Notes Panel Layout */}
+      <div className={cn(
+        "relative mb-8 flex transition-all duration-300 ease-out gap-0",
+        notesPanelOpen ? "md:pr-[40vw] md:max-w-none" : ""
+      )}>
+        <Card className="flex-1 min-w-0 overflow-hidden">
+          {video.status === 'ready' ? (
+            <VideoPlayer
+              videoId={video.id}
+              status={video.status}
+              poster={video.thumbnail_url || undefined}
+              onTimeUpdate={handleTimeUpdate}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              markers={markers}
+              onMarkerClick={(marker) => handleSeekToNote(marker.time)}
+            />
+          ) : video.status === 'processing' ? (
+            <div className="aspect-video flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800">
+              <Icon name="hourglass_empty" size="text-6xl" className="text-gray-400 mb-4 animate-spin" />
+              <p className="text-xl font-bold text-gray-600 dark:text-gray-400 mb-2">
+                {t('videoLibrary.processing.processing')}
+              </p>
+              <p className="text-sm text-gray-500">
+                {t('videoLibrary.processing.processingMessage')}
+              </p>
+            </div>
+          ) : (
+            <div className="aspect-video flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800">
+              <Icon name="error" size="text-6xl" className="text-gray-400 mb-4" />
+              <p className="text-xl font-bold text-gray-600 dark:text-gray-400">
+                {video.status === 'pending_upload' ? t('videoLibrary.processing.pendingUpload')
+                  : video.status === 'uploading' ? t('videoLibrary.processing.uploading')
+                  : video.status === 'errored' ? t('videoLibrary.processing.failed')
+                  : video.status === 'deleted' ? t('videoLibrary.processing.deleted')
+                  : t('videoLibrary.processing.processing')}
+              </p>
+            </div>
+          )}
+        </Card>
+
+        {/* Floating "Notes" Button (visible when panel is closed) */}
+        {!notesPanelOpen && (
+          <button
+            type="button"
+            onClick={() => setNotesPanelOpen(true)}
+            className="absolute right-3 top-3 z-10 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--org-btn-secondary-bg)] text-white text-sm font-bold shadow-lg hover:opacity-90 transition-opacity"
+          >
+            <span>📝</span>
+            Notes
+            {notes.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-white/20 text-[11px] font-black">
+                {notes.length}
               </span>
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* Notes Panel (slide-out) */}
+      <NotesPanel
+        isOpen={notesPanelOpen}
+        onClose={() => setNotesPanelOpen(false)}
+        onCaptureTime={handleCaptureTime}
+        onSeekToTimestamp={handleSeekToNote}
+        onAddNote={async (note) => {
+          if (!videoId) return
+          await createNote({
+            content: note.content,
+            title: note.title,
+            timestamp_start: note.timestamp_start,
+            scope: note.scope,
+            target_athlete_ids: note.target_athlete_ids,
+          })
+          refreshNotes()
+        }}
+        notes={notes}
+        notesLoading={notesLoading}
+        activeNoteId={activeNoteId}
+        linkedAthletes={video.athlete_links?.map(link => ({
+          id: link.athlete_id,
+          name: `${link.athlete?.first_name} ${link.athlete?.last_name}`
+        })) || []}
+        disabled={USE_FAKE_DATA}
+      />
+
+      {/* Accordion Sections (below video) */}
+      <div className="space-y-3">
+        {/* Video Details */}
+        <AccordionItem title="Video Details">
+          <div className="space-y-4">
+            <div>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                {t('videoLibrary.details.description')}
+              </label>
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                {video.description || t('videoLibrary.details.noDescription')}
+              </p>
             </div>
-            
-            <div className="space-y-4">
-              {/* Description */}
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-800 grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                  {t('videoLibrary.details.description')}
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
+                  {t('videoLibrary.details.uploadedBy')}
                 </label>
-                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {video.description || t('videoLibrary.details.noDescription')}
-                </p>
+                <span className="text-sm font-bold">
+                  {video.uploader?.full_name || 'Unknown'}
+                </span>
               </div>
-              
-              {/* Metadata Grid */}
-              <div className="pt-4 border-t border-gray-100 dark:border-gray-800 grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
+                  {t('videoLibrary.details.uploadDate')}
+                </label>
+                <span className="text-sm font-bold">
+                  {new Date(video.created_at).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </span>
+              </div>
+              {video.duration_seconds && (
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
-                    {t('videoLibrary.details.uploadedBy')}
+                    {t('videoLibrary.details.duration')}
                   </label>
                   <span className="text-sm font-bold">
-                    {video.uploader?.full_name || 'Unknown'}
+                    {formatDuration(video.duration_seconds)}
                   </span>
                 </div>
+              )}
+              {video.recorded_at && (
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
-                    {t('videoLibrary.details.uploadDate')}
+                    {t('videoLibrary.details.recordedDate')}
                   </label>
                   <span className="text-sm font-bold">
-                    {new Date(video.created_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}
+                    {new Date(video.recorded_at).toLocaleDateString()}
                   </span>
                 </div>
-                {video.duration_seconds && (
-                  <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
-                      {t('videoLibrary.details.duration')}
-                    </label>
-                    <span className="text-sm font-bold">
-                      {formatDuration(video.duration_seconds)}
-                    </span>
-                  </div>
-                )}
-                {video.recorded_at && (
-                  <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
-                      {t('videoLibrary.details.recordedDate')}
-                    </label>
-                    <span className="text-sm font-bold">
-                      {new Date(video.recorded_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-                {video.recording_location && (
-                  <div className="col-span-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
-                      {t('videoLibrary.details.recordedLocation')}
-                    </label>
-                    <span className="text-sm font-bold">
-                      {video.recording_location}
-                    </span>
-                  </div>
-                )}
-              </div>
+              )}
+              {video.recording_location && (
+                <div className="col-span-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
+                    {t('videoLibrary.details.recordedLocation')}
+                  </label>
+                  <span className="text-sm font-bold">
+                    {video.recording_location}
+                  </span>
+                </div>
+              )}
             </div>
-          </Card>
-          
-          {/* Linked Athletes */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-black uppercase tracking-widest">
-                {t('videoLibrary.details.linkedAthletes')}
-              </h3>
-              <button
-                onClick={() => setShowAthletesModal(true)}
-                disabled={USE_FAKE_DATA}
-                className={cn(
-                  "text-sm font-bold text-[var(--org-btn-primary-bg)] hover:underline flex items-center gap-1",
-                  USE_FAKE_DATA && "opacity-50 cursor-not-allowed"
-                )}
-                title={USE_FAKE_DATA ? t('videoLibrary.demoMode.message') : undefined}
-              >
-                <Icon name="add" size="text-sm" />
-                {t('videoLibrary.athletes.linkAthletes')}
-              </button>
-            </div>
-            {video.athlete_links && video.athlete_links.length > 0 ? (
-              <div className="space-y-2">
-                {video.athlete_links.map((link: VideoAthleteLink) => (
-                  <div
-                    key={link.id}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 group"
-                  >
-                    <div className="size-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                      <Icon name="person" size="text-sm" className="text-gray-500" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="text-sm font-medium">
-                        {link.athlete?.first_name} {link.athlete?.last_name}
+          </div>
+        </AccordionItem>
+
+        {/* Linked Athletes */}
+        <AccordionItem
+          title="Linked Athletes"
+          badge={video.athlete_links?.length || 0}
+          headerAction={
+            <button
+              onClick={() => setShowAthletesModal(true)}
+              disabled={USE_FAKE_DATA}
+              className={cn(
+                "text-xs font-bold text-[var(--org-btn-secondary-bg)] hover:underline flex items-center gap-1",
+                USE_FAKE_DATA && "opacity-50 cursor-not-allowed"
+              )}
+              title={USE_FAKE_DATA ? t('videoLibrary.demoMode.message') : undefined}
+            >
+              <Icon name="add" size="text-sm" />
+              Add
+            </button>
+          }
+        >
+          {video.athlete_links && video.athlete_links.length > 0 ? (
+            <div className="space-y-2">
+              {video.athlete_links.map((link: VideoAthleteLink) => (
+                <div
+                  key={link.id}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 group"
+                >
+                  <div className="size-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                    <Icon name="person" size="text-sm" className="text-gray-500" />
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-sm font-medium">
+                      {link.athlete?.first_name} {link.athlete?.last_name}
+                    </span>
+                    {link.athlete?.jersey_number && (
+                      <span className="ml-2 text-xs text-gray-500">
+                        #{link.athlete.jersey_number}
                       </span>
-                      {link.athlete?.jersey_number && (
-                        <span className="ml-2 text-xs text-gray-500">
-                          #{link.athlete.jersey_number}
-                        </span>
-                      )}
-                      <div>
-                        <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded font-bold uppercase">
-                          {link.link_type}
-                        </span>
-                      </div>
+                    )}
+                    <div>
+                      <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded font-bold uppercase">
+                        {link.link_type}
+                      </span>
                     </div>
-                    <button
-                      onClick={() => handleUnlinkAthlete(link.athlete_id)}
-                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
-                    >
-                      <Icon name="close" size="text-sm" />
-                    </button>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 text-gray-500 text-sm">
-                <Icon name="group" size="text-3xl" className="mx-auto mb-2" />
-                <p>{t('videoLibrary.athletes.noAthletes')}</p>
-              </div>
-            )}
-          </Card>
-          
-          {/* Tags */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-black uppercase tracking-widest">
-                {t('videoLibrary.tags.title')}
-              </h3>
-              <button
-                onClick={() => setShowTagsModal(true)}
-                disabled={USE_FAKE_DATA}
-                className={cn(
-                  "text-sm font-bold text-[var(--org-btn-primary-bg)] hover:underline flex items-center gap-1",
-                  USE_FAKE_DATA && "opacity-50 cursor-not-allowed"
-                )}
-                title={USE_FAKE_DATA ? t('videoLibrary.demoMode.message') : undefined}
-              >
-                <Icon name="add" size="text-sm" />
-                {t('videoLibrary.tags.addTag')}
-              </button>
-            </div>
-            {video.tags && video.tags.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {video.tags.map((tagLink, i) => (
-                  <div
-                    key={i}
-                    className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-500 flex items-center gap-1.5"
+                  <button
+                    onClick={() => handleUnlinkAthlete(link.athlete_id)}
+                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
                   >
-                    <Icon name="label" size="text-sm" />
-                    {tagLink.tag?.name?.toUpperCase() || 'TAG'}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 text-gray-500 text-sm">
-                <Icon name="label" size="text-3xl" className="mx-auto mb-2" />
-                <p>{t('videoLibrary.tags.noTags')}</p>
-              </div>
-            )}
-          </Card>
-          
-          {/* Bookmarks */}
+                    <Icon name="close" size="text-sm" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-gray-500 text-sm">
+              <Icon name="group" size="text-3xl" className="mx-auto mb-2" />
+              <p>{t('videoLibrary.athletes.noAthletes')}</p>
+            </div>
+          )}
+        </AccordionItem>
+
+        {/* Tags */}
+        <AccordionItem
+          title="Tags"
+          badge={video.tags?.length || 0}
+          headerAction={
+            <button
+              onClick={() => setShowTagsModal(true)}
+              disabled={USE_FAKE_DATA}
+              className={cn(
+                "text-xs font-bold text-[var(--org-btn-secondary-bg)] hover:underline flex items-center gap-1",
+                USE_FAKE_DATA && "opacity-50 cursor-not-allowed"
+              )}
+              title={USE_FAKE_DATA ? t('videoLibrary.demoMode.message') : undefined}
+            >
+              <Icon name="add" size="text-sm" />
+              Add
+            </button>
+          }
+        >
+          {video.tags && video.tags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {video.tags.map((tagLink, i) => (
+                <div
+                  key={i}
+                  className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-500 flex items-center gap-1.5"
+                >
+                  <Icon name="label" size="text-sm" />
+                  {tagLink.tag?.name?.toUpperCase() || 'TAG'}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-gray-500 text-sm">
+              <Icon name="label" size="text-3xl" className="mx-auto mb-2" />
+              <p>{t('videoLibrary.tags.noTags')}</p>
+            </div>
+          )}
+        </AccordionItem>
+
+        {/* Bookmarks */}
+        <AccordionItem
+          title="Bookmarks"
+          badge={undefined}
+        >
           <BookmarksPanel
             videoId={videoId!}
             currentTime={currentTime}
             onSeek={handleSeekToNote}
             disabled={USE_FAKE_DATA}
           />
-        </div>
-        
-        {/* Right Column - Notes, Comments */}
-        <div className="col-span-12 lg:col-span-7 space-y-6">
-          {/* Note Composer */}
-          <VideoNoteComposer
-            currentTime={currentTime}
-            isPlaying={isPlaying}
-            durationSeconds={video.duration_seconds ?? undefined}
-            athletes={video.athlete_links?.map(link => ({
-              id: link.athlete_id,
-              name: `${link.athlete?.first_name} ${link.athlete?.last_name}`
-            })) || []}
-            onSave={handleCreateNote}
-            disabled={USE_FAKE_DATA}
-          />
-          
-          {/* Notes List */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-sm font-black uppercase tracking-widest">
-                {t('videoLibrary.notes.title')}
-              </h3>
-              <div className="flex items-center gap-2 text-[10px] font-black text-gray-400">
-                {t('videoLibrary.notes.sortBy')}{' '}
-                <button
-                  onClick={() => setSortBy(sortBy === 'timestamp' ? 'created' : 'timestamp')}
-                  className="text-[var(--org-btn-primary-bg)] cursor-pointer underline"
-                >
-                  {sortBy === 'timestamp' ? t('videoLibrary.notes.sortByTimestamp') : t('videoLibrary.notes.sortByCreated')}
-                </button>
-              </div>
-            </div>
-            
-            {notesLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="animate-pulse bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800">
-                    <div className="flex gap-4">
-                      <div className="h-10 w-20 bg-gray-200 dark:bg-gray-700 rounded-lg" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4" />
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : sortedNotes.length === 0 ? (
-              <Card className="text-center py-8">
-                <Icon name="speaker_notes_off" size="text-4xl" className="text-gray-300 dark:text-gray-600 mb-3" />
-                <p className="text-gray-500 text-sm">
-                  {t('videoLibrary.notes.noNotesMessage')}
-                </p>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {sortedNotes.map(note => (
-                  <VideoNoteCard
-                    key={note.id}
-                    note={note}
-                    isActive={activeNoteId === note.id}
-                    isGuardianView={false}
-                    onSeek={handleSeekToNote}
-                    onEdit={() => {
-                      console.log('Edit note:', note.id)
-                    }}
-                    onDelete={handleDeleteNote}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-          
-          {/* Comments Section */}
+        </AccordionItem>
+
+        {/* Comments */}
+        <AccordionItem
+          title="Comments"
+          badge={undefined}
+        >
           <VideoCommentsPanel
             videoId={videoId!}
             disabled={USE_FAKE_DATA}
           />
-        </div>
+        </AccordionItem>
       </div>
       
       {/* Edit Video Modal */}
@@ -1460,7 +1407,7 @@ export default function CoachVideoDetail() {
                 <select
                   value={editVisibility}
                   onChange={(e) => handleVisibilityChange(e.target.value as VideoVisibility)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                 >
                   <option value="private">{t('videoUploader.visibilities.private')}</option>
                   <option value="team">{t('videoUploader.visibilities.team')}</option>
@@ -1741,7 +1688,7 @@ export default function CoachVideoDetail() {
       <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
         <Link
           to={getLink('admin.videos.list')}
-          className="inline-flex items-center gap-2 text-sm font-bold text-[var(--org-btn-primary-bg)] hover:underline"
+          className="inline-flex items-center gap-2 text-sm font-bold text-[var(--org-btn-secondary-bg)] hover:underline"
         >
           <Icon name="arrow_back" size="text-lg" />
           {t('videoLibrary.title')}

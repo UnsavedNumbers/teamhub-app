@@ -763,7 +763,7 @@ export default function LevelDetail() {
                   Export CSV
                 </Button>
               }
-              noPadding
+             
             >
               <Table
                 columns={columns}
@@ -844,3 +844,4 @@ export default function LevelDetail() {
     </div>
   )
 }
+
