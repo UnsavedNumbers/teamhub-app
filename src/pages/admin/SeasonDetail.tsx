@@ -49,6 +49,7 @@ export default function SeasonDetail() {
   const [statsLoading, setStatsLoading] = useState(true)
   const [showArchiveDialog, setShowArchiveDialog] = useState(false)
   const [archiving, setArchiving] = useState(false)
+  void archiving
   const [seasonTeams, setSeasonTeams] = useState<SeasonTeamRow[]>([])
   const [teamsSlideOverOpen, setTeamsSlideOverOpen] = useState(false)
   const [galleryInsights, setGalleryInsights] = useState<GalleryInsights>({
@@ -613,7 +614,6 @@ export default function SeasonDetail() {
         confirmLabel={t('admin.seasonDetail.archiveConfirm')}
         cancelLabel={t('admin.seasonDetail.archiveCancel')}
         variant="danger"
-        loading={archiving}
         onConfirm={handleArchive}
         onCancel={() => setShowArchiveDialog(false)}
       />

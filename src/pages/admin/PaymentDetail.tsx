@@ -775,17 +775,17 @@ export default function PaymentDetail() {
             {/* Destination */}
             <div className="space-y-4">
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">DESTINATION</h3>
-              <Card 
-                className={`p-5 transition-all group ${assignment.team?.id || assignment.season?.id ? 'hover:border-[var(--org-btn-primary-bg, #137fec)] cursor-pointer' : 'cursor-default'}`}
-                onClick={() => {
-                  if (assignment.team?.id) {
-                    navigate(getLink('admin.teams.detail', { id: assignment.team.id }))
-                  } else if (assignment.season?.id) {
-                    navigate(getLink('admin.seasons.detail', { id: assignment.season.id }))
-                  }
-                }}
-              >
-                <div className="flex items-center gap-4">
+              <Card className={`p-5 transition-all group ${assignment.team?.id || assignment.season?.id ? 'hover:border-[var(--org-btn-primary-bg, #137fec)] cursor-pointer' : 'cursor-default'}`}>
+                <div
+                  className="flex items-center gap-4"
+                  onClick={() => {
+                    if (assignment.team?.id) {
+                      navigate(getLink('admin.teams.detail', { id: assignment.team.id }))
+                    } else if (assignment.season?.id) {
+                      navigate(getLink('admin.seasons.detail', { id: assignment.season.id }))
+                    }
+                  }}
+                >
                   <div className="size-10 bg-[var(--org-btn-primary-bg, #137fec)]/10 text-[var(--org-btn-primary-bg, #137fec)] rounded-lg flex items-center justify-center group-hover:bg-[var(--org-btn-primary-bg, #137fec)] group-hover:text-white transition-colors">
                     <span className="material-symbols-outlined">sports_soccer</span>
                   </div>
@@ -942,17 +942,14 @@ export default function PaymentDetail() {
         open={confirmDialog.open}
         title={confirmDialog.title}
         description={confirmDialog.description}
-        variant={confirmDialog.variant}
-        requireReason={confirmDialog.requireReason}
-        loading={actionLoading !== null}
-        error={confirmDialog.error}
+        variant={confirmDialog.variant === 'danger' ? 'danger' : 'primary'}
         confirmLabel={
           confirmDialog.action === 'markPaid' ? 'Mark as Paid' :
           confirmDialog.action === 'refund' ? 'Issue Refund' :
           confirmDialog.action === 'void' ? 'Void Payment' :
           'Confirm'
         }
-        onConfirm={handleConfirmDialogConfirm}
+        onConfirm={() => { void handleConfirmDialogConfirm('') }}
         onCancel={handleConfirmDialogCancel}
       />
     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useUserContext } from '@/hooks/useUserContext';
 import { useI18n } from '@/i18n/useI18n';
@@ -29,7 +29,7 @@ export function usePortalGalleryData(galleryId?: string) {
     const id = galleryId || paramId;
 
     const { context, isReady } = useUserContext();
-    const { t } = useI18n();
+    useI18n();
 
     const { filters, setFilters, clearFilters, setDensity } = usePhotoFilters({
         viewKey: `photosGallery:${id || 'unknown'}`,

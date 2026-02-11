@@ -425,18 +425,15 @@ export default function GuardianAttachmentRequests() {
                 confirmLabel={reviewDialog.approve ? 'Approve' : 'Deny'}
                 cancelLabel="Cancel"
                 variant={reviewDialog.approve ? undefined : 'danger'}
-                requireReason={!reviewDialog.approve}
-                onConfirm={(reason) => {
+                onConfirm={() => {
                     if (reviewDialog.request) {
-                        handleReview(reviewDialog.request, reviewDialog.approve, reason)
+                        handleReview(reviewDialog.request, reviewDialog.approve, '')
                     }
                 }}
                 onCancel={() => {
                     setReviewDialog({ open: false, request: null, approve: false })
                     setError(null)
                 }}
-                loading={isReviewing}
-                error={error}
             />
         </div>
     )

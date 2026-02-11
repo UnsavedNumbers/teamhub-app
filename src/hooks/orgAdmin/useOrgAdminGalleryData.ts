@@ -30,7 +30,7 @@ export function useOrgAdminGalleryData(galleryId?: string) {
     const id = galleryId || paramId;
 
     const { context } = useUserContext();
-    const { t } = useI18n();
+    useI18n();
 
     const { filters, setFilters, clearFilters, setDensity } = usePhotoFilters({
         viewKey: `adminGallery:${id || 'unknown'}`,

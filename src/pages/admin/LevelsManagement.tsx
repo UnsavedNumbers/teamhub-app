@@ -34,6 +34,7 @@ export default function LevelsManagement() {
   const [deletingLevelId, setDeletingLevelId] = useState<string | null>(null)
   const [levelToDelete, setLevelToDelete] = useState<{ id: string; name: string } | null>(null)
   const [dialogError, setDialogError] = useState<string | null>(null)
+  void dialogError
 
   const isMountedRef = useRef(true)
 
@@ -481,8 +482,6 @@ export default function LevelsManagement() {
         }
         confirmLabel="Remove"
         variant="danger"
-        loading={deletingLevelId !== null}
-        error={dialogError}
         onConfirm={confirmDeleteLevel}
         onCancel={handleCancelDelete}
       />

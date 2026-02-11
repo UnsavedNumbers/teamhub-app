@@ -246,7 +246,7 @@ export default function FamilyDetail() {
                     title={alertDialog.title}
                     description={alertDialog.message}
                     confirmLabel="OK"
-                    cancelLabel={null}
+                    cancelLabel="Cancel"
                     variant="danger"
                     onConfirm={() => setAlertDialog(null)}
                     onCancel={() => setAlertDialog(null)}

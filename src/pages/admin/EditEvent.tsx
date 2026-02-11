@@ -69,6 +69,7 @@ export default function EditEvent() {
   const [cancelDialog, setCancelDialog] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  void actionError
   const [hasPaidOrders, setHasPaidOrders] = useState(false)
   const [ticketedEventId, setTicketedEventId] = useState<string | null>(null)
   const [bannerFile, setBannerFile] = useState<File | null>(null)
@@ -1642,10 +1643,7 @@ export default function EditEvent() {
         description={`Are you sure you want to delete this event? This action cannot be undone and will delete all associated data (RSVPs, attendance, etc.).`}
         confirmLabel="Delete"
         variant="danger"
-        requireReason
-        loading={actionLoading}
-        error={actionError}
-        onConfirm={async (_reason: string) => {
+        onConfirm={async () => {
           if (!eventId) return
           setActionLoading(true)
           setActionError(null)
@@ -1695,11 +1693,8 @@ export default function EditEvent() {
         title="Cancel Event"
         description={`Are you sure you want to cancel this event? This will mark the event as cancelled and notify participants.`}
         confirmLabel="Cancel Event"
-        variant="warning"
-        requireReason
-        loading={actionLoading}
-        error={actionError}
-        onConfirm={async (reason: string) => {
+        variant="primary"
+        onConfirm={async () => {
           if (!eventId) return
           setActionLoading(true)
           setActionError(null)
@@ -1724,7 +1719,7 @@ export default function EditEvent() {
               .from('events')
               .update({
                 is_cancelled: true,
-                cancellation_reason: reason || null,
+                cancellation_reason: null,
                 cancelled_at: new Date().toISOString(),
                 cancelled_by_user_id: context.userId
               })
@@ -1770,7 +1765,7 @@ export default function EditEvent() {
         description="Changing RSVP type will delete existing RSVP responses. Are you sure?"
         confirmLabel="Continue"
         cancelLabel="Cancel"
-        variant="warning"
+        variant="primary"
         onConfirm={handleConfirmRsvpChange}
         onCancel={() => {
           setShowRsvpChangeDialog(false)

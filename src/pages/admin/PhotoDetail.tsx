@@ -122,7 +122,7 @@ export default function PhotoDetail() {
       return
     }
 
-    if (!window.confirm(t('photos.confirmDelete'))) return
+    if (!window.confirm(t('photos.confirmDelete' as any))) return
 
     const { error } = await deletePhotos(context!, gallery?.id || '', ids)
     if (error) {
@@ -153,18 +153,18 @@ export default function PhotoDetail() {
     try {
       const { error } = await setGalleryCover(context, galleryId, photoId)
       if (error) throw error
-      showSuccess(t('photos.success.coverSet'))
+      showSuccess(t('photos.success.coverSet' as any))
       // Reload gallery to get updated cover photo
       const { data: galleryData } = await getGalleryById(context, galleryId)
       if (galleryData) {
         setGallery(galleryData)
       }
     } catch (err) {
-      showError(err instanceof Error ? err.message : t('photos.errors.setCover'))
+      showError(err instanceof Error ? err.message : t('photos.errors.setCover' as any))
     }
   }
 
-  const handleTagPhoto = (photoId: string) => {
+  const handleTagPhoto = (_photoId: string) => {
     // TODO: Implement tag photo modal
     showError('Photo tagging coming soon')
   }
@@ -260,10 +260,10 @@ export default function PhotoDetail() {
                     {t('common.delete')}
                   </Button>
                   <Button variant="secondary" size="small" onClick={() => handleModerate(selectedIds, 'approve')}>
-                    {t('common.approve')}
+                    {t('common.approve' as any)}
                   </Button>
                   <Button variant="secondary" size="small" onClick={() => handleModerate(selectedIds, 'reject')}>
-                    {t('common.reject')}
+                    {t('common.reject' as any)}
                   </Button>
                   <Button variant="ghost" size="small" onClick={() => setSelectedIds([])}>
                      {t('common.cancel')}
@@ -280,7 +280,7 @@ export default function PhotoDetail() {
                         type="button"
                         className={`oa-view-toggle-btn ${viewMode === 'grid' ? 'oa-view-toggle-btn--active' : ''}`}
                         onClick={() => setViewMode('grid')}
-                        aria-label={t('photos.gridView')}
+                        aria-label={t('photos.gridView' as any)}
                       >
                         <span className="material-symbols-outlined">grid_view</span>
                       </button>
@@ -288,7 +288,7 @@ export default function PhotoDetail() {
                         type="button"
                         className={`oa-view-toggle-btn ${viewMode === 'list' ? 'oa-view-toggle-btn--active' : ''}`}
                         onClick={() => setViewMode('list')}
-                        aria-label={t('photos.listView')}
+                        aria-label={t('photos.listView' as any)}
                       >
                         <span className="material-symbols-outlined">view_list</span>
                       </button>

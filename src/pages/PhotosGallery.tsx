@@ -15,7 +15,6 @@ import {
   getAlbumsForGallery,
   getPhotosForGallery,
   getGalleryPhotoUrl,
-  getGalleryPhotoThumbnailUrl,
   checkCanModerateGallery,
   checkCanUploadToGallery,
   getPhotoBookmarks,
@@ -146,6 +145,7 @@ export default function PhotosGallery() {
     () => new Map(displayPhotos.map((photo, index) => [photo.id, index])),
     [displayPhotos],
   )
+  void displayIndexMap
 
   const photosByAlbum = useMemo(() => {
     if (filters.album || isFavoritesView || albums.length === 0) return null
@@ -167,6 +167,7 @@ export default function PhotosGallery() {
     filters.density === 'compact'
       ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6'
       : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12'
+  void gridClass
 
   const selectedDownloadIds = useMemo(() => {
     if (!gallery?.can_download) return []

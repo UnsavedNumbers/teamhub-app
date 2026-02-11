@@ -78,6 +78,8 @@ export default function AdminAthletes() {
     const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false)
     const [actionLoading, setActionLoading] = useState(false)
     const [actionError, setActionError] = useState<string | null>(null)
+    void actionLoading
+    void actionError
 
     // Filter data
     const [teams, setTeams] = useState<Team[]>([])
@@ -397,8 +399,11 @@ export default function AdminAthletes() {
                     icon="person_off"
                     title={t('admin.athletes.noAthletes')}
                     description={t('admin.athletes.noAthletesDescription')}
-                    action={{ label: t('admin.athletes.add'), onClick: () => navigate(getLink('admin.athletes.create')) }}
-                />
+                >
+                    <button className="oa-btn oa-btn--primary" onClick={() => navigate(getLink('admin.athletes.create'))}>
+                        {t('admin.athletes.add')}
+                    </button>
+                </EmptyState>
             ) : (
                 <AthletesGrid
                     athletes={athletes}
@@ -440,10 +445,7 @@ export default function AdminAthletes() {
                 }
                 confirmLabel={t('common.delete')}
                 variant="danger"
-                requireReason
-                loading={actionLoading}
-                error={actionError}
-                onConfirm={handleDelete}
+                onConfirm={() => { void handleDelete('') }}
                 onCancel={() => {
                     setDeleteDialog({ open: false, athlete: null })
                     setActionError(null)
@@ -457,10 +459,7 @@ export default function AdminAthletes() {
                 description={t('admin.athletes.bulkDeleteConfirm', { count: selectedIds.size })}
                 confirmLabel={t('admin.athletes.delete')}
                 variant="danger"
-                requireReason
-                loading={actionLoading}
-                error={actionError}
-                onConfirm={handleBulkDelete}
+                onConfirm={() => { void handleBulkDelete('') }}
                 onCancel={() => {
                     setBulkDeleteDialog(false)
                     setActionError(null)

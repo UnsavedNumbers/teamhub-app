@@ -584,9 +584,8 @@ export default function AthleteDetail() {
   // Team table columns - MUST be before conditional returns (Rules of Hooks)
   const teamColumns: TableColumn<TeamMembership>[] = useMemo(() => [
     {
-      id: 'team_name',
-      label: t('admin.athletes.table.team').toUpperCase(),
-      cellType: 'primary',
+      key: 'team_name',
+      header: t('admin.athletes.table.team').toUpperCase(),
       render: (row) => (
         <button
           onClick={() => handleTeamClick(row.team_id)}
@@ -607,19 +606,19 @@ export default function AthleteDetail() {
       ),
     },
     {
-      id: 'season_name',
-      label: t('admin.athletes.table.season').toUpperCase(),
+      key: 'season_name',
+      header: t('admin.athletes.table.season').toUpperCase(),
       render: (row) => row.season_name,
     },
     {
-      id: 'jersey_number',
-      label: t('admin.athletes.table.jersey').toUpperCase(),
+      key: 'jersey_number',
+      header: t('admin.athletes.table.jersey').toUpperCase(),
       align: 'center',
       render: (row) => row.jersey_number || '—',
     },
     {
-      id: 'status',
-      label: t('admin.athletes.table.status').toUpperCase(),
+      key: 'status',
+      header: t('admin.athletes.table.status').toUpperCase(),
       render: (row) => (
         <Badge
           variant={row.status === 'active' ? 'success' : row.status === 'pending' ? 'warning' : 'neutral'}
@@ -633,32 +632,31 @@ export default function AthleteDetail() {
   // Guardian table columns - MUST be before conditional returns (Rules of Hooks)
   const guardianColumns: TableColumn<Guardian>[] = useMemo(() => [
     {
-      id: 'display_name',
-      label: t('admin.athletes.table.name').toUpperCase(),
-      cellType: 'primary',
+      key: 'display_name',
+      header: t('admin.athletes.table.name').toUpperCase(),
       render: (guardian) => guardian.display_name || guardian.email,
     },
     {
-      id: 'email',
-      label: t('admin.athletes.table.email').toUpperCase(),
+      key: 'email',
+      header: t('admin.athletes.table.email').toUpperCase(),
       render: (guardian) => guardian.email,
     },
     {
-      id: 'phone',
-      label: t('admin.athletes.table.phone').toUpperCase(),
+      key: 'phone',
+      header: t('admin.athletes.table.phone').toUpperCase(),
       render: (guardian) => guardian.phone || '—',
     },
     {
-      id: 'relationship_type',
-      label: t('admin.athletes.table.relationship').toUpperCase(),
+      key: 'relationship_type',
+      header: t('admin.athletes.table.relationship').toUpperCase(),
       render: (guardian) => {
         const type = guardian.relationship_type || 'parent'
         return type.charAt(0).toUpperCase() + type.slice(1)
       },
     },
     {
-      id: 'status',
-      label: t('admin.athletes.table.status').toUpperCase(),
+      key: 'status',
+      header: t('admin.athletes.table.status').toUpperCase(),
       render: (guardian) => (
         <Badge
           variant={guardian.status === 'active' ? 'success' : guardian.status === 'pending' ? 'warning' : 'neutral'}
@@ -668,8 +666,8 @@ export default function AthleteDetail() {
       ),
     },
     {
-      id: 'action',
-      label: t('admin.athletes.table.action').toUpperCase(),
+      key: 'action',
+      header: t('admin.athletes.table.action').toUpperCase(),
       align: 'right',
       render: (guardian) => (
         <Button
@@ -690,14 +688,13 @@ export default function AthleteDetail() {
   // Pending invites table columns
   const pendingInviteColumns: TableColumn<PendingGuardianInvite>[] = useMemo(() => [
     {
-      id: 'email',
-      label: t('admin.athletes.table.email').toUpperCase(),
-      cellType: 'primary',
+      key: 'email',
+      header: t('admin.athletes.table.email').toUpperCase(),
       render: (invite) => invite.email,
     },
     {
-      id: 'status',
-      label: t('admin.athletes.table.status').toUpperCase(),
+      key: 'status',
+      header: t('admin.athletes.table.status').toUpperCase(),
       render: () => (
         <Badge variant="warning">
           {t('admin.athletes.guardians.invitePending')}
@@ -705,8 +702,8 @@ export default function AthleteDetail() {
       ),
     },
     {
-      id: 'expires_at',
-      label: t('admin.athletes.guardians.expires').toUpperCase(),
+      key: 'expires_at',
+      header: t('admin.athletes.guardians.expires').toUpperCase(),
       render: (invite) => {
         const expiresDate = new Date(invite.expires_at)
         const isExpired = expiresDate < new Date()
@@ -718,8 +715,8 @@ export default function AthleteDetail() {
       },
     },
     {
-      id: 'actions',
-      label: t('admin.athletes.table.action').toUpperCase(),
+      key: 'actions',
+      header: t('admin.athletes.table.action').toUpperCase(),
       align: 'right',
       render: (invite) => (
         <div style={{ display: 'flex', gap: 'var(--oa-space-2)', justifyContent: 'flex-end' }}>
@@ -977,31 +974,31 @@ export default function AthleteDetail() {
               {/* Info Badges Row */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oa-space-2)', alignItems: 'center' }}>
                 {age !== null && (
-                  <Badge variant="neutral" size="small">
+                  <Badge variant="neutral">
                     Age {age}
                   </Badge>
                 )}
                 {genderLabel !== 'Not specified' && (
-                  <Badge variant="neutral" size="small">
+                  <Badge variant="neutral">
                     {genderLabel}
                   </Badge>
                 )}
                 {athlete.jersey_number && (
-                  <Badge variant="info" size="small">
+                  <Badge variant="info">
                     #{athlete.jersey_number}
                   </Badge>
                 )}
                 {plays.length > 0 && (
-                  <Badge variant="success" size="small">
+                  <Badge variant="success">
                     {plays.length} {plays.length === 1 ? 'Sport' : 'Sports'}
                   </Badge>
                 )}
                 {activeTeams > 0 && (
-                  <Badge variant="info" size="small">
+                  <Badge variant="info">
                     {activeTeams} {activeTeams === 1 ? 'Active Team' : 'Active Teams'}
                   </Badge>
                 )}
-                <Badge variant="neutral" size="small">
+                <Badge variant="neutral">
                   {updatedLabel}
                 </Badge>
               </div>
@@ -1553,7 +1550,6 @@ export default function AthleteDetail() {
         confirmLabel={t('admin.athletes.guardians.remove')}
         cancelLabel={t('admin.athletes.guardians.cancel')}
         variant="danger"
-        loading={isRemovingGuardian}
         onConfirm={handleConfirmRemoveGuardian}
         onCancel={handleCancelRemoveGuardian}
       />
@@ -1565,8 +1561,8 @@ export default function AthleteDetail() {
           title={alertDialog.title}
           description={alertDialog.message}
           confirmLabel="OK"
-          cancelLabel={null}
-          variant={alertDialog.variant || 'info'}
+          cancelLabel="Cancel"
+          variant={alertDialog.variant === 'danger' ? 'danger' : 'primary'}
           onConfirm={() => setAlertDialog(null)}
           onCancel={() => setAlertDialog(null)}
         />
@@ -1575,3 +1571,6 @@ export default function AthleteDetail() {
   </div>
 )
 }
+
+
+

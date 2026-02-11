@@ -70,6 +70,7 @@ export default function AdminAnnouncements() {
   })
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  void actionError
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const deleteRequestIdRef = useRef(0)
 
@@ -523,7 +524,7 @@ export default function AdminAnnouncements() {
 
       {/* Show error message if teams fetch failed */}
       {teamsError && (
-        <Card className="oa-mb-4" noPadding>
+        <Card className="oa-mb-4">
           <div className="oa-p-4" style={{ background: 'var(--oa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--oa-danger, #ef4444)' }}>
             <div className="oa-text-sm oa-font-medium" style={{ color: 'var(--oa-danger-dark, #991b1b)' }}>
               {teamsError}
@@ -534,7 +535,7 @@ export default function AdminAnnouncements() {
 
       {/* Show error message if announcements fetch failed */}
       {error && (
-        <Card className="oa-mb-4" noPadding>
+        <Card className="oa-mb-4">
           <div className="oa-p-4" style={{ background: 'var(--oa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--oa-danger, #ef4444)' }}>
             <div className="oa-flex oa-items-center oa-justify-between">
               <div className="oa-text-sm oa-font-medium" style={{ color: 'var(--oa-danger-dark, #991b1b)' }}>
@@ -555,7 +556,7 @@ export default function AdminAnnouncements() {
 
       {/* Show info message when no teams exist */}
       {hasTeams === false && !teamsError && (
-        <Card className="oa-mb-4" noPadding>
+        <Card className="oa-mb-4">
           <div className="oa-p-4" style={{ background: 'var(--oa-info-bg, #eff6ff)', borderLeft: '4px solid var(--oa-info, #3b82f6)' }}>
             <div className="oa-text-sm oa-font-medium" style={{ color: 'var(--oa-info-dark, #1e40af)' }}>
               No teams available. Create teams before posting announcements.
@@ -633,13 +634,15 @@ export default function AdminAnnouncements() {
             title="NO ANNOUNCEMENTS" 
             description={priorityFilter !== 'all' || selectedTeamFilter || dateRangeFilter === 'recent'
               ? "No announcements match your filters."
-              : "Create your first announcement to get started."} 
-            action={hasTeams ? { 
-              label: 'New Announcement', 
-              onClick: () => setIsCreateModalOpen(true) 
-            } : undefined}
+              : "Create your first announcement to get started."}
             noCard
-          />
+          >
+            {hasTeams ? (
+              <button className="oa-btn oa-btn--primary" onClick={() => setIsCreateModalOpen(true)}>
+                New Announcement
+              </button>
+            ) : null}
+          </EmptyState>
         </Card>
       ) : (
         <OrgDataTable 
@@ -670,10 +673,7 @@ export default function AdminAnnouncements() {
         description={deleteDialog.announcement ? `Are you sure you want to delete "${deleteDialog.announcement.title}"? This action cannot be undone.` : ''}
         confirmLabel="Delete"
         variant="danger"
-        requireReason={false}
-        loading={actionLoading}
-        error={actionError}
-        onConfirm={handleDelete}
+        onConfirm={() => { void handleDelete('') }}
         onCancel={() => {
           setDeleteDialog({ open: false, announcement: null })
           setActionError(null)

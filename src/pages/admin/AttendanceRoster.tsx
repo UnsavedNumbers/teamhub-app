@@ -65,7 +65,7 @@ export default function AttendanceRoster() {
         id: 'status', 
         label: 'Status', 
         render: (row) => {
-            const variant = row.status === 'present' ? 'success' : row.status === 'absent' ? 'error' : row.status === 'late' ? 'warning' : 'neutral'
+            const variant = row.status === 'present' ? 'success' : row.status === 'absent' ? 'danger' : row.status === 'late' ? 'warning' : 'neutral'
             return <Badge variant={variant}>{row.status.toUpperCase()}</Badge> 
         }
     },
