@@ -37,63 +37,89 @@ export async function teardownTestData(seeded: SeededData): Promise<void> {
         // Storage cleanup is best-effort
     }
 
-    // 2. Gallery photos
+    // 2. Videos (created by spec-level beforeAll)
+    try {
+        await svc.from('videos').delete().like('title', `${namePrefix}%`);
+    } catch {
+        // Best-effort
+    }
+
+    // 3. Gallery photos
     await svc.from('gallery_photos').delete().eq('gallery_id', seeded.galleryId);
 
-    // 3. Gallery
+    // 4. Gallery
     await svc.from('galleries').delete().eq('id', seeded.galleryId);
+    // Also clean up any galleries created during tests
+    try {
+        await svc.from('galleries').delete().like('name', `${namePrefix}%`);
+    } catch { /* best-effort */ }
 
-    // 4. Fee assignments
+    // 5. Fee assignments
     if (seeded.feeAssignmentId) {
         await svc.from('fee_assignments').delete().eq('id', seeded.feeAssignmentId);
     }
 
-    // 5. Fees
+    // 6. Fees
     if (seeded.feeId) {
         await svc.from('fees').delete().eq('id', seeded.feeId);
     }
 
-    // 6. Ticketed events
+    // 7. Ticketed events
     if (seeded.ticketedEventId) {
         // Delete ticket_types, tickets, ticket_orders first
-        await svc.from('ticket_types').delete().eq('ticketed_event_id', seeded.ticketedEventId);
+        try {
+            await svc.from('ticket_types').delete().eq('ticketed_event_id', seeded.ticketedEventId);
+        } catch { /* may not exist */ }
         await svc.from('ticketed_events').delete().eq('id', seeded.ticketedEventId);
     }
 
-    // 7. Fan bookmarks for our event
+    // 8. Fan bookmarks for our events
     await svc.from('fan_event_bookmarks').delete().eq('event_id', seeded.eventId);
+    await svc.from('fan_event_bookmarks').delete().eq('event_id', seeded.privateEventId);
 
-    // 8. Fan org follows for our org
+    // 9. Fan org follows for our org
     await svc.from('fan_org_follows').delete().eq('org_id', seeded.orgId);
 
-    // 9. Announcements
+    // 10. Announcements (seeded + any created by tests)
     await svc.from('announcements').delete().eq('id', seeded.announcementId);
+    try {
+        await svc.from('announcements').delete().like('title', `${namePrefix}%`);
+    } catch { /* best-effort */ }
 
-    // 10. Event RSVPs
+    // 11. Event RSVPs
     await svc.from('event_rsvps').delete().eq('event_id', seeded.eventId);
+    await svc.from('event_rsvps').delete().eq('event_id', seeded.privateEventId);
 
-    // 11. Events
+    // 12. Events (public + private)
     await svc.from('events').delete().eq('id', seeded.eventId);
+    await svc.from('events').delete().eq('id', seeded.privateEventId);
 
-    // 12. Athlete guardians
+    // 13. Athlete guardians
     await svc.from('athlete_guardians').delete().eq('id', seeded.guardianshipId);
+    // Clean up any guardians created by tests
+    try {
+        await svc.from('athlete_guardians').delete().eq('athlete_id', seeded.athleteId);
+    } catch { /* best-effort */ }
 
-    // 13. Team memberships
+    // 14. Team memberships
     await svc.from('team_memberships').delete().eq('team_id', seeded.teamId);
 
-    // 14. Athletes
+    // 15. Athletes
     await svc.from('athletes').delete().eq('id', seeded.athleteId);
 
-    // 15. Teams
+    // 16. Teams (seeded + any created by tests)
     await svc.from('teams').delete().eq('id', seeded.teamId);
+    try {
+        await svc.from('teams').delete().like('name', `${namePrefix}%`);
+    } catch { /* best-effort */ }
 
-    // 16. Seasons
+    // 17. Seasons
     await svc.from('seasons').delete().eq('id', seeded.seasonId);
 
-    // 17. Organization members
+    // 18. Organization members (including staff)
     await svc.from('organization_members').delete().eq('org_id', seeded.orgId);
 
-    // 18. Org settings (cascade-dependent tables)
+    // 19. Org settings (cascade-dependent tables)
     const orgSettingsTables = [
         'organization_settings',
         'organization_contacts',
@@ -110,7 +136,7 @@ export async function teardownTestData(seeded: SeededData): Promise<void> {
         }
     }
 
-    // 19. Organization (root)
+    // 20. Organization (root)
     await svc.from('organizations').delete().eq('id', seeded.orgId);
 }
 
@@ -139,9 +165,12 @@ export async function cleanupStaleTestData(): Promise<void> {
             'galleries',
             'fee_assignments',
             'fees',
+            'fan_event_bookmarks',
+            'fan_org_follows',
             'announcements',
             'athlete_guardians',
             'team_memberships',
+            'event_rsvps',
             'events',
             'athletes',
             'teams',
