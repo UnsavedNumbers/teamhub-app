@@ -151,13 +151,13 @@ export function PhotoSection({
   }
 
   return (
-    <Card className={`p-6 relative rounded-tl-none pa-photo-section ${isExiting ? 'pa-exiting' : ''}`} style={{ opacity: isExiting ? 0 : 1, transition: 'opacity 0.15s ease' }}>
+    <Card className={`p-6 relative rounded-tl-none pa-photo-section bg-white dark:bg-slate-800 ${isExiting ? 'pa-exiting' : ''}`} style={{ opacity: isExiting ? 0 : 1, transition: 'opacity 0.15s ease' }}>
       {/* Black Header Bar - Matching other right column cards */}
       <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
         <Icon name="photo_library" size="text-2xl" />
         {title || t('photos.sectionTitle' as any)}
         {gallery && gallery.photo_count !== undefined && (
-          <span className="text-sm font-normal text-gray-300 ml-2">
+          <span className="text-sm font-normal text-gray-300 dark:text-gray-400 ml-2">
             ({gallery.photo_count} {gallery.photo_count === 1 ? t('photos.photo') : t('photos.photos')})
           </span>
         )}
@@ -166,7 +166,7 @@ export function PhotoSection({
             onClick={viewAll}
             className="ml-auto text-xs font-normal text-gray-300 hover:text-white flex items-center gap-1 transition-colors"
           >
-            {t('photos.viewAll' as any)}
+            {t('portal.fan.entityProfile.viewAllPhotos')}
             <span className="material-symbols-outlined text-sm">open_in_new</span>
           </button>
         )}
@@ -189,12 +189,11 @@ export function PhotoSection({
                 className="pa-skeleton pa-photo-skeleton"
                 style={{
                   width: '100%',
-                  aspectRatio: idx === 0 ? '4/3' : '1',
+                  aspectRatio: '1',
                   borderRadius: '12px',
                   background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)',
                   backgroundSize: '200% 100%',
                   animation: 'shimmer 1.5s infinite',
-                  gridRow: idx === 0 ? 'span 2' : 'auto',
                 }}
               />
             ))}

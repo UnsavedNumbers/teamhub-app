@@ -34,7 +34,7 @@ export default function EventCard({ event, sport = null, onClick, compact = fals
   return (
     <button 
       onClick={onClick}
-      className={`pa-card pa-shadow-sm pa-w-full pa-text-left hover:pa-shadow-md transition-shadow pa-overflow-hidden pa-p-0 border-0 group pa-rounded-lg flex flex-col h-full bg-white ${isCancelled ? 'opacity-75' : ''} ${className}`}
+      className={`pa-card pa-shadow-sm pa-w-full pa-text-left hover:pa-shadow-md transition-shadow pa-overflow-hidden pa-p-0 border-0 group pa-rounded-lg flex flex-col h-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 ${isCancelled ? 'opacity-75' : ''} ${className}`}
     >
       {/* Sport Background Image - Full Width */}
       <div className="pa-relative pa-overflow-hidden w-full rounded-t-lg" style={{ aspectRatio: '16 / 9' }}>
@@ -63,11 +63,11 @@ export default function EventCard({ event, sport = null, onClick, compact = fals
       {/* Card Content */}
       <div className="pa-p-3 flex-1 flex flex-col justify-end">
         <div className="min-w-0 flex-1">
-          <div className={`pa-font-semibold pa-text-slate-900 group-hover:pa-text-blue-600 transition-colors mb-1 ${isCancelled ? 'line-through text-slate-500' : ''}`}>
+          <div className={`pa-font-semibold text-slate-900 dark:text-white group-hover:text-[var(--org-link-color)] transition-colors mb-1 ${isCancelled ? 'line-through text-slate-500 dark:text-slate-400' : ''}`}>
             {event.title}
           </div>
           
-          <div className="pa-text-sm pa-text-muted">
+          <div className="pa-text-sm text-slate-500 dark:text-slate-400">
             {event.team?.name || 'Unknown Team'}
           </div>
           

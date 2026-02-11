@@ -54,7 +54,7 @@ interface PortalNavProps {
  */
 export default function PortalNav({ forceRole }: PortalNavProps) {
   const { hasAnyRole, isOrgAdmin } = useAuth()
-  const { currentOrganization } = useOrganization()
+  const { currentOrganization, isLoading: isOrgLoading } = useOrganization()
   const { resolvedTheme } = useTheme()
   const t = useT()
   const location = useLocation()
@@ -310,8 +310,10 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
       ? coachNavSections 
       : parentNavSections
 
-  // Apply feature gate filtering
-  const { filteredSections: navSections } = useFilteredNavigation(rawNavSections)
+  // Apply feature gate filtering - wait for org context to avoid warnings
+  const { filteredSections: navSections } = useFilteredNavigation(
+    isOrgLoading ? [] : rawNavSections
+  )
 
   // Logo based on theme
   // Light mode needs dark text logo, dark mode needs light text logo
