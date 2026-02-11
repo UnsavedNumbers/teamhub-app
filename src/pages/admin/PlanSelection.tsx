@@ -11,6 +11,7 @@ import {
   Card, 
   Button 
 } from '../../components/admin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 
 interface PlanCard {
   id: LicensePlan

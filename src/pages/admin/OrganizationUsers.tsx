@@ -9,7 +9,7 @@ import {
   Badge,
   InlineNotice,
   OrgDataTable,
-  type ColumnConfig
+  type ColumnConfig,
 } from '../../components/admin'
 import { mapDbRoleToFrontendRole } from '../../utils/roleHelpers'
 import { formatDate } from '../../utils/dateFormatters'
@@ -25,7 +25,7 @@ interface OrgUser {
 }
 
 export default function OrganizationUsers() {
-  const [users, setUsers] = useState<OrgUser[]>([])
+  const [allUsers, setAllUsers] = useState<OrgUser[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(25)
@@ -47,14 +47,14 @@ export default function OrganizationUsers() {
       
       if (fetchError) {
         setError(fetchError.message || 'Failed to load users')
-        setUsers([])
+        setAllUsers([])
       } else {
-        setUsers(data)
+        setAllUsers(data)
         setError(null)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load users')
-      setUsers([])
+      setAllUsers([])
     } finally {
       setLoading(false)
     }
@@ -136,15 +136,18 @@ export default function OrganizationUsers() {
     }
   ]
 
+  // Client-side pagination
+  const paginatedUsers = allUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+
   return (
     <div className="oa-root">
       <AdminPageHeader 
         title={t('admin.users.title')}
         subtitle={t('admin.users.subtitle')} 
         actions={
-          <OrgAdminButton onClick={() => navigate('/admin/users/new')} variant="primary" icon="add" className="w-full sm:w-auto">
+          <Button onClick={() => navigate('/admin/users/new')} variant="primary" icon="add" className="w-full sm:w-auto">
             {t('admin.users.createSubtitle').replace('Add', 'Create').split(' ')[0] || 'Add'} User
-          </OrgAdminButton>
+          </Button>
         }
       />
 
@@ -180,9 +183,9 @@ export default function OrganizationUsers() {
 
       <OrgDataTable
         columns={columns}
-        rows={users}
+        rows={paginatedUsers}
         loading={loading}
-        totalCount={users.length}
+        totalCount={allUsers.length}
         page={page}
         rowsPerPage={rowsPerPage}
         onPageChange={setPage}

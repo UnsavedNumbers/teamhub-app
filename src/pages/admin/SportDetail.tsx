@@ -121,15 +121,15 @@ export default function SportDetail() {
     return (
       <div className="oa-root sport-detail-page">
         <OfflineBanner />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '24px' }}>
+        <div className="sport-detail-loading">
           <div className="oa-skeleton" style={{ height: '60px' }} />
-          <div className="oa-skeleton" style={{ height: '400px', borderRadius: '8px' }} />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
+          <div className="oa-skeleton" style={{ height: '400px' }} />
+          <div className="sport-detail-skeleton-grid">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="oa-skeleton" style={{ height: '120px' }} />
             ))}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div className="sport-detail-skeleton-cards">
             {Array.from({ length: 2 }).map((_, i) => (
               <div key={i} className="oa-skeleton" style={{ height: '300px' }} />
             ))}
@@ -144,25 +144,10 @@ export default function SportDetail() {
       <OfflineBanner />
       
       {/* Hero section with cover image — theme overlay for contrast */}
-      <div 
-        className="sport-detail-hero"
-        style={{
-          position: 'relative',
-          marginBottom: 'var(--oa-space-6)',
-          borderRadius: 'var(--oa-radius-lg)',
-          overflow: 'hidden',
-          minHeight: '200px',
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: `url(${coverUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            zIndex: 0,
-          }}
+      <div className="sport-detail-hero">
+        <div 
+          className="sport-detail-hero-background"
+          style={{ backgroundImage: `url(${coverUrl})` }}
         >
           <img 
             src={getSportCoverUrl(sport?.slug)} 
@@ -171,27 +156,8 @@ export default function SportDetail() {
             onError={() => setCoverError(true)}
           />
         </div>
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%)',
-            zIndex: 1,
-          }}
-        />
-        <div 
-          className="sport-detail-hero-content"
-          style={{ 
-            position: 'relative', 
-            zIndex: 2, 
-            padding: 'var(--oa-space-6)',
-            '--oa-text-primary': '#fff',
-            '--oa-text-secondary': 'rgba(255,255,255,0.85)',
-            '--oa-text-muted': 'rgba(255,255,255,0.7)',
-            '--oa-n900': '#fff',
-            '--oa-n700': 'rgba(255,255,255,0.85)',
-            '--oa-n500': 'rgba(255,255,255,0.7)',
-          } as React.CSSProperties}
+        <div className="sport-detail-hero-overlay" />
+        <div className="sport-detail-hero-content"
         >
           <AdminPageHeader
             title={<span className="sport-detail-hero-title">{sport?.name || 'Sport'}</span>}
@@ -219,40 +185,31 @@ export default function SportDetail() {
       </div>
 
       {successMessage && (
-        <Card 
-          className="oa-mb-6 sport-detail-alert sport-detail-alert--success" 
-          style={{ background: 'var(--oa-success-bg, rgba(46, 125, 50, 0.08))' }}
-        >
-          <div className="oa-body-m sport-detail-alert-text sport-detail-alert-text--success" style={{ padding: 'var(--oa-space-3) var(--oa-space-4)' }}>
+        <Card className="oa-mb-6 sport-detail-alert sport-detail-alert--success">
+          <div className="oa-body-m sport-detail-alert-text sport-detail-alert-text--success">
             {successMessage}
           </div>
         </Card>
       )}
 
       {actionError && (
-        <Card 
-          className="oa-mb-6 sport-detail-alert sport-detail-alert--error" 
-          style={{ background: 'var(--oa-danger-bg, rgba(198, 40, 40, 0.08))' }}
-        >
-          <div className="oa-body-m sport-detail-alert-text sport-detail-alert-text--error" style={{ padding: 'var(--oa-space-3) var(--oa-space-4)' }}>
+        <Card className="oa-mb-6 sport-detail-alert sport-detail-alert--error">
+          <div className="oa-body-m sport-detail-alert-text sport-detail-alert-text--error">
             {actionError}
           </div>
         </Card>
       )}
 
       {error && (
-        <Card 
-          className="oa-mb-6 sport-detail-alert sport-detail-alert--error" 
-          style={{ background: 'var(--oa-danger-bg, rgba(198, 40, 40, 0.08))' }}
-        >
-          <div className="oa-body-m sport-detail-alert-text sport-detail-alert-text--error" style={{ padding: 'var(--oa-space-3) var(--oa-space-4)' }}>
+        <Card className="oa-mb-6 sport-detail-alert sport-detail-alert--error">
+          <div className="oa-body-m sport-detail-alert-text sport-detail-alert-text--error">
             {error}
           </div>
         </Card>
       )}
 
       {!sport ? null : (
-        <div className="sport-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--oa-space-6)' }}>
+        <div className="sport-detail-grid">
           {false && (
           <div className="oa-card sport-detail-card">
             <div className="oa-card-header">
@@ -452,7 +409,7 @@ export default function SportDetail() {
               </h3>
             </div>
             {programs.length === 0 ? (
-              <div className="sport-detail-empty oa-text-muted" style={{ padding: 'var(--oa-space-5)' }}>
+              <div className="sport-detail-empty oa-p-5">
                 No programs yet for this sport. Create one to start building out levels and teams.
               </div>
             ) : (
@@ -462,7 +419,6 @@ export default function SportDetail() {
                     key={p.id}
                     to={getLink('admin.programs.detail', { id: p.id })}
                     className="oa-stacked-list-row sport-detail-program-row"
-                    style={{ textDecoration: 'none', color: 'inherit' }}
                   >
                     <div className="oa-stacked-list-row-content">
                       <div>

@@ -31,6 +31,20 @@ interface PaymentDisplay {
   created_at: string
 }
 
+function StatCard({ label, value, icon }: { label: string; value: string; icon: string }) {
+  return (
+    <Card>
+      <div className={cn('oa-flex', 'oa-items-center', 'oa-justify-between', 'oa-gap-3')}>
+        <div>
+          <div className="oa-text-muted oa-body-s">{label}</div>
+          <div className="oa-h2">{value}</div>
+        </div>
+        <span className="material-symbols-outlined oa-text-muted">{icon}</span>
+      </div>
+    </Card>
+  )
+}
+
 export default function Payments() {
   const [payments, setPayments] = useState<PaymentDisplay[]>([])
   const [loading, setLoading] = useState(true)

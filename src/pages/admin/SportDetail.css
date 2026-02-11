@@ -3,6 +3,51 @@
    Uses org/pa theme variables for hierarchy, status, and interaction.
    ===================================================================== */
 
+/* Hero section */
+.sport-detail-page .sport-detail-hero {
+  position: relative;
+  margin-bottom: var(--pa-space-6);
+  border-radius: var(--pa-radius-m);
+  overflow: hidden;
+  min-height: 200px;
+}
+
+.sport-detail-page .sport-detail-hero-background {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+
+.sport-detail-page .sport-detail-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%);
+  z-index: 1;
+}
+
+.sport-detail-page .sport-detail-hero-content {
+  position: relative;
+  z-index: 2;
+  padding: var(--pa-space-6);
+}
+
+/* Override text colors in hero for readability on dark background */
+.sport-detail-page .sport-detail-hero-content .oa-breadcrumbs,
+.sport-detail-page .sport-detail-hero-content .oa-breadcrumb-link,
+.sport-detail-page .sport-detail-hero-content .oa-breadcrumb-current {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.sport-detail-page .sport-detail-hero-content .oa-page-title {
+  color: #fff;
+}
+
+.sport-detail-page .sport-detail-hero-content .oa-page-subtitle {
+  color: rgba(255, 255, 255, 0.85);
+}
+
 /* Hero overlay: title and ghost link stay readable on dark gradient */
 .sport-detail-page .sport-detail-hero-title {
   color: var(--pa-text-inverse, #fff);
@@ -97,6 +142,8 @@ html.dark .sport-detail-page .oa-btn--danger .material-symbols-outlined {
 /* Program list rows: theme hover and link accent */
 .sport-detail-page .sport-detail-program-list .sport-detail-program-row {
   transition: background-color var(--pa-motion-normal) var(--pa-ease-out);
+  text-decoration: none;
+  color: inherit;
 }
 
 .sport-detail-page .sport-detail-program-list .sport-detail-program-row:hover {
@@ -126,4 +173,50 @@ html.dark .sport-detail-page .oa-btn--danger .material-symbols-outlined {
 .sport-detail-page .sport-detail-program-row:focus-visible {
   outline: 2px solid var(--org-focus-ring, var(--pa-theme-focus-ring));
   outline-offset: -2px;
+}
+
+/* Alert cards */
+.sport-detail-page .sport-detail-alert--success {
+  background: var(--pa-success-bg, rgba(46, 125, 50, 0.08));
+}
+
+.sport-detail-page .sport-detail-alert--error {
+  background: var(--pa-danger-bg, rgba(198, 40, 40, 0.08));
+}
+
+.sport-detail-page .sport-detail-alert-text {
+  padding: var(--pa-space-3) var(--pa-space-4);
+}
+
+/* Content grid */
+.sport-detail-page .sport-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--pa-space-6);
+}
+
+/* Loading skeleton */
+.sport-detail-page .sport-detail-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pa-space-6);
+  padding: var(--pa-space-6);
+}
+
+.sport-detail-page .sport-detail-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--pa-space-4);
+}
+
+.sport-detail-page .sport-detail-skeleton-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--pa-space-6);
+}
+
+@media (max-width: 767px) {
+  .sport-detail-page .sport-detail-skeleton-cards {
+    grid-template-columns: 1fr;
+  }
 }

@@ -138,7 +138,7 @@ export default function OrgDataTable<T extends { id: string }>({
     <div className="oa-card" style={{ padding: 0, overflow: 'hidden' }}>
       {/* Top Pagination */}
       <div
-        className={cn('oa-flex', 'oa-flex-col', 'oa-items-stretch', 'oa-gap-3', 'oa-table-pagination')}
+        className={cn('oa-flex', 'oa-items-center', 'oa-gap-3', 'oa-table-pagination')}
         style={{
           padding: 'var(--pa-space-3)',
         }}
@@ -165,12 +165,12 @@ export default function OrgDataTable<T extends { id: string }>({
         </div>
 
         {/* Page info */}
-        <span className="oa-body-s oa-text-center oa-table-pagination-info">
+        <span className="oa-body-s oa-table-pagination-info" style={{ flex: 1, textAlign: 'center' }}>
           {t('common.table.pageSummary', { start: startRow, end: endRow, total: totalCount })}
         </span>
 
         {/* Page controls */}
-        <div className={cn('oa-flex', 'oa-gap-2', 'oa-justify-center')}>
+        <div className={cn('oa-flex', 'oa-gap-2')}>
           <button
             className="oa-btn oa-btn--ghost oa-btn--dense"
             onClick={() => onPageChange?.(page - 1)}
@@ -311,7 +311,7 @@ export default function OrgDataTable<T extends { id: string }>({
 
       {/* Bottom Pagination */}
       <div
-        className={cn('oa-flex', 'oa-flex-col', 'oa-items-stretch', 'oa-gap-3', 'oa-table-pagination')}
+        className={cn('oa-flex', 'oa-items-center', 'oa-gap-3', 'oa-table-pagination')}
         style={{
           padding: 'var(--pa-space-3)',
           borderTop: '1px solid var(--org-border-default, var(--pa-n100))',
@@ -339,12 +339,12 @@ export default function OrgDataTable<T extends { id: string }>({
         </div>
 
         {/* Page info */}
-        <span className="oa-body-s oa-text-center oa-table-pagination-info">
+        <span className="oa-body-s oa-table-pagination-info" style={{ flex: 1, textAlign: 'center' }}>
           {t('common.table.pageSummary', { start: startRow, end: endRow, total: totalCount })}
         </span>
 
         {/* Page controls */}
-        <div className={cn('oa-flex', 'oa-gap-2', 'oa-justify-center')}>
+        <div className={cn('oa-flex', 'oa-gap-2')}>
           <button
             className="oa-btn oa-btn--ghost oa-btn--dense"
             onClick={() => onPageChange?.(page - 1)}

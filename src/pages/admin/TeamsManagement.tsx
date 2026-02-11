@@ -17,6 +17,7 @@ import type { Team, Sport, Program, Level, Season } from '../../data/types/organ
 import { supabase } from '../../lib/supabase'
 import { AdminPageHeader, Button, ConfirmDialog, EmptyState, Card, Select, Badge, InlineNotice, OrgDataTable, type ColumnConfig } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
 
 export default function TeamsManagement() {

@@ -188,7 +188,7 @@ function AthleteSelectorModal({
             <select
               value={linkType}
               onChange={(e) => setLinkType(e.target.value as VideoLinkType)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+              className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
             >
               <option value="appears">{t('videoLibrary.athletes.linkTypes.appears')}</option>
               <option value="featured">{t('videoLibrary.athletes.linkTypes.featured')}</option>
@@ -203,7 +203,7 @@ function AthleteSelectorModal({
             </span>
             <button
               onClick={toggleAll}
-              className="text-sm font-bold text-[var(--org-btn-primary-bg)] hover:underline"
+              className="text-sm font-bold text-[var(--org-btn-secondary-bg)] hover:underline"
             >
               {selectedIds.length === athletes.length ? t('common.clearSelection') : t('videoLibrary.athletes.linkAllTeam')}
             </button>
@@ -228,8 +228,8 @@ function AthleteSelectorModal({
                     className={cn(
                       "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
                       isSelected
-                        ? "border-[var(--org-btn-primary-bg)] bg-[var(--org-btn-primary-bg)]/5"
-                        : "border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-primary-bg)]"
+                        ? "border-[var(--org-btn-secondary-bg)] bg-[var(--org-btn-secondary-bg)]/5"
+                        : "border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-secondary-bg)]"
                     )}
                   >
                     <input
@@ -242,7 +242,7 @@ function AthleteSelectorModal({
                           setSelectedIds(selectedIds.filter(id => id !== athlete.id))
                         }
                       }}
-                      className="size-5 rounded border-gray-300 text-[var(--org-btn-primary-bg)] focus:ring-[var(--org-btn-primary-bg)]"
+                      className="size-5 rounded border-gray-300 text-[var(--org-btn-secondary-bg)] focus:ring-[var(--org-btn-secondary-bg)]"
                     />
                     <div className="flex-1">
                       <span className="font-bold text-gray-900 dark:text-white">
@@ -254,7 +254,7 @@ function AthleteSelectorModal({
                         </span>
                       )}
                       {isCurrentlyLinked && (
-                        <span className="ml-2 text-xs text-[var(--org-btn-primary-bg)] uppercase font-bold">
+                        <span className="ml-2 text-xs text-[var(--org-btn-secondary-bg)] uppercase font-bold">
                           Already Linked
                         </span>
                       )}
@@ -357,7 +357,7 @@ function TagManagerModal({
         <div className="p-6 space-y-6">
           {/* Create Tag Form */}
           {showCreateForm ? (
-            <div className="p-4 border border-[var(--org-btn-primary-bg)] rounded-lg space-y-4">
+            <div className="p-4 border border-[var(--org-btn-secondary-bg)] rounded-lg space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
                   {t('videoLibrary.tags.tagName')}
@@ -367,7 +367,7 @@ function TagManagerModal({
                   value={newTagName}
                   onChange={(e) => setNewTagName(e.target.value)}
                   placeholder="e.g., Zone Defense"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                   autoFocus
                 />
               </div>
@@ -378,7 +378,7 @@ function TagManagerModal({
                 <select
                   value={newTagType}
                   onChange={(e) => setNewTagType(e.target.value as any)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                 >
                   <option value="custom">{t('videoLibrary.tags.tagTypes.custom')}</option>
                   <option value="skill">{t('videoLibrary.tags.tagTypes.skill')}</option>
@@ -411,7 +411,7 @@ function TagManagerModal({
           ) : (
             <button
               onClick={() => setShowCreateForm(true)}
-              className="w-full p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-gray-500 hover:text-[var(--org-btn-primary-bg)] hover:border-[var(--org-btn-primary-bg)] transition-colors font-bold flex items-center justify-center gap-2"
+              className="w-full p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-gray-500 hover:text-[var(--org-btn-secondary-bg)] hover:border-[var(--org-btn-secondary-bg)] transition-colors font-bold flex items-center justify-center gap-2"
             >
               <Icon name="add" />
               {t('videoLibrary.tags.createTag')}
@@ -441,8 +441,8 @@ function TagManagerModal({
                     className={cn(
                       "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
                       isSelected
-                        ? "border-[var(--org-btn-primary-bg)] bg-[var(--org-btn-primary-bg)]/5"
-                        : "border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-primary-bg)]"
+                        ? "border-[var(--org-btn-secondary-bg)] bg-[var(--org-btn-secondary-bg)]/5"
+                        : "border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-secondary-bg)]"
                     )}
                   >
                     <input
@@ -455,7 +455,7 @@ function TagManagerModal({
                           setSelectedIds(selectedIds.filter(id => id !== tag.id))
                         }
                       }}
-                      className="size-5 rounded border-gray-300 text-[var(--org-btn-primary-bg)] focus:ring-[var(--org-btn-primary-bg)]"
+                      className="size-5 rounded border-gray-300 text-[var(--org-btn-secondary-bg)] focus:ring-[var(--org-btn-secondary-bg)]"
                     />
                     <div className="flex-1">
                       <span className="font-bold text-gray-900 dark:text-white">
@@ -547,7 +547,7 @@ function BookmarksPanel({
 
       {/* Add Form */}
       {showAddForm && (
-        <div className="mb-4 p-4 border border-[var(--org-btn-primary-bg)] rounded-lg space-y-3">
+        <div className="mb-4 p-4 border border-[var(--org-btn-secondary-bg)] rounded-lg space-y-3">
           <div>
             <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1">
               {t('videoLibrary.bookmarks.bookmarkLabel')}
@@ -605,11 +605,11 @@ function BookmarksPanel({
           {bookmarks.map(bookmark => (
             <div
               key={bookmark.id}
-              className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-primary-bg)] transition-colors group"
+              className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-secondary-bg)] transition-colors group"
             >
               <button
                 onClick={() => onSeek(bookmark.timestamp_seconds)}
-                className="px-3 py-1 bg-[var(--org-btn-primary-bg)] text-white rounded text-xs font-black hover:bg-opacity-90"
+                className="px-3 py-1 bg-[var(--org-btn-secondary-bg)] text-white rounded text-xs font-black hover:bg-opacity-90"
               >
                 {formatTimestamp(bookmark.timestamp_seconds)}
               </button>
@@ -1415,7 +1415,7 @@ export default function CoachVideoDetail() {
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                   placeholder={t('videoLibrary.edit.titlePlaceholder')}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                 />
               </div>
               
@@ -1429,7 +1429,7 @@ export default function CoachVideoDetail() {
                   onChange={(e) => setEditDescription(e.target.value)}
                   placeholder={t('videoLibrary.edit.descriptionPlaceholder')}
                   rows={4}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent resize-none"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent resize-none"
                 />
               </div>
               
@@ -1441,7 +1441,7 @@ export default function CoachVideoDetail() {
                 <select
                   value={editCategory}
                   onChange={(e) => setEditCategory(e.target.value as VideoCategory)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                 >
                   <option value="game">{t('videoUploader.categories.game')}</option>
                   <option value="practice">{t('videoUploader.categories.practice')}</option>
@@ -1502,7 +1502,7 @@ export default function CoachVideoDetail() {
                       : ['team', 'guardians'].includes(editVisibility)
                       ? 'border-blue-500 dark:border-blue-500'
                       : 'border-gray-200 dark:border-gray-700'
-                  } bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent`}
+                  } bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent`}
                   aria-required={['team', 'guardians'].includes(editVisibility)}
                   aria-invalid={!!formErrors.team}
                   aria-describedby={formErrors.team ? 'team-error' : undefined}
@@ -1527,7 +1527,7 @@ export default function CoachVideoDetail() {
                 <select
                   value={editSeasonId || ''}
                   onChange={(e) => setEditSeasonId(e.target.value || null)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                 >
                   <option value="">{t('videoLibrary.edit.seasonPlaceholder')}</option>
                   {seasons.map(season => (
@@ -1544,7 +1544,7 @@ export default function CoachVideoDetail() {
                 <select
                   value={editProgramId || ''}
                   onChange={(e) => setEditProgramId(e.target.value || null)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                 >
                   <option value="">{t('videoLibrary.edit.programPlaceholder')}</option>
                   {programs.map(program => (
@@ -1561,7 +1561,7 @@ export default function CoachVideoDetail() {
                 <select
                   value={editLevelId || ''}
                   onChange={(e) => setEditLevelId(e.target.value || null)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                 >
                   <option value="">{t('videoLibrary.edit.levelPlaceholder')}</option>
                   {levels.map(level => (
@@ -1578,7 +1578,7 @@ export default function CoachVideoDetail() {
                 <select
                   value={editSportId || ''}
                   onChange={(e) => setEditSportId(e.target.value || null)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                 >
                   <option value="">{t('videoLibrary.edit.sportPlaceholder')}</option>
                   {sports.map(sport => (
@@ -1595,7 +1595,7 @@ export default function CoachVideoDetail() {
                 <select
                   value={editEventId || ''}
                   onChange={(e) => setEditEventId(e.target.value || null)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                 >
                   <option value="">{t('videoLibrary.edit.eventPlaceholder')}</option>
                   {events.map(event => (
@@ -1613,7 +1613,7 @@ export default function CoachVideoDetail() {
                   type="date"
                   value={editRecordedAt}
                   onChange={(e) => setEditRecordedAt(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                 />
               </div>
               
@@ -1627,7 +1627,7 @@ export default function CoachVideoDetail() {
                   value={editRecordedLocation}
                   onChange={(e) => setEditRecordedLocation(e.target.value)}
                   placeholder={t('videoLibrary.edit.recordedLocationPlaceholder')}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                 />
               </div>
             </div>

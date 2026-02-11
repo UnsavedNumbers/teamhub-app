@@ -13,7 +13,17 @@ import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 
 export default function UserContextDropdown() {
   const { user, profile, signOut } = useAuth()
-  const { currentOrganization, organizations, setCurrentOrganization } = useOrganization()
+  let currentOrganization, organizations, setCurrentOrganization
+  try {
+    const orgContext = useOrganization()
+    currentOrganization = orgContext.currentOrganization
+    organizations = orgContext.organizations
+    setCurrentOrganization = orgContext.setCurrentOrganization
+  } catch (err) {
+    // If useOrganization fails, render nothing (context not available)
+    return null
+  }
+  
   const { isOffline } = useOffline()
   const navigate = useNavigate()
   const location = useLocation()
