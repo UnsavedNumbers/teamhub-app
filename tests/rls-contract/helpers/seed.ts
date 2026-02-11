@@ -1,0 +1,296 @@
+/**
+ * RLS Contract Test – Seed helpers
+ *
+ * Seeds data into the remote TEST database using the service-role client.
+ * Every seeded row is tagged with the unique `test_run_id` so teardown
+ * can reliably delete ONLY test data.
+ *
+ * SAFETY NOTE: We never truncate tables or delete unscoped data.
+ */
+
+import { getServiceClient } from './supabase';
+import { TEST_USERS, getUserId } from './auth';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+// ── Test Run ID ────────────────────────────────────────────────────
+/**
+ * Unique per-test-run. Embedded into seeded rows via the `name` prefix pattern:
+ *   __rls_test__<test_run_id>__<entity>
+ *
+ * This never collides with real data and is used for scoped teardown.
+ */
+export const TEST_RUN_ID = crypto.randomUUID();
+
+/** Prefix all test-created names */
+export function testName(entity: string): string {
+    return `__rls_test__${TEST_RUN_ID}__${entity}`;
+}
+
+/** Check if a name belongs to this test run */
+export function isTestRow(name: string | null | undefined): boolean {
+    return !!name && name.startsWith(`__rls_test__${TEST_RUN_ID}__`);
+}
+
+// ── Seeded data references ─────────────────────────────────────────
+export interface SeededData {
+    testRunId: string;
+    orgId: string;
+    orgName: string;
+    teamId: string;
+    teamName: string;
+    seasonId: string;
+    eventId: string;
+    athleteId: string;
+    athleteName: string;
+    guardianshipId: string;
+    announcementId: string;
+    galleryId: string;
+    galleryPhotoId?: string;
+    feeId?: string;
+    feeAssignmentId?: string;
+    ticketedEventId?: string;
+    /** Map of user labels to user IDs */
+    userIds: Record<string, string>;
+}
+
+// ── Main seed function ─────────────────────────────────────────────
+export async function seedTestData(): Promise<SeededData> {
+    const svc = getServiceClient();
+
+    // 1. Resolve user IDs for all test users
+    const userIds: Record<string, string> = {};
+    for (const [key, user] of Object.entries(TEST_USERS)) {
+        userIds[key] = await getUserId(user);
+    }
+
+    // 2. Create test organization
+    const orgName = testName('org');
+    const { data: org, error: orgErr } = await svc
+        .from('organizations')
+        .insert({
+            name: orgName,
+            slug: `rls-test-${TEST_RUN_ID.slice(0, 8)}`.toLowerCase(),
+            status: 'active',
+            license_status: 'active',
+        })
+        .select('id')
+        .single();
+    if (orgErr) throw new Error(`Seed organization failed: ${orgErr.message}`);
+    const orgId = org.id;
+
+    // 3. Create organization memberships for test users
+    //    org_admin -> orgAdmin user
+    //    coach -> coach user
+    //    parent -> parent user
+    const memberships = [
+        { org_id: orgId, user_id: userIds.orgAdmin, role: 'org_admin' },
+        { org_id: orgId, user_id: userIds.coach, role: 'coach' },
+        { org_id: orgId, user_id: userIds.parent, role: 'parent' },
+    ];
+    const { error: memErr } = await svc.from('organization_members').insert(memberships);
+    if (memErr) throw new Error(`Seed memberships failed: ${memErr.message}`);
+
+    // 4. Create a season (required for events + team_memberships)
+    const { data: season, error: seasonErr } = await svc
+        .from('seasons')
+        .insert({
+            org_id: orgId,
+            name: testName('season'),
+            start_date: '2026-01-01',
+            end_date: '2026-12-31',
+            is_active: true,
+        })
+        .select('id')
+        .single();
+    if (seasonErr) throw new Error(`Seed season failed: ${seasonErr.message}`);
+    const seasonId = season.id;
+
+    // 5. Create test team
+    const teamName = testName('team');
+    const { data: team, error: teamErr } = await svc
+        .from('teams')
+        .insert({
+            org_id: orgId,
+            name: teamName,
+            invite_code: TEST_RUN_ID.slice(0, 8).toUpperCase(),
+        })
+        .select('id')
+        .single();
+    if (teamErr) throw new Error(`Seed team failed: ${teamErr.message}`);
+    const teamId = team.id;
+
+    // 6. Create an event
+    const { data: event, error: eventErr } = await svc
+        .from('events')
+        .insert({
+            team_id: teamId,
+            season_id: seasonId,
+            title: testName('event'),
+            type: 'practice',
+            start_time: '2026-06-15T10:00:00Z',
+            end_time: '2026-06-15T12:00:00Z',
+            location: 'Test Field',
+            created_by_user_id: userIds.orgAdmin,
+            visibility: 'public',
+        })
+        .select('id')
+        .single();
+    if (eventErr) throw new Error(`Seed event failed: ${eventErr.message}`);
+    const eventId = event.id;
+
+    // 7. Create an athlete
+    const athleteName = testName('athlete');
+    const { data: athlete, error: athErr } = await svc
+        .from('athletes')
+        .insert({
+            org_id: orgId,
+            first_name: athleteName,
+            last_name: 'Test',
+            birthdate: '2015-01-15',
+        })
+        .select('id')
+        .single();
+    if (athErr) throw new Error(`Seed athlete failed: ${athErr.message}`);
+    const athleteId = athlete.id;
+
+    // 8. Create team membership for the athlete
+    const { error: tmErr } = await svc
+        .from('team_memberships')
+        .insert({
+            athlete_id: athleteId,
+            team_id: teamId,
+            season_id: seasonId,
+            status: 'active',
+        });
+    if (tmErr) throw new Error(`Seed team_membership failed: ${tmErr.message}`);
+
+    // 9. Create athlete_guardian link (parent -> athlete)
+    const { data: guardianship, error: guardErr } = await svc
+        .from('athlete_guardians')
+        .insert({
+            athlete_id: athleteId,
+            user_id: userIds.parent,
+            org_id: orgId,
+            status: 'active',
+        })
+        .select('id')
+        .single();
+    if (guardErr) throw new Error(`Seed guardianship failed: ${guardErr.message}`);
+    const guardianshipId = guardianship.id;
+
+    // 10. Create an announcement
+    const { data: announcement, error: annErr } = await svc
+        .from('announcements')
+        .insert({
+            org_id: orgId,
+            team_id: teamId,
+            author_id: userIds.orgAdmin,
+            title: testName('announcement'),
+            content: 'Contract test announcement content',
+            priority: 'normal',
+            type: 'general',
+        })
+        .select('id')
+        .single();
+    if (annErr) throw new Error(`Seed announcement failed: ${annErr.message}`);
+    const announcementId = announcement.id;
+
+    // 11. Create a gallery
+    const { data: gallery, error: galErr } = await svc
+        .from('galleries')
+        .insert({
+            org_id: orgId,
+            gallery_type: 'org',
+            name: testName('gallery'),
+            allow_contributions: true,
+            require_approval: false,
+        })
+        .select('id')
+        .single();
+    if (galErr) throw new Error(`Seed gallery failed: ${galErr.message}`);
+    const galleryId = gallery.id;
+
+    // 12. Create a fee
+    let feeId: string | undefined;
+    let feeAssignmentId: string | undefined;
+    try {
+        const { data: fee, error: feeErr } = await svc
+            .from('fees')
+            .insert({
+                org_id: orgId,
+                team_id: teamId,
+                name: testName('fee'),
+                amount_cents: 5000,
+                currency: 'usd',
+                status: 'published',
+                type: 'registration',
+                scope: 'team',
+                created_by_user_id: userIds.orgAdmin,
+            })
+            .select('id')
+            .single();
+        if (!feeErr && fee) {
+            feeId = fee.id;
+
+            // Create fee assignment to parent's athlete
+            const { data: feeAssign, error: faErr } = await svc
+                .from('fee_assignments')
+                .insert({
+                    org_id: orgId,
+                    fee_id: feeId,
+                    athlete_id: athleteId,
+                    parent_id: userIds.parent,
+                    amount_cents: 5000,
+                    status: 'unpaid',
+                })
+                .select('id')
+                .single();
+            if (!faErr && feeAssign) {
+                feeAssignmentId = feeAssign.id;
+            }
+        }
+    } catch {
+        // Fees table might have additional constraints; ignore
+    }
+
+    // 13. Create a ticketed event
+    let ticketedEventId: string | undefined;
+    try {
+        const { data: tEvt, error: teErr } = await svc
+            .from('ticketed_events')
+            .insert({
+                org_id: orgId,
+                title: testName('ticketed_event'),
+                starts_at: '2026-07-01T18:00:00Z',
+                ends_at: '2026-07-01T21:00:00Z',
+                status: 'published',
+                visibility: 'public',
+            })
+            .select('id')
+            .single();
+        if (!teErr && tEvt) {
+            ticketedEventId = tEvt.id;
+        }
+    } catch {
+        // ticketed_events might not exist or have different constraints
+    }
+
+    return {
+        testRunId: TEST_RUN_ID,
+        orgId,
+        orgName,
+        teamId,
+        teamName,
+        seasonId,
+        eventId,
+        athleteId,
+        athleteName,
+        guardianshipId,
+        announcementId,
+        galleryId,
+        feeId,
+        feeAssignmentId,
+        ticketedEventId,
+        userIds,
+    };
+}

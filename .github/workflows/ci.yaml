@@ -96,3 +96,31 @@ jobs:
 
       - name: Show what migrations would run (dry-run)
         run: supabase db push --linked --dry-run --debug
+
+  # ── RLS Contract Tests ────────────────────────────────────────────
+  # Runs against remote Supabase TEST project. Skipped on fork PRs.
+  rls-contract:
+    if: github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    needs: [test] # wait for local tests to pass first
+    timeout-minutes: 10
+
+    env:
+      SUPABASE_TEST_URL: ${{ secrets.SUPABASE_TEST_URL }}
+      SUPABASE_TEST_ANON_KEY: ${{ secrets.SUPABASE_TEST_ANON_KEY }}
+      SUPABASE_TEST_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_TEST_SERVICE_ROLE_KEY }}
+      CONTRACT_TEST_PASSWORD: ${{ secrets.CONTRACT_TEST_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run RLS contract tests
+        run: npx vitest run --config vitest.config.rls.ts
+
