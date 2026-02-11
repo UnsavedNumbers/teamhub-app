@@ -15,7 +15,7 @@ import {
   Input, 
   Select,
   DatePicker 
-} from '../../components/platformAdmin'
+} from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { FileUpload } from '../../components/common/FileUpload'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
@@ -26,6 +26,7 @@ import PlanTravelContacts from '../../components/admin/travel/PlanTravelContacts
 import { getOrganizationTravelContacts } from '../../data/services/organizationTravelContactsService'
 import { TRAVEL_CONTACT_CATEGORIES, type TravelContactCategory, type OrganizationTravelContactRow, type TravelContactCategoryOrg } from '../../types/travelContacts'
 import { upsertTravelPlanContacts } from '../../data/services/travelService'
+import '../../styles/orgAdmin.css'
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string }
@@ -415,11 +416,11 @@ export default function CreateTravelPlan() {
     }
   }
 
-  if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />
+  if (loading) return <div className="oa-skeleton" style={{ height: '500px' }} />
 
   if (!isReady || !context?.orgId) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader 
           title="Create Travel Plan" 
           breadcrumbs={[
@@ -428,9 +429,9 @@ export default function CreateTravelPlan() {
           ]}
         />
         <Card>
-          <div className="pa-text-center pa-p-8">
-            <p className="pa-text-danger">Unable to load organization context. Please make sure you have an organization selected.</p>
-            <OrgAdminButton variant="primary" onClick={() => navigate('/admin/travel')} className="pa-mt-4">Back to Travel Plans</OrgAdminButton>
+          <div className="oa-text-center oa-p-8">
+            <p className="oa-text-danger">Unable to load organization context. Please make sure you have an organization selected.</p>
+            <OrgAdminButton variant="primary" onClick={() => navigate('/admin/travel')} className="oa-mt-4">Back to Travel Plans</OrgAdminButton>
           </div>
         </Card>
       </div>
@@ -438,7 +439,7 @@ export default function CreateTravelPlan() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title="Create Travel Plan" 
         subtitle={t('admin.travel.createSubtitle' as TranslationKey)}
@@ -447,21 +448,21 @@ export default function CreateTravelPlan() {
           { label: 'Create Travel Plan' },
         ]}
       />
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card>
           <form onSubmit={handleSubmit(onSubmit)}>
-            {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
+            {error && <div className="oa-card oa-mb-4 oa-text-danger" style={{ background: 'var(--oa-danger-bg)', border: 'none' }}>{error}</div>}
             
-            <div className="pa-form-grid pa-form-grid-2 pa-gap-4 pa-mb-4">
+            <div className="oa-form-grid oa-form-grid-2 oa-gap-4 oa-mb-4">
               <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required />} />
               <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
             </div>
 
-            <div className="pa-mb-4">
+            <div className="oa-mb-4">
               <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Trip Title" required />} />
             </div>
 
-            <div className="pa-mb-4">
+            <div className="oa-mb-4">
               <Controller 
                 name="location" 
                 control={control} 
@@ -511,22 +512,22 @@ export default function CreateTravelPlan() {
               />
             </div>
 
-            <div className="pa-form-grid pa-form-grid-2 pa-gap-4 pa-mb-4">
+            <div className="oa-form-grid oa-form-grid-2 oa-gap-4 oa-mb-4">
               {/* Destination City - Read Only with Override */}
               <Controller 
                 name="destination_city" 
                 control={control} 
                 render={({ field }) => (
-                  <div className="pa-form-group">
-                      <label className="pa-label">Destination City</label>
+                  <div className="oa-form-group">
+                      <label className="oa-label">Destination City</label>
                       {destinationOverride || !watchDestinationPlaceId ? (
-                        <input {...field} className="pa-input" placeholder="City" style={{ minHeight: '44px' }} />
+                        <input {...field} className="oa-input" placeholder="City" style={{ minHeight: '44px' }} />
                       ) : (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minHeight: '44px' }}>
-                            <span className="pa-text-body">{field.value || '—'}</span>
+                            <span className="oa-text-body">{field.value || '—'}</span>
                             <button 
                                 type="button" 
-                                className="pa-link-button" 
+                                className="oa-link-button" 
                                 style={{ fontSize: '12px', minHeight: '44px', padding: '0 8px' }}
                                 onClick={() => setDestinationOverride(true)}
                             >
@@ -543,13 +544,13 @@ export default function CreateTravelPlan() {
                 name="destination_state" 
                 control={control} 
                 render={({ field }) => (
-                  <div className="pa-form-group">
-                      <label className="pa-label">Destination State</label>
+                  <div className="oa-form-group">
+                      <label className="oa-label">Destination State</label>
                       {destinationOverride || !watchDestinationPlaceId ? (
-                        <input {...field} className="pa-input" placeholder="State/Province" style={{ minHeight: '44px' }} />
+                        <input {...field} className="oa-input" placeholder="State/Province" style={{ minHeight: '44px' }} />
                       ) : (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minHeight: '44px' }}>
-                            <span className="pa-text-body">{field.value || '—'}</span>
+                            <span className="oa-text-body">{field.value || '—'}</span>
                             {destinationOverride && (
                                 <button type="button" onClick={() => setDestinationOverride(false)} style={{ minHeight: '44px', padding: '0 8px' }}>Cancel</button>
                             )}
@@ -568,7 +569,7 @@ export default function CreateTravelPlan() {
                     {...field} 
                     label="Start Date" 
                     required 
-                    minValue={getTodayDate()}
+                    min={getTodayDate()}
                   />
                 )} 
               />
@@ -600,7 +601,7 @@ export default function CreateTravelPlan() {
                       {...field} 
                       label="End Date" 
                       required 
-                      minValue={minEndDate}
+                      min={minEndDate}
                       error={fieldState.error?.message}
                     />
                   )
@@ -608,8 +609,8 @@ export default function CreateTravelPlan() {
               />
             </div>
 
-            <h3 className="pa-h3 pa-mb-4 pa-mt-6">VENUE & HOTEL</h3>
-            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+            <h3 className="oa-h3 oa-mb-4 oa-mt-6">VENUE & HOTEL</h3>
+            <div className="oa-grid oa-grid-2 oa-gap-4 oa-mb-4">
               <Controller 
                 name="venue_name" 
                 control={control} 
@@ -716,8 +717,8 @@ export default function CreateTravelPlan() {
 
 
 
-            <h3 className="pa-h3 pa-mb-4">ITINERARY FILE</h3>
-            <div className="pa-mb-6">
+            <h3 className="oa-h3 oa-mb-4">ITINERARY FILE</h3>
+            <div className="oa-mb-6">
               <FileUpload
                 label="Itinerary File"
                 value={itineraryFile}
@@ -730,9 +731,9 @@ export default function CreateTravelPlan() {
               />
             </div>
 
-            <div className="pa-mb-8">
-              <textarea className="pa-input pa-textarea" placeholder="Trip Notes..." style={{ minHeight: '120px' }} value={watch('notes')} onChange={e => setValue('notes', e.target.value)} />
-              <div className="pa-label">Notes</div>
+            <div className="oa-mb-8">
+              <textarea className="oa-input oa-textarea" placeholder="Trip Notes..." style={{ minHeight: '120px' }} value={watch('notes')} onChange={e => setValue('notes', e.target.value)} />
+              <div className="oa-label">Notes</div>
             </div>
 
             <PlanTravelContacts 
@@ -741,9 +742,9 @@ export default function CreateTravelPlan() {
                 orgContacts={orgContacts} 
             />
 
-            <div className="pa-form-actions">
+            <div className="oa-form-actions">
               <OrgAdminButton variant="primary" onClick={() => navigate('/admin/travel')} disabled={saving} className="w-full sm:w-auto">Cancel</OrgAdminButton>
-              <Button type="submit" loading={saving} disabled={saving} className="pa-form-submit-btn w-full sm:w-auto">Create Draft Plan</Button>
+              <Button type="submit" loading={saving} disabled={saving} className="oa-form-submit-btn w-full sm:w-auto">Create Draft Plan</Button>
             </div>
           </form>
         </Card>

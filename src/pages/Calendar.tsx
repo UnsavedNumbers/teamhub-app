@@ -471,11 +471,11 @@ export default function Calendar() {
                              newDate.setMonth(newDate.getMonth() - 1)
                              setCurrentDate(newDate)
                            }} 
-                           className="p-1 hover:bg-slate-100 rounded transition-colors"
+                           className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
                            disabled={loading}
                            aria-label="Previous month"
                          >
-                             <Icon name="chevron_left" />
+                             <Icon name="chevron_left" className="text-slate-500 dark:text-slate-400" />
                          </button>
                          <span className="font-bold text-slate-700 dark:text-slate-300">
                              {currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric'})}
@@ -485,12 +485,12 @@ export default function Calendar() {
                              const newDate = new Date(currentDate)
                              newDate.setMonth(newDate.getMonth() + 1)
                              setCurrentDate(newDate)
-                           }} 
-                           className="p-1 hover:bg-slate-100 rounded transition-colors"
+                           }}
+                           className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
                            disabled={loading}
                            aria-label="Next month"
                          >
-                             <Icon name="chevron_right" />
+                             <Icon name="chevron_right" className="text-slate-500 dark:text-slate-400" />
                          </button>
                      </div>
                      <button 
@@ -592,15 +592,15 @@ export default function Calendar() {
                     <div className="flex items-start justify-between mb-6">
                         <div>
                         <div className="flex items-center gap-2 mb-1">
-                            {selectedEvent.is_cancelled && <span className="text-xs font-black text-red-600 bg-red-100 px-1.5 py-0.5 rounded">{safeT('calendar.event.cancelled', 'Cancelled').toUpperCase()}</span>}
-                             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{safeT(`calendar.eventTypes.${selectedEvent.type}`, selectedEvent.type)}</span>
+                            {selectedEvent.is_cancelled && <span className="text-xs font-black text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded">{safeT('calendar.event.cancelled', 'Cancelled').toUpperCase()}</span>}
+                             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{safeT(`calendar.eventTypes.${selectedEvent.type}`, selectedEvent.type)}</span>
                         </div>
                         <CardTitle className="mb-1 text-2xl">{selectedEvent.title}</CardTitle>
                         <p className="text-xs font-bold uppercase tracking-widest text-[var(--org-link-color)]">{selectedEvent.team?.name}</p>
                         </div>
                         <button 
                           onClick={() => setSelectedEvent(null)} 
-                          className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 hover:bg-slate-100 rounded-full transition-colors"
+                          className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
                           aria-label="Close event details"
                         >
                         <Icon name="close" />
@@ -609,8 +609,8 @@ export default function Calendar() {
 
                     <div className="space-y-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                                <Icon name="event" className="text-slate-500" />
+                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                                <Icon name="event" className="text-slate-500 dark:text-slate-400" />
                             </div>
                             <div>
                                 <p className="font-bold text-slate-900 dark:text-white">{formatEventDate(selectedEvent.start_time, selectedEvent.timezone)}</p>
@@ -620,8 +620,8 @@ export default function Calendar() {
 
                         {selectedEvent.arrival_time && (
                         <div className="flex items-center gap-3">
-                             <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
-                                <Icon name="schedule" className="text-amber-500" />
+                             <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center shrink-0">
+                                <Icon name="schedule" className="text-amber-500 dark:text-amber-400" />
                              </div>
                             <p className="font-bold text-slate-900 dark:text-white">
                                 {safeT('calendar.event.arriveBy', 'Arrive by {{time}}').replace('{{time}}', new Date(selectedEvent.arrival_time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }))}
@@ -631,12 +631,12 @@ export default function Calendar() {
 
                         {(selectedEvent.event_location?.venue_name || selectedEvent.location) && (
                         <div className="flex items-start gap-3">
-                             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                                <Icon name="location_on" className="text-slate-500" />
+                             <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                                <Icon name="location_on" className="text-slate-500 dark:text-slate-400" />
                              </div>
                             <div className="flex-1">
                                 <p className="font-bold text-slate-900 dark:text-white text-sm">{selectedEvent.event_location?.venue_name || selectedEvent.location}</p>
-                                <p className="text-xs text-slate-500">{selectedEvent.event_location ? formatEventLocation(selectedEvent.event_location) : ''}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">{selectedEvent.event_location ? formatEventLocation(selectedEvent.event_location) : ''}</p>
                                 {mapUrl && (
                                     <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--org-link-color)] hover:underline flex items-center gap-1 mt-1">
                                         {safeT('calendar.event.getDirections', 'Get Directions')} <Icon name="open_in_new" size="text-[10px]" />

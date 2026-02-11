@@ -420,12 +420,14 @@ export function EntitySelect<T = unknown>({
           onBlur={handleInputBlur}
           placeholder={placeholder}
           disabled={disabled}
+          readOnly={!!selectedOption}
           className={cn('pa-input', hasError && 'pa-input--error')}
           aria-autocomplete="list"
           aria-expanded={isOpen}
           aria-haspopup="listbox"
           aria-controls={id ? `${id}-listbox` : undefined}
           role="combobox"
+          style={selectedOption ? { cursor: 'default', userSelect: 'none' } : undefined}
         />
 
         {showClearButton && selectedOption && !disabled && (

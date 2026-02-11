@@ -3,18 +3,14 @@ import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { 
-  PageHeader, 
   Card, 
   Input, 
   Select, 
   Checkbox, 
   Button,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
   ConfirmDialog,
-} from '../../components/platformAdmin'
+} from '../../components/admin'
+import { PageHeader, Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/platformAdmin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getUserPreferences, updateUserPreferences, type UserPreferences } from '../../data/services/preferencesService'
 import { supabase } from '../../lib/supabase'
@@ -26,6 +22,7 @@ import { mergeNotificationPreferences, setPreferencesForContext, canonicalRole }
 import type { NotificationGroup } from '../../types/notificationPreferences'
 import type { NotificationRole } from '../../types/notifications'
 import { useT } from '../../i18n/useI18n'
+import '../../styles/orgAdmin.css'
 
 // ============================================================================
 // Helper Functions
@@ -565,30 +562,30 @@ export default function AdminSettings() {
   
   if (loading) {
     return (
-      <div className="pa-page">
-        <div className="pa-page-loading">Loading settings...</div>
+      <div className="oa-page">
+        <div className="oa-page-loading">Loading settings...</div>
       </div>
     )
   }
   
   return (
-    <div className="pa-page">
+    <div className="oa-page">
       <PageHeader
         title="Personal Settings"
         description="Manage your account settings and preferences"
       />
       
       {error && (
-        <div className="pa-alert pa-alert-error" style={{ marginBottom: '1.5rem' }}>
+        <div className="oa-alert oa-alert-error" style={{ marginBottom: '1.5rem' }}>
           <span className="material-symbols-outlined">error</span>
           {error}
         </div>
       )}
       
       {/* Mobile Select for Tabs */}
-      <div className="pa-tabs-mobile-select-container">
+      <div className="oa-tabs-mobile-select-container">
         <select 
-          className="pa-tabs-mobile-select"
+          className="oa-tabs-mobile-select"
           value={activeTab}
           onChange={(e) => handleTabChange(e.target.value)}
         >
@@ -601,7 +598,7 @@ export default function AdminSettings() {
         </select>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="pa-tabs">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="oa-tabs">
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="roles">Role & Access</TabsTrigger>
@@ -690,20 +687,20 @@ export default function AdminSettings() {
       
       {/* Password Change Modal */}
       {showPasswordModal && (
-        <div className="pa-modal-overlay" onClick={() => setShowPasswordModal(false)}>
-          <div className="pa-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="pa-modal-header">
+        <div className="oa-modal-overlay" onClick={() => setShowPasswordModal(false)}>
+          <div className="oa-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="oa-modal-header">
               <h2>Change Password</h2>
               <button
-                className="pa-modal-close"
+                className="oa-modal-close"
                 onClick={() => setShowPasswordModal(false)}
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
-            <div className="pa-modal-content">
-              <div className="pa-form-grid pa-form-grid-2">
-                <div className="pa-form-group">
+            <div className="oa-modal-content">
+              <div className="oa-form-grid oa-form-grid-2">
+                <div className="oa-form-group">
                   <Input
                     label="New Password"
                     type="password"
@@ -720,15 +717,15 @@ export default function AdminSettings() {
                       alignItems: 'center', 
                       gap: '8px',
                       color: passwordValidation.strength === 'strong' 
-                        ? 'var(--pa-success)' 
+                        ? 'var(--oa-success)' 
                         : passwordValidation.strength === 'medium' 
-                        ? 'var(--pa-warning)' 
-                        : 'var(--pa-danger)'
+                        ? 'var(--oa-warning)' 
+                        : 'var(--oa-danger)'
                     }}>
                       <div style={{ 
                         flex: 1, 
                         height: '4px', 
-                        background: 'var(--pa-n200)', 
+                        background: 'var(--oa-n200)', 
                         borderRadius: '2px', 
                         overflow: 'hidden'
                       }}>
@@ -736,10 +733,10 @@ export default function AdminSettings() {
                           width: passwordValidation.strength === 'weak' ? '33%' : passwordValidation.strength === 'medium' ? '66%' : '100%',
                           height: '100%',
                           background: passwordValidation.strength === 'weak' 
-                            ? 'var(--pa-danger)' 
+                            ? 'var(--oa-danger)' 
                             : passwordValidation.strength === 'medium' 
-                            ? 'var(--pa-warning)' 
-                            : 'var(--pa-success)',
+                            ? 'var(--oa-warning)' 
+                            : 'var(--oa-success)',
                           transition: 'all 0.3s ease'
                         }} />
                       </div>
@@ -749,7 +746,7 @@ export default function AdminSettings() {
                     </div>
                   )}
                 </div>
-                <div className="pa-form-group">
+                <div className="oa-form-group">
                   <Input
                     label="Confirm Password"
                     type="password"
@@ -761,7 +758,7 @@ export default function AdminSettings() {
                 </div>
               </div>
             </div>
-            <div className="pa-modal-footer">
+            <div className="oa-modal-footer">
               <OrgAdminButton
                 onClick={() => setShowPasswordModal(false)}
                 variant="primary"
@@ -816,15 +813,15 @@ function ProfileSettings({
 }: any) {
   return (
     <Card>
-      <div className="pa-card-header">
-        <h3 className="pa-card-title">
+      <div className="oa-card-header">
+        <h3 className="oa-card-title">
           <span className="material-symbols-outlined">person</span>
           Profile
         </h3>
       </div>
-      <div className="pa-card-content">
-        <div className="pa-form-grid pa-form-grid-2">
-          <div className="pa-form-group">
+      <div className="oa-card-content">
+        <div className="oa-form-grid oa-form-grid-2">
+          <div className="oa-form-group">
             <Input
               label="First Name"
               value={firstName}
@@ -836,7 +833,7 @@ function ProfileSettings({
             />
           </div>
           
-          <div className="pa-form-group">
+          <div className="oa-form-group">
             <Input
               label="Last Name"
               value={lastName}
@@ -848,7 +845,7 @@ function ProfileSettings({
             />
           </div>
           
-          <div className="pa-form-group">
+          <div className="oa-form-group">
             <Input
               label="Email"
               value={profile?.email || ''}
@@ -857,7 +854,7 @@ function ProfileSettings({
             />
           </div>
           
-          <div className="pa-form-group">
+          <div className="oa-form-group">
             <Input
               label="Phone Number"
               type="tel"
@@ -870,7 +867,7 @@ function ProfileSettings({
             />
           </div>
           
-          <div className="pa-form-group">
+          <div className="oa-form-group">
             <Select
               label="Timezone"
               value={timezone}
@@ -881,7 +878,7 @@ function ProfileSettings({
           </div>
         </div>
         
-        <div className="pa-form-actions">
+        <div className="oa-form-actions">
           <Button
             onClick={onSave}
             disabled={saving}
@@ -890,7 +887,7 @@ function ProfileSettings({
             {saving ? 'Saving...' : 'Save Profile'}
           </Button>
           {success && (
-            <span className="pa-success-message">
+            <span className="oa-success-message">
               <span className="material-symbols-outlined">check_circle</span>
               Saved successfully
             </span>
@@ -904,27 +901,27 @@ function ProfileSettings({
 function RoleSettings({ currentOrganization, profile }: any) {
   return (
     <Card>
-      <div className="pa-card-header">
-        <h3 className="pa-card-title">
+      <div className="oa-card-header">
+        <h3 className="oa-card-title">
           <span className="material-symbols-outlined">badge</span>
           Role & Access
         </h3>
       </div>
-      <div className="pa-card-content">
-        <div className="pa-info-section">
-          <div className="pa-info-row">
-            <span className="pa-info-label">Current Organization</span>
-            <span className="pa-info-value">
+      <div className="oa-card-content">
+        <div className="oa-info-section">
+          <div className="oa-info-row">
+            <span className="oa-info-label">Current Organization</span>
+            <span className="oa-info-value">
               {currentOrganization?.name || 'No organization selected'}
             </span>
           </div>
           
           {currentOrganization && (
-            <div className="pa-info-row">
-              <span className="pa-info-label">Your Roles</span>
-              <div className="pa-badges">
+            <div className="oa-info-row">
+              <span className="oa-info-label">Your Roles</span>
+              <div className="oa-badges">
                 {currentOrganization.roles?.map((role: string) => (
-                  <span key={role} className="pa-badge pa-badge-primary">
+                  <span key={role} className="oa-badge oa-badge-primary">
                     {role === 'org_admin' ? 'Admin' : role.charAt(0).toUpperCase() + role.slice(1)}
                   </span>
                 ))}
@@ -932,16 +929,16 @@ function RoleSettings({ currentOrganization, profile }: any) {
             </div>
           )}
           
-          <div className="pa-info-row">
-            <span className="pa-info-label">All Organizations</span>
-            <div className="pa-org-list">
+          <div className="oa-info-row">
+            <span className="oa-info-label">All Organizations</span>
+            <div className="oa-org-list">
               {profile?.organizations && profile.organizations.length > 0 ? (
                 profile.organizations.map((org: any) => (
-                  <div key={org.id} className="pa-org-item">
-                    <span className="pa-org-name">{org.name}</span>
-                    <div className="pa-badges">
+                  <div key={org.id} className="oa-org-item">
+                    <span className="oa-org-name">{org.name}</span>
+                    <div className="oa-badges">
                       {org.roles?.map((role: string) => (
-                        <span key={role} className="pa-badge pa-badge-secondary">
+                        <span key={role} className="oa-badge oa-badge-secondary">
                           {role === 'org_admin' ? 'Admin' : role.charAt(0).toUpperCase() + role.slice(1)}
                         </span>
                       ))}
@@ -949,14 +946,14 @@ function RoleSettings({ currentOrganization, profile }: any) {
                   </div>
                 ))
               ) : (
-                <span className="pa-text-muted">No organizations</span>
+                <span className="oa-text-muted">No organizations</span>
               )}
             </div>
           </div>
           
           {profile?.isPlatformAdmin && (
-            <div className="pa-info-row">
-              <span className="pa-badge pa-badge-success">
+            <div className="oa-info-row">
+              <span className="oa-badge oa-badge-success">
                 <span className="material-symbols-outlined">admin_panel_settings</span>
                 Platform Administrator
               </span>
@@ -971,14 +968,14 @@ function RoleSettings({ currentOrganization, profile }: any) {
 function WorkflowSettings({ preferences, setPreferences, onSave, saving, success }: any) {
   return (
     <Card>
-      <div className="pa-card-header">
-        <h3 className="pa-card-title">
+      <div className="oa-card-header">
+        <h3 className="oa-card-title">
           <span className="material-symbols-outlined">tune</span>
           Workflow Preferences
         </h3>
       </div>
-      <div className="pa-card-content">
-        <div className="pa-form-group">
+      <div className="oa-card-content">
+        <div className="oa-form-group">
           <Select
             label="Default Landing Page"
             value={preferences.workflow?.default_landing_page || '/admin'}
@@ -999,7 +996,7 @@ function WorkflowSettings({ preferences, setPreferences, onSave, saving, success
           />
         </div>
         
-        <div className="pa-form-group">
+        <div className="oa-form-group">
           <Checkbox
             label="Remember last selected filters"
             checked={preferences.workflow?.remember_filters ?? true}
@@ -1007,11 +1004,11 @@ function WorkflowSettings({ preferences, setPreferences, onSave, saving, success
               ...preferences,
               workflow: { ...preferences.workflow, remember_filters: e.target.checked }
             })}
-            helperText="Restore your previous filter selections when returning to pages"
+            helper="Restore your previous filter selections when returning to pages"
           />
         </div>
         
-        <div className="pa-form-group">
+        <div className="oa-form-group">
           <Checkbox
             label="Auto-select last active organization"
             checked={preferences.workflow?.auto_select_org ?? true}
@@ -1019,11 +1016,11 @@ function WorkflowSettings({ preferences, setPreferences, onSave, saving, success
               ...preferences,
               workflow: { ...preferences.workflow, auto_select_org: e.target.checked }
             })}
-            helperText="Automatically select the last organization you worked in"
+            helper="Automatically select the last organization you worked in"
           />
         </div>
         
-        <div className="pa-form-actions">
+        <div className="oa-form-actions">
           <Button
             onClick={onSave}
             disabled={saving}
@@ -1032,7 +1029,7 @@ function WorkflowSettings({ preferences, setPreferences, onSave, saving, success
             {saving ? 'Saving...' : 'Save Workflow'}
           </Button>
           {success && (
-            <span className="pa-success-message">
+            <span className="oa-success-message">
               <span className="material-symbols-outlined">check_circle</span>
               Saved successfully
             </span>
@@ -1046,15 +1043,15 @@ function WorkflowSettings({ preferences, setPreferences, onSave, saving, success
 function SecuritySettings({ user, onShowPasswordModal, onSignOutAll, passwordSuccess }: any) {
   return (
     <Card>
-      <div className="pa-card-header">
-        <h3 className="pa-card-title">
+      <div className="oa-card-header">
+        <h3 className="oa-card-title">
           <span className="material-symbols-outlined">security</span>
           Security
         </h3>
       </div>
-      <div className="pa-card-content">
-        <div className="pa-form-group">
-          <label className="pa-label">Password</label>
+      <div className="oa-card-content">
+        <div className="oa-form-group">
+          <label className="oa-label">Password</label>
           <OrgAdminButton
             onClick={onShowPasswordModal}
             variant="primary"
@@ -1062,7 +1059,7 @@ function SecuritySettings({ user, onShowPasswordModal, onSignOutAll, passwordSuc
             Change Password
           </OrgAdminButton>
           {passwordSuccess && (
-            <div className="pa-alert pa-alert-success" style={{ marginTop: '1rem' }}>
+            <div className="oa-alert oa-alert-success" style={{ marginTop: '1rem' }}>
               <span className="material-symbols-outlined">check_circle</span>
               Password changed successfully
             </div>
@@ -1070,23 +1067,23 @@ function SecuritySettings({ user, onShowPasswordModal, onSignOutAll, passwordSuc
         </div>
         
         {user?.last_sign_in_at && (
-          <div className="pa-info-row">
-            <span className="pa-info-label">Last login</span>
-            <span className="pa-info-value">
+          <div className="oa-info-row">
+            <span className="oa-info-label">Last login</span>
+            <span className="oa-info-value">
               {new Date(user.last_sign_in_at).toLocaleString()}
             </span>
           </div>
         )}
         
-        <div className="pa-form-group">
-          <label className="pa-label">Sessions</label>
+        <div className="oa-form-group">
+          <label className="oa-label">Sessions</label>
           <Button
             onClick={onSignOutAll}
             variant="danger"
           >
             Sign Out All Sessions
           </Button>
-          <p className="pa-helper-text">
+          <p className="oa-helper-text">
             This will sign you out from all devices
           </p>
         </div>
@@ -1098,14 +1095,14 @@ function SecuritySettings({ user, onShowPasswordModal, onSignOutAll, passwordSuc
 function AdvancedSettings({ preferences, setPreferences, onSave, saving, success }: any) {
   return (
     <Card>
-      <div className="pa-card-header">
-        <h3 className="pa-card-title">
+      <div className="oa-card-header">
+        <h3 className="oa-card-title">
           <span className="material-symbols-outlined">science</span>
           Advanced
         </h3>
       </div>
-      <div className="pa-card-content">
-        <div className="pa-form-group">
+      <div className="oa-card-content">
+        <div className="oa-form-group">
           <Checkbox
             label="Enable beta features"
             checked={preferences.advanced?.beta_features ?? false}
@@ -1113,11 +1110,11 @@ function AdvancedSettings({ preferences, setPreferences, onSave, saving, success
               ...preferences,
               advanced: { ...preferences.advanced, beta_features: e.target.checked }
             })}
-            helperText="Access experimental features (may be unstable)"
+            helper="Access experimental features (may be unstable)"
           />
         </div>
         
-        <div className="pa-form-group">
+        <div className="oa-form-group">
           <Select
             label="UI Density"
             value={preferences.advanced?.ui_density || 'comfortable'}
@@ -1133,7 +1130,7 @@ function AdvancedSettings({ preferences, setPreferences, onSave, saving, success
           />
         </div>
         
-        <div className="pa-form-actions">
+        <div className="oa-form-actions">
           <Button
             onClick={onSave}
             disabled={saving}
@@ -1142,7 +1139,7 @@ function AdvancedSettings({ preferences, setPreferences, onSave, saving, success
             {saving ? 'Saving...' : 'Save Advanced'}
           </Button>
           {success && (
-            <span className="pa-success-message">
+            <span className="oa-success-message">
               <span className="material-symbols-outlined">check_circle</span>
               Saved successfully
             </span>
@@ -1152,3 +1149,4 @@ function AdvancedSettings({ preferences, setPreferences, onSave, saving, success
     </Card>
   )
 }
+

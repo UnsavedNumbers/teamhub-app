@@ -17,6 +17,7 @@ import {
 import { formatCurrency } from '@/types/ticketing'
 import { cn } from '@/utils/cn'
 import { showError, showSuccess } from '@/utils/toast'
+import '../../styles/orgAdmin.css'
 
 type ViewMode = 'list' | 'table'
 
@@ -104,7 +105,7 @@ function ActiveFilterChips({
   if (chips.length === 0) return null
 
   return (
-    <div className="pa-flex pa-flex-wrap pa-gap-2 pa-mt-3 oa-filter-chips">
+    <div className="oa-flex oa-flex-wrap oa-gap-2 oa-mt-3 oa-filter-chips">
       {chips.map((chip) => (
         <span
           key={`${chip.key}-${chip.value || 'all'}`}
@@ -214,16 +215,16 @@ function FilterDrawer({
     <>
       <div className={cn('oa-filter-backdrop', open && 'is-open')} onClick={onClose} />
       <div className={cn('oa-filter-panel', open && 'is-open')}>
-        <div className="pa-flex pa-items-center pa-justify-between pa-mb-4">
-          <div className="pa-text-lg pa-font-semibold">Filters</div>
+        <div className="oa-flex oa-items-center oa-justify-between oa-mb-4">
+          <div className="oa-text-lg oa-font-semibold">Filters</div>
           <Button variant="ghost" icon="close" onClick={onClose} />
         </div>
 
-        <div className="pa-space-y-4">
+        <div className="oa-space-y-4">
           <div>
-            <label className="pa-label">Date preset</label>
+            <label className="oa-label">Date preset</label>
             <select
-              className="pa-input"
+              className="oa-input"
               value={draft.datePreset || ''}
               onChange={(e) => setDraft((prev) => ({ ...prev, datePreset: e.target.value || null, page: 1 }))}
             >
@@ -233,7 +234,7 @@ function FilterDrawer({
               ))}
             </select>
           </div>
-          <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 pa-gap-3">
+          <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-2 oa-gap-3">
             <div>
               <DatePicker
                 label="Start date"
@@ -251,8 +252,8 @@ function FilterDrawer({
           </div>
 
           <div>
-            <label className="pa-label">Events</label>
-            <div className="pa-flex pa-flex-wrap pa-gap-2">
+            <label className="oa-label">Events</label>
+            <div className="oa-flex oa-flex-wrap oa-gap-2">
               {events.slice(0, 10).map((e) => (
                 <Button
                   key={e.id}
@@ -263,14 +264,14 @@ function FilterDrawer({
                   {e.title}
                 </Button>
               ))}
-              {events.length === 0 && <div className="pa-text-sm pa-text-muted">No events</div>}
+              {events.length === 0 && <div className="oa-text-sm oa-text-muted">No events</div>}
             </div>
           </div>
 
           <div>
-            <label className="pa-label">Order status</label>
+            <label className="oa-label">Order status</label>
             <select
-              className="pa-input"
+              className="oa-input"
               value={draft.status || ''}
               onChange={(e) =>
                 setDraft((prev) => ({
@@ -293,9 +294,9 @@ function FilterDrawer({
           </div>
         </div>
 
-        <div className="pa-flex pa-justify-between pa-gap-2 pa-mt-6">
+        <div className="oa-flex oa-justify-between oa-gap-2 oa-mt-6">
           <Button variant="ghost" onClick={clearLocal}>Clear</Button>
-          <div className="pa-flex pa-gap-2">
+          <div className="oa-flex oa-gap-2">
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
             <Button variant="primary" icon="check" onClick={apply}>Apply</Button>
           </div>
@@ -322,7 +323,7 @@ function ListView({
   onDelete: (id: string) => void
 }) {
   return (
-    <div className="pa-card pa-shadow-sm oa-ticket-list">
+    <div className="oa-card oa-shadow-sm oa-ticket-list">
       {orders.map((order) => (
         <div key={order.id} className="oa-ticket-list__row">
           <div className="oa-ticket-list__info">
@@ -368,8 +369,8 @@ function TableView({
   onDelete: (id: string) => void
 }) {
   return (
-    <div className="pa-card pa-shadow-sm pa-overflow-x-auto">
-      <table className="pa-table">
+    <div className="oa-card oa-shadow-sm oa-overflow-x-auto">
+      <table className="oa-table">
         <thead>
           <tr>
             <th>Order ID</th>
@@ -389,18 +390,18 @@ function TableView({
               <td>
                 <div>{order.purchaser_name || order.purchaser_email}</div>
                 {order.purchaser_name && (
-                  <div className="pa-text-xs pa-text-muted">{order.purchaser_email}</div>
+                  <div className="oa-text-xs oa-text-muted">{order.purchaser_email}</div>
                 )}
               </td>
               <td>{order.event?.title || '—'}</td>
               <td>{order.ticket_count || 0}</td>
-              <td className="pa-font-semibold">{formatCurrency(order.total_cents)}</td>
+              <td className="oa-font-semibold">{formatCurrency(order.total_cents)}</td>
               <td>
                 <Badge variant={statusVariant[order.status] || 'neutral'}>{order.status}</Badge>
               </td>
               <td>{order.created_at ? new Date(order.created_at).toLocaleDateString() : ''}</td>
               <td onClick={(e) => e.stopPropagation()}>
-                <div className="pa-flex pa-gap-2">
+                <div className="oa-flex oa-gap-2">
                   <Button variant="secondary" size="dense" onClick={() => onView(order.id)} icon="visibility" />
                   {order.status !== 'paid' && (
                     <Button variant="danger" size="dense" onClick={() => onDelete(order.id)} icon="delete" />
@@ -524,7 +525,7 @@ export default function TicketingOrders() {
   }
 
   return (
-    <div className="pa-page-container oa-ticketing-dashboard">
+    <div className="oa-page-container oa-ticketing-dashboard">
       <AdminPageHeader
         title="Ticket Orders"
         subtitle="View and manage all ticket orders and sales across your organization."
@@ -532,12 +533,12 @@ export default function TicketingOrders() {
 
       <StatsBar totalOrders={meta?.total} totalRevenue={meta?.total_revenue_cents} />
 
-      <div className="pa-card pa-shadow-sm oa-ticketing-toolbar">
+      <div className="oa-card oa-shadow-sm oa-ticketing-toolbar">
         <div className="oa-ticketing-toolbar__left">
           <div className="oa-search">
             <span className="material-symbols-outlined oa-search__icon">search</span>
             <input
-              className="pa-input oa-search__input"
+              className="oa-input oa-search__input"
               placeholder="Search by email, name, or order ID..."
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
@@ -549,7 +550,7 @@ export default function TicketingOrders() {
         </div>
         <div className="oa-ticketing-toolbar__right">
           <select
-            className="pa-input oa-sort-select"
+            className="oa-input oa-sort-select"
             value={filters.sortBy || 'created_at'}
             onChange={(e) => updateFilters({ sortBy: e.target.value, page: 1 })}
           >
@@ -577,17 +578,17 @@ export default function TicketingOrders() {
         />
       )}
 
-      <div className="pa-mt-4">
+      <div className="oa-mt-4">
         {isLoading && (
-          <div className="pa-card pa-shadow-sm pa-p-4">
-            <div className="pa-skeleton oa-skeleton-line oa-skeleton-line--short" />
-            <div className="pa-skeleton oa-skeleton-line oa-skeleton-line--medium" />
-            <div className="pa-skeleton oa-skeleton-line oa-skeleton-line--full" />
+          <div className="oa-card oa-shadow-sm oa-p-4">
+            <div className="oa-skeleton oa-skeleton-line oa-skeleton-line--short" />
+            <div className="oa-skeleton oa-skeleton-line oa-skeleton-line--medium" />
+            <div className="oa-skeleton oa-skeleton-line oa-skeleton-line--full" />
           </div>
         )}
 
         {!isLoading && emptyState && (
-          <div className="pa-card pa-shadow-sm pa-p-6">
+          <div className="oa-card oa-shadow-sm oa-p-6">
             <EmptyState
               icon="receipt_long"
               title={hasActiveFilters ? 'No orders match these filters' : 'No ticket orders yet'}
@@ -615,7 +616,7 @@ export default function TicketingOrders() {
       </div>
 
       {meta && meta.total > filters.perPage && (
-        <div className="pa-flex pa-justify-center pa-gap-2 pa-mt-4">
+        <div className="oa-flex oa-justify-center oa-gap-2 oa-mt-4">
           <Button
             variant="secondary"
             disabled={filters.page === 1}
@@ -623,7 +624,7 @@ export default function TicketingOrders() {
           >
             Previous
           </Button>
-          <span className="pa-flex pa-items-center pa-px-4">
+          <span className="oa-flex oa-items-center oa-px-4">
             Page {filters.page} of {meta.total_pages}
           </span>
           <Button

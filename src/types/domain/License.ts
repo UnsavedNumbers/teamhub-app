@@ -37,6 +37,7 @@ export interface FeatureEntitlement {
   featureType: 'module' | 'permission' | 'limit' | 'visibility' | 'integration'
   description: string | null
   rolloutStatus: 'live' | 'beta' | 'hidden'
+  unavailableGateAction?: 'hide' | 'disable' | 'overlay' | 'modal' | 'paywall' | 'custom' | null
   createdAt: string
   updatedAt: string
   archivedAt: string | null
@@ -45,6 +46,7 @@ export interface FeatureEntitlement {
   lockReason?: string | null // Explanation for why feature is locked
   isSystemFeature?: boolean // If true, always available for every license tier (including new tiers)
   platformAdminOnly?: boolean // If true, not available to org users; platform admin only
+  parentFeatureKey?: string | null // Parent feature for hierarchy (child inherits parent unavailability)
 }
 
 export interface TierFeatureAssignment {

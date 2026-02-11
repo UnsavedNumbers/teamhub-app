@@ -6,15 +6,17 @@ import { GalleryCreateModal } from './GalleryCreateModal'
 import { GalleryPreviewCard } from './GalleryPreviewCard'
 import { Button, EmptyState } from '../platformAdmin'
 import type { GalleryEntityType } from '@/data/services/galleryService'
+import { getLink } from '@/utils/routes'
 
 interface GallerySectionProps {
   entityType: GalleryEntityType
   entityId: string
   title?: string
   allowCreate?: boolean
+  context?: 'portal' | 'admin'
 }
 
-export function GallerySection({ entityType, entityId, title = 'Galleries', allowCreate = true }: GallerySectionProps) {
+export function GallerySection({ entityType, entityId, title = 'Galleries', allowCreate = true, context = 'portal' }: GallerySectionProps) {
   const navigate = useNavigate()
   const { data, isLoading, refetch } = useGalleries(entityType, entityId)
   const { canCreate } = useGalleryPermissions(entityType)
@@ -23,7 +25,12 @@ export function GallerySection({ entityType, entityId, title = 'Galleries', allo
   const galleries = data || []
   const canCreateFinal = allowCreate && canCreate
 
-  const openGallery = (id: string) => navigate(`/portal/photos/gallery/${id}`)
+  const openGallery = (id: string) => {
+    const route = context === 'admin'
+      ? getLink('admin.photos.detail', { id })
+      : getLink('portal.photosGallery', { id })
+    navigate(route)
+  }
 
   return (
     <section className="pa-card pa-shadow-sm pa-p-4 pa-space-y-3">

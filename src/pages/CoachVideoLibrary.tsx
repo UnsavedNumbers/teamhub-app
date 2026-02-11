@@ -8,10 +8,19 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useOrganization } from '@/contexts/OrganizationContext'
-import { VideoUploader } from '@/components/video'
+import { 
+  VideoUploader, 
+  VideoFilterPanel, 
+  VideoSortDropdown, 
+  VideoBulkActionsBar, 
+  VideoShareModal, 
+  VideoTagPicker 
+} from '@/components/video'
 import { useVideos, useVideoMutations } from '@/hooks/useVideos'
+import { useBulkVideoOperations, useVideoSearch } from '@/hooks/useVideosExtended'
 import { cn } from '@/utils/cn'
 import type { VideoCategory, VideoStatus } from '@/types/video'
+import type { VideoFilters } from '@/components/video/VideoFilterPanel'
 import { supabase } from '@/lib/supabase'
 import { AdminPageHeader, Card } from '@/components/platformAdmin'
 import Button from '@/components/portal/Button'
@@ -32,9 +41,19 @@ interface FilterState {
 
 export default function CoachVideoLibrary() {
   const { currentOrganization } = useOrganization()
+  void useVideoSearch
   
   // State for filters and sorting
   const [searchQuery, setSearchQuery] = useState('')
+  const [videoFilters, setVideoFilters] = useState<VideoFilters>({
+    dateRange: { start: null, end: null },
+    tagIds: [],
+    status: [],
+    type: [],
+    teamId: null,
+    uploadedBy: null,
+    hasAthletes: null
+  })
   const [filters, setFilters] = useState<FilterState>({
     type: null,
     teamId: null,
@@ -42,11 +61,22 @@ export default function CoachVideoLibrary() {
     dateRange: { start: null, end: null },
     status: null
   })
-  const [_sortBy, _setSortBy] = useState<SortOption>('created_at')
-  const [_sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [sortBy, setSortBy] = useState<SortOption>('created_at')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [showUploader, setShowUploader] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 12
+  
+  // Bulk operations state
+  const [selectedVideoIds, setSelectedVideoIds] = useState<string[]>([])
+  const [showBulkActions, setShowBulkActions] = useState(false)
+  
+  // Advanced features
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareVideoId, setShareVideoId] = useState<string | null>(null)
+  const [showTagPicker, setShowTagPicker] = useState(false)
+  const [tagVideoIds, setTagVideoIds] = useState<string[]>([])
+  const [showFilterPanel, setShowFilterPanel] = useState(false)
   
   // Active filter dropdowns
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
@@ -87,6 +117,10 @@ export default function CoachVideoLibrary() {
   })
   
   const { deleteVideo, updateVideo } = useVideoMutations()
+  const { bulkDelete, bulkAddTags, isProcessing: isBulkLoading } = useBulkVideoOperations({ orgId: currentOrganization?.id })
+  void showBulkActions
+  void setShowBulkActions
+  void isBulkLoading
   
   // Load teams for filters
   useEffect(() => {
@@ -128,11 +162,13 @@ export default function CoachVideoLibrary() {
     })
     setSearchQuery('')
   }, [])
+  void handleClearFilters
   
   // Toggle sort direction
   const handleSort = useCallback(() => {
     setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
   }, [])
+  void handleSort
   
   // Handle video actions
   const handleEditVideo = useCallback((videoId: string) => {
@@ -170,6 +206,7 @@ export default function CoachVideoLibrary() {
     setSharingVideo(videoId)
     setCopySuccess(false)
   }, [])
+  void handleShareVideo
   
   const handleCopyLink = useCallback(() => {
     navigator.clipboard.writeText(shareLink)
@@ -213,6 +250,47 @@ export default function CoachVideoLibrary() {
     refresh()
   }, [refresh])
   
+  // Bulk operations handlers
+  const handleSelectAll = useCallback(() => {
+    setSelectedVideoIds(videos.map(v => v.id))
+  }, [videos])
+  void handleSelectAll
+  
+  const handleClearSelection = useCallback(() => {
+    setSelectedVideoIds([])
+  }, [])
+  
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedVideoIds.length === 0) return
+    if (!confirm(t('videoLibrary.bulk.confirmDelete' as any, { count: selectedVideoIds.length }))) return
+    
+    const result = await bulkDelete(selectedVideoIds)
+    if (result.succeeded.length > 0) {
+      showSuccess(t('videoLibrary.bulk.deleteSuccess' as any, { count: result.succeeded.length }))
+      setSelectedVideoIds([])
+      refresh()
+    }
+    if (result.failed.length > 0) {
+      showError(t('videoLibrary.bulk.deleteFailed' as any))
+    }
+  }, [selectedVideoIds, bulkDelete, refresh, t])
+  void handleBulkDelete
+  
+  const handleBulkTag = useCallback(async (tagIds: string[]) => {
+    if (selectedVideoIds.length === 0) return
+    
+    const result = await bulkAddTags(selectedVideoIds, tagIds)
+    if (result.succeeded.length > 0) {
+      showSuccess(t('videoLibrary.bulk.tagSuccess' as any))
+      setSelectedVideoIds([])
+      setShowTagPicker(false)
+      refresh()
+    }
+    if (result.failed.length > 0) {
+      showError(t('videoLibrary.bulk.tagFailed' as any))
+    }
+  }, [selectedVideoIds, bulkAddTags, refresh, t])
+  
   // Video categories for filter
   const videoCategories: { value: VideoCategory; label: string }[] = [
     { value: 'game', label: 'Game' },
@@ -245,139 +323,58 @@ export default function CoachVideoLibrary() {
       />
       
       <main className="space-y-6">
-        {/* Filters Card */}
-        <Card className="mb-6">
-          <div className="p-4 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex gap-3 items-center flex-wrap">
-            {/* Search */}
-            <div className="relative">
-              <Icon name="search" size="text-sm" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search videos..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
-              />
-            </div>
-            
-            {/* Type Filter */}
-            <div className="relative">
-              <button
-                onClick={() => setActiveDropdown(activeDropdown === 'type' ? null : 'type')}
-                className={cn(
-                  "flex h-9 items-center gap-2 rounded-lg border px-4 text-xs font-bold uppercase tracking-wider",
-                  filters.type
-                    ? "border-[var(--org-btn-primary-bg)] text-[var(--org-btn-primary-bg)] bg-[var(--org-btn-primary-bg)]/5"
-                    : "border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-primary-bg)]"
-                )}
-              >
-                {filters.type ? videoCategories.find(c => c.value === filters.type)?.label : 'Type'}
-                <Icon name="expand_more" size="text-sm" />
-              </button>
-              
-              {activeDropdown === 'type' && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
-                  <button
-                    onClick={() => {
-                      setFilters(prev => ({ ...prev, type: null }))
-                      setActiveDropdown(null)
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    All Types
-                  </button>
-                  {videoCategories.map(category => (
-                    <button
-                      key={category.value}
-                      onClick={() => {
-                        setFilters(prev => ({ ...prev, type: category.value }))
-                        setActiveDropdown(null)
-                      }}
-                      className={cn(
-                        "w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700",
-                        filters.type === category.value && "text-[var(--org-btn-primary-bg)] font-medium"
-                      )}
-                    >
-                      {category.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            {/* Team Filter */}
-            <div className="relative">
-              <button
-                onClick={() => setActiveDropdown(activeDropdown === 'team' ? null : 'team')}
-                className={cn(
-                  "flex h-9 items-center gap-2 rounded-lg border px-4 text-xs font-bold uppercase tracking-wider",
-                  filters.teamId
-                    ? "border-[var(--org-btn-primary-bg)] text-[var(--org-btn-primary-bg)] bg-[var(--org-btn-primary-bg)]/5"
-                    : "border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-primary-bg)]"
-                )}
-              >
-                {filters.teamId ? teams.find(t => t.id === filters.teamId)?.name : 'Team'}
-                <Icon name="expand_more" size="text-sm" />
-              </button>
-              
-              {activeDropdown === 'team' && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
-                  <button
-                    onClick={() => {
-                      setFilters(prev => ({ ...prev, teamId: null }))
-                      setActiveDropdown(null)
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    All Teams
-                  </button>
-                  {teams.map(team => (
-                    <button
-                      key={team.id}
-                      onClick={() => {
-                        setFilters(prev => ({ ...prev, teamId: team.id }))
-                        setActiveDropdown(null)
-                      }}
-                      className={cn(
-                        "w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700",
-                        filters.teamId === team.id && "text-[var(--org-btn-primary-bg)] font-medium"
-                      )}
-                    >
-                      {team.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            {/* Clear Filters */}
-            {hasActiveFilters && (
-              <>
-                <div className="h-6 w-px bg-gray-300 dark:bg-gray-700 mx-2" />
-                <button
-                  onClick={handleClearFilters}
-                  className="text-[var(--org-btn-primary-bg)] text-xs font-bold hover:underline"
-                >
-                  CLEAR ALL
-                </button>
-              </>
+        {/* Bulk Actions Bar */}
+        {selectedVideoIds.length > 0 && (
+          <VideoBulkActionsBar
+            orgId={currentOrganization?.id || ''}
+            selectedVideoIds={selectedVideoIds}
+            onClearSelection={handleClearSelection}
+            onOperationComplete={() => {
+              setSelectedVideoIds([])
+              refresh()
+            }}
+            teams={teams}
+          />
+        )}
+        
+        {/* Filters and Sort */}
+        <div className="flex gap-4">
+          <Button
+            variant="secondary"
+            onClick={() => setShowFilterPanel(true)}
+            className="flex items-center gap-2"
+          >
+            <Icon name="filter_list" size="text-sm" />
+            Filters
+            {Object.values(videoFilters).some(v => 
+              Array.isArray(v) ? v.length > 0 : 
+              v !== null && (typeof v !== 'object' || v.start || v.end)
+            ) && (
+              <span className="ml-1 bg-[var(--org-btn-secondary-bg)] text-white rounded-full px-2 py-0.5 text-xs font-bold">
+                {[
+                  videoFilters.tagIds.length > 0 ? 1 : 0,
+                  videoFilters.status.length > 0 ? 1 : 0,
+                  videoFilters.type.length > 0 ? 1 : 0,
+                  videoFilters.teamId ? 1 : 0,
+                  videoFilters.dateRange.start || videoFilters.dateRange.end ? 1 : 0
+                ].reduce((a, b) => a + b, 0)}
+              </span>
             )}
-          </div>
-          
-          {/* Sort Controls */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 font-medium uppercase tracking-widest">Sort by:</span>
-            <button
-              onClick={handleSort}
-              className="flex items-center gap-1 text-xs font-bold"
-            >
-              Latest
-              <Icon name="sort" size="text-sm" />
-            </button>
-          </div>
+          </Button>
+          <div className="flex-1" />
+          <VideoSortDropdown
+            value={{
+              field: (sortBy === 'view_count' ? 'views' : sortBy) as any,
+              direction: sortDirection
+            }}
+            onChange={(value) => {
+              const nextField = value.field === 'views' ? 'view_count' : value.field
+              if (nextField === 'size' || nextField === 'comments' || nextField === 'bookmarks') return
+              setSortBy(nextField as SortOption)
+              setSortDirection(value.direction)
+            }}
+          />
         </div>
-      </Card>
       
       {/* Section Header */}
       <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 mb-6">
@@ -420,8 +417,19 @@ export default function CoachVideoLibrary() {
             <CoachVideoCard
               key={video.id}
               video={video}
+              isSelected={selectedVideoIds.includes(video.id)}
+              onSelect={(id, selected) => {
+                if (selected) {
+                  setSelectedVideoIds([...selectedVideoIds, id])
+                } else {
+                  setSelectedVideoIds(selectedVideoIds.filter(vid => vid !== id))
+                }
+              }}
               onEdit={handleEditVideo}
-              onShare={handleShareVideo}
+              onShare={(id) => {
+                setShareVideoId(id)
+                setShowShareModal(true)
+              }}
               onDelete={handleOpenDeleteModal}
             />
           ))}
@@ -429,10 +437,10 @@ export default function CoachVideoLibrary() {
           {/* Add New Video Placeholder */}
           <button
             onClick={() => setShowUploader(true)}
-            className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex flex-col items-center justify-center gap-2 aspect-video group cursor-pointer hover:border-[var(--org-btn-primary-bg)] hover:bg-[var(--org-btn-primary-bg)]/5 transition-all"
+            className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex flex-col items-center justify-center gap-2 aspect-video group cursor-pointer hover:border-[var(--org-btn-secondary-bg)] hover:bg-[var(--org-btn-secondary-bg)]/5 transition-all"
           >
-            <Icon name="add_circle" size="text-3xl" className="text-gray-400 group-hover:text-[var(--org-btn-primary-bg)] transition-colors" />
-            <span className="text-[10px] font-black tracking-widest text-gray-400 group-hover:text-[var(--org-btn-primary-bg)] transition-colors uppercase">
+            <Icon name="add_circle" size="text-3xl" className="text-gray-400 group-hover:text-[var(--org-btn-secondary-bg)] transition-colors" />
+            <span className="text-[10px] font-black tracking-widest text-gray-400 group-hover:text-[var(--org-btn-secondary-bg)] transition-colors uppercase">
               Upload New
             </span>
           </button>
@@ -459,7 +467,7 @@ export default function CoachVideoLibrary() {
               <button
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className="size-8 flex items-center justify-center rounded border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-[var(--org-btn-primary-bg)] transition-colors disabled:opacity-50"
+                className="size-8 flex items-center justify-center rounded border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-[var(--org-btn-secondary-bg)] hover:border-[var(--org-btn-secondary-bg)] transition-colors disabled:opacity-50"
               >
                 <Icon name="chevron_left" size="text-sm" />
               </button>
@@ -474,7 +482,7 @@ export default function CoachVideoLibrary() {
                       "size-8 flex items-center justify-center rounded border transition-colors",
                       currentPage === pageNum
                         ? "bg-[var(--org-btn-primary-bg)] text-white border-[var(--org-btn-primary-bg)]"
-                        : "border-gray-200 dark:border-gray-700 hover:text-[var(--org-btn-primary-bg)]"
+                        : "border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-secondary-bg)] hover:text-gray-700 dark:hover:text-gray-200"
                     )}
                   >
                     <span className="text-xs font-bold">{pageNum}</span>
@@ -485,7 +493,7 @@ export default function CoachVideoLibrary() {
               <button
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
-                className="size-8 flex items-center justify-center rounded border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-[var(--org-btn-primary-bg)] transition-colors disabled:opacity-50"
+                className="size-8 flex items-center justify-center rounded border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-[var(--org-btn-secondary-bg)] hover:border-[var(--org-btn-secondary-bg)] transition-colors disabled:opacity-50"
               >
                 <Icon name="chevron_right" size="text-sm" />
               </button>
@@ -541,7 +549,7 @@ export default function CoachVideoLibrary() {
                   type="text"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                 />
               </div>
               <div>
@@ -551,7 +559,7 @@ export default function CoachVideoLibrary() {
                 <select
                   value={editCategory || ''}
                   onChange={(e) => setEditCategory((e.target.value || null) as VideoCategory | null)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                 >
                   <option value="">Select Category</option>
                   {videoCategories.map(cat => (
@@ -567,7 +575,7 @@ export default function CoachVideoLibrary() {
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   rows={4}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent resize-none"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent resize-none"
                 />
               </div>
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
@@ -694,6 +702,76 @@ export default function CoachVideoLibrary() {
           onClick={() => setActiveDropdown(null)}
         />
       )}
+      
+      {/* Share Modal */}
+      {showShareModal && shareVideoId && (
+        <VideoShareModal
+          isOpen={showShareModal}
+          videoId={shareVideoId}
+          videoTitle={videos.find(v => v.id === shareVideoId)?.title || 'Video'}
+          onClose={() => {
+            setShowShareModal(false)
+            setShareVideoId(null)
+          }}
+        />
+      )}
+      
+      {/* Tag Picker for Bulk Operations */}
+      {showTagPicker && currentOrganization?.id && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-2xl w-full p-6 space-y-4">
+            <h3 className="text-xl font-bold">Select Tags</h3>
+            <VideoTagPicker
+              orgId={currentOrganization.id}
+              selectedTagIds={tagVideoIds}
+              onChange={setTagVideoIds}
+            />
+            <div className="flex items-center justify-end gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowTagPicker(false)
+                  setTagVideoIds([])
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={async () => {
+                  await handleBulkTag(tagVideoIds)
+                }}
+              >
+                Save Tags
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Filter Panel Modal */}
+      {showFilterPanel && (
+        <VideoFilterPanel
+          filters={videoFilters}
+          onFiltersChange={(newFilters) => {
+            setVideoFilters(newFilters)
+            // Convert to old filter format for useVideos hook
+            setFilters({
+              type: newFilters.type.length > 0 ? newFilters.type[0] as VideoCategory : null,
+              teamId: newFilters.teamId,
+              athleteId: null,
+              dateRange: {
+                start: newFilters.dateRange.start ? new Date(newFilters.dateRange.start) : null,
+                end: newFilters.dateRange.end ? new Date(newFilters.dateRange.end) : null,
+              },
+              status: newFilters.status.length > 0 ? newFilters.status[0] as VideoStatus : null
+            })
+          }}
+          teams={teams}
+          isOpen={showFilterPanel}
+          onClose={() => setShowFilterPanel(false)}
+        />
+      )}
     </div>
   )
 }
@@ -712,12 +790,14 @@ interface CoachVideoCardProps {
     created_at: string
     view_count?: number | null
   }
+  isSelected?: boolean
+  onSelect?: (id: string, selected: boolean) => void
   onEdit: (id: string) => void
   onShare: (id: string) => void
   onDelete: (id: string) => void
 }
 
-function CoachVideoCard({ video, onEdit, onShare, onDelete }: CoachVideoCardProps) {
+function CoachVideoCard({ video, isSelected, onSelect, onEdit, onShare, onDelete }: CoachVideoCardProps) {
   const statusColors: Record<VideoStatus, { bg: string; text: string }> = {
     pending_upload: { bg: 'bg-yellow-500', text: 'PENDING' },
     ready: { bg: 'bg-green-500', text: 'READY' },
@@ -737,10 +817,32 @@ function CoachVideoCard({ video, onEdit, onShare, onDelete }: CoachVideoCardProp
   }
   
   return (
-    <Link
-      to={`/admin/videos/${video.id}`}
-      className="group flex flex-col gap-3 pb-3 relative cursor-pointer"
-    >
+    <div className="group flex flex-col gap-3 pb-3 relative">
+      {/* Selection Checkbox */}
+      {onSelect && (
+        <div className="absolute top-2 left-2 z-20">
+          <label
+            className="flex items-center justify-center size-6 bg-white dark:bg-gray-900 rounded border-2 border-gray-300 dark:border-gray-600 cursor-pointer hover:border-[var(--org-btn-secondary-bg)] transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={(e) => {
+                e.stopPropagation()
+                onSelect(video.id, e.target.checked)
+              }}
+              className="sr-only"
+            />
+            {isSelected && <Icon name="check" size="text-sm" className="text-[var(--org-btn-secondary-bg)]" />}
+          </label>
+        </div>
+      )}
+      
+      <Link
+        to={`/admin/videos/${video.id}`}
+        className="cursor-pointer"
+      >
       {/* Thumbnail */}
       <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
         {video.thumbnail_url ? (
@@ -787,7 +889,7 @@ function CoachVideoCard({ video, onEdit, onShare, onDelete }: CoachVideoCardProp
               e.stopPropagation()
               onEdit(video.id)
             }}
-            className="p-2 bg-white text-black rounded-full hover:bg-[var(--org-btn-primary-bg)] hover:text-white transition-all shadow-lg"
+            className="p-2 bg-white text-gray-700 rounded-full hover:bg-[var(--org-btn-secondary-bg)] hover:text-white transition-all shadow-lg border border-gray-200"
             title="Edit video"
           >
             <Icon name="edit" size="text-lg" />
@@ -798,7 +900,7 @@ function CoachVideoCard({ video, onEdit, onShare, onDelete }: CoachVideoCardProp
               e.stopPropagation()
               onShare(video.id)
             }}
-            className="p-2 bg-white text-black rounded-full hover:bg-[var(--org-btn-primary-bg)] hover:text-white transition-all shadow-lg"
+            className="p-2 bg-white text-gray-700 rounded-full hover:bg-[var(--org-btn-secondary-bg)] hover:text-white transition-all shadow-lg border border-gray-200"
             title="Share video"
           >
             <Icon name="share" size="text-lg" />
@@ -816,6 +918,7 @@ function CoachVideoCard({ video, onEdit, onShare, onDelete }: CoachVideoCardProp
           </button>
         </div>
       </div>
+      </Link>
       
       {/* Video Info */}
       <div className="px-1">
@@ -825,7 +928,7 @@ function CoachVideoCard({ video, onEdit, onShare, onDelete }: CoachVideoCardProp
         <div className="flex items-center gap-2">
           {video.category && (
             <>
-              <span className="text-xs font-medium text-[var(--org-btn-primary-bg)]">
+              <span className="text-xs font-medium text-[var(--org-btn-secondary-bg)]">
                 {categoryLabels[video.category]}
               </span>
               <span className="text-gray-300 dark:text-gray-600">•</span>
@@ -837,7 +940,7 @@ function CoachVideoCard({ video, onEdit, onShare, onDelete }: CoachVideoCardProp
           </p>
         </div>
       </div>
-    </Link>
+    </div>
   )
 }
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AdminPageHeader, Card, Input, Button, ErrorState } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Input, Button, ErrorState } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
@@ -8,6 +8,7 @@ import { createFamily } from '../../data/services/familyService'
 import { getLink } from '../../utils/routes'
 import { useT } from '../../i18n/useI18n'
 import type { TranslationKey } from '../../i18n'
+import '../../styles/orgAdmin.css'
 
 export default function CreateFamily() {
   const navigate = useNavigate()
@@ -47,7 +48,7 @@ export default function CreateFamily() {
   if (!isReady) return <AdminLoadingSpinner />
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader
         title="NEW FAMILY"
         subtitle={t('admin.families.createSubtitle' as TranslationKey)}
@@ -57,14 +58,14 @@ export default function CreateFamily() {
         ]}
       />
 
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <form onSubmit={handleSubmit}>
           <Card>
-            <h2 className="pa-h2 pa-mb-6">Family Details</h2>
+            <h2 className="oa-h2 oa-mb-6">Family Details</h2>
             
             {error && <ErrorState title="Creation Failed" message={error.message} onRetry={() => setError(null)} />}
 
-            <div className="pa-form-group pa-mb-6">
+            <div className="oa-form-group oa-mb-6">
               <Input
                 label="Family Name"
                 placeholder="e.g. Johnson Family"
@@ -73,12 +74,12 @@ export default function CreateFamily() {
                 required
                 disabled={loading}
               />
-              <div className="pa-text-sm pa-text-muted pa-mt-2">
+              <div className="oa-text-sm oa-text-muted oa-mt-2">
                 This is how the family will be identified in reports and lists.
               </div>
             </div>
 
-            <div className="pa-flex pa-justify-end pa-gap-4 pa-mt-8">
+            <div className="oa-flex oa-justify-end oa-gap-4 oa-mt-8">
               <OrgAdminButton
                 variant="primary"
                 onClick={() => navigate(getLink('admin.guardians.list'))}

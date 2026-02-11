@@ -85,7 +85,7 @@ export default function CalendarGrid({
           <div className="w-full">
             <div className="grid grid-cols-7 gap-1 mb-2">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                    <div key={day} className="text-center font-bold text-xs uppercase text-slate-500 py-2">
+                    <div key={day} className="text-center font-bold text-xs uppercase text-slate-500 dark:text-slate-400 py-2">
                         {day}
                     </div>
                 ))}
@@ -94,24 +94,24 @@ export default function CalendarGrid({
                 {weeks.map((weekData, wIndex) => (
                     <div key={wIndex} className="grid grid-cols-7 gap-1 h-32">
                         {weekData.map((day, dIndex) => {
-                           if (!day) return <div key={dIndex} className="bg-slate-50/50 dark:bg-slate-900/20 rounded-none" />
+                           if (!day) return <div key={dIndex} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded" />
                            
                            const dayEvents = events.filter(e => isSameDay(new Date(e.start_time), day))
                            const isCurrentDay = isToday(day)
 
                            return (
-                               <div key={dIndex} className={`bg-white dark:bg-slate-900 rounded-none p-1 overflow-hidden hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isCurrentDay ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
+                               <div key={dIndex} className={`bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 overflow-hidden hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer ${isCurrentDay ? 'bg-slate-100 dark:bg-slate-700 ring-2 ring-[var(--org-btn-primary-bg)]' : ''}`}
                                     onClick={() => onDateChange(day)}
                                >
-                                   <div className={`text-right text-xs font-bold mb-1 ${isCurrentDay ? 'text-[var(--org-link-color)]' : 'text-slate-500'}`}>
+                                   <div className={`text-right text-xs font-bold mb-1 ${isCurrentDay ? 'text-[var(--org-link-color)]' : 'text-slate-500 dark:text-slate-400'}`}>
                                        {day.getDate()}
                                    </div>
                                     <div className="space-y-1">
                                         {dayEvents.slice(0, 3).map(event => (
                                             <div key={event.id} 
                                                  onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
-                                                 className={`text-[10px] truncate px-1 py-0.5 rounded-none border-l-2 cursor-pointer
-                                                 hover:bg-slate-100 dark:hover:bg-slate-800
+                                                 className={`text-[10px] truncate px-1 py-0.5 rounded border-l-2 cursor-pointer bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white
+                                                 hover:bg-slate-100 dark:hover:bg-slate-600
                                                  ${event.is_cancelled ? 'line-through opacity-50' : ''}`}
                                                  style={{ borderLeftColor: event.type === 'game' ? '#10b981' : 'var(--org-btn-primary-bg, #137fec)' }}
                                             >

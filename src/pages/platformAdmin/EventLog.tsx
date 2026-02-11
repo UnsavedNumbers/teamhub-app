@@ -24,6 +24,7 @@ const categoryOptions = [
   { value: 'FEATURE_FLAG', label: 'Feature Flag' },
   { value: 'ADMIN', label: 'Admin' },
   { value: 'SYSTEM', label: 'System' },
+  { value: 'SPORT', label: 'Sport' },
 ]
 
 export default function EventLog() {

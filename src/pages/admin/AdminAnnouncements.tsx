@@ -8,13 +8,13 @@ import {
   AdminPageHeader, 
   Card, 
   Badge, 
-  PlatformDataTable, 
   Button, 
   EmptyState,
   Select,
   ConfirmDialog,
-  type ColumnConfig 
-} from '../../components/platformAdmin'
+} from '../../components/admin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { cn } from '../../utils/cn'
 import CreateAnnouncementModal from '../../components/admin/CreateAnnouncementModal'
 import { getAnnouncementEmoji, type AnnouncementType } from '../../utils/announcementTypes'
@@ -70,6 +70,7 @@ export default function AdminAnnouncements() {
   })
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  void actionError
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const deleteRequestIdRef = useRef(0)
 
@@ -391,15 +392,15 @@ export default function AdminAnnouncements() {
       id: 'title',
       label: 'Title',
       render: (row) => (
-        <div className="pa-flex pa-items-center pa-gap-2">
-          <span className="pa-text-lg">{getAnnouncementEmoji(row.type)}</span>
+        <div className="oa-flex oa-items-center oa-gap-2">
+          <span className="oa-text-lg">{getAnnouncementEmoji(row.type)}</span>
           {row.is_org_wide && (
             <Badge variant="info">ORG-WIDE</Badge>
           )}
           {row.priority === 'urgent' && (
             <Badge variant="danger">URGENT</Badge>
           )}
-          <span className="pa-font-bold pa-text-slate-900 dark:pa-text-white">{row.title}</span>
+          <span className="oa-font-bold oa-text-slate-900 dark:oa-text-white">{row.title}</span>
         </div>
       )
     },
@@ -407,7 +408,7 @@ export default function AdminAnnouncements() {
       id: 'team_name',
       label: 'Scope',
       render: (row) => (
-        <span className="pa-text-sm pa-font-medium pa-text-slate-700 dark:pa-text-slate-300">
+        <span className="oa-text-sm oa-font-medium oa-text-slate-700 dark:oa-text-slate-300">
           {row.is_org_wide ? 'All Teams' : row.team_name}
         </span>
       )
@@ -416,9 +417,9 @@ export default function AdminAnnouncements() {
       id: 'type',
       label: 'Type',
       render: (row) => (
-        <div className="pa-flex pa-items-center pa-gap-2">
+        <div className="oa-flex oa-items-center oa-gap-2">
           <span>{getAnnouncementEmoji(row.type)}</span>
-          <span className="pa-text-sm pa-font-medium pa-text-slate-700 dark:pa-text-slate-300">
+          <span className="oa-text-sm oa-font-medium oa-text-slate-700 dark:oa-text-slate-300">
             {row.type.charAt(0).toUpperCase() + row.type.slice(1).replace('_', ' ')}
           </span>
         </div>
@@ -428,12 +429,12 @@ export default function AdminAnnouncements() {
       id: 'author',
       label: 'Author',
       render: (row) => (
-        <div className="pa-flex pa-flex-col">
+        <div className="oa-flex oa-flex-col">
           <Badge variant={row.author_role === 'coach' || row.author_role === 'org_admin' ? 'info' : 'neutral'}>
             {row.author_role === 'org_admin' ? 'Admin' : row.author_role === 'coach' ? 'Coach' : 'Parent'}
           </Badge>
           {row.author_email && (
-            <span className="pa-text-xs pa-text-slate-500 pa-mt-1">{row.author_email}</span>
+            <span className="oa-text-xs oa-text-slate-500 oa-mt-1">{row.author_email}</span>
           )}
         </div>
       )
@@ -451,7 +452,7 @@ export default function AdminAnnouncements() {
       id: 'created_at',
       label: 'Created',
       render: (row) => (
-        <span className="pa-text-sm pa-text-slate-500">
+        <span className="oa-text-sm oa-text-slate-500">
           {new Date(row.created_at).toLocaleDateString()}
         </span>
       )
@@ -468,7 +469,7 @@ export default function AdminAnnouncements() {
         const isDeleting = deletingId === row.id
 
         return (
-          <div className="pa-flex pa-gap-1 pa-justify-end">
+          <div className="oa-flex oa-gap-1 oa-justify-end">
             <Button
               variant="ghost"
               size="dense"
@@ -480,12 +481,12 @@ export default function AdminAnnouncements() {
               }}
               disabled={!canDelete || actionLoading || isDeleting}
               title={!canDelete ? "You don't have permission to delete this announcement" : isDeleting ? "Deleting..." : "Delete announcement"}
-              className="pa-text-danger hover:pa-bg-danger-surface"
+              className="oa-text-danger hover:oa-bg-danger-surface"
             >
               {isDeleting ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current"></div>
               ) : (
-                <span className="material-symbols-outlined pa-icon-sm">delete</span>
+                <span className="material-symbols-outlined oa-icon-sm">delete</span>
               )}
             </Button>
           </div>
@@ -505,7 +506,7 @@ export default function AdminAnnouncements() {
   const displayAnnouncements = announcements
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title="Announcements" 
         subtitle={t('admin.announcements.subtitle')}
@@ -523,9 +524,9 @@ export default function AdminAnnouncements() {
 
       {/* Show error message if teams fetch failed */}
       {teamsError && (
-        <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
-            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>
+        <Card className="oa-mb-4">
+          <div className="oa-p-4" style={{ background: 'var(--oa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--oa-danger, #ef4444)' }}>
+            <div className="oa-text-sm oa-font-medium" style={{ color: 'var(--oa-danger-dark, #991b1b)' }}>
               {teamsError}
             </div>
           </div>
@@ -534,10 +535,10 @@ export default function AdminAnnouncements() {
 
       {/* Show error message if announcements fetch failed */}
       {error && (
-        <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
-            <div className="pa-flex pa-items-center pa-justify-between">
-              <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>
+        <Card className="oa-mb-4">
+          <div className="oa-p-4" style={{ background: 'var(--oa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--oa-danger, #ef4444)' }}>
+            <div className="oa-flex oa-items-center oa-justify-between">
+              <div className="oa-text-sm oa-font-medium" style={{ color: 'var(--oa-danger-dark, #991b1b)' }}>
                 {error}
               </div>
               <Button
@@ -555,9 +556,9 @@ export default function AdminAnnouncements() {
 
       {/* Show info message when no teams exist */}
       {hasTeams === false && !teamsError && (
-        <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-4" style={{ background: 'var(--pa-info-bg, #eff6ff)', borderLeft: '4px solid var(--pa-info, #3b82f6)' }}>
-            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-info-dark, #1e40af)' }}>
+        <Card className="oa-mb-4">
+          <div className="oa-p-4" style={{ background: 'var(--oa-info-bg, #eff6ff)', borderLeft: '4px solid var(--oa-info, #3b82f6)' }}>
+            <div className="oa-text-sm oa-font-medium" style={{ color: 'var(--oa-info-dark, #1e40af)' }}>
               No teams available. Create teams before posting announcements.
             </div>
           </div>
@@ -601,7 +602,7 @@ export default function AdminAnnouncements() {
               { value: '', label: 'All Teams (Global Scope)' },
               ...teams.map(t => ({ value: t.id, label: t.name }))
             ]}
-            className="pa-w-full"
+            className="oa-w-full"
           />
         </div>
 
@@ -633,16 +634,18 @@ export default function AdminAnnouncements() {
             title="NO ANNOUNCEMENTS" 
             description={priorityFilter !== 'all' || selectedTeamFilter || dateRangeFilter === 'recent'
               ? "No announcements match your filters."
-              : "Create your first announcement to get started."} 
-            action={hasTeams ? { 
-              label: 'New Announcement', 
-              onClick: () => setIsCreateModalOpen(true) 
-            } : undefined}
+              : "Create your first announcement to get started."}
             noCard
-          />
+          >
+            {hasTeams ? (
+              <button className="oa-btn oa-btn--primary" onClick={() => setIsCreateModalOpen(true)}>
+                New Announcement
+              </button>
+            ) : null}
+          </EmptyState>
         </Card>
       ) : (
-        <PlatformDataTable 
+        <OrgDataTable 
           columns={columns} 
           rows={displayAnnouncements} 
           loading={loading} 
@@ -670,10 +673,7 @@ export default function AdminAnnouncements() {
         description={deleteDialog.announcement ? `Are you sure you want to delete "${deleteDialog.announcement.title}"? This action cannot be undone.` : ''}
         confirmLabel="Delete"
         variant="danger"
-        requireReason={false}
-        loading={actionLoading}
-        error={actionError}
-        onConfirm={handleDelete}
+        onConfirm={() => { void handleDelete('') }}
         onCancel={() => {
           setDeleteDialog({ open: false, announcement: null })
           setActionError(null)

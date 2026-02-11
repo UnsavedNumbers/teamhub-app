@@ -17,13 +17,14 @@ import {
 import { 
     AdminPageHeader, 
     Button, 
-    PlatformDataTable, 
     Badge,
-    type ColumnConfig,
     ConfirmDialog
-} from '../../components/platformAdmin'
+} from '../../components/admin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { getLink } from '../../utils/routes'
 import { calculateAge } from '../../utils/athleteHelpers'
+import '../../styles/orgAdmin.css'
 
 type RequestStatus = 'pending' | 'approved' | 'denied' | 'all'
 
@@ -201,11 +202,11 @@ export default function GuardianAttachmentRequests() {
             label: 'Athlete',
             render: (row) => (
                 <div>
-                    <div className="pa-body-m" style={{ fontWeight: 600 }}>
+                    <div className="oa-body-m" style={{ fontWeight: 600 }}>
                         {row.athlete_first_name} {row.athlete_last_name}
                     </div>
                     {row.athlete_birthdate && (
-                        <div className="pa-body-s pa-text-muted">
+                        <div className="oa-body-s oa-text-muted">
                             Age {String(calculateAge(row.athlete_birthdate))}
                         </div>
                     )}
@@ -217,9 +218,9 @@ export default function GuardianAttachmentRequests() {
             label: 'Requester',
             render: (row) => (
                 <div>
-                    <div className="pa-body-m">{row.requester_email}</div>
+                    <div className="oa-body-m">{row.requester_email}</div>
                     {row.requester_display_name && (
-                        <div className="pa-body-s pa-text-muted">{row.requester_display_name}</div>
+                        <div className="oa-body-s oa-text-muted">{row.requester_display_name}</div>
                     )}
                 </div>
             )
@@ -256,9 +257,9 @@ export default function GuardianAttachmentRequests() {
                 if (row.status === 'pending') return '—'
                 return (
                     <div>
-                        <div className="pa-body-s">{formatDate(row.reviewed_at)}</div>
+                        <div className="oa-body-s">{formatDate(row.reviewed_at)}</div>
                         {row.reviewer_display_name && (
-                            <div className="pa-body-s pa-text-muted">by {row.reviewer_display_name}</div>
+                            <div className="oa-body-s oa-text-muted">by {row.reviewer_display_name}</div>
                         )}
                     </div>
                 )
@@ -321,7 +322,7 @@ export default function GuardianAttachmentRequests() {
     
     if (!isReady) {
         return (
-            <div className="pa-root">
+            <div className="oa-root">
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
                 </div>
@@ -330,7 +331,7 @@ export default function GuardianAttachmentRequests() {
     }
     
     return (
-        <div className="pa-root">
+        <div className="oa-root">
             <AdminPageHeader 
                 title="Guardian Attachment Requests"
                 actions={
@@ -347,8 +348,8 @@ export default function GuardianAttachmentRequests() {
                 <div style={{ 
                     marginBottom: '16px', 
                     padding: '12px', 
-                    backgroundColor: 'var(--pa-danger-light)', 
-                    color: 'var(--pa-danger)', 
+                    backgroundColor: 'var(--oa-danger-light)', 
+                    color: 'var(--oa-danger)', 
                     borderRadius: '8px' 
                 }}>
                     {error}
@@ -357,7 +358,7 @@ export default function GuardianAttachmentRequests() {
             
             {/* Status Filter */}
             <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <label className="pa-body-s" style={{ fontWeight: 600, marginRight: '8px' }}>
+                <label className="oa-body-s" style={{ fontWeight: 600, marginRight: '8px' }}>
                     Filter:
                 </label>
                 <Button
@@ -391,7 +392,7 @@ export default function GuardianAttachmentRequests() {
             </div>
             
             {/* Requests Table */}
-            <PlatformDataTable
+            <OrgDataTable
                 columns={columns}
                 rows={requests}
                 loading={loading}
@@ -424,18 +425,15 @@ export default function GuardianAttachmentRequests() {
                 confirmLabel={reviewDialog.approve ? 'Approve' : 'Deny'}
                 cancelLabel="Cancel"
                 variant={reviewDialog.approve ? undefined : 'danger'}
-                requireReason={!reviewDialog.approve}
-                onConfirm={(reason) => {
+                onConfirm={() => {
                     if (reviewDialog.request) {
-                        handleReview(reviewDialog.request, reviewDialog.approve, reason)
+                        handleReview(reviewDialog.request, reviewDialog.approve, '')
                     }
                 }}
                 onCancel={() => {
                     setReviewDialog({ open: false, request: null, approve: false })
                     setError(null)
                 }}
-                loading={isReviewing}
-                error={error}
             />
         </div>
     )

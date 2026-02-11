@@ -3,10 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { PageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
+import { FeatureHierarchySelector } from '../../components/admin/FeatureHierarchySelector'
 import { mapFeatureEntitlement, mapLicenseTier, mapTierFeatureAssignment } from '../../utils/domainMappers'
 import type { FeatureEntitlement, LicenseTier, TierFeatureAssignment } from '../../types/domain/License'
 import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
 import { showSuccess, showError } from '../../utils/toast'
+import { useI18n } from '../../i18n/useI18n'
 
 const FEATURE_CATEGORIES_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
 const FEATURE_TYPES_OPTIONS = FEATURE_TYPES.map(type => ({ value: type, label: type }))
@@ -15,6 +17,7 @@ export default function FeatureDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const isNew = id === 'new'
+  const { t } = useI18n()
 
   const [feature, setFeature] = useState<Partial<FeatureEntitlement>>({
     featureKey: '',
@@ -23,6 +26,7 @@ export default function FeatureDetail() {
     featureType: 'module',
     description: '',
     rolloutStatus: 'live',
+    unavailableGateAction: 'overlay',
     isSystemFeature: false,
     platformAdminOnly: false,
   })
@@ -35,6 +39,10 @@ export default function FeatureDetail() {
   const [featureTypeOverride, setFeatureTypeOverride] = useState(false)
   const [savingAssignment, setSavingAssignment] = useState<Record<string, boolean>>({})
   const [showUnsavedBanner, setShowUnsavedBanner] = useState(false)
+  const [pendingLimits, setPendingLimits] = useState<Record<string, number | null>>({})
+  const [suggestedChildren, setSuggestedChildren] = useState<FeatureEntitlement[]>([])
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+  const [addingChild, setAddingChild] = useState<Record<string, boolean>>({})
 
   const fetchFeature = useCallback(async () => {
     if (isNew) return
@@ -87,15 +95,77 @@ export default function FeatureDetail() {
       if (assignmentsError) throw assignmentsError
 
       const assignmentsMap: Record<string, TierFeatureAssignment> = {}
+      const limitsMap: Record<string, number | null> = {}
       ;(data || []).forEach((assignment) => {
         const mapped = mapTierFeatureAssignment(assignment)
         assignmentsMap[mapped.licenseTierId] = mapped
+        limitsMap[mapped.licenseTierId] = mapped.limitValue ?? null
       })
       setAssignments(assignmentsMap)
+      setPendingLimits(limitsMap)
     } catch (err: any) {
       console.error('Error fetching assignments:', err)
     }
   }, [id, isNew])
+
+  const fetchSuggestedChildren = useCallback(async () => {
+    if (isNew || !feature.featureKey || feature.parentFeatureKey) return
+
+    setLoadingSuggestions(true)
+    try {
+      // Fetch features that:
+      // 1. Don't have a parent yet (parent_feature_key IS NULL)
+      // 2. Are in the same category OR have similar naming pattern
+      // 3. Are not the current feature itself
+      const { data, error } = await supabase
+        .from('feature_entitlements')
+        .select('*')
+        .is('parent_feature_key', null)
+        .is('archived_at', null)
+        .neq('feature_key', feature.featureKey!)
+        .or(`category.eq.${feature.category},feature_key.ilike.%${feature.featureKey?.split('_')[0]}%`)
+        .order('display_name', { ascending: true })
+        .limit(10)
+
+      if (error) throw error
+
+      const suggestions = (data || [])
+        .map(row => mapFeatureEntitlement(row))
+        // Filter out features that are already children
+        .filter(f => f.featureKey !== feature.featureKey)
+      
+      setSuggestedChildren(suggestions)
+    } catch (err: any) {
+      console.error('Error fetching suggested children:', err)
+    } finally {
+      setLoadingSuggestions(false)
+    }
+  }, [id, isNew, feature.featureKey, feature.category, feature.parentFeatureKey])
+
+  const handleAddChild = async (childFeatureKey: string, childFeatureId: string) => {
+    if (!feature.featureKey) return
+
+    setAddingChild(prev => ({ ...prev, [childFeatureKey]: true }))
+
+    try {
+      const { error } = await supabase
+        .from('feature_entitlements')
+        .update({ parent_feature_key: feature.featureKey } as any)
+        .eq('id', childFeatureId)
+
+      if (error) throw error
+
+      showSuccess('Child feature added successfully!')
+      
+      // Remove from suggestions
+      setSuggestedChildren(prev => prev.filter(f => f.featureKey !== childFeatureKey))
+    } catch (err: any) {
+      console.error('Error adding child:', err)
+      showError(err.message || 'Failed to add child feature')
+    } finally {
+      setAddingChild(prev => ({ ...prev, [childFeatureKey]: false }))
+    }
+  }
 
   const toggleTierAssignment = async (tierId: string, included: boolean) => {
     if (isNew || !id) return
@@ -193,11 +263,43 @@ export default function FeatureDetail() {
     }
   }
 
+  const updateAssignmentLimit = async (tierId: string, limitValue: number | null) => {
+    if (isNew || !id) return
+    const assignment = assignments[tierId]
+    if (!assignment?.id) return
+
+    setSavingAssignment(prev => ({ ...prev, [tierId]: true }))
+    try {
+      const { error: updateError } = await supabase
+        .from('tier_feature_assignments')
+        .update({
+          limit_value: limitValue,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', assignment.id)
+
+      if (updateError) throw updateError
+      await fetchAssignments()
+      showSuccess(t('platformAdmin.featureDetail.limitUpdated'))
+    } catch (err: any) {
+      showError(err.message || t('platformAdmin.featureDetail.limitUpdateError'))
+    } finally {
+      setSavingAssignment(prev => ({ ...prev, [tierId]: false }))
+    }
+  }
+
   useEffect(() => {
     fetchFeature()
     fetchTiers()
     fetchAssignments()
   }, [fetchFeature, fetchTiers, fetchAssignments])
+
+  // Fetch suggested children when feature loads and it's root-level
+  useEffect(() => {
+    if (!isNew && feature.featureKey && !feature.parentFeatureKey) {
+      fetchSuggestedChildren()
+    }
+  }, [feature.featureKey, feature.parentFeatureKey, isNew, fetchSuggestedChildren])
 
   // Track unsaved changes
   useEffect(() => {
@@ -225,7 +327,8 @@ export default function FeatureDetail() {
         feature.category === originalFeature.category &&
         feature.featureType === originalFeature.featureType &&
         feature.description === originalFeature.description &&
-        feature.rolloutStatus === originalFeature.rolloutStatus
+        feature.rolloutStatus === originalFeature.rolloutStatus &&
+        feature.unavailableGateAction === originalFeature.unavailableGateAction
 
       if (matchesOriginal) {
         setShowUnsavedBanner(false)
@@ -264,7 +367,6 @@ export default function FeatureDetail() {
 
     try {
       if (isNew) {
-        type FeatureInsert = Database['public']['Tables']['feature_entitlements']['Insert']
         const insertData = {
           feature_key: feature.featureKey,
           display_name: feature.displayName,
@@ -272,9 +374,11 @@ export default function FeatureDetail() {
           feature_type: feature.featureType!,
           description: feature.description || null,
           rollout_status: feature.rolloutStatus || 'live',
+          unavailable_gate_action: feature.unavailableGateAction || 'overlay',
           is_system_feature: feature.isSystemFeature ?? false,
           platform_admin_only: feature.platformAdminOnly ?? false,
-        } satisfies FeatureInsert
+          parent_feature_key: feature.parentFeatureKey || null,
+        } as any
         const { data, error: createError } = await supabase
           .from('feature_entitlements')
           .insert(insertData)
@@ -313,17 +417,18 @@ export default function FeatureDetail() {
           return false
         }
 
-        type FeatureUpdate = Database['public']['Tables']['feature_entitlements']['Update']
         const updateData = {
           display_name: feature.displayName,
           category: feature.category,
           feature_type: feature.featureType,
           description: feature.description || null,
+          unavailable_gate_action: feature.unavailableGateAction || 'overlay',
           is_system_feature: feature.isSystemFeature ?? false,
           platform_admin_only: feature.platformAdminOnly ?? false,
+          parent_feature_key: feature.parentFeatureKey || null,
           // Only update rollout_status if feature is toggleable
           ...(feature.isToggleable !== false ? { rollout_status: feature.rolloutStatus } : {}),
-        } satisfies FeatureUpdate
+        } as any
         const { error: updateError } = await supabase
           .from('feature_entitlements')
           .update(updateData)
@@ -351,6 +456,16 @@ export default function FeatureDetail() {
 
         // Update original feature after successful save
         setOriginalFeature(feature)
+        
+        // Save all pending limit changes
+        const limitPromises = Object.entries(pendingLimits).map(async ([tierId, limitValue]) => {
+          const assignment = assignments[tierId]
+          if (assignment?.id && limitValue !== assignment.limitValue) {
+            await updateAssignmentLimit(tierId, limitValue)
+          }
+        })
+        await Promise.all(limitPromises)
+        
         showSuccess('Feature updated successfully!')
         return true
       }
@@ -516,7 +631,7 @@ export default function FeatureDetail() {
         </div>
       )}
 
-      <div className="pa-grid pa-grid-2" style={{ gap: 'var(--pa-space-5)' }}>
+      <div className="pa-grid pa-grid-2" style={{ gap: 'var(--pa-space-5)', alignItems: 'start' }}>
         {/* Feature Settings */}
         <Card title="Feature Settings">
           <div className="pa-form-group">
@@ -616,6 +731,20 @@ export default function FeatureDetail() {
           </div>
 
           <div className="pa-form-group">
+            <label className="pa-label">Parent Feature</label>
+            <FeatureHierarchySelector
+              currentFeatureKey={feature.featureKey || ''}
+              currentParentKey={feature.parentFeatureKey}
+              onChange={(parentKey) => setFeature({ ...feature, parentFeatureKey: parentKey })}
+              disabled={!feature.featureKey}
+            />
+            <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginTop: '4px' }}>
+              Child features automatically inherit unavailability from parent features. 
+              If the parent is not available in a tier, children are also unavailable.
+            </div>
+          </div>
+
+          <div className="pa-form-group">
             <label className="pa-label">
               Rollout Status
               {feature.isToggleable === false && (
@@ -639,6 +768,25 @@ export default function FeatureDetail() {
                 This feature is locked and its status cannot be changed.
               </div>
             )}
+          </div>
+
+          <div className="pa-form-group">
+            <label className="pa-label">Gate Action</label>
+            <Select
+              value={feature.unavailableGateAction || 'overlay'}
+              onChange={(e) => setFeature({ ...feature, unavailableGateAction: e.target.value as any })}
+              options={[
+                { value: 'hide', label: 'Hide (Remove from navigation)' },
+                { value: 'disable', label: 'Disable (Show but grayed out)' },
+                { value: 'overlay', label: 'Overlay (Show upgrade prompt)' },
+                { value: 'modal', label: 'Modal (Show in popup)' },
+                { value: 'paywall', label: 'Paywall (Redirect to billing)' },
+                { value: 'custom', label: 'Custom (Developer-defined)' },
+              ]}
+            />
+            <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginTop: '4px' }}>
+              How the UI responds when a user doesn't have access to this feature.
+            </div>
           </div>
 
             <div className="pa-form-group">
@@ -758,9 +906,32 @@ export default function FeatureDetail() {
                     <hr className="pa-tier-assignment-card__divider" />
                     <div className="pa-tier-assignment-card__details">
                       {feature.featureType === 'limit' && (
-                        <span><strong>Limit:</strong> {assignment.limitValue ?? 'Not set'}</span>
+                        <div className="pa-form-group" style={{ marginBottom: 'var(--pa-space-4)' }}>
+                          <label className="pa-label" style={{ fontSize: '12px', marginBottom: 'var(--pa-space-2)' }}>
+                            {t('platformAdmin.featureDetail.limitLabel')}
+                          </label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="999999"
+                            step="1"
+                            value={pendingLimits[tier.id] ?? assignment.limitValue ?? ''}
+                            onChange={(e) => {
+                              const value = e.target.value
+                              const numValue = value === '' ? null : parseInt(value, 10)
+                              if (numValue !== null && (Number.isNaN(numValue) || numValue < 0 || numValue > 999999)) {
+                                return
+                              }
+                              setPendingLimits(prev => ({ ...prev, [tier.id]: numValue }))
+                            }}
+                            placeholder="0"
+                            helper={t('platformAdmin.featureDetail.limitHelper')}
+                            disabled={isSaving || isNew}
+                            style={{ maxWidth: '180px' }}
+                          />
+                        </div>
                       )}
-                      <div className="pa-form-group" style={{ marginBottom: 0, marginTop: feature.featureType === 'limit' ? 'var(--pa-space-3)' : 0 }}>
+                      <div className="pa-form-group" style={{ marginBottom: 0 }}>
                         <label className="pa-label" style={{ fontSize: '12px', marginBottom: 'var(--pa-space-2)' }}>
                           Role Access
                         </label>
@@ -812,6 +983,127 @@ export default function FeatureDetail() {
           )}
         </Card>
       </div>
+
+      {/* Suggested Children (only for root-level features) */}
+      {!isNew && feature.featureKey && !feature.parentFeatureKey && (
+        <Card title="Suggested Child Features">
+          <p className="pa-body-s pa-text-muted" style={{ marginBottom: 'var(--pa-space-4)' }}>
+            These features could logically be children of "{feature.displayName}". 
+            Child features automatically inherit unavailability from their parent.
+          </p>
+
+            {loadingSuggestions && (
+              <div style={{ textAlign: 'center', padding: 'var(--pa-space-5)' }}>
+                <span className="material-symbols-outlined pa-spin" style={{ fontSize: '24px', color: 'var(--pa-n500)' }}>
+                  sync
+                </span>
+                <p className="pa-body-s pa-text-muted" style={{ marginTop: 'var(--pa-space-2)' }}>
+                  Loading suggestions...
+                </p>
+              </div>
+            )}
+
+            {!loadingSuggestions && suggestedChildren.length === 0 && (
+              <div style={{ textAlign: 'center', padding: 'var(--pa-space-5)', background: 'var(--pa-n50)', borderRadius: 'var(--pa-radius-md)' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '32px', color: 'var(--pa-n400)' }}>
+                  check_circle
+                </span>
+                <p className="pa-body-s pa-text-muted" style={{ marginTop: 'var(--pa-space-2)' }}>
+                  No suggested children found. Features in the same category without parents will appear here.
+                </p>
+              </div>
+            )}
+
+            {!loadingSuggestions && suggestedChildren.length > 0 && (
+              <div style={{ display: 'grid', gap: 'var(--pa-space-3)' }}>
+                {suggestedChildren.map((child) => {
+                  const isAdding = addingChild[child.featureKey] || false
+
+                  return (
+                    <div
+                      key={child.featureKey}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        gap: 'var(--pa-space-3)',
+                        padding: 'var(--pa-space-3)',
+                        border: '1px solid var(--pa-n200)',
+                        borderRadius: 'var(--pa-radius-md)',
+                        background: 'var(--pa-n50)',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)', marginBottom: 'var(--pa-space-1)' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--pa-n500)' }}>
+                            subdirectory_arrow_right
+                          </span>
+                          <h4 className="pa-body-m" style={{ fontWeight: 600, margin: 0 }}>
+                            {child.displayName}
+                          </h4>
+                        </div>
+                        <p className="pa-mono" style={{ fontSize: '11px', color: 'var(--pa-n600)', marginBottom: 'var(--pa-space-1)' }}>
+                          {child.featureKey}
+                        </p>
+                        {child.description && (
+                          <p className="pa-body-s" style={{ color: 'var(--pa-n600)', margin: 0 }}>
+                            {child.description}
+                          </p>
+                        )}
+                        <div style={{ display: 'flex', gap: 'var(--pa-space-2)', marginTop: 'var(--pa-space-2)' }}>
+                          <span className="pa-badge" style={{ fontSize: '11px' }}>
+                            {child.category}
+                          </span>
+                          <span className="pa-badge" style={{ fontSize: '11px', background: 'var(--pa-primary-50)', color: 'var(--pa-primary-700)' }}>
+                            {child.featureType}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="primary"
+                        size="dense"
+                        onClick={() => handleAddChild(child.featureKey, child.id)}
+                        disabled={isAdding}
+                        style={{ flexShrink: 0 }}
+                      >
+                        {isAdding ? (
+                          <>
+                            <span className="material-symbols-outlined pa-spin" style={{ fontSize: '16px', marginRight: 'var(--pa-space-1)' }}>
+                              sync
+                            </span>
+                            Adding...
+                          </>
+                        ) : (
+                          <>
+                            <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: 'var(--pa-space-1)' }}>
+                              add
+                            </span>
+                            Add as Child
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {!loadingSuggestions && suggestedChildren.length > 0 && (
+              <div style={{ marginTop: 'var(--pa-space-4)', padding: 'var(--pa-space-3)', background: 'var(--pa-info-bg)', borderRadius: 'var(--pa-radius-md)', border: '1px solid var(--pa-info)' }}>
+                <div style={{ display: 'flex', gap: 'var(--pa-space-2)', alignItems: 'flex-start' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--pa-info)', flexShrink: 0 }}>
+                    info
+                  </span>
+                  <p className="pa-body-s" style={{ color: 'var(--pa-n700)', margin: 0 }}>
+                    When you add a child feature, it will automatically inherit tier availability from "{feature.displayName}". 
+                    If this parent is unavailable in a tier, the child will also be unavailable.
+                  </p>
+                </div>
+              </div>
+            )}
+        </Card>
+      )}
     </div>
   )
 }

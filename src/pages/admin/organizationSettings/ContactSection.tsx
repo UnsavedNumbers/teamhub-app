@@ -276,14 +276,14 @@ export default function ContactSection({ orgId }: { orgId: string }) {
   }
 
   if (loading) {
-      return <div className="pa-p-8 pa-text-center">{t('admin.organizationSettings.contacts.loading')}</div>
+      return <div className="oa-p-8 oa-text-center">{t('admin.organizationSettings.contacts.loading')}</div>
   }
 
   return (
     <div className="oa-contact-section">
       {/* Default Contact Section */}
       <Card title={t('admin.organizationSettings.contacts.defaultTitle')}>
-        <p className="pa-text-sm pa-text-muted pa-mb-4">{t('admin.organizationSettings.contacts.defaultDescription')}</p>
+        <p className="oa-text-sm oa-text-muted oa-mb-4">{t('admin.organizationSettings.contacts.defaultDescription')}</p>
         <div className="oa-contact-form-grid">
                 <Controller
                     control={control}
@@ -318,7 +318,7 @@ export default function ContactSection({ orgId }: { orgId: string }) {
 
       {/* Category Contacts Section */}
       <Card title={t('admin.organizationSettings.contacts.categoryTitle')}>
-        <p className="pa-text-sm pa-text-muted pa-mb-4">{t('admin.organizationSettings.contacts.categoryDescription')}</p>
+        <p className="oa-text-sm oa-text-muted oa-mb-4">{t('admin.organizationSettings.contacts.categoryDescription')}</p>
         <div className="oa-category-list">
             {fields.map((field, index) => {
                 const isCustom = watch(`categories.${index}.is_custom`)
@@ -378,14 +378,14 @@ export default function ContactSection({ orgId }: { orgId: string }) {
                                 />
                                 {field.category === 'travel' && (
                                   <>
-                                    <div className="pa-w-full pa-text-sm pa-text-muted pa-mb-2">{t('admin.organizationSettings.contacts.travelIntro')}</div>
+                                    <div className="oa-w-full oa-text-sm oa-text-muted oa-mb-2">{t('admin.organizationSettings.contacts.travelIntro')}</div>
                                     {TRAVEL_SUBCATEGORY_KEYS.map((sub, subIdx) => (
                                       <Fragment key={sub}>
-                                        {subIdx > 0 && <hr className="pa-border-t pa-my-4" />}
+                                        {subIdx > 0 && <hr className="oa-border-t oa-my-4" />}
                                         
                                         <div className="oa-contact-form-grid">
                                           <h4 className="oa-category-title">{t(TRAVEL_SUBCATEGORY_LABEL_KEYS[sub])}</h4>
-                                          <div className="pa-text-xs pa-text-muted pa-text-right">
+                                          <div className="oa-text-xs oa-text-muted oa-text-right">
                                             {sub === 'transportation' && t('admin.organizationSettings.contacts.travelDescriptions.transportation')}
                                             {sub === 'lodging' && t('admin.organizationSettings.contacts.travelDescriptions.lodging')}
                                             {sub === 'venue' && t('admin.organizationSettings.contacts.travelDescriptions.venue')}

@@ -6,6 +6,7 @@ import { LoadingStateProvider } from './contexts/LoadingStateContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { FeatureGateRoute } from './components/FeatureGateRoute'
+import { FeatureGateProvider } from './lib/featureGate'
 import AdminLoadingSpinner from './components/admin/AdminLoadingSpinner'
 import FullScreenLoader from './components/common/FullScreenLoader'
 import { getHostAppContext } from './utils/host'
@@ -84,6 +85,8 @@ const FanOrgProfile = lazy(() => import('./pages/fan/FanOrgProfile'))
 const FanPhotos = lazy(() => import('./pages/fan/FanPhotos'))
 const FanGalleryDetail = lazy(() => import('./pages/fan/FanPhotos').then(m => ({ default: m.FanGalleryDetail })))
 const FanAthletePhotos = lazy(() => import('./pages/fan/FanPhotos').then(m => ({ default: m.FanAthletePhotos })))
+const FanVideos = lazy(() => import('./pages/fan/FanVideos'))
+const FanVideoDetail = lazy(() => import('./pages/fan/FanVideoDetail'))
 const FanSchedule = lazy(() => import('./pages/fan/FanSchedule'))
 const FanEventDetail = lazy(() => import('./pages/fan/FanEventDetail'))
 const FanTickets = lazy(() => import('./pages/fan/FanTickets'))
@@ -103,6 +106,7 @@ const GuardianVideos = lazy(() => import('./pages/GuardianVideos'))
 const GuardianVideoDetail = lazy(() => import('./pages/GuardianVideoDetail'))
 const CoachVideoLibrary = lazy(() => import('./pages/CoachVideoLibrary'))
 const CoachVideoDetail = lazy(() => import('./pages/CoachVideoDetail'))
+const SharedVideoPage = lazy(() => import('./pages/SharedVideoPage'))
 
 // Admin Layout (Material Dashboard)
 import AdminLayout from './layouts/AdminLayout'
@@ -192,7 +196,14 @@ const EditTravelPlan = lazy(() => import('./pages/admin/EditTravelPlan'))
 const AdminTryouts = lazy(() => import('./pages/admin/AdminTryouts'))
 const AdminTryoutDetail = lazy(() => import('./pages/admin/AdminTryoutDetail'))
 const CreateTryout = lazy(() => import('./pages/admin/CreateTryout'))
+const AdminPhotosLayout = lazy(() => import('./pages/admin/photos/AdminPhotosLayout').then(m => ({ default: m.AdminPhotosLayout })))
+const PhotosDashboardView = lazy(() => import('./pages/admin/photos/PhotosDashboardView').then(m => ({ default: m.PhotosDashboardView })))
+const PhotosBrowseView = lazy(() => import('./pages/admin/photos/PhotosBrowseView').then(m => ({ default: m.PhotosBrowseView })))
+const PhotosSearchView = lazy(() => import('./pages/admin/photos/PhotosSearchView').then(m => ({ default: m.PhotosSearchView })))
+const PhotosBulkView = lazy(() => import('./pages/admin/photos/PhotosBulkView').then(m => ({ default: m.PhotosBulkView })))
+const PhotosSettingsView = lazy(() => import('./pages/admin/photos/PhotosSettingsView').then(m => ({ default: m.PhotosSettingsView })))
 const AdminPhotos = lazy(() => import('./pages/admin/Photos'))
+void AdminPhotos
 const AdminGalleryDetail = lazy(() => import('./pages/admin/GalleryDetail'))
 const CreateGallery = lazy(() => import('./pages/admin/CreateGallery'))
 const PhotoDetail = lazy(() => import('./pages/admin/PhotoDetail'))
@@ -276,7 +287,9 @@ function App() {
     <OrganizationProvider>
       <AuthProvider>
         <LoadingStateProvider>
-          <AppWithTheme />
+          <FeatureGateProvider>
+            <AppWithTheme />
+          </FeatureGateProvider>
         </LoadingStateProvider>
       </AuthProvider>
     </OrganizationProvider>
@@ -325,6 +338,13 @@ function AppWithTheme() {
           <Route path="/tickets/access/:token" element={<TicketAccess />} />
           <Route path="/tickets/resend" element={<ResendTicketsPage />} />
           <Route path="/tickets/validate/:token" element={<TicketScanner />} />
+          
+          {/* Public Shared Video Routes */}
+          <Route path="/share/video/:token" element={
+            <Suspense fallback={<FullScreenLoader />}>
+              <SharedVideoPage />
+            </Suspense>
+          } />
           
           {/* Redirect /accept-invite to /portal/accept-invite for old email links */}
           <Route path="/accept-invite" element={<AcceptInvite />} />
@@ -406,6 +426,8 @@ function AppWithTheme() {
             <Route path="photos" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanPhotos /></Suspense></ProtectedRoute>} />
             <Route path="photos/gallery/:id" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanGalleryDetail /></Suspense></ProtectedRoute>} />
             <Route path="photos/athlete/:athleteId" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanAthletePhotos /></Suspense></ProtectedRoute>} />
+            <Route path="videos" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanVideos /></Suspense></ProtectedRoute>} />
+            <Route path="videos/:id" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanVideoDetail /></Suspense></ProtectedRoute>} />
             <Route path="tickets" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanTickets /></Suspense></ProtectedRoute>} />
             <Route path="tickets/:ticketId" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanTicketDetail /></Suspense></ProtectedRoute>} />
             <Route path="following" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><FanFollowing /></Suspense></ProtectedRoute>} />
@@ -465,33 +487,33 @@ function AppWithTheme() {
               <Route index element={<AdminDashboard />} />
             
               {/* Standardized Entity Routes - Most specific first */}
-              <Route path="sports/:sport_slug/update" element={<SportUpdate />} />
-              <Route path="sports/:sport_slug" element={<SportDetail />} />
-              <Route path="sports" element={<Sports />} />
-              <Route path="programs/sport/:sport_slug" element={<Programs />} />
-              <Route path="programs/:id/update" element={<ProgramUpdate />} />
-              <Route path="programs/:id" element={<ProgramDetail />} />
-              <Route path="programs" element={<Programs />} />
-              <Route path="levels/:id/update" element={<LevelUpdate />} />
-              <Route path="levels/:id" element={<LevelDetail />} />
-              <Route path="levels" element={<LevelsManagement />} />
-              <Route path="seasons/:id/update" element={<SeasonUpdate />} />
-              <Route path="seasons/:id" element={<SeasonDetail />} />
-              <Route path="seasons" element={<SeasonsManagement />} />
-              <Route path="teams/:id/roster" element={<Roster />} />
-              <Route path="teams/:id/update" element={<TeamUpdate />} />
-              <Route path="teams/:id" element={<TeamDetail />} />
-              <Route path="teams" element={<Teams />} />
-              <Route path="athletes/:id/edit" element={<EditAthlete />} />
-              <Route path="athletes/:id" element={<AthleteDetail />} />
-              <Route path="athletes/new" element={<CreateAthlete />} />
+              <Route path="sports/:sport_slug/update" element={<FeatureGateRoute routeKey="admin.sports.update"><SportUpdate /></FeatureGateRoute>} />
+              <Route path="sports/:sport_slug" element={<FeatureGateRoute routeKey="admin.sports.detail"><SportDetail /></FeatureGateRoute>} />
+              <Route path="sports" element={<FeatureGateRoute routeKey="admin.sports.list"><Sports /></FeatureGateRoute>} />
+              <Route path="programs/sport/:sport_slug" element={<FeatureGateRoute routeKey="admin.programs.bySport"><Programs /></FeatureGateRoute>} />
+              <Route path="programs/:id/update" element={<FeatureGateRoute routeKey="admin.programs.update"><ProgramUpdate /></FeatureGateRoute>} />
+              <Route path="programs/:id" element={<FeatureGateRoute routeKey="admin.programs.detail"><ProgramDetail /></FeatureGateRoute>} />
+              <Route path="programs" element={<FeatureGateRoute routeKey="admin.programs.list"><Programs /></FeatureGateRoute>} />
+              <Route path="levels/:id/update" element={<FeatureGateRoute routeKey="admin.levels.update"><LevelUpdate /></FeatureGateRoute>} />
+              <Route path="levels/:id" element={<FeatureGateRoute routeKey="admin.levels.detail"><LevelDetail /></FeatureGateRoute>} />
+              <Route path="levels" element={<FeatureGateRoute routeKey="admin.levels.list"><LevelsManagement /></FeatureGateRoute>} />
+              <Route path="seasons/:id/update" element={<FeatureGateRoute routeKey="admin.seasons.update"><SeasonUpdate /></FeatureGateRoute>} />
+              <Route path="seasons/:id" element={<FeatureGateRoute routeKey="admin.seasons.detail"><SeasonDetail /></FeatureGateRoute>} />
+              <Route path="seasons" element={<FeatureGateRoute routeKey="admin.seasons.list"><SeasonsManagement /></FeatureGateRoute>} />
+              <Route path="teams/:id/roster" element={<FeatureGateRoute routeKey="admin.teams.roster"><Roster /></FeatureGateRoute>} />
+              <Route path="teams/:id/update" element={<FeatureGateRoute routeKey="admin.teams.update"><TeamUpdate /></FeatureGateRoute>} />
+              <Route path="teams/:id" element={<FeatureGateRoute routeKey="admin.teams.detail"><TeamDetail /></FeatureGateRoute>} />
+              <Route path="teams" element={<FeatureGateRoute routeKey="admin.teams.list"><Teams /></FeatureGateRoute>} />
+              <Route path="athletes/:id/edit" element={<FeatureGateRoute routeKey="admin.athletes.edit"><EditAthlete /></FeatureGateRoute>} />
+              <Route path="athletes/:id" element={<FeatureGateRoute routeKey="admin.athletes.detail"><AthleteDetail /></FeatureGateRoute>} />
+              <Route path="athletes/new" element={<FeatureGateRoute routeKey="admin.athletes.create"><CreateAthlete /></FeatureGateRoute>} />
               <Route path="athletes/import" element={<FeatureGateRoute routeKey="admin.athletes.import"><ImportAthletes /></FeatureGateRoute>} />
-              <Route path="athletes" element={<AdminAthletes />} />
-              <Route path="guardians/:familyId/athletes/new" element={<CreateChild />} />
-              <Route path="guardians/new" element={<CreateFamily />} />
-              <Route path="guardians/:id" element={<FamilyDetail />} />
-              <Route path="guardians" element={<AdminFamilies />} />
-              <Route path="guardian-requests" element={<GuardianAttachmentRequests />} />
+              <Route path="athletes" element={<FeatureGateRoute routeKey="admin.athletes.list"><AdminAthletes /></FeatureGateRoute>} />
+              <Route path="guardians/:familyId/athletes/new" element={<FeatureGateRoute routeKey="admin.athletes.create"><CreateChild /></FeatureGateRoute>} />
+              <Route path="guardians/new" element={<FeatureGateRoute routeKey="admin.guardians.list"><CreateFamily /></FeatureGateRoute>} />
+              <Route path="guardians/:id" element={<FeatureGateRoute routeKey="admin.guardians.detail"><FamilyDetail /></FeatureGateRoute>} />
+              <Route path="guardians" element={<FeatureGateRoute routeKey="admin.guardians.list"><AdminFamilies /></FeatureGateRoute>} />
+              <Route path="guardian-requests" element={<FeatureGateRoute routeKey="admin.guardianRequests"><GuardianAttachmentRequests /></FeatureGateRoute>} />
 
               {/* Backward Compatibility Redirects */}
               <Route path="organization/sports/:id" element={<RedirectWithParams to="/admin/sports" />} />
@@ -561,7 +583,13 @@ function AppWithTheme() {
               <Route path="tryouts/:tryoutId" element={<FeatureGateRoute routeKey="admin.tryouts.detail"><AdminTryoutDetail /></FeatureGateRoute>} />
             
               {/* Photos */}
-              <Route path="photos" element={<FeatureGateRoute routeKey="admin.photos.list"><Suspense fallback={<AdminLoadingSpinner />}><AdminPhotos /></Suspense></FeatureGateRoute>} />
+              <Route path="photos" element={<FeatureGateRoute routeKey="admin.photos.list"><Suspense fallback={<AdminLoadingSpinner />}><AdminPhotosLayout /></Suspense></FeatureGateRoute>}>
+                <Route index element={<PhotosDashboardView />} />
+                <Route path="browse" element={<Suspense fallback={<AdminLoadingSpinner />}><PhotosBrowseView /></Suspense>} />
+                <Route path="search" element={<Suspense fallback={<AdminLoadingSpinner />}><PhotosSearchView /></Suspense>} />
+                <Route path="bulk" element={<Suspense fallback={<AdminLoadingSpinner />}><PhotosBulkView /></Suspense>} />
+                <Route path="settings" element={<Suspense fallback={<AdminLoadingSpinner />}><PhotosSettingsView /></Suspense>} />
+              </Route>
               <Route path="photos/create" element={<FeatureGateRoute routeKey="admin.photos.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateGallery /></Suspense></FeatureGateRoute>} />
               <Route path="photos/:id" element={<FeatureGateRoute routeKey="admin.photos.detail"><Suspense fallback={<AdminLoadingSpinner />}><AdminGalleryDetail /></Suspense></FeatureGateRoute>} />
               <Route path="photos/:galleryId/photo/:photoId" element={<FeatureGateRoute routeKey="admin.photos.photo"><Suspense fallback={<AdminLoadingSpinner />}><PhotoDetail /></Suspense></FeatureGateRoute>} />

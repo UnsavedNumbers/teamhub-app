@@ -6,9 +6,10 @@ import { USE_FAKE_DATA } from '../../data/config'
 import { getTeams, updateTeam } from '../../data/services/teamsService'
 import { getLevels } from '../../data/services/levelsService'
 import type { Team, Level } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, Input, Select, Checkbox } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 export default function TeamUpdate() {
   const { id } = useParams<{ id: string }>()
@@ -112,26 +113,26 @@ export default function TeamUpdate() {
 
   if (loading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
-        <div className="pa-skeleton" style={{ height: '400px' }} />
+        <div className="oa-skeleton" style={{ height: '400px' }} />
       </div>
     )
   }
 
   if (!team) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
         <Card>
-          <div className="pa-body-m pa-text-danger">Team not found</div>
+          <div className="oa-body-m oa-text-danger">Team not found</div>
         </Card>
       </div>
     )
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <OfflineBanner />
       
       <AdminPageHeader
@@ -145,17 +146,17 @@ export default function TeamUpdate() {
       />
 
       {error && (
-        <Card className="pa-mb-6" noPadding>
-          <div className="pa-alert-card pa-alert-card--error">
-            <div className="pa-body-m pa-text-danger">{error}</div>
+        <Card className="oa-mb-6">
+          <div className="oa-alert-card oa-alert-card--error">
+            <div className="oa-body-m oa-text-danger">{error}</div>
           </div>
         </Card>
       )}
 
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card>
-          <form onSubmit={handleSubmit} className="pa-form-grid">
-          <div className="pa-form-group">
+          <form onSubmit={handleSubmit} className="oa-form-grid">
+          <div className="oa-form-group">
             <Select
               label="Level"
               value={levelId}
@@ -166,7 +167,7 @@ export default function TeamUpdate() {
             />
           </div>
 
-          <div className="pa-form-group">
+          <div className="oa-form-group">
             <Input
               label="Team Name"
               value={name}
@@ -177,7 +178,7 @@ export default function TeamUpdate() {
             />
           </div>
 
-          <div className="pa-checkbox-row">
+          <div className="oa-checkbox-row">
             <Checkbox
               label="Active"
               checked={isActive}
@@ -186,7 +187,7 @@ export default function TeamUpdate() {
             />
           </div>
 
-          <div className="pa-form-actions">
+          <div className="oa-form-actions">
             <Button
               type="submit"
               disabled={!levelId || !name.trim() || submitting || isOffline || USE_FAKE_DATA}
@@ -209,3 +210,4 @@ export default function TeamUpdate() {
     </div>
   )
 }
+

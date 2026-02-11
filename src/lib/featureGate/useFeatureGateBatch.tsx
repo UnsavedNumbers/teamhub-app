@@ -3,6 +3,11 @@
  * 
  * React hook to check feature gates for multiple features at once.
  * Useful for navigation filtering where many features need to be checked.
+ *
+ * Improvements:
+ *  - AbortController cancels in-flight batch requests on unmount / dependency change
+ *  - Context validation logs warnings in dev when org_id is missing
+ *  - AbortError is silently swallowed (component unmounted)
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -11,23 +16,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { fetchFeatureGates } from './api';
 import type { FeatureGateResult, FeatureGateContext, UseFeatureGateBatchResult } from './types';
 
+// Warn only once per session
+let _batchContextWarned = false;
+
 /**
  * Hook to check feature gates for multiple features at once
  * 
  * @param featureKeys - Array of feature keys to check
  * @returns Map of feature key to gate result, with loading state
- * 
- * @example
- * ```tsx
- * const { gates, loading } = useFeatureGateBatch(['travel', 'tryouts', 'payments']);
- * const travelGate = gates.get('travel');
- * if (!travelGate?.allowed) {
- *   // Hide or disable travel nav item
- * }
- * ```
  */
 export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchResult {
-    const { currentOrganization } = useOrganization();
+    const { currentOrganization, organizations, isLoading: isOrganizationLoading } = useOrganization();
     const { user, profile } = useAuth();
 
     const [gates, setGates] = useState<Map<string, FeatureGateResult>>(new Map());
@@ -42,7 +41,12 @@ export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchR
         };
     }, []);
 
-    // Build context
+    const skipOrgScopedChecks = useMemo(() => {
+        if (!user?.id || !profile) return false;
+        return !profile.isPlatformAdmin && !isOrganizationLoading && !currentOrganization?.id;
+    }, [user?.id, profile, isOrganizationLoading, currentOrganization?.id]);
+
+    // Build context — with dev-mode validation
     const context: FeatureGateContext | null = useMemo(() => {
         if (!user?.id || !profile) {
             return null;
@@ -53,14 +57,33 @@ export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchR
         );
         const currentOrgRole = currentOrg?.roles?.[0] ?? 'parent';
 
+        const orgId = currentOrganization?.id ?? null;
+
+        if (
+            import.meta.env.DEV &&
+            featureKeys.length > 0 &&
+            !orgId &&
+            organizations.length > 0 &&
+            !isOrganizationLoading &&
+            !profile.isPlatformAdmin
+        ) {
+            if (!_batchContextWarned) {
+                _batchContextWarned = true;
+                console.warn(
+                    `[useFeatureGateBatch] Checking ${featureKeys.length} features without an org_id. ` +
+                    'Ensure OrganizationContext is set.'
+                );
+            }
+        }
+
         return {
-            org_id: currentOrganization?.id ?? null,
+            org_id: orgId,
             user_id: user.id,
             role: currentOrgRole as 'parent' | 'coach' | 'org_admin',
             license_tier: null,
             is_platform_admin: profile.isPlatformAdmin ?? false,
         };
-    }, [user?.id, profile, currentOrganization?.id]);
+    }, [user?.id, profile, currentOrganization?.id, organizations.length, isOrganizationLoading, featureKeys.length]);
 
     // Stable key string for dependency checking (sorted to avoid re-renders from order changes)
     const keysString = useMemo(() =>
@@ -68,7 +91,7 @@ export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchR
         [featureKeys]
     );
 
-    const refetch = useCallback(async () => {
+    const refetch = useCallback(async (signal?: AbortSignal) => {
         // No keys to fetch
         if (featureKeys.length === 0) {
             if (isMountedRef.current) {
@@ -78,10 +101,19 @@ export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchR
             return;
         }
 
-        // No context yet - still loading
+        // No context yet — still loading
         if (!context) {
             if (isMountedRef.current) {
                 setLoading(true);
+            }
+            return;
+        }
+
+        // User has no organization context yet; skip org-scoped checks until org is selected/available
+        if (skipOrgScopedChecks) {
+            if (isMountedRef.current) {
+                setGates(new Map());
+                setLoading(false);
             }
             return;
         }
@@ -91,9 +123,9 @@ export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchR
         }
 
         try {
-            const results = await fetchFeatureGates(featureKeys, context);
+            const results = await fetchFeatureGates(featureKeys, context, signal);
 
-            if (isMountedRef.current) {
+            if (isMountedRef.current && !signal?.aborted) {
                 const newMap = new Map<string, FeatureGateResult>();
                 for (const [key, value] of Object.entries(results)) {
                     newMap.set(key, value);
@@ -101,24 +133,33 @@ export function useFeatureGateBatch(featureKeys: string[]): UseFeatureGateBatchR
                 setGates(newMap);
             }
         } catch (err) {
+            // Silently ignore AbortError — component unmounted or deps changed
+            if (err instanceof DOMException && err.name === 'AbortError') {
+                return;
+            }
             console.error('[useFeatureGateBatch] Error:', err);
             // Keep existing gates on error
         } finally {
-            if (isMountedRef.current) {
+            if (isMountedRef.current && !signal?.aborted) {
                 setLoading(false);
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [keysString, context]);
+    }, [keysString, context, skipOrgScopedChecks]);
 
+    // Fetch on mount and when dependencies change, with abort on cleanup
     useEffect(() => {
-        refetch();
+        const abortController = new AbortController();
+        refetch(abortController.signal);
+        return () => {
+            abortController.abort();
+        };
     }, [refetch]);
 
     return {
         gates,
         loading,
-        refetch,
+        refetch: () => refetch(),
     };
 }
 

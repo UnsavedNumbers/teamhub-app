@@ -7,7 +7,7 @@ import { getLink } from '../../utils/routes'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
 import { showSuccess, showError } from '../../utils/toast'
-import { ConfirmDialog, AdminPageHeader, EmptyState } from '../../components/platformAdmin'
+import { ConfirmDialog, AdminPageHeader, EmptyState } from '../../components/admin'
 import TravelHeader from '../../components/admin/TravelHeader'
 import TravelFilters from '../../components/admin/TravelFilters'
 import TravelList from '../../components/admin/TravelList'
@@ -51,6 +51,7 @@ export default function TravelPlans() {
     const [publishLoading, setPublishLoading] = useState<string | null>(null)
     const [cancelLoading, setCancelLoading] = useState<string | null>(null)
     const [actionError, setActionError] = useState<string | null>(null)
+    void actionError
 
     const [teams, setTeams] = useState<Team[]>([])
 
@@ -249,8 +250,11 @@ export default function TravelPlans() {
                     icon="flight_takeoff"
                     title={t('travelPlans.noPlans')}
                     description={t('travelPlans.noPlansDesc')}
-                    action={{ label: t('travelPlans.createPlan'), onClick: () => navigate('/admin/travel/new') }}
-                />
+                >
+                    <button className="oa-btn oa-btn--primary" onClick={() => navigate('/admin/travel/new')}>
+                        {t('travelPlans.createPlan')}
+                    </button>
+                </EmptyState>
             ) : (
                 <>
                     {viewMode === 'list' && (
@@ -314,11 +318,8 @@ export default function TravelPlans() {
                 title={t('travelPlans.cancelDialogTitle')}
                 description={cancelDialog.plan ? t('travelPlans.cancelDialogDesc', { title: cancelDialog.plan.title }) : ''}
                 confirmLabel={t('travelPlans.cancelConfirmLabel')}
-                variant="warning"
-                requireReason
-                loading={cancelLoading !== null}
-                error={actionError}
-                onConfirm={handleCancelConfirm}
+                variant="primary"
+                onConfirm={() => { void handleCancelConfirm('') }}
                 onCancel={() => { setCancelDialog({ open: false, plan: null }); setActionError(null) }}
             />
         </div>

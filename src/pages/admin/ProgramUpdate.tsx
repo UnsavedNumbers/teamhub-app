@@ -5,7 +5,7 @@ import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
 import { getPrograms, getSports, updateProgram } from '../../data/services/sportsService'
 import type { Program, GenderCategory, Sport } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, Input, Select } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, Input, Select } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
@@ -151,7 +151,7 @@ export default function ProgramUpdate() {
       />
 
       {error && (
-        <Card className="oa-mb-6" noPadding>
+        <Card className="oa-mb-6">
           <div className="oa-alert-card oa-alert-card--error">
             <div className="oa-body-m oa-text-danger">{error}</div>
           </div>
@@ -214,3 +214,4 @@ export default function ProgramUpdate() {
     </div>
   )
 }
+

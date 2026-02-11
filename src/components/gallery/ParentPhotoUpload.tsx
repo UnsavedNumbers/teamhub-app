@@ -16,6 +16,7 @@ import {
   uploadPhotoToGallery,
   type Gallery,
 } from '../../data/services/galleryService'
+import { compressPhotoFile } from '../../utils/photoCompression'
 
 interface ParentPhotoUploadProps {
   gallery: Gallery
@@ -90,16 +91,22 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
     )
 
     try {
+      const { file: processedFile } = await compressPhotoFile(uploadFile.file, {
+        maxSizeMB: 2,
+        maxDimension: 4000,
+        force: true,
+      })
+
       const { data: photo, error: uploadError } = await uploadPhotoToGallery(
         context,
         gallery.id,
-        uploadFile.file,
+        processedFile,
         null, // No album for parent uploads
         'pending' // Parents upload pending photos
       )
 
       if (uploadError || !photo) {
-        throw uploadError || new Error('Upload failed')
+        throw uploadError || new Error(t('toast.error.generic'))
       }
 
       setFiles((prev) =>
@@ -113,7 +120,7 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
       showSuccess(t('gallery.parentPhotoUpload.uploadPendingReview', { fileName: uploadFile.file.name }))
       onUploadComplete?.()
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Upload failed'
+      const errorMessage = err instanceof Error ? err.message : t('toast.error.generic')
       setFiles((prev) =>
         prev.map((f) =>
           f.id === uploadFile.id
@@ -147,11 +154,14 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
       .forEach((uploadFile) => uploadPhoto(uploadFile))
   }
 
+  const pendingCount = files.filter((f) => f.status === 'pending' || f.status === 'error').length
+  const pendingLabel = pendingCount === 1 ? t('gallery.parentPhotoUpload.photo') : t('gallery.parentPhotoUpload.photos')
+
   return (
     <div className="space-y-4">
       {/* Entry point */}
       <Card>
-        <h3 className="text-lg font-bold mb-4">Share Your Highlights</h3>
+        <h3 className="text-lg font-bold mb-4">{t('gallery.parentPhotoUpload.title')}</h3>
         <div className="flex flex-col sm:flex-row gap-3">
           <Button
             variant="secondary"
@@ -159,7 +169,7 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
             className="flex-1"
           >
             <Icon name="camera_alt" size="text-lg" className="mr-2" />
-            TAKE PHOTO
+            {t('gallery.parentPhotoUpload.takePhoto')}
           </Button>
           <Button
             variant="secondary"
@@ -167,7 +177,7 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
             className="flex-1"
           >
             <Icon name="photo_library" size="text-lg" className="mr-2" />
-            Upload from Gallery
+            {t('gallery.parentPhotoUpload.uploadFromGallery')}
           </Button>
           <input
             ref={fileInputRef}
@@ -184,7 +194,7 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
       {/* Selected photos */}
       {files.length > 0 && (
         <Card>
-          <h3 className="font-semibold mb-4">Selected Photos</h3>
+          <h3 className="font-semibold mb-4">{t('gallery.parentPhotoUpload.selectedPhotos')}</h3>
           <div className="space-y-3">
             {files.map((uploadFile) => (
               <div key={uploadFile.id} className="flex items-center gap-4">
@@ -200,7 +210,7 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
                     <span className="text-sm font-medium truncate">{uploadFile.file.name}</span>
                     {uploadFile.status === 'pending' && (
                       <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
-                        Pending Review
+                        {t('gallery.parentPhotoUpload.pendingReview')}
                       </span>
                     )}
                     {uploadFile.status === 'success' && (
@@ -252,7 +262,7 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
           disabled={!agreedToGuidelines || files.some((f) => f.status === 'uploading')}
           className="w-full"
         >
-          SUBMIT {files.filter((f) => f.status === 'pending' || f.status === 'error').length} PHOTO{files.filter((f) => f.status === 'pending' || f.status === 'error').length !== 1 ? 'S' : ''}
+          {t('gallery.parentPhotoUpload.submitCount', { count: pendingCount, label: pendingLabel })}
         </Button>
       )}
     </div>

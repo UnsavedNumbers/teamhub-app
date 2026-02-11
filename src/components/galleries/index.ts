@@ -1,5 +1,6 @@
 export * from './GallerySection'
 export * from './StaticGallerySection'
+export * from './PhotoSection'
 export * from './GalleryPreviewCard'
 export * from './GalleryCreateModal'
 export * from './PhotoUploadButton'

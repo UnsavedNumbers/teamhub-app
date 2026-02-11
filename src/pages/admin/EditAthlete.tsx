@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { AdminPageHeader, Card, Input, Button, Select, DatePicker, ErrorState } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Input, Button, Select, DatePicker, ErrorState } from '../../components/admin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
@@ -22,6 +22,7 @@ import type { Gender, UpdateAthleteDTO } from '../../types/family'
 import type { Sport } from '../../data/types/organization'
 import { AlertCircle } from 'lucide-react'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 type SportType = 'plays' | 'interested'
 
@@ -401,7 +402,7 @@ export default function EditAthlete() {
     // Not found or access denied
     if (notFound) {
         return (
-            <div className="pa-root">
+            <div className="oa-root">
                 <AdminPageHeader
                     title="Athlete Not Found"
                     subtitle="The athlete you're looking for doesn't exist or you don't have access."
@@ -411,7 +412,7 @@ export default function EditAthlete() {
                         { label: 'Edit Athlete', path: '#' }
                     ]}
                 />
-                <div className="pa-form-container">
+                <div className="oa-form-container">
                     <Card>
                         <div className="text-center py-12">
                             <p className="text-red-600 dark:text-red-400 font-bold mb-4">
@@ -431,7 +432,7 @@ export default function EditAthlete() {
     }
 
     return (
-        <div className="pa-root">
+        <div className="oa-root">
             <AdminPageHeader
                 title="Edit Athlete"
                 subtitle={t('admin.athletes.editSubtitle')}
@@ -442,7 +443,7 @@ export default function EditAthlete() {
                 ]}
             />
 
-            <div className="pa-form-container">
+            <div className="oa-form-container">
                 <form onSubmit={handleSubmit}>
                     {error && (
                         <ErrorState
@@ -476,7 +477,7 @@ export default function EditAthlete() {
 
                     {/* Profile Photo */}
                     <Card className="mb-6">
-                        <h2 className="pa-h2 pa-mb-6">Profile Photo</h2>
+                        <h2 className="oa-h2 oa-mb-6">Profile Photo</h2>
                         <AthletePhotoUpload
                             photoFile={photoFile}
                             photoUrl={photoUrl}
@@ -498,9 +499,9 @@ export default function EditAthlete() {
 
                     {/* Athlete Information */}
                     <Card>
-                        <h2 className="pa-h2 pa-mb-6">Athlete Information</h2>
+                        <h2 className="oa-h2 oa-mb-6">Athlete Information</h2>
 
-                        <div className="pa-form-grid pa-form-grid-2 pa-gap-4 pa-mb-4">
+                        <div className="oa-form-grid oa-form-grid-2 oa-gap-4 oa-mb-4">
                             <Input
                                 label="First Name"
                                 value={formData.first_name}
@@ -515,11 +516,11 @@ export default function EditAthlete() {
                             />
                         </div>
 
-                        <div className="pa-form-grid pa-form-grid-2 pa-gap-4 pa-mb-4">
+                        <div className="oa-form-grid oa-form-grid-2 oa-gap-4 oa-mb-4">
                             <DatePicker
                                 label="Date of Birth"
                                 value={formData.date_of_birth}
-                                onChange={(value) => setFormData({ ...formData, date_of_birth: value })}
+                                onChange={(value) => setFormData({ ...formData, date_of_birth: value.target.value })}
                                 required
                             />
                             <Select
@@ -535,7 +536,7 @@ export default function EditAthlete() {
                             />
                         </div>
 
-                        <div className="pa-mb-6">
+                        <div className="oa-mb-6">
                             <Input
                                 label="Preferred Name / Goes By (Optional)"
                                 value={formData.preferred_name}
@@ -544,7 +545,7 @@ export default function EditAthlete() {
                             />
                         </div>
 
-                        <div className="pa-mb-6">
+                        <div className="oa-mb-6">
                             <Input
                                 label="Jersey Number (Optional)"
                                 value={formData.jersey_number}
@@ -553,7 +554,7 @@ export default function EditAthlete() {
                             />
                         </div>
 
-                        <div className="pa-form-grid pa-form-grid-2 pa-gap-4 pa-mb-6">
+                        <div className="oa-form-grid oa-form-grid-2 oa-gap-4 oa-mb-6">
                             <Input
                                 label="Phone Number (Optional)"
                                 type="tel"
@@ -570,9 +571,9 @@ export default function EditAthlete() {
                             />
                         </div>
 
-                        <h3 className="pa-h3 pa-mt-8 pa-mb-4">Medical & Emergency</h3>
+                        <h3 className="oa-h3 oa-mt-8 oa-mb-4">Medical & Emergency</h3>
 
-                        <div className="pa-mb-4">
+                        <div className="oa-mb-4">
                             <Input
                                 label="Medical Notes (Optional)"
                                 value={formData.medical_notes}
@@ -582,7 +583,7 @@ export default function EditAthlete() {
                             />
                         </div>
 
-                        <div className="pa-mb-4">
+                        <div className="oa-mb-4">
                             <Input
                                 label="Allergies (Optional)"
                                 value={formData.allergies}
@@ -591,7 +592,7 @@ export default function EditAthlete() {
                             />
                         </div>
 
-                        <div className="pa-form-grid pa-form-grid-2 pa-gap-4">
+                        <div className="oa-form-grid oa-form-grid-2 oa-gap-4">
                             <Input
                                 label="Emergency Contact Name (Optional)"
                                 value={formData.emergency_contact_name}
@@ -613,7 +614,7 @@ export default function EditAthlete() {
 
                     {/* Sports Interests */}
                     <Card className="mt-6">
-                        <h2 className="pa-h2 pa-mb-2">Sports Interests</h2>
+                        <h2 className="oa-h2 oa-mb-2">Sports Interests</h2>
                         <p className="text-sm text-gray-600 mb-6">
                             Select sports this athlete plays or is interested in playing. This is optional.
                         </p>
@@ -639,7 +640,7 @@ export default function EditAthlete() {
                     </Card>
 
                     {/* Submit Buttons */}
-                    <div className="pa-form-actions mt-6">
+                    <div className="oa-form-actions mt-6">
                         <Button
                             type="button"
                             variant="ghost"
@@ -649,7 +650,7 @@ export default function EditAthlete() {
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting} className="pa-form-submit-btn w-full sm:w-auto">
+                        <Button type="submit" disabled={isSubmitting} className="oa-form-submit-btn w-full sm:w-auto">
                             {isSubmitting ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </div>

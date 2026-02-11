@@ -14,12 +14,13 @@ import {
   Button,
   Input,
   Select,
-  DatePicker,
-  TimePicker
-} from '../../components/platformAdmin'
+  DatePicker
+} from '../../components/admin'
+import { TimePicker } from '../../components/platformAdmin/TimePicker'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import { useT } from '../../i18n/useI18n'
 import type { TranslationKey } from '../../i18n'
+import '../../styles/orgAdmin.css'
 
 interface TryoutFormData {
   title: string
@@ -104,11 +105,11 @@ export default function CreateTryout() {
   }, [context, isReady, currentOrganization, navigate])
 
   if (!isReady || !currentOrganization) {
-    return <div className="pa-skeleton" style={{ height: '500px' }} />
+    return <div className="oa-skeleton" style={{ height: '500px' }} />
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader
         title="Create Tryout"
         subtitle={t('admin.tryouts.createSubtitle' as TranslationKey)}
@@ -117,17 +118,17 @@ export default function CreateTryout() {
           { label: 'Create Tryout' },
         ]}
       />
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card>
           <form onSubmit={handleSubmit(onSubmit)}>
             {error && (
-              <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
+              <div className="oa-card oa-mb-4 oa-text-danger" style={{ background: 'var(--oa-danger-bg)', border: 'none' }}>
                 {error}
               </div>
             )}
 
             {/* SECTION 1: BASIC INFO */}
-            <div className="pa-mb-4">
+            <div className="oa-mb-4">
               <Controller
                 name="title"
                 control={control}
@@ -143,15 +144,15 @@ export default function CreateTryout() {
               />
             </div>
 
-            <div className="pa-mb-4">
-              <label className="pa-label">Description/Notes</label>
+            <div className="oa-mb-4">
+              <label className="oa-label">Description/Notes</label>
               <Controller
                 name="description"
                 control={control}
                 render={({ field }) => (
                   <textarea
                     {...field}
-                    className="pa-input pa-textarea"
+                    className="oa-input oa-textarea"
                     placeholder="Optional notes and instructions for participants"
                     rows={3}
                   />
@@ -160,7 +161,7 @@ export default function CreateTryout() {
             </div>
 
             {/* SECTION 2: TYPE AND AGE GROUP */}
-            <div className="pa-grid pa-grid-2 pa-mb-4 pa-gap-4">
+            <div className="oa-grid oa-grid-2 oa-mb-4 oa-gap-4">
               <Controller
                 name="type"
                 control={control}
@@ -190,7 +191,7 @@ export default function CreateTryout() {
             </div>
 
             {/* SECTION 3: LOCATION AND FEE */}
-            <div className="pa-grid pa-grid-2 pa-mb-4 pa-gap-4">
+            <div className="oa-grid oa-grid-2 oa-mb-4 oa-gap-4">
               <Controller
                 name="location"
                 control={control}
@@ -226,8 +227,8 @@ export default function CreateTryout() {
             </div>
 
             {/* SECTION 4: DATES AND TIMES */}
-            <div className="pa-mb-4">
-              <div className="pa-form-grid pa-form-grid-3 pa-form-grid-tablet-2col">
+            <div className="oa-mb-4">
+              <div className="oa-form-grid oa-form-grid-3 oa-form-grid-tablet-2col">
                 <Controller
                   name="start_at"
                   control={control}
@@ -242,7 +243,7 @@ export default function CreateTryout() {
                     />
                   )}
                 />
-                <div className="pa-max-w-xs">
+                <div className="oa-max-w-xs">
                   <Controller
                     name="start_at"
                     control={control}
@@ -258,7 +259,7 @@ export default function CreateTryout() {
                     )}
                   />
                 </div>
-                <div className="pa-max-w-xs">
+                <div className="oa-max-w-xs">
                   <Controller
                     name="registration_deadline_at"
                     control={control}
@@ -278,7 +279,7 @@ export default function CreateTryout() {
             </div>
 
             {/* SECTION 5: CAPACITY */}
-            <div className="pa-mb-4">
+            <div className="oa-mb-4">
               <Controller
                 name="capacity"
                 control={control}
@@ -297,7 +298,7 @@ export default function CreateTryout() {
             </div>
 
             {/* FORM ACTIONS */}
-            <div className="pa-flex pa-justify-end pa-gap-3 pa-mt-6">
+            <div className="oa-flex oa-justify-end oa-gap-3 oa-mt-6">
               <Button
                 type="button"
                 variant="ghost"

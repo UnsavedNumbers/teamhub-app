@@ -12,6 +12,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
+import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
 const supabaseAny = supabase as any
 
 // ============================================================================
@@ -43,6 +44,11 @@ export function mapEntityToGalleryType(entityType: GalleryEntityType): GalleryTy
 
 export type PhotoStatus = 'pending' | 'approved' | 'rejected'
 
+export interface KeysetCursor {
+  created_at: string
+  id: string
+}
+
 export interface Gallery {
   id: string
   org_id: string
@@ -56,22 +62,21 @@ export interface Gallery {
   created_by_user_id?: string | null
   allow_contributions: boolean
   require_approval: boolean
-  fans_can_see?: boolean
-  is_system_generated?: boolean
+  fans_can_see: boolean
+  is_system_generated: boolean
+  cover_generated_at: string | null
+  cover_generation_status: string | null
+  cover_thumbnails: any | null
   created_at: string
   updated_at: string
+  can_download?: boolean
   // Computed fields (from queries)
   photo_count?: number
   pending_count?: number
   cover_url?: string | null
-  cover_thumbnails?: {
-    thumb_small?: { webp: string; jpg: string };
-    thumb_medium?: { webp: string; jpg: string };
-    thumb_large?: { webp: string; jpg: string };
-    thumb_wide?: { webp: string; jpg: string };
-  } | null
-  cover_generated_at?: string | null
-  cover_generation_status?: 'pending' | 'processing' | 'completed' | 'failed'
+  org_name?: string | null
+  org_slug?: string | null
+  entity_name?: string | null
 }
 
 export interface GalleryAlbum {
@@ -88,6 +93,10 @@ export interface GalleryPhoto {
   album_id: string | null
   storage_path: string
   thumbnail_path: string | null
+  thumbnail_sm_path?: string | null
+  thumbnail_md_path?: string | null
+  thumbnail_lg_path?: string | null
+  blurhash?: string | null
   url?: string
   thumbnail_url?: string | null
   filename?: string | null
@@ -95,6 +104,7 @@ export interface GalleryPhoto {
   sort_order?: number | null
   status: PhotoStatus
   approval_status?: PhotoStatus
+  can_download?: boolean
   uploaded_by_user_id: string
   uploaded_by?: string | null
   caption?: string | null
@@ -113,6 +123,12 @@ export interface GetGalleriesParams {
   gallery_type?: GalleryType
   entity_id?: string
   org_id?: string
+  org_ids?: string[]
+  search?: string
+  limit?: number
+  offset?: number
+  cursor?: KeysetCursor
+  order_direction?: 'asc' | 'desc'
 }
 
 export interface GetPhotosParams {
@@ -122,8 +138,12 @@ export interface GetPhotosParams {
   athlete_id?: string | string[] // Filter by tagged athletes (comma-separated for multiple)
   limit?: number
   offset?: number
-  order_by?: 'created_at' | 'taken_at'
+  order_by?: 'created_at' | 'taken_at' | 'sort_order'
   order_direction?: 'asc' | 'desc'
+  search?: string
+  from?: string
+  to?: string
+  cursor?: KeysetCursor
 }
 
 // ============================================================================
@@ -197,12 +217,113 @@ function mapPhotoRecord(photo: any): GalleryPhoto {
       ?.map((tag: any) => tag.athlete)
       .filter((athlete: any) => athlete !== null) || []
 
+  const resolvedThumbnailPath = photo.thumbnail_md_path || photo.thumbnail_path || null
+
   return {
     ...photo,
+    thumbnail_path: resolvedThumbnailPath,
     url: getGalleryPhotoUrl(photo.storage_path),
-    thumbnail_url: getGalleryPhotoThumbnailUrl(photo.thumbnail_path, photo.storage_path),
+    thumbnail_url: getGalleryPhotoThumbnailUrl(resolvedThumbnailPath, photo.storage_path),
     tagged_athletes: taggedAthletes,
   } as GalleryPhoto
+}
+
+async function attachEntityNames(galleries: Gallery[]): Promise<Gallery[]> {
+  if (galleries.length === 0) return galleries
+
+  const teamIds: string[] = []
+  const eventIds: string[] = []
+  const seasonIds: string[] = []
+  const programIds: string[] = []
+  const athleteIds: string[] = []
+  const travelIds: string[] = []
+
+  galleries.forEach((gallery) => {
+    if (!gallery.entity_id) return
+    switch (gallery.gallery_type) {
+      case 'team':
+        teamIds.push(gallery.entity_id)
+        break
+      case 'event':
+        eventIds.push(gallery.entity_id)
+        break
+      case 'season':
+        seasonIds.push(gallery.entity_id)
+        break
+      case 'program':
+        programIds.push(gallery.entity_id)
+        break
+      case 'athlete':
+        athleteIds.push(gallery.entity_id)
+        break
+      case 'travel':
+        travelIds.push(gallery.entity_id)
+        break
+      default:
+        break
+    }
+  })
+
+  const [teamsRes, eventsRes, seasonsRes, programsRes, athletesRes, travelRes] = await Promise.all([
+    teamIds.length > 0
+      ? supabase.from('teams').select('id, name').in('id', teamIds)
+      : Promise.resolve({ data: [] }),
+    eventIds.length > 0
+      ? supabase.from('events').select('id, title').in('id', eventIds)
+      : Promise.resolve({ data: [] }),
+    seasonIds.length > 0
+      ? supabase.from('seasons').select('id, name').in('id', seasonIds)
+      : Promise.resolve({ data: [] }),
+    programIds.length > 0
+      ? supabase.from('programs').select('id, name').in('id', programIds)
+      : Promise.resolve({ data: [] }),
+    athleteIds.length > 0
+      ? supabase.from('athletes').select('id, first_name, last_name').in('id', athleteIds)
+      : Promise.resolve({ data: [] }),
+    travelIds.length > 0
+      ? supabase.from('travel_plans').select('id, title').in('id', travelIds)
+      : Promise.resolve({ data: [] }),
+  ])
+
+  const teamMap = new Map((teamsRes.data || []).map((t: any) => [t.id, t.name]))
+  const eventMap = new Map((eventsRes.data || []).map((e: any) => [e.id, e.title]))
+  const seasonMap = new Map((seasonsRes.data || []).map((s: any) => [s.id, s.name]))
+  const programMap = new Map((programsRes.data || []).map((p: any) => [p.id, p.name]))
+  const athleteMap = new Map(
+    (athletesRes.data || []).map((a: any) => [
+      a.id,
+      [a.first_name, a.last_name].filter(Boolean).join(' ').trim(),
+    ])
+  )
+  const travelMap = new Map((travelRes.data || []).map((t: any) => [t.id, t.title]))
+
+  galleries.forEach((gallery) => {
+    if (!gallery.entity_id) return
+    switch (gallery.gallery_type) {
+      case 'team':
+        gallery.entity_name = teamMap.get(gallery.entity_id) || null
+        break
+      case 'event':
+        gallery.entity_name = eventMap.get(gallery.entity_id) || null
+        break
+      case 'season':
+        gallery.entity_name = seasonMap.get(gallery.entity_id) || null
+        break
+      case 'program':
+        gallery.entity_name = programMap.get(gallery.entity_id) || null
+        break
+      case 'athlete':
+        gallery.entity_name = athleteMap.get(gallery.entity_id) || null
+        break
+      case 'travel':
+        gallery.entity_name = travelMap.get(gallery.entity_id) || null
+        break
+      default:
+        break
+    }
+  })
+
+  return galleries
 }
 
 // ============================================================================
@@ -223,38 +344,14 @@ export async function getGalleriesForUser(
   }
 
   try {
-    console.log('[galleryService] getGalleriesForUser params:', params, 'context.orgId:', context.orgId)
-
-    // Debug: check org admin status
-    const { data: debugResult, error: debugAdminError } = await supabase.rpc('is_org_admin', {
-      org_id_param: context.orgId
-    })
-    console.log('[galleryService] is_org_admin check:', debugResult, debugAdminError)
-
-    // Debug: check user's organization memberships
-    const { data: memberships, error: memError } = await supabase
-      .from('organization_members')
-      .select('organization_id, role, user_id')
-    console.log('[galleryService] User memberships:', memberships, memError)
-
-    // Debug: Try to call can_view_gallery directly for a known gallery
-    const testGalleryId = '2a7eba2b-ae54-4b79-a4aa-f68a37aa7bf8' // Known gallery ID
-    const { data: canViewResult, error: canViewError } = await supabase.rpc('can_view_gallery', {
-      gallery_id_param: testGalleryId
-    })
-    console.log('[galleryService] can_view_gallery test:', { galleryId: testGalleryId, canView: canViewResult, error: canViewError })
-
-    // Debug: check what galleries exist (without RLS)
-    const { data: allGalleries, error: debugError } = await supabase
-      .from('galleries')
-      .select('id, name, gallery_type, org_id')
-      .limit(5)
-    console.log('[galleryService] Sample galleries (with RLS):', allGalleries, debugError)
+    const orderDirection = params.order_direction || 'desc'
+    const ascending = orderDirection === 'asc'
 
     let query = supabase
       .from('galleries')
-      .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
-      .order('created_at', { ascending: false })
+      .select('*, cover:cover_photo_id (thumbnail_path, storage_path), org:organizations(id, name, slug)')
+      .order('created_at', { ascending })
+      .order('id', { ascending })
 
     // Filter by gallery type
     if (params.gallery_type) {
@@ -262,30 +359,52 @@ export async function getGalleriesForUser(
     }
 
     // Filter by entity_id (team, athlete, event, travel)
-    if (params.entity_id) {
+    if (params.entity_id && params.entity_id !== '') {
       query = query.eq('entity_id', params.entity_id)
     }
 
-    // Filter by org_id
-    if (params.org_id) {
+    // Filter by org_id or org_ids
+    if (params.org_ids && params.org_ids.length > 0) {
+      query = query.in('org_id', params.org_ids)
+    } else if (params.org_id) {
       query = query.eq('org_id', params.org_id)
-    } else if (context.orgId) {
+    } else if (context.orgId && context.orgId !== '') {
       query = query.eq('org_id', context.orgId)
     }
 
-    const { data: galleries, error } = await query
+    // Search by name/description
+    if (params.search && params.search.trim() !== '') {
+      const term = params.search.trim()
+      query = query.or(`name.ilike.%${term}%,description.ilike.%${term}%`)
+    }
 
-    console.log('[galleryService] Query result:', { count: galleries?.length, error, galleries })
-    console.log('[galleryService] Cover data for galleries:', galleries?.map((g: any) => ({ id: g.id, name: g.name, cover_photo_id: g.cover_photo_id, cover: g.cover })))
+    // Keyset pagination (created_at, id)
+    if (params.cursor) {
+      const op = ascending ? 'gt' : 'lt'
+      const createdAt = encodeURIComponent(params.cursor.created_at)
+      const cursorId = encodeURIComponent(params.cursor.id)
+      query = query.or(`created_at.${op}.${createdAt},and(created_at.eq.${createdAt},id.${op}.${cursorId})`)
+    }
+
+    // Pagination (offset-based)
+    if (params.limit) {
+      query = query.limit(params.limit)
+    }
+    if (params.offset) {
+      query = query.range(params.offset, params.offset + (params.limit || 1000) - 1)
+    }
+
+    const { data: galleries, error } = await query
 
     if (error) throw error
 
     const galleryList = (galleries || []).map((g: any) => {
       const coverUrl = g.cover ? getGalleryPhotoThumbnailUrl(g.cover.thumbnail_path, g.cover.storage_path) : null
-      console.log('[galleryService] Cover URL for', g.name, ':', { cover: g.cover, coverUrl })
       return {
         ...g,
         cover_url: coverUrl,
+        org_name: g.org?.name ?? null,
+        org_slug: g.org?.slug ?? null,
       }
     }) as Gallery[]
 
@@ -370,12 +489,123 @@ export async function getGalleriesForUser(
       }
     }
 
+    const withEntities = await attachEntityNames(galleryList)
+
     return {
-      data: galleryList,
+      data: withEntities,
       error: null,
     }
   } catch (err) {
     console.error('[galleryService] Error getting galleries:', err)
+    return {
+      data: [],
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
+ * Recent activity item interface
+ */
+export interface RecentActivityItem {
+  type: 'photo_upload' | 'gallery_created' | 'gallery_updated'
+  gallery_id: string
+  gallery_name: string
+  gallery_cover_url: string | null
+  timestamp: string
+  photo_count?: number
+  /** Status of the most recent photo in this activity (from gallery_photos.status) */
+  status?: PhotoStatus
+}
+
+/**
+ * Get recent gallery activity for an organization
+ * Returns recent photo uploads and gallery updates
+ */
+export async function getRecentGalleryActivity(
+  context: UserContext,
+  limit: number = 10
+): Promise<{ data: RecentActivityItem[]; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: [], error: null }
+  }
+
+  try {
+    if (!context.orgId) {
+      return { data: [], error: new Error('Organization context required') }
+    }
+
+    // Get recent photo uploads (last 10 photos) with gallery info
+    const { data: recentPhotos, error: photosError } = await supabase
+      .from('gallery_photos')
+      .select(`
+        id,
+        gallery_id,
+        status,
+        created_at,
+        gallery:galleries!gallery_photos_gallery_id_fkey!inner(
+          id,
+          name,
+          org_id,
+          cover_photo_id,
+          cover:cover_photo_id(thumbnail_path, storage_path)
+        )
+      `)
+      .eq('gallery.org_id', context.orgId)
+      .order('created_at', { ascending: false })
+      .limit(limit * 2) // Get more to account for grouping
+
+    if (photosError) throw photosError
+
+    const activityItems: RecentActivityItem[] = []
+
+    if (recentPhotos) {
+      // Group by gallery and get most recent per gallery
+      const galleryMap = new Map<string, RecentActivityItem>()
+      
+      for (const photo of recentPhotos as any[]) {
+        const gallery = photo.gallery
+        if (!gallery) continue
+
+        const galleryId = gallery.id
+        if (!galleryMap.has(galleryId)) {
+          const coverUrl = gallery.cover 
+            ? getGalleryPhotoThumbnailUrl(gallery.cover.thumbnail_path, gallery.cover.storage_path)
+            : null
+
+          galleryMap.set(galleryId, {
+            type: 'photo_upload',
+            gallery_id: galleryId,
+            gallery_name: gallery.name,
+            gallery_cover_url: coverUrl,
+            timestamp: photo.created_at,
+            photo_count: 1,
+            status: photo.status as PhotoStatus | undefined,
+          })
+        } else {
+          const item = galleryMap.get(galleryId)!
+          item.photo_count = (item.photo_count || 0) + 1
+          // Keep the most recent timestamp and status
+          if (new Date(photo.created_at) > new Date(item.timestamp)) {
+            item.timestamp = photo.created_at
+            item.status = photo.status as PhotoStatus | undefined
+          }
+        }
+      }
+
+      activityItems.push(...Array.from(galleryMap.values()))
+    }
+
+    // Sort by timestamp descending and limit
+    activityItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    
+    return {
+      data: activityItems.slice(0, limit),
+      error: null,
+    }
+  } catch (err) {
+    console.error('[galleryService] Error getting recent activity:', err)
     return {
       data: [],
       error: err instanceof Error ? err : new Error('Unknown error'),
@@ -402,14 +632,27 @@ export async function getGalleryById(
 
     const { data, error } = await supabase
       .from('galleries')
-      .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
+      .select('*, cover:cover_photo_id (thumbnail_path, storage_path), org:organizations(id, name, slug)')
       .eq('id', galleryId)
       .maybeSingle()
 
     if (error) throw error
 
+    if (!data) {
+      return { data: null, error: null }
+    }
+
+    const gallery = {
+      ...(data as any),
+      cover_url: data.cover ? getGalleryPhotoThumbnailUrl(data.cover.thumbnail_path, data.cover.storage_path) : null,
+      org_name: (data as any).org?.name ?? null,
+      org_slug: (data as any).org?.slug ?? null,
+    } as Gallery
+
+    const [withEntity] = await attachEntityNames([gallery])
+
     return {
-      data: data ? { ...(data as any), cover_url: data.cover ? getGalleryPhotoThumbnailUrl(data.cover.thumbnail_path, data.cover.storage_path) : null } as Gallery : null,
+      data: withEntity || gallery,
       error: null,
     }
   } catch (err) {
@@ -766,16 +1009,42 @@ export async function getPhotosForGallery(
       query = query.eq('status', params.status)
     }
 
-    // Ordering
-    const orderBy = params.order_by || 'sort_order'
-    const orderDirection = params.order_direction || 'asc'
-    if (orderBy === 'sort_order') {
-      query = query.order('sort_order', { ascending: true }).order('created_at', { ascending: false })
-    } else {
-      query = query.order(orderBy, { ascending: orderDirection === 'asc' })
+    // Search by caption or filename
+    if (params.search && params.search.trim() !== '') {
+      const term = params.search.trim()
+      query = query.or(`caption.ilike.%${term}%,filename.ilike.%${term}%`)
     }
 
-    // Pagination
+    // Date range (created_at)
+    if (params.from) {
+      query = query.gte('created_at', params.from)
+    }
+    if (params.to) {
+      query = query.lte('created_at', params.to)
+    }
+
+    // Ordering
+    const requestedOrderBy = params.order_by || 'sort_order'
+    const orderDirection = params.order_direction || (requestedOrderBy === 'sort_order' ? 'asc' : 'desc')
+    const useCursor = !!params.cursor
+    const orderBy = useCursor ? 'created_at' : requestedOrderBy
+    const ascending = useCursor ? params.order_direction === 'asc' : orderDirection === 'asc'
+
+    if (orderBy === 'sort_order') {
+      query = query.order('sort_order', { ascending: true }).order('created_at', { ascending: false }).order('id', { ascending: false })
+    } else {
+      query = query.order(orderBy, { ascending }).order('id', { ascending })
+    }
+
+    // Keyset pagination (created_at, id)
+    if (params.cursor) {
+      const op = ascending ? 'gt' : 'lt'
+      const createdAt = encodeURIComponent(params.cursor.created_at)
+      const cursorId = encodeURIComponent(params.cursor.id)
+      query = query.or(`created_at.${op}.${createdAt},and(created_at.eq.${createdAt},id.${op}.${cursorId})`)
+    }
+
+    // Pagination (offset-based)
     if (params.limit) {
       query = query.limit(params.limit)
     }
@@ -874,41 +1143,84 @@ export async function getPhotoById(
 }
 
 /**
+ * Result of getGalleryPhotoCounts: exact counts by status for a gallery.
+ */
+export interface GalleryPhotoCounts {
+  total: number
+  pending: number
+  approved: number
+  rejected: number
+}
+
+/**
+ * Get exact photo counts for a gallery (total and by status).
+ * Uses count queries so counts are correct regardless of pagination.
+ */
+export async function getGalleryPhotoCounts(
+  _context: UserContext,
+  galleryId: string
+): Promise<{ data: GalleryPhotoCounts; error: Error | null }> {
+  const empty: GalleryPhotoCounts = { total: 0, pending: 0, approved: 0, rejected: 0 }
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: empty, error: null }
+  }
+
+  try {
+    if (!isValidUUID(galleryId)) {
+      return { data: empty, error: new Error('Invalid gallery ID') }
+    }
+
+    const toNum = (c: number | null | undefined): number =>
+      typeof c === 'number' && Number.isFinite(c) ? c : 0
+
+    const base = () =>
+      supabase
+        .from('gallery_photos')
+        .select('id', { count: 'exact' })
+        .eq('gallery_id', galleryId)
+        .limit(0)
+
+    const [totalRes, pendingRes, approvedRes, rejectedRes] = await Promise.all([
+      base().then((r) => ({ count: r.count, error: r.error })),
+      base().eq('status', 'pending').then((r) => ({ count: r.count, error: r.error })),
+      base().eq('status', 'approved').then((r) => ({ count: r.count, error: r.error })),
+      base().eq('status', 'rejected').then((r) => ({ count: r.count, error: r.error })),
+    ])
+
+    if (totalRes.error) throw totalRes.error
+    if (pendingRes.error) throw pendingRes.error
+    if (approvedRes.error) throw approvedRes.error
+    if (rejectedRes.error) throw rejectedRes.error
+
+    return {
+      data: {
+        total: toNum(totalRes.count),
+        pending: toNum(pendingRes.count),
+        approved: toNum(approvedRes.count),
+        rejected: toNum(rejectedRes.count),
+      },
+      error: null,
+    }
+  } catch (err) {
+    console.error('[galleryService] Error getting gallery photo counts:', err)
+    return {
+      data: empty,
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
  * Get pending photos count for moderation
  */
 export async function getPendingPhotosCount(
   _context: UserContext,
   galleryId: string
 ): Promise<{ data: number; error: Error | null }> {
-  if (USE_FAKE_DATA) {
-    await simulateDelay()
-    return { data: 0, error: null }
-  }
-
-  try {
-    if (!isValidUUID(galleryId)) {
-      return { data: 0, error: new Error('Invalid gallery ID') }
-    }
-
-    const { count, error } = await supabase
-      .from('gallery_photos')
-      .select('*', { count: 'exact', head: true })
-      .eq('gallery_id', galleryId)
-      .eq('status', 'pending')
-
-    if (error) throw error
-
-    return {
-      data: count || 0,
-      error: null,
-    }
-  } catch (err) {
-    console.error('[galleryService] Error getting pending count:', err)
-    return {
-      data: 0,
-      error: err instanceof Error ? err : new Error('Unknown error'),
-    }
-  }
+  const { data, error } = await getGalleryPhotoCounts(_context, galleryId)
+  if (error) return { data: 0, error }
+  return { data: data.pending, error: null }
 }
 
 // ============================================================================
@@ -950,6 +1262,214 @@ export async function getAlbumsForGallery(
       data: [],
       error: err instanceof Error ? err : new Error('Unknown error'),
     }
+  }
+}
+
+export async function createGalleryAlbum(
+  _context: UserContext,
+  galleryId: string,
+  name: string,
+  description?: string | null
+): Promise<{ data: GalleryAlbum | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: null, error: null }
+  }
+
+  try {
+    if (!isValidUUID(galleryId)) {
+      return { data: null, error: new Error('Invalid gallery ID') }
+    }
+
+    const trimmed = name.trim()
+    if (!trimmed) {
+      return { data: null, error: new Error('Album name is required') }
+    }
+
+    const { data, error } = await supabase
+      .from('gallery_albums')
+      .insert({
+        gallery_id: galleryId,
+        name: trimmed,
+        description: description?.trim() || null,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return { data: data as GalleryAlbum, error: null }
+  } catch (err) {
+    console.error('[galleryService] Error creating album:', err)
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+export async function updateGalleryAlbum(
+  _context: UserContext,
+  albumId: string,
+  updates: { name?: string; description?: string | null }
+): Promise<{ data: GalleryAlbum | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: null, error: null }
+  }
+
+  try {
+    if (!isValidUUID(albumId)) {
+      return { data: null, error: new Error('Invalid album ID') }
+    }
+
+    const payload: { name?: string; description?: string | null } = {}
+    if (updates.name !== undefined) {
+      const trimmed = updates.name.trim()
+      if (!trimmed) {
+        return { data: null, error: new Error('Album name is required') }
+      }
+      payload.name = trimmed
+    }
+    if (updates.description !== undefined) {
+      payload.description = updates.description?.trim() || null
+    }
+
+    const { data, error } = await supabase
+      .from('gallery_albums')
+      .update(payload)
+      .eq('id', albumId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return { data: data as GalleryAlbum, error: null }
+  } catch (err) {
+    console.error('[galleryService] Error updating album:', err)
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+export async function deleteGalleryAlbum(
+  _context: UserContext,
+  albumId: string
+): Promise<{ error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { error: null }
+  }
+
+  try {
+    if (!isValidUUID(albumId)) {
+      return { error: new Error('Invalid album ID') }
+    }
+
+    const { error } = await supabase
+      .from('gallery_albums')
+      .delete()
+      .eq('id', albumId)
+
+    if (error) throw error
+
+    return { error: null }
+  } catch (err) {
+    console.error('[galleryService] Error deleting album:', err)
+    return { error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+export async function getPhotoBookmarks(
+  context: UserContext,
+  photoIds: string[]
+): Promise<{ data: string[]; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: [], error: null }
+  }
+
+  try {
+    if (!context.userId) {
+      return { data: [], error: new Error('User context required') }
+    }
+    if (!photoIds || photoIds.length === 0) {
+      return { data: [], error: null }
+    }
+
+    const { data, error } = await supabase
+      .from('gallery_photo_bookmarks')
+      .select('photo_id')
+      .eq('user_id', context.userId)
+      .in('photo_id', photoIds)
+
+    if (error) throw error
+
+    return {
+      data: (data || []).map((row: any) => row.photo_id as string),
+      error: null,
+    }
+  } catch (err) {
+    console.error('[galleryService] Error fetching photo bookmarks:', err)
+    return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+export async function addPhotoBookmark(
+  context: UserContext,
+  photoId: string
+): Promise<{ error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { error: null }
+  }
+
+  try {
+    if (!context.userId) {
+      return { error: new Error('User context required') }
+    }
+    if (!isValidUUID(photoId)) {
+      return { error: new Error('Invalid photo ID') }
+    }
+
+    const { error } = await supabase
+      .from('gallery_photo_bookmarks')
+      .insert({ photo_id: photoId, user_id: context.userId })
+
+    if (error) throw error
+
+    return { error: null }
+  } catch (err) {
+    console.error('[galleryService] Error adding photo bookmark:', err)
+    return { error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+export async function removePhotoBookmark(
+  context: UserContext,
+  photoId: string
+): Promise<{ error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { error: null }
+  }
+
+  try {
+    if (!context.userId) {
+      return { error: new Error('User context required') }
+    }
+    if (!isValidUUID(photoId)) {
+      return { error: new Error('Invalid photo ID') }
+    }
+
+    const { error } = await supabase
+      .from('gallery_photo_bookmarks')
+      .delete()
+      .eq('photo_id', photoId)
+      .eq('user_id', context.userId)
+
+    if (error) throw error
+
+    return { error: null }
+  } catch (err) {
+    console.error('[galleryService] Error removing photo bookmark:', err)
+    return { error: err instanceof Error ? err : new Error('Unknown error') }
   }
 }
 
@@ -1307,7 +1827,7 @@ export async function uploadPhotoToGallery(
     const { error: uploadError } = await supabase.storage
       .from('public-media')
       .upload(storagePath, file, {
-        cacheControl: '3600',
+        cacheControl: '86400',
         upsert: false,
       })
 
@@ -1338,11 +1858,48 @@ export async function uploadPhotoToGallery(
       throw insertError
     }
 
+    // Best-effort audit log for upload actions.
+    const uploadedPhoto = data as GalleryPhoto
+    const logResult = await logEvent({
+      category: 'SYSTEM',
+      eventType: 'PHOTO_UPLOADED',
+      actorUserId: context.userId,
+      actorRole: deriveActorRoleFromRoles(context.roles),
+      orgId: context.orgId,
+      targetEntityType: 'gallery_photo',
+      targetEntityId: uploadedPhoto.id,
+      metadata: {
+        gallery_id: galleryId,
+        album_id: albumId || null,
+        file_name: file.name,
+        file_size: file.size,
+        file_type: file.type,
+        status,
+        storage_path: storagePath,
+        source: 'galleryService.uploadPhotoToGallery',
+      },
+    })
+    if (logResult.error) {
+      console.error('[galleryService] Failed to log PHOTO_UPLOADED event:', logResult.error)
+    }
+
+    // Trigger thumbnail generation (non-blocking)
+    try {
+      const { error: thumbError } = await supabase.functions.invoke('generate-photo-thumbnails', {
+        body: { photo_id: uploadedPhoto.id },
+      })
+      if (thumbError) {
+        console.error('[galleryService] Thumbnail generation failed:', thumbError)
+      }
+    } catch (thumbErr) {
+      console.error('[galleryService] Error invoking generate-photo-thumbnails:', thumbErr)
+    }
+
     // Trigger cover generation if this is the first photo or gallery has no cover
     try {
       const { data: gallery } = await supabase.from('galleries').select('cover_photo_id').eq('id', galleryId).maybeSingle();
       if (gallery && !gallery.cover_photo_id) {
-        generateGalleryCover(galleryId, (data as GalleryPhoto).id).catch(console.error);
+        generateGalleryCover(galleryId, uploadedPhoto.id).catch(console.error);
       }
     } catch (e) {
       console.warn('Failed to check/trigger cover generation', e);
@@ -1468,7 +2025,7 @@ export async function deletePhotos(
 
     const { data: photos, error: fetchError } = await supabase
       .from('gallery_photos')
-      .select('id, storage_path, thumbnail_path, size_bytes')
+      .select('id, storage_path, thumbnail_path, thumbnail_sm_path, thumbnail_md_path, thumbnail_lg_path, size_bytes')
       .eq('gallery_id', galleryId)
       .in('id', photoIds)
 
@@ -1479,6 +2036,9 @@ export async function deletePhotos(
       ; (photos || []).forEach((p: any) => {
         if (p.storage_path) pathsToDelete.push(p.storage_path)
         if (p.thumbnail_path) pathsToDelete.push(p.thumbnail_path)
+        if (p.thumbnail_sm_path) pathsToDelete.push(p.thumbnail_sm_path)
+        if (p.thumbnail_md_path) pathsToDelete.push(p.thumbnail_md_path)
+        if (p.thumbnail_lg_path) pathsToDelete.push(p.thumbnail_lg_path)
         reclaimedBytes += Number(p.size_bytes || 0)
       })
 
@@ -1555,7 +2115,7 @@ export async function deleteGallery(
 
     const { data: photos, error: photosError } = await supabase
       .from('gallery_photos')
-      .select('id, storage_path, thumbnail_path, size_bytes')
+      .select('id, storage_path, thumbnail_path, thumbnail_sm_path, thumbnail_md_path, thumbnail_lg_path, size_bytes')
       .eq('gallery_id', galleryId)
 
     if (photosError) throw photosError
@@ -1565,6 +2125,9 @@ export async function deleteGallery(
       ; (photos || []).forEach((p: any) => {
         if (p.storage_path) paths.push(p.storage_path)
         if (p.thumbnail_path) paths.push(p.thumbnail_path)
+        if (p.thumbnail_sm_path) paths.push(p.thumbnail_sm_path)
+        if (p.thumbnail_md_path) paths.push(p.thumbnail_md_path)
+        if (p.thumbnail_lg_path) paths.push(p.thumbnail_lg_path)
         reclaimedBytes += Number(p.size_bytes || 0)
       })
 

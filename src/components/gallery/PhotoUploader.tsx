@@ -8,7 +8,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
-import { supabase } from '../../lib/supabase'
 import Icon from '../portal/Icon'
 import Card from '../portal/Card'
 import Button from '../portal/Button'
@@ -18,6 +17,7 @@ import {
   type Gallery,
   type PhotoStatus,
 } from '../../data/services/galleryService'
+import { compressPhotoFile } from '../../utils/photoCompression'
 
 interface PhotoUploaderProps {
   gallery: Gallery
@@ -51,11 +51,11 @@ export function PhotoUploader({
     const maxSize = 50 * 1024 * 1024 // 50MB
 
     if (!allowedTypes.includes(file.type)) {
-      return t('gallery.photoUploader.dragDropSubtitle')
+      return t('gallery.parentPhotoUpload.fileValidationError')
     }
 
     if (file.size > maxSize) {
-      return `File size exceeds 50MB limit. File is ${(file.size / 1024 / 1024).toFixed(2)}MB.`
+      return t('gallery.parentPhotoUpload.fileSizeError', { size: (file.size / 1024 / 1024).toFixed(2) })
     }
 
     return null
@@ -90,7 +90,7 @@ export function PhotoUploader({
 
   const uploadPhoto = async (uploadFile: UploadFile) => {
     if (!context.orgId) {
-      showError('Organization context required')
+      showError(t('gallery.parentPhotoUpload.orgContextRequired'))
       return
     }
 
@@ -101,27 +101,14 @@ export function PhotoUploader({
     )
 
     try {
-      // Generate photo ID
-      const photoId = crypto.randomUUID()
-      const fileExt = uploadFile.file.name.split('.').pop() || 'jpg'
-      const storagePath = `orgs/${context.orgId}/galleries/${gallery.id}/${photoId}.${fileExt}`
+      const { file: processedFile } = await compressPhotoFile(uploadFile.file, {
+        maxSizeMB: 2,
+        maxDimension: 4000,
+      })
 
-      // Upload to storage
-      const { error: uploadError } = await supabase.storage
-        .from('public-media')
-        .upload(storagePath, uploadFile.file, {
-          cacheControl: '3600',
-          upsert: false,
-        })
-
-      if (uploadError) {
-        throw uploadError
-      }
-
-      // Update progress
       setFiles((prev) =>
         prev.map((f) =>
-          f.id === uploadFile.id ? { ...f, progress: 50 } : f
+          f.id === uploadFile.id ? { ...f, progress: 25 } : f
         )
       )
 
@@ -129,13 +116,13 @@ export function PhotoUploader({
       const { data: photo, error: uploadServiceError } = await uploadPhotoToGallery(
         context,
         gallery.id,
-        uploadFile.file,
+        processedFile,
         albumId,
         status
       )
 
       if (uploadServiceError || !photo) {
-        throw uploadServiceError || new Error('Upload failed')
+        throw uploadServiceError || new Error(t('toast.error.generic'))
       }
 
       // Mark as success
@@ -150,7 +137,7 @@ export function PhotoUploader({
       showSuccess(t('gallery.photoUploader.uploadSuccess', { fileName: uploadFile.file.name }))
       onUploadComplete?.()
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Upload failed'
+      const errorMessage = err instanceof Error ? err.message : t('toast.error.generic')
       setFiles((prev) =>
         prev.map((f) =>
           f.id === uploadFile.id
@@ -267,7 +254,7 @@ export function PhotoUploader({
                       variant="secondary"
                       onClick={() => retryUpload(uploadFile)}
                     >
-                      Retry
+                      {t('gallery.photoUploader.retry')}
                     </Button>
                   )}
                   {(uploadFile.status === 'success' || uploadFile.status === 'error') && (
@@ -275,7 +262,7 @@ export function PhotoUploader({
                       variant="secondary"
                       onClick={() => removeFile(uploadFile.id)}
                     >
-                      Remove
+                      {t('gallery.photoUploader.remove')}
                     </Button>
                   )}
                 </div>

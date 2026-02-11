@@ -61,11 +61,14 @@ export const FEATURE_CATEGORIES = [
   'Tryouts',
   'Travel',
   'Uniforms & Gear',
+  'Photo Galleries',
+  'Video Library',
   'Reporting & Analytics',
   'Admin & Permissions',
   'Integrations',
   'Security & Compliance',
   'Support Tools',
+  'Uncategorized',
 ] as const
 
 export type FeatureCategory = typeof FEATURE_CATEGORIES[number]

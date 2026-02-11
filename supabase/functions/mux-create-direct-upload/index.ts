@@ -62,13 +62,22 @@ interface MuxDirectUploadResponse {
   }
 }
 
+type EventActorRole = "platform_admin" | "org_admin" | "coach" | "parent" | "system"
+
+function mapMemberRoleToEventActorRole(role: string | null | undefined): EventActorRole {
+  if (role === "org_admin") return "org_admin"
+  if (role === "coach" || role === "staff") return "coach"
+  return "parent"
+}
+
 /**
  * Creates a Mux Direct Upload URL and records the pending video in the database
  */
 async function createDirectUpload(
   userId: string,
   request: CreateUploadRequest,
-  config: ReturnType<typeof getConfig>
+  config: ReturnType<typeof getConfig>,
+  actorRole: EventActorRole
 ): Promise<{ upload_url: string; video_id: string; upload_id: string }> {
   const { supabase, muxTokenId, muxTokenSecret } = config
   
@@ -81,6 +90,7 @@ async function createDirectUpload(
     org_id: request.org_id,
     team_id: request.team_id || null,
     uploaded_by: userId,
+    uploader_actor_role: actorRole,
   })
   
   // Call Mux API to create direct upload
@@ -134,12 +144,42 @@ async function createDirectUpload(
         org_id: request.org_id,
         team_id: request.team_id || null,
         uploaded_by: userId,
+        uploader_actor_role: actorRole,
       },
     })
   
   if (insertError) {
     console.error("Database insert error:", insertError)
     throw new Error(`Failed to create video record: ${insertError.message}`)
+  }
+
+  // Best-effort event log; should not block uploads.
+  try {
+    const { error: logError } = await supabase.rpc("log_event", {
+      p_category: "SYSTEM",
+      p_event_type: "VIDEO_UPLOAD_STARTED",
+      p_actor_user_id: userId,
+      p_actor_role: actorRole,
+      p_org_id: request.org_id,
+      p_target_entity_type: "video",
+      p_target_entity_id: videoId,
+      p_metadata: {
+        mux_upload_id: muxUploadId,
+        team_id: request.team_id || null,
+        event_id: request.event_id || null,
+        title: request.title,
+        category: request.category || "practice",
+        visibility: request.visibility || "team",
+        status: "pending_upload",
+        source: "mux-create-direct-upload",
+      },
+    })
+
+    if (logError) {
+      console.error("Failed to log VIDEO_UPLOAD_STARTED event:", logError)
+    }
+  } catch (logErr) {
+    console.error("Failed to log VIDEO_UPLOAD_STARTED event:", logErr)
   }
   
   console.log(`Created video ${videoId} with Mux upload ${muxUploadId}`)
@@ -154,7 +194,11 @@ async function createDirectUpload(
 /**
  * Verify user has permission to upload videos for this org
  */
-async function verifyUploadPermission(userId: string, orgId: string, supabase: ReturnType<typeof createClient>): Promise<boolean> {
+async function verifyUploadPermission(
+  userId: string,
+  orgId: string,
+  supabase: ReturnType<typeof createClient>
+): Promise<{ allowed: boolean; actorRole: EventActorRole }> {
   const { data, error } = await supabase
     .from("organization_members")
     .select("role")
@@ -164,11 +208,12 @@ async function verifyUploadPermission(userId: string, orgId: string, supabase: R
     .single()
   
   if (error || !data) {
-    return false
+    return { allowed: false, actorRole: "parent" }
   }
   
   // Only org_admins, staff, and coaches can upload videos
-  return ["org_admin", "staff", "coach"].includes(data.role)
+  const allowed = ["org_admin", "staff", "coach"].includes(data.role)
+  return { allowed, actorRole: mapMemberRoleToEventActorRole(data.role) }
 }
 
 /**
@@ -243,8 +288,8 @@ serve(async (req: Request) => {
     }
     
     // Verify user has upload permission
-    const hasPermission = await verifyUploadPermission(userId, body.org_id, config.supabase)
-    if (!hasPermission) {
+    const permission = await verifyUploadPermission(userId, body.org_id, config.supabase)
+    if (!permission.allowed) {
       return new Response(
         JSON.stringify({ error: "You do not have permission to upload videos to this organization" }),
         {
@@ -255,7 +300,7 @@ serve(async (req: Request) => {
     }
     
     // Create direct upload
-    const result = await createDirectUpload(userId, body, config)
+    const result = await createDirectUpload(userId, body, config, permission.actorRole)
     
     return new Response(JSON.stringify(result), {
       status: 200,

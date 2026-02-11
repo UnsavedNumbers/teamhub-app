@@ -4,19 +4,10 @@
  * Route wrapper that enforces feature gate checks.
  * Use inside ProtectedRoute (after auth/org/license checks).
  * 
- * @example
- * ```tsx
- * <Route
- *   path="/admin/travel"
- *   element={
- *     <ProtectedRoute allowedRoles={['admin', 'coach']}>
- *       <FeatureGateRoute routeKey="admin.travel.list">
- *         <AdminTravel />
- *       </FeatureGateRoute>
- *     </ProtectedRoute>
- *   }
- * />
- * ```
+ * Improvements:
+ *  - Safe redirect logic: never redirects to another gated route
+ *  - Redirect-loop detection via sessionStorage (max 2 consecutive redirects)
+ *  - Context-aware safe targets (admin → admin dashboard, portal → portal dashboard)
  */
 
 import { Navigate, useLocation } from 'react-router-dom';
@@ -30,6 +21,11 @@ import {
 } from '@/lib/featureGate';
 import { getLink, RouteKeys } from '@/utils/routes';
 
+/** sessionStorage key for redirect-loop detection */
+const REDIRECT_COUNTER_KEY = '__fg_redirect_count';
+/** Max consecutive gate redirects before we bail to a hard-safe target */
+const MAX_REDIRECTS = 2;
+
 interface FeatureGateRouteProps {
   children: React.ReactNode;
   /** Route key from definitions.ts */
@@ -38,6 +34,51 @@ interface FeatureGateRouteProps {
   featureKey?: string;
   /** Custom fallback component instead of default overlay */
   fallback?: React.ReactNode;
+}
+
+/**
+ * Determine a safe redirect target based on the current route context.
+ * Admin routes go to admin dashboard, everything else goes to portal dashboard.
+ */
+function getSafeRedirectTarget(pathname: string): string {
+  if (pathname.startsWith('/admin')) {
+    return getLink(RouteKeys.ADMIN_DASHBOARD);
+  }
+  return getLink(RouteKeys.PORTAL_DASHBOARD);
+}
+
+/**
+ * Detects and guards against redirect loops.
+ * Returns the safe target if under the limit, or null to signal "stop redirecting".
+ */
+function getLoopSafeRedirect(pathname: string): string | null {
+  try {
+    const raw = sessionStorage.getItem(REDIRECT_COUNTER_KEY);
+    const count = raw ? parseInt(raw, 10) : 0;
+
+    if (count >= MAX_REDIRECTS) {
+      // Too many consecutive redirects — reset counter and render overlay instead
+      sessionStorage.removeItem(REDIRECT_COUNTER_KEY);
+      return null;
+    }
+
+    sessionStorage.setItem(REDIRECT_COUNTER_KEY, String(count + 1));
+    return getSafeRedirectTarget(pathname);
+  } catch {
+    // sessionStorage unavailable (e.g. private browsing edge case)
+    return getSafeRedirectTarget(pathname);
+  }
+}
+
+/**
+ * Reset the redirect counter — call on successful page render.
+ */
+function clearRedirectCounter() {
+  try {
+    sessionStorage.removeItem(REDIRECT_COUNTER_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 /**
@@ -58,6 +99,7 @@ export function FeatureGateRoute({
 
   // Ungated routes pass through
   if (!featureKey || isRouteUngated(routeKey)) {
+    clearRedirectCounter();
     return <>{children}</>;
   }
 
@@ -66,8 +108,9 @@ export function FeatureGateRoute({
     return null;
   }
 
-  // Access granted
+  // Access granted — clear the redirect counter so future loops start fresh
   if (allowed) {
+    clearRedirectCounter();
     return <>{children}</>;
   }
 
@@ -88,18 +131,26 @@ export function FeatureGateRoute({
         />
       );
 
-    case 'hide':
-      // Redirect to dashboard (404-like behavior)
-      return (
-        <Navigate
-          to={getLink(RouteKeys.PORTAL_DASHBOARD)}
-          replace
-        />
-      );
+    case 'hide': {
+      // Redirect to dashboard (404-like behavior) with loop protection
+      const target = getLoopSafeRedirect(location.pathname);
+      if (target === null) {
+        // Loop detected — render overlay instead of redirecting again
+        return (
+          <FeatureGateOverlay
+            reasonCode={reason_code}
+            featureKey={featureKey}
+            showUpgrade={false}
+          />
+        );
+      }
+      return <Navigate to={target} replace />;
+    }
 
     case 'modal':
       // Render children but with modal context
       // The page should check for this and show modal
+      clearRedirectCounter();
       return (
         <>
           {children}
@@ -110,6 +161,7 @@ export function FeatureGateRoute({
     case 'disable':
     default:
       // Show upgrade overlay
+      clearRedirectCounter();
       return (
         <FeatureGateOverlay
           reasonCode={reason_code}

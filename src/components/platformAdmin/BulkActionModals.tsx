@@ -131,7 +131,6 @@ interface ApplyToTiersModalProps {
   availableTiers: Array<{ id: string; tier_key: string; tier_name: string }>
   onConfirm: (tierIds: string[], action: 'add' | 'remove', roleVisibility: { admin: boolean; coach: boolean; parent: boolean }) => void
   onCancel: () => void
-  onComplete?: () => void
   loading?: boolean
 }
 
@@ -142,12 +141,31 @@ export function ApplyToTiersModal({
   onConfirm,
   onCancel,
   loading = false,
-  onComplete,
 }: ApplyToTiersModalProps) {
   const [tierActions, setTierActions] = useState<Record<string, 'add' | 'remove' | 'none'>>({})
   const [roleAdmin, setRoleAdmin] = useState(true)
   const [roleCoach, setRoleCoach] = useState(true)
   const [roleParent, setRoleParent] = useState(false)
+
+  // Determine which tiers are already assigned to each feature
+  const tierAssignmentStatus = useMemo(() => {
+    const status: Record<string, { assignedToAll: boolean; assignedToSome: boolean; unassignedAll: boolean }> = {}
+    
+    availableTiers.forEach(tier => {
+      const assignedFeatures = selectedFeatures.filter(f => 
+        f.assigned_tier_keys && f.assigned_tier_keys.includes(tier.tier_key)
+      ).length
+      
+      const totalFeatures = selectedFeatures.length
+      const assignedToAll = assignedFeatures === totalFeatures
+      const assignedToSome = assignedFeatures > 0
+      const unassignedAll = assignedFeatures === 0
+      
+      status[tier.id] = { assignedToAll, assignedToSome, unassignedAll }
+    })
+    
+    return status
+  }, [selectedFeatures, availableTiers])
 
   useEffect(() => {
     if (open) {
@@ -179,10 +197,6 @@ export function ApplyToTiersModal({
       if (removeTiers.length > 0) {
         await onConfirm(removeTiers, 'remove', { admin: roleAdmin, coach: roleCoach, parent: roleParent })
       }
-      // Call onComplete after all operations succeed
-      if (onComplete && (addTiers.length > 0 || removeTiers.length > 0)) {
-        onComplete()
-      }
     } catch (err) {
       // Error handling is done in the parent handler
       // Don't call onComplete on error
@@ -213,37 +227,55 @@ export function ApplyToTiersModal({
             Select Tiers
           </label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)' }}>
-            {availableTiers.map(tier => (
-              <div
-                key={tier.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: 'var(--pa-space-2)',
-                  border: '1px solid var(--pa-n200)',
-                  borderRadius: 'var(--pa-radius-sm)',
-                }}
-              >
-                <span className="pa-body-m">{tier.tier_name}</span>
-                <div style={{ display: 'flex', gap: 'var(--pa-space-2)' }}>
-                  <Button
-                    variant={tierActions[tier.id] === 'add' ? 'primary' : 'ghost'}
-                    size="dense"
-                    onClick={() => handleTierActionChange(tier.id, tierActions[tier.id] === 'add' ? 'none' : 'add')}
-                  >
-                    Add
-                  </Button>
-                  <Button
-                    variant={tierActions[tier.id] === 'remove' ? 'secondary' : 'ghost'}
-                    size="dense"
-                    onClick={() => handleTierActionChange(tier.id, tierActions[tier.id] === 'remove' ? 'none' : 'remove')}
-                  >
-                    Remove
-                  </Button>
+            {availableTiers.map(tier => {
+              const status = tierAssignmentStatus[tier.id]
+              const canAdd = !status.assignedToAll // Can add only if not already assigned to all
+              const canRemove = !status.unassignedAll // Can remove only if assigned to at least one
+              
+              return (
+                <div
+                  key={tier.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: 'var(--pa-space-2)',
+                    border: '1px solid var(--pa-n200)',
+                    borderRadius: 'var(--pa-radius-sm)',
+                    backgroundColor: status.assignedToSome ? 'rgba(59, 130, 246, 0.05)' : undefined,
+                  }}
+                >
+                  <div>
+                    <span className="pa-body-m">{tier.tier_name}</span>
+                    {status.assignedToSome && (
+                      <div className="pa-body-sm" style={{ color: 'var(--pa-n600)', marginTop: 'var(--pa-space-1)' }}>
+                        {status.assignedToAll ? 'Assigned to all selected' : `Assigned to ${selectedFeatures.filter(f => f.assigned_tier_keys?.includes(tier.tier_key)).length} of ${selectedFeatures.length}`}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 'var(--pa-space-2)' }}>
+                    <Button
+                      variant={tierActions[tier.id] === 'add' ? 'primary' : 'ghost'}
+                      size="dense"
+                      disabled={!canAdd}
+                      title={!canAdd ? 'Already assigned to all selected features' : undefined}
+                      onClick={() => handleTierActionChange(tier.id, tierActions[tier.id] === 'add' ? 'none' : 'add')}
+                    >
+                      Add
+                    </Button>
+                    <Button
+                      variant={tierActions[tier.id] === 'remove' ? 'secondary' : 'ghost'}
+                      size="dense"
+                      disabled={!canRemove}
+                      title={!canRemove ? 'Not assigned to any selected features' : undefined}
+                      onClick={() => handleTierActionChange(tier.id, tierActions[tier.id] === 'remove' ? 'none' : 'remove')}
+                    >
+                      Remove
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
@@ -568,6 +600,144 @@ interface UpdateCategoryModalProps {
   onConfirm: (category: FeatureCategory) => void
   onCancel: () => void
   loading?: boolean
+}
+
+// ============================================================================
+// SetAsSystemFeatureModal
+// ============================================================================
+
+interface SetAsSystemFeatureModalProps {
+  open: boolean
+  selectedFeatures: FeatureEntitlementWithCounts[]
+  onConfirm: () => void
+  onCancel: () => void
+  loading?: boolean
+}
+
+export function SetAsSystemFeatureModal({
+  open,
+  selectedFeatures,
+  onConfirm,
+  onCancel,
+  loading = false,
+}: SetAsSystemFeatureModalProps) {
+  const featuresWithAssignments = selectedFeatures.filter(
+    f => (f.tier_assignments_count || 0) > 0
+  ).length
+
+  return (
+    <BaseModal
+      open={open}
+      title="Set as System Feature"
+      description={`Mark ${selectedFeatures.length} feature${selectedFeatures.length === 1 ? '' : 's'} as system features.`}
+      confirmLabel="Set as System Feature"
+      cancelLabel="Cancel"
+      variant="warning"
+      loading={loading}
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    >
+      <div style={{ marginTop: 'var(--pa-space-4)' }}>
+        <div
+          className="pa-card"
+          style={{
+            padding: 'var(--pa-space-3)',
+            background: 'var(--pa-warning-bg)',
+            border: '1px solid var(--pa-warning)',
+            marginBottom: 'var(--pa-space-3)',
+          }}
+        >
+          <div style={{ display: 'flex', gap: 'var(--pa-space-2)', alignItems: 'flex-start' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-warning)', flexShrink: 0, marginTop: '2px' }}>warning</span>
+            <div>
+              <p className="pa-body-s" style={{ margin: 0, fontWeight: 600 }}>This will:</p>
+              <ul className="pa-body-s" style={{ margin: 'var(--pa-space-2) 0 0 var(--pa-space-3)', padding: 0 }}>
+                <li>Set status to <strong>Live</strong></li>
+                <li>Mark as <strong>System Feature</strong> (always available for all tiers)</li>
+                {featuresWithAssignments > 0 && (
+                  <li>Remove <strong>all tier assignments</strong> and role visibility settings ({featuresWithAssignments} feature{featuresWithAssignments === 1 ? ' has' : 's have'} assignments)</li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <p className="pa-body-s" style={{ color: 'var(--pa-n700)', margin: 0 }}>
+          System features are automatically available to every organization regardless of their license tier.
+          Tier assignments and role visibility are not needed.
+        </p>
+      </div>
+    </BaseModal>
+  )
+}
+
+// ============================================================================
+// SetPlatformOnlyModal
+// ============================================================================
+
+interface SetPlatformOnlyModalProps {
+  open: boolean
+  selectedFeatures: FeatureEntitlementWithCounts[]
+  onConfirm: () => void
+  onCancel: () => void
+  loading?: boolean
+}
+
+export function SetPlatformOnlyModal({
+  open,
+  selectedFeatures,
+  onConfirm,
+  onCancel,
+  loading = false,
+}: SetPlatformOnlyModalProps) {
+  const featuresWithAssignments = selectedFeatures.filter(
+    f => (f.tier_assignments_count || 0) > 0
+  ).length
+
+  return (
+    <BaseModal
+      open={open}
+      title="Set to Platform Admin Only"
+      description={`Restrict ${selectedFeatures.length} feature${selectedFeatures.length === 1 ? '' : 's'} to platform administrators.`}
+      confirmLabel="Set to Platform Only"
+      cancelLabel="Cancel"
+      variant="warning"
+      loading={loading}
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    >
+      <div style={{ marginTop: 'var(--pa-space-4)' }}>
+        <div
+          className="pa-card"
+          style={{
+            padding: 'var(--pa-space-3)',
+            background: 'var(--pa-warning-bg)',
+            border: '1px solid var(--pa-warning)',
+            marginBottom: 'var(--pa-space-3)',
+          }}
+        >
+          <div style={{ display: 'flex', gap: 'var(--pa-space-2)', alignItems: 'flex-start' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-warning)', flexShrink: 0, marginTop: '2px' }}>warning</span>
+            <div>
+              <p className="pa-body-s" style={{ margin: 0, fontWeight: 600 }}>This will:</p>
+              <ul className="pa-body-s" style={{ margin: 'var(--pa-space-2) 0 0 var(--pa-space-3)', padding: 0 }}>
+                <li>Set status to <strong>Live</strong></li>
+                <li>Mark as <strong>Platform Admin Only</strong> (not available to org users)</li>
+                {featuresWithAssignments > 0 && (
+                  <li>Remove <strong>all tier assignments</strong> and role visibility settings ({featuresWithAssignments} feature{featuresWithAssignments === 1 ? ' has' : 's have'} assignments)</li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <p className="pa-body-s" style={{ color: 'var(--pa-n700)', margin: 0 }}>
+          Platform-only features are only accessible by platform administrators.
+          They will not appear for org admins, coaches, or parents.
+        </p>
+      </div>
+    </BaseModal>
+  )
 }
 
 const CATEGORY_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))

@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AdminPageHeader, PlatformDataTable, Button, Badge, ErrorState, Card } from '../../components/platformAdmin'
+import { AdminPageHeader, Button, Badge, ErrorState, Card } from '../../components/admin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
-import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { getFamilies } from '../../data/services/familyService'
@@ -10,6 +11,7 @@ import type { Family } from '../../types/family'
 import { getLink } from '../../utils/routes'
 import { showError } from '../../utils/toast'
 import { cn } from '../../utils/cn'
+import '../../styles/orgAdmin.css'
 
 export default function AdminFamilies() {
   const navigate = useNavigate()
@@ -169,7 +171,7 @@ export default function AdminFamilies() {
       id: 'name',
       label: 'Family Name',
       sortable: true,
-      render: (row) => <span className="pa-text-primary" style={{ fontWeight: 600 }}>{row?.name || 'Unnamed Family'}</span>
+      render: (row) => <span className="oa-text-primary" style={{ fontWeight: 600 }}>{row?.name || 'Unnamed Family'}</span>
     },
     {
       id: 'created_at',
@@ -189,7 +191,7 @@ export default function AdminFamilies() {
   if (!isReady) return <AdminLoadingSpinner />
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title={t('admin.families.title')} 
         subtitle={t('admin.families.subtitle')}
@@ -205,14 +207,14 @@ export default function AdminFamilies() {
       />
 
       {/* Info Banner */}
-      <Card noPadding className={cn('pa-mb-6', 'pa-overflow-hidden')}>
-        <div className={cn('pa-flex', 'pa-items-start', 'pa-gap-3', 'pa-p-4')} style={{ background: 'var(--pa-info-bg, #eff6ff)' }}>
-          <span className="material-symbols-outlined" style={{ color: 'var(--pa-info-text, #1d4ed8)', fontSize: '20px', marginTop: '2px' }}>info</span>
+      <Card className={cn('oa-mb-6', 'oa-overflow-hidden')}>
+        <div className={cn('oa-flex', 'oa-items-start', 'oa-gap-3', 'oa-p-4')} style={{ background: 'var(--oa-info-bg, #eff6ff)' }}>
+          <span className="material-symbols-outlined" style={{ color: 'var(--oa-info-text, #1d4ed8)', fontSize: '20px', marginTop: '2px' }}>info</span>
           <div>
-            <h3 className={cn('pa-text-sm', 'pa-font-semibold', 'pa-mb-1')} style={{ color: 'var(--pa-info-text, #1e3a8a)' }}>
+            <h3 className={cn('oa-text-sm', 'oa-font-semibold', 'oa-mb-1')} style={{ color: 'var(--oa-info-text, #1e3a8a)' }}>
               Families are Created Automatically
             </h3>
-            <p className={cn('pa-text-sm')} style={{ color: 'var(--pa-info-text, #1e40af)' }}>
+            <p className={cn('oa-text-sm')} style={{ color: 'var(--oa-info-text, #1e40af)' }}>
               Families are automatically formed when athletes share guardians. To create a new family,
               simply add athletes and link their guardians. Athletes with shared guardians will appear
               together as a family.
@@ -228,7 +230,7 @@ export default function AdminFamilies() {
           onRetry={fetchFamilies}
         />
       ) : (
-        <PlatformDataTable
+        <OrgDataTable
           rows={sortedAndPaginatedFamilies}
           columns={columns}
           loading={loading}

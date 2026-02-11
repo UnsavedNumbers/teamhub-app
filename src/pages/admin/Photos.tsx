@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Card,
   PageHeader,
@@ -13,12 +13,14 @@ import {
 } from '@/components/platformAdmin'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '../../i18n/useI18n'
+import { usePhotoFilters } from '../../hooks/usePhotoFilters'
 import { USE_FAKE_DATA } from '@/data/config'
 import { GalleryManagementSection } from '@/components/admin/galleries/GalleryManagementSection'
 import { getGalleriesForUser, type Gallery } from '@/data/services/galleryService'
 import { getMockGalleriesForOrg } from '@/data/fake/mockGalleries'
 import { getLink } from '@/utils/routes'
 import './Photos.css'
+import '../../styles/orgAdmin.css'
 
 // Cache for galleries (5 minutes)
 const CACHE_KEY = 'admin_photos_galleries'
@@ -56,11 +58,15 @@ export default function AdminPhotos() {
   const [galleries, setGalleries] = useState<Gallery[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
   const [activeType, setActiveType] = useState<'all' | Gallery['gallery_type']>('all')
-  const [sortBy, setSortBy] = useState<'recent' | 'az' | 'photos'>('recent')
   const [showManagement] = useState(false)
   const [showDemoModal, setShowDemoModal] = useState(false)
+  const { filters, setFilters } = usePhotoFilters({
+    viewKey: 'adminPhotos',
+    defaultSort: 'recent',
+    allowedSorts: ['recent', 'az', 'photos'],
+    persistDensity: false,
+  })
 
   useEffect(() => {
     let mounted = true
@@ -76,7 +82,10 @@ export default function AdminPhotos() {
       // Demo mode: use mock data
       if (USE_FAKE_DATA) {
         console.log('[Photos] USE_FAKE_DATA is true, using mock data')
-        const mockGalleries = getMockGalleriesForOrg(context.orgId)
+        const mockGalleriesDb = getMockGalleriesForOrg(context.orgId)
+        const mockGalleries = mockGalleriesDb.map(
+          (g) => ({ ...g, can_download: g.can_download ?? undefined }) as unknown as Gallery,
+        )
         setGalleries(mockGalleries)
         setLoading(false)
         return
@@ -111,13 +120,13 @@ export default function AdminPhotos() {
     if (activeType !== 'all') {
       result = result.filter((g) => g.gallery_type === activeType)
     }
-    if (search.trim()) {
-      const term = search.toLowerCase()
+    if (filters.q.trim()) {
+      const term = filters.q.toLowerCase()
       result = result.filter((g) => g.name.toLowerCase().includes(term))
     }
-    if (sortBy === 'az') {
+    if (filters.sort === 'az') {
       result = [...result].sort((a, b) => a.name.localeCompare(b.name))
-    } else if (sortBy === 'photos') {
+    } else if (filters.sort === 'photos') {
       result = [...result].sort((a, b) => (b.photo_count || 0) - (a.photo_count || 0))
     } else {
       result = [...result].sort(
@@ -127,7 +136,7 @@ export default function AdminPhotos() {
       )
     }
     return result
-  }, [galleries, activeType, search, sortBy])
+  }, [galleries, activeType, filters.q, filters.sort])
 
   const totals = useMemo(() => {
     const totalPhotos = galleries.reduce((sum, g) => sum + (g.photo_count || 0), 0)
@@ -154,16 +163,36 @@ export default function AdminPhotos() {
     navigate(getLink('admin.photos.create'))
   }
 
-  const getEntityLabel = (gallery: Gallery): string => {
-    // This would ideally fetch entity names from related tables
-    // For now, show entity type
-    const typeLabel = t(`photos.galleryType.${gallery.gallery_type}`)
-    return typeLabel
+  const getEntityMeta = (gallery: Gallery): { label: string; link?: string } => {
+    const label = gallery.entity_name || t(`photos.galleryType.${gallery.gallery_type}`)
+    if (!gallery.entity_id) {
+      if (gallery.gallery_type === 'org') {
+        return { label: gallery.org_name || label, link: getLink('admin.organization.base') }
+      }
+      return { label }
+    }
+
+    switch (gallery.gallery_type) {
+      case 'team':
+        return { label, link: getLink('admin.teams.detail', { id: gallery.entity_id }) }
+      case 'event':
+        return { label, link: getLink('admin.events.detail', { id: gallery.entity_id }) }
+      case 'season':
+        return { label, link: getLink('admin.seasons.detail', { id: gallery.entity_id }) }
+      case 'program':
+        return { label, link: getLink('admin.programs.detail', { id: gallery.entity_id }) }
+      case 'athlete':
+        return { label, link: getLink('admin.athletes.detail', { id: gallery.entity_id }) }
+      case 'travel':
+        return { label, link: getLink('admin.travel.edit', { id: gallery.entity_id }) }
+      default:
+        return { label }
+    }
   }
 
   return (
-    <div className="pa-root admin-photos-page">
-      <div className="pa-container">
+    <div className="oa-root admin-photos-page">
+      <div className="oa-container">
         <PageHeader
           title={t('photos.title')}
           description={t('photos.subtitle')}
@@ -183,8 +212,8 @@ export default function AdminPhotos() {
             <span className="material-symbols-outlined search-icon">search</span>
             <Input
               placeholder={t('photos.filters.search')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={filters.q}
+              onChange={(e) => setFilters({ q: e.target.value })}
             />
           </div>
 
@@ -209,12 +238,12 @@ export default function AdminPhotos() {
           <div className="filter-chip">
             <div className="filter-chip-label">{t('common.sort')}</div>
             <Select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              value={filters.sort}
+              onChange={(e) => setFilters({ sort: e.target.value })}
               options={[
                 { label: t('common.mostRecent'), value: 'recent' },
-                { label: 'A → Z', value: 'az' },
-                { label: t('photos.stats.photosCount', { count: '' }).replace('0', 'Most'), value: 'photos' },
+                { label: t('photos.filters.az'), value: 'az' },
+                { label: t('photos.filters.mostPhotos'), value: 'photos' },
               ]}
             />
           </div>
@@ -247,12 +276,12 @@ export default function AdminPhotos() {
         </div>
 
         {loading ? (
-          <Card className="pa-card pa-h-64 pa-animate-pulse" />
+          <Card className="oa-card oa-h-64 oa-animate-pulse" />
         ) : filtered.length === 0 ? (
           <div className="empty-state">
-            <p className="pa-text-base pa-font-semibold">{t('photos.filters.noResults')}</p>
-            <p className="pa-text-sm pa-text-muted">{t('photos.empty.message')}</p>
-            <Button variant="primary" onClick={handleCreateGallery} className="pa-mt-4">
+            <p className="oa-text-base oa-font-semibold">{t('photos.filters.noResults')}</p>
+            <p className="oa-text-sm oa-text-muted">{t('photos.empty.message')}</p>
+            <Button variant="primary" onClick={handleCreateGallery} className="oa-mt-4">
               {t('photos.createGallery')}
             </Button>
           </div>
@@ -269,12 +298,22 @@ export default function AdminPhotos() {
                   {gallery.cover_url ? (
                     <img src={gallery.cover_url} alt={gallery.name} />
                   ) : (
-                    <div className="pa-flex pa-items-center pa-justify-center pa-w-full pa-h-full pa-text-muted pa-text-sm">
+                    <div className="oa-flex oa-items-center oa-justify-center oa-w-full oa-h-full oa-text-muted oa-text-sm">
                       {t('photos.stats.emptyGallery')}
                     </div>
                   )}
                   <div className="gallery-badge">
-                    <Badge variant="info">{getEntityLabel(gallery)}</Badge>
+                    {(() => {
+                      const meta = getEntityMeta(gallery)
+                      if (meta.link) {
+                        return (
+                          <Link to={meta.link} onClick={(e) => e.stopPropagation()}>
+                            <Badge variant="info">{meta.label}</Badge>
+                          </Link>
+                        )
+                      }
+                      return <Badge variant="info">{meta.label}</Badge>
+                    })()}
                   </div>
                 </div>
                 <div className="gallery-body">
@@ -283,13 +322,20 @@ export default function AdminPhotos() {
                     {t('common.modified')} {new Date(gallery.updated_at || gallery.created_at).toLocaleDateString()}
                   </div>
                   <div className="gallery-footer">
-                    <div className="pa-flex pa-items-center pa-gap-2">
-                      <span className="material-symbols-outlined pa-text-muted">image</span>
-                      <span className="pa-text-sm pa-font-semibold">
-                        {t('photos.stats.photosCount', { count: gallery.photo_count || 0 })}
+                    <div className="oa-flex oa-items-center oa-gap-2">
+                      <span className="material-symbols-outlined oa-text-muted">
+                        {(gallery.photo_count || 0) === 0 ? 'upload' : 'image'}
+                      </span>
+                      <span className="oa-text-sm oa-font-semibold">
+                        {(gallery.photo_count || 0) === 0 
+                          ? t('photos.addFirstPhoto')
+                          : `${gallery.photo_count} ${gallery.photo_count === 1 ? t('photos.photo') : t('photos.photos')}`
+                        }
                       </span>
                     </div>
-                    <span className="material-symbols-outlined pa-text-muted">arrow_forward</span>
+                    {(gallery.photo_count || 0) > 0 && (
+                      <span className="material-symbols-outlined oa-text-muted">arrow_forward</span>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -299,8 +345,8 @@ export default function AdminPhotos() {
               <div className="add-icon">
                 <span className="material-symbols-outlined">add</span>
               </div>
-              <div className="pa-text-base pa-font-semibold">{t('photos.createGallery')}</div>
-              <div className="pa-text-sm pa-text-muted">
+              <div className="oa-text-base oa-font-semibold">{t('photos.createGallery')}</div>
+              <div className="oa-text-sm oa-text-muted">
                 {t('photos.subtitle')}
               </div>
             </Card>
@@ -315,10 +361,10 @@ export default function AdminPhotos() {
           onClose={() => setShowDemoModal(false)}
           title={t('photos.demoMode.title')}
         >
-          <p className="pa-text-sm pa-text-muted pa-mb-4">
+          <p className="oa-text-sm oa-text-muted oa-mb-4">
             {t('photos.demoMode.createBlocked')}
           </p>
-          <div className="pa-flex pa-justify-end">
+          <div className="oa-flex oa-justify-end">
             <Button variant="primary" onClick={() => setShowDemoModal(false)}>
               {t('common.ok')}
             </Button>

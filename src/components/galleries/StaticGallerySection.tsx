@@ -16,6 +16,7 @@ import { Button, EmptyState } from '../platformAdmin'
 import { PhotoUploadButton } from './PhotoUploadButton'
 import { PhotoThumbnailGrid } from './PhotoThumbnailGrid'
 import { showError } from '@/utils/toast'
+import { getLink } from '@/utils/routes'
 
 interface StaticGallerySectionProps {
   entityType: GalleryEntityType
@@ -23,6 +24,7 @@ interface StaticGallerySectionProps {
   canUpload?: boolean
   previewCount?: number
   title?: string
+  context?: 'portal' | 'admin'
 }
 
 export function StaticGallerySection({
@@ -31,8 +33,9 @@ export function StaticGallerySection({
   canUpload = true,
   previewCount = 5,
   title = 'Photos',
+  context = 'portal',
 }: StaticGallerySectionProps) {
-  const { context, isReady } = useUserContext()
+  const { context: userContext, isReady } = useUserContext()
   const navigate = useNavigate()
   const perms = useGalleryPermissions(entityType)
   const [gallery, setGallery] = useState<Gallery | null>(null)
@@ -41,22 +44,22 @@ export function StaticGallerySection({
 
   useEffect(() => {
     const load = async () => {
-      if (!context || !isReady || !entityId) return
+      if (!userContext || !isReady || !entityId) return
       setLoading(true)
       try {
         const galleryType = mapEntityToGalleryType(entityType)
         // Ensure gallery exists
-        const result = await getGalleryByEntity(context, galleryType, entityId)
+        const result = await getGalleryByEntity(userContext, galleryType, entityId)
         let g = result.data
         if (!g) {
-          const created = await getOrCreateStaticGallery(context, galleryType, entityId)
+          const created = await getOrCreateStaticGallery(userContext, galleryType, entityId)
           if (created.error || !created.id) throw created.error || new Error('Failed to create gallery')
-          const refetched = await getGalleryByEntity(context, galleryType, entityId)
+          const refetched = await getGalleryByEntity(userContext, galleryType, entityId)
           g = refetched.data
         }
         if (g) {
           setGallery(g)
-          const photosResp = await getPhotosForGallery(context, { gallery_id: g.id, limit: previewCount, order_by: 'created_at', order_direction: 'desc' })
+          const photosResp = await getPhotosForGallery(userContext, { gallery_id: g.id, limit: previewCount, order_by: 'created_at', order_direction: 'desc' })
           if (photosResp.error) throw photosResp.error
           setPhotos(photosResp.data)
         }
@@ -67,11 +70,11 @@ export function StaticGallerySection({
       }
     }
     load()
-  }, [context, isReady, entityId, entityType, previewCount])
+  }, [userContext, isReady, entityId, entityType, previewCount])
 
   const handleUploadComplete = async () => {
-    if (!context || !gallery) return
-    const photosResp = await getPhotosForGallery(context, { gallery_id: gallery.id, limit: previewCount, order_by: 'created_at', order_direction: 'desc' })
+    if (!userContext || !gallery) return
+    const photosResp = await getPhotosForGallery(userContext, { gallery_id: gallery.id, limit: previewCount, order_by: 'created_at', order_direction: 'desc' })
     if (!photosResp.error) setPhotos(photosResp.data)
   }
 
@@ -81,7 +84,12 @@ export function StaticGallerySection({
   }))
 
   const viewAll = () => {
-    if (gallery) navigate(`/portal/photos/gallery/${gallery.id}`)
+    if (gallery) {
+      const route = context === 'admin'
+        ? getLink('admin.photos.detail', { id: gallery.id })
+        : getLink('portal.photosGallery', { id: gallery.id })
+      navigate(route)
+    }
   }
 
   return (

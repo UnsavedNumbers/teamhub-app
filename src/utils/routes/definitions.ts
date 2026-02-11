@@ -128,7 +128,7 @@ const portal = {
         icon: 'qr_code_scanner',
     },
     myTickets: {
-        path: '/account/tickets',
+        path: '/portal/account/tickets',
         label: 'My Tickets',
         icon: 'confirmation_number',
         description: 'Your event tickets',
@@ -242,6 +242,20 @@ const portal = {
         params: ['id'] as const,
         label: 'Manage Gallery',
         icon: 'edit',
+    },
+
+    // Videos
+    videos: {
+        path: '/portal/videos',
+        label: 'Videos',
+        icon: 'smart_display',
+        description: 'Video library & feedback',
+    },
+    videoDetail: {
+        path: '/portal/videos/:id',
+        params: ['id'] as const,
+        label: 'Video Details',
+        icon: 'smart_display',
     },
 
     // Role Selection
@@ -720,6 +734,13 @@ const admin = {
             icon: 'child_care',
             requiresOrg: true,
         },
+        edit: {
+            path: '/admin/athletes/:id/edit',
+            params: ['id'] as const,
+            label: 'Edit Athlete',
+            icon: 'edit',
+            requiresOrg: true,
+        },
         import: {
             path: '/admin/athletes/import',
             label: 'Import Athletes',
@@ -783,6 +804,15 @@ const admin = {
         label: 'Attendance',
         icon: 'how_to_reg',
         description: 'Check-ins & tracking',
+        requiresOrg: true,
+    },
+
+    // Notifications
+    notifications: {
+        path: '/admin/notifications',
+        label: 'Notifications',
+        icon: 'notifications',
+        description: 'Admin notifications',
         requiresOrg: true,
     },
 
@@ -978,6 +1008,20 @@ const admin = {
             description: 'Photo galleries',
             requiresOrg: true,
         },
+        browse: {
+            path: '/admin/photos/browse',
+            label: 'Browse',
+            icon: 'folder',
+            description: 'Browse galleries',
+            requiresOrg: true,
+        },
+        search: {
+            path: '/admin/photos/search',
+            label: 'Search',
+            icon: 'search',
+            description: 'Search galleries',
+            requiresOrg: true,
+        },
         create: {
             path: '/admin/photos/create',
             label: 'Create Gallery',
@@ -990,6 +1034,13 @@ const admin = {
             params: ['id'] as const,
             label: 'Gallery',
             icon: 'collections',
+            requiresOrg: true,
+        },
+        edit: {
+            path: '/admin/photos/:id/edit',
+            params: ['id'] as const,
+            label: 'Edit Gallery',
+            icon: 'edit',
             requiresOrg: true,
         },
         photo: {
@@ -1290,6 +1341,22 @@ const fan = {
         },
     },
 
+    // Videos
+    videos: {
+        list: {
+            path: '/fan/videos',
+            label: 'Videos',
+            icon: 'videocam',
+            description: 'Browse video library',
+        },
+        detail: {
+            path: '/fan/videos/:id',
+            params: ['id'] as const,
+            label: 'Video Details',
+            icon: 'play_circle',
+        },
+    },
+
     // My Tickets
     tickets: {
         list: {
@@ -1397,6 +1464,18 @@ const root = {
 } as const satisfies Record<string, RouteDefinition>
 
 // ============================================================================
+// SHARE ROUTES - Public shared content
+// ============================================================================
+const share = {
+    video: {
+        path: '/share/video/:token',
+        params: ['token'] as const,
+        label: 'Shared Video',
+        icon: 'play_circle',
+    },
+} as const satisfies Record<string, RouteDefinition>
+
+// ============================================================================
 // EXPORTED ROUTE DEFINITIONS
 // ============================================================================
 export const routes = {
@@ -1406,6 +1485,7 @@ export const routes = {
     admin,
     platformAdmin,
     fan,
+    share,
 } as const
 
 // Type for the routes object

@@ -13,10 +13,11 @@ import { getSports, getPrograms, deleteProgram, getSportBySlug } from '../../dat
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Sport, Program, Level, Team } from '../../data/types/organization'
-import { AdminPageHeader, Select, ConfirmDialog, Button, Card, EmptyState, Badge, InlineNotice } from '../../components/platformAdmin'
+import { AdminPageHeader, Select, ConfirmDialog, Button, Card, EmptyState, Badge, InlineNotice } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import './Programs.css'
+import '../../styles/orgAdmin.css'
 
 export default function Programs() {
   const { context, isReady } = useUserContext()
@@ -316,23 +317,23 @@ export default function Programs() {
 
   if (loading) {
     return (
-      <div className="pa-root">
-        <div className="pa-skeleton pa-mb-8" style={{ width: '40%', height: '40px' }} />
-        <div className="pa-skeleton" style={{ width: '100%', height: '400px' }} />
+      <div className="oa-root">
+        <div className="oa-skeleton oa-mb-8" style={{ width: '40%', height: '40px' }} />
+        <div className="oa-skeleton" style={{ width: '100%', height: '400px' }} />
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="pa-root programs-page">
+      <div className="oa-root programs-page">
         <AdminPageHeader
           title="Programs"
           breadcrumbs={[{ label: 'Organizations', path: structureRoute }, { label: 'Programs' }]}
         />
-        <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-6 pa-text-center">
-            <div className="pa-text-danger pa-mb-4">{error}</div>
+        <Card className="oa-mb-4">
+          <div className="oa-p-6 oa-text-center">
+            <div className="oa-text-danger oa-mb-4">{error}</div>
             <Button variant="ghost" onClick={loadProgramsData}>Retry</Button>
           </div>
         </Card>
@@ -341,7 +342,7 @@ export default function Programs() {
   }
 
   return (
-    <div className="pa-root programs-page">
+    <div className="oa-root programs-page">
       <OfflineBanner />
       <AdminPageHeader
         title="Programs"
@@ -369,7 +370,7 @@ export default function Programs() {
             </Button>
           }
           onClose={() => setError(null)}
-          className="pa-mb-4"
+          className="oa-mb-4"
         />
       )}
 
@@ -378,7 +379,7 @@ export default function Programs() {
           tone="success"
           title={successMessage}
           onClose={() => setSuccessMessage(null)}
-          className="pa-mb-4"
+          className="oa-mb-4"
         />
       )}
 
@@ -387,13 +388,13 @@ export default function Programs() {
           tone="error"
           title={actionError}
           onClose={() => setActionError(null)}
-          className="pa-mb-4"
+          className="oa-mb-4"
         />
       )}
 
-      <Card className="pa-mb-6 pa-filter-section">
-        <div className="pa-filter-row">
-          <div className="pa-filter-control">
+      <Card className="oa-mb-6 oa-filter-section">
+        <div className="oa-filter-row">
+          <div className="oa-filter-control">
             <Select
               label="Filter by sport"
               value={filterSportId}
@@ -406,7 +407,7 @@ export default function Programs() {
             />
           </div>
           {filterSportId && (
-            <div className="pa-filter-actions">
+            <div className="oa-filter-actions">
               <Button
                 onClick={() => handleNavigateToAddProgram(filterSportId)}
                 disabled={loading || isOffline || USE_FAKE_DATA || !filterSportId}
@@ -419,7 +420,7 @@ export default function Programs() {
         </div>
       </Card>
 
-      <div className="pa-flex pa-flex-col pa-gap-4">
+      <div className="oa-flex oa-flex-col oa-gap-4">
         {filteredPrograms.length === 0 ? (
           <Card>
             <EmptyState
@@ -440,7 +441,7 @@ export default function Programs() {
             </EmptyState>
           </Card>
         ) : (
-          <Card className="pa-stacked-list" noPadding>
+          <Card className="oa-stacked-list">
             {filteredPrograms.map((program) => {
               const sport = sportById.get(program.sport_id)
               const levelsList = programLevels(program.id)
@@ -448,19 +449,19 @@ export default function Programs() {
               const levelCount = levelsList.length
 
               return (
-                <div key={program.id} className="pa-stacked-list-row programs-list-row">
-                  <div className="pa-stacked-list-row-content">
-                    <div className="pa-flex-1">
+                <div key={program.id} className="oa-stacked-list-row programs-list-row">
+                  <div className="oa-stacked-list-row-content">
+                    <div className="oa-flex-1">
                       {sport && (
-                        <div className="pa-mb-1">
-                          <Badge variant="neutral" className="pa-uppercase pa-text-[10px] pa-font-bold" style={{ padding: '2px 6px' }}>
+                        <div className="oa-mb-1">
+                          <Badge variant="neutral" className="oa-uppercase oa-text-[10px] oa-font-bold oa-px-2 oa-py-0.5">
                             {sport.name}
                           </Badge>
                         </div>
                       )}
-                      <div className="pa-flex pa-items-baseline pa-gap-2 pa-mb-2">
+                      <div className="oa-flex oa-items-baseline oa-gap-2 oa-mb-2">
                         <span
-                          className="pa-stacked-list-row-title programs-program-name pa-cursor-pointer hover:pa-underline pa-block"
+                          className="oa-stacked-list-row-title programs-program-name oa-cursor-pointer hover:oa-underline oa-block"
                           onClick={() => handleNavigateToProgramDetail(program.id)}
                         >
                           {program.name}
@@ -468,17 +469,17 @@ export default function Programs() {
                       </div>
 
                       <div className="programs-meta">
-                        <span className="pa-text-xs pa-font-semibold pa-text-slate-500 pa-capitalize">
+                        <span className="oa-text-xs oa-font-semibold oa-text-slate-500 oa-capitalize">
                           {program.gender_category}
                         </span>
                         <span
-                          className="pa-text-xs pa-font-semibold pa-text-slate-500 hover:pa-text-primary pa-cursor-pointer"
+                          className="oa-text-xs oa-font-semibold oa-text-slate-500 hover:oa-text-primary oa-cursor-pointer"
                           onClick={() => handleNavigateToLevels(program.id)}
                         >
                           {levelCount} {levelCount === 1 ? 'LEVEL' : 'LEVELS'}
                         </span>
                         <span
-                          className="pa-text-xs pa-font-semibold pa-text-slate-500 hover:pa-text-primary pa-cursor-pointer"
+                          className="oa-text-xs oa-font-semibold oa-text-slate-500 hover:oa-text-primary oa-cursor-pointer"
                           onClick={() => handleNavigateToTeams(program.id)}
                         >
                           {totalTeams} {totalTeams === 1 ? 'TEAM' : 'TEAMS'}
@@ -486,7 +487,7 @@ export default function Programs() {
                       </div>
                     </div>
                     
-                    <div className="pa-stacked-list-row-actions">
+                    <div className="oa-stacked-list-row-actions">
                       <Button
                         variant="ghost"
                         size="dense"
@@ -512,7 +513,7 @@ export default function Programs() {
                         disabled={deletingProgramId === program.id || loading || isOffline || USE_FAKE_DATA || levelCount > 0}
                         loading={deletingProgramId === program.id}
                         icon="delete"
-                        className="pa-text-danger hover:pa-bg-danger-surface"
+                        className="oa-text-danger hover:oa-bg-danger-surface"
                       >
                          Delete
                       </Button>
@@ -536,3 +537,4 @@ export default function Programs() {
     </div>
   )
 }
+

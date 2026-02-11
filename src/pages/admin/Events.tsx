@@ -9,7 +9,7 @@ import { supabase } from '../../lib/supabase'
 import { showSuccess, showError } from '../../utils/toast'
 import { validateCancelEvent, EVENT_ERRORS } from '../../utils/eventValidation'
 import { useOrganization } from '../../contexts/OrganizationContext'
-import { ConfirmDialog, AdminPageHeader, EmptyState } from '../../components/platformAdmin'
+import { ConfirmDialog, AdminPageHeader, EmptyState } from '../../components/admin'
 import EventsHeader from '../../components/admin/EventsHeader'
 import EventsFilters from '../../components/admin/EventsFilters'
 import EventsList from '../../components/admin/EventsList'
@@ -83,6 +83,8 @@ export default function Events() {
     const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false)
     const [actionLoading, setActionLoading] = useState(false)
     const [actionError, setActionError] = useState<string | null>(null)
+    void actionLoading
+    void actionError
     
     // Filter data
     const [teams, setTeams] = useState<Team[]>([])
@@ -458,8 +460,11 @@ export default function Events() {
                     icon="event"
                     title="NO EVENTS"
                     description="No events match your current filters."
-                    action={{ label: t('admin.events.create'), onClick: () => navigate('/admin/events/new') }}
-                />
+                >
+                    <button className="oa-btn oa-btn--primary" onClick={() => navigate('/admin/events/new')}>
+                        {t('admin.events.create')}
+                    </button>
+                </EmptyState>
             ) : (
                 <>
                     {viewMode === 'list' && (
@@ -548,10 +553,7 @@ export default function Events() {
                 }
                 confirmLabel="Delete"
                 variant="danger"
-                requireReason
-                loading={actionLoading}
-                error={actionError}
-                onConfirm={handleDelete}
+                onConfirm={() => { void handleDelete('') }}
                 onCancel={() => {
                     setDeleteDialog({ open: false, event: null })
                     setActionError(null)
@@ -568,11 +570,8 @@ export default function Events() {
                         : ''
                 }
                 confirmLabel="Cancel Event"
-                variant="warning"
-                requireReason
-                loading={actionLoading}
-                error={actionError}
-                onConfirm={handleCancel}
+                variant="primary"
+                onConfirm={() => { void handleCancel('') }}
                 onCancel={() => {
                     setCancelDialog({ open: false, event: null })
                     setActionError(null)
@@ -585,11 +584,8 @@ export default function Events() {
                 title="Cancel Events"
                 description={`Are you sure you want to cancel ${selectedIds.size} events? This will mark all selected events as cancelled and notify participants.`}
                 confirmLabel="Cancel Events"
-                variant="warning"
-                requireReason
-                loading={actionLoading}
-                error={actionError}
-                onConfirm={handleBulkCancel}
+                variant="primary"
+                onConfirm={() => { void handleBulkCancel('') }}
                 onCancel={() => {
                     setBulkCancelDialog(false)
                     setActionError(null)
@@ -603,10 +599,7 @@ export default function Events() {
                 description={`Are you sure you want to delete ${selectedIds.size} events? This action cannot be undone and will delete all associated data (RSVPs, attendance, etc.).`}
                 confirmLabel="Delete Events"
                 variant="danger"
-                requireReason
-                loading={actionLoading}
-                error={actionError}
-                onConfirm={handleBulkDelete}
+                onConfirm={() => { void handleBulkDelete('') }}
                 onCancel={() => {
                     setBulkDeleteDialog(false)
                     setActionError(null)

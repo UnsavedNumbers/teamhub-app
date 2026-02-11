@@ -11,10 +11,11 @@ import { useT } from '../../i18n/useI18n'
 import type { TranslationKey } from '../../i18n'
 import { createUniformKit } from '../../data/services/uniformsService'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
-import { AdminPageHeader, Card, Button, EmptyState } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, EmptyState } from '../../components/admin'
 import { SportUniformForm } from '../../components/uniforms/SportUniformForm'
 import type { CreateUniformKitDTO } from '../../types/uniforms'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 export default function CreateUniform() {
   const { context, isReady } = useUserContext()
@@ -46,7 +47,7 @@ export default function CreateUniform() {
   // Show loading state while sports are loading
   if (sportsLoading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader title="Create Uniform" actions={null} />
         <AdminLoadingSpinner />
       </div>
@@ -56,11 +57,11 @@ export default function CreateUniform() {
   // Show error state if sports failed to load
   if (sportsError) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader title="Create Uniform" actions={null} />
         <Card>
-          <div className="pa-p-8 pa-text-center">
-            <p className="pa-text-danger pa-mb-4">{t('admin.uniforms.prerequisite.loadError', { message: sportsError.message })}</p>
+          <div className="oa-p-8 oa-text-center">
+            <p className="oa-text-danger oa-mb-4">{t('admin.uniforms.prerequisite.loadError', { message: sportsError.message })}</p>
             <Button onClick={refetchSports} variant="primary">
               {t('admin.uniforms.prerequisite.retry')}
             </Button>
@@ -74,7 +75,7 @@ export default function CreateUniform() {
   if ((sports?.length ?? 0) === 0) {
     const returnUrl = encodeURIComponent('/admin/uniforms/new')
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <AdminPageHeader title="Create Uniform" actions={null} />
         <Card>
           <EmptyState
@@ -93,14 +94,14 @@ export default function CreateUniform() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title="Create Uniform"
         subtitle={t('admin.uniforms.createSubtitle' as TranslationKey)}
         actions={null}
       />
 
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <SportUniformForm
           onSubmit={handleSubmit}
           isOrgLevel={false}
