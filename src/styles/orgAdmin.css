@@ -513,6 +513,37 @@ html.dark .oa-display-xl {
     color: var(--pa-text-primary);
 }
 
+.oa-h1 {
+    font: var(--pa-text-h1);
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: var(--pa-n900);
+}
+
+html.dark .oa-h1 {
+    color: var(--pa-text-primary);
+}
+
+.oa-h2 {
+    font: var(--pa-text-h2);
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: var(--pa-n900);
+}
+
+html.dark .oa-h2 {
+    color: var(--pa-text-primary);
+}
+
+.oa-body-l {
+    font: var(--pa-text-body-l);
+    color: var(--pa-n700);
+}
+
+html.dark .oa-body-l {
+    color: var(--pa-text-secondary);
+}
+
 .oa-overline {
     font: var(--pa-text-overline);
     letter-spacing: 0.08em;
@@ -521,6 +552,16 @@ html.dark .oa-display-xl {
 }
 
 html.dark .oa-overline {
+    color: var(--pa-text-muted);
+}
+
+.oa-caption {
+    font: var(--pa-text-caption);
+    letter-spacing: 0.02em;
+    color: var(--pa-n500);
+}
+
+html.dark .oa-caption {
     color: var(--pa-text-muted);
 }
 
@@ -941,20 +982,24 @@ html.dark .oa-page-subtitle {
 /* Dark mode overrides */
 html.dark .oa-card {
     background: var(--pa-surface) !important;
-    border: 1px solid var(--org-border-default, var(--pa-border-subtle)) !important;
+    border: 0 !important;
+    border-width: 0 !important;
 }
 
 html.dark .oa-card:hover {
     border-color: var(--pa-theme-border-accent) !important;
 }
 
-/* Specific fix for card headers in org admin - use secondary background */
+/* Card headers follow org theme:
+   - background: primary color
+   - title text: secondary color */
 .oa-card-header,
 .oa-card .pa-card-header {
     padding: var(--pa-space-5) var(--pa-space-6);
     border-bottom: 1px solid var(--org-border-default, var(--pa-n100));
     margin: calc(var(--pa-space-6) * -1) calc(var(--pa-space-6) * -1) var(--pa-space-6) calc(var(--pa-space-6) * -1);
-    background: #f9fafb;
+    background: var(--org-btn-primary-bg, var(--pa-theme-action-primary, #003A8F));
+    color: var(--org-border-active, #B6C9E2);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -962,8 +1007,9 @@ html.dark .oa-card:hover {
 
 html.dark .oa-card-header,
 html.dark .oa-card .pa-card-header {
-    border-bottom-color: var(--pa-border-default) !important;
-    background: var(--pa-surface-panel) !important;
+    border-bottom-color: var(--org-border-default, var(--pa-border-default)) !important;
+    background: var(--org-btn-primary-bg, var(--pa-theme-action-primary, #003A8F)) !important;
+    color: var(--org-border-active, #B6C9E2) !important;
 }
 
 /* If card has no padding, header needs to handle its own layout */
@@ -974,16 +1020,18 @@ html.dark .oa-card .pa-card-header {
 .oa-card--no-padding .oa-card-header,
 .oa-card--no-padding .pa-card-header {
     margin: 0;
-    /* Ensure consistent header styling - same as regular oa-card headers */
-    background: #f9fafb;
+    /* Keep no-padding cards aligned with regular card header treatment */
+    background: var(--org-btn-primary-bg, var(--pa-theme-action-primary, #003A8F));
+    color: var(--org-border-active, #B6C9E2);
     border-bottom: 1px solid var(--org-border-default, var(--pa-n100));
     padding: var(--pa-space-5) var(--pa-space-6);
 }
 
 html.dark .oa-card--no-padding .oa-card-header,
 html.dark .oa-card--no-padding .pa-card-header {
-    background: var(--pa-surface-panel) !important;
-    border-bottom-color: var(--pa-border-default) !important;
+    background: var(--org-btn-primary-bg, var(--pa-theme-action-primary, #003A8F)) !important;
+    color: var(--org-border-active, #B6C9E2) !important;
+    border-bottom-color: var(--org-border-default, var(--pa-border-default)) !important;
 }
 
 .oa-card--no-padding .oa-card-title,
@@ -994,7 +1042,7 @@ html.dark .oa-card--no-padding .pa-card-header {
 
 html.dark .oa-card--no-padding .oa-card-title,
 html.dark .oa-card--no-padding .pa-card-title {
-    color: var(--pa-text-primary) !important;
+    color: var(--org-border-active, #B6C9E2) !important;
 }
 
 .oa-card-title,
@@ -1017,6 +1065,14 @@ html.dark .oa-card .pa-card-title {
     color: var(--pa-text-primary) !important;
 }
 
+/* Header titles use theme secondary color */
+.oa-card-header .oa-card-title,
+.oa-card .pa-card-header .pa-card-title,
+.oa-card--no-padding .oa-card-header .oa-card-title,
+.oa-card--no-padding .pa-card-header .pa-card-title {
+    color: var(--org-border-active, #B6C9E2) !important;
+}
+
 .oa-card-actions {
     display: flex;
     align-items: center;
@@ -1034,6 +1090,7 @@ html.dark .oa-card .pa-card-title {
 
 html.dark .oa-card {
     background: var(--org-surface-panel, var(--pa-surface));
+    border-width: 0 !important;
     border-color: var(--pa-border-subtle);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
@@ -2057,8 +2114,8 @@ html.dark .oa-timepicker-option--selected:hover {
 }
 
 .oa-checkbox-input:checked {
-    background: var(--org-btn-primary-bg, var(--pa-n900));
-    border-color: var(--org-btn-primary-bg, var(--pa-n900));
+    background: var(--org-btn-secondary-bg, var(--pa-secondary-600));
+    border-color: var(--org-btn-secondary-bg, var(--pa-secondary-600));
     box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.15);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z'/%3E%3C/svg%3E");
 }
@@ -3048,17 +3105,27 @@ html.dark .oa-empty-text {
     color: var(--pa-text-secondary);
 }
 
-/* Checkbox Styling */
-.oa-checkbox {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    accent-color: var(--org-btn-primary-bg, var(--pa-n900));
-    flex-shrink: 0;
+/* Checkbox wrapper ensures checkbox and label are always on the same line */
+.oa-checkbox-wrapper {
+    display: block;
+    margin-bottom: var(--pa-space-4);
 }
 
-html.dark .oa-checkbox {
-    accent-color: var(--org-btn-primary-bg, var(--pa-white));
+.oa-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    cursor: pointer;
+    width: 100%;
+    justify-content: flex-start;
+}
+
+.oa-checkbox-label {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--pa-text-primary);
+    cursor: pointer;
+    user-select: none;
 }
 
 /* Utility Classes for OrgDataTable */
@@ -4493,8 +4560,8 @@ html.dark .oa-checkbox-input {
 }
 
 .oa-checkbox-input:checked {
-    background: var(--org-btn-primary-bg, #7c3aed);
-    border-color: var(--org-btn-primary-bg, #7c3aed);
+    background: var(--org-btn-secondary-bg, var(--pa-secondary-600));
+    border-color: var(--org-btn-secondary-bg, var(--pa-secondary-600));
 }
 
 .oa-checkbox-input:checked::after {
@@ -8893,6 +8960,99 @@ html.dark .dash-athlete-tl-title {
     font-size: 11px;
     color: var(--pa-text-muted, #94a3b8);
 }
+/* =====================================================================
+   ORGANIZATION STRUCTURE PAGE - Stats Grid (duplicated from platformAdmin.css)
+   ===================================================================== */
+
+/* Stats Grid */
+.org-stats-section {
+    background: white;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border-left: 8px solid var(--pa-theme-action-primary);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.org-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+}
+
+@media (min-width: 768px) {
+    .org-stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .org-stats-grid {
+        grid-template-columns: repeat(7, 1fr);
+    }
+}
+
+.org-stat-box {
+    padding: 2rem;
+    border-right: 1px solid #F1F5F9;
+    transition: background-color 0.2s;
+}
+
+.org-stat-box:hover {
+    background: #F8FAFC;
+}
+
+.org-stat-box:last-child {
+    border-right: none;
+}
+
+.org-stat-label {
+    display: block;
+    font-size: 0.625rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #94A3B8;
+    margin-bottom: 0.25rem;
+}
+
+.org-stat-value {
+    display: block;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 900;
+    font-size: 3rem;
+    line-height: 1;
+    color: var(--org-btn-secondary-bg, #B6C9E2);
+}
+
+.org-stat-value.empty {
+    color: #CBD5E1;
+}
+
+/* Stats Section - Dark Mode */
+html.dark .org-stats-section {
+    background: var(--pa-bg-raised);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+html.dark .org-stat-box {
+    border-right-color: var(--pa-border-light);
+}
+
+html.dark .org-stat-box:hover {
+    background: var(--pa-bg-elevated);
+}
+
+html.dark .org-stat-label {
+    color: var(--pa-text-muted);
+}
+
+html.dark .org-stat-value {
+    color: var(--org-btn-secondary-bg, #B6C9E2);
+}
+
+html.dark .org-stat-value.empty {
+    color: var(--pa-text-disabled);
+}
+
 /* =====================================================================
    ORGANIZATION STRUCTURE - THEME COLOR OVERRIDES
    Apply theme colors to season card, section header line, and principles

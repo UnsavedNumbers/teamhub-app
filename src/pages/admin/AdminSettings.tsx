@@ -1004,7 +1004,7 @@ function WorkflowSettings({ preferences, setPreferences, onSave, saving, success
               ...preferences,
               workflow: { ...preferences.workflow, remember_filters: e.target.checked }
             })}
-            helperText="Restore your previous filter selections when returning to pages"
+            helper="Restore your previous filter selections when returning to pages"
           />
         </div>
         
@@ -1016,7 +1016,7 @@ function WorkflowSettings({ preferences, setPreferences, onSave, saving, success
               ...preferences,
               workflow: { ...preferences.workflow, auto_select_org: e.target.checked }
             })}
-            helperText="Automatically select the last organization you worked in"
+            helper="Automatically select the last organization you worked in"
           />
         </div>
         
@@ -1110,7 +1110,7 @@ function AdvancedSettings({ preferences, setPreferences, onSave, saving, success
               ...preferences,
               advanced: { ...preferences.advanced, beta_features: e.target.checked }
             })}
-            helperText="Access experimental features (may be unstable)"
+            helper="Access experimental features (may be unstable)"
           />
         </div>
         
@@ -1149,3 +1149,4 @@ function AdvancedSettings({ preferences, setPreferences, onSave, saving, success
     </Card>
   )
 }
+

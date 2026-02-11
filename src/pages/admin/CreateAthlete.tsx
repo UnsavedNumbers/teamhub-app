@@ -348,7 +348,7 @@ export default function CreateAthlete() {
                                 <DatePicker
                                     label="Date of Birth"
                                     value={formData.date_of_birth}
-                                    onChange={(value) => setFormData({ ...formData, date_of_birth: value })}
+                                    onChange={(value) => setFormData({ ...formData, date_of_birth: value.target.value })}
                                     required
                                 />
                                 <Select

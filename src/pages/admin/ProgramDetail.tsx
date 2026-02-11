@@ -764,7 +764,7 @@ export default function ProgramDetail() {
                       Export CSV
                     </Button>
                   }
-                  noPadding
+                 
                 >
                   <Table
                     columns={columns}
@@ -800,3 +800,4 @@ export default function ProgramDetail() {
     </div>
   )
 }
+

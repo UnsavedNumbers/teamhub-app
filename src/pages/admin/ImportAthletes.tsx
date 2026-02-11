@@ -430,7 +430,7 @@ export default function ImportAthletes() {
 
   const renderMapping = () => (
     <div className="oa-flex oa-flex-col oa-gap-8">
-      <Card noPadding>
+      <Card>
         <div className="oa-p-6 oa-border-b oa-border-slate-100">
             <h2 className="oa-overline oa-mb-1">STEP 2: COLUMN MAPPING</h2>
             <p className="oa-body-s oa-text-muted">Map your file's columns to the corresponding Youth Sports fields.</p>
@@ -497,25 +497,25 @@ export default function ImportAthletes() {
     <div className="oa-flex oa-flex-col oa-gap-8">
       {/* Stats Bar */}
       <div className="oa-grid oa-grid-4 oa-gap-4">
-        <Card noPadding>
+        <Card>
             <div className="oa-p-5 oa-text-center">
                 <p className="oa-overline oa-mb-1 oa-text-muted">TOTAL ROWS</p>
                 <p className="oa-h2 oa-m-0">{stats.total}</p>
             </div>
         </Card>
-        <Card noPadding style={{ borderLeft: '4px solid var(--oa-success)' }}>
+        <Card style={{ borderLeft: '4px solid var(--oa-success)' }}>
             <div className="oa-p-5 oa-text-center">
                 <p className="oa-overline oa-mb-1 oa-text-success">READY</p>
                 <p className="oa-h2 oa-m-0">{stats.ready}</p>
             </div>
         </Card>
-        <Card noPadding style={{ borderLeft: '4px solid var(--oa-warning)' }}>
+        <Card style={{ borderLeft: '4px solid var(--oa-warning)' }}>
             <div className="oa-p-5 oa-text-center">
                 <p className="oa-overline oa-mb-1 oa-text-warning">WARNINGS</p>
                 <p className="oa-h2 oa-m-0">{stats.warnings}</p>
             </div>
         </Card>
-        <Card noPadding style={{ borderLeft: '4px solid var(--oa-danger)' }}>
+        <Card style={{ borderLeft: '4px solid var(--oa-danger)' }}>
             <div className="oa-p-5 oa-text-center">
                 <p className="oa-overline oa-mb-1 oa-text-danger">ERRORS</p>
                 <p className="oa-h2 oa-m-0">{stats.errors}</p>
@@ -525,7 +525,7 @@ export default function ImportAthletes() {
 
       <div className="oa-flex oa-flex-col lg:oa-flex-row oa-gap-8">
         <div className="oa-flex-1">
-            <Card noPadding>
+            <Card>
                 <div className="oa-p-4 oa-border-b oa-border-slate-100 oa-flex oa-justify-between oa-items-center">
                     <h2 className="oa-overline">DATA PREVIEW</h2>
                     <Button 
@@ -705,3 +705,4 @@ export default function ImportAthletes() {
     </div>
   )
 }
+

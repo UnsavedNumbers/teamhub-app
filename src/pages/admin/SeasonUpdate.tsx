@@ -141,7 +141,7 @@ export default function SeasonUpdate() {
       />
 
       {error && (
-        <Card className="oa-mb-6" noPadding>
+        <Card className="oa-mb-6">
           <div className="oa-alert-card oa-alert-card--error">
             <div className="oa-body-m oa-text-danger">{error}</div>
           </div>
@@ -167,18 +167,18 @@ export default function SeasonUpdate() {
               <DatePicker
                 label="Start Date"
                 value={startDate}
-                onChange={(value) => setStartDate(value)}
+                onChange={(value) => setStartDate(value.target.value)}
                 required
-                isDisabled={isOffline || USE_FAKE_DATA || submitting}
+                disabled={isOffline || USE_FAKE_DATA || submitting}
               />
             </div>
             <div className="oa-form-group">
               <DatePicker
                 label="End Date"
                 value={endDate}
-                onChange={(value) => setEndDate(value)}
+                onChange={(value) => setEndDate(value.target.value)}
                 required
-                isDisabled={isOffline || USE_FAKE_DATA || submitting}
+                disabled={isOffline || USE_FAKE_DATA || submitting}
               />
             </div>
           </div>
@@ -189,7 +189,7 @@ export default function SeasonUpdate() {
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
               disabled={isOffline || USE_FAKE_DATA || submitting}
-              helperText="Mark this season as currently active"
+              helper="Mark this season as currently active"
             />
           </div>
 
@@ -216,3 +216,5 @@ export default function SeasonUpdate() {
     </div>
   )
 }
+
+

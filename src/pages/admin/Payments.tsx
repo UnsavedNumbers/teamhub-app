@@ -36,7 +36,7 @@ function StatCard({ label, value, icon }: { label: string; value: string; icon: 
     <Card>
       <div className={cn('oa-flex', 'oa-items-center', 'oa-justify-between', 'oa-gap-3')}>
         <div>
-          <div className="oa-text-muted oa-body-s">{label}</div>
+          <div className="oa-caption oa-text-muted">{label}</div>
           <div className="oa-h2">{value}</div>
         </div>
         <span className="material-symbols-outlined oa-text-muted">{icon}</span>
@@ -345,7 +345,7 @@ export default function Payments() {
         />
 
         {/* Introduction to Payments - Nike-style Hero with Onboarding */}
-        <Card noPadding>
+        <Card>
           {/* Hero Section with Background Image and Dark Overlay */}
           <div style={{
             position: 'relative',
@@ -626,7 +626,7 @@ export default function Payments() {
 
       {/* Show error message if athlete check failed */}
       {athleteCheckError && (
-        <Card className="oa-mb-4" noPadding>
+        <Card className="oa-mb-4">
           <div className="oa-p-4" style={{ background: 'var(--oa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--oa-danger, #ef4444)' }}>
             <div className="oa-text-sm oa-font-medium" style={{ color: 'var(--oa-danger-dark, #991b1b)' }}>{athleteCheckError}</div>
           </div>
@@ -635,7 +635,7 @@ export default function Payments() {
 
       {/* Show error message if payments fetch failed */}
       {paymentsError && (
-        <Card className="oa-mb-4" noPadding>
+        <Card className="oa-mb-4">
           <div className="oa-p-4" style={{ background: 'var(--oa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--oa-danger, #ef4444)' }}>
             <div className="oa-text-sm oa-font-medium" style={{ color: 'var(--oa-danger-dark, #991b1b)' }}>{paymentsError}</div>
           </div>
@@ -644,7 +644,7 @@ export default function Payments() {
 
       {/* Show info message when no athletes with guardians found */}
       {hasAthletes === false && !athleteCheckError && (
-        <Card className="oa-mb-4" noPadding>
+        <Card className="oa-mb-4">
           <div className="oa-p-4" style={{ background: 'var(--oa-info-bg, #eff6ff)', borderLeft: '4px solid var(--oa-info, #3b82f6)' }}>
             <div className="oa-text-sm oa-font-medium" style={{ color: 'var(--oa-info-dark, #1e40af)' }}>
                 No athletes with guardians found. To assign fees, athletes must have a guardian linked to them (the guardian is responsible for payment).
@@ -696,3 +696,4 @@ export default function Payments() {
     </div>
   )
 }
+

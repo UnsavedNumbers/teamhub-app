@@ -182,7 +182,7 @@ export default function Sports() {
             </EmptyState>
           </Card>
         ) : (
-          <Card className="oa-stacked-list" noPadding>
+          <Card className="oa-stacked-list">
             {sports.map((sport) => {
               const programCount = programCountBySport(sport.id)
 
@@ -285,3 +285,4 @@ export default function Sports() {
     </div>
   )
 }
+

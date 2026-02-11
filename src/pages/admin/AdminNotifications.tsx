@@ -372,7 +372,7 @@ export default function AdminNotifications() {
                                 return (
                                     <Card 
                                         key={notification.id} 
-                                        noPadding 
+                                        
                                         className={cn(
                                             'oa-group oa-transition-all oa-duration-200 oa-cursor-pointer hover:oa-shadow-lg hover:oa-translate-y-[-2px]',
                                             isUnread 
@@ -469,3 +469,4 @@ export default function AdminNotifications() {
     </div>
   )
 }
+

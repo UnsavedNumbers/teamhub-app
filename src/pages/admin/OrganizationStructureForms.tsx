@@ -1005,7 +1005,7 @@ export default function OrganizationStructureForms() {
       ) : null}
 
       {actionError && (
-        <Card className="oa-mb-4" noPadding>
+        <Card className="oa-mb-4">
           <div className="oa-alert-card oa-alert-card--error">
             <div className="oa-body-m oa-text-danger">{actionError}</div>
           </div>
@@ -1013,7 +1013,7 @@ export default function OrganizationStructureForms() {
       )}
 
       {loadError && (
-        <Card className="oa-mb-4" noPadding>
+        <Card className="oa-mb-4">
           <div className="oa-alert-card oa-alert-card--error">
             <div className="oa-body-m oa-text-danger">{loadError}</div>
           </div>
@@ -1873,15 +1873,15 @@ export default function OrganizationStructureForms() {
               <DatePicker
                 label={t('admin.structureForms.fields.seasonStart.label')}
                 value={seasonForm.startDate}
-                onChange={(value) => setSeasonForm((prev) => ({ ...prev, startDate: value }))}
+                onChange={(value) => setSeasonForm((prev) => ({ ...prev, startDate: value.target.value }))}
                 required
                 error={seasonStartError}
               />
               <DatePicker
                 label={t('admin.structureForms.fields.seasonEnd.label')}
                 value={seasonForm.endDate}
-                onChange={(value) => setSeasonForm((prev) => ({ ...prev, endDate: value }))}
-                minValue={seasonForm.startDate}
+                onChange={(value) => setSeasonForm((prev) => ({ ...prev, endDate: value.target.value }))}
+                min={seasonForm.startDate}
                 required
                 error={seasonEndError || seasonRangeError}
               />
@@ -1993,3 +1993,4 @@ export default function OrganizationStructureForms() {
     </div>
   )
 }
+
