@@ -5,7 +5,6 @@
  */
 
 import type React from 'react'
-import { cn } from '../../utils/cn'
 
 export interface SwitchProps {
   checked: boolean
@@ -25,41 +24,38 @@ export function Switch({
   style,
 }: SwitchProps) {
   return (
-    <div className={className} style={style}>
-      <label
-        className={cn(
-          'pa-inline-flex',
-          'pa-items-center',
-          'pa-gap-2',
-          disabled ? 'pa-cursor-not-allowed' : 'pa-cursor-pointer',
-          'pa-select-none'
-        )}
-      >
-        <span className={cn('pa-toggle', disabled && 'opacity-50')}>
-          <input
-            type="checkbox"
-            className={cn('pa-toggle-input', disabled ? 'pa-cursor-not-allowed' : 'pa-cursor-pointer')}
-            checked={checked}
-            disabled={disabled}
-            onChange={(e) => onCheckedChange(e.target.checked)}
-          />
-          <span className="pa-toggle-track" />
-          <span className="pa-toggle-thumb" />
-        </span>
-
-        {label && (
-          <span
-            className={cn(
-              'pa-label',
-              'pa-font-xs',
-              'pa-font-semibold',
-              disabled ? 'pa-text-muted' : 'pa-text-primary'
-            )}
-          >
-            {label}
-          </span>
-        )}
+    <div 
+      className={className} 
+      style={{ 
+        display: 'inline-flex', 
+        alignItems: 'center', 
+        gap: 'var(--pa-space-3)',
+        ...style 
+      }}
+    >
+      <label className="pa-toggle" style={{ opacity: disabled ? 0.5 : 1 }}>
+        <input
+          type="checkbox"
+          className="pa-toggle-input"
+          checked={checked}
+          disabled={disabled}
+          onChange={(e) => onCheckedChange(e.target.checked)}
+          style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
+        />
+        <div className="pa-toggle-track" />
+        <div className="pa-toggle-thumb" />
       </label>
+
+      {label && (
+        <span
+          className="pa-body-m"
+          style={{
+            color: disabled ? 'var(--pa-text-muted)' : undefined,
+          }}
+        >
+          {label}
+        </span>
+      )}
     </div>
   )
 }

@@ -12,11 +12,12 @@ import { USE_FAKE_DATA } from '../../data/config'
 import { getSports, deleteSport } from '../../data/services/sportsService'
 import { getPrograms } from '../../data/services/sportsService'
 import type { Sport } from '../../data/types/organization'
-import { AdminPageHeader, ConfirmDialog, Button, Card, EmptyState, Badge, InlineNotice } from '../../components/platformAdmin'
+import { AdminPageHeader, ConfirmDialog, Button, Card, EmptyState, InlineNotice } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { Tooltip } from '../../components/admin/Tooltip'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 import './Sports.css'
 
 export default function Sports() {
@@ -114,15 +115,15 @@ export default function Sports() {
 
   if (loading) {
     return (
-      <div className="pa-root sports-page">
-        <div className="sports-skeleton pa-skeleton pa-mb-8" style={{ width: '40%', height: '40px' }} />
-        <div className="sports-skeleton pa-skeleton" style={{ width: '100%', height: '300px' }} />
+      <div className="oa-root sports-page">
+        <div className="sports-skeleton oa-skeleton oa-mb-8" style={{ width: '40%', height: '40px' }} />
+        <div className="sports-skeleton oa-skeleton" style={{ width: '100%', height: '300px' }} />
       </div>
     )
   }
 
   return (
-    <div className="pa-root sports-page">
+    <div className="oa-root sports-page">
       <OfflineBanner />
       <AdminPageHeader
         title="Sports"
@@ -149,7 +150,7 @@ export default function Sports() {
           tone="success"
           title={successMessage}
           onClose={() => setSuccessMessage(null)}
-          className="pa-mb-4"
+          className="oa-mb-4"
         />
       )}
 
@@ -158,11 +159,11 @@ export default function Sports() {
           tone="error"
           title={actionError}
           onClose={() => setActionError(null)}
-          className="pa-mb-4"
+          className="oa-mb-4"
         />
       )}
 
-      <div className="pa-flex pa-flex-col pa-gap-4">
+      <div className="oa-flex oa-flex-col oa-gap-4">
         {sports.length === 0 ? (
           <Card>
             <EmptyState
@@ -181,18 +182,18 @@ export default function Sports() {
             </EmptyState>
           </Card>
         ) : (
-          <Card className="pa-stacked-list" noPadding>
+          <Card className="oa-stacked-list">
             {sports.map((sport) => {
               const programCount = programCountBySport(sport.id)
 
               return (
-                <div key={sport.id} className="pa-stacked-list-row sports-list-row">
-                  <div className="pa-stacked-list-row-content">
-                    <div className="pa-flex-1">
+                <div key={sport.id} className="oa-stacked-list-row sports-list-row">
+                  <div className="oa-stacked-list-row-content">
+                    <div className="oa-flex-1">
                       <span
                         role="button"
                         tabIndex={0}
-                        className="pa-stacked-list-row-title sports-sport-name pa-cursor-pointer hover:pa-underline pa-block pa-mb-1"
+                        className="oa-stacked-list-row-title sports-sport-name oa-cursor-pointer hover:oa-underline oa-block oa-mb-1"
                         onClick={() => navigate(getLink('admin.sports.detail', { sport_slug: sport.slug || sport.id }))}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
@@ -203,15 +204,12 @@ export default function Sports() {
                       >
                         {sport.name}
                       </span>
-                      <div className="pa-flex pa-items-center pa-gap-2">
-                        <Badge
-                          variant="neutral"
-                          role="button"
-                          tabIndex={0}
-                          className="pa-uppercase pa-text-[10px] pa-font-bold pa-cursor-pointer"
-                          style={{ padding: '2px 6px' }}
+                      <div className="oa-flex oa-items-center oa-gap-2">
+                        <button
+                          type="button"
+                          className="oa-badge oa-badge--neutral oa-uppercase oa-text-[10px] oa-font-bold oa-cursor-pointer oa-px-2 oa-py-0.5"
                           onClick={() => navigate(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sport.id}`)}
-                          onKeyDown={(e) => {
+                          onKeyDown={(e: any) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault()
                               navigate(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sport.id}`)
@@ -219,11 +217,11 @@ export default function Sports() {
                           }}
                         >
                           {programCount} {programCount === 1 ? 'PROGRAM' : 'PROGRAMS'}
-                        </Badge>
+                        </button>
                       </div>
                     </div>
 
-                    <div className="pa-stacked-list-row-actions">
+                    <div className="oa-stacked-list-row-actions">
                       <Button
                         variant="secondary"
                         size="dense"
@@ -284,3 +282,4 @@ export default function Sports() {
     </div>
   )
 }
+

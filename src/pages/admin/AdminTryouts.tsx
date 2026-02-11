@@ -8,10 +8,11 @@ import type { Tryout } from '../../data/services/tryoutsService'
 import { 
   AdminPageHeader, 
   Button, 
-  PlatformDataTable, 
   Badge,
-  type ColumnConfig 
-} from '../../components/platformAdmin'
+} from '../../components/admin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
+import '../../styles/orgAdmin.css'
 
 export default function AdminTryouts() {
   const [tryouts, setTryouts] = useState<Tryout[]>([])
@@ -36,7 +37,7 @@ export default function AdminTryouts() {
   }, [isReady, currentOrganization, fetchTryouts])
 
   const columns: ColumnConfig<Tryout>[] = [
-    { id: 'title', label: 'Title', render: (row) => <span className="pa-body-m" style={{fontWeight:600}}>{row.title}</span> },
+    { id: 'title', label: 'Title', render: (row) => <span className="oa-body-m" style={{fontWeight:600}}>{row.title}</span> },
     { id: 'tryout_date', label: 'Date', render: (row) => row.tryout_date ? new Date(row.tryout_date).toLocaleDateString() : 'TBD' },
     { id: 'age_group', label: 'Age Group' },
     { id: 'status', label: 'Status', render: (row) => <Badge variant={row.status === 'open' ? 'success' : 'neutral'}>{row.status.toUpperCase()}</Badge> },
@@ -53,7 +54,7 @@ export default function AdminTryouts() {
   ]
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title={t('admin.tryouts.title')}
         subtitle={t('admin.tryouts.subtitle')}
@@ -64,7 +65,7 @@ export default function AdminTryouts() {
           </Button>
         }
       />
-      <PlatformDataTable
+      <OrgDataTable
         columns={columns}
         rows={tryouts}
         loading={loading}

@@ -53,6 +53,71 @@ interface MuxWebhookEvent {
   }
 }
 
+type EventActorRole = "platform_admin" | "org_admin" | "coach" | "parent" | "system"
+
+function mapMemberRoleToEventActorRole(role: string | null | undefined): EventActorRole {
+  if (role === "org_admin") return "org_admin"
+  if (role === "coach" || role === "staff") return "coach"
+  return "parent"
+}
+
+function parseActorRoleHint(value: unknown): EventActorRole | null {
+  if (value === "platform_admin" || value === "org_admin" || value === "coach" || value === "parent" || value === "system") {
+    return value
+  }
+  return null
+}
+
+async function resolveActorRole(
+  supabase: ReturnType<typeof createClient>,
+  userId: string | null | undefined,
+  orgId: string | null | undefined
+): Promise<EventActorRole> {
+  if (!userId || !orgId) return "system"
+  const { data } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("org_id", orgId)
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .maybeSingle()
+  return data?.role ? mapMemberRoleToEventActorRole(data.role) : "system"
+}
+
+async function logVideoLifecycleEvent(
+  supabase: ReturnType<typeof createClient>,
+  eventType: "VIDEO_UPLOAD_COMPLETED" | "VIDEO_UPLOAD_FAILED" | "VIDEO_UPLOAD_CANCELLED",
+  args: {
+    videoId: string
+    orgId?: string | null
+    actorUserId?: string | null
+    actorRoleHint?: EventActorRole | null
+    metadata?: Record<string, unknown>
+  }
+): Promise<void> {
+  try {
+    const actorRole = args.actorRoleHint ?? await resolveActorRole(supabase, args.actorUserId, args.orgId)
+    const { error } = await supabase.rpc("log_event", {
+      p_category: "SYSTEM",
+      p_event_type: eventType,
+      p_actor_user_id: args.actorUserId || null,
+      p_actor_role: actorRole,
+      p_org_id: args.orgId || null,
+      p_target_entity_type: "video",
+      p_target_entity_id: args.videoId,
+      p_metadata: {
+        ...(args.metadata || {}),
+        source: "mux-webhook",
+      },
+    })
+    if (error) {
+      console.error(`Failed to log ${eventType} event:`, error)
+    }
+  } catch (err) {
+    console.error(`Failed to log ${eventType} event:`, err)
+  }
+}
+
 /**
  * Verify Mux webhook signature
  * Mux uses HMAC-SHA256 for signature verification
@@ -195,6 +260,22 @@ async function handleAssetReady(data: any, supabase: ReturnType<typeof createCli
     console.error("Failed to update video to ready:", updateError)
     throw updateError
   }
+
+  await logVideoLifecycleEvent(supabase, "VIDEO_UPLOAD_COMPLETED", {
+    videoId: video.id,
+    orgId: video.org_id,
+    actorUserId: video.uploaded_by,
+    actorRoleHint: parseActorRoleHint(video.passthrough?.uploader_actor_role),
+    metadata: {
+      mux_asset_id: assetId,
+      mux_playback_id: playbackId,
+      duration_seconds: duration ?? null,
+      resolution_tier: resolutionTier ?? null,
+      max_stored_resolution: maxStoredResolution ?? null,
+      max_stored_frame_rate: maxStoredFrameRate ?? null,
+      status: "ready",
+    },
+  })
   
   console.log(`Video ${video.id} is now ready for playback`)
 }
@@ -210,6 +291,15 @@ async function handleAssetErrored(data: any, supabase: ReturnType<typeof createC
   
   console.error(`Asset ${assetId} errored:`, errors)
   
+  const { data: affectedVideos, error: selectError } = await supabase
+    .from("videos")
+    .select("id, org_id, uploaded_by, passthrough")
+    .eq("mux_asset_id", assetId)
+
+  if (selectError) {
+    console.error("Failed to load videos for errored asset:", selectError)
+  }
+
   const { error } = await supabase
     .from("videos")
     .update({
@@ -224,6 +314,23 @@ async function handleAssetErrored(data: any, supabase: ReturnType<typeof createC
     console.error("Failed to update video to errored:", error)
     throw error
   }
+
+  if (affectedVideos && affectedVideos.length > 0) {
+    for (const video of affectedVideos) {
+      await logVideoLifecycleEvent(supabase, "VIDEO_UPLOAD_FAILED", {
+        videoId: video.id,
+        orgId: video.org_id,
+        actorUserId: video.uploaded_by,
+        actorRoleHint: parseActorRoleHint(video.passthrough?.uploader_actor_role),
+        metadata: {
+          mux_asset_id: assetId,
+          error_type: errorType,
+          error_messages: errorMessages,
+          status: "errored",
+        },
+      })
+    }
+  }
 }
 
 /**
@@ -237,6 +344,15 @@ async function handleUploadErrored(data: any, supabase: ReturnType<typeof create
   
   console.error(`Upload ${uploadId} errored:`, error)
   
+  const { data: affectedVideos, error: selectError } = await supabase
+    .from("videos")
+    .select("id, org_id, uploaded_by, passthrough")
+    .eq("mux_upload_id", uploadId)
+
+  if (selectError) {
+    console.error("Failed to load videos for errored upload:", selectError)
+  }
+
   const { error: dbError } = await supabase
     .from("videos")
     .update({
@@ -250,6 +366,23 @@ async function handleUploadErrored(data: any, supabase: ReturnType<typeof create
     console.error("Failed to update video to errored:", dbError)
     throw dbError
   }
+
+  if (affectedVideos && affectedVideos.length > 0) {
+    for (const video of affectedVideos) {
+      await logVideoLifecycleEvent(supabase, "VIDEO_UPLOAD_FAILED", {
+        videoId: video.id,
+        orgId: video.org_id,
+        actorUserId: video.uploaded_by,
+        actorRoleHint: parseActorRoleHint(video.passthrough?.uploader_actor_role),
+        metadata: {
+          mux_upload_id: uploadId,
+          error_type: errorType,
+          error_message: errorMessage,
+          status: "errored",
+        },
+      })
+    }
+  }
 }
 
 /**
@@ -260,6 +393,15 @@ async function handleUploadCancelled(data: any, supabase: ReturnType<typeof crea
   
   console.log(`Upload ${uploadId} was cancelled`)
   
+  const { data: affectedVideos, error: selectError } = await supabase
+    .from("videos")
+    .select("id, org_id, uploaded_by, passthrough")
+    .eq("mux_upload_id", uploadId)
+
+  if (selectError) {
+    console.error("Failed to load videos for cancelled upload:", selectError)
+  }
+
   const { error } = await supabase
     .from("videos")
     .update({
@@ -271,6 +413,21 @@ async function handleUploadCancelled(data: any, supabase: ReturnType<typeof crea
   if (error) {
     console.error("Failed to mark video as deleted:", error)
     throw error
+  }
+
+  if (affectedVideos && affectedVideos.length > 0) {
+    for (const video of affectedVideos) {
+      await logVideoLifecycleEvent(supabase, "VIDEO_UPLOAD_CANCELLED", {
+        videoId: video.id,
+        orgId: video.org_id,
+        actorUserId: video.uploaded_by,
+        actorRoleHint: parseActorRoleHint(video.passthrough?.uploader_actor_role),
+        metadata: {
+          mux_upload_id: uploadId,
+          status: "deleted",
+        },
+      })
+    }
   }
 }
 

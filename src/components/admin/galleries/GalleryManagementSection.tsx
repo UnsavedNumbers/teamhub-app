@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Badge, Button, Card, EmptyState, Modal } from '@/components/platformAdmin'
+import { Button, Card, EmptyState, Modal } from '@/components/platformAdmin'
 import {
   deleteGallery,
   getGalleriesForUser,
@@ -22,6 +22,8 @@ interface Props {
   orgId?: string
   title?: string
   allowCreate?: boolean
+  onGalleriesLoaded?: (galleries: Gallery[]) => void
+  onLoadingChange?: (loading: boolean) => void
 }
 
 export function GalleryManagementSection({
@@ -30,6 +32,8 @@ export function GalleryManagementSection({
   orgId,
   title = 'Galleries',
   allowCreate = true,
+  onGalleriesLoaded,
+  onLoadingChange,
 }: Props) {
   const { context } = useUserContext()
   const { t } = useI18n()
@@ -45,24 +49,30 @@ export function GalleryManagementSection({
   const load = async () => {
     if (!context) return
     setLoading(true)
-    const { data, error } = await getGalleriesForUser(context, {
+    onLoadingChange?.(true)
+    try {
+      const { data, error } = await getGalleriesForUser(context, {
       org_id: orgId || context.orgId,
       gallery_type: galleryTypeFilter,
       entity_id: entityId,
     })
     if (error) {
       showError(error.message)
+        return
+      }
+      const fetchedGalleries = data || []
+      setGalleries(fetchedGalleries)
+      onGalleriesLoaded?.(fetchedGalleries)
+    } finally {
       setLoading(false)
-      return
+      onLoadingChange?.(false)
     }
-    setGalleries(data || [])
-    setLoading(false)
   }
 
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityId, entityType, orgId])
+  }, [entityId, entityType, orgId, onGalleriesLoaded, onLoadingChange])
 
   const handleDelete = async (galleryId: string) => {
     if (USE_FAKE_DATA) {
@@ -100,52 +110,79 @@ export function GalleryManagementSection({
   }
 
   const renderGalleryCard = (gallery: Gallery) => (
-    <Card key={gallery.id} className="pa-card pa-flex pa-justify-between pa-items-center pa-gap-4">
-      <div className="pa-flex pa-gap-3 pa-items-center">
-        <div
-          className="pa-w-14 pa-h-14 pa-rounded-lg pa-bg-surface-muted pa-flex pa-items-center pa-justify-center pa-overflow-hidden"
-          style={{ border: '1px solid var(--pa-border-subtle)' }}
-        >
-          {gallery.cover_url ? (
-            <img src={gallery.cover_url} alt={gallery.name} className="pa-w-full pa-h-full pa-object-cover" />
-          ) : (
-            <span className="pa-text-muted pa-text-lg">📸</span>
-          )}
-        </div>
-        <div>
-          <div className="pa-flex pa-gap-2 pa-items-center">
-            <p className="pa-text-base pa-font-semibold pa-m-0">{gallery.name}</p>
-            {gallery.visibility && <Badge variant="info">{gallery.visibility}</Badge>}
+    <Card key={gallery.id} className="oa-gallery-card">
+      <div className="oa-gallery-card-image">
+        {gallery.cover_url ? (
+          <img
+            src={gallery.cover_url}
+            alt={gallery.name}
+            className="oa-gallery-card-img"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+            }}
+          />
+        ) : (
+          <div className="oa-gallery-card-placeholder">
+            <span className="material-symbols-outlined">photo_library</span>
           </div>
-          <p className="pa-text-sm pa-text-muted pa-m-0">
-            {t('photos.stats.photosCount', { count: gallery.photo_count ?? 0 })} • {new Date(gallery.created_at).toLocaleDateString()}
-          </p>
-          <p className="pa-text-xs pa-text-muted pa-m-0">
-            {t(`photos.galleryType.${gallery.gallery_type}` as any)}
-            {gallery.entity_id ? ` • ${gallery.entity_id.slice(0, 8)}` : ''}
+        )}
+        <div className="oa-gallery-card-overlay" />
+        {gallery.visibility === 'public' && (
+          <div className="oa-gallery-card-badge">
+            <span className="material-symbols-outlined">public</span>
+            <span>Public</span>
+          </div>
+        )}
+      </div>
+
+      <div className="oa-gallery-card-body">
+        <div className="oa-gallery-card-header">
+          <h3 className="oa-gallery-card-title">{gallery.name}</h3>
+          <p className="oa-gallery-card-meta">
+            {(gallery.photo_count ?? 0) === 0
+              ? t('photos.addFirstPhoto')
+              : `${gallery.photo_count} ${gallery.photo_count === 1 ? t('photos.photo') : t('photos.photos')}`
+            } • {new Date(gallery.created_at).toLocaleDateString()}
           </p>
         </div>
-      </div>
-      <div className="pa-flex pa-gap-2">
-        <Button variant="secondary" onClick={() => navigate(getLink('admin.photos.detail', { id: gallery.id }))}>
-          {t('photos.viewGallery')}
-        </Button>
-        <Button variant="ghost" onClick={() => handleEditClick(gallery)}>
-          {t('common.edit')}
-        </Button>
-        <Button variant="danger" onClick={() => handleDelete(gallery.id)}>
-          {t('common.delete')}
-        </Button>
+
+        <div className="oa-gallery-card-footer">
+          <div className="oa-gallery-card-actions">
+            <button
+              className="oa-gallery-card-icon-btn"
+              onClick={(e) => { e.stopPropagation(); handleEditClick(gallery) }}
+              title={t('common.edit')}
+            >
+              <span className="material-symbols-outlined">edit</span>
+            </button>
+            {!gallery.is_system_generated && (
+              <button
+                className="oa-gallery-card-icon-btn oa-gallery-card-icon-btn--danger"
+                onClick={(e) => { e.stopPropagation(); handleDelete(gallery.id) }}
+                title={t('common.delete')}
+              >
+                <span className="material-symbols-outlined">delete</span>
+              </button>
+            )}
+          </div>
+          <button
+            className="oa-gallery-card-browse"
+            onClick={() => navigate(getLink('admin.photos.detail', { id: gallery.id }))}
+          >
+            {t('photos.viewGallery')}
+            <span className="material-symbols-outlined">arrow_forward</span>
+          </button>
+        </div>
       </div>
     </Card>
   )
 
   return (
-    <div className="pa-space-y-4">
-      <div className="pa-flex pa-justify-between pa-items-center">
+    <div className="oa-gallery-section">
+      <div className="oa-gallery-section-header">
         <div>
-          <h3 className="pa-text-lg pa-font-semibold">{title}</h3>
-          <p className="pa-text-sm pa-text-muted">
+          <h3 className="oa-gallery-section-title">{title}</h3>
+          <p className="oa-gallery-section-subtitle">
             {entityType 
               ? `${t('photos.title')} ${t('photos.linkedTo')} ${t(`photos.galleryType.${entityType}` as any).toLowerCase()}`
               : t('photos.subtitle')}
@@ -159,7 +196,11 @@ export function GalleryManagementSection({
       </div>
 
       {loading ? (
-        <Card className="pa-card pa-h-32 pa-animate-pulse" />
+        <div className="oa-gallery-grid">
+          <Card className="oa-gallery-card oa-gallery-card--loading" />
+          <Card className="oa-gallery-card oa-gallery-card--loading" />
+          <Card className="oa-gallery-card oa-gallery-card--loading" />
+        </div>
       ) : galleries.length === 0 ? (
         <EmptyState
           title={t('photos.empty.title')}
@@ -170,7 +211,7 @@ export function GalleryManagementSection({
           } : undefined}
         />
       ) : (
-        <div className="pa-space-y-3">{galleries.map(renderGalleryCard)}</div>
+        <div className="oa-gallery-grid">{galleries.map(renderGalleryCard)}</div>
       )}
 
       {showCreate && (

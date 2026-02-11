@@ -54,7 +54,7 @@ interface PortalNavProps {
  */
 export default function PortalNav({ forceRole }: PortalNavProps) {
   const { hasAnyRole, isOrgAdmin } = useAuth()
-  const { currentOrganization } = useOrganization()
+  const { currentOrganization, isLoading: isOrgLoading } = useOrganization()
   const { resolvedTheme } = useTheme()
   const t = useT()
   const location = useLocation()
@@ -71,21 +71,21 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: '',
           items: [
-            { routeKey: 'admin.dashboard', text: 'Admin Dashboard', icon: 'dashboard', path: '/admin', description: 'Organization overview' },
+            { routeKey: 'admin.dashboard', text: 'Admin Dashboard', icon: 'dashboard', path: getLink('admin.dashboard'), description: 'Organization overview' },
           ],
         },
       ],
     },
     {
       label: 'Organization',
-      route: '/admin/organization',
+      route: getLink('admin.organization.base'),
       groups: [
         {
           label: 'Configuration',
           items: [
-            { routeKey: 'admin.organization.settings', text: 'Organization Settings', icon: 'settings', path: '/admin/organization', description: 'Organization info' },
-            { routeKey: 'admin.organization.users', text: 'Users', icon: 'admin_panel_settings', path: '/admin/organization/users', description: 'Access and roles' },
-            { routeKey: 'admin.organization.billing', text: 'Billing', icon: 'credit_card', path: '/admin/organization/billing', description: 'Plan and billing' },
+            { routeKey: 'admin.organization.base', text: 'Organization Settings', icon: 'settings', path: getLink('admin.organization.base'), description: 'Organization info' },
+            { routeKey: 'admin.organization.users', text: 'Users', icon: 'admin_panel_settings', path: getLink('admin.organization.users'), description: 'Access and roles' },
+            { routeKey: 'admin.organization.billing', text: 'Billing', icon: 'credit_card', path: getLink('admin.organization.billing'), description: 'Plan and billing' },
           ],
         },
       ],
@@ -98,16 +98,16 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
           label: 'Core',
           items: [
             { routeKey: 'admin.teams.list', text: 'Teams', icon: 'groups', path: getLink('admin.teams.list'), description: 'Teams and rosters' },
-            { routeKey: 'admin.events.list', text: 'Events', icon: 'event', path: '/admin/events', description: 'Schedule and calendar' },
-            { routeKey: 'admin.payments.list', text: 'Payments', icon: 'receipt_long', path: '/admin/payments', description: 'Fees and collections' },
-            { routeKey: 'admin.travel.list', text: 'Travel', icon: 'flight', path: '/admin/travel', description: 'Trip planning' },
+            { routeKey: 'admin.events.list', text: 'Events', icon: 'event', path: getLink('admin.events.list'), description: 'Schedule and calendar' },
+            { routeKey: 'admin.payments.list', text: 'Payments', icon: 'receipt_long', path: getLink('admin.payments.list'), description: 'Fees and collections' },
+            { routeKey: 'admin.travel.list', text: 'Travel', icon: 'flight', path: getLink('admin.travel.list'), description: 'Trip planning' },
           ],
         },
         {
           label: 'Programs',
           items: [
-            { routeKey: 'admin.tryouts.list', text: 'Tryouts', icon: 'emoji_events', path: '/admin/tryouts', description: 'Registration and evaluation' },
-            { routeKey: 'admin.uniforms.list', text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', description: 'Kits and gear' },
+            { routeKey: 'admin.tryouts.list', text: 'Tryouts', icon: 'emoji_events', path: getLink('admin.tryouts.list'), description: 'Registration and evaluation' },
+            { routeKey: 'admin.uniforms.list', text: 'Uniforms', icon: 'checkroom', path: getLink('admin.uniforms.list'), description: 'Kits and gear' },
           ],
         },
       ],
@@ -117,50 +117,50 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   const coachNavSections = useMemo(() => [
     {
       label: 'Dashboard',
-      route: '/portal/dashboard',
+      route: getLink('portal.dashboard'),
       groups: [
         {
           label: '',
           items: [
-            { routeKey: 'portal.dashboard', text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Today\'s overview' },
+            { routeKey: 'portal.dashboard', text: 'Dashboard', icon: 'dashboard', path: getLink('portal.dashboard'), description: 'Today\'s overview' },
           ],
         },
       ],
     },
     {
       label: 'My Athletes',
-      route: '/portal/athletes',
+      route: getLink('portal.athletes'),
       groups: [
             {
               label: 'My Athletes',
               items: [
-                { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', path: '/portal/athletes', description: 'Athlete profiles and information' },
-                { routeKey: 'portal.athletes.requestAttachment', text: 'Request Athlete Attachment', icon: 'person_add', path: '/portal/athletes/request-attachment', description: 'Request to attach to an existing athlete' },
+                { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', path: getLink('portal.athletes'), description: 'Athlete profiles and information' },
+                { routeKey: 'portal.requestAttachment', text: 'Request Athlete Attachment', icon: 'person_add', path: getLink('portal.requestAttachment'), description: 'Request to attach to an existing athlete' },
               ],
             },
       ],
     },
     {
       label: 'Schedule',
-      route: '/portal/calendar',
+      route: getLink('portal.calendar'),
       groups: [
         {
           label: 'Schedule',
           items: [
-            { routeKey: 'portal.calendar', text: 'Calendar', icon: 'calendar_month', path: '/portal/calendar', description: 'View schedule' },
+            { routeKey: 'portal.calendar', text: 'Calendar', icon: 'calendar_month', path: getLink('portal.calendar'), description: 'View schedule' },
           ],
         },
       ],
     },
     {
       label: 'Attendance',
-      route: '/portal/calendar',
+      route: getLink('portal.calendar'),
       groups: [
         {
           label: 'Tracking',
           items: [
-            { routeKey: 'portal.calendar', text: 'Take Attendance', icon: 'how_to_reg', path: '/portal/calendar', description: 'Use events to manage attendance', disabled: true },
-            { routeKey: 'portal.calendar', text: 'Attendance History', icon: 'history', path: '/portal/calendar', description: 'Use events to review attendance', disabled: true },
+            { routeKey: 'portal.calendar', text: 'Take Attendance', icon: 'how_to_reg', path: getLink('portal.calendar'), description: 'Use events to manage attendance', disabled: true },
+            { routeKey: 'portal.calendar', text: 'Attendance History', icon: 'history', path: getLink('portal.calendar'), description: 'Use events to review attendance', disabled: true },
           ],
         },
       ],
@@ -171,12 +171,12 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Additional',
           items: [
-            { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
-            { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip details' },
-            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Communications' },
-            { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', path: '/portal/photos', description: 'Team photos' },
-            { routeKey: 'portal.videos', text: 'Videos', icon: 'smart_display', path: '/portal/videos', description: 'Video library & feedback' },
-            { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
+            { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', path: getLink('portal.tryouts'), description: 'Tryout sessions' },
+            { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', path: getLink('portal.travel'), description: 'Trip details' },
+            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: getLink('portal.messages'), description: 'Communications' },
+            { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', path: getLink('portal.photos'), description: 'Team photos' },
+            { routeKey: 'portal.videos', text: 'Videos', icon: 'smart_display', path: getLink('portal.videos'), description: 'Video library & feedback' },
+            { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: getLink('portal.settings'), description: 'Preferences' },
           ],
         },
       ],
@@ -186,78 +186,78 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   const parentNavSections = useMemo(() => [
     {
       label: 'Dashboard',
-      route: '/portal/dashboard',
+      route: getLink('portal.dashboard'),
       groups: [
         {
           label: '',
           items: [
-            { routeKey: 'portal.dashboard', text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Daily overview' },
+            { routeKey: 'portal.dashboard', text: 'Dashboard', icon: 'dashboard', path: getLink('portal.dashboard'), description: 'Daily overview' },
           ],
         },
       ],
     },
     {
       label: 'My Events',
-      route: '/portal/calendar',
+      route: getLink('portal.calendar'),
       groups: [
         {
           label: 'My Events',
           items: [
-            { routeKey: 'portal.calendar', text: 'Events I\'m Attending', icon: 'calendar_month', path: '/portal/calendar', description: 'View upcoming events' },
-            { routeKey: 'portal.myTickets', text: 'My Tickets', icon: 'confirmation_number', path: '/account/tickets', description: 'Event tickets' },
-            { routeKey: 'portal.bookmarkedEvents', text: 'My Bookmarks', icon: 'bookmark', path: '/portal/bookmarks', description: 'Saved events' },
+            { routeKey: 'portal.calendar', text: 'Events I\'m Attending', icon: 'calendar_month', path: getLink('portal.calendar'), description: 'View upcoming events' },
+            { routeKey: 'portal.myTickets', text: 'My Tickets', icon: 'confirmation_number', path: getLink('portal.myTickets'), description: 'Event tickets' },
+            { routeKey: 'portal.bookmarkedEvents', text: 'My Bookmarks', icon: 'bookmark', path: getLink('portal.bookmarkedEvents'), description: 'Saved events' },
           ],
         },
       ],
     },
     {
       label: 'My Teams',
-      route: '/portal/athletes',
+      route: getLink('portal.athletes'),
       groups: [
         {
           label: 'My Teams',
           items: [
-            { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', path: '/portal/athletes', description: 'Athletes and teams I follow' },
-            { routeKey: 'portal.requestAttachment', text: 'Request Athlete Attachment', icon: 'person_add', path: '/portal/athletes/request-attachment', description: 'Attach to an existing athlete' },
-            { routeKey: 'portal.uniforms', text: 'Uniform Orders', icon: 'checkroom', path: '/portal/uniforms', description: 'Gear and uniforms' },
+            { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', path: getLink('portal.athletes'), description: 'Athletes and teams I follow' },
+            { routeKey: 'portal.requestAttachment', text: 'Request Athlete Attachment', icon: 'person_add', path: getLink('portal.requestAttachment'), description: 'Attach to an existing athlete' },
+            { routeKey: 'portal.uniforms', text: 'Uniform Orders', icon: 'checkroom', path: getLink('portal.uniforms'), description: 'Gear and uniforms' },
           ],
         },
       ],
     },
     {
       label: 'Fees',
-      route: '/portal/payments',
+      route: getLink('portal.payments'),
       groups: [
         {
           label: '',
           items: [
-            { routeKey: 'portal.payments', text: 'Fees', icon: 'receipt_long', path: '/portal/payments', description: 'Outstanding fees and payment history' },
+            { routeKey: 'portal.payments', text: 'Fees', icon: 'receipt_long', path: getLink('portal.payments'), description: 'Outstanding fees and payment history' },
           ],
         },
       ],
     },
     {
       label: 'Messages',
-      route: '/portal/messages',
+      route: getLink('portal.messages'),
       groups: [
         {
           label: 'Messages',
           items: [
-            { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', path: '/portal/messages', description: 'Team chat and announcements' },
+            { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', path: getLink('portal.messages'), description: 'Team chat and announcements' },
           ],
         },
       ],
     },
     {
       label: 'Organizations',
-      route: '/portal/following',
+      route: getLink('portal.following'),
       groups: [
         {
           label: 'Organizations',
           items: [
-            { routeKey: 'portal.following', text: 'Followed Organizations', icon: 'favorite', path: '/portal/following', description: 'Organizations I follow' },
-            { routeKey: 'portal.discoverOrgs', text: 'Browse Organizations', icon: 'explore', path: '/portal/discover', description: 'Discover new teams' },
-            { routeKey: 'portal.join', text: 'Join a Team', icon: 'group_add', path: '/portal/join', description: 'Enter an invite code' },
+            { routeKey: 'portal.following', text: 'Followed Organizations', icon: 'favorite', path: getLink('portal.following'), description: 'Organizations I follow' },
+            { routeKey: 'portal.discoverOrgs', text: 'Browse Organizations', icon: 'explore', path: getLink('portal.discoverOrgs'), description: 'Discover new teams' },
+            { routeKey: 'portal.join', text: 'Join a Team', icon: 'group_add', path: getLink('portal.join'), description: 'Enter an invite code' },
           ],
         },
       ],
@@ -268,15 +268,15 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Media & Programs',
           items: [
-            { routeKey: 'portal.photos', text: 'Photos & Videos', icon: 'photo_library', path: '/portal/photos', description: 'Team galleries' },
-            { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
+            { routeKey: 'portal.photos', text: 'Photos & Videos', icon: 'photo_library', path: getLink('portal.photos'), description: 'Team galleries' },
+            { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', path: getLink('portal.tryouts'), description: 'Tryout sessions' },
           ],
         },
         {
           label: 'Account',
           items: [
-            { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Account preferences' },
-            { routeKey: 'portal.help', text: 'Help & Support', icon: 'help', path: '/portal/help', description: 'Get assistance' },
+            { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: getLink('portal.settings'), description: 'Account preferences' },
+            { routeKey: 'portal.help', text: 'Help & Support', icon: 'help', path: getLink('portal.help'), description: 'Get assistance' },
           ],
         },
       ],
@@ -310,8 +310,10 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
       ? coachNavSections 
       : parentNavSections
 
-  // Apply feature gate filtering
-  const { filteredSections: navSections } = useFilteredNavigation(rawNavSections)
+  // Apply feature gate filtering - wait for org context to avoid warnings
+  const { filteredSections: navSections } = useFilteredNavigation(
+    isOrgLoading ? [] : rawNavSections
+  )
 
   // Logo based on theme
   // Light mode needs dark text logo, dark mode needs light text logo

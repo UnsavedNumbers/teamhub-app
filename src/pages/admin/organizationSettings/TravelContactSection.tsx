@@ -144,32 +144,32 @@ export default function TravelContactSection() {
   }
 
   if (loading) {
-      return <div className="pa-p-8 pa-text-center">Loading travel contacts...</div>
+      return <div className="oa-p-8 oa-text-center">Loading travel contacts...</div>
   }
 
   return (
     <div className="oa-contact-section">
-      <Card title="Organization Travel Contacts" className="pa-mb-6">
-        <p className="pa-text-sm pa-text-muted pa-mb-6">
+      <Card title="Organization Travel Contacts" className="oa-mb-6">
+        <p className="oa-text-sm oa-text-muted oa-mb-6">
             Manage fallback contacts for travel plans. Travel plans will use these contacts unless specific overrides are set on the plan itself.
         </p>
         
-        <div className="oa-category-list pa-flex pa-flex-col pa-gap-6">
+        <div className="oa-category-list oa-flex oa-flex-col oa-gap-6">
             {fields.map((field, index) => {
                 const label = CATEGORY_LABELS[field.category]
                 const desc = CATEGORY_DESCRIPTIONS[field.category]
                 
                 return (
-                    <div key={field.id} className="oa-category-row pa-p-4 pa-border pa-rounded-lg pa-bg-gray-50 dark:pa-bg-gray-900/50">
-                        <div className="pa-mb-3">
-                            <h4 className="pa-h4 pa-mb-1 pa-flex pa-items-center pa-gap-2">
+                    <div key={field.id} className="oa-category-row oa-p-4 oa-border oa-rounded-lg oa-bg-gray-50 dark:oa-bg-gray-900/50">
+                        <div className="oa-mb-3">
+                            <h4 className="oa-h4 oa-mb-1 oa-flex oa-items-center oa-gap-2">
                                 {label}
                                 {field.category === 'default' && <Badge variant="primary" size="small">Fallback</Badge>}
                             </h4>
-                            <p className="pa-text-xs pa-text-muted">{desc}</p>
+                            <p className="oa-text-xs oa-text-muted">{desc}</p>
                         </div>
 
-                        <div className="oa-contact-form-grid pa-grid pa-grid-cols-1 md:pa-grid-cols-2 pa-gap-4">
+                        <div className="oa-contact-form-grid oa-grid oa-grid-cols-1 md:oa-grid-cols-2 oa-gap-4">
                             <Controller
                                 control={control}
                                 name={`contacts.${index}.first_name`}

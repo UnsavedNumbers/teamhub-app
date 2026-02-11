@@ -12,6 +12,7 @@ import { useOrganization } from '@/contexts/OrganizationContext'
 import { supabase } from '@/lib/supabase'
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { Badge } from '@/components/platformAdmin'
+import '../../styles/orgAdmin.css'
 
 interface TicketStats {
   total_tickets: number
@@ -200,7 +201,7 @@ export default function ValidationDashboard() {
 
   if (!eventId) {
     return (
-      <div className="pa-page-container">
+      <div className="oa-page-container">
         <AdminPageHeader title={t('ticketing.dashboard.title')} />
         <div className="text-center py-12">
           <p className="text-gray-500">{t('common.error.label')}: Event ID required</p>
@@ -214,7 +215,7 @@ export default function ValidationDashboard() {
     : 0
 
   return (
-    <div className="pa-page-container">
+    <div className="oa-page-container">
       <AdminPageHeader
         title={t('ticketing.dashboard.title')}
         breadcrumbs={[

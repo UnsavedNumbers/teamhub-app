@@ -6,12 +6,13 @@ import { getEventAttendance, updateAttendance } from '../../data/services/attend
 import type { AttendanceRecord, AttendanceStatus } from '../../types/attendance'
 import {
   Card, 
-  PlatformDataTable, 
   Button,
   Badge,
-  type ColumnConfig 
-} from '../../components/platformAdmin'
+} from '../../components/admin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+import '../../styles/orgAdmin.css'
 
 export default function AttendanceRoster() {
   const { id } = useParams<{ id: string }>() // Route is events/:id/attendance, so param is :id? Wait App.tsx said :id
@@ -64,7 +65,7 @@ export default function AttendanceRoster() {
         id: 'status', 
         label: 'Status', 
         render: (row) => {
-            const variant = row.status === 'present' ? 'success' : row.status === 'absent' ? 'error' : row.status === 'late' ? 'warning' : 'neutral'
+            const variant = row.status === 'present' ? 'success' : row.status === 'absent' ? 'danger' : row.status === 'late' ? 'warning' : 'neutral'
             return <Badge variant={variant}>{row.status.toUpperCase()}</Badge> 
         }
     },
@@ -77,7 +78,7 @@ export default function AttendanceRoster() {
       id: 'actions', 
       label: 'Mark', 
       render: (row) => (
-        <div className="pa-flex pa-gap-2">
+        <div className="oa-flex oa-gap-2">
           <Button 
             size="compact" 
             variant={row.status === 'present' ? 'primary' : 'secondary'}
@@ -116,18 +117,18 @@ export default function AttendanceRoster() {
   ]
 
   return (
-    <div className="pa-root">
-      <div className="pa-flex pa-items-center pa-gap-4 pa-mb-6">
+    <div className="oa-root">
+      <div className="oa-flex oa-items-center oa-gap-4 oa-mb-6">
         <OrgAdminButton variant="primary" onClick={() => navigate('/admin/attendance')}>
            Back to Attendance
         </OrgAdminButton>
-        <div className="pa-flex-1">
-            <h1 className="pa-text-2xl pa-font-bold">Event Attendance</h1>
+        <div className="oa-flex-1">
+            <h1 className="oa-text-2xl oa-font-bold">Event Attendance</h1>
         </div>
       </div>
 
       <Card>
-        <PlatformDataTable
+        <OrgDataTable
           columns={columns}
           rows={records}
           loading={loading}

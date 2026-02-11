@@ -391,36 +391,36 @@ async function getOrgSuggestions(
   const results: SuggestedPerson[] = []
 
   try {
-    // Get athletes via families
-    const { data: families } = await supabase
-      .from('families')
-      .select('id')
-      .eq('org_id', orgId)
-      .limit(100)
+    // Use the RPC function that properly handles org-level athlete queries
+    const { data: athletes, error: athletesError } = await supabase
+      .rpc('get_athletes_with_guardian_status', {
+        p_org_id: orgId,
+        p_limit: limit + excludeIds.length, // Get extra to account for exclusions
+        p_offset: 0,
+      })
 
-    if (families && families.length > 0) {
-      const familyIds = families.map((f) => f.id)
+    if (athletesError) {
+      console.error('[taggingService] Error fetching athletes via RPC:', athletesError)
+      return []
+    }
 
-      let athleteQuery = supabase
-        .from('athletes')
-        .select('id, first_name, last_name')
-        .in('family_id', familyIds)
-        .order('first_name', { ascending: true })
-        .limit(limit)
+    if (athletes) {
+      for (const athlete of athletes) {
+        // Skip excluded athletes and soft-deleted athletes
+        if (excludeIds.includes(athlete.athlete_id) || athlete.deleted_at) {
+          continue
+        }
+        
+        results.push({
+          id: athlete.athlete_id,
+          first_name: athlete.first_name,
+          last_name: athlete.last_name,
+          source: 'athlete',
+        })
 
-      // Filter out already-tagged athletes
-      if (excludeIds.length > 0) {
-        athleteQuery = athleteQuery.not('id', 'in', `(${excludeIds.join(',')})`)
-      }
-
-      const { data: athletes } = await athleteQuery
-
-      if (athletes) {
-        for (const athlete of athletes) {
-          results.push({
-            ...athlete,
-            source: 'athlete',
-          })
+        // Stop if we've reached the limit
+        if (results.length >= limit) {
+          break
         }
       }
     }

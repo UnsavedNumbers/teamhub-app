@@ -9,11 +9,13 @@ import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getSeasons, deleteSeason, isSeasonEmpty } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, ConfirmDialog, EmptyState, Badge, PlatformDataTable, InlineNotice } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, ConfirmDialog, EmptyState, Badge, InlineNotice } from '../../components/admin'
+import OrgDataTable from '../../components/admin/OrgDataTable'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
-import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
+import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 export default function SeasonsManagement() {
   const { context, isReady } = useUserContext()
@@ -26,6 +28,7 @@ export default function SeasonsManagement() {
   const [seasonToDelete, setSeasonToDelete] = useState<Season | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  void deleteError
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const checkedSeasonIds = useRef<Set<string>>(new Set())
 
@@ -119,7 +122,7 @@ export default function SeasonsManagement() {
       label: 'Season Name',
       sortable: true,
       render: (row) => (
-        <div className="pa-font-bold pa-text-slate-900">
+        <div className="oa-font-bold oa-text-slate-900">
           {row.name}
         </div>
       )
@@ -127,14 +130,14 @@ export default function SeasonsManagement() {
     {
       id: 'term',
       label: 'Term',
-      render: () => <span className="pa-text-xs pa-text-slate-400 pa-font-medium">SYSTEM DEFAULT</span>
+      render: () => <span className="oa-text-xs oa-text-slate-400 oa-font-medium">SYSTEM DEFAULT</span>
     },
     {
       id: 'start_date',
       label: 'Start Date',
       sortable: true,
       render: (row) => (
-        <span className="pa-text-sm pa-text-slate-600">
+        <span className="oa-text-sm oa-text-slate-600">
           {row.start_date ? new Date(row.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
         </span>
       )
@@ -144,7 +147,7 @@ export default function SeasonsManagement() {
       label: 'End Date',
       sortable: true,
       render: (row) => (
-        <span className="pa-text-sm pa-text-slate-600">
+        <span className="oa-text-sm oa-text-slate-600">
           {row.end_date ? new Date(row.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
         </span>
       )
@@ -164,7 +167,7 @@ export default function SeasonsManagement() {
       label: 'Actions',
       align: 'right',
       render: (row) => (
-        <div className="pa-flex pa-items-center pa-justify-end pa-gap-2">
+        <div className="oa-flex oa-items-center oa-justify-end oa-gap-2">
           <Button 
             variant="ghost" 
             size="dense" 
@@ -183,7 +186,7 @@ export default function SeasonsManagement() {
               icon="delete"
               disabled={deleting}
               onClick={(e: React.MouseEvent) => handleDeleteClick(row, e)}
-              className="pa-text-danger hover:pa-bg-danger-surface"
+              className="oa-text-danger hover:oa-bg-danger-surface"
               title="Delete empty season"
             >
               Delete
@@ -196,15 +199,15 @@ export default function SeasonsManagement() {
 
   if (loading) {
     return (
-      <div className="pa-root">
-        <div className="pa-skeleton pa-mb-8" style={{ width: '40%', height: '40px' }} />
-        <div className="pa-skeleton" style={{ width: '100%', height: '400px' }} />
+      <div className="oa-root">
+        <div className="oa-skeleton oa-mb-8" style={{ width: '40%', height: '40px' }} />
+        <div className="oa-skeleton" style={{ width: '100%', height: '400px' }} />
       </div>
     )
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <OfflineBanner />
       <AdminPageHeader
         title="Seasons"
@@ -233,7 +236,7 @@ export default function SeasonsManagement() {
           title="Unable to load seasons"
           message={error}
           onClose={() => setError(null)}
-          className="pa-mb-6"
+          className="oa-mb-6"
         />
       )}
 
@@ -242,7 +245,7 @@ export default function SeasonsManagement() {
           tone="success"
           title={successMessage}
           onClose={() => setSuccessMessage(null)}
-          className="pa-mb-6"
+          className="oa-mb-6"
         />
       )}
 
@@ -263,7 +266,7 @@ export default function SeasonsManagement() {
           </EmptyState>
         </Card>
       ) : (
-        <PlatformDataTable
+        <OrgDataTable
            rows={seasons}
            columns={columns}
            onRowClick={(row) => navigate(getLink('admin.seasons.detail', { id: row.id }))}
@@ -285,8 +288,6 @@ export default function SeasonsManagement() {
         }
         confirmLabel="Delete"
         variant="danger"
-        loading={deleting}
-        error={deleteError}
         onConfirm={handleConfirmDelete}
         onCancel={() => {
           setSeasonToDelete(null)

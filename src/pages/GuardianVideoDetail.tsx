@@ -11,8 +11,9 @@ import PortalLayout from '@/components/portal/PortalLayout'
 import Card from '@/components/portal/Card'
 import Button from '@/components/portal/Button'
 import Icon from '@/components/portal/Icon'
-import { VideoPlayer, VideoNoteCard } from '@/components/video'
+import { VideoPlayer, VideoNoteCard, VideoFavoriteButton } from '@/components/video'
 import { useVideo, useVideoNotes } from '@/hooks/useVideos'
+import { useVideoFavorites } from '@/hooks/useVideosExtended'
 import { cn } from '@/utils/cn'
 import type { VideoNote } from '@/types/video'
 
@@ -27,6 +28,8 @@ export default function GuardianVideoDetail() {
     videoId,
     enabled: !!videoId
   })
+  
+  useVideoFavorites({ enabled: !!videoId })
   
   const { notes, isLoading: _notesLoading } = useVideoNotes({
     videoId,
@@ -183,10 +186,16 @@ export default function GuardianVideoDetail() {
             {video.title}
           </p>
         </div>
-        <Button onClick={handleMarkReviewed} className="flex items-center gap-2">
-          <Icon name="check_circle" size="text-sm" />
-          MARK AS REVIEWED
-        </Button>
+        <div className="flex gap-2">
+          <VideoFavoriteButton
+            videoId={videoId!}
+            orgId={video.org_id}
+          />
+          <Button onClick={handleMarkReviewed} className="flex items-center gap-2">
+            <Icon name="check_circle" size="text-sm" />
+            MARK AS REVIEWED
+          </Button>
+        </div>
       </div>
       
       {/* Video Player Section */}

@@ -15,7 +15,16 @@ interface NotificationBellProps {
 }
 
 export default function NotificationBell({ viewAllPath = '/dashboard' }: NotificationBellProps) {
-  const { context, isReady } = useUserContext()
+  let context, isReady
+  try {
+    const result = useUserContext()
+    context = result.context
+    isReady = result.isReady
+  } catch (err) {
+    // If useUserContext fails, disable the bell
+    return null
+  }
+  
   const t = useT()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)

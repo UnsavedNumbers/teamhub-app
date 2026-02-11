@@ -163,39 +163,39 @@ export default function VisibilitySection({
   }
 
   return (
-    <div className="pa-flex pa-flex-col pa-gap-6">
+    <div className="oa-flex oa-flex-col oa-gap-6">
       <div>
-        <h3 className="pa-h3 pa-mb-1">Visibility Settings</h3>
-        <p className="pa-body-m pa-text-muted">
+        <h3 className="oa-h3 oa-mb-1">Visibility Settings</h3>
+        <p className="oa-body-m oa-text-muted">
           Configure what each role can view and edit across the organization
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="pa-flex pa-flex-col pa-gap-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="oa-flex oa-flex-col oa-gap-6">
         {error && (
-          <div className="pa-alert pa-alert--danger">
+          <div className="oa-alert oa-alert--danger">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="pa-alert pa-alert--success">
+          <div className="oa-alert oa-alert--success">
             Settings saved successfully!
           </div>
         )}
 
         <Card noPadding style={{ overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
-            <table className="pa-table" style={{ width: '100%' }}>
+            <table className="oa-table" style={{ width: '100%' }}>
               <thead>
                 <tr>
-                  <th style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', textAlign: 'left', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--pa-n500)' }}>
+                  <th style={{ padding: 'var(--oa-space-4) var(--oa-space-6)', textAlign: 'left', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--oa-n500)' }}>
                     Permission
                   </th>
                   {ROLES.map((role) => (
                     <th
                       key={role}
-                      style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', textAlign: 'center', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--pa-n500)' }}
+                      style={{ padding: 'var(--oa-space-4) var(--oa-space-6)', textAlign: 'center', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--oa-n500)' }}
                     >
                       {role}
                     </th>
@@ -205,9 +205,9 @@ export default function VisibilitySection({
               <tbody>
                 {PERMISSIONS.map((permission) => (
                   <tr key={permission.key}>
-                    <td style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', fontWeight: 500 }}>{permission.label}</td>
+                    <td style={{ padding: 'var(--oa-space-4) var(--oa-space-6)', fontWeight: 500 }}>{permission.label}</td>
                     {ROLES.map((role) => (
-                      <td key={role} style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', textAlign: 'center' }}>
+                      <td key={role} style={{ padding: 'var(--oa-space-4) var(--oa-space-6)', textAlign: 'center' }}>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           <Checkbox
                             checked={rolePermissions?.[role]?.[permission.key] ?? false}
@@ -225,15 +225,15 @@ export default function VisibilitySection({
           </div>
         </Card>
 
-        <div className={cn('pa-p-4', 'pa-rounded-lg')} style={{ background: 'var(--pa-info-bg, #eff6ff)', border: '1px solid var(--pa-info-border, #bfdbfe)' }}>
-          <p className="pa-body-s" style={{ color: 'var(--pa-info-text, #1e40af)' }}>
+        <div className={cn('oa-p-4', 'oa-rounded-lg')} style={{ background: 'var(--oa-info-bg, #eff6ff)', border: '1px solid var(--oa-info-border, #bfdbfe)' }}>
+          <p className="oa-body-s" style={{ color: 'var(--oa-info-text, #1e40af)' }}>
             <strong>Note:</strong> Administrators always have full permissions and cannot be
             restricted. These settings apply organization-wide and override team-specific
             permissions.
           </p>
         </div>
 
-        <div className={cn('pa-flex', 'pa-justify-end', 'pa-gap-3', 'pa-pt-4')} style={{ borderTop: '1px solid var(--pa-n100)' }}>
+        <div className={cn('oa-flex', 'oa-justify-end', 'oa-gap-3', 'oa-pt-4')} style={{ borderTop: '1px solid var(--oa-n100)' }}>
           <Button
             type="button"
             variant="secondary"

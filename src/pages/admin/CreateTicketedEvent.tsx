@@ -8,10 +8,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { AdminPageHeader, Card, Button, Input } from '@/components/admin'
 import { FileUpload } from '@/components/common/FileUpload'
 import { useRouteLink } from '@/utils/routes'
 import type { TicketedEventType, TicketedEventStatus } from '@/types/ticketing'
 import { uploadTicketBanner } from '@/data/services/organizationService'
+import '../../styles/orgAdmin.css'
 
 export default function CreateTicketedEvent() {
   const navigate = useNavigate()
@@ -86,144 +88,145 @@ export default function CreateTicketedEvent() {
   }
 
   return (
-    <div className="pa-page-container">
-      <div className="pa-page-header">
-        <h1 className="pa-page-title">Create Ticketed Event</h1>
+    <div className="oa-theme-active pa-layout">
+      <AdminPageHeader
+        title="Create Ticketed Event"
+        breadcrumbs={[
+          { label: 'Admin', path: '/admin/dashboard' },
+          { label: 'Ticketing', path: '/admin/ticketing/events' },
+          { label: 'Create Event' }
+        ]}
+      />
+
+      <div className="oa-form-container">
+        <form onSubmit={handleSubmit}>
+          <Card title="Event Details" className="oa-mb-6">
+            <div className="oa-flex oa-flex-col oa-gap-4">
+              <Input
+                label="Event Title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                required
+                placeholder="Enter event name"
+              />
+
+              <Input
+                label="Internal Notes / Description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Internal notes (not shown to public)"
+              />
+
+              <Input
+                label="Public Event Description"
+                value={formData.event_description}
+                onChange={(e) => setFormData({ ...formData, event_description: e.target.value })}
+                placeholder="Description shown to public users..."
+                maxLength={500}
+              />
+
+              <div className="oa-form-group">
+                <FileUpload
+                  label="Ticket Banner Image"
+                  onFileSelect={setBannerFile}
+                  value={bannerFile}
+                  accept="image/*"
+                  maxSize={5 * 1024 * 1024}
+                  buttonText="Upload Banner"
+                  helperText="Suggested size: 1200 × 400 px. Max 5MB."
+                  showDropZone={true}
+                  fullWidth={true}
+                />
+              </div>
+            </div>
+          </Card>
+
+          <Card title="Event Schedule" className="oa-mb-6">
+            <div className="oa-flex oa-flex-col oa-gap-4">
+              <div className="oa-grid oa-grid-2 oa-gap-4">
+                <div className="oa-form-group">
+                  <label className="oa-label oa-label--required">Start Date/Time</label>
+                  <input
+                    type="datetime-local"
+                    value={formData.starts_at}
+                    onChange={(e) => setFormData({ ...formData, starts_at: e.target.value })}
+                    className="oa-form-input"
+                    required
+                  />
+                </div>
+
+                <div className="oa-form-group">
+                  <label className="oa-label oa-label--required">End Date/Time</label>
+                  <input
+                    type="datetime-local"
+                    value={formData.ends_at}
+                    onChange={(e) => setFormData({ ...formData, ends_at: e.target.value })}
+                    className="oa-form-input"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card title="Venue Information" className="oa-mb-6">
+            <div className="oa-flex oa-flex-col oa-gap-4">
+              <Input
+                label="Venue Name"
+                value={formData.venue_name}
+                onChange={(e) => setFormData({ ...formData, venue_name: e.target.value })}
+                placeholder="Enter venue name"
+              />
+
+              <div className="oa-grid oa-grid-2 oa-gap-4">
+                <Input
+                  label="City"
+                  value={formData.venue_city}
+                  onChange={(e) => setFormData({ ...formData, venue_city: e.target.value })}
+                  placeholder="Enter city"
+                />
+
+                <Input
+                  label="State"
+                  value={formData.venue_state}
+                  onChange={(e) => setFormData({ ...formData, venue_state: e.target.value })}
+                  placeholder="Enter state"
+                />
+              </div>
+            </div>
+          </Card>
+
+          <Card title="Event Status" className="oa-mb-6">
+            <div className="oa-form-group">
+              <label className="oa-label">Status</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as TicketedEventStatus })}
+                className="oa-form-input"
+              >
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+              </select>
+            </div>
+          </Card>
+
+          <div className="oa-form-actions">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(-1)}
+              disabled={createMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              loading={createMutation.isPending}
+            >
+              Create Event
+            </Button>
+          </div>
+        </form>
       </div>
-
-      <form onSubmit={handleSubmit} className="pa-form">
-        <div className="pa-form-group">
-          <label className="pa-form-label">Event Title *</label>
-          <input
-            type="text"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            className="pa-form-input"
-            required
-          />
-        </div>
-
-        <div className="pa-form-group">
-          <label className="pa-form-label">Internal Methods / Description</label>
-          <textarea
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="pa-form-input"
-            rows={2}
-          />
-        </div>
-
-        <div className="pa-form-group">
-          <label className="pa-form-label">Public Event Description</label>
-           <textarea
-            value={formData.event_description}
-            onChange={(e) => setFormData({ ...formData, event_description: e.target.value })}
-            className="pa-form-input"
-            rows={4}
-            maxLength={500}
-            placeholder="Description shown to public users..."
-          />
-        </div>
-
-        <div className="pa-form-group">
-          <FileUpload
-            label="Ticket Banner Image"
-            onFileSelect={setBannerFile}
-            value={bannerFile}
-            accept="image/*"
-            maxSize={5 * 1024 * 1024}
-            buttonText="Upload Banner"
-            helperText="Suggested size: 1200 × 400 px. Max 5MB."
-            showDropZone={true}
-            fullWidth={true}
-          />
-        </div>
-
-        <div className="pa-form-row">
-          <div className="pa-form-group">
-            <label className="pa-form-label">Start Date/Time *</label>
-            <input
-              type="datetime-local"
-              value={formData.starts_at}
-              onChange={(e) => setFormData({ ...formData, starts_at: e.target.value })}
-              className="pa-form-input"
-              required
-            />
-          </div>
-
-          <div className="pa-form-group">
-            <label className="pa-form-label">End Date/Time *</label>
-            <input
-              type="datetime-local"
-              value={formData.ends_at}
-              onChange={(e) => setFormData({ ...formData, ends_at: e.target.value })}
-              className="pa-form-input"
-              required
-            />
-          </div>
-        </div>
-
-        <div className="pa-form-row">
-          <div className="pa-form-group">
-            <label className="pa-form-label">Venue Name</label>
-            <input
-              type="text"
-              value={formData.venue_name}
-              onChange={(e) => setFormData({ ...formData, venue_name: e.target.value })}
-              className="pa-form-input"
-            />
-          </div>
-
-          <div className="pa-form-group">
-            <label className="pa-form-label">City</label>
-            <input
-              type="text"
-              value={formData.venue_city}
-              onChange={(e) => setFormData({ ...formData, venue_city: e.target.value })}
-              className="pa-form-input"
-            />
-          </div>
-
-          <div className="pa-form-group">
-            <label className="pa-form-label">State</label>
-            <input
-              type="text"
-              value={formData.venue_state}
-              onChange={(e) => setFormData({ ...formData, venue_state: e.target.value })}
-              className="pa-form-input"
-            />
-          </div>
-        </div>
-
-        <div className="pa-form-group">
-          <label className="pa-form-label">Status</label>
-          <select
-            value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value as TicketedEventStatus })}
-            className="pa-form-input"
-          >
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-          </select>
-        </div>
-
-        <div className="pa-form-actions">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="pa-button pa-button-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={createMutation.isPending}
-            className="pa-button pa-button-primary"
-          >
-            {createMutation.isPending ? 'Creating...' : 'Create Event'}
-          </button>
-        </div>
-      </form>
     </div>
   )
 }

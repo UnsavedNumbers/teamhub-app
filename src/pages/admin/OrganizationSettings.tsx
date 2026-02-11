@@ -19,13 +19,15 @@ import {
   Input,
   Select,
   Checkbox,
-  ThemePicker,
   Card,
+  Badge,
+} from '../../components/admin'
+import {
   Tabs,
   TabsList,
   TabsTrigger,
   TabsContent,
-  Badge,
+  ThemePicker,
 } from '../../components/platformAdmin'
 import { FileUpload } from '../../components/common/FileUpload'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
@@ -64,11 +66,12 @@ import {
 
 import type { StripeConnectStatus } from '../../types/stripeConnect.types'
 
-import { type OrganizationSettings as OrgSettingsType } from '@/types/organizationSettings'
+import { type OrganizationSettings as OrgSettingsType, type GeneralSettings } from '@/types/organizationSettings'
 import ContactSection from './organizationSettings/ContactSection'
 import StaffSection from './organizationSettings/StaffSection'
 
 import type { Organization } from '../../types/domain/Organization'
+import '../../styles/orgAdmin.css'
 
 export default function OrganizationSettings() {
   const { t } = useI18n()
@@ -95,7 +98,7 @@ export default function OrganizationSettings() {
 
   // Valid tab values for URL parameter
   const validTabs = useMemo(() => {
-    const baseTabs = ['overview', 'contact', 'general', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'staff', 'advanced']
+    const baseTabs = ['overview', 'contact', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'staff', 'advanced']
     if (hasPaymentAccess) {
       baseTabs.push('payments')
     }
@@ -318,34 +321,32 @@ export default function OrganizationSettings() {
 
   if (!isReady || loading) {
     return (
-      <div className="pa-page">
-        <div className="pa-page-loading">{t('admin.organizationSettings.loading')}</div>
+      <div className="oa-page">
+        <div className="oa-page-loading">{t('admin.organizationSettings.loading')}</div>
       </div>
     )
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader title={t('admin.organizationSettings.title')} />
       
       {error && (
-        <div className="pa-alert pa-alert-error Pa-mb-4" style={{ background: 'var(--pa-danger-bg)', color: 'var(--pa-danger)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
+        <div className="oa-alert oa-alert-error oa-mb-4" style={{ background: 'var(--oa-danger-bg)', color: 'var(--oa-danger)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
           {error}
         </div>
       )}
             
       {success && (
-        <div className="pa-alert pa-alert-success Pa-mb-4" style={{ background: 'var(--pa-success-bg)', color: 'var(--pa-success)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
+        <div className="oa-alert oa-alert-success oa-mb-4" style={{ background: 'var(--oa-success-bg)', color: 'var(--oa-success)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
           {success}
         </div>
       )}
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="pa-tabs">
-        <TabsList className="pa-mb-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="oa-tabs">
+        <TabsList className="oa-mb-6">
           <TabsTrigger value="overview">{t('admin.organizationSettings.tabs.overview')}</TabsTrigger>
           <TabsTrigger value="contact">{t('admin.organizationSettings.tabs.contact')}</TabsTrigger>
-          {/* Travel contacts merged into Contact tab */}
-          <TabsTrigger value="general">{t('admin.organizationSettings.tabs.general')}</TabsTrigger>
           <TabsTrigger value="appearance">{t('admin.organizationSettings.tabs.appearance')}</TabsTrigger>
           <TabsTrigger value="attendance">{t('admin.organizationSettings.tabs.attendance')}</TabsTrigger>
           <TabsTrigger value="registration">{t('admin.organizationSettings.tabs.registration')}</TabsTrigger>
@@ -357,7 +358,7 @@ export default function OrganizationSettings() {
         </TabsList>
 
         <TabsContent value="overview">
-          {orgDetails && <OverviewForm key={orgDetails.id + '-' + (orgDetails.updatedAt || 'initial')} org={orgDetails} onSave={handleSaveOverview} loading={saving} />}
+          {orgDetails && <OverviewForm key={orgDetails.id + '-' + (orgDetails.updatedAt || 'initial')} org={orgDetails} generalSettings={settings?.general} onSave={handleSaveOverview} onSaveGeneral={(d) => handleSaveSettings('general', d)} loading={saving} />}
 
           {/* Public URL slug — set/update slug for established orgs */}
           {currentOrganization?.id && (
@@ -390,10 +391,7 @@ export default function OrganizationSettings() {
         </TabsContent>
 
         {/* Travel contacts merged into Contact tab; section removed */}
-
-        <TabsContent value="general">
-          {settings && <GeneralConfigForm settings={settings.general} onSave={(d) => handleSaveSettings('general', d)} loading={saving} />}
-        </TabsContent>
+        {/* General settings (timezone/language) moved to Overview tab */}
 
         <TabsContent value="appearance">
           {themeSettings && (
@@ -586,24 +584,24 @@ function PublicUrlSlugForm({ orgId, initialSlug }: { orgId: string; initialSlug?
 
   return (
     <Card>
-      <h3 className="pa-h3 pa-mb-2">{t('admin.organizationSettings.publicSlug.title')}</h3>
-      <p className="pa-text-muted pa-mb-4">
+      <h3 className="oa-h3 oa-mb-2">{t('admin.organizationSettings.publicSlug.title')}</h3>
+      <p className="oa-text-muted oa-mb-4">
         {t('admin.organizationSettings.publicSlug.description', { slug: resolvedSlug || '{slug}' })}
       </p>
       {slugLoadError && (
-        <p className="pa-text-sm pa-text-danger pa-mb-4" role="alert">
+        <p className="oa-text-sm oa-text-danger oa-mb-4" role="alert">
           {getErrorMessage(slugLoadError) || t('admin.organizationSettings.publicSlug.loadFailed')}
         </p>
       )}
       {resolvedSlug ? (
-        <p className="pa-text-sm pa-mb-4">
+        <p className="oa-text-sm oa-mb-4">
           {t('admin.organizationSettings.publicSlug.currentSlug', { slug: resolvedSlug })}
         </p>
       ) : (
-        <p className="pa-text-sm pa-mb-4">{t('admin.organizationSettings.publicSlug.noneSet')}</p>
+        <p className="oa-text-sm oa-mb-4">{t('admin.organizationSettings.publicSlug.noneSet')}</p>
       )}
       <form onSubmit={handleSubmit}>
-        <div className="pa-form-group pa-mb-4">
+        <div className="oa-form-group oa-mb-4">
           <Input
             label={t('admin.organizationSettings.publicSlug.label')}
             value={input}
@@ -614,28 +612,28 @@ function PublicUrlSlugForm({ orgId, initialSlug }: { orgId: string; initialSlug?
             aria-describedby={slugError ? 'slug-error' : undefined}
           />
           {slugError && (
-            <p id="slug-error" className="pa-text-sm pa-text-danger pa-mt-1" role="alert">
+            <p id="slug-error" className="oa-text-sm oa-text-danger oa-mt-1" role="alert">
               {slugError}
             </p>
           )}
           {slugTaken && (
-            <p className="pa-text-sm pa-text-danger pa-mt-1">{t('admin.organizationSettings.publicSlug.taken')}</p>
+            <p className="oa-text-sm oa-text-danger oa-mt-1">{t('admin.organizationSettings.publicSlug.taken')}</p>
           )}
           {slugCheckError && !slugError && (
-            <p className="pa-text-sm pa-text-danger pa-mt-1" role="alert">
+            <p className="oa-text-sm oa-text-danger oa-mt-1" role="alert">
               {slugCheckError}
             </p>
           )}
           {slugChecking && (
-            <p className="pa-text-sm pa-text-muted pa-mt-1">{t('admin.organizationSettings.publicSlug.checking')}</p>
+            <p className="oa-text-sm oa-text-muted oa-mt-1">{t('admin.organizationSettings.publicSlug.checking')}</p>
           )}
           {isInvalidFormat && input.trim().length > 0 && !slugError && (
-            <p className="pa-text-sm pa-text-danger pa-mt-1">
+            <p className="oa-text-sm oa-text-danger oa-mt-1">
               {getValidationMessage(validateSlugFormat(normalizeSlug(input)).code) ?? t('admin.organizationSettings.publicSlug.validation.invalid')}
             </p>
           )}
         </div>
-        <div className="pa-form-actions">
+        <div className="oa-form-actions">
           <Button type="submit" variant="primary" loading={saving} disabled={!canSubmit}>
             {t('admin.organizationSettings.publicSlug.save')}
           </Button>
@@ -645,7 +643,13 @@ function PublicUrlSlugForm({ orgId, initialSlug }: { orgId: string; initialSlug?
   )
 }
 
-function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (data: OrganizationUpdateDTO, file?: File) => void, loading: boolean }) {
+function OverviewForm({ org, generalSettings, onSave, onSaveGeneral, loading }: { 
+  org: Organization, 
+  generalSettings?: GeneralSettings,
+  onSave: (data: OrganizationUpdateDTO, file?: File) => void, 
+  onSaveGeneral: (data: any) => void,
+  loading: boolean 
+}) {
   const { t } = useI18n()
   const { control, handleSubmit, setValue, trigger, reset } = useForm<OrganizationUpdateDTO>({
     defaultValues: {
@@ -665,6 +669,17 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
   const [logoFile, setLogoFile] = useState<File | undefined>(undefined)
   const [logoError, setLogoError] = useState<string | null>(null)
   const [profileVisibleToFans, setProfileVisibleToFans] = useState(org.profile_visible_to_fans || false)
+  
+  // Localization state
+  const [timezone, setTimezone] = useState(generalSettings?.timezone || 'America/New_York')
+  const [defaultLanguage, setDefaultLanguage] = useState(generalSettings?.default_language || 'en')
+
+  const timezones = [
+    { value: 'America/New_York', label: t('admin.organizationSettings.general.timezones.eastern') },
+    { value: 'America/Chicago', label: t('admin.organizationSettings.general.timezones.central') },
+    { value: 'America/Denver', label: t('admin.organizationSettings.general.timezones.mountain') },
+    { value: 'America/Los_Angeles', label: t('admin.organizationSettings.general.timezones.pacific') },
+  ]
 
   // Sync form state when org prop changes (e.g., after save/reload)
   useEffect(() => {
@@ -690,24 +705,37 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
     console.log('OverviewForm: set profileVisibleToFans to', org.profile_visible_to_fans || false)
   }, [org, reset])
 
+  // Sync localization state when generalSettings change
+  useEffect(() => {
+    if (generalSettings) {
+      setTimezone(generalSettings.timezone || 'America/New_York')
+      setDefaultLanguage(generalSettings.default_language || 'en')
+    }
+  }, [generalSettings])
+
   return (
     <Card>
       <form onSubmit={handleSubmit((data) => {
         if (logoError) return
         const dataWithVisibility = { ...data, profile_visible_to_fans: profileVisibleToFans } as any
         onSave(dataWithVisibility, logoFile)
+        // Also save localization settings
+        onSaveGeneral({
+          timezone,
+          default_language: defaultLanguage,
+        })
       })}>
-        <div className="pa-form-grid pa-form-grid-2">
+        <div className="oa-form-grid oa-form-grid-2">
           {/* Left Column: Basic Info */}
-          <div className="pa-flex pa-flex-col pa-gap-4">
-            <h3 className="pa-h3 pa-mb-2">{t('admin.organizationSettings.overview.basicInfo')}</h3>
-            <div className="pa-form-group">
+          <div className="oa-flex oa-flex-col oa-gap-4">
+            <h3 className="oa-h3 oa-mb-2">{t('admin.organizationSettings.overview.basicInfo')}</h3>
+            <div className="oa-form-group">
               <Controller name="name" control={control} rules={{required: t('formFields.required')}} render={({field}) => (
                  <Input {...field} label={t('admin.organizationSettings.overview.orgName')} required />
               )} />
             </div>
             
-            <div className="pa-form-grid pa-form-grid-2">
+            <div className="oa-form-grid oa-form-grid-2">
               <Controller name="email" control={control} render={({field}) => (
                 <Input {...field} value={field.value || ''} label={t('admin.organizationSettings.overview.contactEmail')} type="email" />
               )} />
@@ -716,7 +744,7 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
               )} />
             </div>
             
-            <div className="pa-form-group">
+            <div className="oa-form-group">
                <Controller name="website" control={control} render={({field}) => (
                 <Input {...field} value={field.value || ''} label={t('admin.organizationSettings.overview.website')} type="url" />
               )} />
@@ -725,10 +753,10 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
           
           {/* Right Column: Logo */}
           <div>
-            <h3 className="pa-h3 pa-mb-2">{t('admin.organizationSettings.overview.logo')}</h3>
+            <h3 className="oa-h3 oa-mb-2">{t('admin.organizationSettings.overview.logo')}</h3>
             {/* Show existing logo if available */}
             {org.logo_url && !logoFile && (
-              <div className="pa-mb-3">
+              <div className="oa-mb-3">
                 <img 
                   src={org.logo_url} 
                   alt={org.name} 
@@ -736,7 +764,7 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
                     maxWidth: '120px', 
                     maxHeight: '120px', 
                     borderRadius: '8px',
-                    border: '1px solid var(--pa-n200)',
+                    border: '1px solid var(--oa-n200)',
                     objectFit: 'contain'
                   }} 
                 />
@@ -759,9 +787,9 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
           </div>
         </div>
         
-        <div className="pa-mt-6">
-          <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.overview.location')}</h3>
-          <div className="pa-form-group pa-mb-4">
+        <div className="oa-mt-6">
+          <h3 className="oa-h3 oa-mb-4">{t('admin.organizationSettings.overview.location')}</h3>
+          <div className="oa-form-group oa-mb-4">
             <Controller
               name="address"
               control={control}
@@ -789,7 +817,7 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
               )}
             />
           </div>
-          <div className="pa-form-grid pa-form-grid-3">
+          <div className="oa-form-grid oa-form-grid-3">
              <Controller name="city" control={control} render={({field}) => (
                <Input {...field} value={field.value || ''} label={t('admin.organizationSettings.overview.city')} />
             )} />
@@ -802,9 +830,34 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
           </div>
         </div>
 
+        {/* Localization Section */}
+        <div className="oa-mt-6 oa-pt-6 oa-border-t">
+          <div className="oa-form-grid oa-form-grid-2">
+            <div className="oa-form-group">
+              <Select 
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                label={t('admin.organizationSettings.general.timezoneLabel')} 
+                options={timezones} 
+              />
+            </div>
+            <div className="oa-form-group">
+              <Select
+                value={defaultLanguage}
+                onChange={(e) => setDefaultLanguage(e.target.value)}
+                label={t('admin.organizationSettings.general.languageLabel')}
+                options={[
+                  { value: 'en', label: t('admin.organizationSettings.general.languages.english') },
+                  { value: 'es', label: t('admin.organizationSettings.general.languages.spanish') }
+                ]}
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Public Visibility Section */}
-        <div className="pa-mt-6 pa-pt-6 pa-border-t">
-          <h3 className="pa-h3 pa-mb-4">Public Visibility</h3>
+        <div className="oa-mt-6 oa-pt-6 oa-border-t">
+          <h3 className="oa-h3 oa-mb-4">Public Visibility</h3>
           <FanVisibilityToggle
             checked={profileVisibleToFans}
             onChange={setProfileVisibleToFans}
@@ -813,64 +866,8 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
           />
         </div>
 
-        <div className="pa-form-actions">
+        <div className="oa-form-actions">
           <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.overview.save')}</Button>
-        </div>
-      </form>
-    </Card>
-  )
-}
-
-function GeneralConfigForm({ settings, onSave, loading }: { settings: OrgSettingsType['general'], onSave: (d: any) => void, loading: boolean }) {
-  const { t } = useI18n()
-  const { control, handleSubmit, reset } = useForm({
-    defaultValues: {
-      organization_name: settings.organization_name,
-      timezone: settings.timezone,
-      default_language: settings.default_language || 'en',
-    }
-  })
-
-  useEffect(() => {
-    reset({
-      organization_name: settings.organization_name,
-      timezone: settings.timezone,
-      default_language: settings.default_language || 'en',
-    })
-  }, [reset, settings.organization_name, settings.timezone, settings.default_language])
-
-  const timezones = [
-    { value: 'America/New_York', label: t('admin.organizationSettings.general.timezones.eastern') },
-    { value: 'America/Chicago', label: t('admin.organizationSettings.general.timezones.central') },
-    { value: 'America/Denver', label: t('admin.organizationSettings.general.timezones.mountain') },
-    { value: 'America/Los_Angeles', label: t('admin.organizationSettings.general.timezones.pacific') },
-  ]
-
-  return (
-    <Card>
-      <form onSubmit={handleSubmit(onSave)}>
-        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.general.title')}</h3>
-        <div className="pa-form-grid pa-form-grid-2">
-          <div className="pa-form-group">
-            <Controller name="timezone" control={control} render={({field}) => (
-               <Select {...field} label={t('admin.organizationSettings.general.timezoneLabel')} options={timezones} />
-            )} />
-          </div>
-           <div className="pa-form-group">
-            <Controller name="default_language" control={control} render={({field}) => (
-               <Select
-                 {...field}
-                 label={t('admin.organizationSettings.general.languageLabel')}
-                 options={[
-                   { value: 'en', label: t('admin.organizationSettings.general.languages.english') },
-                   { value: 'es', label: t('admin.organizationSettings.general.languages.spanish') }
-                 ]}
-               />
-            )} />
-          </div>
-        </div>
-        <div className="pa-form-actions">
-          <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.general.save')}</Button>
         </div>
       </form>
     </Card>
@@ -901,14 +898,14 @@ function AppearanceForm({ settings, onSave, loading }: { settings: OrganizationT
   return (
     <Card>
       <form onSubmit={handleSubmit}>
-        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.appearance.title')}</h3>
-        <p className="pa-text-muted pa-mb-6">
+        <h3 className="oa-h3 oa-mb-4">{t('admin.organizationSettings.appearance.title')}</h3>
+        <p className="oa-text-muted oa-mb-6">
           {t('admin.organizationSettings.appearance.description')}
         </p>
 
-        <div className="pa-form-group pa-mb-6">
-          <label className="pa-label pa-mb-3 block">{t('admin.organizationSettings.appearance.themeLabel')}</label>
-          <p className="pa-text-muted pa-mb-4">
+        <div className="oa-form-group oa-mb-6">
+          <label className="oa-label oa-mb-3 block">{t('admin.organizationSettings.appearance.themeLabel')}</label>
+          <p className="oa-text-muted oa-mb-4">
             {t('admin.organizationSettings.appearance.themeHelp')}
           </p>
           <ThemePicker
@@ -921,7 +918,7 @@ function AppearanceForm({ settings, onSave, loading }: { settings: OrganizationT
           />
         </div>
 
-        <div className="pa-form-actions">
+        <div className="oa-form-actions">
           <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.appearance.save')}</Button>
         </div>
       </form>
@@ -942,8 +939,8 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
   return (
     <Card>
       <form onSubmit={handleSubmit(onSave)}>
-        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.attendance.title')}</h3>
-        <div className="pa-form-grid pa-form-grid-3 pa-mb-6">
+        <h3 className="oa-h3 oa-mb-4">{t('admin.organizationSettings.attendance.title')}</h3>
+        <div className="oa-form-grid oa-form-grid-3 oa-mb-6">
           <Controller name="required_for_game" control={control} render={({field}) => (
             <Checkbox label={t('admin.organizationSettings.attendance.requiredForGames')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
@@ -955,7 +952,7 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
           )} />
         </div>
 
-        <div className="pa-form-group pa-max-w-md pa-mb-6">
+        <div className="oa-form-group oa-max-w-md oa-mb-6">
           <Controller name="submission_deadline_hours" control={control} render={({field}) => (
              <Input
                {...field}
@@ -969,14 +966,14 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
           )} />
         </div>
 
-        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.attendance.parentControls')}</h3>
-         <div className="pa-mb-6">
+        <h3 className="oa-h3 oa-mb-4">{t('admin.organizationSettings.attendance.parentControls')}</h3>
+         <div className="oa-mb-6">
            <Controller name="parent_visibility.can_submit_attendance" control={control} render={({field}) => (
             <Checkbox label={t('admin.organizationSettings.attendance.parentsCanSubmit')} checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
 
-         <div className="pa-form-actions">
+         <div className="oa-form-actions">
           <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.attendance.save')}</Button>
         </div>
       </form>
@@ -998,8 +995,8 @@ function RegistrationForm({ settings, onSave, loading }: { settings: OrgSettings
   return (
     <Card>
       <form onSubmit={handleSubmit(onSave)}>
-        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.registration.title')}</h3>
-        <div className="pa-flex pa-flex-col pa-gap-4 pa-mb-6">
+        <h3 className="oa-h3 oa-mb-4">{t('admin.organizationSettings.registration.title')}</h3>
+        <div className="oa-flex oa-flex-col oa-gap-4 oa-mb-6">
            <Controller name="allow_guardian_self_invite" control={control} render={({field}) => (
             <Checkbox label={t('admin.organizationSettings.registration.allowGuardianInvite')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
@@ -1010,7 +1007,7 @@ function RegistrationForm({ settings, onSave, loading }: { settings: OrgSettings
             <Checkbox label={t('admin.organizationSettings.registration.requireMedicalForm')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
-         <div className="pa-form-actions">
+         <div className="oa-form-actions">
           <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.registration.save')}</Button>
         </div>
       </form>
@@ -1031,8 +1028,8 @@ function NotificationsForm({ settings, onSave, loading }: { settings: OrgSetting
   return (
     <Card>
       <form onSubmit={handleSubmit(onSave)}>
-        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.notifications.title')}</h3>
-         <div className="pa-flex pa-flex-col pa-gap-4 pa-mb-6">
+        <h3 className="oa-h3 oa-mb-4">{t('admin.organizationSettings.notifications.title')}</h3>
+         <div className="oa-flex oa-flex-col oa-gap-4 oa-mb-6">
            <Controller name="attendance_reminders_enabled" control={control} render={({field}) => (
             <Checkbox label={t('admin.organizationSettings.notifications.attendanceReminders')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
@@ -1040,7 +1037,7 @@ function NotificationsForm({ settings, onSave, loading }: { settings: OrgSetting
             <Checkbox label={t('admin.organizationSettings.notifications.scheduleChangeAlerts')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
-        <div className="pa-form-group pa-max-w-md pa-mb-6">
+        <div className="oa-form-group oa-max-w-md oa-mb-6">
           <Controller name="payment_reminder_behavior" control={control} render={({field}) => (
              <Select
                {...field}
@@ -1052,7 +1049,7 @@ function NotificationsForm({ settings, onSave, loading }: { settings: OrgSetting
              />
           )} />
         </div>
-        <div className="pa-form-actions">
+        <div className="oa-form-actions">
           <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.notifications.save')}</Button>
         </div>
       </form>
@@ -1090,12 +1087,12 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
   return (
     <Card>
        <form onSubmit={handleSubmit(onSave)}>
-        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.permissions.title')}</h3>
-        <p className="pa-text-sm pa-text-muted pa-mb-4">{t('admin.organizationSettings.permissions.description')}</p>
+        <h3 className="oa-h3 oa-mb-4">{t('admin.organizationSettings.permissions.title')}</h3>
+        <p className="oa-text-sm oa-text-muted oa-mb-4">{t('admin.organizationSettings.permissions.description')}</p>
         
         {/* Parent Permissions */}
-        <h4 className="pa-h4 pa-mb-2">{t('admin.organizationSettings.permissions.parentRole')}</h4>
-        <div className="pa-form-grid pa-form-grid-3 pa-mb-6">
+        <h4 className="oa-h4 oa-mb-2">{t('admin.organizationSettings.permissions.parentRole')}</h4>
+        <div className="oa-form-grid oa-form-grid-3 oa-mb-6">
            <Controller name="role_permissions.parent.can_view_roster" control={control} render={({field}) => (
             <Checkbox label={t('admin.organizationSettings.permissions.parentViewRoster')} checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
@@ -1108,8 +1105,8 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
         </div>
 
         {/* Coach Permissions */}
-        <h4 className="pa-h4 pa-mb-2">{t('admin.organizationSettings.permissions.coachRole')}</h4>
-        <div className="pa-form-grid pa-form-grid-2 pa-mb-6">
+        <h4 className="oa-h4 oa-mb-2">{t('admin.organizationSettings.permissions.coachRole')}</h4>
+        <div className="oa-form-grid oa-form-grid-2 oa-mb-6">
            <Controller name="role_permissions.coach.can_view_payments" control={control} render={({field}) => (
             <Checkbox label={t('admin.organizationSettings.permissions.coachViewFinancials')} checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
@@ -1119,9 +1116,9 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
         </div>
 
         {/* Fan Visibility Defaults */}
-        <div className="pa-mt-8 pa-mb-6">
-          <h4 className="pa-h4 pa-mb-2">{t('admin.organizationSettings.permissions.fanVisibilityDefaults.title')}</h4>
-          <p className="pa-text-sm pa-text-muted pa-mb-4">{t('admin.organizationSettings.permissions.fanVisibilityDefaults.description')}</p>
+        <div className="oa-mt-8 oa-mb-6">
+          <h4 className="oa-h4 oa-mb-2">{t('admin.organizationSettings.permissions.fanVisibilityDefaults.title')}</h4>
+          <p className="oa-text-sm oa-text-muted oa-mb-4">{t('admin.organizationSettings.permissions.fanVisibilityDefaults.description')}</p>
           
           <div 
             style={{
@@ -1131,31 +1128,31 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
               borderRadius: '8px',
             }}
           >
-            <div className="pa-flex pa-flex-col pa-gap-3">
+            <div className="oa-flex oa-flex-col oa-gap-3">
               {eventTypes.map((eventType) => (
                 <Controller
                   key={eventType.key}
                   name={`fan_visibility_defaults.${eventType.key}` as any}
                   control={control}
                   render={({ field }) => (
-                    <div className="pa-flex pa-items-center pa-justify-between">
+                    <div className="oa-flex oa-items-center oa-justify-between">
                       <label 
                         htmlFor={`fan-visibility-${eventType.key}`}
                         style={{ fontSize: '14px', fontWeight: 500 }}
                       >
                         {eventType.label}
                       </label>
-                      <label className="pa-inline-flex pa-items-center pa-gap-2">
-                        <span className="pa-toggle" style={{ width: '52px', height: '28px' }}>
+                      <label className="oa-inline-flex oa-items-center oa-gap-2">
+                        <span className="oa-toggle" style={{ width: '52px', height: '28px' }}>
                           <input
                             id={`fan-visibility-${eventType.key}`}
                             type="checkbox"
-                            className="pa-toggle-input"
+                            className="oa-toggle-input"
                             checked={field.value || false}
                             onChange={(e) => field.onChange(e.target.checked)}
                           />
-                          <span className="pa-toggle-track" style={{ borderRadius: '14px' }} />
-                          <span className="pa-toggle-thumb" style={{ borderRadius: '50%' }} />
+                          <span className="oa-toggle-track" style={{ borderRadius: '14px' }} />
+                          <span className="oa-toggle-thumb" style={{ borderRadius: '50%' }} />
                         </span>
                         <span style={{ fontSize: '13px', color: field.value ? '#059669' : '#6b7280', fontWeight: 500 }}>
                           {field.value ? t('admin.organizationSettings.permissions.fanVisibilityDefaults.visibleByDefault') : t('admin.organizationSettings.permissions.fanVisibilityDefaults.privateByDefault')}
@@ -1186,7 +1183,7 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
           </div>
         </div>
 
-         <div className="pa-form-actions">
+         <div className="oa-form-actions">
           <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.permissions.save')}</Button>
         </div>
       </form>
@@ -1365,7 +1362,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
   if (loading || policyLoading) {
     return (
       <Card>
-        <div className="pa-text-center pa-p-8">{t('admin.organizationSettings.payments.loading')}</div>
+        <div className="oa-text-center oa-p-8">{t('admin.organizationSettings.payments.loading')}</div>
       </Card>
     )
   }
@@ -1392,28 +1389,28 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
   return (
     <>
     {/* Payment Options Card */}
-    <Card className="pa-mb-6">
-      <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.payments.optionsTitle')}</h3>
+    <Card className="oa-mb-6">
+      <h3 className="oa-h3 oa-mb-4">{t('admin.organizationSettings.payments.optionsTitle')}</h3>
       
-      <div className="pa-form-group">
+      <div className="oa-form-group">
         <Checkbox
           label={t('admin.organizationSettings.payments.allowPartialPayments')}
           checked={allowPartialPayments}
           onChange={(e) => handleSavePartialPayments(e.target.checked)}
           disabled={policySaving}
         />
-        <p className="pa-text-sm pa-text-muted pa-mt-2">
+        <p className="oa-text-sm oa-text-muted oa-mt-2">
           {t('admin.organizationSettings.payments.allowPartialPaymentsHelp')}
         </p>
       </div>
     </Card>
 
     {/* Payment Processing Status Card */}
-    <Card className="pa-mb-6">
+    <Card className="oa-mb-6">
       {error && (
-        <div className="pa-alert pa-alert-error pa-mb-6" style={{ 
-          background: 'var(--pa-danger-bg)', 
-          color: 'var(--pa-danger)', 
+        <div className="oa-alert oa-alert-error oa-mb-6" style={{ 
+          background: 'var(--oa-danger-bg)', 
+          color: 'var(--oa-danger)', 
           padding: '1rem', 
           borderRadius: '8px',
           border: '1px solid rgba(239, 68, 68, 0.3)'
@@ -1423,7 +1420,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
       )}
 
       {/* Status Hero Section */}
-      <div className="pa-flex pa-items-start pa-gap-6 pa-mb-6">
+      <div className="oa-flex oa-items-start oa-gap-6 oa-mb-6">
         {/* Large Status Icon */}
         <div style={{
           width: '80px',
@@ -1453,9 +1450,9 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
         </div>
 
         {/* Status Info */}
-        <div className="pa-flex-1">
-          <div className="pa-flex pa-items-center pa-gap-3 pa-mb-2">
-            <h3 className="pa-h3" style={{ margin: 0 }}>
+        <div className="oa-flex-1">
+          <div className="oa-flex oa-items-center oa-gap-3 oa-mb-2">
+            <h3 className="oa-h3" style={{ margin: 0 }}>
               {t('admin.organizationSettings.payments.processingTitle')}
             </h3>
             <Badge variant={statusType === 'success' ? 'success' : statusType === 'error' ? 'danger' : statusType === 'warning' ? 'warning' : 'neutral'}>
@@ -1463,7 +1460,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
             </Badge>
           </div>
           
-          <p className="pa-text-muted pa-mb-3">
+          <p className="oa-text-muted oa-mb-3">
             {connectStatus?.connected 
               ? payoutsPaused
                 ? t('admin.organizationSettings.payments.statusDescription.payoutsPaused')
@@ -1475,14 +1472,14 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           </p>
 
           {connectStatus?.lastStatusUpdated && (
-            <div className="pa-text-xs pa-text-muted">
+            <div className="oa-text-xs oa-text-muted">
               {t('admin.organizationSettings.payments.lastSynced', { date: formatDateTime(connectStatus.lastStatusUpdated) })}
             </div>
           )}
         </div>
 
         {/* Quick Actions */}
-        <div className="pa-flex pa-flex-col pa-gap-2" style={{ minWidth: '160px' }}>
+        <div className="oa-flex oa-flex-col oa-gap-2" style={{ minWidth: '160px' }}>
           {!connectStatus?.connected ? (
             <Button
               variant="primary"
@@ -1556,17 +1553,17 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           padding: '20px',
           marginBottom: '24px'
         }}>
-          <div className="pa-flex pa-items-start pa-gap-3">
+          <div className="oa-flex oa-items-start oa-gap-3">
             <span style={{ fontSize: '24px', lineHeight: 1 }}>{t('admin.organizationSettings.payments.statusIcons.error')}</span>
-            <div className="pa-flex-1">
-              <h4 className="pa-h4 pa-mb-2" style={{ color: 'var(--pa-danger, #ef4444)' }}>
+            <div className="oa-flex-1">
+              <h4 className="oa-h4 oa-mb-2" style={{ color: 'var(--oa-danger, #ef4444)' }}>
                 {t('admin.organizationSettings.payments.payoutsPaused.title')}
               </h4>
-              <p className="pa-text-sm pa-mb-3">
+              <p className="oa-text-sm oa-mb-3">
                 {disabledCopy || t('admin.organizationSettings.payments.payoutsPaused.description')}
               </p>
               {connectStatus.requirementsDeadline && (
-                <div className="pa-text-xs pa-text-muted pa-mb-3" style={{ 
+                <div className="oa-text-xs oa-text-muted oa-mb-3" style={{ 
                   background: 'rgba(239, 68, 68, 0.1)',
                   padding: '8px 12px',
                   borderRadius: '6px',
@@ -1588,17 +1585,17 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           padding: '20px',
           marginBottom: '24px'
         }}>
-          <div className="pa-flex pa-items-start pa-gap-3">
+          <div className="oa-flex oa-items-start oa-gap-3">
             <span style={{ fontSize: '24px', lineHeight: 1 }}>{t('admin.organizationSettings.payments.statusIcons.warning')}</span>
-            <div className="pa-flex-1">
-              <h4 className="pa-h4 pa-mb-2" style={{ color: 'var(--pa-warning, #fbbf24)' }}>
+            <div className="oa-flex-1">
+              <h4 className="oa-h4 oa-mb-2" style={{ color: 'var(--oa-warning, #fbbf24)' }}>
                 {t('admin.organizationSettings.payments.requirementsDue.title')}
               </h4>
-              <p className="pa-text-sm pa-mb-3">
+              <p className="oa-text-sm oa-mb-3">
                 {t('admin.organizationSettings.payments.requirementsDue.description')}
               </p>
               {connectStatus.requirementsDeadline && (
-                <div className="pa-text-xs pa-text-muted" style={{ 
+                <div className="oa-text-xs oa-text-muted" style={{ 
                   background: 'rgba(251, 191, 36, 0.1)',
                   padding: '8px 12px',
                   borderRadius: '6px',
@@ -1613,17 +1610,17 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
       )}
 
       {connectStatus?.connected && (
-        <div className="pa-form-grid pa-form-grid-3 pa-mb-6" style={{ gap: '16px' }}>
+        <div className="oa-form-grid oa-form-grid-3 oa-mb-6" style={{ gap: '16px' }}>
           {/* Payout Status */}
           <div style={{
-            background: 'var(--pa-bg, white)',
-            border: '1px solid var(--pa-border, #e5e7eb)',
+            background: 'var(--oa-bg, white)',
+            border: '1px solid var(--oa-border, #e5e7eb)',
             borderRadius: '12px',
             padding: '20px',
           }}>
-            <div className="pa-caption pa-text-muted pa-mb-2">{t('admin.organizationSettings.payments.info.payoutStatus')}</div>
-            <div className="pa-flex pa-items-center pa-gap-2">
-              <Badge variant={connectStatus.payoutsEnabled ? 'success' : 'danger'} style={{ fontSize: '14px' }}>
+            <div className="oa-caption oa-text-muted oa-mb-2">{t('admin.organizationSettings.payments.info.payoutStatus')}</div>
+            <div className="oa-flex oa-items-center oa-gap-2">
+              <Badge variant={connectStatus.payoutsEnabled ? 'success' : 'danger'} className="oa-text-sm">
                 {connectStatus.payoutsEnabled
                   ? t('admin.organizationSettings.payments.info.payoutStatusActive')
                   : t('admin.organizationSettings.payments.info.payoutStatusPaused')}
@@ -1633,12 +1630,12 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
 
           {/* Onboarding Status */}
           <div style={{
-            background: 'var(--pa-bg, white)',
-            border: '1px solid var(--pa-border, #e5e7eb)',
+            background: 'var(--oa-bg, white)',
+            border: '1px solid var(--oa-border, #e5e7eb)',
             borderRadius: '12px',
             padding: '20px',
           }}>
-            <div className="pa-caption pa-text-muted pa-mb-2">{t('admin.organizationSettings.payments.info.onboarding')}</div>
+            <div className="oa-caption oa-text-muted oa-mb-2">{t('admin.organizationSettings.payments.info.onboarding')}</div>
             <Badge
               variant={
                 connectStatus.onboardingStatus === 'completed'
@@ -1647,7 +1644,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                     ? 'danger'
                     : 'warning'
               }
-              style={{ fontSize: '14px', textTransform: 'capitalize' }}
+              className="oa-text-sm oa-capitalize"
             >
               {t(`admin.organizationSettings.payments.onboardingStatus.${connectStatus.onboardingStatus}`)}
             </Badge>
@@ -1655,13 +1652,13 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
 
           {/* Account Status */}
           <div style={{
-            background: 'var(--pa-bg, white)',
-            border: '1px solid var(--pa-border, #e5e7eb)',
+            background: 'var(--oa-bg, white)',
+            border: '1px solid var(--oa-border, #e5e7eb)',
             borderRadius: '12px',
             padding: '20px',
           }}>
-            <div className="pa-caption pa-text-muted pa-mb-2">{t('admin.organizationSettings.payments.info.accountHealth')}</div>
-            <div className="pa-text-sm" style={{ fontWeight: 600 }}>
+            <div className="oa-caption oa-text-muted oa-mb-2">{t('admin.organizationSettings.payments.info.accountHealth')}</div>
+            <div className="oa-text-sm" style={{ fontWeight: 600 }}>
               {disabledCopy || (hasPendingReview
                 ? t('admin.organizationSettings.payments.info.underReview')
                 : t('admin.organizationSettings.payments.info.allClear'))}
@@ -1673,18 +1670,18 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
       {/* Requirements Checklist */}
       {connectStatus?.connected && (connectStatus.requirementsDue?.length > 0 || connectStatus.requirementsErrors?.length > 0) && (
         <div style={{
-          background: 'var(--pa-bg, white)',
-          border: '1px solid var(--pa-border, #e5e7eb)',
+          background: 'var(--oa-bg, white)',
+          border: '1px solid var(--oa-border, #e5e7eb)',
           borderRadius: '12px',
           padding: '20px',
           marginBottom: '24px'
         }}>
-          <h4 className="pa-h4 pa-mb-4">{t('admin.organizationSettings.payments.requirements.title')}</h4>
+          <h4 className="oa-h4 oa-mb-4">{t('admin.organizationSettings.payments.requirements.title')}</h4>
           
           {connectStatus.requirementsDue?.length > 0 && (
-            <div className="pa-mb-4">
-              <div className="pa-text-sm pa-font-semibold pa-mb-2">{t('admin.organizationSettings.payments.requirements.due')}</div>
-              <div className="pa-flex pa-flex-col pa-gap-2">
+            <div className="oa-mb-4">
+              <div className="oa-text-sm oa-font-semibold oa-mb-2">{t('admin.organizationSettings.payments.requirements.due')}</div>
+              <div className="oa-flex oa-flex-col oa-gap-2">
                 {connectStatus.requirementsDue.map((req) => {
                   // Convert technical requirement names to human-readable format
                   const humanReadable = req
@@ -1702,7 +1699,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                     .join(' ')
                   
                   return (
-                    <div key={req} className="pa-flex pa-items-center pa-gap-2 pa-text-sm" style={{
+                    <div key={req} className="oa-flex oa-items-center oa-gap-2 oa-text-sm" style={{
                       padding: '8px 12px',
                       background: 'rgba(251, 191, 36, 0.05)',
                       borderRadius: '8px',
@@ -1719,8 +1716,8 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
 
           {connectStatus.requirementsErrors?.length > 0 && (
             <div>
-              <div className="pa-text-sm pa-font-semibold pa-mb-2">{t('admin.organizationSettings.payments.requirements.issues')}</div>
-              <div className="pa-flex pa-flex-col pa-gap-2">
+              <div className="oa-text-sm oa-font-semibold oa-mb-2">{t('admin.organizationSettings.payments.requirements.issues')}</div>
+              <div className="oa-flex oa-flex-col oa-gap-2">
                 {connectStatus.requirementsErrors.map((err, idx) => {
                   // Convert technical field names to human-readable format
                   const humanReadableField = err.requirement
@@ -1738,7 +1735,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                     ?.join(' ')
                   
                   return (
-                    <div key={`${err.code}-${idx}`} className="pa-flex pa-items-start pa-gap-2 pa-text-sm" style={{
+                    <div key={`${err.code}-${idx}`} className="oa-flex oa-items-start oa-gap-2 oa-text-sm" style={{
                       padding: '8px 12px',
                       background: 'rgba(239, 68, 68, 0.05)',
                       borderRadius: '8px',
@@ -1748,7 +1745,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                       <div>
                         <div>{err.reason || err.code || t('admin.organizationSettings.payments.requirements.issueDetected')}</div>
                         {humanReadableField && (
-                          <div className="pa-text-xs pa-text-muted pa-mt-1">{t('admin.organizationSettings.payments.requirements.field', { field: humanReadableField })}</div>
+                          <div className="oa-text-xs oa-text-muted oa-mt-1">{t('admin.organizationSettings.payments.requirements.field', { field: humanReadableField })}</div>
                         )}
                       </div>
                     </div>
@@ -1769,7 +1766,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           padding: '16px',
           marginBottom: '24px'
         }}>
-          <div className="pa-flex pa-items-start pa-gap-2 pa-text-sm">
+          <div className="oa-flex oa-items-start oa-gap-2 oa-text-sm">
             <span style={{ fontSize: '18px' }}>{t('admin.organizationSettings.payments.statusIcons.info')}</span>
             <div>
               <strong>{t('admin.organizationSettings.payments.pendingReview.title')}</strong> {t('admin.organizationSettings.payments.pendingReview.description')}
@@ -1781,13 +1778,13 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
       {/* Advanced Details (Collapsible) */}
       {connectStatus?.connected && (
         <div style={{
-          borderTop: '1px solid var(--pa-border, #e5e7eb)',
+          borderTop: '1px solid var(--oa-border, #e5e7eb)',
           paddingTop: '20px',
           marginTop: '24px'
         }}>
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="pa-flex pa-items-center pa-gap-2 pa-text-sm pa-text-muted"
+            className="oa-flex oa-items-center oa-gap-2 oa-text-sm oa-text-muted"
             style={{
               background: 'none',
               border: 'none',
@@ -1801,11 +1798,11 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           </button>
 
           {showAdvanced && (
-            <div className="pa-mt-4 pa-flex pa-flex-col pa-gap-3">
+            <div className="oa-mt-4 oa-flex oa-flex-col oa-gap-3">
               {connectStatus.payoutDescriptor && (
                 <div>
-                  <div className="pa-caption pa-text-muted">{t('admin.organizationSettings.payments.payoutDescriptor')}</div>
-                  <div className="pa-text-sm" style={{ 
+                  <div className="oa-caption oa-text-muted">{t('admin.organizationSettings.payments.payoutDescriptor')}</div>
+                  <div className="oa-text-sm" style={{ 
                     fontFamily: 'monospace',
                     background: 'rgba(0, 0, 0, 0.03)',
                     padding: '8px 12px',
@@ -1819,8 +1816,8 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
               
               {connectStatus.requirementsPending && connectStatus.requirementsPending.length > 0 && (
                 <div>
-                  <div className="pa-caption pa-text-muted">{t('admin.organizationSettings.payments.pendingVerification')}</div>
-                  <div className="pa-text-sm pa-text-muted pa-mt-1">
+                  <div className="oa-caption oa-text-muted">{t('admin.organizationSettings.payments.pendingVerification')}</div>
+                  <div className="oa-text-sm oa-text-muted oa-mt-1">
                     {connectStatus.requirementsPending.join(', ')}
                   </div>
                 </div>
@@ -1847,25 +1844,25 @@ function AdvancedForm({ settings, onSave, loading }: { settings: OrgSettingsType
   return (
     <Card>
       <form onSubmit={handleSubmit(onSave)}>
-        <h3 className="pa-h3 pa-mb-4">{t('admin.organizationSettings.advanced.title')}</h3>
-        <div className="pa-alert pa-alert-warning pa-mb-4">
+        <h3 className="oa-h3 oa-mb-4">{t('admin.organizationSettings.advanced.title')}</h3>
+        <div className="oa-alert oa-alert-warning oa-mb-4">
            {t('admin.organizationSettings.advanced.warning')}
         </div>
         
-        <div className="pa-form-group pa-mb-4">
+        <div className="oa-form-group oa-mb-4">
            <Controller name="allow_data_export" control={control} render={({field}) => (
             <Checkbox label={t('admin.organizationSettings.advanced.allowDataExport')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
 
-         <div className="pa-form-group pa-mb-6">
+         <div className="oa-form-group oa-mb-6">
            <Controller name="enable_api_access" control={control} render={({field}) => (
             <Checkbox label={t('admin.organizationSettings.advanced.enableApiAccess')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
 
-         <div className="pa-form-actions">
-          <Button type="submit" loading={loading} variant="danger" style={{background: 'var(--pa-secondary-bg)', color: 'var(--pa-text)'}}>{t('admin.organizationSettings.advanced.save')}</Button>
+         <div className="oa-form-actions">
+          <Button type="submit" loading={loading} variant="danger" style={{background: 'var(--oa-secondary-bg)', color: 'var(--oa-text)'}}>{t('admin.organizationSettings.advanced.save')}</Button>
         </div>
       </form>
     </Card>

@@ -250,3 +250,91 @@ export function lbsToKg(lbs: number): number {
 export function kgToLbs(kg: number): number {
     return Math.round(kg / 0.453592 * 100) / 100 // Round to 2 decimal places
 }
+
+/**
+ * Get athletes tagged in a gallery's photos
+ * Returns unique athletes from gallery_photo_tags joined with athletes table
+ */
+export async function getAthletesByGallery(
+    context: { orgId: string },
+    galleryId: string
+): Promise<ServiceResponse<Array<{
+    id: string
+    first_name: string
+    last_name: string
+    avatar_url?: string | null
+}>>> {
+    try {
+        void context
+        if (!galleryId) {
+            return { data: [], error: null }
+        }
+
+        // First get photo IDs for this gallery
+        const { data: photos, error: photosError } = await supabase
+            .from('gallery_photos')
+            .select('id')
+            .eq('gallery_id', galleryId)
+
+        if (photosError) {
+            console.error('[AthletesService] Error getting photos:', photosError)
+            return { data: [], error: null }
+        }
+
+        if (!photos || photos.length === 0) {
+            return { data: [], error: null }
+        }
+
+        const photoIds = photos.map(p => p.id)
+
+        // Then query gallery_photo_tags joined with athletes
+        const { data, error } = await supabase
+            .from('gallery_photo_tags')
+            .select(`
+                athlete:athletes!inner (
+                    id,
+                    first_name,
+                    last_name
+                )
+            `)
+            .in('photo_id', photoIds)
+
+        if (error) {
+            console.error('[AthletesService] Error getting athletes by gallery:', error)
+            return { data: [], error: null }
+        }
+
+        // Extract unique athletes and flatten structure
+        const athletesMap = new Map<string, {
+            id: string
+            first_name: string
+            last_name: string
+            avatar_url?: string | null
+        }>()
+
+        ;(data || []).forEach((item: any) => {
+            if (item.athlete) {
+                const athlete = item.athlete
+                if (!athletesMap.has(athlete.id)) {
+                    athletesMap.set(athlete.id, {
+                        id: athlete.id,
+                        first_name: athlete.first_name,
+                        last_name: athlete.last_name,
+                        avatar_url: null, // Avatar URL would need separate join
+                    })
+                }
+            }
+        })
+
+        return { 
+            data: Array.from(athletesMap.values()), 
+            error: null 
+        }
+    } catch (err) {
+        console.error('[AthletesService] Error getting athletes by gallery:', err)
+        return { 
+            data: null, 
+            error: err as Error 
+        }
+    }
+}

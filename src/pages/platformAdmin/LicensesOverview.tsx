@@ -110,7 +110,7 @@ export default function LicensesOverview() {
             return acc
           }, {} as Record<string, number>)
 
-          const duplicates = Object.entries(priceIdCounts).filter(([_, count]) => count > 1)
+          const duplicates = Object.entries(priceIdCounts).filter(([_, count]: [string, number]) => count > 1)
           if (duplicates.length > 0) {
             newAlerts.push({
               type: 'error',

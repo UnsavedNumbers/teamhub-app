@@ -50,53 +50,56 @@ BEGIN
   ),
   all_events AS (
     -- Regular events from events table
-    SELECT DISTINCT ON (e.id)
-      e.id,
-      e.title,
-      e.start_time,
-      e.end_time,
-      e.location,
-      e.timezone,
-      e.org_id,
-      e.visibility,
-      e.event_type,
-      e.description,
-      o.name as org_name,
-      o.slug as org_slug,
-      ARRAY_AGG(DISTINCT source.source) FILTER (WHERE source.source IS NOT NULL) as sources,
-      'event' as record_type
-    FROM public.events e
-    JOIN public.organizations o ON o.id = e.org_id
-    CROSS JOIN LATERAL (
-      SELECT
-        CASE
-          WHEN e.org_id IN (SELECT org_id FROM followed_orgs) THEN 'followed'
-          WHEN e.id IN (SELECT event_id FROM bookmarked_events) THEN 'bookmarked'
-          WHEN e.id IN (SELECT event_id FROM user_tickets) THEN 'ticketed'
-        END as source
-    ) source
-    WHERE
-      -- Events must be public OR user has tickets
-      (
-        e.visibility = 'public'
-        OR e.id IN (SELECT event_id FROM user_tickets)
-      )
-      -- And user must follow org OR have tickets
-      AND (
-        e.org_id IN (SELECT org_id FROM followed_orgs)
-        OR e.id IN (SELECT event_id FROM bookmarked_events)
-        OR e.id IN (SELECT event_id FROM user_tickets)
-      )
-      -- Date range filter
-      AND (p_start_date IS NULL OR e.start_time >= p_start_date)
-      AND (p_end_date IS NULL OR e.start_time <= p_end_date)
-      -- Org filter
-      AND (p_org_ids IS NULL OR e.org_id = ANY(p_org_ids))
-      -- Only upcoming or recent events
-      AND e.start_time > NOW() - INTERVAL '7 days'
-    GROUP BY e.id, e.title, e.start_time, e.end_time, e.location, e.timezone,
-             e.org_id, e.visibility, e.event_type, e.description, o.name, o.slug
-    ORDER BY e.id, e.start_time
+    SELECT *
+    FROM (
+      SELECT DISTINCT ON (e.id)
+        e.id,
+        e.title,
+        e.start_time,
+        e.end_time,
+        e.location,
+        e.timezone,
+        e.org_id,
+        e.visibility,
+        e.event_type,
+        e.description,
+        o.name as org_name,
+        o.slug as org_slug,
+        ARRAY_AGG(DISTINCT source.source) FILTER (WHERE source.source IS NOT NULL) as sources,
+        'event' as record_type
+      FROM public.events e
+      JOIN public.organizations o ON o.id = e.org_id
+      CROSS JOIN LATERAL (
+        SELECT
+          CASE
+            WHEN e.org_id IN (SELECT org_id FROM followed_orgs) THEN 'followed'
+            WHEN e.id IN (SELECT event_id FROM bookmarked_events) THEN 'bookmarked'
+            WHEN e.id IN (SELECT event_id FROM user_tickets) THEN 'ticketed'
+          END as source
+      ) source
+      WHERE
+        -- Events must be public OR user has tickets
+        (
+          e.visibility = 'public'
+          OR e.id IN (SELECT event_id FROM user_tickets)
+        )
+        -- And user must follow org OR have tickets
+        AND (
+          e.org_id IN (SELECT org_id FROM followed_orgs)
+          OR e.id IN (SELECT event_id FROM bookmarked_events)
+          OR e.id IN (SELECT event_id FROM user_tickets)
+        )
+        -- Date range filter
+        AND (p_start_date IS NULL OR e.start_time >= p_start_date)
+        AND (p_end_date IS NULL OR e.start_time <= p_end_date)
+        -- Org filter
+        AND (p_org_ids IS NULL OR e.org_id = ANY(p_org_ids))
+        -- Only upcoming or recent events
+        AND e.start_time > NOW() - INTERVAL '7 days'
+      GROUP BY e.id, e.title, e.start_time, e.end_time, e.location, e.timezone,
+               e.org_id, e.visibility, e.event_type, e.description, o.name, o.slug
+      ORDER BY e.id, e.start_time
+    ) regular_events
 
     UNION ALL
 

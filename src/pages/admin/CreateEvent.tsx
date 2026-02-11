@@ -19,13 +19,14 @@ import {
   Button,
   Input,
   Select,
-  DatePicker,
-  TimePicker,
   Checkbox
-} from '../../components/platformAdmin'
+} from '../../components/admin'
+import { TimePicker } from '../../components/platformAdmin/TimePicker'
+import { DateTimePicker } from '../../components/platformAdmin/DateTimePicker'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { FanVisibilityToggle } from '../../components/admin/FanVisibilityToggle'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
+import { FileUpload } from '../../components/common/FileUpload'
 import type { StructuredAddress } from '../../types/location'
 import { startTransition } from 'react'
 import {
@@ -36,7 +37,9 @@ import {
 import { API_TIMEOUT_MS } from '../../constants/api'
 import { STORAGE_KEYS, STORAGE_EXPIRY } from '../../constants/storage'
 import { getDefaultEventVisibility } from '../../utils/fanVisibilityHelpers'
+import { uploadTicketBanner } from '../../data/services/organizationService'
 import { getLink, RouteKeys } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 const STORAGE_KEY = STORAGE_KEYS.FORM_AUTOSAVE
 const DRAFT_TTL_MS = STORAGE_EXPIRY.FORM_AUTOSAVE
@@ -67,6 +70,7 @@ export default function CreateEvent() {
   const [draftSaved, setDraftSaved] = useState(false)
   const [orgVisibilityDefaults, setOrgVisibilityDefaults] = useState<Record<string, boolean> | null>(null)
   const [visibility, setVisibility] = useState<'public' | 'private'>('private')
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
 
   const t = useT()
   const { context, isReady } = useUserContext()
@@ -414,7 +418,7 @@ export default function CreateEvent() {
           .from('organization_visibility_settings')
           .select('fan_visibility_defaults')
           .eq('org_id', context.orgId)
-          .single()
+          .maybeSingle()
         
         if (error) {
           console.error('Error fetching org visibility defaults:', error)
@@ -604,16 +608,21 @@ export default function CreateEvent() {
         if (!teamData?.org_id) {
           throw new Error('Failed to get organization ID from team')
         }
+        const orgId = teamData.org_id
+        let finalBannerUrl = data.ticketing.ticket_banner_url?.trim() || null
 
         // Build ticketed_events insert
         type TicketedEventInsert = Database['public']['Tables']['ticketed_events']['Insert']
         const ticketedEventData: TicketedEventInsert = {
           event_id: eventDataAny.id,
-          org_id: teamData.org_id,
+          org_id: orgId,
           team_id: data.team_id!,
           event_type: data.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
           title: data.title,
           description: data.notes || null,
+          event_description: data.ticketing.event_description?.trim() || null,
+          ticket_banner_url: finalBannerUrl,
+          cover_image_path: finalBannerUrl,
           starts_at: new Date(data.start_time).toISOString(),
           ends_at: end.toISOString(),
           timezone: data.timezone,
@@ -646,6 +655,28 @@ export default function CreateEvent() {
 
         const ticketedEventId = ticketedEventDataResult.id
 
+        if (bannerFile) {
+          const { path, error: uploadError } = await uploadTicketBanner(orgId, ticketedEventId, bannerFile)
+          if (uploadError) {
+            console.error('Ticket banner upload failed:', uploadError)
+          }
+
+          if (!uploadError && path) {
+            finalBannerUrl = path
+            const { error: updateBannerError } = await supabase
+              .from('ticketed_events')
+              .update({
+                ticket_banner_url: finalBannerUrl,
+                cover_image_path: finalBannerUrl,
+              })
+              .eq('id', ticketedEventId)
+
+            if (updateBannerError) {
+              console.error('Ticket banner URL save failed:', updateBannerError)
+            }
+          }
+        }
+
         // Insert ticket types
         if (data.ticketing.ticket_types && data.ticketing.ticket_types.length > 0) {
           type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert']
@@ -663,7 +694,7 @@ export default function CreateEvent() {
               const capacityRemaining = capacityTotal
 
               return {
-                org_id: teamData.org_id,
+                org_id: orgId,
                 ticketed_event_id: ticketedEventId,
                 name: tt.name.trim(),
                 price_cents: priceCents,
@@ -762,10 +793,10 @@ export default function CreateEvent() {
       label: EVENT_TYPE_LABELS[key]
   }))
 
-  if (loading) return <div className="pa-skeleton oa-skeleton--tall" />
+  if (loading) return <div className="oa-skeleton oa-skeleton--tall" />
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title="Create Event" 
         subtitle={t('admin.events.createSubtitle')}
@@ -774,36 +805,30 @@ export default function CreateEvent() {
           { label: 'Create Event' },
         ]}
       />
-      <div className="pa-form-container">
-        <Card>
-          <form onSubmit={handleSubmit(onSubmit, (errors) => console.error('Form validation errors:', errors))}>
+      <div className="oa-form-container">
+        <form onSubmit={handleSubmit(onSubmit, (errors) => console.error('Form validation errors:', errors))}>
             {error && (
-              <div className="oa-alert oa-alert--error pa-mb-4">
+              <div className="oa-alert oa-alert--error oa-mb-4">
                 <div>{error}</div>
                 {errorDetail && <div className="oa-alert__meta">{errorDetail}</div>}
               </div>
             )}
             
             {draftSaved && (
-              <div className="oa-draft-saved pa-mb-4">
+              <div className="oa-draft-saved oa-mb-4">
                 <span className="material-symbols-outlined oa-draft-saved__icon">check_circle</span>
                 <span>Draft saved</span>
               </div>
             )}
             
-            <section className="oa-form-section" aria-labelledby="event-basics-heading">
-              <div className="oa-form-section-header">
-                <div>
-                  <h3 id="event-basics-heading" className="oa-form-section-title">Event Basics</h3>
-                  <p className="oa-form-section-subtitle">Name the event and connect it to the correct sport, program, season, and team.</p>
-                </div>
-              </div>
+            <Card title="Event Basics" className="oa-mb-6">
               <div className="oa-form-section-body">
-                <div className="pa-mb-4">
+                <p className="oa-form-section-subtitle oa-mb-4">Name the event and connect it to the correct sport, program, season, and team.</p>
+                <div className="oa-mb-4">
                   <Controller name="title" control={control} rules={{ required: t('admin.events.validation.titleRequired'), minLength: { value: 3, message: t('admin.events.validation.titleMinLength') } }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
                 </div>
-                <div className="pa-form-grid pa-form-grid-4 pa-mb-4">
-                  <div className="pa-select-wrapper">
+                <div className="oa-form-grid oa-form-grid-4 oa-mb-4">
+                  <div className="oa-select-wrapper">
                     <Controller
                       name="sport_id"
                       control={control}
@@ -823,7 +848,7 @@ export default function CreateEvent() {
                       )}
                     />
                   </div>
-                  <div className="pa-select-wrapper">
+                  <div className="oa-select-wrapper">
                     <Controller
                       name="program_id"
                       control={control}
@@ -843,7 +868,7 @@ export default function CreateEvent() {
                       )}
                     />
                   </div>
-                  <div className="pa-select-wrapper">
+                  <div className="oa-select-wrapper">
                     <Controller
                       name="season_id"
                       control={control}
@@ -865,7 +890,7 @@ export default function CreateEvent() {
                       )}
                     />
                   </div>
-                  <div className="pa-select-wrapper">
+                  <div className="oa-select-wrapper">
                     <Controller
                       name="team_id"
                       control={control}
@@ -884,42 +909,37 @@ export default function CreateEvent() {
                     />
                   </div>
                 </div>
-                <div className="pa-form-grid pa-form-grid-3 pa-mb-4">
-                  <div className="pa-select-wrapper">
+                <div className="oa-form-grid oa-form-grid-3 oa-mb-4">
+                  <div className="oa-select-wrapper">
                 <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.eventType')} options={eventTypeOptions} />} />
                   </div>
                 </div>
               </div>
-            </section>
+            </Card>
 
-            <section className="oa-form-section" aria-labelledby="event-dates-heading">
-              <div className="oa-form-section-header">
-                <div>
-                  <h3 id="event-dates-heading" className="oa-form-section-title">Date &amp; Time</h3>
-                  <p className="oa-form-section-subtitle">Schedule the date, start, end, and arrival windows for this event.</p>
-                </div>
-              </div>
+            <Card title="Date & Time" className="oa-mb-6">
               <div className="oa-form-section-body">
-                <div className="pa-form-grid pa-form-grid-4 pa-form-grid-tablet-2col">
+                <p className="oa-form-section-subtitle oa-mb-4">Schedule the date, start, end, and arrival windows for this event.</p>
+                <div className="oa-form-grid oa-form-grid-4 oa-form-grid-tablet-2col">
                   <Controller 
                     name="start_time" 
                     control={control} 
                     rules={{ required: t('admin.events.validation.startTimeRequired') }} 
                     render={({ field }) => (
-                      <DatePicker 
+                      <DateTimePicker 
                         label="Event Date" 
                         value={field.value ? field.value.split('T')[0] : ''}
                         onChange={(date) => {
                           const time = field.value?.split('T')[1] || '09:00'
                           field.onChange(`${date}T${time}`)
                         }}
-                        minValue={new Date().toISOString().split('T')[0]}
+                        min={new Date().toISOString().split('T')[0]}
                         required
                         error={errors.start_time?.message}
                       />
                     )} 
                   />
-                  <div className="pa-max-w-xs">
+                  <div className="oa-max-w-xs">
                     <Controller 
                       name="start_time" 
                       control={control} 
@@ -936,7 +956,7 @@ export default function CreateEvent() {
                       )} 
                     />
                   </div>
-                  <div className="pa-max-w-xs">
+                  <div className="oa-max-w-xs">
                     <Controller 
                       name="end_time" 
                       control={control} 
@@ -953,7 +973,7 @@ export default function CreateEvent() {
                       )} 
                     />
                   </div>
-                  <div className="pa-max-w-xs">
+                  <div className="oa-max-w-xs">
                     <Controller 
                       name="arrival_time" 
                       control={control} 
@@ -971,21 +991,16 @@ export default function CreateEvent() {
                   </div>
                 </div>
               </div>
-            </section>
+            </Card>
 
-            <section className="oa-form-section" aria-labelledby="event-location-heading">
-              <div className="oa-form-section-header">
-                <div>
-                  <h3 id="event-location-heading" className="oa-form-section-title">Location</h3>
-                  <p className="oa-form-section-subtitle">Point to a venue, mark the event as TBD, or capture a virtual link.</p>
-                </div>
-              </div>
+            <Card title="Location" className="oa-mb-6">
               <div className="oa-form-section-body">
-                <div className="pa-mb-2">
+                <p className="oa-form-section-subtitle oa-mb-4">Point to a venue, mark the event as TBD, or capture a virtual link.</p>
+                <div className="oa-mb-2">
                   <Button type="button" variant="ghost" onClick={() => setShowLocationDetails(!showLocationDetails)}>{showLocationDetails ? 'Simple Location' : 'Detailed Location'}</Button>
                 </div>
-                <div className="pa-space-y-4">
-                  <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col">
+                <div className="oa-space-y-4">
+                  <div className="oa-form-grid oa-form-grid-2 oa-form-grid-tablet-2col">
                     <Controller
                       name="location.venue_name"
                       control={control}
@@ -1024,7 +1039,7 @@ export default function CreateEvent() {
                   
                   {showLocationDetails && (
                     <>
-                      <div className="pa-form-grid pa-form-grid-3 pa-form-grid-tablet-2col">
+                      <div className="oa-form-grid oa-form-grid-3 oa-form-grid-tablet-2col">
                         <Controller name="location.city" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.city')} />} />
                         <Controller name="location.state" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.state')} />} />
                         <Controller name="location.postal_code" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.postalCode')} />} />
@@ -1038,17 +1053,12 @@ export default function CreateEvent() {
                   )}
                 </div>
               </div>
-            </section>
+            </Card>
           
           {!ticketingGateLoading && ticketingAllowed && (
-            <section className="oa-form-section" aria-labelledby="event-ticketing-heading">
-              <div className="oa-form-section-header">
-                <div>
-                  <h3 id="event-ticketing-heading" className="oa-form-section-title">{t('admin.events.ticketing.title')}</h3>
-                  <p className="oa-form-section-subtitle">Activate ticket sales, control the sales window, and manage inventory.</p>
-                </div>
-              </div>
+            <Card title={t('admin.events.ticketing.title')} className="oa-mb-6">
               <div className="oa-form-section-body">
+                <p className="oa-form-section-subtitle oa-mb-4">Activate ticket sales, control the sales window, and manage inventory.</p>
                 <div className="oa-checkbox-stack">
                   <Controller 
                     name="ticketing.is_ticketed" 
@@ -1064,8 +1074,77 @@ export default function CreateEvent() {
                 </div>
 
                 {watchTicketingEnabled && (
-                  <div className="pa-card oa-ticket-card pa-mb-4">
-                    <div className="pa-mb-4">
+                  <div className="oa-card oa-ticket-card oa-mb-4">
+                    <div className="oa-mb-4">
+                      <Controller
+                        name="notes"
+                        control={control}
+                        render={({ field }) => (
+                          <div className="oa-space-y-2">
+                            <label className="oa-label">Internal Notes / Description</label>
+                            <textarea
+                              className="oa-input oa-textarea"
+                              {...field}
+                              placeholder="Internal notes (not shown to public)"
+                              rows={2}
+                            />
+                          </div>
+                        )}
+                      />
+                    </div>
+
+                    <div className="oa-mb-4">
+                      <Controller
+                        name="ticketing.event_description"
+                        control={control}
+                        rules={{ maxLength: { value: 500, message: 'Max 500 characters' } }}
+                        render={({ field }) => (
+                          <div className="oa-space-y-2">
+                            <label className="oa-label">Public Event Description</label>
+                            <textarea
+                              className="oa-input oa-textarea oa-textarea-expand"
+                              {...field}
+                              placeholder="Description shown to public users..."
+                              rows={4}
+                              maxLength={500}
+                            />
+                            {errors.ticketing?.event_description?.message && (
+                              <span className="oa-error-message">{errors.ticketing.event_description.message}</span>
+                            )}
+                          </div>
+                        )}
+                      />
+                    </div>
+
+                    <div className="oa-mb-4">
+                      <FileUpload
+                        label="Ticket Banner Image"
+                        onFileSelect={setBannerFile}
+                        value={bannerFile}
+                        accept="image/*"
+                        maxSize={5 * 1024 * 1024}
+                        buttonText="Upload Banner"
+                        replaceText="Replace Banner"
+                        helperText="Suggested size: 1200 x 400 px (3:1). Max 5MB."
+                        showDropZone={true}
+                        fullWidth={true}
+                      />
+
+                      {watch('ticketing.ticket_banner_url') && !bannerFile && (
+                        <div className="oa-bg-surface-section oa-p-3 oa-rounded-lg oa-border oa-border-border-subtle oa-mt-4">
+                          <p className="oa-text-xs oa-font-bold oa-uppercase oa-text-muted oa-mb-2">Current Banner</p>
+                          <div className="oa-relative oa-w-full oa-h-32 oa-rounded-md oa-overflow-hidden oa-bg-gray-100 dark:oa-bg-gray-800">
+                            <img
+                              src={watch('ticketing.ticket_banner_url')}
+                              alt="Current Banner"
+                              className="oa-w-full oa-h-full oa-object-cover"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="oa-mb-4">
                       <Controller
                         name="ticketing.event_type"
                         control={control}
@@ -1084,10 +1163,28 @@ export default function CreateEvent() {
                           />
                         )}
                       />
-                      <p className="pa-text-xs pa-text-muted pa-mt-1">{t('admin.events.ticketing.eventType.helper')}</p>
+                      <p className="oa-text-xs oa-text-muted oa-mt-1">{t('admin.events.ticketing.eventType.helper')}</p>
                     </div>
 
-                    <div className="pa-mb-4">
+                    <div className="oa-mb-4">
+                      <Controller
+                        name="ticketing.status"
+                        control={control}
+                        render={({ field }) => (
+                          <Select
+                            {...field}
+                            value={field.value || 'draft'}
+                            label={t('admin.events.ticketing.status.label')}
+                            options={[
+                              { value: 'draft', label: t('admin.events.ticketing.status.draft') },
+                              { value: 'published', label: t('admin.events.ticketing.status.published') },
+                            ]}
+                          />
+                        )}
+                      />
+                    </div>
+
+                    <div className="oa-mb-4">
                       <Controller
                         name="ticketing.sales_immediate"
                         control={control}
@@ -1108,7 +1205,7 @@ export default function CreateEvent() {
                     </div>
 
                     {!watchTicketSalesImmediate && (
-                      <div className="pa-form-grid pa-form-grid-4 pa-form-grid-tablet-2col pa-mb-4">
+                      <div className="oa-form-grid oa-form-grid-4 oa-form-grid-tablet-2col oa-mb-4">
                         <Controller
                           name="ticketing.sales_start_at"
                           control={control}
@@ -1116,10 +1213,10 @@ export default function CreateEvent() {
                             validate: () => true
                           }}
                           render={({ field }) => (
-                            <DatePicker
+                            <DateTimePicker
                               label={t('admin.events.ticketing.salesWindow.startDate' as any)}
                               value={field.value ? field.value.split('T')[0] : ''}
-                              minValue={new Date().toISOString().slice(0, 10)}
+                              min={new Date().toISOString().slice(0, 10)}
                               onChange={(date) => {
                                 const time = field.value?.split('T')[1] || '00:00'
                                 field.onChange(`${date}T${time}`)
@@ -1128,7 +1225,7 @@ export default function CreateEvent() {
                             />
                           )}
                         />
-                        <div className="pa-max-w-xs">
+                        <div className="oa-max-w-xs">
                           <Controller
                             name="ticketing.sales_start_at"
                             control={control}
@@ -1169,10 +1266,10 @@ export default function CreateEvent() {
                             }
                           }}
                           render={({ field }) => (
-                            <DatePicker
+                            <DateTimePicker
                               label={t('admin.events.ticketing.salesWindow.endDate' as any)}
                               value={field.value ? field.value.split('T')[0] : ''}
-                              maxValue={watch('start_time')?.split('T')[0]}
+                              max={watch('start_time')?.split('T')[0]}
                               onChange={(date) => {
                                 const time = field.value?.split('T')[1] || '23:59'
                                 field.onChange(`${date}T${time}`)
@@ -1181,7 +1278,7 @@ export default function CreateEvent() {
                             />
                           )}
                         />
-                        <div className="pa-max-w-xs">
+                        <div className="oa-max-w-xs">
                           <Controller
                             name="ticketing.sales_end_at"
                             control={control}
@@ -1215,27 +1312,9 @@ export default function CreateEvent() {
                       </div>
                     )}
 
-                    <div className="pa-mb-4">
-                      <Controller
-                        name="ticketing.status"
-                        control={control}
-                        render={({ field }) => (
-                          <Select
-                            {...field}
-                            value={field.value || 'draft'}
-                            label={t('admin.events.ticketing.status.label')}
-                            options={[
-                              { value: 'draft', label: t('admin.events.ticketing.status.draft') },
-                              { value: 'published', label: t('admin.events.ticketing.status.published') },
-                            ]}
-                          />
-                        )}
-                      />
-                    </div>
-
-                    <div className="pa-mb-4">
-                      <div className="pa-flex pa-items-center pa-justify-between pa-mb-2">
-                        <label className="pa-label">{t('admin.events.ticketing.ticketTypes.label')}</label>
+                    <div className="oa-mb-4">
+                      <div className="oa-flex oa-items-center oa-justify-between oa-mb-2">
+                        <label className="oa-label">{t('admin.events.ticketing.ticketTypes.label')}</label>
                         <Button
                           type="button"
                           variant="ghost"
@@ -1246,12 +1325,12 @@ export default function CreateEvent() {
                       </div>
                       
                       {ticketTypeFields.length === 0 ? (
-                        <p className="pa-text-sm pa-text-muted">{t('admin.events.ticketing.ticketTypes.none')}</p>
+                        <p className="oa-text-sm oa-text-muted">{t('admin.events.ticketing.ticketTypes.none')}</p>
                       ) : (
-                        <div className="pa-space-y-3">
+                        <div className="oa-space-y-3">
                           {ticketTypeFields.map((field, index) => (
                             <div key={field.id} className="oa-ticket-type-card">
-                              <div className="pa-form-grid pa-form-grid-3 pa-mb-2">
+                              <div className="oa-form-grid oa-form-grid-3 oa-mb-2">
                                 <Controller
                                   name={`ticketing.ticket_types.${index}.name`}
                                   control={control}
@@ -1344,18 +1423,13 @@ export default function CreateEvent() {
                   </div>
                 )}
               </div>
-            </section>
+            </Card>
           )}
           
-            <section className="oa-form-section" aria-labelledby="event-attendance-heading">
-              <div className="oa-form-section-header">
-                <div>
-                  <h3 id="event-attendance-heading" className="oa-form-section-title">RSVP &amp; Recurrence</h3>
-                  <p className="oa-form-section-subtitle">Collect RSVPs and set up recurring sessions for the event.</p>
-                </div>
-              </div>
+            <Card title="RSVP & Recurrence" className="oa-mb-6">
               <div className="oa-form-section-body">
-                <div className="oa-checkbox-stack pa-mb-4">
+                <p className="oa-form-section-subtitle oa-mb-4">Collect RSVPs and set up recurring sessions for the event.</p>
+                <div className="oa-checkbox-stack oa-mb-4">
                   <Controller name="rsvp_enabled" control={control} render={({ field: { value, onChange } }) => (
                     <Checkbox checked={!!value} onChange={(e) => { 
                       onChange(e.target.checked)
@@ -1370,8 +1444,8 @@ export default function CreateEvent() {
                 </div>
 
                 {watchRSVPEnabled && (
-                  <div className="pa-mb-4">
-                    <div className="pa-select-wrapper">
+                  <div className="oa-mb-4">
+                    <div className="oa-select-wrapper">
                       <Controller 
                         name="rsvp_type" 
                         control={control} 
@@ -1395,36 +1469,31 @@ export default function CreateEvent() {
                 )}
 
                 {showRecurring && (
-                  <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col">
-                    <div className="pa-select-wrapper">
+                  <div className="oa-form-grid oa-form-grid-2 oa-form-grid-tablet-2col">
+                    <div className="oa-select-wrapper">
                       <Controller name="recurring.frequency" control={control} render={({ field }) => <Select {...field} label="Frequency" options={[{value:'weekly', label:'Weekly'}]} />} />
                     </div>
-                    <div className="pa-max-w-sm">
-                      <Controller name="recurring.end_date" control={control} render={({ field }) => <DatePicker {...field} label="Recurs Until" />} />
+                    <div className="oa-max-w-sm">
+                      <Controller name="recurring.end_date" control={control} render={({ field }) => <DateTimePicker {...field} label="Recurs Until" />} />
                     </div>
                   </div>
                 )}
               </div>
-            </section>
+            </Card>
 
-            <section className="oa-form-section" aria-labelledby="event-notes-heading">
-              <div className="oa-form-section-header">
-                <div>
-                  <h3 id="event-notes-heading" className="oa-form-section-title">Notes &amp; Prep</h3>
-                  <p className="oa-form-section-subtitle">Capture uniform, equipment, and general notes for coaches and families.</p>
-                </div>
-              </div>
+            <Card title="Notes & Prep" className="oa-mb-6">
               <div className="oa-form-section-body">
-                <div className="pa-form-grid pa-form-grid-2 pa-mb-6">
-                  <div className="pa-space-y-2">
+                <p className="oa-form-section-subtitle oa-mb-4">Capture uniform, equipment, and general notes for coaches and families.</p>
+                <div className="oa-form-grid oa-form-grid-2 oa-mb-6">
+                  <div className="oa-space-y-2">
                     <Controller name="uniform_notes" control={control} render={({ field }) => <Input {...field} label="Uniform Notes" placeholder="e.g. Home Kit" />} />
                     <Controller name="equipment_notes" control={control} render={({ field }) => <Input {...field} label="Equipment Notes" placeholder="e.g. Bring water" />} />
                   </div>
                   <div className="oa-notes-group">
-                    <label className="pa-label">{t('admin.events.fields.generalNotes')}</label>
+                    <label className="oa-label">{t('admin.events.fields.generalNotes')}</label>
                     <Controller name="notes" control={control} render={({ field }) => (
                       <textarea 
-                        className="pa-input pa-textarea oa-textarea-expand" 
+                        className="oa-input oa-textarea oa-textarea-expand" 
                         {...field} 
                         placeholder="General Notes..." 
                       />
@@ -1432,17 +1501,11 @@ export default function CreateEvent() {
                   </div>
                 </div>
               </div>
-            </section>
+            </Card>
 
-            {/* SECTION 7: FAN VISIBILITY */}
-            <section className="oa-form-section" aria-labelledby="event-visibility-heading">
-              <div className="oa-form-section-header">
-                <div>
-                  <h3 id="event-visibility-heading" className="oa-form-section-title">Fan Visibility</h3>
-                  <p className="oa-form-section-subtitle">Control who can see this event in the public fan portal.</p>
-                </div>
-              </div>
+            <Card title="Fan Visibility" className="oa-mb-6">
               <div className="oa-form-section-body">
+                <p className="oa-form-section-subtitle oa-mb-4">Control who can see this event in the public fan portal.</p>
                 <FanVisibilityToggle
                   checked={visibility === 'public'}
                   onChange={(checked) => setVisibility(checked ? 'public' : 'private')}
@@ -1451,11 +1514,11 @@ export default function CreateEvent() {
                   contextForWarning={watchTicketingEnabled ? 'payment' : null}
                 />
               </div>
-            </section>
+            </Card>
 
           {/* SECTION 8: ACTIONS */}
           {/* Mobile: Full-width stacked | Tablet: Full-width or right-aligned | Desktop: Right-aligned */}
-          <div className="pa-form-actions">
+          <div className="oa-form-actions">
             <OrgAdminButton
               variant="primary"
               onClick={() => {
@@ -1473,13 +1536,12 @@ export default function CreateEvent() {
             <Button
               type="submit"
               loading={saving}
-              className="pa-form-submit-btn w-full sm:w-auto"
+              className="oa-form-submit-btn w-full sm:w-auto"
             >
               Create Event
             </Button>
           </div>
         </form>
-      </Card>
       </div>
     </div>
   )

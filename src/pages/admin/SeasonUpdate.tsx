@@ -5,9 +5,10 @@ import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
 import { getSeasons, updateSeason } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, Input, DatePicker, Checkbox } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, Input, DatePicker, Checkbox } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 export default function SeasonUpdate() {
   const { id } = useParams<{ id: string }>()
@@ -107,26 +108,26 @@ export default function SeasonUpdate() {
 
   if (loading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
-        <div className="pa-skeleton" style={{ height: '400px' }} />
+        <div className="oa-skeleton" style={{ height: '400px' }} />
       </div>
     )
   }
 
   if (!season) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
         <Card>
-          <div className="pa-body-m pa-text-danger">Season not found</div>
+          <div className="oa-body-m oa-text-danger">Season not found</div>
         </Card>
       </div>
     )
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <OfflineBanner />
       
       <AdminPageHeader
@@ -140,17 +141,17 @@ export default function SeasonUpdate() {
       />
 
       {error && (
-        <Card className="pa-mb-6" noPadding>
-          <div className="pa-alert-card pa-alert-card--error">
-            <div className="pa-body-m pa-text-danger">{error}</div>
+        <Card className="oa-mb-6">
+          <div className="oa-alert-card oa-alert-card--error">
+            <div className="oa-body-m oa-text-danger">{error}</div>
           </div>
         </Card>
       )}
 
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card>
-          <form onSubmit={handleSubmit} className="pa-form-grid">
-          <div className="pa-form-group">
+          <form onSubmit={handleSubmit} className="oa-form-grid">
+          <div className="oa-form-group">
             <Input
               label="Season Name"
               value={name}
@@ -161,38 +162,38 @@ export default function SeasonUpdate() {
             />
           </div>
 
-          <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col">
-            <div className="pa-form-group">
+          <div className="oa-form-grid oa-form-grid-2 oa-form-grid-tablet-2col">
+            <div className="oa-form-group">
               <DatePicker
                 label="Start Date"
                 value={startDate}
-                onChange={(value) => setStartDate(value)}
+                onChange={(value) => setStartDate(value.target.value)}
                 required
-                isDisabled={isOffline || USE_FAKE_DATA || submitting}
+                disabled={isOffline || USE_FAKE_DATA || submitting}
               />
             </div>
-            <div className="pa-form-group">
+            <div className="oa-form-group">
               <DatePicker
                 label="End Date"
                 value={endDate}
-                onChange={(value) => setEndDate(value)}
+                onChange={(value) => setEndDate(value.target.value)}
                 required
-                isDisabled={isOffline || USE_FAKE_DATA || submitting}
+                disabled={isOffline || USE_FAKE_DATA || submitting}
               />
             </div>
           </div>
 
-          <div className="pa-checkbox-row">
+          <div className="oa-checkbox-row">
             <Checkbox
               label="Active Season"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
               disabled={isOffline || USE_FAKE_DATA || submitting}
-              helperText="Mark this season as currently active"
+              helper="Mark this season as currently active"
             />
           </div>
 
-          <div className="pa-form-actions">
+          <div className="oa-form-actions">
             <Button
               type="submit"
               disabled={!name.trim() || !startDate || !endDate || submitting || isOffline || USE_FAKE_DATA}
@@ -215,3 +216,5 @@ export default function SeasonUpdate() {
     </div>
   )
 }
+
+

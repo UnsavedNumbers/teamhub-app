@@ -1,23 +1,25 @@
 
 import { useState } from 'react'
-import { AdminPageHeader, Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/platformAdmin'
+import { AdminPageHeader } from '../../components/admin'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/platformAdmin'
 import AttendanceOverview from './attendance/AttendanceOverview'
 import AttendanceEvents from './attendance/AttendanceEvents'
 import AttendancePeople from './attendance/AttendancePeople'
 import AttendanceReports from './attendance/AttendanceReports'
 import AttendanceSettings from './attendance/AttendanceSettings'
+import '../../styles/orgAdmin.css'
 
 export default function Attendance() {
   const [activeTab, setActiveTab] = useState('overview')
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <AdminPageHeader 
         title="Attendance" 
         subtitle="Monitor and manage attendance across your organization"
       />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="pa-tabs">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="oa-tabs">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="events">Events</TabsTrigger>

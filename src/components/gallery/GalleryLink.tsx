@@ -26,6 +26,7 @@ interface GalleryLinkProps {
   entityName: string
   className?: string
   variant?: 'button' | 'link'
+  context?: 'portal' | 'admin'
 }
 
 // Auto-gallery entity types that have system-generated galleries
@@ -36,8 +37,9 @@ export function GalleryLink({
   entityId,
   className = '',
   variant = 'link',
+  context = 'portal',
 }: GalleryLinkProps) {
-  const { context, isReady } = useUserContext()
+  const { context: userContext, isReady } = useUserContext()
   const [galleryId, setGalleryId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -49,7 +51,7 @@ export function GalleryLink({
 
       // Only try to get existing gallery - no creation for auto-gallery types
       const { data: existingGallery } = await getGalleryByEntity(
-        context,
+        userContext,
         galleryType,
         entityId
       )
@@ -62,32 +64,38 @@ export function GalleryLink({
     }
 
     loadGallery()
-  }, [context, isReady, galleryType, entityId])
+  }, [userContext, isReady, galleryType, entityId])
 
   // Don't render if loading, no gallery found, or for multi-gallery entity types
   if (loading || !galleryId || !AUTO_GALLERY_TYPES.has(galleryType)) {
     return null
   }
 
+  const galleryRoute = context === 'admin' 
+    ? getLink('admin.photos.detail', { id: galleryId })
+    : getLink('portal.photosGallery', { id: galleryId })
+  
+  const label = context === 'admin' ? 'Manage Gallery' : 'View Gallery'
+
   if (variant === 'button') {
     return (
       <Link
-        to={getLink('portal.photosGallery', { id: galleryId })}
+        to={galleryRoute}
         className={`inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors ${className}`}
       >
         <Icon name="photo_library" size="text-lg" />
-        <span>View Gallery</span>
+        <span>{label}</span>
       </Link>
     )
   }
 
   return (
     <Link
-      to={getLink('portal.photosGallery', { id: galleryId })}
+      to={galleryRoute}
       className={`inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline ${className}`}
     >
       <Icon name="photo_library" size="text-sm" />
-      <span>View Gallery</span>
+      <span>{label}</span>
     </Link>
   )
 }

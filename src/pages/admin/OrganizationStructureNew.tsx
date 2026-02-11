@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useUserContext } from '../../hooks/useUserContext'
-import { AdminPageHeader, Button } from '../../components/platformAdmin'
+import { AdminPageHeader, Button } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import { getSports, getPrograms } from '../../data/services/sportsService'
@@ -13,6 +13,7 @@ import { getAthletes } from '../../data/services/familyService'
 import { getOrganizationUsers } from '../../data/services/usersService'
 import type { Sport, Program, Level, Team, Season } from '../../data/types/organization'
 import type { Child } from '../../types/family'
+import '../../styles/orgAdmin.css'
 
 export default function OrganizationStructureNew() {
   const { currentOrganization } = useOrganization()
@@ -126,8 +127,8 @@ export default function OrganizationStructureNew() {
 
   if (!isReady || loading) {
     return (
-      <div className="pa-flex pa-items-center pa-justify-center pa-h-full">
-        <div className="pa-spinner"></div>
+      <div className="oa-flex oa-items-center oa-justify-center oa-h-full">
+        <div className="oa-spinner"></div>
       </div>
     )
   }
@@ -138,7 +139,7 @@ export default function OrganizationStructureNew() {
         <AdminPageHeader
           title={
             <>
-              Organization <span className="pa-title-accent">Overview</span>
+              Organization <span className="oa-title-accent">Overview</span>
             </>
           }
           subtitle={`${currentOrganization?.name || 'Organization'} — Structural setup and team management`}
@@ -147,8 +148,8 @@ export default function OrganizationStructureNew() {
             { label: currentOrganization?.name || 'Organization' },
           ]}
         />
-        <div className="pa-card">
-          <div className="pa-text-danger pa-mb-3">{error}</div>
+        <div className="oa-card">
+          <div className="oa-text-danger oa-mb-3">{error}</div>
           <Button onClick={loadData}>
             Retry
           </Button>
@@ -163,7 +164,7 @@ export default function OrganizationStructureNew() {
       <AdminPageHeader
         title={
           <>
-            Organization <span className="pa-title-accent">Overview</span>
+            Organization <span className="oa-title-accent">Overview</span>
           </>
         }
         subtitle={`${currentOrganization?.name || 'Organization'} — Structural setup and team management`}
@@ -394,14 +395,10 @@ function QuickActionButton({
 }) {
   return (
     <button
-      className="org-action-btn"
+      className={`org-action-btn ${disabled ? 'org-action-btn--disabled' : ''}`}
       onClick={onClick}
       disabled={disabled}
       title={tooltip}
-      style={{
-        opacity: disabled ? 0.5 : 1,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-      }}
     >
       <div className="org-action-content">
         <span className="material-symbols-outlined org-action-icon">{icon}</span>

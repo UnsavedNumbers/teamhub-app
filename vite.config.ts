@@ -4,6 +4,9 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    include: ['react-hook-form'],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -26,5 +29,13 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/ngrok/, ''),
       },
     },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
+    exclude: ['node_modules', 'backups', 'supabase'],
+    css: true,
   },
 })

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Button, Input } from '@/components/platformAdmin'
-import { FanVisibilityToggle } from '../FanVisibilityToggle'
 import { generateGalleryCover, updateGallery, type Gallery, type GalleryPhoto } from '@/data/services/galleryService'
 import { useUserContext } from '@/hooks/useUserContext'
 import { showError, showSuccess } from '@/utils/toast'
-import { mapFanVisibilityToGalleryVisibility, mapGalleryVisibilityToFanVisibility } from '@/utils/fanVisibilityHelpers'
+import { mapFanVisibilityToGalleryVisibility } from '@/utils/fanVisibilityHelpers'
+import { useI18n } from '@/i18n/useI18n'
 
 interface GalleryEditModalProps {
   open: boolean
@@ -17,9 +17,11 @@ interface GalleryEditModalProps {
 
 export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved, onDelete }: GalleryEditModalProps) {
   const { context } = useUserContext()
+  const { t } = useI18n()
   const [name, setName] = useState(gallery?.name || '')
   const [description, setDescription] = useState(gallery?.description || '')
   const [visibleToFans, setVisibleToFans] = useState(false)
+  const [fansCanSee, setFansCanSee] = useState(false)
   const [coverPhotoId, setCoverPhotoId] = useState<string | ''>(gallery?.cover_photo_id || '')
   const [saving, setSaving] = useState(false)
 
@@ -27,7 +29,8 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
     if (gallery && open) {
       setName(gallery.name)
       setDescription(gallery.description || '')
-      setVisibleToFans(mapGalleryVisibilityToFanVisibility(gallery.visibility as any))
+      setVisibleToFans(gallery.visibility === 'public')
+      setFansCanSee(gallery.fans_can_see || false)
       setCoverPhotoId(gallery.cover_photo_id || '')
     }
   }, [gallery, open])
@@ -45,13 +48,16 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
     if (!context) return
     setSaving(true)
     try {
-      const visibility = mapFanVisibilityToGalleryVisibility(visibleToFans)
-      const { data, error } = await updateGallery(context, gallery.id, {
+      // Only update visibility if it was explicitly changed by the user
+      // Otherwise preserve the original visibility setting
+      const updates: Parameters<typeof updateGallery>[2] = {
         name: name.trim(),
         description: description.trim(),
-        visibility,
         cover_photo_id: coverPhotoId || null,
-      })
+        visibility: mapFanVisibilityToGalleryVisibility(visibleToFans),
+      }
+
+      const { data, error } = await updateGallery(context, gallery.id, updates)
       if (error || !data) throw error || new Error('Failed to update gallery')
       
       // Check if cover changed and trigger regeneration
@@ -106,13 +112,13 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
         </div>
         <form className="space-y-4" onSubmit={handleSave}>
           <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Name</label>
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Name</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
           </div>
           <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Description</label>
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Description</label>
             <textarea
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent resize-none"
+              className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent resize-none"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
@@ -120,28 +126,92 @@ export function GalleryEditModal({ open, gallery, photos = [], onClose, onSaved,
             />
           </div>
           <div>
-            <FanVisibilityToggle
-              checked={visibleToFans}
-              onChange={setVisibleToFans}
-              entityType="gallery"
-              disabled={saving}
-            />
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">
+              {t('photos.visibility.label')}
+            </label>
+            <div className="inline-flex w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-1 gap-1">
+              <button
+                type="button"
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+                  !visibleToFans
+                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+                onClick={() => {
+                  setVisibleToFans(false)
+                }}
+                disabled={saving}
+                aria-pressed={!visibleToFans}
+              >
+                {t('photos.visibility.draft')}
+              </button>
+              <button
+                type="button"
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+                  visibleToFans
+                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+                onClick={() => {
+                  setVisibleToFans(true)
+                }}
+                disabled={saving}
+                aria-pressed={visibleToFans}
+              >
+                {t('photos.visibility.public')}
+              </button>
+            </div>
           </div>
           <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Cover photo</label>
-            <select 
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
-              value={coverPhotoId} 
-              onChange={(e) => setCoverPhotoId(e.target.value)}
-            >
-              <option value="">No cover</option>
-              {photos.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.filename || p.id}
-                </option>
-              ))}
-            </select>
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">
+              Fan Visibility
+            </label>
+            <div className="inline-flex w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-1 gap-1">
+              <button
+                type="button"
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+                  !fansCanSee
+                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+                onClick={() => setFansCanSee(false)}
+                disabled={saving}
+                aria-pressed={!fansCanSee}
+              >
+                {t('photos.visibility.internal')}
+              </button>
+              <button
+                type="button"
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+                  fansCanSee
+                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+                onClick={() => setFansCanSee(true)}
+                disabled={saving}
+                aria-pressed={fansCanSee}
+              >
+                {t('photos.visibility.fansCanSee')}
+              </button>
+            </div>
           </div>
+          {photos.length > 0 && (
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Cover photo</label>
+              <select 
+                className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+                value={coverPhotoId} 
+                onChange={(e) => setCoverPhotoId(e.target.value)}
+              >
+                <option value="">No cover</option>
+                {photos.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.filename || p.id}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
             {onDelete && (
