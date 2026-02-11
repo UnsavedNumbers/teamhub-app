@@ -10,6 +10,7 @@ import { Button } from '../../components/platformAdmin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { AddExistingAthleteModal } from '../../components/admin/AddExistingAthleteModal'
 import { EmptyRosterState } from '../../components/admin/EmptyRosterState'
+import OfflineBanner from '../../components/admin/OfflineBanner'
 import { TeamOverviewTab } from '../../components/admin/TeamOverviewTab'
 import { TeamScheduleTab } from '../../components/admin/TeamScheduleTab'
 import { TeamAttendanceTab } from '../../components/admin/TeamAttendanceTab'
@@ -364,7 +365,21 @@ export default function TeamDetail() {
   if (loading) {
     return (
       <div className="pa-root">
-        <div className="pa-skeleton" style={{ height: '400px' }} />
+        <OfflineBanner />
+        <div style={{ padding: '24px' }}>
+          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div className="pa-skeleton" style={{ height: '200px', borderRadius: '8px', marginBottom: '24px' }} />
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="pa-skeleton" style={{ height: '40px', width: '100px' }} />
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="pa-skeleton" style={{ height: '250px' }} />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }

@@ -549,12 +549,20 @@ export default function PaymentDetail() {
   }
 
   if (loading) {
-    console.log('[PaymentDetail] Rendering loading state')
     return (
       <div className="pa-root">
-        <AdminPageHeader title="Payment" />
-        <div className="pa-flex pa-justify-center pa-py-12">
-          <div className="pa-animate-spin pa-rounded-full pa-h-8 pa-w-8 pa-border-t-2 pa-border-b-2 pa-border-slate-900 dark:pa-border-white"></div>
+        <div style={{ padding: '24px' }}>
+          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="pa-skeleton" style={{ height: '100px' }} />
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="pa-skeleton" style={{ height: '300px' }} />
+            ))}
+          </div>
         </div>
       </div>
     )

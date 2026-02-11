@@ -135,7 +135,24 @@ export default function FamilyDetail() {
     ]
 
     if (!isReady) return <AdminLoadingSpinner />
-    if (loading) return <div className="pa-loader" />
+    if (loading) {
+      return (
+        <div className="pa-root">
+          <div style={{ padding: '24px' }}>
+            <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+            <div className="pa-skeleton" style={{ height: '320px', borderRadius: '8px', marginBottom: '24px' }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i}>
+                  <div className="pa-skeleton" style={{ height: '40px', marginBottom: '16px' }} />
+                  <div className="pa-skeleton" style={{ height: '200px' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )
+    }
     if (error) return <ErrorState title="Error Loading Family" message={error.message} onRetry={fetchDetail} />
     if (!family) return <ErrorState title="Not Found" message="Family not found." />
 

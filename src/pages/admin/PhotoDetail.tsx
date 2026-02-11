@@ -104,8 +104,15 @@ export default function PhotoDetail() {
   if (loading) {
     return (
       <div className="pa-root">
-        <div className="pa-container pa-flex pa-items-center pa-justify-center pa-min-h-[400px]">
-          <div className="pa-animate-spin pa-text-4xl">⏳</div>
+        <div style={{ padding: '24px' }}>
+          <div className="pa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+            <div className="pa-skeleton" style={{ height: '600px', borderRadius: '8px' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="pa-skeleton" style={{ height: '200px' }} />
+              <div className="pa-skeleton" style={{ height: '200px' }} />
+            </div>
+          </div>
         </div>
       </div>
     )
