@@ -129,6 +129,15 @@ function mapParams(params: Partial<TicketingEventsQuery>) {
 // Events
 // ---------------------------------------------------------------------------
 
+function normalizeEvent(event: any): TicketedEvent {
+  const e = event as Record<string, unknown>
+  return {
+    ...event,
+    capacity_total: e.capacity_total ?? e.capacityTotal ?? null,
+    capacity_remaining: e.capacity_remaining ?? e.capacityRemaining ?? null,
+  } as TicketedEvent
+}
+
 export async function fetchTicketingEvents(orgId: string, params: Partial<TicketingEventsQuery>): Promise<TicketingEventsResponse> {
   if (USE_FAKE_DATA || !isSupabaseConfigured) {
     const result = getFakeTicketingEvents(orgId, params)
@@ -140,7 +149,11 @@ export async function fetchTicketingEvents(orgId: string, params: Partial<Ticket
     params: mapParams(params),
   })
 
-  return response as TicketingEventsResponse
+  const resp = response as TicketingEventsResponse
+  if (resp?.data && Array.isArray(resp.data)) {
+    resp.data = resp.data.map(normalizeEvent)
+  }
+  return resp
 }
 
 export async function createTicketingEvent(orgId: string, payload: Partial<TicketedEvent>) {

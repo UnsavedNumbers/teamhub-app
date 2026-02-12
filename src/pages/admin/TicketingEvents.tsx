@@ -612,9 +612,9 @@ function ListView({
             </div>
           </div>
           <div className="oa-ticket-list__actions">
-            {event.ticket_progress_pct !== null && event.ticket_progress_pct !== undefined && (
+            {(event.ticket_progress_pct != null || event.capacity_total != null) && (
               <div className="oa-ticket-list__stat">
-                {event.tickets_sold || 0}/{event.capacity_total || '?'}
+                {event.tickets_sold ?? 0}/{event.capacity_total ?? '?'}
               </div>
             )}
             <div className="oa-ticket-list__price">{formatCurrency(event.revenue_cents || 0)}</div>
@@ -870,6 +870,7 @@ export default function TicketingEvents() {
   const programs = programsQuery.data ?? []
   const seasons = seasonsQuery.data ?? []
   const venues = venuesQuery.data ?? []
+  console.log("Events---------------------------", events)
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   useEffect(() => setSelectedIds(new Set()), [filters.view, filters.page, events.length])
