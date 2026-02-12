@@ -200,6 +200,8 @@ async function handleEventsList(orgId: string, url: URL, client: any) {
       tickets_sold: ticketsSold,
       revenue_cents: orderMetrics.revenueCents,
       ticket_progress_pct: ticketProgress,
+      capacity_total: row.capacityTotal ?? null,
+      capacity_remaining: row.capacityRemaining ?? null,
     }
   })
 
