@@ -501,7 +501,17 @@ function TicketChip({ label, variant = 'neutral' }: { label: string; variant?: '
   return <span className={cn('oa-ticket-chip', `oa-ticket-chip--${variant}`)}>{label}</span>
 }
 
-function GridView({ events, onView, onDuplicate, onDelete }: { events: TicketedEvent[]; onView: (id: string) => void; onDuplicate: (id: string) => void; onDelete: (id: string) => void }) {
+function GridView({
+  events,
+  onView,
+  onDuplicate,
+  onDelete,
+}: {
+  events: TicketedEvent[]
+  onView: (ticketedEventId: string, eventId?: string | null) => void
+  onDuplicate: (id: string) => void
+  onDelete: (id: string) => void
+}) {
   return (
     <div className="oa-ticketing-grid">
       {events.map((event) => {
@@ -557,7 +567,7 @@ function GridView({ events, onView, onDuplicate, onDelete }: { events: TicketedE
               <Button variant="danger" size="dense" icon="delete" onClick={() => onDelete(event.id)} className="oa-ticket-card__action">
                 Delete
               </Button>
-              <Button variant="secondary" size="dense" icon="open_in_new" onClick={() => onView(event.id)} className="oa-ticket-card__action">
+              <Button variant="secondary" size="dense" icon="open_in_new" onClick={() => onView(event.id, event.event_id)} className="oa-ticket-card__action">
                 Open
               </Button>
             </div>
@@ -568,7 +578,17 @@ function GridView({ events, onView, onDuplicate, onDelete }: { events: TicketedE
   )
 }
 
-function ListView({ events, onView, onDuplicate, onDelete }: { events: TicketedEvent[]; onView: (id: string) => void; onDuplicate: (id: string) => void; onDelete: (id: string) => void }) {
+function ListView({
+  events,
+  onView,
+  onDuplicate,
+  onDelete,
+}: {
+  events: TicketedEvent[]
+  onView: (ticketedEventId: string, eventId?: string | null) => void
+  onDuplicate: (id: string) => void
+  onDelete: (id: string) => void
+}) {
   return (
     <div className="oa-card oa-shadow-sm oa-ticket-list">
       {events.map((event) => (
@@ -598,7 +618,7 @@ function ListView({ events, onView, onDuplicate, onDelete }: { events: TicketedE
               </div>
             )}
             <div className="oa-ticket-list__price">{formatCurrency(event.revenue_cents || 0)}</div>
-            <Button variant="secondary" size="dense" onClick={() => onView(event.id)} icon="visibility">View</Button>
+            <Button variant="secondary" size="dense" onClick={() => onView(event.id, event.event_id)} icon="visibility">View</Button>
             <Button variant="secondary" size="dense" onClick={() => onDuplicate(event.id)} icon="content_copy" />
             <Button variant="danger" size="dense" onClick={() => onDelete(event.id)} icon="delete" />
           </div>
@@ -624,7 +644,7 @@ function TableView({
   meta?: { page: number; per_page: number; total: number }
   selectedIds: Set<string>
   onSelectionChange: (next: Set<string> | ((prev: Set<string>) => Set<string>)) => void
-  onView: (id: string) => void
+  onView: (ticketedEventId: string, eventId?: string | null) => void
   onDuplicate: (id: string) => void
   onDelete: (id: string) => void
   onPageChange: (page: number) => void
@@ -644,7 +664,7 @@ function TableView({
       { id: 'revenue', label: 'Revenue', sortable: true, render: (row: TicketedEvent) => formatCurrency(row.revenue_cents || 0) },
       { id: 'actions', label: '', render: (row: TicketedEvent) => (
         <div className="oa-flex oa-gap-1">
-          <Button size="dense" variant="secondary" icon="open_in_new" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onView(row.id) }}>Open</Button>
+          <Button size="dense" variant="secondary" icon="open_in_new" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onView(row.id, row.event_id) }}>Open</Button>
           <Button size="dense" variant="secondary" icon="content_copy" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDuplicate(row.id) }} />
           <Button size="dense" variant="danger" icon="delete" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDelete(row.id) }} />
         </div>
@@ -667,7 +687,7 @@ function TableView({
       selectedIds={selectedIds}
       onSelectionChange={onSelectionChange}
       onSelectAllChange={() => {}}
-      onRowClick={(row) => onView(row.id)}
+      onRowClick={(row) => onView(row.id, row.event_id)}
     />
   )
 }
@@ -775,7 +795,6 @@ export default function TicketingEvents() {
   const queryClient = useQueryClient()
 
   const createEventPath = useRouteLink('admin.ticketingEvents.create') || useRouteLink('admin.events.create') || '/admin/ticketing/events/new'
-  const detailRouteTemplate = useRouteLink('admin.ticketingEvents.detail', { id: '__ID__' })
 
   useEffect(() => {
     setSearchInput(filters.search || '')
@@ -868,12 +887,13 @@ export default function TicketingEvents() {
     return () => clearTimeout(timer)
   }, [searchInput, filters.search])
 
-  const onView = (id: string) => {
-    if (detailRouteTemplate) {
-      navigate(detailRouteTemplate.replace('__ID__', id))
-    } else {
-      navigate(`/admin/ticketing/events/${id}`)
+  const onView = (ticketedEventId: string, eventId?: string | null) => {
+    if (!ticketedEventId || !eventId) {
+      showError('This ticketed event is not linked to a calendar event.')
+      return
     }
+
+    navigate(`${getLink('admin.events.detail', { id: eventId })}?view=ticketing`)
   }
 
   const handleDelete = (id: string) => {

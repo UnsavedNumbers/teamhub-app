@@ -152,13 +152,19 @@ export async function getTicketedEventByIdAdmin(id: string) {
     return event
   }
 
-  const { data } = await supabase
-    .from('ticketed_events')
-    .select('*')
-    .eq('id', id)
-    .single()
+  try {
+    const { data, error } = await supabase
+      .from('ticketed_events')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-  return normalizeSupabaseResponse<TicketedEvent>(data as unknown as TicketedEvent, false)
+    if (error) throw error
+
+    return normalizeSupabaseResponse<TicketedEvent>(data as unknown as TicketedEvent, false)
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticketed event')
+  }
 }
 
 // ============================================================================
@@ -252,14 +258,72 @@ export async function getTicketTypesForEventAdmin(ticketedEventId: string) {
     return getFakeTicketTypes(ticketedEventId, null)
   }
 
-  const { data } = await supabase
-    .from('ticket_types')
-    .select('*')
-    .eq('ticketed_event_id', ticketedEventId)
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true })
+  try {
+    const { data, error } = await supabase
+      .from('ticket_types')
+      .select('*')
+      .eq('ticketed_event_id', ticketedEventId)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
 
-  return normalizeSupabaseResponse<TicketType[]>(data as unknown as TicketType[], true)
+    if (error) throw error
+
+    return normalizeSupabaseResponse<TicketType[]>(data as unknown as TicketType[], true)
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticket types')
+  }
+}
+
+export interface TicketTypeSortMetrics {
+  activeCount: number
+  totalCount: number
+  nextSortOrder: number
+}
+
+export async function getTicketTypeSortMetricsForEventAdmin(ticketedEventId: string): Promise<TicketTypeSortMetrics> {
+  if (!ticketedEventId) {
+    throw new ValidationError('Ticketed event is required')
+  }
+
+  if (USE_FAKE_DATA) {
+    const fakeTypes = getFakeTicketTypes(ticketedEventId, null)
+    const maxSortOrder = fakeTypes.reduce(
+      (maxValue, ticketType) => (ticketType.sort_order > maxValue ? ticketType.sort_order : maxValue),
+      -1,
+    )
+    return {
+      activeCount: fakeTypes.length,
+      totalCount: fakeTypes.length,
+      nextSortOrder: maxSortOrder + 1,
+    }
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    const { data, error } = await supabaseAny
+      .from('ticket_types')
+      .select('is_active, sort_order')
+      .eq('ticketed_event_id', ticketedEventId)
+
+    if (error) throw error
+
+    const rows = (data ?? []) as Array<{ is_active: boolean | null; sort_order: number | null }>
+    const activeCount = rows.filter((row) => row.is_active !== false).length
+    const maxSortOrder = rows.reduce((maxValue, row) => {
+      if (typeof row.sort_order !== 'number') {
+        return maxValue
+      }
+      return row.sort_order > maxValue ? row.sort_order : maxValue
+    }, -1)
+
+    return {
+      activeCount,
+      totalCount: rows.length,
+      nextSortOrder: maxSortOrder + 1,
+    }
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticket type metrics')
+  }
 }
 
 export async function createTicketType(
@@ -302,6 +366,46 @@ export async function getSeatMapsForEvent(ticketedEventId: string): Promise<Seat
     return normalizeSupabaseResponse<SeatMap[]>(data as unknown as SeatMap[], true)
   } catch (error) {
     throw classifySupabaseError(error, 'Seat maps')
+  }
+}
+
+export interface ReservedCapacitySnapshot {
+  capacityTotal: number
+  capacityRemaining: number
+}
+
+export async function getReservedCapacitySnapshot(seatMapId: string): Promise<ReservedCapacitySnapshot> {
+  if (!seatMapId) {
+    throw new ValidationError('Seat map is required')
+  }
+
+  try {
+    const supabaseAny = supabase as any
+
+    const { count: totalAvailableCount, error: totalAvailableError } = await supabaseAny
+      .from('seat_map_sections')
+      .select('id', { count: 'exact', head: true })
+      .eq('seat_map_id', seatMapId)
+      .eq('is_available', true)
+
+    if (totalAvailableError) throw totalAvailableError
+
+    const { count: soldCount, error: soldError } = await supabaseAny
+      .from('seat_assignments')
+      .select('id, seat_map_sections!inner(seat_map_id)', { count: 'exact', head: true })
+      .eq('seat_map_sections.seat_map_id', seatMapId)
+
+    if (soldError) throw soldError
+
+    const capacityTotal = totalAvailableCount ?? 0
+    const sold = soldCount ?? 0
+
+    return {
+      capacityTotal,
+      capacityRemaining: Math.max(capacityTotal - sold, 0),
+    }
+  } catch (error) {
+    throw classifySupabaseError(error, 'Reserved capacity')
   }
 }
 
@@ -378,16 +482,55 @@ export async function uploadSeatMapChart(seatMapId: string, file: File): Promise
 
   try {
     const supabaseAny = supabase as any
-    const path = `${seatMapId}/${Date.now()}-${file.name.replace(/\s+/g, '-')}`
+    const safeFileName = file.name.replace(/\s+/g, '-').replace(/\//g, '-')
+    const timestampedFileName = `${Date.now()}-${safeFileName}`
     const bucket = 'ticketing-seat-maps'
 
-    const { error: uploadError } = await supabaseAny.storage
-      .from(bucket)
-      .upload(path, file, { upsert: true, contentType: file.type || 'image/jpeg' })
+    let orgId: string | null = null
+    const { data: seatMapRecord, error: seatMapError } = await supabaseAny
+      .from('seat_maps')
+      .select('ticketed_event_id')
+      .eq('id', seatMapId)
+      .maybeSingle()
 
-    if (uploadError) throw uploadError
+    if (!seatMapError && seatMapRecord?.ticketed_event_id) {
+      const { data: ticketedEventRecord, error: ticketedEventError } = await supabaseAny
+        .from('ticketed_events')
+        .select('org_id')
+        .eq('id', seatMapRecord.ticketed_event_id)
+        .maybeSingle()
 
-    const { data: urlData } = supabaseAny.storage.from(bucket).getPublicUrl(path)
+      if (!ticketedEventError && ticketedEventRecord?.org_id) {
+        orgId = ticketedEventRecord.org_id
+      }
+    }
+
+    const pathCandidates = [
+      orgId ? `${orgId}/${seatMapId}/${timestampedFileName}` : null,
+      `${seatMapId}/${timestampedFileName}`,
+    ].filter((candidate): candidate is string => Boolean(candidate))
+
+    let uploadedPath: string | null = null
+    let lastUploadError: any = null
+
+    for (const candidatePath of pathCandidates) {
+      const { error: uploadError } = await supabaseAny.storage
+        .from(bucket)
+        .upload(candidatePath, file, { upsert: true, contentType: file.type || 'image/jpeg' })
+
+      if (!uploadError) {
+        uploadedPath = candidatePath
+        break
+      }
+
+      lastUploadError = uploadError
+    }
+
+    if (!uploadedPath) {
+      throw lastUploadError ?? new Error('Seat map chart upload failed')
+    }
+
+    const { data: urlData } = supabaseAny.storage.from(bucket).getPublicUrl(uploadedPath)
     const publicUrl = urlData.publicUrl
 
     const { error: updateError } = await supabaseAny
@@ -456,10 +599,42 @@ export async function bulkAddSeats(seatMapId: string, config: BulkSeatConfig): P
 
   try {
     const supabaseAny = supabase as any
-    for (let i = 0; i < rows.length; i += 500) {
-      const chunk = rows.slice(i, i + 500)
-      const { error } = await supabaseAny.from('seat_map_sections').insert(chunk)
-      if (error) throw error
+    for (let i = 0; i < rows.length; i += 100) {
+      const chunk = rows.slice(i, i + 100)
+      let lastError: any = null
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const { error } = await supabaseAny.from('seat_map_sections').insert(chunk)
+          if (!error) {
+            lastError = null
+            break
+          }
+
+          const status = Number((error as any)?.status ?? 0)
+          const message = String((error as any)?.message ?? '').toLowerCase()
+          const retryable = status >= 500 || message.includes('gateway') || message.includes('cors') || message.includes('failed to fetch') || message.includes('network')
+          lastError = error
+
+          if (!retryable || attempt === 2) {
+            break
+          }
+        } catch (error: any) {
+          const message = String(error?.message ?? '').toLowerCase()
+          const retryable = message.includes('failed to fetch') || message.includes('network') || message.includes('cors') || message.includes('gateway')
+          lastError = error
+
+          if (!retryable || attempt === 2) {
+            break
+          }
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)))
+      }
+
+      if (lastError) {
+        throw lastError
+      }
     }
     return rows.length
   } catch (error) {
@@ -495,10 +670,42 @@ export async function importSeatRows(
 
   try {
     const supabaseAny = supabase as any
-    for (let i = 0; i < inserts.length; i += 500) {
-      const chunk = inserts.slice(i, i + 500)
-      const { error } = await supabaseAny.from('seat_map_sections').insert(chunk)
-      if (error) throw error
+    for (let i = 0; i < inserts.length; i += 100) {
+      const chunk = inserts.slice(i, i + 100)
+      let lastError: any = null
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const { error } = await supabaseAny.from('seat_map_sections').insert(chunk)
+          if (!error) {
+            lastError = null
+            break
+          }
+
+          const status = Number((error as any)?.status ?? 0)
+          const message = String((error as any)?.message ?? '').toLowerCase()
+          const retryable = status >= 500 || message.includes('gateway') || message.includes('cors') || message.includes('failed to fetch') || message.includes('network')
+          lastError = error
+
+          if (!retryable || attempt === 2) {
+            break
+          }
+        } catch (error: any) {
+          const message = String(error?.message ?? '').toLowerCase()
+          const retryable = message.includes('failed to fetch') || message.includes('network') || message.includes('cors') || message.includes('gateway')
+          lastError = error
+
+          if (!retryable || attempt === 2) {
+            break
+          }
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)))
+      }
+
+      if (lastError) {
+        throw lastError
+      }
     }
     return inserts.length
   } catch (error) {

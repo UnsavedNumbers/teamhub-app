@@ -166,7 +166,6 @@ export const ROUTES = {
   ADMIN_TICKETING_SCANNER: '/admin/ticketing/scanner',
   ADMIN_TICKETING_EVENTS: '/admin/ticketing/events',
   ADMIN_TICKETING_EVENT_CREATE: '/admin/ticketing/events/new',
-  ADMIN_TICKETING_EVENT_DETAIL: (id: string) => `/admin/ticketing/events/${id}`,
   ADMIN_TICKETING_ORDERS: '/admin/ticketing/orders',
   ADMIN_TICKETING_ORDER_DETAIL: (orderId: string) => `/admin/ticketing/orders/${orderId}`,
   ADMIN_PROGRAMS: '/admin/programs',
