@@ -129,6 +129,29 @@ function mapParams(params: Partial<TicketingEventsQuery>) {
 // Events
 // ---------------------------------------------------------------------------
 
+function normalizeEvent(event: any): TicketedEvent {
+  const e = event as Record<string, unknown>
+  // Backend may return programs/seasons/venues as null when FKs are unset; use cached/denormalized fallbacks
+  const program =
+    (e.program ?? e.programs) ??
+    (e.program_name_cached ? { name: e.program_name_cached } : null)
+  const season =
+    (e.season ?? e.seasons) ??
+    (e.season_name_cached ? { name: e.season_name_cached } : null)
+  const venue =
+    (e.venue ?? e.venues) ??
+    (e.venue_name ? { name: e.venue_name, city: e.venue_city, state: e.venue_state } : null)
+
+  return {
+    ...event,
+    capacity_total: e.capacity_total ?? e.capacityTotal ?? null,
+    capacity_remaining: e.capacity_remaining ?? e.capacityRemaining ?? null,
+    program,
+    season,
+    venue,
+  } as TicketedEvent
+}
+
 export async function fetchTicketingEvents(orgId: string, params: Partial<TicketingEventsQuery>): Promise<TicketingEventsResponse> {
   if (USE_FAKE_DATA || !isSupabaseConfigured) {
     const result = getFakeTicketingEvents(orgId, params)
@@ -140,7 +163,11 @@ export async function fetchTicketingEvents(orgId: string, params: Partial<Ticket
     params: mapParams(params),
   })
 
-  return response as TicketingEventsResponse
+  const resp = response as TicketingEventsResponse
+  if (resp?.data && Array.isArray(resp.data)) {
+    resp.data = resp.data.map(normalizeEvent)
+  }
+  return resp
 }
 
 export async function createTicketingEvent(orgId: string, payload: Partial<TicketedEvent>) {
