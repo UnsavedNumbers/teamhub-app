@@ -194,12 +194,23 @@ async function handleEventsList(orgId: string, url: URL, client: any) {
         ? Math.min(100, Math.round((ticketsSold / row.capacityTotal) * 100))
         : null
 
+    // Fallbacks when program/season/venue embeds are null (e.g. program_id/season_id/venue_id not set)
+    const programs = row.programs ?? (row.program_name_cached ? { name: row.program_name_cached } : null)
+    const seasons = row.seasons ?? (row.season_name_cached ? { name: row.season_name_cached } : null)
+    const venues =
+      row.venues ?? (row.venue_name ? { name: row.venue_name, city: row.venue_city, state: row.venue_state } : null)
+
     return {
       ...row,
+      programs,
+      seasons,
+      venues,
       sale_status,
       tickets_sold: ticketsSold,
       revenue_cents: orderMetrics.revenueCents,
       ticket_progress_pct: ticketProgress,
+      capacity_total: row.capacityTotal ?? null,
+      capacity_remaining: row.capacityRemaining ?? null,
     }
   })
 
@@ -213,7 +224,7 @@ async function handleEventsList(orgId: string, url: URL, client: any) {
   const countsByProgram: Record<string, number> = {}
   for (const e of filtered) {
     countsByStatus[e.status] = (countsByStatus[e.status] || 0) + 1
-    const programLabel = e.programs?.name || "Unassigned"
+    const programLabel = e.programs?.name ?? e.program_name_cached ?? "Unassigned"
     countsByProgram[programLabel] = (countsByProgram[programLabel] || 0) + 1
   }
 
