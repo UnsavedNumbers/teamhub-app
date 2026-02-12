@@ -16,13 +16,19 @@ export interface SupabaseResponse<T = unknown> {
 type ChainMethod =
   | 'from'
   | 'select'
+  | 'or'
   | 'eq'
   | 'neq'
+  | 'gt'
+  | 'lt'
   | 'gte'
   | 'lte'
   | 'order'
   | 'limit'
   | 'in'
+  | 'is'
+  | 'not'
+  | 'like'
   | 'ilike'
   | 'contains'
   | 'overlaps'
@@ -37,13 +43,19 @@ type TerminalMethod = 'single' | 'maybeSingle' | 'then' | 'execute'
 const CHAIN_METHODS: ChainMethod[] = [
   'from',
   'select',
+  'or',
   'eq',
   'neq',
+  'gt',
+  'lt',
   'gte',
   'lte',
   'order',
   'limit',
   'in',
+  'is',
+  'not',
+  'like',
   'ilike',
   'contains',
   'overlaps',

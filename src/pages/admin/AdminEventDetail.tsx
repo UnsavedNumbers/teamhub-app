@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { showError, showSuccess } from '@/utils/toast'
 import { getLink } from '@/utils/routes'
 import { getReasonIcon, getReasonMessage, shouldShowUpgradePrompt, useFeatureGate } from '@/lib/featureGate'
+import type { ReasonCode } from '@/lib/featureGate/types'
 import type { CalendarEvent, EventLocation } from '@/types/calendar'
 import { formatEventDate, formatEventTimeRange } from '@/types/calendar'
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
@@ -527,6 +528,7 @@ export default function AdminEventDetail() {
   const timezoneDisplay = formatTimezoneDisplay(event.timezone, event.start_time)
   const isRecurring = hasRecurringSchedule(event.recurring_pattern)
   const currentView = searchParams.get('view') === 'ticketing' ? 'ticketing' : 'details'
+  const ticketingReason = (ticketingReasonCode || 'error') as ReasonCode
 
   const setView = (view: 'details' | 'ticketing') => {
     const next = new URLSearchParams(searchParams)
@@ -563,7 +565,7 @@ export default function AdminEventDetail() {
       />
 
       <div className="space-y-6">
-        <div className="oa-segmented" role="tablist" aria-label="Event detail sections">
+        <div className="oa-segmented" role="tablist" aria-label={t('admin.events.detailPage.tabs.ariaLabel')}>
           <button
             type="button"
             role="tab"
@@ -571,7 +573,7 @@ export default function AdminEventDetail() {
             className={`oa-segmented__button ${currentView === 'details' ? 'is-active' : ''}`}
             onClick={() => setView('details')}
           >
-            Event Details
+            {t('admin.events.detailPage.tabs.details')}
           </button>
           <button
             type="button"
@@ -580,7 +582,7 @@ export default function AdminEventDetail() {
             className={`oa-segmented__button ${currentView === 'ticketing' ? 'is-active' : ''}`}
             onClick={() => setView('ticketing')}
           >
-            Ticketing
+            {t('admin.events.detailPage.tabs.ticketing')}
           </button>
         </div>
 
@@ -593,16 +595,18 @@ export default function AdminEventDetail() {
             <section className="oa-card" style={{ padding: 'var(--pa-space-6)' }}>
               <div className="text-center" style={{ maxWidth: 560, margin: '0 auto' }}>
                 <span className="material-symbols-rounded text-6xl text-amber-500 mb-4 block">
-                  {getReasonIcon(ticketingReasonCode as any)}
+                  {getReasonIcon(ticketingReason)}
                 </span>
-                <h2 className="text-xl font-semibold" style={{ marginBottom: 'var(--pa-space-2)' }}>Feature Unavailable</h2>
+                <h2 className="text-xl font-semibold" style={{ marginBottom: 'var(--pa-space-2)' }}>
+                  {t('admin.events.detailPage.featureGate.title')}
+                </h2>
                 <p style={{ color: 'var(--pa-text-muted)', marginBottom: 'var(--pa-space-5)' }}>
-                  {getReasonMessage(ticketingReasonCode as any)}
+                  {getReasonMessage(ticketingReason)}
                 </p>
-                {shouldShowUpgradePrompt(ticketingReasonCode as any) && (
+                {shouldShowUpgradePrompt(ticketingReason) && (
                   <a href={getLink('admin.organization.billing')} className="oa-btn oa-btn--primary">
                     <span className="material-symbols-outlined" style={{ fontSize: 18 }}>workspace_premium</span>
-                    Upgrade Plan
+                    {t('admin.events.detailPage.actions.upgradePlan')}
                   </a>
                 )}
               </div>

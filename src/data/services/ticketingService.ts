@@ -30,6 +30,8 @@ import { assertNotDemoMode } from '@/utils/demoMode'
 import { classifySupabaseError, ValidationError } from '@/utils/supabaseErrorHandler'
 import {
   createFakeCheckoutSession,
+  createFakeStaffValidationLink,
+  getFakeTicketTypesTotalCount,
   getFakeMyTicketOrders,
   getFakeTicketedEvent,
   getFakeTicketedEvents,
@@ -272,6 +274,83 @@ export async function getTicketTypesForEventAdmin(ticketedEventId: string) {
   } catch (error) {
     throw classifySupabaseError(error, 'Ticket types')
   }
+}
+
+export async function getTicketTypesTotalCountForEventAdmin(ticketedEventId: string): Promise<number> {
+  if (!ticketedEventId) {
+    throw new ValidationError('Ticketed event is required')
+  }
+
+  if (USE_FAKE_DATA) {
+    return getFakeTicketTypesTotalCount(ticketedEventId)
+  }
+
+  try {
+    const { count, error } = await supabase
+      .from('ticket_types')
+      .select('id', { head: true, count: 'exact' })
+      .eq('ticketed_event_id', ticketedEventId)
+
+    if (error) throw error
+    return count ?? 0
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticket type count')
+  }
+}
+
+export async function createStaffValidationLinkForEventAdmin(ticketedEventId: string): Promise<string> {
+  if (!ticketedEventId) {
+    throw new ValidationError('Ticketed event ID is required to generate a staff link.')
+  }
+
+  if (USE_FAKE_DATA) {
+    return createFakeStaffValidationLink(ticketedEventId)
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new ValidationError('Permission denied')
+  }
+
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('org_id')
+    .eq('id', user.id)
+    .single()
+
+  if (userError) {
+    throw classifySupabaseError(userError, 'Staff link generation')
+  }
+
+  if (!userData?.org_id) {
+    throw new ValidationError('Permission denied')
+  }
+
+  const array = new Uint8Array(32)
+  window.crypto.getRandomValues(array)
+  const token = Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('')
+  const tokenHash = await hashToken(token)
+
+  const expiresAt = new Date()
+  expiresAt.setDate(expiresAt.getDate() + 7)
+
+  const { error } = await supabase.from('ticket_staff_links').insert({
+    org_id: userData.org_id,
+    ticketed_event_id: ticketedEventId,
+    token_hash: tokenHash,
+    expires_at: expiresAt.toISOString(),
+    created_by_user_id: user.id,
+  })
+
+  if (error) {
+    throw classifySupabaseError(error, 'Staff link generation')
+  }
+
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  return `${baseUrl}/tickets/validate/${token}`
 }
 
 export interface TicketTypeSortMetrics {

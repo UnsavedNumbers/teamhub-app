@@ -86,6 +86,19 @@ export function getFakeTicketTypes(eventId: string, orgId?: string | null) {
   return getFakeTicketTypesForEvent(eventId, orgId)
 }
 
+export function getFakeTicketTypesTotalCount(eventId: string, orgId?: string | null): number {
+  const allTypes = getFakeTicketTypesForEvent(eventId, orgId)
+  return allTypes.length
+}
+
+export function createFakeStaffValidationLink(ticketedEventId: string): string {
+  const token = randomCode(24)
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  const fallbackUrl = `/tickets/validate/${token}`
+  if (!ticketedEventId) return `${baseUrl}${fallbackUrl}`
+  return `${baseUrl}/tickets/validate/${token}`
+}
+
 export function getFakeTicketOrderById(orderId: string, orgId?: string | null) {
   const order = fakeOrders.find(item => item.id === orderId)
   if (!order) return null
