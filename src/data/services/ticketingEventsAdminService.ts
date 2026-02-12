@@ -20,6 +20,7 @@ import type {
 } from '@/types/ticketing'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 const FUNCTION_URL = SUPABASE_URL
   ? `${SUPABASE_URL.replace('/rest/v1', '')}/functions/v1/ticketing-events-api`
   : ''
@@ -62,21 +63,39 @@ async function authedFetch(path: string, { method = 'GET', body, params }: Fetch
     })
   }
 
-  const { data: session } = await supabase.auth.getSession()
-  const token = session.session?.access_token
+  const runRequest = async (token?: string | null) => {
+    return fetch(url.toString(), {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(SUPABASE_ANON_KEY ? { apikey: SUPABASE_ANON_KEY } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    })
+  }
 
-  const res = await fetch(url.toString(), {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  })
+  const { data: sessionData } = await supabase.auth.getSession()
+  let token = sessionData.session?.access_token ?? null
+
+  // If session bootstrap is still settling, try to refresh once before first request.
+  if (!token) {
+    const { data: refreshed } = await supabase.auth.refreshSession()
+    token = refreshed.session?.access_token ?? null
+  }
+
+  let res = await runRequest(token)
+
+  // Recover from expired/stale tokens once.
+  if (res.status === 401) {
+    const { data: refreshed } = await supabase.auth.refreshSession()
+    token = refreshed.session?.access_token ?? null
+    res = await runRequest(token)
+  }
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(text || res.statusText)
+    throw new Error(text || `${res.status} ${res.statusText}`)
   }
 
   if (res.status === 204) return null
