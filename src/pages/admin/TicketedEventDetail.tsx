@@ -413,11 +413,27 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
   const hasDemoReadOnlyNotice = USE_FAKE_DATA
   const hasOnlyInactiveTicketTypes = totalTicketTypeCount > 0 && ticketTypesList.length === 0
   const hasDeletedAllVisibleTicketTypes = hadTicketTypesRef.current && ticketTypesList.length === 0 && totalTicketTypeCount === 0
+  const activeTicketTypesCount = ticketTypesList.filter((type) => type.is_active).length
+  const hasFiniteCapacity = ticketTypesList.some((type) => type.capacity_total !== null)
+  const totalCapacity = hasFiniteCapacity
+    ? ticketTypesList.reduce((sum, type) => sum + (type.capacity_total ?? 0), 0)
+    : null
+  const totalRemainingCapacity = hasFiniteCapacity
+    ? ticketTypesList.reduce((sum, type) => sum + (type.capacity_remaining ?? 0), 0)
+    : null
+
+  const salesStatusLabel = (() => {
+    if (event.status === 'published') return t('ticketing.detail.values.salesStatus.live')
+    if (event.status === 'draft') return t('ticketing.detail.values.salesStatus.preparing')
+    if (event.status === 'completed') return t('ticketing.detail.values.salesStatus.closed')
+    if (event.status === 'cancelled') return t('ticketing.detail.values.salesStatus.closed')
+    return t('ticketing.detail.values.unavailable')
+  })()
 
   const ticketingContent = (
-    <div className="oa-space-y-6">
+    <div className="oa-ticketing-detail oa-space-y-6">
       {(hasOfflineReadOnlyNotice || hasDemoReadOnlyNotice) && (
-        <div className="oa-card oa-p-4">
+        <div className="oa-card oa-p-4 oa-ticketing-notice-card" role="status" aria-live="polite">
           {hasOfflineReadOnlyNotice && (
             <p className="oa-text-muted">{t('ticketing.detail.notices.offlineReadOnly')}</p>
           )}
@@ -427,57 +443,101 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
         </div>
       )}
 
-      <div className="oa-grid oa-grid-cols-1 md:oa-grid-cols-2 oa-gap-6">
-        <div className="oa-card">
-          <h2 className="oa-card-title">{t('ticketing.detail.sections.eventDetails')}</h2>
-          <div className="oa-info-grid">
+      <section className="oa-card oa-ticketing-overview-card" aria-label={t('ticketing.detail.sections.overview')}>
+        <div className="oa-ticketing-overview__header">
+          <div>
+            <h2 className="oa-card-title">{t('ticketing.detail.sections.eventDetails')}</h2>
+            <p className="oa-ticketing-overview__subtitle">{t('ticketing.detail.overview.subtitle')}</p>
+          </div>
+          <span className={`oa-badge oa-badge-${event.status === 'published' ? 'success' : event.status === 'draft' ? 'info' : 'default'}`}>
+            {statusLabel}
+          </span>
+        </div>
+
+        <div className="oa-ticketing-kpi-grid">
+          <div className="oa-ticketing-kpi">
+            <span className="material-symbols-outlined">confirmation_number</span>
             <div>
-              <span className="oa-info-label">{t('ticketing.detail.labels.date')}</span>
-              <span>{eventDateRange}</span>
+              <p className="oa-ticketing-kpi__label">{t('ticketing.detail.labels.activeTicketTypes')}</p>
+              <p className="oa-ticketing-kpi__value">
+                {activeTicketTypesCount}/{totalTicketTypeCount}
+              </p>
             </div>
+          </div>
+          <div className="oa-ticketing-kpi">
+            <span className="material-symbols-outlined">inventory_2</span>
             <div>
-              <span className="oa-info-label">{t('ticketing.detail.labels.venue')}</span>
-              <span>{venueLabel}</span>
+              <p className="oa-ticketing-kpi__label">{t('ticketing.detail.labels.availableCapacity')}</p>
+              <p className="oa-ticketing-kpi__value">
+                {totalRemainingCapacity !== null && totalCapacity !== null
+                  ? `${totalRemainingCapacity}/${totalCapacity}`
+                  : t('ticketing.detail.values.unlimited')}
+              </p>
             </div>
+          </div>
+          <div className="oa-ticketing-kpi">
+            <span className="material-symbols-outlined">storefront</span>
             <div>
-              <span className="oa-info-label">{t('ticketing.detail.labels.timezone')}</span>
-              <span>{event.timezone || t('ticketing.detail.values.unavailable')}</span>
+              <p className="oa-ticketing-kpi__label">{t('ticketing.detail.labels.salesStatus')}</p>
+              <p className="oa-ticketing-kpi__value">{salesStatusLabel}</p>
             </div>
+          </div>
+          <div className="oa-ticketing-kpi">
+            <span className="material-symbols-outlined">wifi</span>
             <div>
-              <span className="oa-info-label">{t('ticketing.detail.labels.salesWindow')}</span>
-              <span>{salesWindow}</span>
-            </div>
-            <div>
-              <span className="oa-info-label">{t('ticketing.detail.labels.teamScope')}</span>
-              <span>{event.team_id ? t('ticketing.detail.values.teamScoped') : t('ticketing.detail.values.orgWide')}</span>
-            </div>
-            <div>
-              <span className="oa-info-label">{t('ticketing.detail.labels.lastUpdated')}</span>
-              <span>{lastUpdatedAt}</span>
+              <p className="oa-ticketing-kpi__label">{t('ticketing.detail.labels.connection')}</p>
+              <p className="oa-ticketing-kpi__value">
+                {isOnline ? t('ticketing.detail.values.connection.online') : t('ticketing.detail.values.connection.offline')}
+              </p>
             </div>
           </div>
         </div>
 
-        {event.status === 'published' ? (
-          <PublicUrlShare
-            orgId={event.org_id}
-            path={getLink(RouteKeys.PORTAL_TICKET_EVENT_DETAIL, { id: event.id })}
-            title={t('ticketing.detail.share.title')}
-            description={t('ticketing.detail.share.description')}
-          />
-        ) : (
-          <div className="oa-card oa-flex oa-flex-col oa-gap-3 oa-justify-center oa-p-8">
-            <h2 className="oa-card-title">{t('ticketing.detail.sections.publicLink')}</h2>
-            <p className="oa-text-muted">
-              {t('ticketing.detail.notices.publishToShareDescription')}
+        <div className="oa-ticketing-meta-grid">
+          <div className="oa-ticketing-meta-item">
+            <span className="oa-ticketing-meta-item__label">{t('ticketing.detail.labels.date')}</span>
+            <p className="oa-ticketing-meta-item__value">{eventDateRange}</p>
+          </div>
+          <div className="oa-ticketing-meta-item">
+            <span className="oa-ticketing-meta-item__label">{t('ticketing.detail.labels.venue')}</span>
+            <p className="oa-ticketing-meta-item__value">{venueLabel}</p>
+          </div>
+          <div className="oa-ticketing-meta-item">
+            <span className="oa-ticketing-meta-item__label">{t('ticketing.detail.labels.timezone')}</span>
+            <p className="oa-ticketing-meta-item__value">{event.timezone || t('ticketing.detail.values.unavailable')}</p>
+          </div>
+          <div className="oa-ticketing-meta-item">
+            <span className="oa-ticketing-meta-item__label">{t('ticketing.detail.labels.salesWindow')}</span>
+            <p className="oa-ticketing-meta-item__value">{salesWindow}</p>
+          </div>
+          <div className="oa-ticketing-meta-item">
+            <span className="oa-ticketing-meta-item__label">{t('ticketing.detail.labels.teamScope')}</span>
+            <p className="oa-ticketing-meta-item__value">
+              {event.team_id ? t('ticketing.detail.values.teamScoped') : t('ticketing.detail.values.orgWide')}
             </p>
           </div>
-        )}
-      </div>
+          <div className="oa-ticketing-meta-item">
+            <span className="oa-ticketing-meta-item__label">{t('ticketing.detail.labels.lastUpdated')}</span>
+            <p className="oa-ticketing-meta-item__value">{lastUpdatedAt}</p>
+          </div>
+        </div>
 
-      <div className="oa-card">
-        <div className="flex justify-between items-center gap-2 mb-4">
-          <h2 className="oa-card-title">{t('ticketing.detail.sections.ticketTypes')}</h2>
+        <div className="oa-ticketing-overview__actions">
+          <OrgAdminButton
+            variant="secondary"
+            icon={generateStaffLinkMutation.isPending ? 'hourglass_empty' : 'admin_panel_settings'}
+            onClick={handleGenerateStaffLink}
+            disabled={generateStaffLinkMutation.isPending || eventFetching || !isOnline || USE_FAKE_DATA}
+          >
+            {generateStaffLinkMutation.isPending
+              ? t('ticketing.detail.actions.generatingStaffLink')
+              : t('ticketing.detail.actions.generateStaffLink')}
+          </OrgAdminButton>
+
+          <OrgAdminButton as={Link} to={scannerPath} icon="qr_code_scanner">
+            {t('ticketing.detail.actions.openScanner')}
+          </OrgAdminButton>
+
           <OrgAdminButton
             size="compact"
             icon="add"
@@ -487,6 +547,31 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
           >
             {t('ticketing.detail.actions.addTicketType')}
           </OrgAdminButton>
+        </div>
+      </section>
+
+      {event.status === 'published' ? (
+        <PublicUrlShare
+          orgId={event.org_id}
+          path={getLink(RouteKeys.PORTAL_TICKET_EVENT_DETAIL, { id: event.id })}
+          title={t('ticketing.detail.share.title')}
+          description={t('ticketing.detail.share.description')}
+        />
+      ) : (
+        <div className="oa-card oa-flex oa-flex-col oa-gap-3 oa-justify-center oa-p-8 oa-ticketing-share-locked">
+          <h2 className="oa-card-title">{t('ticketing.detail.sections.publicLink')}</h2>
+          <p className="oa-text-muted">
+            {t('ticketing.detail.notices.publishToShareDescription')}
+          </p>
+        </div>
+      )}
+
+      <div className="oa-card oa-ticketing-types-card">
+        <div className="oa-ticketing-types-card__header">
+          <h2 className="oa-card-title">{t('ticketing.detail.sections.ticketTypes')}</h2>
+          <span className="oa-ticketing-types-card__count">
+            {t('ticketing.detail.labels.totalTicketTypes', { count: totalTicketTypeCount })}
+          </span>
         </div>
 
         {ticketTypesLoading ? (
@@ -561,7 +646,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
             )}
           </div>
         ) : (
-          <div className="oa-table-container">
+          <div className="oa-table-container oa-ticketing-types-table-wrap">
             <table className="oa-table">
               <thead>
                 <tr>
@@ -610,7 +695,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
                             eventId: id,
                             seatMapId: type.seat_map_id,
                           })}
-                          className="oa-link"
+                          className="oa-link oa-ticketing-seat-link"
                         >
                           {t('ticketing.reservedSeating.admin.manageSeats')}
                         </Link>
@@ -628,7 +713,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
     </div>
   )
 
-  const handleGenerateStaffLink = () => {
+  function handleGenerateStaffLink() {
     if (generateStaffLinkMutation.isPending || eventFetching) return
 
     if (USE_FAKE_DATA) {

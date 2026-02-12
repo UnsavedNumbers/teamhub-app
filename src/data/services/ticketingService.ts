@@ -28,6 +28,7 @@ import type {
 import { normalizeSupabaseResponse, createServiceResponse } from './responseHelpers'
 import { assertNotDemoMode } from '@/utils/demoMode'
 import { classifySupabaseError, ValidationError } from '@/utils/supabaseErrorHandler'
+import { getLink, RouteKeys } from '@/utils/routes'
 import {
   createFakeCheckoutSession,
   createFakeStaffValidationLink,
@@ -350,7 +351,8 @@ export async function createStaffValidationLinkForEventAdmin(ticketedEventId: st
   }
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-  return `${baseUrl}/tickets/validate/${token}`
+  const validatePath = getLink(RouteKeys.PORTAL_TICKET_VALIDATE, { token })
+  return `${baseUrl}${validatePath}`
 }
 
 export interface TicketTypeSortMetrics {

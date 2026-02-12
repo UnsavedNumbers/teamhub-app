@@ -93,6 +93,21 @@ export const en = {
         copiedToClipboard: 'Copied to clipboard',
         publicUrls: {
             title: 'Public URLs',
+            actions: {
+                copy: 'Copy',
+                copied: 'Copied!',
+                twitter: 'Twitter',
+                facebook: 'Facebook',
+                email: 'Email',
+                downloadPng: 'Download PNG',
+            },
+            messages: {
+                emailBody: 'Check out this event: {{url}}',
+            },
+            qr: {
+                title: 'QR Code',
+                description: 'Scan to open this link. Download for posters or print materials.',
+            },
             setSlug: 'Set a public URL slug to enable public links.',
             goToSetup: 'Set Up Public URL',
             copy: 'Copy',
@@ -3346,19 +3361,29 @@ export const en = {
             title: 'Ticketing',
             subtitle: 'Status: {{status}}',
             sections: {
+                overview: 'Ticketing Overview',
                 eventDetails: 'Event Details',
                 publicLink: 'Public link',
+                quickFacts: 'Quick Facts',
                 ticketTypes: 'Ticket Types',
+            },
+            overview: {
+                subtitle: 'Monitor sales readiness, visibility, and fulfillment at a glance.',
             },
             labels: {
                 date: 'Date',
                 venue: 'Venue',
                 timezone: 'Timezone',
                 salesWindow: 'Sales window',
+                salesStatus: 'Sales status',
+                connection: 'Connection',
                 salesStartLabel: 'Sales begin',
                 salesEndLabel: 'Sales end',
                 teamScope: 'Team scope',
                 lastUpdated: 'Last updated',
+                activeTicketTypes: 'Active ticket types',
+                availableCapacity: 'Available capacity',
+                totalTicketTypes: '{{count}} configured',
                 name: 'Name',
                 price: 'Price',
                 capacity: 'Capacity',
@@ -3370,6 +3395,15 @@ export const en = {
                 tbd: 'TBD',
                 unavailable: '-',
                 unlimited: 'Unlimited',
+                connection: {
+                    online: 'Online',
+                    offline: 'Offline',
+                },
+                salesStatus: {
+                    live: 'Live',
+                    preparing: 'Preparing',
+                    closed: 'Closed',
+                },
                 status: {
                     draft: 'Draft',
                     published: 'Published',
@@ -4525,6 +4559,21 @@ export const es = {
         copiedToClipboard: 'Copiado al portapapeles',
         publicUrls: {
             title: 'URLs pÃºblicas',
+            actions: {
+                copy: 'Copy',
+                copied: 'Copied!',
+                twitter: 'Twitter',
+                facebook: 'Facebook',
+                email: 'Email',
+                downloadPng: 'Download PNG',
+            },
+            messages: {
+                emailBody: 'Check out this event: {{url}}',
+            },
+            qr: {
+                title: 'QR Code',
+                description: 'Scan to open this link. Download for posters or print materials.',
+            },
             setSlug: 'Establece un slug pÃºblico para habilitar los enlaces pÃºblicos.',
             goToSetup: 'Configurar URL pÃºblica',
             copy: 'Copiar',
