@@ -943,8 +943,9 @@ export async function createEvent(
         const eventInsertData: EventInsert = {
             title: formData.title,
             type: formData.type,
-            team_id: formData.team_id!,
-            season_id: formData.season_id!,
+            org_id: context.orgId,
+            team_id: formData.team_id || null,
+            season_id: formData.season_id || null,
             start_time: start.toISOString(),
             end_time: end.toISOString(),
             arrival_time: arrival ? arrival.toISOString() : null,
@@ -1007,21 +1008,15 @@ export async function createEvent(
 
         // 4. Handle Ticketing
         if (formData.ticketing?.is_ticketed) {
-            // Get org_id from team if team_id is provided
-            let orgId: string | null = null
-            if (formData.team_id) {
-                const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', formData.team_id).single()
-                if (!teamData?.org_id) throw new Error('Failed to get organization ID from team')
-                orgId = teamData.org_id
-            }
-
-            if (!orgId) throw new Error('Organization ID is required for ticketed events. Please select a team.')
+            // Use org_id from context (required for all events)
+            const orgId = context.orgId
+            if (!orgId) throw new Error('Organization ID is required for ticketed events.')
 
             type TicketedEventInsert = Database['public']['Tables']['ticketed_events']['Insert']
             const ticketedEventData: TicketedEventInsert = {
                 event_id: eventData.id,
                 org_id: orgId,
-                team_id: formData.team_id!,
+                team_id: formData.team_id || null,
                 event_type: formData.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
                 title: formData.title,
                 description: formData.notes || null,
@@ -1110,8 +1105,8 @@ export async function updateEvent(
         const eventUpdateData: EventUpdate = {
             title: formData.title,
             type: formData.type,
-            team_id: formData.team_id ?? undefined,
-            season_id: formData.season_id ?? undefined,
+            team_id: formData.team_id || null,
+            season_id: formData.season_id || null,
             start_time: start.toISOString(),
             end_time: end.toISOString(),
             arrival_time: arrival ? arrival.toISOString() : null,

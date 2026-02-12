@@ -13,6 +13,11 @@ import type {
   TicketOrder,
   TicketOrderItem,
   Ticket,
+  SeatMap,
+  SeatMapSection,
+  SeatMapWithSections,
+  BulkSeatConfig,
+  SeatAvailabilityMap,
   CreateCheckoutRequest,
   CreateCheckoutResponse,
   ValidateScanRequest,
@@ -276,6 +281,393 @@ export async function createTicketType(
     return createServiceResponse<TicketType>(data as unknown as TicketType, null)
   } catch (error: unknown) {
     return createServiceResponse<TicketType>(null, error as Error)
+  }
+}
+
+export async function getSeatMapsForEvent(ticketedEventId: string): Promise<SeatMap[]> {
+  if (!ticketedEventId) {
+    throw new ValidationError('Ticketed event is required')
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    const { data, error } = await supabaseAny
+      .from('seat_maps')
+      .select('*')
+      .eq('ticketed_event_id', ticketedEventId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return normalizeSupabaseResponse<SeatMap[]>(data as unknown as SeatMap[], true)
+  } catch (error) {
+    throw classifySupabaseError(error, 'Seat maps')
+  }
+}
+
+export async function createSeatMap(ticketedEventId: string, name: string): Promise<SeatMap> {
+  if (!ticketedEventId) {
+    throw new ValidationError('Ticketed event is required')
+  }
+
+  if (!name.trim()) {
+    throw new ValidationError('Seat map name is required')
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    const { data, error } = await supabaseAny
+      .from('seat_maps')
+      .insert({
+        ticketed_event_id: ticketedEventId,
+        name: name.trim(),
+      })
+      .select('*')
+      .single()
+
+    if (error) throw error
+
+    return normalizeSupabaseResponse<SeatMap>(data as unknown as SeatMap, false)
+  } catch (error) {
+    throw classifySupabaseError(error, 'Create seat map')
+  }
+}
+
+export async function updateSeatMap(
+  seatMapId: string,
+  updates: Partial<Pick<SeatMap, 'name' | 'chart_image_url' | 'metadata'>>,
+): Promise<void> {
+  if (!seatMapId) {
+    throw new ValidationError('Seat map is required')
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    const payload: Record<string, unknown> = {}
+    if (updates.name !== undefined) payload.name = updates.name
+    if (updates.chart_image_url !== undefined) payload.chart_image_url = updates.chart_image_url
+    if (updates.metadata !== undefined) payload.metadata = updates.metadata
+
+    if (Object.keys(payload).length === 0) {
+      return
+    }
+
+    const { error } = await supabaseAny
+      .from('seat_maps')
+      .update(payload)
+      .eq('id', seatMapId)
+
+    if (error) throw error
+  } catch (error) {
+    throw classifySupabaseError(error, 'Update seat map')
+  }
+}
+
+export async function uploadSeatMapChart(seatMapId: string, file: File): Promise<string> {
+  if (!seatMapId) {
+    throw new ValidationError('Seat map is required')
+  }
+
+  if (!file) {
+    throw new ValidationError('Chart file is required')
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    throw new ValidationError('Seating chart must be 5MB or smaller')
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    const path = `${seatMapId}/${Date.now()}-${file.name.replace(/\s+/g, '-')}`
+    const bucket = 'ticketing-seat-maps'
+
+    const { error: uploadError } = await supabaseAny.storage
+      .from(bucket)
+      .upload(path, file, { upsert: true, contentType: file.type || 'image/jpeg' })
+
+    if (uploadError) throw uploadError
+
+    const { data: urlData } = supabaseAny.storage.from(bucket).getPublicUrl(path)
+    const publicUrl = urlData.publicUrl
+
+    const { error: updateError } = await supabaseAny
+      .from('seat_maps')
+      .update({ chart_image_url: publicUrl })
+      .eq('id', seatMapId)
+
+    if (updateError) throw updateError
+
+    return publicUrl
+  } catch (error) {
+    throw classifySupabaseError(error, 'Upload seat map chart')
+  }
+}
+
+export async function bulkAddSeats(seatMapId: string, config: BulkSeatConfig): Promise<number> {
+  if (!seatMapId) {
+    throw new ValidationError('Seat map is required')
+  }
+
+  const rowStart = Number(config.row_start)
+  const rowEnd = Number(config.row_end)
+  const seatStart = Number(config.seat_start)
+  const seatEnd = Number(config.seat_end)
+  const sectionName = config.section_name?.trim()
+
+  if (!sectionName) {
+    throw new ValidationError('Section name is required')
+  }
+  if (Number.isNaN(rowStart) || Number.isNaN(rowEnd) || rowEnd < rowStart) {
+    throw new ValidationError('Row range is invalid')
+  }
+  if (Number.isNaN(seatStart) || Number.isNaN(seatEnd) || seatEnd < seatStart) {
+    throw new ValidationError('Seat range is invalid')
+  }
+
+  const rowCount = rowEnd - rowStart + 1
+  const seatCount = seatEnd - seatStart + 1
+  const totalSeats = rowCount * seatCount
+
+  if (totalSeats > 5000) {
+    throw new ValidationError('Bulk add supports up to 5000 seats per operation')
+  }
+
+  const rows: Array<{
+    seat_map_id: string
+    section_name: string
+    row_identifier: string
+    seat_identifier: string
+    seat_attributes: Record<string, unknown>
+    is_available: boolean
+  }> = []
+
+  for (let row = rowStart; row <= rowEnd; row += 1) {
+    for (let seat = seatStart; seat <= seatEnd; seat += 1) {
+      rows.push({
+        seat_map_id: seatMapId,
+        section_name: sectionName,
+        row_identifier: String(row),
+        seat_identifier: String(seat),
+        seat_attributes: (config.seat_attributes ?? {}) as Record<string, unknown>,
+        is_available: true,
+      })
+    }
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    for (let i = 0; i < rows.length; i += 500) {
+      const chunk = rows.slice(i, i + 500)
+      const { error } = await supabaseAny.from('seat_map_sections').insert(chunk)
+      if (error) throw error
+    }
+    return rows.length
+  } catch (error) {
+    throw classifySupabaseError(error, 'Bulk add seats')
+  }
+}
+
+export async function importSeatRows(
+  seatMapId: string,
+  rows: Array<{
+    section: string
+    row: string
+    seat: string
+    seat_attributes?: Record<string, unknown>
+  }>,
+): Promise<number> {
+  if (!seatMapId) {
+    throw new ValidationError('Seat map is required')
+  }
+
+  if (rows.length === 0) {
+    return 0
+  }
+
+  const inserts = rows.map((row) => ({
+    seat_map_id: seatMapId,
+    section_name: row.section.trim(),
+    row_identifier: row.row.trim(),
+    seat_identifier: row.seat.trim(),
+    seat_attributes: row.seat_attributes ?? {},
+    is_available: true,
+  }))
+
+  try {
+    const supabaseAny = supabase as any
+    for (let i = 0; i < inserts.length; i += 500) {
+      const chunk = inserts.slice(i, i + 500)
+      const { error } = await supabaseAny.from('seat_map_sections').insert(chunk)
+      if (error) throw error
+    }
+    return inserts.length
+  } catch (error) {
+    throw classifySupabaseError(error, 'Import seats')
+  }
+}
+
+export async function updateSeat(sectionId: string, updates: Partial<SeatMapSection>): Promise<void> {
+  if (!sectionId) {
+    throw new ValidationError('Seat section is required')
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    const { error } = await supabaseAny
+      .from('seat_map_sections')
+      .update({
+        section_name: updates.section_name,
+        row_identifier: updates.row_identifier,
+        seat_identifier: updates.seat_identifier,
+        seat_attributes: updates.seat_attributes,
+        is_available: updates.is_available,
+        position_metadata: updates.position_metadata,
+      })
+      .eq('id', sectionId)
+
+    if (error) throw error
+  } catch (error) {
+    throw classifySupabaseError(error, 'Update seat')
+  }
+}
+
+export async function deleteSeat(sectionId: string): Promise<void> {
+  if (!sectionId) {
+    throw new ValidationError('Seat section is required')
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    const { count, error: assignmentError } = await supabaseAny
+      .from('seat_assignments')
+      .select('id', { count: 'exact', head: true })
+      .eq('seat_map_section_id', sectionId)
+
+    if (assignmentError) throw assignmentError
+
+    if ((count ?? 0) > 0) {
+      throw new ValidationError('Cannot delete a seat that is already assigned')
+    }
+
+    const { error } = await supabaseAny
+      .from('seat_map_sections')
+      .delete()
+      .eq('id', sectionId)
+
+    if (error) throw error
+  } catch (error) {
+    throw classifySupabaseError(error, 'Delete seat')
+  }
+}
+
+export async function getSeatMapWithSeats(seatMapId: string): Promise<SeatMapWithSections> {
+  if (!seatMapId) {
+    throw new ValidationError('Seat map is required')
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    const [{ data: seatMap, error: mapError }, { data: sections, error: sectionError }] = await Promise.all([
+      supabaseAny.from('seat_maps').select('*').eq('id', seatMapId).single(),
+      supabaseAny
+        .from('seat_map_sections')
+        .select('*')
+        .eq('seat_map_id', seatMapId)
+        .order('section_name', { ascending: true })
+        .order('row_identifier', { ascending: true })
+        .order('seat_identifier', { ascending: true }),
+    ])
+
+    if (mapError) throw mapError
+    if (sectionError) throw sectionError
+
+    const seatMapData = normalizeSupabaseResponse<SeatMap>(seatMap as unknown as SeatMap, false)
+    const sectionData = normalizeSupabaseResponse<SeatMapSection[]>(sections as unknown as SeatMapSection[], true)
+
+    return {
+      ...seatMapData,
+      sections: sectionData,
+    }
+  } catch (error) {
+    throw classifySupabaseError(error, 'Seat map')
+  }
+}
+
+export async function getSeatAvailability(ticketTypeId: string): Promise<SeatAvailabilityMap> {
+  if (!ticketTypeId) {
+    throw new ValidationError('Ticket type is required')
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    const { data: ticketType, error: ticketTypeError } = await supabaseAny
+      .from('ticket_types')
+      .select('seat_map_id')
+      .eq('id', ticketTypeId)
+      .single()
+
+    if (ticketTypeError) throw ticketTypeError
+
+    const seatMapId = ticketType?.seat_map_id as string | null
+    if (!seatMapId) {
+      return {}
+    }
+
+    const { data: seats, error: seatsError } = await supabaseAny
+      .from('seat_map_sections')
+      .select('id, section_name, row_identifier, seat_identifier, seat_attributes')
+      .eq('seat_map_id', seatMapId)
+      .eq('is_available', true)
+
+    if (seatsError) throw seatsError
+
+    const seatRows = (seats ?? []) as Array<{
+      id: string
+      section_name: string
+      row_identifier: string
+      seat_identifier: string
+      seat_attributes: Record<string, unknown> | null
+    }>
+    if (seatRows.length === 0) {
+      return {}
+    }
+
+    const seatIds = seatRows.map((seat) => seat.id)
+    const nowIso = new Date().toISOString()
+
+    const [{ data: assignments, error: assignmentError }, { data: holds, error: holdsError }] = await Promise.all([
+      supabaseAny
+        .from('seat_assignments')
+        .select('seat_map_section_id')
+        .in('seat_map_section_id', seatIds),
+      supabaseAny
+        .from('seat_holds')
+        .select('seat_map_section_id')
+        .in('seat_map_section_id', seatIds)
+        .gt('expires_at', nowIso),
+    ])
+
+    if (assignmentError) throw assignmentError
+    if (holdsError) throw holdsError
+
+    const assignedIds = new Set((assignments ?? []).map((row: any) => row.seat_map_section_id as string))
+    const heldIds = new Set((holds ?? []).map((row: any) => row.seat_map_section_id as string))
+
+    const availability: SeatAvailabilityMap = {}
+    for (const seat of seatRows) {
+      const available = !assignedIds.has(seat.id) && !heldIds.has(seat.id)
+      availability[seat.id] = {
+        available,
+        attributes: (seat.seat_attributes ?? {}) as Record<string, unknown>,
+        section: seat.section_name,
+        row: seat.row_identifier,
+        seat: seat.seat_identifier,
+      }
+    }
+
+    return availability
+  } catch (error) {
+    throw classifySupabaseError(error, 'Seat availability')
   }
 }
 
@@ -565,7 +957,7 @@ export async function getTicketsForOrder(orderId: string) {
 
     if (error) throw error
 
-    return normalizeSupabaseResponse<Array<Ticket & {
+    const tickets = normalizeSupabaseResponse<Array<Ticket & {
       ticket_types: Pick<TicketType, 'name' | 'description'>
       ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
       ticket_orders: { purchaser_email: string }
@@ -574,6 +966,62 @@ export async function getTicketsForOrder(orderId: string) {
       ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
       ticket_orders: { purchaser_email: string }
     }>, true)
+
+    const seatAssignmentIds = tickets
+      .map((ticket) => ticket.seat_assignment_id)
+      .filter((id): id is string => Boolean(id))
+
+    if (seatAssignmentIds.length === 0) {
+      return tickets
+    }
+
+    const supabaseAny = supabase as any
+    const { data: seatAssignments, error: seatAssignmentError } = await supabaseAny
+      .from('seat_assignments')
+      .select(`
+        id,
+        seat_map_sections (
+          section_name,
+          row_identifier,
+          seat_identifier,
+          seat_attributes
+        )
+      `)
+      .in('id', seatAssignmentIds)
+
+    if (seatAssignmentError) throw seatAssignmentError
+
+    const seatInfoByAssignmentId = new Map<string, {
+      section: string
+      row: string
+      seat: string
+      attributes?: Record<string, unknown>
+    }>()
+
+    for (const row of seatAssignments ?? []) {
+      const section = (row as any).seat_map_sections
+      if (!section) {
+        continue
+      }
+      seatInfoByAssignmentId.set((row as any).id, {
+        section: section.section_name,
+        row: section.row_identifier,
+        seat: section.seat_identifier,
+        attributes: section.seat_attributes ?? undefined,
+      })
+    }
+
+    return tickets.map((ticket) => {
+      if (!ticket.seat_assignment_id) {
+        return ticket
+      }
+
+      const seatInfo = seatInfoByAssignmentId.get(ticket.seat_assignment_id) ?? null
+      return {
+        ...ticket,
+        seat_info: seatInfo,
+      }
+    })
   } catch (error) {
     throw classifySupabaseError(error, 'Tickets')
   }
@@ -725,20 +1173,6 @@ export async function createCheckoutSession(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'ticketingService.ts:createCheckoutSession',
-          message: 'Checkout failed',
-          data: { status: response.status, errorData, requestPayload: request },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          hypothesisId: 'A',
-        }),
-      }).catch(() => { })
-      // #endregion
       return createServiceResponse<CreateCheckoutResponse>(null, new Error(errorData.error || 'Failed to create checkout'))
     }
 

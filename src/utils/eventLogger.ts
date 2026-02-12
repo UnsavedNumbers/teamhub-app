@@ -84,6 +84,10 @@ function extractUserAgent(headers: Headers | Record<string, string>): string | n
 export async function logEvent<C extends EventCategory>(
   params: EventLogParams<C>
 ): Promise<EventLogResponse> {
+  if (String(params.eventType).includes('__rls__')) {
+    return { id: null }
+  }
+
   // Prevent circular logging
   if (isLoggingContext) {
     console.warn('Event logging skipped: already in logging context (circular prevention)')

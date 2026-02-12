@@ -16,6 +16,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { showError, showSuccess } from '../../utils/toast'
 import { QRCodeSVG } from 'qrcode.react'
 import { getLink, RouteKeys } from '../../utils/routes'
+import { useT } from '../../i18n/useI18n'
 import '../../styles/fan.css'
 import '../../styles/fan-layouts.css'
 import type { TicketOrder } from '../../types/ticketing'
@@ -33,6 +34,10 @@ interface FanTicket {
   order_confirmation_code: string | null
   ticket_type_name: string
   seat_info?: string
+  seat_section?: string
+  seat_row?: string
+  seat_number?: string
+  seat_attributes?: Record<string, unknown>
   holder_name?: string
   scanned_at: string | null
   qr_code_data: string
@@ -55,6 +60,7 @@ const generateQRPayload = (ticketId: string, timestamp: number): string => {
 }
 
 export default function FanTickets() {
+  const t = useT()
   const navigate = useNavigate()
   
   // Data state
@@ -117,6 +123,17 @@ export default function FanTickets() {
           venue_name: event?.venue_name || undefined,
           order_confirmation_code: ticket.entry_code || null,
           ticket_type_name: ticketType?.name || 'General Admission',
+          seat_info: ticket.seat_info
+            ? t('ticketing.reservedSeating.seatDisplay', {
+              section: ticket.seat_info.section,
+              row: ticket.seat_info.row,
+              seat: ticket.seat_info.seat,
+            })
+            : undefined,
+          seat_section: ticket.seat_info?.section,
+          seat_row: ticket.seat_info?.row,
+          seat_number: ticket.seat_info?.seat,
+          seat_attributes: ticket.seat_info?.attributes,
           scanned_at: ticket.used_at || null,
           qr_code_data: ticket.entry_code || '',
           purchase_date: ticket.created_at,
@@ -435,6 +452,7 @@ const formatWeekday = (dateStr: string) => {
  * Accessed via /fan/tickets/:ticketId
  */
 export function FanTicketDetail() {
+  const t = useT()
   const { ticketId } = useParams<{ ticketId: string }>()
   const navigate = useNavigate()
   const [ticket, setTicket] = useState<FanTicket | null>(null)
@@ -510,6 +528,17 @@ export function FanTicketDetail() {
           venue_name: event?.venue_name || undefined,
           order_confirmation_code: foundTicket.entry_code || null,
           ticket_type_name: ticketType?.name || 'General Admission',
+          seat_info: foundTicket.seat_info
+            ? t('ticketing.reservedSeating.seatDisplay', {
+              section: foundTicket.seat_info.section,
+              row: foundTicket.seat_info.row,
+              seat: foundTicket.seat_info.seat,
+            })
+            : undefined,
+          seat_section: foundTicket.seat_info?.section,
+          seat_row: foundTicket.seat_info?.row,
+          seat_number: foundTicket.seat_info?.seat,
+          seat_attributes: foundTicket.seat_info?.attributes,
           scanned_at: foundTicket.used_at || null,
           qr_code_data: foundTicket.entry_code || '',
           purchase_date: foundTicket.created_at,

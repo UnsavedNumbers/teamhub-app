@@ -4,13 +4,90 @@
  * TypeScript types for the ticketing system (events, tickets, orders, validation)
  */
 
-export type TicketedEventType = 'game' | 'tournament' | 'concert' | 'fundraiser' | 'other'
+export type TicketedEventType = 'game' | 'tournament' | 'concert' | 'fundraiser' | 'travel' | 'social_event' | 'other'
 export type TicketedEventStatus = 'draft' | 'published' | 'cancelled' | 'completed'
 export type TicketOrderStatus = 'pending_payment' | 'paid' | 'refunded' | 'cancelled'
 export type TicketStatus = 'active' | 'used' | 'refunded' | 'voided'
 export type TicketScanResult = 'valid' | 'already_used' | 'invalid' | 'wrong_event' | 'refunded' | 'voided' | 'not_found'
 export type ScanMethod = 'qr' | 'manual'
 export type TicketSaleStatus = 'off' | 'scheduled' | 'on_sale' | 'ended' | 'sold_out'
+export type TicketSeatingMode = 'general_admission' | 'reserved_seating'
+
+export interface SeatAttributes {
+  accessible?: boolean
+  obstructed_view?: boolean
+  companion_required?: boolean
+  vip?: boolean
+  [key: string]: unknown
+}
+
+export interface SeatMap {
+  id: string
+  ticketed_event_id: string
+  name: string
+  chart_image_url: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+export interface SeatMapSection {
+  id: string
+  seat_map_id: string
+  section_name: string
+  row_identifier: string
+  seat_identifier: string
+  position_metadata: Record<string, unknown>
+  seat_attributes: SeatAttributes
+  is_available: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface SeatMapWithSections extends SeatMap {
+  sections: SeatMapSection[]
+}
+
+export interface SeatAssignment {
+  id: string
+  ticket_id: string
+  seat_map_section_id: string
+  assigned_at: string
+}
+
+export interface SeatHold {
+  id: string
+  seat_map_section_id: string
+  order_id: string
+  expires_at: string
+  created_at: string
+}
+
+export interface SeatSelection {
+  seat_map_section_id: string
+  section: string
+  row: string
+  seat: string
+}
+
+export interface SeatAvailability {
+  available: boolean
+  attributes: SeatAttributes
+  section: string
+  row: string
+  seat: string
+}
+
+export type SeatAvailabilityMap = Record<string, SeatAvailability>
+
+export interface BulkSeatConfig {
+  section_name: string
+  row_start: number
+  row_end: number
+  seat_start: number
+  seat_end: number
+  seat_attributes?: SeatAttributes
+}
 
 export interface TicketingProgram {
   id: string
@@ -115,6 +192,8 @@ export interface TicketType {
   sales_end_at: string | null
   sort_order: number
   is_active: boolean
+  seating_mode?: TicketSeatingMode
+  seat_map_id?: string | null
   created_at: string
   updated_at: string
 }
@@ -168,6 +247,13 @@ export interface Ticket {
   used_by_user_id: string | null
   created_at: string
   updated_at: string
+  seat_assignment_id?: string | null
+  seat_info?: {
+    section: string
+    row: string
+    seat: string
+    attributes?: SeatAttributes
+  } | null
   // Relations (populated by select)
   ticket_orders?: { purchaser_email: string }
 }
@@ -216,6 +302,10 @@ export interface CreateCheckoutRequest {
     quantity: number
   }>
   purchaser_email: string
+  seat_selections?: Array<{
+    ticket_type_id: string
+    seat_map_section_ids: string[]
+  }>
   org_slug?: string // Optional org slug for URL construction in checkout
   return_base_url?: string // Optional base URL for redirects (e.g. window.location.origin)
 }
@@ -261,6 +351,11 @@ export interface ValidateScanResponse {
   validated_count?: number
   remaining_capacity?: number | null
   purchaser_name?: string | null
+  seat_section?: string | null
+  seat_row?: string | null
+  seat_number?: string | null
+  seat_attributes?: SeatAttributes | null
+  seat_display?: string | null
   // Event mismatch handling
   event_mismatch?: boolean
   ticket_event_id?: string

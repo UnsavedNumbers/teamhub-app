@@ -73,6 +73,17 @@ import StaffSection from './organizationSettings/StaffSection'
 import type { Organization } from '../../types/domain/Organization'
 import '../../styles/orgAdmin.css'
 
+const PERMISSION_EVENT_TYPES = [
+  { key: 'practice', label: 'Practice' },
+  { key: 'game', label: 'Game' },
+  { key: 'tournament', label: 'Tournament' },
+  { key: 'meeting', label: 'Meeting' },
+  { key: 'tryout', label: 'Tryout' },
+  { key: 'travel', label: 'Travel' },
+  { key: 'pickup_dropoff', label: 'Pickup/Dropoff' },
+  { key: 'social', label: 'Social' },
+] as const
+
 export default function OrganizationSettings() {
   const { t } = useI18n()
   const { currentOrganization } = useOrganization()
@@ -1059,34 +1070,43 @@ function NotificationsForm({ settings, onSave, loading }: { settings: OrgSetting
 
 function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsType['visibility'], onSave: (d: any) => void, loading: boolean }) {
     const { t } = useI18n()
-    const { control, handleSubmit, reset } = useForm({
-    defaultValues: { 
+
+  const fanVisibilityDefaults = useMemo(
+    () =>
+      PERMISSION_EVENT_TYPES.reduce<Record<string, boolean>>((acc, eventType) => {
+        acc[eventType.key] = settings.fan_visibility_defaults?.[eventType.key] ?? false
+        return acc
+      }, {}),
+    [settings.fan_visibility_defaults]
+  )
+
+  const { control, handleSubmit, reset } = useForm({
+    defaultValues: {
       ...settings,
-      fan_visibility_defaults: settings.fan_visibility_defaults || {}
-    }
+      fan_visibility_defaults: fanVisibilityDefaults,
+    },
   })
 
   useEffect(() => {
-    reset({ 
+    reset({
       ...settings,
-      fan_visibility_defaults: settings.fan_visibility_defaults || {}
+      fan_visibility_defaults: fanVisibilityDefaults,
     })
-  }, [reset, settings])
+  }, [fanVisibilityDefaults, reset, settings])
 
-  const eventTypes = [
-    { key: 'practice', label: 'Practice' },
-    { key: 'game', label: 'Game' },
-    { key: 'tournament', label: 'Tournament' },
-    { key: 'meeting', label: 'Meeting' },
-    { key: 'tryout', label: 'Tryout' },
-    { key: 'travel', label: 'Travel' },
-    { key: 'pickup_dropoff', label: 'Pickup/Dropoff' },
-    { key: 'social', label: 'Social' },
-  ]
+  const handleSave = (data: any) => {
+    onSave({
+      ...data,
+      fan_visibility_defaults: PERMISSION_EVENT_TYPES.reduce<Record<string, boolean>>((acc, eventType) => {
+        acc[eventType.key] = data.fan_visibility_defaults?.[eventType.key] ?? false
+        return acc
+      }, {}),
+    })
+  }
 
   return (
     <Card>
-       <form onSubmit={handleSubmit(onSave)}>
+      <form onSubmit={handleSubmit(handleSave)}>
         <h3 className="oa-h3 oa-mb-4">{t('admin.organizationSettings.permissions.title')}</h3>
         <p className="oa-text-sm oa-text-muted oa-mb-4">{t('admin.organizationSettings.permissions.description')}</p>
         
@@ -1129,7 +1149,7 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
             }}
           >
             <div className="oa-flex oa-flex-col oa-gap-3">
-              {eventTypes.map((eventType) => (
+              {PERMISSION_EVENT_TYPES.map((eventType) => (
                 <Controller
                   key={eventType.key}
                   name={`fan_visibility_defaults.${eventType.key}` as any}

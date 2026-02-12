@@ -267,9 +267,9 @@ export default function EventForm({ initialValues, onSubmit, loading: parentLoad
 
           <div className="md:col-span-2">
             <label className={labelClass}>Team</label>
-            <Controller name="team_id" control={control} rules={{ required: 'Required' }} render={({ field }) => (
+            <Controller name="team_id" control={control} render={({ field }) => (
                <select {...field} className={inputClass} disabled={!watchSeasonId}>
-                 <option value="">Select Team</option>
+                 <option value="">Select Team (Optional)</option>
                  {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                </select>
              )} />

@@ -10,19 +10,24 @@ import { useParams } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { createCheckoutSession, getPublicTicketedEventById, getPublicTicketTypesForEvent } from '@/data/services'
 import { formatCurrency } from '@/types/ticketing'
-import type { TicketType, TicketedEvent } from '@/types/ticketing'
+import type { SeatSelection, TicketType, TicketedEvent } from '@/types/ticketing'
 import { showError } from '@/utils/toast'
 import { useOffline } from '@/hooks/useOffline'
+import SeatSelector from '@/components/ticketing/SeatSelector'
+import { validateAdjacentSeats } from '@/utils/ticketingHelpers'
+import { useT } from '@/i18n/useI18n'
 
 interface CartItem {
   ticket_type_id: string
   quantity: number
   ticketType: TicketType
+  seat_selections?: SeatSelection[]
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function TicketEventDetail() {
+  const t = useT()
   const { eventId } = useParams<{ eventId: string }>()
   const { isOffline } = useOffline()
   const [cart, setCart] = useState<CartItem[]>([])
@@ -46,18 +51,39 @@ export default function TicketEventDetail() {
   const ticketTypes = useMemo(() => ticketTypesQuery.data ?? [], [ticketTypesQuery.data])
 
   useEffect(() => {
-    setCart((prev) =>
-      prev
-        .map((item) => {
-          const latest = ticketTypes.find((type) => type.id === item.ticket_type_id)
-          if (!latest) return null
-          const available = latest.capacity_remaining ?? item.quantity
-          const nextQuantity = Math.min(item.quantity, available)
-          if (nextQuantity <= 0) return null
-          return { ...item, quantity: nextQuantity, ticketType: latest }
-        })
-        .filter((item): item is CartItem => Boolean(item))
-    )
+    setCart((prev) => {
+      const nextCart: CartItem[] = []
+
+      for (const item of prev) {
+        const latest = ticketTypes.find((type) => type.id === item.ticket_type_id)
+        if (!latest) {
+          continue
+        }
+
+        const available = latest.capacity_remaining ?? item.quantity
+        const nextQuantity = Math.min(item.quantity, available)
+        if (nextQuantity <= 0) {
+          continue
+        }
+
+        const nextItem: CartItem = {
+          ticket_type_id: item.ticket_type_id,
+          quantity: nextQuantity,
+          ticketType: latest,
+        }
+
+        if (latest.seating_mode === 'reserved_seating') {
+          nextItem.seat_selections =
+            (item.seat_selections?.length ?? 0) === nextQuantity
+              ? item.seat_selections
+              : []
+        }
+
+        nextCart.push(nextItem)
+      }
+
+      return nextCart
+    })
   }, [ticketTypes])
 
   const updateQuantity = useCallback(
@@ -79,11 +105,28 @@ export default function TicketEventDetail() {
         }
 
         if (existing) {
-          return prev.map((item) =>
-            item.ticket_type_id === ticketTypeId ? { ...item, quantity: newQuantity, ticketType } : item,
-          )
+          return prev.map((item) => {
+            if (item.ticket_type_id !== ticketTypeId) {
+              return item
+            }
+
+            return {
+              ...item,
+              quantity: newQuantity,
+              ticketType,
+              seat_selections: ticketType.seating_mode === 'reserved_seating' ? [] : undefined,
+            }
+          })
         }
-        return [...prev, { ticket_type_id: ticketTypeId, quantity: newQuantity, ticketType }]
+        return [
+          ...prev,
+          {
+            ticket_type_id: ticketTypeId,
+            quantity: newQuantity,
+            ticketType,
+            seat_selections: ticketType.seating_mode === 'reserved_seating' ? [] : undefined,
+          },
+        ]
       })
     },
     [ticketTypes],
@@ -132,6 +175,27 @@ export default function TicketEventDetail() {
       const trimmedEmail = purchaserEmail.trim()
       if (!EMAIL_REGEX.test(trimmedEmail)) throw new Error('Enter a valid email address.')
       if (cart.length === 0) throw new Error('Select at least one ticket.')
+      if (
+        cart.some(
+          (item) =>
+            item.ticketType.seating_mode === 'reserved_seating' &&
+            (item.seat_selections?.length ?? 0) !== item.quantity,
+        )
+      ) {
+        throw new Error(t('ticketing.reservedSeating.errors.requiredSeats'))
+      }
+
+      if (
+        cart.some(
+          (item) =>
+            item.ticketType.seating_mode === 'reserved_seating' &&
+            item.seat_selections &&
+            item.seat_selections.length > 1 &&
+            !validateAdjacentSeats(item.seat_selections),
+        )
+      ) {
+        throw new Error(t('ticketing.reservedSeating.errors.adjacentSeats'))
+      }
 
       const response = await createCheckoutSession({
         ticketed_event_id: eventId,
@@ -140,6 +204,12 @@ export default function TicketEventDetail() {
           quantity: item.quantity,
         })),
         purchaser_email: trimmedEmail,
+        seat_selections: cart
+          .filter((item) => item.ticketType.seating_mode === 'reserved_seating')
+          .map((item) => ({
+            ticket_type_id: item.ticket_type_id,
+            seat_map_section_ids: (item.seat_selections ?? []).map((seat) => seat.seat_map_section_id),
+          })),
       })
 
       if (response.error) {
@@ -208,7 +278,10 @@ export default function TicketEventDetail() {
     !salesStatus.isOnSale ||
     !hasAvailableTickets ||
     cart.length === 0 ||
-    !emailIsValid
+    !emailIsValid ||
+    cart.some(
+      (item) => item.ticketType.seating_mode === 'reserved_seating' && (item.seat_selections?.length ?? 0) !== item.quantity,
+    )
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white">
@@ -307,11 +380,12 @@ export default function TicketEventDetail() {
                   return (
                     <div
                       key={ticketType.id}
-                      className={`flex flex-col md:flex-row md:items-center justify-between p-6 ${
+                      className={`p-6 ${
                         idx < ticketTypes.length - 1 ? 'border-b border-[#f0f2f4] dark:border-gray-800' : ''
                       } hover:bg-[#f6f7f8] dark:hover:bg-gray-800/50 transition-colors`}
                     >
-                      <div className="mb-4 md:mb-0">
+                      <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div>
                         <h3 className="text-xl font-bold">{ticketType.name}</h3>
                         {ticketType.description && (
                           <p className="text-[#617589] dark:text-gray-400 text-sm">{ticketType.description}</p>
@@ -325,28 +399,53 @@ export default function TicketEventDetail() {
                             {isSoldOut ? 'Sold out' : `${ticketType.capacity_remaining} left`}
                           </p>
                         )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => updateQuantity(ticketType.id, -1)}
-                          disabled={quantity === 0 || checkoutMutation.isPending}
-                          className="bg-[#137fec] hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white size-12 flex items-center justify-center rounded-lg transition-colors"
-                          type="button"
-                        >
-                          <span className="material-symbols-outlined">remove</span>
-                        </button>
-                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 size-12 flex items-center justify-center font-bold text-xl">
-                          {quantity}
                         </div>
-                        <button
-                          onClick={() => updateQuantity(ticketType.id, 1)}
-                          disabled={available <= quantity || isSoldOut || checkoutMutation.isPending}
-                          className="bg-[#137fec] hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white size-12 flex items-center justify-center rounded-lg transition-colors"
-                          type="button"
-                        >
-                          <span className="material-symbols-outlined">add</span>
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => updateQuantity(ticketType.id, -1)}
+                            disabled={quantity === 0 || checkoutMutation.isPending}
+                            className="bg-[#137fec] hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white size-12 flex items-center justify-center rounded-lg transition-colors"
+                            type="button"
+                          >
+                            <span className="material-symbols-outlined">remove</span>
+                          </button>
+                          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 size-12 flex items-center justify-center font-bold text-xl">
+                            {quantity}
+                          </div>
+                          <button
+                            onClick={() => updateQuantity(ticketType.id, 1)}
+                            disabled={available <= quantity || isSoldOut || checkoutMutation.isPending}
+                            className="bg-[#137fec] hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white size-12 flex items-center justify-center rounded-lg transition-colors"
+                            type="button"
+                          >
+                            <span className="material-symbols-outlined">add</span>
+                          </button>
+                        </div>
                       </div>
+
+                      {ticketType.seating_mode === 'reserved_seating' && quantity > 0 && (
+                        <SeatSelector
+                          ticketTypeId={ticketType.id}
+                          quantity={quantity}
+                          onSeatsSelected={(selections) => {
+                            setCart((prev) =>
+                              prev.map((item) =>
+                                item.ticket_type_id === ticketType.id
+                                  ? { ...item, seat_selections: selections }
+                                  : item,
+                              ),
+                            )
+                          }}
+                        />
+                      )}
+
+                      {ticketType.seating_mode === 'reserved_seating' && (cartItem?.seat_selections?.length ?? 0) > 0 && (
+                        <p className="mt-2 text-xs text-[#617589] dark:text-gray-400">
+                          {t('ticketing.reservedSeating.selectedSeatsInline', {
+                            seats: cartItem?.seat_selections?.map((seat) => `${seat.section}-${seat.row}-${seat.seat}`).join(', ') ?? '',
+                          })}
+                        </p>
+                      )}
                     </div>
                   )
                 })}

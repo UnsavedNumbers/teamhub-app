@@ -53,6 +53,35 @@ type VisibilitySettingsRow = SupabaseExtended['public']['Tables']['organization_
 type NotificationSettingsRow = SupabaseExtended['public']['Tables']['organization_notification_settings']['Row']
 type AdvancedSettingsRow = SupabaseExtended['public']['Tables']['organization_advanced_settings']['Row']
 
+function sanitizeFanVisibilityDefaults(
+  defaults: unknown
+): VisibilitySettings['fan_visibility_defaults'] | undefined {
+  if (!defaults || typeof defaults !== 'object' || Array.isArray(defaults)) {
+    return undefined
+  }
+
+  return Object.entries(defaults as Record<string, unknown>).reduce<Record<string, boolean>>(
+    (acc, [key, value]) => {
+      acc[key] = typeof value === 'boolean' ? value : false
+      return acc
+    },
+    {}
+  )
+}
+
+function sanitizeVisibilitySettingsPayload(
+  settings: Partial<VisibilitySettings>
+): Partial<VisibilitySettings> {
+  if (!Object.prototype.hasOwnProperty.call(settings, 'fan_visibility_defaults')) {
+    return settings
+  }
+
+  return {
+    ...settings,
+    fan_visibility_defaults: sanitizeFanVisibilityDefaults(settings.fan_visibility_defaults),
+  }
+}
+
 // ============================================================================
 // Get Operations
 // ============================================================================
@@ -455,6 +484,7 @@ async function getVisibilitySettings(
     const settings: VisibilitySettings = {
       org_id: row.org_id,
       role_permissions: row.role_permissions as VisibilitySettings['role_permissions'],
+      fan_visibility_defaults: sanitizeFanVisibilityDefaults(row.fan_visibility_defaults),
       updated_at: row.updated_at || new Date().toISOString(),
     }
 
@@ -695,7 +725,8 @@ export async function updateVisibilitySettings(
     return updateFakeVisibilitySettings(context, settings, currentUpdatedAt)
   }
   try {
-    const validated = visibilitySettingsSchema.partial().parse(settings)
+    const sanitizedSettings = sanitizeVisibilitySettingsPayload(settings)
+    const validated = visibilitySettingsSchema.partial().parse(sanitizedSettings)
 
     const { error } = await fromTable('organization_visibility_settings')
       .upsert(

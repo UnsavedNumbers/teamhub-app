@@ -4,23 +4,40 @@
  * Form to create a new ticketed event
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { AdminPageHeader, Card, Button, Input } from '@/components/admin'
+import { AdminPageHeader, Card, Button, Input, Select } from '@/components/admin'
 import { FileUpload } from '@/components/common/FileUpload'
 import { useRouteLink } from '@/utils/routes'
 import type { TicketedEventType, TicketedEventStatus } from '@/types/ticketing'
 import { uploadTicketBanner } from '@/data/services/organizationService'
+import { getSports } from '@/data/services/sportsService'
+import { getPrograms } from '@/data/services/sportsService'
+import { getTeams } from '@/data/services/teamsService'
+import { useUserContext } from '@/hooks/useUserContext'
 import '../../styles/orgAdmin.css'
+
+interface Sport { id: string; name: string }
+interface Program { id: string; name: string; sport_id: string }
+interface Team { id: string; name: string }
+interface Season { id: string; name: string; is_active?: boolean; start_date?: string; end_date?: string }
 
 export default function CreateTicketedEvent() {
   const navigate = useNavigate()
+  const { context, isReady } = useUserContext()
+  const previousSportIdRef = useRef<string | undefined>(undefined)
+  const previousProgramIdRef = useRef<string | undefined>(undefined)
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     event_type: 'other' as TicketedEventType,
+    sport_id: '',
+    program_id: '',
+    season_id: '',
+    team_id: '',
     starts_at: '',
     ends_at: '',
     timezone: 'America/New_York',
@@ -34,6 +51,12 @@ export default function CreateTicketedEvent() {
     ticket_banner_url: '',
   })
   const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [sports, setSports] = useState<Sport[]>([])
+  const [programs, setPrograms] = useState<Program[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
+  const [seasons, setSeasons] = useState<Season[]>([])
+  const [loading, setLoading] = useState(true)
+  const [hasStructure, setHasStructure] = useState(false) // Whether sport has program/season/team
 
   const createMutation = useMutation({
     mutationFn: async () => {

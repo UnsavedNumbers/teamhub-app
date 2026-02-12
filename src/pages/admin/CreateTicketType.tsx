@@ -1,10 +1,10 @@
-import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 
-import { getTicketedEventByIdAdmin, getTicketTypesForEventAdmin, createTicketType } from '@/data/services'
-import type { TicketType } from '@/types/ticketing'
-import { useRouteLink } from '@/utils/routes'
+import { getTicketedEventByIdAdmin, getTicketTypesForEventAdmin, createTicketType, createSeatMap, getSeatMapsForEvent } from '@/data/services'
+import type { TicketType, TicketSeatingMode } from '@/types/ticketing'
+import { getLink, useRouteLink } from '@/utils/routes'
 import { showError, showSuccess } from '@/utils/toast'
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import AdminLoadingSpinner from '@/components/admin/AdminLoadingSpinner'
@@ -12,18 +12,25 @@ import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
 import EmptyState from '@/components/platformAdmin/EmptyState'
 import { DatePicker, TimePicker, Input, Checkbox, Button } from '@/components/platformAdmin'
 import type { SupabaseExtended as Database } from '@/lib/supabase.extended.types'
+import { useT } from '@/i18n/useI18n'
 import '../../styles/orgAdmin.css'
 
-type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert']
+type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert'] & {
+  seating_mode?: TicketSeatingMode
+  seat_map_id?: string | null
+}
 
 export default function CreateTicketType() {
+  const t = useT()
   const { id } = useParams<{ id: string }>()
+  const location = useLocation()
   const navigate = useNavigate()
 
   const detailPath = useRouteLink(
     id ? 'admin.ticketingEvents.detail' : 'admin.ticketingEvents.list',
     id ? { id } : undefined,
   )
+  const eventsPath = useRouteLink('admin.ticketingEvents.list')
 
   const {
     data: event,
@@ -41,6 +48,12 @@ export default function CreateTicketType() {
     enabled: Boolean(id),
   })
 
+  const { data: seatMaps } = useQuery({
+    queryKey: ['seat-maps', id],
+    queryFn: () => getSeatMapsForEvent(id!),
+    enabled: Boolean(id),
+  })
+
   const ticketTypesList = Array.isArray(ticketTypes) ? ticketTypes : (ticketTypes as TicketType[] | undefined) ?? []
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -51,9 +64,21 @@ export default function CreateTicketType() {
   const [salesEndDate, setSalesEndDate] = useState('')
   const [salesEndTime, setSalesEndTime] = useState('')
   const [isActive, setIsActive] = useState(true)
+  const [seatingMode, setSeatingMode] = useState<TicketSeatingMode>('general_admission')
+  const [seatMapId, setSeatMapId] = useState<string>('')
   const [formError, setFormError] = useState<string | null>(null)
 
   const sortOrder = ticketTypesList.length
+  const seatMapList = seatMaps ?? []
+
+  useEffect(() => {
+    const query = new URLSearchParams(location.search)
+    const seatMapFromQuery = query.get('seatMapId')
+    if (seatMapFromQuery) {
+      setSeatingMode('reserved_seating')
+      setSeatMapId(seatMapFromQuery)
+    }
+  }, [location.search])
 
   const combineDateAndTimeIso = (date: string, time: string): string | null => {
     if (!date || !time) return null
@@ -101,13 +126,18 @@ export default function CreateTicketType() {
     const priceCents = Math.round(priceValue * 100)
 
     let capacityValue: number | null = null
-    if (capacity.trim() !== '') {
+    if (seatingMode === 'general_admission' && capacity.trim() !== '') {
       const numeric = parseInt(capacity, 10)
       if (Number.isNaN(numeric) || numeric <= 0) {
         setFormError('Capacity must be a whole number greater than zero')
         return
       }
       capacityValue = numeric
+    }
+
+    if (seatingMode === 'reserved_seating' && !seatMapId) {
+      setFormError(t('ticketing.reservedSeating.admin.reservedRequiresSeatMap'))
+      return
     }
 
     const salesStartIso = combineDateAndTimeIso(salesStartDate, salesStartTime)
@@ -128,6 +158,8 @@ export default function CreateTicketType() {
       currency: 'USD',
       capacity_total: capacityValue,
       capacity_remaining: capacityValue,
+      seating_mode: seatingMode,
+      seat_map_id: seatingMode === 'reserved_seating' ? seatMapId : null,
       sales_start_at: salesStartIso,
       sales_end_at: salesEndIso,
       sort_order: sortOrder,
@@ -142,7 +174,7 @@ export default function CreateTicketType() {
           icon="event"
           title="Missing event"
           description="We cannot determine which ticketed event this ticket type belongs to."
-          action={{ label: 'Back to ticketed events', onClick: () => navigate('/admin/ticketing/events') }}
+          action={{ label: 'Back to ticketed events', onClick: () => navigate(eventsPath) }}
           noCard
         />
       </div>
@@ -164,7 +196,7 @@ export default function CreateTicketType() {
           icon="event_busy"
           title={eventError ? 'Unable to load event' : 'Event not found'}
           description={eventError ? 'Something went wrong while loading the ticketed event.' : 'This ticketed event may have been removed.'}
-          action={{ label: 'Back to ticketed events', onClick: () => navigate('/admin/ticketing/events') }}
+          action={{ label: 'Back to ticketed events', onClick: () => navigate(eventsPath) }}
           noCard
         />
       </div>
@@ -220,16 +252,104 @@ export default function CreateTicketType() {
               step="0.01"
               required
             />
-            <Input
-              label="Capacity (optional)"
-              type="number"
-              min="1"
-              step="1"
-              value={capacity}
-              onChange={(e) => setCapacity(e.target.value)}
-              helper="Leave empty for unlimited capacity"
-            />
+            {seatingMode === 'general_admission' ? (
+              <Input
+                label="Capacity (optional)"
+                type="number"
+                min="1"
+                step="1"
+                value={capacity}
+                onChange={(e) => setCapacity(e.target.value)}
+                helper="Leave empty for unlimited capacity"
+              />
+            ) : (
+              <Input
+                label="Capacity"
+                type="text"
+                value={t('ticketing.reservedSeating.admin.capacityAutoCalculated')}
+                onChange={() => undefined}
+                disabled
+              />
+            )}
           </div>
+
+          <div className="oa-space-y-2">
+            <span className="oa-label">{t('ticketing.reservedSeating.admin.seatingMode')}</span>
+            <div className="oa-flex oa-gap-4">
+              <label className="oa-checkbox-wrapper">
+                <input
+                  type="radio"
+                  name="seating-mode"
+                  checked={seatingMode === 'general_admission'}
+                  onChange={() => setSeatingMode('general_admission')}
+                />
+                <span>{t('ticketing.reservedSeating.mode.generalAdmission')}</span>
+              </label>
+              <label className="oa-checkbox-wrapper">
+                <input
+                  type="radio"
+                  name="seating-mode"
+                  checked={seatingMode === 'reserved_seating'}
+                  onChange={() => setSeatingMode('reserved_seating')}
+                />
+                <span>{t('ticketing.reservedSeating.mode.reservedSeating')}</span>
+              </label>
+            </div>
+          </div>
+
+          {seatingMode === 'reserved_seating' && (
+            <div className="oa-space-y-3">
+              <label className="oa-label">{t('ticketing.reservedSeating.admin.seatMap')}</label>
+              <select
+                className="oa-input"
+                value={seatMapId}
+                onChange={(event) => setSeatMapId(event.target.value)}
+              >
+                <option value="">{t('ticketing.reservedSeating.admin.selectSeatMap')}</option>
+                {seatMapList.map((seatMap) => (
+                  <option key={seatMap.id} value={seatMap.id}>
+                    {seatMap.name}
+                  </option>
+                ))}
+              </select>
+              <div className="oa-flex oa-gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={async () => {
+                    if (!id) return
+                    try {
+                      const created = await createSeatMap(id, `Seat Map ${new Date().toLocaleDateString()}`)
+                      setSeatMapId(created.id)
+                      setSeatingMode('reserved_seating')
+                      const builderPath = getLink('admin.ticketingEvents.seatMaps.builder', {
+                        eventId: id,
+                        seatMapId: created.id,
+                      })
+                      navigate(`${builderPath}?returnTo=${encodeURIComponent(`${location.pathname}?seatMapId=${created.id}`)}`)
+                    } catch (error: any) {
+                      showError(error.message || t('ticketing.reservedSeating.admin.createSeatMapFailed'))
+                    }
+                  }}
+                >
+                  {t('ticketing.reservedSeating.admin.createSeatMap')}
+                </Button>
+                {seatMapId && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    as={Link}
+                    to={`${getLink('admin.ticketingEvents.seatMaps.builder', {
+                      eventId: id!,
+                      seatMapId,
+                    })}?returnTo=${encodeURIComponent(`${location.pathname}?seatMapId=${seatMapId}`)}`}
+                  >
+                    {t('ticketing.reservedSeating.admin.manageSeats')}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="oa-form-grid oa-form-grid-2 oa-gap-4">
             <div className="oa-space-y-2">

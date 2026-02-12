@@ -7,6 +7,20 @@ import { useQueryParams } from '../../hooks/useQueryParams'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { AdminEventLog, EventCategory } from '../../types/eventLog.types'
 
+const hasRlsMarker = (value: unknown): boolean =>
+  typeof value === 'string' && value.toLowerCase().includes('__rls__')
+
+const isRlsEvent = (log: AdminEventLog): boolean => {
+  if (hasRlsMarker(log.event_type)) return true
+  if (hasRlsMarker(log.organization_name)) return true
+  if (hasRlsMarker(log.target_entity_type)) return true
+  if (hasRlsMarker(log.target_entity_id)) return true
+  if (hasRlsMarker(log.actor_email)) return true
+  if (hasRlsMarker(log.actor_name)) return true
+  if (hasRlsMarker(JSON.stringify(log.metadata ?? {}))) return true
+  return false
+}
+
 // Category options for filtering
 const categoryOptions = [
   { value: 'AUTH', label: 'Auth' },
@@ -92,6 +106,11 @@ export default function EventLog() {
       let query = supabase
         .from('admin_event_logs')
         .select('*', { count: 'exact' })
+        .not('event_type', 'ilike', '%__rls__%')
+        .not('organization_name', 'ilike', '%__rls__%')
+        .not('actor_email', 'ilike', '%__rls__%')
+        .not('actor_name', 'ilike', '%__rls__%')
+        .not('target_entity_type', 'ilike', '%__rls__%')
 
       if (search) {
         query = query.or(`actor_email.ilike.%${search}%,actor_name.ilike.%${search}%`)
@@ -129,7 +148,8 @@ export default function EventLog() {
         setLogs([])
         setTotalCount(0)
       } else {
-        setLogs(data as AdminEventLog[])
+        const visibleLogs = ((data || []) as AdminEventLog[]).filter(log => !isRlsEvent(log))
+        setLogs(visibleLogs)
         setTotalCount(count || 0)
       }
     } catch (err) {

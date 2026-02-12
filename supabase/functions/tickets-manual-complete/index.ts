@@ -193,6 +193,19 @@ serve(async (req) => {
       return json(req, { error: "Failed to load order items" }, 500)
     }
 
+    const { data: seatHolds } = await supabase
+      .from("seat_holds")
+      .select("id, seat_map_section_id, expires_at")
+      .eq("order_id", orderId)
+
+    for (const hold of seatHolds || []) {
+      if (new Date(hold.expires_at) < new Date()) {
+        await supabase.from("seat_holds").delete().eq("order_id", orderId)
+        await supabase.from("ticket_holds").delete().eq("order_id", orderId)
+        return json(req, { error: "Seat hold expired for this order" }, 400)
+      }
+    }
+
     // Create tickets with raw tokens for email
     const tickets: any[] = []
     const ticketsWithRawTokens: Array<{ ticket: any; qr_token_raw: string }> = []
@@ -228,6 +241,58 @@ serve(async (req) => {
       return json(req, { error: `Failed to create tickets: ${ticketsError?.message || "Unknown error"}` }, 500)
     }
 
+    const ticketTypeIds = Array.from(new Set(orderItems.map((item) => item.ticket_type_id)))
+    const { data: ticketTypes, error: ticketTypesError } = await supabase
+      .from("ticket_types")
+      .select("id, seating_mode")
+      .in("id", ticketTypeIds)
+
+    if (ticketTypesError) {
+      return json(req, { error: "Failed to load ticket type seating modes" }, 500)
+    }
+
+    const reservedTypeIds = new Set(
+      (ticketTypes ?? [])
+        .filter((ticketType: any) => ticketType.seating_mode === "reserved_seating")
+        .map((ticketType: any) => ticketType.id as string),
+    )
+
+    const reservedTickets = insertedTickets.filter((ticket) => reservedTypeIds.has(ticket.ticket_type_id))
+    if (reservedTickets.length > 0) {
+      const orderedSeatHolds = [...(seatHolds ?? [])].sort(
+        (left, right) => new Date(left.expires_at).getTime() - new Date(right.expires_at).getTime(),
+      )
+
+      if (orderedSeatHolds.length !== reservedTickets.length) {
+        return json(req, { error: "Reserved seat hold count mismatch" }, 400)
+      }
+
+      const seatAssignmentsPayload = reservedTickets.map((ticket, index) => ({
+        ticket_id: ticket.id,
+        seat_map_section_id: orderedSeatHolds[index].seat_map_section_id,
+      }))
+
+      const { data: insertedAssignments, error: assignmentError } = await supabase
+        .from("seat_assignments")
+        .insert(seatAssignmentsPayload)
+        .select("id, ticket_id")
+
+      if (assignmentError || !insertedAssignments) {
+        return json(req, { error: "Failed to create seat assignments" }, 500)
+      }
+
+      for (const assignment of insertedAssignments) {
+        const { error: ticketUpdateError } = await supabase
+          .from("tickets")
+          .update({ seat_assignment_id: assignment.id })
+          .eq("id", assignment.ticket_id)
+
+        if (ticketUpdateError) {
+          return json(req, { error: "Failed to link ticket seat assignment" }, 500)
+        }
+      }
+    }
+
     // Update order status
     const updateData: any = {
       status: "paid",
@@ -250,6 +315,7 @@ serve(async (req) => {
 
     // Delete holds
     await supabase.from("ticket_holds").delete().eq("order_id", orderId)
+    await supabase.from("seat_holds").delete().eq("order_id", orderId)
 
     // Try to send receipt with raw tokens
     const baseUrl = Deno.env.get("SUPABASE_URL")?.replace("/rest/v1", "") || ""

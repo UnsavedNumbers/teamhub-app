@@ -37,6 +37,7 @@ import {
 import { uploadTicketBanner } from '../../data/services/organizationService'
 import { validateDeleteEvent, validateCancelEvent, validateUpdateEvent, EVENT_ERRORS } from '../../utils/eventValidation'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
 import '../../styles/orgAdmin.css'
 
 interface Team { id: string; name: string }
@@ -855,6 +856,26 @@ export default function EditEvent() {
       navigate(getLink('admin.events.list'))
     } catch (err: unknown) {
       const errorMessage = getErrorMessage(err) || 'Failed to update event'
+
+      const logResult = await logEvent({
+        category: 'SYSTEM',
+        eventType: 'SYSTEM_ALERT',
+        actorUserId: context.userId,
+        actorRole: deriveActorRoleFromRoles(context.roles),
+        orgId: context.orgId,
+        targetEntityType: 'event',
+        targetEntityId: eventId,
+        metadata: {
+          source: 'EditEvent.onSubmit',
+          operation: 'update',
+          status: 'failed',
+          error_message: errorMessage,
+        },
+      })
+      if (logResult.error) {
+        console.error('[EditEvent] Failed to log update failure:', logResult.error)
+      }
+
       setError(errorMessage)
       showError(errorMessage)
       
@@ -962,8 +983,8 @@ export default function EditEvent() {
                 </div>
                 <div className="oa-form-grid oa-form-grid-3 oa-mb-4 oa-gap-4">
                   <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.eventType')} options={eventTypeOptions} />} />
-                  <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.team')} options={teams.map(t => ({ value: t.id, label: t.name }))} required error={errors.team_id?.message || undefined} />} />
-                  <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.season')} options={seasons.map(s => ({ value: s.id, label: s.name }))} required disabled={!watchTeamId} />} />
+                  <Controller name="team_id" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.team')} options={teams.map(t => ({ value: t.id, label: t.name }))} error={errors.team_id?.message || undefined} />} />
+                  <Controller name="season_id" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.season')} options={seasons.map(s => ({ value: s.id, label: s.name }))} disabled={!watchTeamId} />} />
                 </div>
               </div>
             </section>
@@ -1675,6 +1696,26 @@ export default function EditEvent() {
             navigate(getLink('admin.events.list'))
           } catch (err) {
             const errorMessage = getErrorMessage(err) || 'Failed to delete event'
+
+            const logResult = await logEvent({
+              category: 'SYSTEM',
+              eventType: 'SYSTEM_ALERT',
+              actorUserId: context.userId,
+              actorRole: deriveActorRoleFromRoles(context.roles),
+              orgId: context.orgId,
+              targetEntityType: 'event',
+              targetEntityId: eventId,
+              metadata: {
+                source: 'EditEvent.deleteDialog.onConfirm',
+                operation: 'delete',
+                status: 'failed',
+                error_message: errorMessage,
+              },
+            })
+            if (logResult.error) {
+              console.error('[EditEvent] Failed to log delete failure:', logResult.error)
+            }
+
             setActionError(errorMessage)
             showError(errorMessage)
           } finally {
@@ -1746,6 +1787,26 @@ export default function EditEvent() {
             navigate(getLink('admin.events.list'))
           } catch (err) {
             const errorMessage = getErrorMessage(err) || 'Failed to cancel event'
+
+            const logResult = await logEvent({
+              category: 'SYSTEM',
+              eventType: 'SYSTEM_ALERT',
+              actorUserId: context.userId,
+              actorRole: deriveActorRoleFromRoles(context.roles),
+              orgId: context.orgId,
+              targetEntityType: 'event',
+              targetEntityId: eventId,
+              metadata: {
+                source: 'EditEvent.cancelDialog.onConfirm',
+                operation: 'cancel',
+                status: 'failed',
+                error_message: errorMessage,
+              },
+            })
+            if (logResult.error) {
+              console.error('[EditEvent] Failed to log cancel failure:', logResult.error)
+            }
+
             setActionError(errorMessage)
             showError(errorMessage)
           } finally {
