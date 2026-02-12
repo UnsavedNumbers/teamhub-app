@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { getEvents, getEventsCount } from '../../data/services/eventsService'
@@ -17,7 +17,6 @@ import EventsList from '../../components/admin/EventsList'
 import EventsCalendar from '../../components/admin/EventsCalendar'
 import EventsAgenda from '../../components/admin/EventsAgenda'
 import BulkActionsBar from '../../components/admin/BulkActionsBar'
-import EventDetailSlideOver from '../../components/admin/EventDetailSlideOver'
 import type { CalendarEvent } from '../../types/calendar'
 import type { EventTimeContext, EventViewMode, EventsFilters as EventsFiltersType } from '../../types/eventsManagement'
 
@@ -50,8 +49,6 @@ const DEFAULT_FILTERS: EventsFiltersType = {
 }
 
 export default function Events() {
-    const { id: eventIdParam } = useParams<{ id: string }>()
-    
     // View state
     const [timeContext, setTimeContext] = useState<EventTimeContext>('upcoming')
     const [viewMode, setViewMode] = useState<EventViewMode>('list')
@@ -70,9 +67,6 @@ export default function Events() {
     
     // Selection and bulk actions
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-    
-    // Detail slide-over
-    const [detailEventId, setDetailEventId] = useState<string | null>(null)
     
     // Calendar state
     const [calendarDate, setCalendarDate] = useState(new Date())
@@ -145,11 +139,6 @@ export default function Events() {
         if (savedViewMode) setViewMode(savedViewMode)
         if (savedTimeContext) setTimeContext(savedTimeContext)
     }, [])
-
-    // Sync detail event ID with route param (events/:id)
-    useEffect(() => {
-        setDetailEventId(eventIdParam ?? null)
-    }, [eventIdParam])
 
     const fetchEvents = useCallback(async () => {
         if (!isReady) return
@@ -268,7 +257,7 @@ export default function Events() {
         try {
             const { data: eventData } = await supabaseAny
                 .from('events')
-                .select('id, start_time, is_cancelled, status, type, org_id, team_id')
+                .select('id, start_time, is_cancelled, type, org_id, team_id')
                 .eq('id', cancelDialog.event.id)
                 .single()
 
@@ -287,7 +276,7 @@ export default function Events() {
                     is_cancelled: true,
                     cancellation_reason: reason || null,
                     cancelled_at: new Date().toISOString(),
-                    cancelled_by_user_id: context.userId,
+                    cancelled_by_user_id: context.userId || null,
                 })
                 .eq('id', cancelDialog.event.id)
 
@@ -512,10 +501,6 @@ export default function Events() {
         navigate(getLink('admin.events.detail', { id: event.id }))
     }
 
-    const handleCloseDetail = () => {
-        navigate(getLink('admin.events.list'))
-    }
-
     if (!isReady) {
         return (
             <div>
@@ -541,7 +526,7 @@ export default function Events() {
                     setViewMode(mode)
                     setPage(0)
                 }}
-                onCreateClick={() => navigate('/admin/events/new')}
+                onCreateClick={() => navigate(getLink('admin.events.create'))}
             />
 
             <EventsFilters
@@ -562,7 +547,7 @@ export default function Events() {
                     title="NO EVENTS"
                     description="No events match your current filters."
                 >
-                    <button className="oa-btn oa-btn--primary" onClick={() => navigate('/admin/events/new')}>
+                    <button className="oa-btn oa-btn--primary" onClick={() => navigate(getLink('admin.events.create'))}>
                         {t('admin.events.create')}
                     </button>
                 </EmptyState>
@@ -623,24 +608,6 @@ export default function Events() {
                 onReschedule={() => showError('Reschedule feature coming soon')}
                 onDelete={() => setBulkDeleteDialog(true)}
                 onClearSelection={() => setSelectedIds(new Set())}
-            />
-
-            <EventDetailSlideOver
-                eventId={detailEventId}
-                onClose={handleCloseDetail}
-                onEdit={(eventId) => navigate(getLink('admin.events.edit', { id: eventId }))}
-                onDuplicate={(eventId) => {
-                    const event = events.find((e) => e.id === eventId)
-                    if (event) handleDuplicate(event)
-                }}
-                onCancel={(eventId) => {
-                    const event = events.find((e) => e.id === eventId)
-                    if (event) setCancelDialog({ open: true, event })
-                }}
-                onDelete={(eventId) => {
-                    const event = events.find((e) => e.id === eventId)
-                    if (event) setDeleteDialog({ open: true, event })
-                }}
             />
 
             {/* Delete Confirmation Dialog */}

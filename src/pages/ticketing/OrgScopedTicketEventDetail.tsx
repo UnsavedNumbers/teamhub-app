@@ -28,6 +28,32 @@ interface CartItem {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+function formatTimezoneDisplay(timeZone: string | null | undefined, referenceDate: string): string {
+  if (!timeZone) return ''
+
+  const parsedDate = new Date(referenceDate)
+  if (Number.isNaN(parsedDate.getTime())) return timeZone
+
+  try {
+    const longParts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      timeZoneName: 'long',
+    }).formatToParts(parsedDate)
+    const shortParts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      timeZoneName: 'short',
+    }).formatToParts(parsedDate)
+
+    const longName = longParts.find(part => part.type === 'timeZoneName')?.value
+    const shortName = shortParts.find(part => part.type === 'timeZoneName')?.value
+
+    if (longName && shortName) return `${longName} (${shortName})`
+    return longName || shortName || timeZone
+  } catch {
+    return timeZone
+  }
+}
+
 function TicketEventDetailContent({ org }: { org: OrgContext }) {
   const t = useT()
   const { eventId, orgSlug } = useParams<{ eventId: string; orgSlug: string }>()
@@ -282,8 +308,20 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
   const venue = event.venue_name
     ? `${event.venue_name}${event.venue_city ? `, ${event.venue_city}` : ''}${event.venue_state ? ` ${event.venue_state}` : ''}`
     : 'Location TBD'
-  const dateFormatted = eventDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-  const timeFormatted = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  const dateFormatted = eventDate.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: event.timezone,
+  })
+  const timeFormatted = eventDate.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: event.timezone,
+  })
+  const timezoneLabel = formatTimezoneDisplay(event.timezone, event.starts_at)
 
   const checkoutDisabled =
     checkoutMutation.isPending ||
@@ -356,6 +394,12 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
                 <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>schedule</span>
                 <span className="text-sm font-medium text-[#617589] dark:text-gray-400">Doors open at {timeFormatted}</span>
               </div>
+              {timezoneLabel && (
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>public</span>
+                  <span className="text-sm font-medium text-[#617589] dark:text-gray-400">{timezoneLabel}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

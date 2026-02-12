@@ -18,13 +18,12 @@ import {
   Button, 
   Input, 
   Select,
-  DatePicker,
   Checkbox,
   ConfirmDialog
 } from '../../components/admin'
 import { TimePicker } from '../../components/platformAdmin/TimePicker'
+import { DateTimePicker } from '../../components/platformAdmin/DateTimePicker'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
-import { FanVisibilityToggle } from '../../components/admin/FanVisibilityToggle'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import { FileUpload } from '../../components/common/FileUpload'
 import { 
@@ -44,12 +43,6 @@ interface Team { id: string; name: string }
 interface Season { id: string; name: string; team_id: string }
 
 const supabaseAny = supabase as any
-
-/** Format Date for datetime-local input (YYYY-MM-DDTHH:mm) */
-function toDatetimeLocal(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
 
 export default function EditEvent() {
   const { id: eventId } = useParams<{ id: string }>()
@@ -84,7 +77,7 @@ export default function EditEvent() {
   const t = useT()
   const { isOffline } = useOffline()
 
-  const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<EventFormData>({
+  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<EventFormData>({
     defaultValues: { 
       title: '', 
       type: 'practice', 
@@ -330,9 +323,9 @@ export default function EditEvent() {
 
         const { data: ticketTypes } = await supabase
           .from('ticket_types')
-          .select('id, name, description, price_cents, capacity_total, capacity_remaining, sort_order')
+          .select('id, name, description, price_cents, capacity_total, capacity_remaining, sort_order, seating_mode, seat_map_id')
           .eq('ticketed_event_id', ticketedEvent.id)
-          .order('sort_order') as { data: { id: string; name: string; price_cents: number; capacity_total: number | null; capacity_remaining: number | null; sort_order: number }[] | null }
+          .order('sort_order') as { data: { id: string; name: string; price_cents: number; capacity_total: number | null; capacity_remaining: number | null; sort_order: number; seating_mode: 'general_admission' | 'reserved_seating' | null; seat_map_id: string | null }[] | null }
 
         if (ticketTypes?.length) {
           const formTicketTypes = ticketTypes.map(tt => {
@@ -341,11 +334,13 @@ export default function EditEvent() {
               : 0
             return {
               id: tt.id,
+              seat_map_id: tt.seat_map_id,
               soldCount: sold,
               name: tt.name,
               description: (tt as any).description || '',
               price_dollars: (tt.price_cents / 100).toFixed(2),
-              capacity: tt.capacity_total != null ? String(tt.capacity_total) : ''
+              capacity: tt.capacity_total != null ? String(tt.capacity_total) : '',
+              seating_mode: tt.seating_mode || 'general_admission',
             }
           })
           setValue('ticketing.ticket_types', formTicketTypes)
@@ -711,7 +706,16 @@ export default function EditEvent() {
           const newTeId = createdTe.id
 
           if (data.ticketing.ticket_types?.length) {
-            type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert']
+            const hasReservedTypesWithoutSeatMap = data.ticketing.ticket_types.some(
+              (ticketType) => ticketType.name.trim() !== '' && ticketType.seating_mode === 'reserved_seating',
+            )
+            if (hasReservedTypesWithoutSeatMap) {
+              throw new Error(t('admin.events.ticketing.ticketTypes.mode.requiresSeatMap'))
+            }
+
+            type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert'] & {
+              seating_mode?: 'general_admission' | 'reserved_seating'
+            }
             const inserts: TicketTypeInsert[] = data.ticketing.ticket_types
               .filter(tt => tt.name.trim() !== '')
               .map((tt, index) => {
@@ -730,6 +734,7 @@ export default function EditEvent() {
                   sort_order: index,
                   is_active: true,
                   description: tt.description?.trim() || null,
+                  seating_mode: tt.seating_mode === 'reserved_seating' ? 'reserved_seating' : 'general_admission',
                 } satisfies TicketTypeInsert
               })
             if (inserts.length > 0) {
@@ -784,10 +789,15 @@ export default function EditEvent() {
             }
           }
 
-          type TicketTypeUpdate = Database['public']['Tables']['ticket_types']['Update']
+          type TicketTypeUpdate = Database['public']['Tables']['ticket_types']['Update'] & {
+            seating_mode?: 'general_admission' | 'reserved_seating'
+          }
           for (let index = 0; index < formTypes.length; index++) {
             const tt = formTypes[index]
             if (!tt.name.trim()) continue
+            if (tt.seating_mode === 'reserved_seating' && !tt.seat_map_id) {
+              throw new Error(t('admin.events.ticketing.ticketTypes.mode.requiresSeatMap'))
+            }
             const priceCents = Math.round((parseFloat(tt.price_dollars) || 0) * 100)
             const capStr = tt.capacity.trim()
             const capacityTotal = capStr === '' ? null : (parseInt(capStr, 10) || null)
@@ -801,6 +811,7 @@ export default function EditEvent() {
                 name: tt.name.trim(),
                 sort_order: index,
                 description: tt.description?.trim() || null,
+                seating_mode: tt.seating_mode === 'reserved_seating' ? 'reserved_seating' : 'general_admission',
               }
               if (!hasPaidOrders) {
                 updatePayload.price_cents = priceCents
@@ -818,7 +829,9 @@ export default function EditEvent() {
                 .eq('id', tt.id)
               if (uErr) throw uErr
             } else {
-              type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert']
+              type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert'] & {
+                seating_mode?: 'general_admission' | 'reserved_seating'
+              }
               const insertPayload: TicketTypeInsert = {
                 org_id: orgId,
                 ticketed_event_id: ticketedEventId,
@@ -830,6 +843,7 @@ export default function EditEvent() {
                 sort_order: index,
                 is_active: true,
                 description: tt.description?.trim() || null,
+                seating_mode: tt.seating_mode === 'reserved_seating' ? 'reserved_seating' : 'general_admission',
               }
               const { error: iErr } = await supabase.from('ticket_types').insert(insertPayload)
               if (iErr) throw iErr
@@ -956,8 +970,7 @@ export default function EditEvent() {
           </div>
         )}
 
-        <Card>
-          <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit)}>
             <fieldset disabled={isPastEvent}>
             {error && (
               <div className="oa-alert oa-alert--error oa-mb-4">
@@ -970,58 +983,49 @@ export default function EditEvent() {
               </div>
             )}
             
-            <section className="oa-form-section" aria-labelledby="event-basics-heading">
-              <div className="oa-form-section-header">
-                <div>
-                  <h3 id="event-basics-heading" className="oa-form-section-title">Event Basics</h3>
-                  <p className="oa-form-section-subtitle">Update the title, type, team, and season that own this event.</p>
-                </div>
-              </div>
+            <Card title="Event Basics" className="oa-mb-6">
               <div className="oa-form-section-body">
+                <p className="oa-form-section-subtitle oa-mb-4">Update the title, type, team, and season for this event.</p>
                 <div className="oa-mb-4">
                   <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
                 </div>
                 <div className="oa-form-grid oa-form-grid-3 oa-mb-4 oa-gap-4">
                   <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.eventType')} options={eventTypeOptions} />} />
-                  <Controller name="team_id" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.team')} options={teams.map(t => ({ value: t.id, label: t.name }))} error={errors.team_id?.message || undefined} />} />
-                  <Controller name="season_id" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.season')} options={seasons.map(s => ({ value: s.id, label: s.name }))} disabled={!watchTeamId} />} />
+                  <Controller name="team_id" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.team')} options={teams.map(team => ({ value: team.id, label: team.name }))} error={errors.team_id?.message || undefined} />} />
+                  <Controller name="season_id" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.season')} options={seasons.map(season => ({ value: season.id, label: season.name }))} disabled={!watchTeamId} />} />
                 </div>
               </div>
-            </section>
+            </Card>
 
-            <section className="oa-form-section" aria-labelledby="event-dates-heading">
-              <div className="oa-form-section-header">
-                <div>
-                  <h3 id="event-dates-heading" className="oa-form-section-title">Date &amp; Time</h3>
-                  <p className="oa-form-section-subtitle">Adjust the event date, start, end, and arrival windows.</p>
-                </div>
-              </div>
+            <Card title="Date & Time" className="oa-mb-6">
               <div className="oa-form-section-body">
+                <p className="oa-form-section-subtitle oa-mb-4">Adjust the event date, start, end, and arrival windows.</p>
                 <div className="oa-form-grid oa-form-grid-4 oa-form-grid-tablet-2col">
-                  <Controller 
-                    name="start_time" 
-                    control={control} 
-                    rules={{ required: 'Start date and time are required' }} 
+                  <Controller
+                    name="start_time"
+                    control={control}
+                    rules={{ required: 'Start date and time are required' }}
                     render={({ field }) => (
-                      <DatePicker 
-                        label="Event Date" 
+                      <DateTimePicker
+                        label="Event Date"
                         value={field.value ? field.value.split('T')[0] : ''}
                         onChange={(date) => {
                           const time = field.value?.split('T')[1] || '09:00'
                           field.onChange(`${date}T${time}`)
                         }}
+                        min={new Date().toISOString().split('T')[0]}
                         required
                         error={errors.start_time?.message}
                       />
-                    )} 
+                    )}
                   />
                   <div className="oa-max-w-xs">
-                    <Controller 
-                      name="start_time" 
-                      control={control} 
+                    <Controller
+                      name="start_time"
+                      control={control}
                       render={({ field }) => (
-                        <TimePicker 
-                          label="Start Time" 
+                        <TimePicker
+                          label="Start Time"
                           value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
                           onChange={(time) => {
                             const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
@@ -1029,112 +1033,116 @@ export default function EditEvent() {
                           }}
                           required
                         />
-                      )} 
+                      )}
                     />
                   </div>
                   <div className="oa-max-w-xs">
-                    <Controller 
-                      name="end_time" 
-                      control={control} 
+                    <Controller
+                      name="end_time"
+                      control={control}
                       render={({ field }) => (
-                        <TimePicker 
-                          label="End Time" 
+                        <TimePicker
+                          label="End Time"
+                          value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                          onChange={(time) => {
+                            const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
+                            field.onChange(time ? `${startDate}T${time}` : '')
+                          }}
+                          error={errors.end_time?.message}
+                        />
+                      )}
+                    />
+                  </div>
+                  <div className="oa-max-w-xs">
+                    <Controller
+                      name="arrival_time"
+                      control={control}
+                      render={({ field }) => (
+                        <TimePicker
+                          label="Arrival Time"
                           value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
                           onChange={(time) => {
                             const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
                             field.onChange(time ? `${startDate}T${time}` : '')
                           }}
                         />
-                      )} 
-                    />
-                  </div>
-                  <div className="oa-max-w-xs">
-                    <Controller 
-                      name="arrival_time" 
-                      control={control} 
-                      render={({ field }) => (
-                        <TimePicker 
-                          label="Arrival Time" 
-                          value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                          onChange={(time) => {
-                            const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
-                            field.onChange(time ? `${startDate}T${time}` : '')
-                          }}
-                        />
-                      )} 
+                      )}
                     />
                   </div>
                 </div>
               </div>
-            </section>
+            </Card>
 
-            <section className="oa-form-section" aria-labelledby="event-location-heading">
-              <div className="oa-form-section-header">
-                <div>
-                  <h3 id="event-location-heading" className="oa-form-section-title">Location</h3>
-                  <p className="oa-form-section-subtitle">Update the venue, address, and any virtual details.</p>
-                </div>
-                <Button type="button" variant="ghost" onClick={() => setShowLocationDetails(!showLocationDetails)}>
-                  {showLocationDetails ? 'Simple Location' : 'Detailed Location'}
-                </Button>
-              </div>
-              <div className="oa-form-section-body oa-space-y-4">
-                <div className="oa-form-grid oa-form-grid-2 oa-form-grid-tablet-2col">
-                  <Controller name="location.venue_name" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.venueName')} placeholder="e.g. Field 1" />} />
-                  <Controller
-                    name="location.address_line1"
-                    control={control}
-                    render={({ field }) => (
-                      <LocationAutocomplete
-                        value={field.value || ''}
-                        onInputChange={field.onChange}
-                        onChange={(address) => {
-                          startTransition(() => {
-                            setValue('location.address_line1', address.address_line1, { shouldValidate: false, shouldDirty: true })
-                            setValue('location.city', address.city, { shouldValidate: false, shouldDirty: true })
-                            setValue('location.state', address.state, { shouldValidate: false, shouldDirty: true })
-                            setValue('location.postal_code', address.postal_code, { shouldValidate: false, shouldDirty: true })
-                            setValue('location.place_id', address.place_id, { shouldValidate: false, shouldDirty: true })
-                            setValue('location.latitude', address.latitude.toString(), { shouldValidate: false, shouldDirty: true })
-                            setValue('location.longitude', address.longitude.toString(), { shouldValidate: false, shouldDirty: true })
-                            trigger(['location.address_line1', 'location.city', 'location.state', 'location.postal_code'])
-                          })
-                        }}
-                        label={t('admin.events.location.address')}
-                        placeholder="Enter an address"
-                      />
-                    )}
-                  />
-                </div>
-
-                {showLocationDetails && (
-                  <>
-                    <div className="oa-form-grid oa-form-grid-3 oa-form-grid-tablet-2col oa-gap-4">
-                      <Controller name="location.city" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.city')} />} />
-                      <Controller name="location.state" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.state')} />} />
-                      <Controller name="location.postal_code" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.postalCode')} />} />
-                    </div>
-                    <div className="oa-checkbox-stack">
-                      <Controller name="location.is_tbd" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label={t('admin.events.location.isTBD')} />} />
-                      <Controller name="location.is_virtual" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label={t('admin.events.location.isVirtual')} />} />
-                    </div>
-                    <Controller name="location.virtual_link" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.virtualLink')} placeholder="https://zoom.us/..." />} />
-                  </>
-                )}
-              </div>
-            </section>
-          
-            <section className="oa-form-section" aria-labelledby="event-attendance-heading">
-              <div className="oa-form-section-header">
-                <div>
-                  <h3 id="event-attendance-heading" className="oa-form-section-title">RSVP &amp; Recurrence</h3>
-                  <p className="oa-form-section-subtitle">Control RSVPs and set recurring details.</p>
-                </div>
-              </div>
+            <Card title="Location" className="oa-mb-6">
               <div className="oa-form-section-body">
+                <p className="oa-form-section-subtitle oa-mb-4">Point to a venue, mark the event as TBD, or capture a virtual link.</p>
+                <div className="oa-mb-2">
+                  <Button type="button" variant="ghost" onClick={() => setShowLocationDetails(!showLocationDetails)}>
+                    {showLocationDetails ? 'Simple Location' : 'Detailed Location'}
+                  </Button>
+                </div>
+                <div className="oa-space-y-4">
+                  <div className="oa-form-grid oa-form-grid-2 oa-form-grid-tablet-2col">
+                    <Controller
+                      name="location.venue_name"
+                      control={control}
+                      render={({ field }) => (
+                        <LocationAutocomplete
+                          value={field.value || ''}
+                          onInputChange={field.onChange}
+                          onChange={(address: any, placeResult?: google.maps.places.PlaceResult) => {
+                            startTransition(() => {
+                              const placeName = placeResult?.name && placeResult.name !== address.formatted_address
+                                ? placeResult.name
+                                : ''
+                              setValue('location.venue_name', placeName, { shouldValidate: false, shouldDirty: true })
+                              setValue('location.address_line1', address.formatted_address || '', { shouldValidate: false, shouldDirty: true })
+                              setValue('location.city', address.city || '', { shouldValidate: false, shouldDirty: true })
+                              setValue('location.state', address.state || '', { shouldValidate: false, shouldDirty: true })
+                              setValue('location.postal_code', address.postal_code || '', { shouldValidate: false, shouldDirty: true })
+                              setValue('location.place_id', address.place_id || '', { shouldValidate: false, shouldDirty: true })
+                              setValue('location.latitude', String(address.latitude ?? ''), { shouldValidate: false, shouldDirty: true })
+                              setValue('location.longitude', String(address.longitude ?? ''), { shouldValidate: false, shouldDirty: true })
+                              if (placeName) field.onChange(placeName)
+                            })
+                          }}
+                          label={t('admin.events.location.venueName')}
+                          placeholder="Search for venue..."
+                          types={['establishment', 'geocode']}
+                        />
+                      )}
+                    />
+                    <Controller
+                      name="location.address_line1"
+                      control={control}
+                      render={({ field }) => <Input {...field} label={t('admin.events.location.address')} />}
+                    />
+                  </div>
+
+                  {showLocationDetails && (
+                    <>
+                      <div className="oa-form-grid oa-form-grid-3 oa-form-grid-tablet-2col">
+                        <Controller name="location.city" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.city')} />} />
+                        <Controller name="location.state" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.state')} />} />
+                        <Controller name="location.postal_code" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.postalCode')} />} />
+                      </div>
+                      <div className="oa-checkbox-stack">
+                        <Controller name="location.is_tbd" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label={t('admin.events.location.isTBD')} />} />
+                        <Controller name="location.is_virtual" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label={t('admin.events.location.isVirtual')} />} />
+                      </div>
+                      <Controller name="location.virtual_link" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.virtualLink')} placeholder="https://zoom.us/..." />} />
+                    </>
+                  )}
+                </div>
+              </div>
+            </Card>
+
+            <Card title="RSVP & Recurrence" className="oa-mb-6">
+              <div className="oa-form-section-body">
+                <p className="oa-form-section-subtitle oa-mb-4">Collect RSVPs and set up recurring sessions for the event.</p>
                 <div className="oa-checkbox-stack oa-mb-4">
                   <Controller name="rsvp_enabled" control={control} render={({ field: { value, onChange } }) => (
-                    <Checkbox checked={!!value} onChange={(e) => { 
+                    <Checkbox checked={!!value} onChange={(e) => {
                       onChange(e.target.checked)
                       if (!e.target.checked) {
                         setValue('rsvp_type', null)
@@ -1142,55 +1150,52 @@ export default function EditEvent() {
                     }} label="RSVP Required?" />
                   )} />
                   <Controller name="recurring.enabled" control={control} render={({ field: { value, onChange } }) => (
-                    <Checkbox checked={!!value} onChange={(e) => { onChange(e.target.checked); setShowRecurring(e.target.checked); }} label="Recurring Event?" />
+                    <Checkbox checked={!!value} onChange={(e) => { onChange(e.target.checked); setShowRecurring(e.target.checked) }} label="Recurring Event?" />
                   )} />
                 </div>
 
                 {watchRSVPEnabled && (
                   <div className="oa-mb-4">
-                    <Controller 
-                      name="rsvp_type" 
-                      control={control} 
-                      rules={{ required: watchRSVPEnabled ? 'RSVP type is required' : false }}
-                      render={({ field }) => (
-                        <Select 
-                          {...field} 
-                          value={field.value || ''}
-                          label="RSVP Type" 
-                          options={[
-                            {value: 'general', label: t('admin.events.rsvpType.general')},
-                            {value: 'athlete', label: t('admin.events.rsvpType.athlete')}
-                          ]}
-                          required
-                          error={errors.rsvp_type?.message || undefined}
-                        />
-                      )} 
-                    />
+                    <div className="oa-select-wrapper">
+                      <Controller
+                        name="rsvp_type"
+                        control={control}
+                        rules={{ required: watchRSVPEnabled ? 'RSVP type is required' : false }}
+                        render={({ field }) => (
+                          <Select
+                            {...field}
+                            value={field.value || ''}
+                            label="RSVP Type"
+                            options={[
+                              { value: 'general', label: t('admin.events.rsvpType.general') },
+                              { value: 'athlete', label: t('admin.events.rsvpType.athlete') }
+                            ]}
+                            required
+                            error={errors.rsvp_type?.message || undefined}
+                          />
+                        )}
+                      />
+                    </div>
                   </div>
                 )}
 
                 {showRecurring && (
-                  <div className="oa-form-grid oa-form-grid-2 oa-form-grid-tablet-2col oa-gap-4">
+                  <div className="oa-form-grid oa-form-grid-2 oa-form-grid-tablet-2col">
                     <div className="oa-select-wrapper">
-                      <Controller name="recurring.frequency" control={control} render={({ field }) => <Select {...field} label="Frequency" options={[{value:'weekly', label:'Weekly'}]} />} />
+                      <Controller name="recurring.frequency" control={control} render={({ field }) => <Select {...field} label="Frequency" options={[{ value: 'weekly', label: 'Weekly' }]} />} />
                     </div>
                     <div className="oa-max-w-sm">
-                      <Controller name="recurring.end_date" control={control} render={({ field }) => <DatePicker {...field} label="Recurs Until" />} />
+                      <Controller name="recurring.end_date" control={control} render={({ field }) => <DateTimePicker {...field} label="Recurs Until" />} />
                     </div>
                   </div>
                 )}
               </div>
-            </section>
+            </Card>
 
-            {!ticketingGateLoading && ticketingAllowed && (ticketedEventId || watchTicketingEnabled) && (
-              <section className="oa-form-section" aria-labelledby="event-ticketing-heading">
-                <div className="oa-form-section-header">
-                  <div>
-                    <h3 id="event-ticketing-heading" className="oa-form-section-title">{t('admin.events.ticketing.title')}</h3>
-                    <p className="oa-form-section-subtitle">Manage ticket sales, choices, and capacity.</p>
-                  </div>
-                </div>
+            {!ticketingGateLoading && ticketingAllowed && (
+              <Card title={t('admin.events.ticketing.title')} className="oa-mb-6">
                 <div className="oa-form-section-body">
+                  <p className="oa-form-section-subtitle oa-mb-4">Activate ticket sales, control the sales window, and manage inventory.</p>
                   <div className="oa-checkbox-stack">
                     <Controller
                       name="ticketing.is_ticketed"
@@ -1259,7 +1264,7 @@ export default function EditEvent() {
                       </div>
 
                       {!watchTicketSalesImmediate && (
-                        <div className="oa-form-grid oa-form-grid-2 oa-mb-4">
+                        <div className="oa-form-grid oa-form-grid-4 oa-form-grid-tablet-2col oa-mb-4">
                           <Controller
                             name="ticketing.sales_start_at"
                             control={control}
@@ -1273,17 +1278,36 @@ export default function EditEvent() {
                               }
                             }}
                             render={({ field }) => (
-                              <Input
-                                {...field}
-                                type="datetime-local"
-                                label={t('admin.events.ticketing.salesWindow.start')}
-                                placeholder={t('admin.events.ticketing.salesWindow.optional')}
-                                min={toDatetimeLocal(new Date())}
+                              <DateTimePicker
+                                label={t('admin.events.ticketing.salesWindow.startDate' as any)}
+                                value={field.value ? field.value.split('T')[0] : ''}
+                                min={new Date().toISOString().slice(0, 10)}
+                                onChange={(date) => {
+                                  const time = field.value?.split('T')[1] || '00:00'
+                                  field.onChange(`${date}T${time}`)
+                                }}
                                 error={errors.ticketing?.sales_start_at?.message}
-                                disabled={hasPaidOrders}
+                                isDisabled={hasPaidOrders}
                               />
                             )}
                           />
+                          <div className="oa-max-w-xs">
+                            <Controller
+                              name="ticketing.sales_start_at"
+                              control={control}
+                              render={({ field }) => (
+                                <TimePicker
+                                  label={t('admin.events.ticketing.salesWindow.startTime' as any)}
+                                  value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                                  onChange={(time) => {
+                                    const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                                    field.onChange(`${date}T${time}`)
+                                  }}
+                                  error={errors.ticketing?.sales_start_at?.message}
+                                />
+                              )}
+                            />
+                          </div>
                           <Controller
                             name="ticketing.sales_end_at"
                             control={control}
@@ -1302,17 +1326,36 @@ export default function EditEvent() {
                               }
                             }}
                             render={({ field }) => (
-                              <Input
-                                {...field}
-                                type="datetime-local"
-                                label={t('admin.events.ticketing.salesWindow.end')}
-                                placeholder={t('admin.events.ticketing.salesWindow.optional')}
-                                max={watch('start_time') || undefined}
+                              <DateTimePicker
+                                label={t('admin.events.ticketing.salesWindow.endDate' as any)}
+                                value={field.value ? field.value.split('T')[0] : ''}
+                                max={watch('start_time')?.split('T')[0]}
+                                onChange={(date) => {
+                                  const time = field.value?.split('T')[1] || '23:59'
+                                  field.onChange(`${date}T${time}`)
+                                }}
                                 error={errors.ticketing?.sales_end_at?.message}
-                                disabled={hasPaidOrders}
+                                isDisabled={hasPaidOrders}
                               />
                             )}
                           />
+                          <div className="oa-max-w-xs">
+                            <Controller
+                              name="ticketing.sales_end_at"
+                              control={control}
+                              render={({ field }) => (
+                                <TimePicker
+                                  label={t('admin.events.ticketing.salesWindow.endTime' as any)}
+                                  value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                                  onChange={(time) => {
+                                    const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                                    field.onChange(`${date}T${time}`)
+                                  }}
+                                  error={errors.ticketing?.sales_end_at?.message}
+                                />
+                              )}
+                            />
+                          </div>
                         </div>
                       )}
 
@@ -1390,7 +1433,7 @@ export default function EditEvent() {
                             <Button
                               type="button"
                               variant="ghost"
-                            onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '', description: '' })}
+                            onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '', description: '', seating_mode: 'general_admission' })}
                             >
                               {t('admin.events.ticketing.ticketTypes.add')}
                             </Button>
@@ -1405,7 +1448,7 @@ export default function EditEvent() {
                               const canRemove = !hasPaidOrders || soldCount === 0
                               return (
                                 <div key={field.id} className="oa-ticket-type-card">
-                                  <div className="oa-form-grid oa-form-grid-3 oa-mb-2">
+                                  <div className="oa-form-grid oa-form-grid-4 oa-mb-2">
                                     <Controller
                                       name={`ticketing.ticket_types.${index}.name`}
                                       control={control}
@@ -1453,6 +1496,22 @@ export default function EditEvent() {
                                           label={t('admin.events.ticketing.ticketTypes.price.label')}
                                           placeholder={t('admin.events.ticketing.ticketTypes.price.placeholder')}
                                           error={errors.ticketing?.ticket_types?.[index]?.price_dollars?.message}
+                                          disabled={hasPaidOrders}
+                                        />
+                                      )}
+                                    />
+                                    <Controller
+                                      name={`ticketing.ticket_types.${index}.seating_mode`}
+                                      control={control}
+                                      render={({ field: f }) => (
+                                        <Select
+                                          {...f}
+                                          value={f.value || 'general_admission'}
+                                          label={t('admin.events.ticketing.ticketTypes.mode.label')}
+                                          options={[
+                                            { value: 'general_admission', label: t('admin.events.ticketing.ticketTypes.mode.generalAdmission') },
+                                            { value: 'reserved_seating', label: t('admin.events.ticketing.ticketTypes.mode.reservedSeating') },
+                                          ]}
                                           disabled={hasPaidOrders}
                                         />
                                       )}
@@ -1526,24 +1585,13 @@ export default function EditEvent() {
                     </div>
                   )}
                 </div>
-              </section>
+              </Card>
             )}
 
-            <section className="oa-form-section" aria-labelledby="event-notes-heading">
-              <div className="oa-form-section-header">
-                <div>
-                  <h3 id="event-notes-heading" className="oa-form-section-title">Notes &amp; Prep</h3>
-                  <p className="oa-form-section-subtitle">Touchpoints for families, coaches, and staff.</p>
-                </div>
-              </div>
+            <Card title="Notes & Prep" className="oa-mb-6">
               <div className="oa-form-section-body">
-                <div className="oa-form-grid oa-form-grid-2 oa-gap-4">
-                  <div className="oa-notes-group">
-                    <label className="oa-label">{t('admin.events.fields.generalNotes')}</label>
-                    <Controller name="notes" control={control} render={({ field }) => (
-                      <textarea className="oa-input oa-textarea oa-textarea-expand" {...field} placeholder="General Notes..." />
-                    )} />
-                  </div>
+                <p className="oa-form-section-subtitle oa-mb-4">Capture uniform, equipment, and general notes for coaches and families.</p>
+                <div className="oa-form-grid oa-form-grid-2 oa-mb-6">
                   <div className="oa-space-y-2">
                     <Controller name="uniform_notes" control={control} render={({ field }) => <Input {...field} label="Uniform Notes" placeholder="e.g. Home Kit" />} />
                     <Controller name="equipment_notes" control={control} render={({ field }) => <Input {...field} label="Equipment Notes" placeholder="e.g. Bring water" />} />
@@ -1552,27 +1600,28 @@ export default function EditEvent() {
                       <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Weather Dependent" />
                     )} />
                   </div>
+                  <div className="oa-notes-group">
+                    <label className="oa-label">{t('admin.events.fields.generalNotes')}</label>
+                    <Controller name="notes" control={control} render={({ field }) => (
+                      <textarea className="oa-input oa-textarea oa-textarea-expand" {...field} placeholder="General Notes..." />
+                    )} />
+                  </div>
                 </div>
               </div>
-            </section>
+            </Card>
 
-            {/* SECTION: FAN VISIBILITY */}
-            <section className="oa-form-section" aria-labelledby="event-visibility-heading">
-              <div className="oa-form-section-header">
-                <div>
-                  <h3 id="event-visibility-heading" className="oa-form-section-title">Fan Visibility</h3>
-                  <p className="oa-form-section-subtitle">Control who can see this event in the public fan portal.</p>
-                </div>
-              </div>
+            <Card title="Fan Visibility" className="oa-mb-6">
               <div className="oa-form-section-body">
-                <FanVisibilityToggle
+                <p className="oa-form-section-subtitle oa-mb-4">Control who can see this event in the public fan portal.</p>
+                <Checkbox
                   checked={visibility === 'public'}
-                  onChange={(checked) => setVisibility(checked ? 'public' : 'private')}
-                  entityType="event"
+                  onChange={(e) => setVisibility(e.target.checked ? 'public' : 'private')}
+                  label="Visible to Fans"
                   disabled={saving}
+                  helper={watchTicketingEnabled ? 'Ticketed events shown to fans may include payment access.' : 'When enabled, this event appears in fan-facing views.'}
                 />
               </div>
-            </section>
+            </Card>
 
           {/* Recurring Event Edit Mode Selection */}
           {isRecurring && (
@@ -1654,7 +1703,6 @@ export default function EditEvent() {
             </div>
             </fieldset>
           </form>
-        </Card>
       </div>
 
       {/* Delete Confirmation Dialog */}
@@ -1743,7 +1791,7 @@ export default function EditEvent() {
           try {
             const { data: eventData } = await supabaseAny
               .from('events')
-              .select('id, start_time, is_cancelled, status, type, org_id, team_id')
+              .select('id, start_time, is_cancelled, type, org_id, team_id')
               .eq('id', eventId)
               .single()
 
@@ -1762,7 +1810,7 @@ export default function EditEvent() {
                 is_cancelled: true,
                 cancellation_reason: null,
                 cancelled_at: new Date().toISOString(),
-                cancelled_by_user_id: context.userId
+                cancelled_by_user_id: context.userId || null
               })
               .eq('id', eventId)
             

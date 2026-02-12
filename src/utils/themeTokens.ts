@@ -48,6 +48,9 @@ export interface ThemeTokens {
   '--org-text-secondary': string
   '--org-text-muted': string
   '--org-text-inverse': string
+  '--org-surface-primary': string
+  '--org-surface-secondary': string
+  '--org-surface-tertiary': string
   '--org-surface-page': string
   '--org-surface-section': string
   '--org-surface-card': string
@@ -96,6 +99,9 @@ export const THEME_TOKEN_NAMES = [
   '--org-text-secondary',
   '--org-text-muted',
   '--org-text-inverse',
+  '--org-surface-primary',
+  '--org-surface-secondary',
+  '--org-surface-tertiary',
   '--org-surface-page',
   '--org-surface-section',
   '--org-surface-card',
@@ -182,6 +188,9 @@ export function getPlatformAdminFixedTokens(): ThemeTokens {
     '--org-text-secondary': textSecondary,
     '--org-text-muted': textMuted,
     '--org-text-inverse': '#FFFFFF',
+    '--org-surface-primary': surfaceCard,
+    '--org-surface-secondary': surfaceSection,
+    '--org-surface-tertiary': surfaceHover,
     '--org-surface-page': surfacePage,
     '--org-surface-section': surfaceSection,
     '--org-surface-card': surfaceCard,
@@ -301,6 +310,9 @@ function generateDefaultTokens(isDark: boolean): ThemeTokens {
       '--org-text-secondary': isDark ? '#9CA3AF' : '#6B7280',
       '--org-text-muted': isDark ? '#6B7280' : '#9CA3AF',
       '--org-text-inverse': isDark ? '#0F172A' : '#FFFFFF',
+      '--org-surface-primary': isDark ? '#1F2937' : '#FFFFFF',
+      '--org-surface-secondary': isDark ? '#111827' : '#EEF2F7',
+      '--org-surface-tertiary': isDark ? '#374151' : '#F9FAFB',
       '--org-surface-page': isDark ? '#0B0F14' : '#F7F9FC',
       '--org-surface-section': isDark ? '#111827' : '#EEF2F7',
       '--org-surface-card': isDark ? '#1F2937' : '#FFFFFF',
@@ -421,6 +433,9 @@ export function generateTokens(theme: Theme, isDark: boolean): ThemeTokens {
       '--org-text-muted': isDark ? colors.text.secondary : ui.text.muted,
       '--org-text-inverse': ui.text.inverse,
 
+      '--org-surface-primary': colors.surface.card,
+      '--org-surface-secondary': colors.surface.section,
+      '--org-surface-tertiary': colors.surface.hover,
       '--org-surface-page': colors.surface.page,
       '--org-surface-section': colors.surface.section,
       '--org-surface-card': colors.surface.card,

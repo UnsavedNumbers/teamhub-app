@@ -19,7 +19,11 @@ interface RoleCard {
   orgName: string
   role: OrgMemberRole
   title: string
-  description: string
+}
+
+interface OrgVisualSettings {
+  logoUrl: string | null
+  primaryColor: string | null
 }
 
 export function RoleSelection() {
@@ -37,6 +41,7 @@ export function RoleSelection() {
   const [navigating, setNavigating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [retrying, setRetrying] = useState(false)
+  const [orgVisualSettings, setOrgVisualSettings] = useState<Record<string, OrgVisualSettings>>({})
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const focusedCardIndex = useRef<number>(-1)
 
@@ -67,18 +72,6 @@ export function RoleSelection() {
     }
   }, [t])
 
-  const getRoleDescription = useCallback((role: OrgMemberRole, orgName: string): string => {
-    switch (role) {
-      case 'parent':
-        return `${t('portal.roleSelection.parentDescription')} - ${orgName}`
-      case 'coach':
-      case 'org_admin':
-        return orgName
-      default:
-        return orgName
-    }
-  }, [t])
-
   // Build role cards from user's organizations
   const roleCards = useMemo((): RoleCard[] => {
     if (!profile) return []
@@ -90,13 +83,75 @@ export function RoleSelection() {
           orgId: org.id,
           orgName: org.name,
           role,
-          title: getRoleTitle(role),
-          description: getRoleDescription(role, org.name),
+          title: org.name,
         })
       })
     })
     return cards
-  }, [profile, getRoleTitle, getRoleDescription])
+  }, [profile, getRoleTitle])
+
+  useEffect(() => {
+    const orgIds = profile?.organizations?.map(org => org.id).filter(Boolean) || []
+
+    if (orgIds.length === 0) {
+      setOrgVisualSettings({})
+      return
+    }
+
+    let isMounted = true
+
+    const loadOrgVisualSettings = async () => {
+      const uniqueOrgIds = Array.from(new Set(orgIds))
+
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('id, logo_url')
+        .in('id', uniqueOrgIds)
+
+      if (error) {
+        if ((error as { code?: string }).code === '42703') {
+          const fallbackResult = await supabase
+            .from('organizations')
+            .select('id, logo_url')
+            .in('id', uniqueOrgIds)
+
+          if (!fallbackResult.error && Array.isArray(fallbackResult.data) && isMounted) {
+            const mappedFallbackSettings = fallbackResult.data.reduce((acc, org) => {
+              acc[org.id] = {
+                logoUrl: org.logo_url || null,
+                primaryColor: null,
+              }
+              return acc
+            }, {} as Record<string, OrgVisualSettings>)
+
+            setOrgVisualSettings(mappedFallbackSettings)
+          }
+          return
+        }
+
+        console.error('Failed loading organization visual settings:', error)
+        return
+      }
+
+      if (Array.isArray(data) && isMounted) {
+        const mappedSettings = data.reduce((acc, org) => {
+          acc[org.id] = {
+            logoUrl: org.logo_url || null,
+            primaryColor: null,
+          }
+          return acc
+        }, {} as Record<string, OrgVisualSettings>)
+
+        setOrgVisualSettings(mappedSettings)
+      }
+    }
+
+    loadOrgVisualSettings()
+
+    return () => {
+      isMounted = false
+    }
+  }, [profile])
 
   // Validate user has multiple roles - redirect if not
   useEffect(() => {
@@ -540,7 +595,7 @@ export function RoleSelection() {
             <section>
               <div className="flex items-center gap-4 mb-6">
                 <h3 className="text-slate-900 dark:text-white text-sm font-black tracking-widest uppercase px-6 py-2 bg-white dark:bg-slate-800 border-2 border-slate-900 dark:border-white rounded-full">
-                  {t('portal.roleSelection.parentLabel')}
+                  {getRoleTitle('parent')}
                 </h3>
                 <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
               </div>
@@ -569,29 +624,36 @@ export function RoleSelection() {
                       }}
                       className={`cursor-pointer group relative flex flex-col gap-4 p-8 rounded-2xl transition-all overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                         isSelected
-                          ? 'shadow-[0_10px_30px_rgba(37,140,244,0.15)]'
-                          : 'shadow-sm hover:-translate-y-1'
+                          ? 'shadow-[0_10px_30px_rgba(37,140,244,0.15)] bg-white dark:bg-slate-800 border-2 border-primary'
+                          : 'shadow-sm hover:-translate-y-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700'
                       }`}
-                      style={{
-                        backgroundImage: `url(${bgImage})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat',
-                        boxSizing: 'border-box',
-                      }}
+                      style={{ boxSizing: 'border-box' }}
                     >
-                      {/* Dark Overlay */}
-                      <div className="absolute inset-0 bg-black/80 group-hover:bg-black/60 transition-colors"></div>
-                      
                       {isSelected && (
-                        <div className="absolute top-6 right-6 text-white scale-125 z-20">
+                        <div className="absolute top-4 right-4 text-primary scale-125 z-20">
                           <span className="material-symbols-outlined fill-1">check_circle</span>
                         </div>
                       )}
-                      <div className="relative z-10 flex flex-col gap-5">
-                        <div>
-                          <p className="text-white text-xl font-bold leading-normal">{card.title}</p>
-                          <p className="text-white/90 text-sm font-medium leading-normal mt-1">{card.description}</p>
+                      <div className="relative z-10 flex items-center gap-4">
+                        <div className="h-20 w-20 sm:h-24 sm:w-24 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600">
+                          <img
+                            src={orgVisualSettings[card.orgId]?.logoUrl || bgImage}
+                            alt={`${card.orgName} logo`}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              if (e.currentTarget.dataset.fallbackApplied === 'true') return
+                              e.currentTarget.dataset.fallbackApplied = 'true'
+                              e.currentTarget.src = bgImage
+                            }}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p
+                            className={`text-xl font-bold leading-normal break-words whitespace-normal ${orgVisualSettings[card.orgId]?.primaryColor ? '' : 'text-primary'}`}
+                            style={orgVisualSettings[card.orgId]?.primaryColor ? { color: orgVisualSettings[card.orgId].primaryColor! } : undefined}
+                          >
+                            {card.title}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -606,7 +668,7 @@ export function RoleSelection() {
             <section>
               <div className="flex items-center gap-4 mb-6">
                 <h3 className="text-slate-900 dark:text-white text-sm font-black tracking-widest uppercase px-6 py-2 bg-white dark:bg-slate-800 border-2 border-slate-900 dark:border-white rounded-full">
-                  {t('portal.roleSelection.coachLabel')}
+                  {getRoleTitle('coach')}
                 </h3>
                 <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
               </div>
@@ -635,29 +697,36 @@ export function RoleSelection() {
                       }}
                       className={`cursor-pointer group relative flex flex-col gap-4 p-8 rounded-2xl transition-all overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                         isSelected
-                          ? 'shadow-[0_10px_30px_rgba(37,140,244,0.15)]'
-                          : 'shadow-sm hover:-translate-y-1'
+                          ? 'shadow-[0_10px_30px_rgba(37,140,244,0.15)] bg-white dark:bg-slate-800 border-2 border-primary'
+                          : 'shadow-sm hover:-translate-y-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700'
                       }`}
-                      style={{
-                        backgroundImage: `url(${bgImage})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat',
-                        boxSizing: 'border-box',
-                      }}
+                      style={{ boxSizing: 'border-box' }}
                     >
-                      {/* Dark Overlay */}
-                      <div className="absolute inset-0 bg-black/60 group-hover:bg-black/50 transition-colors"></div>
-                      
                       {isSelected && (
-                        <div className="absolute top-6 right-6 text-white scale-125 z-20">
+                        <div className="absolute top-4 right-4 text-primary scale-125 z-20">
                           <span className="material-symbols-outlined fill-1">check_circle</span>
                         </div>
                       )}
-                      <div className="relative z-10 flex flex-col gap-5">
-                        <div>
-                          <p className="text-white text-xl font-bold leading-normal">{card.title}</p>
-                          <p className="text-white/90 text-sm font-medium leading-normal mt-1">{card.description}</p>
+                      <div className="relative z-10 flex items-center gap-4">
+                        <div className="h-20 w-20 sm:h-24 sm:w-24 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600">
+                          <img
+                            src={orgVisualSettings[card.orgId]?.logoUrl || bgImage}
+                            alt={`${card.orgName} logo`}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              if (e.currentTarget.dataset.fallbackApplied === 'true') return
+                              e.currentTarget.dataset.fallbackApplied = 'true'
+                              e.currentTarget.src = bgImage
+                            }}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p
+                            className={`text-xl font-bold leading-normal break-words whitespace-normal ${orgVisualSettings[card.orgId]?.primaryColor ? '' : 'text-primary'}`}
+                            style={orgVisualSettings[card.orgId]?.primaryColor ? { color: orgVisualSettings[card.orgId].primaryColor! } : undefined}
+                          >
+                            {card.title}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -672,7 +741,7 @@ export function RoleSelection() {
             <section>
               <div className="flex items-center gap-4 mb-6">
                 <h3 className="text-slate-900 dark:text-white text-sm font-black tracking-widest uppercase px-6 py-2 bg-white dark:bg-slate-800 border-2 border-slate-900 dark:border-white rounded-full">
-                  {t('portal.roleSelection.adminLabel')}
+                  {getRoleTitle('org_admin')}
                 </h3>
                 <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
               </div>
@@ -701,29 +770,36 @@ export function RoleSelection() {
                       }}
                       className={`cursor-pointer group relative flex flex-col gap-4 p-8 rounded-2xl transition-all overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                         isSelected
-                          ? 'shadow-[0_10px_30px_rgba(37,140,244,0.15)]'
-                          : 'shadow-sm hover:-translate-y-1'
+                          ? 'shadow-[0_10px_30px_rgba(37,140,244,0.15)] bg-white dark:bg-slate-800 border-2 border-primary'
+                          : 'shadow-sm hover:-translate-y-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700'
                       }`}
-                      style={{
-                        backgroundImage: `url(${bgImage})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat',
-                        boxSizing: 'border-box',
-                      }}
+                      style={{ boxSizing: 'border-box' }}
                     >
-                      {/* Dark Overlay */}
-                      <div className="absolute inset-0 bg-black/60 group-hover:bg-black/50 transition-colors"></div>
-                      
                       {isSelected && (
-                        <div className="absolute top-6 right-6 text-white scale-125 z-20">
+                        <div className="absolute top-4 right-4 text-primary scale-125 z-20">
                           <span className="material-symbols-outlined fill-1">check_circle</span>
                         </div>
                       )}
-                      <div className="relative z-10 flex flex-col gap-5">
-                        <div>
-                          <p className="text-white text-xl font-bold leading-normal">{card.title}</p>
-                          <p className="text-white/90 text-sm font-medium leading-normal mt-1">{card.description}</p>
+                      <div className="relative z-10 flex items-center gap-4">
+                        <div className="h-20 w-20 sm:h-24 sm:w-24 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600">
+                          <img
+                            src={orgVisualSettings[card.orgId]?.logoUrl || bgImage}
+                            alt={`${card.orgName} logo`}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              if (e.currentTarget.dataset.fallbackApplied === 'true') return
+                              e.currentTarget.dataset.fallbackApplied = 'true'
+                              e.currentTarget.src = bgImage
+                            }}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p
+                            className={`text-xl font-bold leading-normal break-words whitespace-normal ${orgVisualSettings[card.orgId]?.primaryColor ? '' : 'text-primary'}`}
+                            style={orgVisualSettings[card.orgId]?.primaryColor ? { color: orgVisualSettings[card.orgId].primaryColor! } : undefined}
+                          >
+                            {card.title}
+                          </p>
                         </div>
                       </div>
                     </div>

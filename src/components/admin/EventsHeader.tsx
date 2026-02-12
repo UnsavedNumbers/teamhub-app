@@ -34,7 +34,7 @@ export default function EventsHeader({
     return (
         <div className={cn('flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6')}>
             {/* Left: Time Context Tabs */}
-            <div className={cn('flex gap-1 p-1 rounded-md')} style={{ background: 'var(--org-surface-secondary, rgba(0,0,0,0.06))' }}>
+            <div className={cn('flex gap-1 p-1 rounded-md')} style={{ background: 'var(--org-surface-secondary)' }}>
                 {timeContextOptions.map((option) => (
                     <button
                         key={option.value}
@@ -47,8 +47,8 @@ export default function EventsHeader({
                         )}
                         style={
                             timeContext === option.value
-                                ? { background: 'var(--org-surface-primary, #fff)', color: 'var(--org-text-primary, #111)' }
-                                : { color: 'var(--org-text-secondary, #555)' }
+                                ? { background: 'var(--org-surface-primary)', color: 'var(--org-text-primary)' }
+                                : { color: 'var(--org-text-secondary)' }
                         }
                     >
                         {option.label}
@@ -67,7 +67,7 @@ export default function EventsHeader({
             {/* Right: View Mode + Create Button */}
             <div className={cn('flex items-center gap-3 w-full sm:w-auto')}>
                 {/* View Mode Tabs */}
-                <div className={cn('flex gap-1 p-1 rounded-md')} style={{ background: 'var(--org-surface-secondary, rgba(0,0,0,0.06))' }}>
+                <div className={cn('flex gap-1 p-1 rounded-md')} style={{ background: 'var(--org-surface-secondary)' }}>
                     {viewModeOptions.map((option) => (
                         <button
                             key={option.value}
@@ -78,8 +78,8 @@ export default function EventsHeader({
                             )}
                             style={
                                 viewMode === option.value
-                                    ? { background: 'var(--org-surface-primary, #fff)', color: 'var(--org-text-primary, #111)' }
-                                    : { color: 'var(--org-text-secondary, #555)' }
+                                    ? { background: 'var(--org-surface-primary)', color: 'var(--org-text-primary)' }
+                                    : { color: 'var(--org-text-secondary)' }
                             }
                             title={option.label}
                         >

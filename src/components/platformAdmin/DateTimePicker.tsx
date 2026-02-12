@@ -49,7 +49,6 @@ export function DateTimePicker({
   onBlur,
   isDisabled = false,
   isReadOnly = false,
-  name,
   min,
   max,
 }: DateTimePickerProps) {

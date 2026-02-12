@@ -5297,6 +5297,284 @@ html.dark .oa-section-title {
     opacity: 0.7;
 }
 
+/* =====================================================================
+   EVENT DETAIL PAGE – Visual Uplift Components
+   ===================================================================== */
+
+/* Stat Grid – responsive 4-column quick-info strip */
+.oa-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--pa-space-5);
+}
+
+@media (min-width: 768px) {
+    .oa-stat-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Stat Item – icon-paired label + value block */
+.oa-stat-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--pa-space-3);
+}
+
+.oa-stat-item > .material-symbols-outlined {
+    font-size: 20px;
+    color: var(--pa-text-muted);
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+html.dark .oa-stat-item > .material-symbols-outlined {
+    color: var(--pa-text-secondary);
+    opacity: 0.6;
+}
+
+.oa-stat-item__label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--pa-n500);
+    margin-bottom: 2px;
+}
+
+html.dark .oa-stat-item__label {
+    color: var(--pa-text-muted);
+}
+
+.oa-stat-item__value {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--pa-n900);
+    line-height: 1.4;
+}
+
+html.dark .oa-stat-item__value {
+    color: var(--pa-text-primary);
+}
+
+.oa-stat-item__hint {
+    font-size: 0.75rem;
+    color: var(--pa-text-muted);
+    margin-top: 2px;
+}
+
+/* Weather feature display */
+.oa-weather-hero {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-4);
+    margin-bottom: var(--pa-space-4);
+}
+
+.oa-weather-hero__icon {
+    font-size: 44px;
+    color: var(--pa-text-muted);
+    opacity: 0.8;
+}
+
+html.dark .oa-weather-hero__icon {
+    color: var(--pa-text-secondary);
+}
+
+.oa-weather-hero__temp {
+    font-size: 2.75rem;
+    font-weight: 800;
+    font-family: var(--pa-font-display);
+    line-height: 1;
+    color: var(--pa-n900);
+}
+
+html.dark .oa-weather-hero__temp {
+    color: var(--pa-text-primary);
+}
+
+.oa-weather-hero__condition {
+    font-size: 0.875rem;
+    color: var(--pa-text-secondary);
+    text-transform: capitalize;
+    margin-top: 4px;
+}
+
+.oa-weather-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--pa-space-3);
+    padding-top: var(--pa-space-4);
+    border-top: 1px solid var(--pa-n100);
+}
+
+html.dark .oa-weather-stats {
+    border-top-color: var(--pa-border-subtle);
+}
+
+.oa-weather-stat {
+    text-align: center;
+}
+
+.oa-weather-stat__value {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--pa-n900);
+    font-family: var(--pa-font-display);
+}
+
+html.dark .oa-weather-stat__value {
+    color: var(--pa-text-primary);
+}
+
+.oa-weather-stat__label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--pa-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+}
+
+/* Commute metric display */
+.oa-commute-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--pa-space-3);
+    margin-bottom: var(--pa-space-4);
+}
+
+.oa-commute-metric {
+    text-align: center;
+    padding: var(--pa-space-4);
+    border-radius: var(--pa-radius-s);
+    background: var(--pa-n50, #f8fafc);
+    border: 1px solid var(--pa-n100);
+}
+
+html.dark .oa-commute-metric {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--pa-border-subtle);
+}
+
+.oa-commute-metric__value {
+    font-size: 1.125rem;
+    font-weight: 800;
+    color: var(--pa-n900);
+    font-family: var(--pa-font-display);
+    line-height: 1.3;
+}
+
+html.dark .oa-commute-metric__value {
+    color: var(--pa-text-primary);
+}
+
+.oa-commute-metric__label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--pa-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 4px;
+}
+
+/* Prep item – icon-paired row with divider */
+.oa-prep-item {
+    display: flex;
+    gap: var(--pa-space-3);
+    padding: var(--pa-space-4) 0;
+    border-bottom: 1px solid var(--pa-n100);
+}
+
+html.dark .oa-prep-item {
+    border-bottom-color: var(--pa-border-subtle);
+}
+
+.oa-prep-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.oa-prep-item:first-child {
+    padding-top: 0;
+}
+
+.oa-prep-item > .material-symbols-outlined {
+    font-size: 20px;
+    color: var(--pa-text-muted);
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+html.dark .oa-prep-item > .material-symbols-outlined {
+    color: var(--pa-text-secondary);
+    opacity: 0.6;
+}
+
+/* Detail divider */
+.oa-detail-divider {
+    border: none;
+    border-top: 1px solid var(--pa-n100);
+    margin: var(--pa-space-4) 0;
+}
+
+html.dark .oa-detail-divider {
+    border-top-color: var(--pa-border-subtle);
+}
+
+/* Danger zone card */
+.oa-danger-zone {
+    border: 1px solid rgba(239, 68, 68, 0.25) !important;
+}
+
+html.dark .oa-danger-zone {
+    border: 1px solid rgba(239, 68, 68, 0.2) !important;
+}
+
+/* Cancelled event banner */
+.oa-cancelled-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-3);
+    padding: var(--pa-space-4) var(--pa-space-5);
+    background: var(--pa-danger-bg);
+    border: 1px solid rgba(239, 68, 68, 0.15);
+    border-radius: var(--oa-radius-m, var(--pa-radius-m));
+    color: var(--pa-danger, #ef4444);
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+html.dark .oa-cancelled-banner {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+}
+
+.oa-cancelled-banner > .material-symbols-outlined {
+    font-size: 20px;
+}
+
+/* Empty hint – icon + muted text row */
+.oa-empty-hint {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-3);
+    color: var(--pa-text-muted);
+}
+
+.oa-empty-hint > .material-symbols-outlined {
+    font-size: 20px;
+    opacity: 0.5;
+}
+
+.oa-empty-hint > p {
+    font-size: 0.875rem;
+    margin: 0;
+}
+
 /* Card Overrides */
 .oa-filter-card {
     background: var(--pa-white);

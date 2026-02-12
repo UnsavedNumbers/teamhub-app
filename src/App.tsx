@@ -172,6 +172,7 @@ const TeamDetail = lazy(() => import('./pages/admin/TeamDetail'))
 const TeamUpdate = lazy(() => import('./pages/admin/TeamUpdate'))
 const Roster = lazy(() => import('./pages/admin/Roster'))
 const Events = lazy(() => import('./pages/admin/Events'))
+const AdminEventDetail = lazy(() => import('./pages/admin/AdminEventDetail'))
 const AdminAnnouncements = lazy(() => import('./pages/admin/AdminAnnouncements'))
 const CreateEvent = lazy(() => import('./pages/admin/CreateEvent'))
 const EditEvent = lazy(() => import('./pages/admin/EditEvent'))
@@ -218,6 +219,12 @@ const CheckoutSuccess = lazy(() => import('./pages/admin/CheckoutSuccess'))
 const CheckoutCancel = lazy(() => import('./pages/admin/CheckoutCancel'))
 const TrialExpired = lazy(() => import('./pages/admin/TrialExpired'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
+
+const adminEventsListPath = getPath('admin.events.list').replace('/admin/', '')
+const adminEventsCreatePath = getPath('admin.events.create').replace('/admin/', '')
+const adminEventsDetailPath = getPath('admin.events.detail').replace('/admin/', '')
+const adminEventsEditPath = getPath('admin.events.edit').replace('/admin/', '')
+const adminEventsAttendancePath = getPath('admin.events.attendance').replace('/admin/', '')
 const AdminFamilies = lazy(() => import('./pages/admin/AdminFamilies'))
 const CreateFamily = lazy(() => import('./pages/admin/CreateFamily'))
 const FamilyDetail = lazy(() => import('./pages/admin/FamilyDetail'))
@@ -526,6 +533,7 @@ function AppWithTheme() {
               <Route path="organization/seasons/:id" element={<RedirectWithParams to="/admin/seasons" />} />
               <Route path="organization/seasons" element={<Navigate to="/admin/seasons" replace />} />
               <Route path="organization/teams" element={<Navigate to="/admin/teams" replace />} />
+              <Route path="events/create" element={<Navigate to={getLink(RouteKeys.ADMIN_CREATE_EVENT)} replace />} />
               <Route path="athletes/:id/edit" element={<RedirectWithParams to="/admin/athletes" />} />
               <Route path="families/:familyId/athletes/new" element={<RedirectWithParams to="/admin/guardians" paramKey="familyId" suffix="/athletes/new" />} />
               <Route path="families/new" element={<Navigate to="/admin/guardians/new" replace />} />
@@ -539,11 +547,11 @@ function AppWithTheme() {
               {/* Events */}
             
               {/* Events */}
-              <Route path="events" element={<FeatureGateRoute routeKey="admin.events.list"><Events /></FeatureGateRoute>} />
-              <Route path="events/new" element={<FeatureGateRoute routeKey="admin.events.create"><CreateEvent /></FeatureGateRoute>} />
-              <Route path="events/:id/edit" element={<FeatureGateRoute routeKey="admin.events.edit"><EditEvent /></FeatureGateRoute>} />
-              <Route path="events/:id/attendance" element={<FeatureGateRoute routeKey="admin.attendance"><AttendanceRoster /></FeatureGateRoute>} />
-              <Route path="events/:id" element={<FeatureGateRoute routeKey="admin.events.list"><Events /></FeatureGateRoute>} />
+              <Route path={adminEventsListPath} element={<FeatureGateRoute routeKey="admin.events.list"><Events /></FeatureGateRoute>} />
+              <Route path={adminEventsCreatePath} element={<FeatureGateRoute routeKey="admin.events.create"><CreateEvent /></FeatureGateRoute>} />
+              <Route path={adminEventsEditPath} element={<FeatureGateRoute routeKey="admin.events.edit"><EditEvent /></FeatureGateRoute>} />
+              <Route path={adminEventsAttendancePath} element={<FeatureGateRoute routeKey="admin.attendance"><AttendanceRoster /></FeatureGateRoute>} />
+              <Route path={adminEventsDetailPath} element={<FeatureGateRoute routeKey="admin.events.detail"><AdminEventDetail /></FeatureGateRoute>} />
 
               {/* Announcements */}
               <Route path="announcements" element={<FeatureGateRoute routeKey="admin.announcements.list"><AdminAnnouncements /></FeatureGateRoute>} />
