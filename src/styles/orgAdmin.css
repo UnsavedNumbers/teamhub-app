@@ -7830,6 +7830,7 @@ html.dark .oa-calendar__date {
     border-radius: 12px;
     border: 1px solid var(--pa-border-subtle, var(--pa-n100));
     background: var(--pa-surface-panel);
+    min-width: 0;
 }
 
 html.dark .oa-ticket-list__row {
@@ -7843,6 +7844,7 @@ html.dark .oa-ticket-list__row {
     gap: var(--pa-space-3);
     align-items: flex-start;
     flex: 1;
+    min-width: 0;
 }
 
 .oa-ticket-list__chips {
@@ -7892,6 +7894,7 @@ html.dark .oa-ticket-list__meta {
     display: flex;
     align-items: center;
     gap: var(--pa-space-2);
+    flex-shrink: 0;
 }
 
 .oa-ticket-list__stat {
@@ -7908,21 +7911,99 @@ html.dark .oa-ticket-list__meta {
     text-align: right;
 }
 
-@media (max-width: 900px) {
+/* Tablet: stack info and actions vertically */
+@media (max-width: 1024px) {
     .oa-ticket-list__row {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
     }
 
     .oa-ticket-list__info {
-        grid-template-columns: 1fr;
+        grid-template-columns: auto 1fr;
+        gap: var(--pa-space-2);
     }
 
     .oa-ticket-list__actions {
         width: 100%;
         flex-wrap: wrap;
         justify-content: flex-start;
+        gap: var(--pa-space-2);
     }
+
+    .oa-ticket-list__stat {
+        min-width: 56px;
+    }
+
+    .oa-ticket-list__price {
+        min-width: 70px;
+    }
+}
+
+/* Mobile: single column, compact layout */
+@media (max-width: 640px) {
+    .oa-ticket-list {
+        padding: var(--pa-space-2);
+    }
+
+    .oa-ticket-list__row {
+        padding: var(--pa-space-2);
+    }
+
+    .oa-ticket-list__info {
+        grid-template-columns: 1fr;
+    }
+
+    .oa-ticket-list__chips {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .oa-ticket-list__chips .pa-badge,
+    .oa-ticket-list__chips .oa-ticket-chip {
+        width: auto;
+    }
+
+    .oa-ticket-list__title {
+        font-size: 0.95rem;
+    }
+
+    .oa-ticket-list__meta {
+        font-size: 0.8125rem;
+    }
+
+    .oa-ticket-list__meta--sub {
+        font-size: 0.75rem;
+    }
+
+    .oa-ticket-list__titles {
+        min-width: 0;
+    }
+
+    .oa-ticket-list__title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .oa-ticket-list__meta {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .oa-ticket-list__actions {
+        flex-wrap: wrap;
+        gap: var(--pa-space-2);
+    }
+
+    .oa-ticket-list__stat {
+        min-width: 0;
+    }
+
+    .oa-ticket-list__price {
+        min-width: 0;
+    }
+
 }
 
 @media (max-width: 767px) {
