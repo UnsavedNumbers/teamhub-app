@@ -545,13 +545,39 @@ serve(async (req) => {
     .eq("id", ticket.order_id)
     .single()
 
+  const { data: seatAssignment } = await supabase
+    .from("seat_assignments")
+    .select(`
+      seat_map_sections (
+        section_name,
+        row_identifier,
+        seat_identifier,
+        seat_attributes
+      )
+    `)
+    .eq("ticket_id", ticket.id)
+    .maybeSingle()
+
+  const seatSection = (seatAssignment as any)?.seat_map_sections?.section_name ?? null
+  const seatRow = (seatAssignment as any)?.seat_map_sections?.row_identifier ?? null
+  const seatNumber = (seatAssignment as any)?.seat_map_sections?.seat_identifier ?? null
+  const seatAttributes = (seatAssignment as any)?.seat_map_sections?.seat_attributes ?? null
+  const seatDisplay = seatSection && seatRow && seatNumber
+    ? `Section ${seatSection}, Row ${seatRow}, Seat ${seatNumber}`
+    : null
+
   return json(req, {
     result: "valid",
     ticket_type_name: ticketType?.name || null,
-    event_confirmation: `Valid for ${ticketedEventId}`,
+    event_confirmation: seatDisplay ? `Valid Entry - ${seatDisplay}` : `Valid for ${ticketedEventId}`,
     validated_count: validatedCount || 0,
     remaining_capacity: ticketTypeData?.capacity_remaining ?? null,
     order_context: orderContext,
     purchaser_name: order?.purchaser_name || null,
+    seat_section: seatSection,
+    seat_row: seatRow,
+    seat_number: seatNumber,
+    seat_attributes: seatAttributes,
+    seat_display: seatDisplay,
   })
 })

@@ -429,6 +429,10 @@ serve(async (req) => {
             .from("ticket_holds")
             .select("id, ticket_type_id, qty, expires_at")
             .eq("order_id", orderId)
+          const { data: seatHolds } = await supabase
+            .from("seat_holds")
+            .select("id, seat_map_section_id, expires_at")
+            .eq("order_id", orderId)
 
           const now = new Date()
           for (const hold of holds || []) {
@@ -440,6 +444,14 @@ serve(async (req) => {
               })
               await supabase.from("ticket_orders").update({ status: "cancelled" }).eq("id", orderId)
               throw new Error("Hold expired, order cancelled")
+            }
+          }
+          for (const hold of seatHolds || []) {
+            if (new Date(hold.expires_at) < now) {
+              await supabase.from("seat_holds").delete().eq("order_id", orderId)
+              await supabase.from("ticket_holds").delete().eq("order_id", orderId)
+              await supabase.from("ticket_orders").update({ status: "cancelled" }).eq("id", orderId)
+              throw new Error("Seat hold expired, order cancelled")
             }
           }
 
@@ -487,6 +499,58 @@ serve(async (req) => {
 
           if (ticketsError || !insertedTickets) {
             throw new Error(`Failed to create tickets: ${ticketsError?.message || "Unknown error"}`)
+          }
+
+          const ticketTypeIds = Array.from(new Set(orderItems.map((item) => item.ticket_type_id)))
+          const { data: orderItemTicketTypes, error: orderItemTicketTypesError } = await supabase
+            .from("ticket_types")
+            .select("id, seating_mode")
+            .in("id", ticketTypeIds)
+
+          if (orderItemTicketTypesError) {
+            throw new Error("Failed to load ticket type seating modes")
+          }
+
+          const reservedTypeIds = new Set(
+            (orderItemTicketTypes ?? [])
+              .filter((ticketType: any) => ticketType.seating_mode === "reserved_seating")
+              .map((ticketType: any) => ticketType.id as string),
+          )
+
+          const reservedTickets = insertedTickets.filter((ticket) => reservedTypeIds.has(ticket.ticket_type_id))
+          if (reservedTickets.length > 0) {
+            const orderedSeatHolds = [...(seatHolds ?? [])].sort(
+              (left, right) => new Date(left.expires_at).getTime() - new Date(right.expires_at).getTime(),
+            )
+
+            if (orderedSeatHolds.length !== reservedTickets.length) {
+              throw new Error("Reserved seat hold count mismatch")
+            }
+
+            const seatAssignmentsPayload = reservedTickets.map((ticket, index) => ({
+              ticket_id: ticket.id,
+              seat_map_section_id: orderedSeatHolds[index].seat_map_section_id,
+            }))
+
+            const { data: insertedAssignments, error: assignmentError } = await supabase
+              .from("seat_assignments")
+              .insert(seatAssignmentsPayload)
+              .select("id, ticket_id")
+
+            if (assignmentError || !insertedAssignments) {
+              throw new Error("Failed to create seat assignments")
+            }
+
+            for (const assignment of insertedAssignments) {
+              const { error: ticketUpdateError } = await supabase
+                .from("tickets")
+                .update({ seat_assignment_id: assignment.id })
+                .eq("id", assignment.ticket_id)
+
+              if (ticketUpdateError) {
+                throw new Error("Failed to link ticket seat assignment")
+              }
+            }
           }
 
           // Update order status and Connect fields
@@ -547,6 +611,7 @@ serve(async (req) => {
 
           // Delete holds (they're finalized)
           await supabase.from("ticket_holds").delete().eq("order_id", orderId)
+          await supabase.from("seat_holds").delete().eq("order_id", orderId)
 
           // Send receipt (call tickets-send-receipt Edge Function)
           // Pass raw tokens for QR code generation and access links

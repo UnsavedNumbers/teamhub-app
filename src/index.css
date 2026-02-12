@@ -164,9 +164,6 @@ strong {
 /* Dark mode overrides */
 html.dark {
   color-scheme: dark;
-}
-
-html.dark :root {
   color: rgba(255, 255, 255, 0.87);
   background-color: #0f172a;
 }

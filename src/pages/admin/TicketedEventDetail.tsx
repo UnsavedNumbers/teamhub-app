@@ -6,7 +6,7 @@
 
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { useRouteLink } from '@/utils/routes'
+import { getLink, useRouteLink } from '@/utils/routes'
 import { supabase } from '@/lib/supabase'
 import { getTicketedEventByIdAdmin, getTicketTypesForEventAdmin } from '@/data/services'
 import { formatCurrency, type TicketedEvent, type TicketType } from '@/types/ticketing'
@@ -14,6 +14,7 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
 import EmptyState from '@/components/platformAdmin/EmptyState'
 import PublicUrlShare from '@/components/ticketing/PublicUrlShare'
+import { useT } from '@/i18n/useI18n'
 import '../../styles/orgAdmin.css'
 
 async function hashToken(token: string): Promise<string> {
@@ -68,11 +69,12 @@ function formatSalesWindow(start?: string | null, end?: string | null) {
 }
 
 export default function TicketedEventDetail() {
+  const t = useT()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const scannerPath = useRouteLink('admin.ticketingScanner')
-  const detailPath = useRouteLink('admin.ticketingEvents.detail', { id: id ?? '' })
-  const addTicketTypePath = `${detailPath}/ticket-types/new`
+  const addTicketTypePath = useRouteLink('admin.ticketingEvents.ticketTypes.create', { id: id ?? '' })
+  const eventsPath = useRouteLink('admin.ticketingEvents.list')
 
   const {
     data: event,
@@ -144,7 +146,7 @@ export default function TicketedEventDetail() {
           icon="event"
           title="Event missing"
           description="We could not determine which ticketed event to show."
-          action={{ label: 'Back to events', onClick: () => navigate('/admin/ticketing/events') }}
+          action={{ label: 'Back to events', onClick: () => navigate(eventsPath) }}
           noCard
         />
       </div>
@@ -181,7 +183,7 @@ export default function TicketedEventDetail() {
           icon="event_busy"
           title={eventError ? 'Unable to load event' : 'Event not found'}
           description={eventError ? 'Something went wrong while loading this ticketed event.' : 'This event may have been deleted.'}
-          action={{ label: 'Back to ticketed events', onClick: () => navigate('/admin/ticketing/events') }}
+          action={{ label: 'Back to ticketed events', onClick: () => navigate(eventsPath) }}
           noCard
         />
       </div>
@@ -300,18 +302,33 @@ export default function TicketedEventDetail() {
                 <thead>
                   <tr>
                     <th>Name</th>
+                    <th>{t('ticketing.reservedSeating.admin.modeColumn')}</th>
                     <th>Price</th>
                     <th>Capacity</th>
                     <th>Status</th>
+                    <th>{t('ticketing.reservedSeating.admin.actionsColumn')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {ticketTypesList.map((type) => (
                     <tr key={type.id}>
                       <td>{type.name}</td>
+                      <td>
+                        <span className={`oa-badge oa-badge-${type.seating_mode === 'reserved_seating' ? 'info' : 'default'}`}>
+                          {type.seating_mode === 'reserved_seating'
+                            ? t('ticketing.reservedSeating.mode.reservedSeating')
+                            : t('ticketing.reservedSeating.mode.generalAdmission')}
+                        </span>
+                      </td>
                       <td>{formatCurrency(type.price_cents)}</td>
                       <td>
-                        {type.capacity_total !== null
+                        {type.seating_mode === 'reserved_seating' && type.capacity_total !== null
+                          ? t('ticketing.reservedSeating.admin.reservedCapacitySummary', {
+                            total: type.capacity_total,
+                            available: type.capacity_remaining ?? 0,
+                            sold: type.capacity_total - (type.capacity_remaining ?? 0),
+                          })
+                          : type.capacity_total !== null
                           ? `${type.capacity_remaining}/${type.capacity_total}`
                           : 'Unlimited'}
                       </td>
@@ -319,6 +336,21 @@ export default function TicketedEventDetail() {
                         <span className={`oa-badge oa-badge-${type.is_active ? 'success' : 'default'}`}>
                           {type.is_active ? 'Active' : 'Inactive'}
                         </span>
+                      </td>
+                      <td>
+                        {type.seating_mode === 'reserved_seating' && type.seat_map_id ? (
+                          <Link
+                            to={getLink('admin.ticketingEvents.seatMaps.builder', {
+                              eventId: id!,
+                              seatMapId: type.seat_map_id,
+                            })}
+                            className="oa-link"
+                          >
+                            {t('ticketing.reservedSeating.admin.manageSeats')}
+                          </Link>
+                        ) : (
+                          '-'
+                        )}
                       </td>
                     </tr>
                   ))}

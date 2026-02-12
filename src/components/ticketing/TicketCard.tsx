@@ -9,6 +9,7 @@
 import { QRCodeSVG } from 'qrcode.react'
 import type { Ticket, TicketType, TicketedEvent } from '@/types/ticketing'
 import { formatEntryCode } from '@/types/ticketing'
+import { useT } from '@/i18n/useI18n'
 
 interface TicketCardProps {
   ticket: Ticket & {
@@ -26,6 +27,7 @@ export default function TicketCard({
   orderId,
   showQR = true,
 }: TicketCardProps) {
+  const t = useT()
   const entryCodeFormatted = formatEntryCode(ticket.entry_code)
   const eventDate = event?.starts_at ? new Date(event.starts_at) : null
   const dateStr = eventDate
@@ -107,6 +109,30 @@ export default function TicketCard({
           </div>
         )}
       </div>
+
+      {ticket.seat_info && (
+        <div className="px-6 py-4 bg-blue-50 dark:bg-blue-900/20 border-t border-blue-100 dark:border-blue-900/40">
+          <p className="text-sm font-semibold text-[#111418] dark:text-white">
+            {t('ticketing.reservedSeating.seatDisplayCompact', {
+              section: ticket.seat_info.section,
+              row: ticket.seat_info.row,
+              seat: ticket.seat_info.seat,
+            })}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {ticket.seat_info.attributes?.accessible && (
+              <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-800">
+                {t('ticketing.reservedSeating.ticketCard.accessible')}
+              </span>
+            )}
+            {ticket.seat_info.attributes?.obstructed_view && (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">
+                {t('ticketing.reservedSeating.ticketCard.obstructedView')}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Status Badge */}
       {ticket.status !== 'active' && (

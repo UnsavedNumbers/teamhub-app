@@ -24,7 +24,6 @@ import {
 import { TimePicker } from '../../components/platformAdmin/TimePicker'
 import { DateTimePicker } from '../../components/platformAdmin/DateTimePicker'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
-import { FanVisibilityToggle } from '../../components/admin/FanVisibilityToggle'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import { FileUpload } from '../../components/common/FileUpload'
 import type { StructuredAddress } from '../../types/location'
@@ -39,10 +38,80 @@ import { STORAGE_KEYS, STORAGE_EXPIRY } from '../../constants/storage'
 import { getDefaultEventVisibility } from '../../utils/fanVisibilityHelpers'
 import { uploadTicketBanner } from '../../data/services/organizationService'
 import { getLink, RouteKeys } from '../../utils/routes'
+import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
 import '../../styles/orgAdmin.css'
 
 const STORAGE_KEY = STORAGE_KEYS.FORM_AUTOSAVE
 const DRAFT_TTL_MS = STORAGE_EXPIRY.FORM_AUTOSAVE
+
+const isLocalhostEnvironment = (): boolean => {
+  if (typeof window === 'undefined') return false
+  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+}
+
+const formatDateTimeLocal = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  const hours = `${date.getHours()}`.padStart(2, '0')
+  const minutes = `${date.getMinutes()}`.padStart(2, '0')
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+const buildLocalhostEventDefaults = (): Partial<EventFormData> => {
+  const now = new Date()
+  const start = new Date(now)
+  start.setDate(start.getDate() + 5)
+  start.setHours(18, 0, 0, 0)
+
+  const arrival = new Date(start)
+  arrival.setMinutes(arrival.getMinutes() - 30)
+
+  const end = new Date(start)
+  end.setHours(end.getHours() + 2)
+
+  return {
+    title: 'Local Test Game',
+    type: 'game',
+    start_time: formatDateTimeLocal(start),
+    end_time: formatDateTimeLocal(end),
+    arrival_time: formatDateTimeLocal(arrival),
+    notes: 'Localhost test run: staff arrive 30 minutes early, gate opens 45 minutes before start.',
+    uniform_notes: 'Home jersey, white socks, team warm-up top.',
+    equipment_notes: 'Bring game ball, water, cones, and first-aid kit.',
+    location: {
+      venue_name: 'Main Field',
+      address_line1: '',
+      address_line2: '',
+      city: '',
+      state: '',
+      postal_code: '',
+      place_id: '',
+      latitude: '',
+      longitude: '',
+      is_tbd: false,
+      is_virtual: false,
+      virtual_link: ''
+    },
+    rsvp_enabled: false,
+    rsvp_type: null,
+    ticketing: {
+      is_ticketed: true,
+      event_type: 'game',
+      sales_immediate: true,
+      sales_start_at: '',
+      sales_end_at: '',
+      status: 'draft',
+      event_description: 'Test ticketed event for local development.',
+      ticket_banner_url: '',
+      ticket_types: [
+        { name: 'General Admission', description: 'Standard entry', price_dollars: '15.00', capacity: '150' },
+        { name: 'Student', description: 'Student discounted entry', price_dollars: '8.00', capacity: '100' },
+        { name: 'VIP', description: 'Premium seating and perks', price_dollars: '35.00', capacity: '40' }
+      ]
+    }
+  }
+}
 
 const validateCoordinate = (value: number | string | null | undefined): number | null => {
   if (value === null || value === undefined) return null
@@ -71,6 +140,7 @@ export default function CreateEvent() {
   const [orgVisibilityDefaults, setOrgVisibilityDefaults] = useState<Record<string, boolean> | null>(null)
   const [visibility, setVisibility] = useState<'public' | 'private'>('private')
   const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [hasStructure, setHasStructure] = useState(!isLocalhostEnvironment()) // Whether selected sport has program/season/team structure (start false on localhost so cascade runs fully)
 
   const t = useT()
   const { context, isReady } = useUserContext()
@@ -132,7 +202,8 @@ export default function CreateEvent() {
       event_description: '',
       ticket_banner_url: '',
       ticket_types: []
-    }
+    },
+    ...(isLocalhostEnvironment() ? buildLocalhostEventDefaults() : {})
   })
 
   // Get initial values from sessionStorage (computed once during render)
@@ -208,6 +279,35 @@ export default function CreateEvent() {
   const watchTicketingEnabled = watch('ticketing.is_ticketed')
   const watchTicketSalesImmediate = watch('ticketing.sales_immediate')
   const watchEventType = watch('type')
+
+  useEffect(() => {
+    if (!watchTicketingEnabled) return
+    setValue('rsvp_enabled', false, { shouldValidate: false })
+    setValue('rsvp_type', null, { shouldValidate: false })
+  }, [watchTicketingEnabled, setValue])
+
+  useEffect(() => {
+    if (!isLocalhostEnvironment()) return
+
+    const localhostDefaults = buildLocalhostEventDefaults()
+    const defaultGeneralNotes = localhostDefaults.notes ?? ''
+    const defaultUniformNotes = localhostDefaults.uniform_notes ?? ''
+    const defaultEquipmentNotes = localhostDefaults.equipment_notes ?? ''
+
+    const currentGeneralNotes = (getValues('notes') || '').trim()
+    const currentUniformNotes = (getValues('uniform_notes') || '').trim()
+    const currentEquipmentNotes = (getValues('equipment_notes') || '').trim()
+
+    if (!currentUniformNotes && defaultUniformNotes) {
+      setValue('uniform_notes', defaultUniformNotes, { shouldValidate: false, shouldDirty: false })
+    }
+    if (!currentEquipmentNotes && defaultEquipmentNotes) {
+      setValue('equipment_notes', defaultEquipmentNotes, { shouldValidate: false, shouldDirty: false })
+    }
+    if (!currentGeneralNotes || currentGeneralNotes === 'Auto-filled localhost test event.') {
+      setValue('notes', defaultGeneralNotes, { shouldValidate: false, shouldDirty: false })
+    }
+  }, [getValues, setValue])
   
   // Watch all form values for persistence
   const formValues = watch()
@@ -277,6 +377,68 @@ export default function CreateEvent() {
 
   // Cascade: Sport → Program → Season → Team. Each step populates the next dropdown.
 
+  const fetchProgramsForSport = useCallback(async (sportId: string) => {
+    if (!isReady || !context?.orgId) return
+    try {
+      const { data, error } = await getPrograms(context, sportId)
+      if (error) throw error
+      const programsList = (data || []).map(p => ({ id: p.id, name: p.name, sport_id: p.sport_id }))
+      setPrograms(programsList)
+
+      // Auto-select first program by default when empty or invalid for selected sport
+      const currentProgramId = getValues('program_id')
+      const hasValidCurrentProgram = programsList.some((program) => program.id === currentProgramId)
+      if (programsList.length > 0 && !hasValidCurrentProgram) {
+        setValue('program_id', programsList[0].id, { shouldValidate: false })
+      }
+
+      // Check full hierarchy: program + season + team must all exist
+      const hasPrograms = programsList.length > 0
+      let hasTeams = false
+      let hasSeasons = false
+
+      if (hasPrograms) {
+        const { data: teamsData, error: teamsError } = await getTeams(context, {
+          sportId,
+          activeOnly: true,
+        })
+        if (!teamsError && teamsData && teamsData.length > 0) {
+          hasTeams = true
+          const teamIds = teamsData.map((team) => team.id)
+          const { data: tsData, error: tsError } = await supabase
+            .from('team_seasons_view')
+            .select('season_id, is_active, end_date')
+            .in('team_id', teamIds)
+
+          if (!tsError && tsData && tsData.length > 0) {
+            const today = new Date().toISOString().split('T')[0]
+            hasSeasons = tsData.some((row: { season_id: string | null; is_active: boolean | null; end_date: string | null }) => {
+              if (!row.season_id) return false
+              const isActive = row.is_active ?? false
+              const isFuture = (row.end_date || '') >= today
+              return isActive || isFuture
+            })
+          }
+        }
+      }
+
+      const hasFullStructure = hasPrograms && hasTeams && hasSeasons
+      setHasStructure(hasFullStructure)
+
+      if (!hasFullStructure) {
+        setValue('season_id', '', { shouldValidate: false })
+        setValue('team_id', '', { shouldValidate: false })
+        setSeasons([])
+        setTeams([])
+        return
+      }
+    } catch (err) {
+      console.error('Error fetching programs:', err)
+      setPrograms([])
+      setHasStructure(false)
+    }
+  }, [context, isReady, getValues, setValue])
+
   const fetchSports = useCallback(async () => {
     if (!isReady || !context?.orgId) return
     setLoading(true)
@@ -285,9 +447,12 @@ export default function CreateEvent() {
       if (error) throw error
       const sportsList = (data || []).map(s => ({ id: s.id, name: s.name }))
       setSports(sportsList)
-      // Auto-select if only one sport
-      if (sportsList.length === 1 && !getValues('sport_id')) {
+      // Auto-select first sport when none selected, then eagerly fetch its programs
+      // so that programs are populated before loading=false renders the form
+      if (sportsList.length > 0 && !getValues('sport_id')) {
         setValue('sport_id', sportsList[0].id, { shouldValidate: false })
+        previousSportIdRef.current = sportsList[0].id
+        await fetchProgramsForSport(sportsList[0].id)
       }
     } catch (err) {
       console.error('Error fetching sports:', err)
@@ -295,24 +460,7 @@ export default function CreateEvent() {
     } finally {
       setLoading(false)
     }
-  }, [context, isReady, getValues, setValue])
-
-  const fetchProgramsForSport = useCallback(async (sportId: string) => {
-    if (!isReady || !context?.orgId) return
-    try {
-      const { data, error } = await getPrograms(context, sportId)
-      if (error) throw error
-      const programsList = (data || []).map(p => ({ id: p.id, name: p.name, sport_id: p.sport_id }))
-      setPrograms(programsList)
-      // Auto-select if only one program
-      if (programsList.length === 1 && !getValues('program_id')) {
-        setValue('program_id', programsList[0].id, { shouldValidate: false })
-      }
-    } catch (err) {
-      console.error('Error fetching programs:', err)
-      setPrograms([])
-    }
-  }, [context, isReady, getValues, setValue])
+  }, [context, isReady, getValues, setValue, fetchProgramsForSport])
 
   const fetchSeasonsForProgram = useCallback(async (sportId: string, programId: string) => {
     if (!isReady || !context?.orgId) return
@@ -363,8 +511,13 @@ export default function CreateEvent() {
       })
       const seasonList = Array.from(bySeasonId.values())
       setSeasons(seasonList)
-      setValue('season_id', '', { shouldValidate: false })
-      if (seasonList.length === 1) {
+
+      const currentSeasonId = getValues('season_id')
+      const hasValidCurrentSeason = seasonList.some((season) => season.id === currentSeasonId)
+      if (!hasValidCurrentSeason) {
+        setValue('season_id', '', { shouldValidate: false })
+      }
+      if (seasonList.length > 0 && (!hasValidCurrentSeason || isLocalhostEnvironment())) {
         setValue('season_id', seasonList[0].id, { shouldValidate: false })
       }
     } catch (err) {
@@ -373,7 +526,7 @@ export default function CreateEvent() {
       setValue('season_id', '', { shouldValidate: false })
       setValue('team_id', '', { shouldValidate: false })
     }
-  }, [context, isReady, setValue])
+  }, [context, isReady, setValue, getValues])
 
   const filterTeamsForSeason = useCallback(async (seasonId: string) => {
     if (!context?.orgId) return
@@ -398,11 +551,16 @@ export default function CreateEvent() {
     }
     const filtered = teamsData.filter(t => allowedTeamIds.has(t.id)).map(t => ({ id: t.id, name: t.name }))
     setTeams(filtered)
-    setValue('team_id', '', { shouldValidate: false })
-    if (filtered.length === 1) {
+
+    const currentTeamId = getValues('team_id')
+    const hasValidCurrentTeam = filtered.some((team) => team.id === currentTeamId)
+    if (!hasValidCurrentTeam) {
+      setValue('team_id', '', { shouldValidate: false })
+    }
+    if (filtered.length > 0 && (!hasValidCurrentTeam || isLocalhostEnvironment())) {
       setValue('team_id', filtered[0].id, { shouldValidate: false })
     }
-  }, [context, watchSportId, watchProgramId, setValue])
+  }, [context, watchSportId, watchProgramId, setValue, getValues])
 
   useEffect(() => {
     if (isReady) fetchSports()
@@ -449,6 +607,7 @@ export default function CreateEvent() {
       setPrograms([])
       setSeasons([])
       setTeams([])
+      setHasStructure(false)
       setValue('program_id', '', { shouldValidate: false })
       setValue('season_id', '', { shouldValidate: false })
       setValue('team_id', '', { shouldValidate: false })
@@ -456,9 +615,12 @@ export default function CreateEvent() {
       previousProgramIdRef.current = undefined
       return
     }
+    // Skip if sport was already eagerly loaded in fetchSports
+    if (previousSportIdRef.current === watchSportId && programs.length > 0) return
     const sportChanged = previousSportIdRef.current !== undefined && previousSportIdRef.current !== watchSportId
     previousSportIdRef.current = watchSportId
     if (sportChanged) {
+      setHasStructure(false)
       setValue('program_id', '', { shouldValidate: false })
       setValue('season_id', '', { shouldValidate: false })
       setValue('team_id', '', { shouldValidate: false })
@@ -489,6 +651,16 @@ export default function CreateEvent() {
     if (!watchSeasonId || !watchSportId || !watchProgramId) return
     filterTeamsForSeason(watchSeasonId)
   }, [watchSeasonId, watchSportId, watchProgramId, filterTeamsForSeason])
+
+  useEffect(() => {
+    if (!watchSportId || hasStructure) return
+    // On localhost prefill the type is already set by buildLocalhostEventDefaults;
+    // don't override it while the cascade is still loading.
+    if (isLocalhostEnvironment()) return
+    if (watchEventType !== 'travel' && watchEventType !== 'social') {
+      setValue('type', 'travel', { shouldValidate: false })
+    }
+  }, [watchSportId, hasStructure, watchEventType, setValue])
 
   const onSubmit = async (data: EventFormData) => {
     setSaving(true)
@@ -533,13 +705,40 @@ export default function CreateEvent() {
           ? end
           : salesEndAt || null
 
+      const resolvedTeamId = data.team_id || null
+
+      let selectedTeamOrgId: string | null = null
+      if (resolvedTeamId) {
+        const { data: selectedTeam, error: selectedTeamError } = await supabase
+          .from('teams')
+          .select('id, org_id')
+          .eq('id', resolvedTeamId)
+          .maybeSingle()
+
+        if (selectedTeamError) {
+          throw selectedTeamError
+        }
+        if (!selectedTeam?.org_id) {
+          setError('Please select a valid team in your organization before creating this event.')
+          setSaving(false)
+          return
+        }
+        if (context.orgId && selectedTeam.org_id !== context.orgId) {
+          setError('Selected team does not belong to your current organization.')
+          setSaving(false)
+          return
+        }
+        selectedTeamOrgId = selectedTeam.org_id
+      }
+
       // 1. Insert Event
       type EventInsert = Database['public']['Tables']['events']['Insert']
       const eventInsertData = {
+        org_id: context.orgId,
         title: data.title,
         type: data.type,
-        team_id: data.team_id!,
-        season_id: data.season_id!,
+        team_id: resolvedTeamId,
+        season_id: hasStructure ? data.season_id! : null,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
         arrival_time: arrival ? arrival.toISOString() : null,
@@ -603,12 +802,10 @@ export default function CreateEvent() {
 
       // 4. Handle Ticketing
       if (data.ticketing?.is_ticketed) {
-        // Get org_id from team
-        const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', data.team_id!).single()
-        if (!teamData?.org_id) {
-          throw new Error('Failed to get organization ID from team')
+        const orgId = context.orgId || selectedTeamOrgId
+        if (!orgId) {
+          throw new Error('Failed to resolve organization ID for ticketing')
         }
-        const orgId = teamData.org_id
         let finalBannerUrl = data.ticketing.ticket_banner_url?.trim() || null
 
         // Build ticketed_events insert
@@ -616,7 +813,7 @@ export default function CreateEvent() {
         const ticketedEventData: TicketedEventInsert = {
           event_id: eventDataAny.id,
           org_id: orgId,
-          team_id: data.team_id!,
+          team_id: resolvedTeamId,
           event_type: data.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
           title: data.title,
           description: data.notes || null,
@@ -727,16 +924,18 @@ export default function CreateEvent() {
 
       // Distribute notifications
       const { distributeEventNotifications } = await import('../../data/services/notificationDistribution')
-      const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', data.team_id!).single()
-      if (teamData?.org_id) {
+      if (resolvedTeamId) {
+        const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', resolvedTeamId).single()
+        if (teamData?.org_id) {
         distributeEventNotifications({
           id: eventDataAny.id,
-          team_id: data.team_id!,
+          team_id: resolvedTeamId,
           org_id: teamData.org_id,
           title: data.title,
           start_time: new Date(data.start_time).toISOString(),
           created_by_user_id: context.userId
         }).catch(err => console.error('Failed to distribute event notifications:', err))
+        }
       }
 
       // Success message for ticketed events
@@ -779,6 +978,25 @@ export default function CreateEvent() {
         friendlyError = 'Failed to create event. Please check all required fields and try again.'
         detail = displayMessage
       }
+
+      const logResult = await logEvent({
+        category: 'EVENT',
+        eventType: 'EVENT_CREATED',
+        actorUserId: context.userId,
+        actorRole: 'org_admin',
+        orgId: context.orgId,
+        metadata: {
+          source: 'CreateEvent.onSubmit',
+          operation: 'create',
+          status: 'failed',
+          event_title: data.title,
+          event_type: data.type,
+          error_message: rawError || displayMessage,
+        },
+      })
+      if (logResult.error) {
+        console.error('[CreateEvent] Failed to log create failure:', logResult.error)
+      }
       
       setError(friendlyError)
       setErrorDetail(detail)
@@ -788,10 +1006,20 @@ export default function CreateEvent() {
     }
   }
 
-  const eventTypeOptions = (Object.keys(EVENT_TYPE_LABELS) as EventType[]).map(key => ({
+  // Filter event types based on whether sport has structure
+  const eventTypeOptions = (Object.keys(EVENT_TYPE_LABELS) as EventType[])
+    .filter(key => {
+      // If sport has no structure (no programs/seasons/teams), only allow 'travel' and 'social'
+      if (!hasStructure) {
+        return key === 'travel' || key === 'social'
+      }
+      // Otherwise, allow all event types
+      return true
+    })
+    .map(key => ({
       value: key,
       label: EVENT_TYPE_LABELS[key]
-  }))
+    }))
 
   if (loading) return <div className="oa-skeleton oa-skeleton--tall" />
 
@@ -823,7 +1051,11 @@ export default function CreateEvent() {
             
             <Card title="Event Basics" className="oa-mb-6">
               <div className="oa-form-section-body">
-                <p className="oa-form-section-subtitle oa-mb-4">Name the event and connect it to the correct sport, program, season, and team.</p>
+                <p className="oa-form-section-subtitle oa-mb-4">
+                  {hasStructure 
+                    ? 'Name the event and connect it to the correct sport, program, season, and team.' 
+                    : 'Name the event and select a sport. Since this sport has no programs/teams configured, only Travel and Social Event types are available.'}
+                </p>
                 <div className="oa-mb-4">
                   <Controller name="title" control={control} rules={{ required: t('admin.events.validation.titleRequired'), minLength: { value: 3, message: t('admin.events.validation.titleMinLength') } }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
                 </div>
@@ -848,6 +1080,7 @@ export default function CreateEvent() {
                       )}
                     />
                   </div>
+                  {programs.length > 0 && (
                   <div className="oa-select-wrapper">
                     <Controller
                       name="program_id"
@@ -868,18 +1101,20 @@ export default function CreateEvent() {
                       )}
                     />
                   </div>
+                  )}
+                  {hasStructure && (
                   <div className="oa-select-wrapper">
                     <Controller
                       name="season_id"
                       control={control}
-                      rules={{ required: t('admin.events.validation.seasonRequired') }}
+                      rules={{ required: hasStructure ? t('admin.events.validation.seasonRequired') : false }}
                       render={({ field }) => (
                     <Select
                       {...field}
                       value={field.value || ''}
                       label={t('admin.events.fields.season')}
                           options={seasons.map(s => ({ value: s.id, label: s.name }))}
-                          required
+                          required={hasStructure}
                           disabled={!watchProgramId || loading}
                           error={errors.season_id?.message || undefined}
                           onChange={(value) => {
@@ -890,24 +1125,27 @@ export default function CreateEvent() {
                       )}
                     />
                   </div>
+                  )}
+                  {hasStructure && (
                   <div className="oa-select-wrapper">
                     <Controller
                       name="team_id"
                       control={control}
-                      rules={{ required: t('admin.events.validation.teamRequired') }}
+                      rules={{ required: hasStructure ? t('admin.events.validation.teamRequired') : false }}
                       render={({ field }) => (
                     <Select
                       {...field}
                       value={field.value || ''}
                       label={t('admin.events.fields.team')}
                           options={teams.map(t => ({ value: t.id, label: t.name }))}
-                          required
+                          required={hasStructure}
                           disabled={!watchSeasonId || loading}
                           error={errors.team_id?.message || undefined}
                         />
                       )}
                     />
                   </div>
+                  )}
                 </div>
                 <div className="oa-form-grid oa-form-grid-3 oa-mb-4">
                   <div className="oa-select-wrapper">
@@ -1430,14 +1668,16 @@ export default function CreateEvent() {
               <div className="oa-form-section-body">
                 <p className="oa-form-section-subtitle oa-mb-4">Collect RSVPs and set up recurring sessions for the event.</p>
                 <div className="oa-checkbox-stack oa-mb-4">
-                  <Controller name="rsvp_enabled" control={control} render={({ field: { value, onChange } }) => (
-                    <Checkbox checked={!!value} onChange={(e) => { 
-                      onChange(e.target.checked)
-                      if (!e.target.checked) {
-                        setValue('rsvp_type', null)
-                      }
-                    }} label="RSVP Required?" />
-                  )} />
+                  {!watchTicketingEnabled && (
+                    <Controller name="rsvp_enabled" control={control} render={({ field: { value, onChange } }) => (
+                      <Checkbox checked={!!value} onChange={(e) => {
+                        onChange(e.target.checked)
+                        if (!e.target.checked) {
+                          setValue('rsvp_type', null)
+                        }
+                      }} label="RSVP Required?" />
+                    )} />
+                  )}
                   <Controller name="recurring.enabled" control={control} render={({ field: { value, onChange } }) => (
                     <Checkbox checked={!!value} onChange={(e) => { onChange(e.target.checked); setShowRecurring(e.target.checked); }} label="Recurring Event?" />
                   )} />
@@ -1506,12 +1746,12 @@ export default function CreateEvent() {
             <Card title="Fan Visibility" className="oa-mb-6">
               <div className="oa-form-section-body">
                 <p className="oa-form-section-subtitle oa-mb-4">Control who can see this event in the public fan portal.</p>
-                <FanVisibilityToggle
+                <Checkbox
                   checked={visibility === 'public'}
-                  onChange={(checked) => setVisibility(checked ? 'public' : 'private')}
-                  entityType="event"
+                  onChange={(e) => setVisibility(e.target.checked ? 'public' : 'private')}
+                  label="Visible to Fans"
                   disabled={saving}
-                  contextForWarning={watchTicketingEnabled ? 'payment' : null}
+                  helper={watchTicketingEnabled ? 'Ticketed events shown to fans may include payment access.' : 'When enabled, this event appears in fan-facing views.'}
                 />
               </div>
             </Card>

@@ -4199,6 +4199,8 @@ html.dark .oa-alert-card--error .oa-text-danger {
     border-radius: 16px;
     padding: var(--pa-space-4);
     border: 1px solid transparent;
+    background-clip: padding-box;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     gap: var(--pa-space-1);
@@ -4246,13 +4248,13 @@ html.dark .oa-alert {
 }
 
 html.dark .oa-alert--error {
-    background: rgba(239, 68, 68, 0.12);
-    border-color: #ef4444;
-    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.10);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: var(--pa-text-secondary);
 }
 
 html.dark .oa-alert--error .oa-alert__meta {
-    color: rgba(252, 165, 165, 0.8);
+    color: var(--pa-text-muted);
 }
 
 html.dark .oa-alert--info {
@@ -5083,9 +5085,9 @@ html.dark .oa-textarea-expand {
 }
 
 html.dark .oa-alert--error {
-    background: rgba(239, 68, 68, 0.08);
-    border-color: rgba(239, 68, 68, 0.6);
-    color: var(--pa-danger);
+    background: rgba(239, 68, 68, 0.10);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: var(--pa-text-secondary);
 }
 
 html.dark .oa-alert--info {

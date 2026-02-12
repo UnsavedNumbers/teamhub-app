@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabase'
 import { showSuccess, showError } from '../../utils/toast'
 import { validateCancelEvent, EVENT_ERRORS } from '../../utils/eventValidation'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
 import { ConfirmDialog, AdminPageHeader, EmptyState } from '../../components/admin'
 import EventsHeader from '../../components/admin/EventsHeader'
 import EventsFilters from '../../components/admin/EventsFilters'
@@ -231,6 +232,26 @@ export default function Events() {
             fetchEvents()
         } catch (err) {
             const errorMessage = getErrorMessage(err) || 'Failed to delete event'
+
+            const logResult = await logEvent({
+                category: 'SYSTEM',
+                eventType: 'SYSTEM_ALERT',
+                actorUserId: context.userId,
+                actorRole: deriveActorRoleFromRoles(context.roles),
+                orgId: context.orgId,
+                targetEntityType: 'event',
+                targetEntityId: deleteDialog.event.id,
+                metadata: {
+                    source: 'Events.handleDelete',
+                    operation: 'delete',
+                    status: 'failed',
+                    error_message: errorMessage,
+                },
+            })
+            if (logResult.error) {
+                console.error('[Events] Failed to log delete failure:', logResult.error)
+            }
+
             setActionError(errorMessage)
             showError(errorMessage)
         } finally {
@@ -277,6 +298,26 @@ export default function Events() {
             fetchEvents()
         } catch (err) {
             const errorMessage = getErrorMessage(err) || 'Failed to cancel event'
+
+            const logResult = await logEvent({
+                category: 'SYSTEM',
+                eventType: 'SYSTEM_ALERT',
+                actorUserId: context.userId,
+                actorRole: deriveActorRoleFromRoles(context.roles),
+                orgId: context.orgId,
+                targetEntityType: 'event',
+                targetEntityId: cancelDialog.event.id,
+                metadata: {
+                    source: 'Events.handleCancel',
+                    operation: 'cancel',
+                    status: 'failed',
+                    error_message: errorMessage,
+                },
+            })
+            if (logResult.error) {
+                console.error('[Events] Failed to log cancel failure:', logResult.error)
+            }
+
             setActionError(errorMessage)
             showError(errorMessage)
         } finally {
@@ -344,6 +385,26 @@ export default function Events() {
             navigate(getLink('admin.events.edit', { id: (newEvent as any).id }))
         } catch (err) {
             const errorMessage = getErrorMessage(err) || 'Failed to duplicate event'
+
+            const logResult = await logEvent({
+                category: 'SYSTEM',
+                eventType: 'SYSTEM_ALERT',
+                actorUserId: context.userId,
+                actorRole: deriveActorRoleFromRoles(context.roles),
+                orgId: context.orgId,
+                targetEntityType: 'event',
+                targetEntityId: event.id,
+                metadata: {
+                    source: 'Events.handleDuplicate',
+                    operation: 'create',
+                    status: 'failed',
+                    error_message: errorMessage,
+                },
+            })
+            if (logResult.error) {
+                console.error('[Events] Failed to log duplicate failure:', logResult.error)
+            }
+
             showError(errorMessage)
         }
     }
@@ -372,6 +433,26 @@ export default function Events() {
             fetchEvents()
         } catch (err) {
             const errorMessage = getErrorMessage(err) || 'Failed to cancel events'
+
+            const logResult = await logEvent({
+                category: 'SYSTEM',
+                eventType: 'SYSTEM_ALERT',
+                actorUserId: context.userId,
+                actorRole: deriveActorRoleFromRoles(context.roles),
+                orgId: context.orgId,
+                targetEntityType: 'event',
+                metadata: {
+                    source: 'Events.handleBulkCancel',
+                    operation: 'cancel',
+                    status: 'failed',
+                    selected_ids: Array.from(selectedIds),
+                    error_message: errorMessage,
+                },
+            })
+            if (logResult.error) {
+                console.error('[Events] Failed to log bulk cancel failure:', logResult.error)
+            }
+
             setActionError(errorMessage)
             showError(errorMessage)
         } finally {
@@ -395,6 +476,26 @@ export default function Events() {
             fetchEvents()
         } catch (err) {
             const errorMessage = getErrorMessage(err) || 'Failed to delete events'
+
+            const logResult = await logEvent({
+                category: 'SYSTEM',
+                eventType: 'SYSTEM_ALERT',
+                actorUserId: context.userId,
+                actorRole: deriveActorRoleFromRoles(context.roles),
+                orgId: context.orgId,
+                targetEntityType: 'event',
+                metadata: {
+                    source: 'Events.handleBulkDelete',
+                    operation: 'delete',
+                    status: 'failed',
+                    selected_ids: Array.from(selectedIds),
+                    error_message: errorMessage,
+                },
+            })
+            if (logResult.error) {
+                console.error('[Events] Failed to log bulk delete failure:', logResult.error)
+            }
+
             setActionError(errorMessage)
             showError(errorMessage)
         } finally {

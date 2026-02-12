@@ -16,7 +16,13 @@ export function getDefaultEventVisibility(
     eventType: EventType,
     orgDefaults?: Record<string, boolean> | null
 ): 'public' | 'private' {
-    if (!orgDefaults) return 'private'
+    if (!orgDefaults) {
+        return eventType === 'game' ? 'public' : 'private'
+    }
+
+    if (eventType === 'game' && orgDefaults.game === undefined) {
+        return 'public'
+    }
 
     // Check if this event type has a default setting
     const isVisibleByDefault = orgDefaults[eventType] === true

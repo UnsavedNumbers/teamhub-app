@@ -22,10 +22,179 @@ function buildCorsHeaders(req: Request) {
 }
 
 function json(req: Request, body: unknown, status = 200) {
-  const cors = buildCorsHeaders(req)
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, "Content-Type": "application/json" },
+  return new Response(JSON.stringify(body), { status, headers: { ...buildCorsHeaders(req), "Content-Type": "application/json" } })
+}
+
+function escapeHtml(value: string | null | undefined): string {
+  const text = value ?? ""
+  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;")
+}
+
+function formatMoney(cents: number | null | undefined): string {
+  return `$${((Number(cents ?? 0) || 0) / 100).toFixed(2)}`
+}
+
+function formatDate(value: string | null | undefined): string {
+  if (!value) return "TBD"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "TBD"
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "2-digit", year: "numeric" }).format(date)
+}
+
+function formatTime(value: string | null | undefined): string {
+  if (!value) return "TBD"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "TBD"
+  return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).format(date)
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) return "TBD"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "TBD"
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }).format(date)
+}
+
+function buildVenueAddress(event: any): string {
+  const parts = [
+    event?.venue_name,
+    event?.venue_address_line1,
+    event?.venue_address_line2,
+    [event?.venue_city, event?.venue_state].filter(Boolean).join(", "),
+    event?.venue_postal_code,
+    event?.venue_country,
+  ]
+    .map((part: string | null | undefined) => (part ?? "").trim())
+    .filter((part: string) => part.length > 0)
+  return parts.length > 0 ? parts.join(", ") : "Venue details available in portal"
+}
+
+function renderTemplate(values: Record<string, string>): string {
+  let html = TEMPLATE
+  for (const [key, value] of Object.entries(values)) html = html.replaceAll(`{{${key}}}`, value)
+  return html
+}
+
+export async function sendTicketReceiptEmail(req: Request, supabase: any, orderId: string, ticketsWithTokens?: Array<{ id?: string; qr_token_raw: string; entry_code: string; ticket_type_id: string }>) {
+  const { data: order, error: orderError } = await supabase
+    .from("ticket_orders")
+    .select(`
+      id, org_id, purchaser_email, purchaser_name, purchaser_user_id, status, created_at, subtotal_cents, tax_cents, fees_cents, total_cents, receipt_email_sent_at, stripe_checkout_session_id, stripe_payment_intent_id,
+      ticketed_events (id, title, starts_at, venue_name, venue_address_line1, venue_address_line2, venue_city, venue_state, venue_postal_code, venue_country),
+      organizations!ticket_orders_org_id_fkey (name)
+    `)
+    .eq("id", orderId)
+    .single()
+
+  if (orderError || !order) return json(req, { error: "Order not found" }, 404)
+  if (order.status !== "paid") return json(req, { error: "Order is not paid" }, 400)
+  if (order.receipt_email_sent_at) return json(req, { success: true, skipped: true, reason: "receipt_already_sent" })
+
+  const { data: claimed, error: claimError } = await supabase
+    .from("email_receipts")
+    .insert({
+      order_id: orderId,
+      stripe_payment_intent_id: order.stripe_payment_intent_id,
+      stripe_session_id: order.stripe_checkout_session_id,
+      buyer_email: order.purchaser_email,
+      status: "processing",
+    })
+    .select("id")
+    .maybeSingle()
+
+  if (claimError) {
+    if (claimError.code !== "23505") return json(req, { error: "Failed to claim receipt send" }, 500)
+    const { data: existing } = await supabase.from("email_receipts").select("status, sent_at").eq("order_id", orderId).single()
+    if (existing?.status === "sent" || existing?.sent_at) return json(req, { success: true, skipped: true, reason: "receipt_already_sent" })
+    if (existing?.status === "processing") return json(req, { success: true, skipped: true, reason: "receipt_processing" })
+    await supabase.from("email_receipts").update({ status: "processing", error_message: null, provider_message_id: null }).eq("order_id", orderId)
+  } else if (!claimed) {
+    return json(req, { success: true, skipped: true, reason: "receipt_already_sent" })
+  }
+
+  const { data: orderItems } = await supabase
+    .from("ticket_order_items")
+    .select("quantity, unit_price_cents, line_total_cents, ticket_types (name)")
+    .eq("order_id", orderId)
+
+  const { data: tickets } = await supabase
+    .from("tickets")
+    .select(`
+      id,
+      entry_code,
+      ticket_type_id,
+      ticket_types (name),
+      seat_assignments!tickets_seat_assignment_id_fkey (
+        seat_map_sections (
+          section_name,
+          row_identifier,
+          seat_identifier
+        )
+      )
+    `)
+    .eq("order_id", orderId)
+
+  const tokenById = new Map<string, string>()
+  const tokenByCode = new Map<string, string>()
+  for (const item of ticketsWithTokens ?? []) {
+    if (item.id && item.qr_token_raw) tokenById.set(item.id, item.qr_token_raw)
+    if (item.entry_code && item.qr_token_raw) tokenByCode.set(item.entry_code, item.qr_token_raw)
+  }
+
+  const lineItemsRows = (orderItems ?? []).length > 0
+    ? (orderItems ?? [])
+      .map((item: any) => `<tr><td style="padding:8px;border:1px solid #d1d5db;">${escapeHtml(item.ticket_types?.name ?? "Ticket")}</td><td style="padding:8px;border:1px solid #d1d5db;text-align:right;">${item.quantity ?? 0}</td><td style="padding:8px;border:1px solid #d1d5db;text-align:right;">${formatMoney(item.unit_price_cents)}</td><td style="padding:8px;border:1px solid #d1d5db;text-align:right;">${formatMoney(item.line_total_cents)}</td></tr>`)
+      .join("")
+    : `<tr><td style="padding:8px;border:1px solid #d1d5db;">Ticket</td><td style="padding:8px;border:1px solid #d1d5db;text-align:right;">1</td><td style="padding:8px;border:1px solid #d1d5db;text-align:right;">${formatMoney(order.total_cents)}</td><td style="padding:8px;border:1px solid #d1d5db;text-align:right;">${formatMoney(order.total_cents)}</td></tr>`
+
+  const feesTaxRows = [
+    (order.tax_cents ?? 0) > 0 ? `<tr><td style="padding:8px;border:1px solid #d1d5db;">Tax</td><td style="padding:8px;border:1px solid #d1d5db;text-align:right;">-</td><td style="padding:8px;border:1px solid #d1d5db;text-align:right;">-</td><td style="padding:8px;border:1px solid #d1d5db;text-align:right;">${formatMoney(order.tax_cents)}</td></tr>` : "",
+    (order.fees_cents ?? 0) > 0 ? `<tr><td style="padding:8px;border:1px solid #d1d5db;">Fees</td><td style="padding:8px;border:1px solid #d1d5db;text-align:right;">-</td><td style="padding:8px;border:1px solid #d1d5db;text-align:right;">-</td><td style="padding:8px;border:1px solid #d1d5db;text-align:right;">${formatMoney(order.fees_cents)}</td></tr>` : "",
+  ].join("")
+
+  const ticketCodeRows = (tickets ?? []).length > 0
+    ? (tickets ?? [])
+      .map((ticket: any) => {
+        const seat = ticket.seat_assignments?.seat_map_sections
+        const seatText = seat
+          ? `Section ${seat.section_name}, Row ${seat.row_identifier}, Seat ${seat.seat_identifier}`
+          : ""
+        return `<tr><td style="padding:8px 0;border-bottom:1px solid #e5e7eb;"><div style="font-size:12px;color:#6b7280;">${escapeHtml(ticket.ticket_types?.name ?? "Ticket")}</div><div style="font-size:16px;font-weight:700;letter-spacing:.08em;">${escapeHtml(ticket.entry_code ?? "N/A")}</div>${seatText ? `<div style="font-size:12px;color:#4b5563;margin-top:4px;">${escapeHtml(seatText)}</div>` : ""}</td></tr>`
+      })
+      .join("")
+    : `<tr><td style="padding:8px 0;color:#6b7280;">Ticket code available in portal.</td></tr>`
+
+  const firstTicket = (tickets ?? [])[0]
+  const qrValue = (firstTicket?.id ? tokenById.get(firstTicket.id) : undefined) ?? (firstTicket?.entry_code ? tokenByCode.get(firstTicket.entry_code) : undefined) ?? firstTicket?.entry_code ?? null
+  let primaryQrBlock = ""
+  if (qrValue) {
+    try {
+      const qrBase64 = await qrcode(qrValue, { size: 220 })
+      primaryQrBlock = `<div style="margin-top:12px;text-align:center;"><div style="font-size:12px;color:#6b7280;margin-bottom:6px;">Primary QR Code</div><img src="data:image/png;base64,${qrBase64}" alt="Ticket QR Code" width="220" height="220" style="border:1px solid #d1d5db;border-radius:8px;padding:8px;background:#fff;"/></div>`
+    } catch {
+      primaryQrBlock = ""
+    }
+  }
+
+  const event = order.ticketed_events as any
+  const baseUrl = Deno.env.get("SITE_URL") || "https://platform.youthsports.team"
+  const html = renderTemplate({
+    RECEIPT_ID: escapeHtml(order.id),
+    ORGANIZATION_NAME: escapeHtml((order.organizations as any)?.name ?? "Organization"),
+    EVENT_NAME: escapeHtml(event?.title ?? "Event"),
+    EVENT_DATE: escapeHtml(formatDate(event?.starts_at)),
+    EVENT_TIME: escapeHtml(formatTime(event?.starts_at)),
+    VENUE_ADDRESS: escapeHtml(buildVenueAddress(event)),
+    LINE_ITEMS_ROWS: lineItemsRows,
+    FEES_TAX_ROWS: feesTaxRows,
+    TOTAL_PAID: escapeHtml(formatMoney(order.total_cents)),
+    PURCHASE_DATE_TIME: escapeHtml(formatDateTime(order.created_at)),
+    BUYER_EMAIL: escapeHtml(order.purchaser_email),
+    ORDER_ID: escapeHtml(order.id),
+    STRIPE_REFERENCE: escapeHtml(order.stripe_payment_intent_id || order.stripe_checkout_session_id || "N/A"),
+    TICKET_CODES_ROWS: ticketCodeRows,
+    PRIMARY_QR_BLOCK: primaryQrBlock,
+    MY_TICKETS_URL: escapeHtml(getFullUrl("portal.myTickets", baseUrl)),
   })
 }
 

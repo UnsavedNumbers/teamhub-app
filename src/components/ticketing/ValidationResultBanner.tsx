@@ -81,6 +81,12 @@ export function ValidationResultBanner({ result, onAdmitAnyway, onDismiss }: Val
             {scanResult.ticket_type_name && (
               <p className="text-lg opacity-90">{scanResult.ticket_type_name}</p>
             )}
+            {scanResult.seat_display && (
+              <p className="text-sm opacity-90 mt-1">{scanResult.seat_display}</p>
+            )}
+            {scanResult.seat_attributes?.accessible && (
+              <p className="text-xs font-semibold opacity-90 mt-1">{t('ticketing.validation.accessibleSeat')}</p>
+            )}
           </div>
         </div>
       </div>

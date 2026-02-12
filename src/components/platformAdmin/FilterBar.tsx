@@ -66,6 +66,7 @@ export default function FilterBar({
 }: FilterBarProps) {
   const [localSearch, setLocalSearch] = useState(searchValue)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  const normalizedStatusValue = statusValue ?? ''
   
   // Sync local search with prop
   useEffect(() => {
@@ -96,7 +97,7 @@ export default function FilterBar({
   
   const hasActiveFilters = 
     searchValue !== '' || 
-    statusValue !== '' || 
+    normalizedStatusValue !== '' || 
     activeFilters.length > 0 ||
     dateFrom !== '' ||
     dateTo !== ''
@@ -191,7 +192,7 @@ export default function FilterBar({
             <div className="pa-form-group" style={{ marginBottom: 0 }}>
               <select
                 className="pa-input pa-select"
-                value={statusValue}
+                value={normalizedStatusValue}
                 onChange={(e) => onStatusChange(e.target.value)}
                 aria-label={statusLabel}
                 style={{ width: '100%', height: '44px' }}

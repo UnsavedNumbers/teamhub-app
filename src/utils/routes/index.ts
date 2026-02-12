@@ -205,6 +205,7 @@ export const RouteKeys = {
     ADMIN_TICKETING_EVENTS_CREATE: 'admin.ticketingEvents.create',
     ADMIN_TICKETING_EVENTS_DETAIL: 'admin.ticketingEvents.detail',
     ADMIN_TICKETING_EVENTS_TICKET_TYPES_CREATE: 'admin.ticketingEvents.ticketTypes.create',
+    ADMIN_TICKETING_EVENTS_SEAT_MAP_BUILDER: 'admin.ticketingEvents.seatMaps.builder',
     ADMIN_TICKETING_ORDERS: 'admin.ticketingOrders',
     ADMIN_TICKETING_SCANNER: 'admin.ticketingScanner',
     ADMIN_UNIFORMS: 'admin.uniforms.list',

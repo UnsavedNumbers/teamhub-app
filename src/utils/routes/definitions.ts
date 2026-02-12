@@ -877,6 +877,15 @@ const admin = {
                 requiresOrg: true,
             },
         },
+        seatMaps: {
+            builder: {
+                path: '/admin/ticketing/events/:eventId/seat-maps/:seatMapId',
+                params: ['eventId', 'seatMapId'] as const,
+                label: 'Seat Map Builder',
+                icon: 'event_seat',
+                requiresOrg: true,
+            },
+        },
     },
     ticketingOrders: {
         path: '/admin/ticketing/orders',
