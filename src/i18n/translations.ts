@@ -2561,11 +2561,20 @@ export const en = {
                     actions: 'Actions',
                     dangerZone: 'Danger Zone',
                 },
+                tabs: {
+                    ariaLabel: 'Event detail sections',
+                    details: 'Event Details',
+                    ticketing: 'Ticketing',
+                },
+                featureGate: {
+                    title: 'Feature Unavailable',
+                },
                 actions: {
                     backToEvents: 'Back to Events',
                     manageAttendance: 'Manage Attendance',
                     openTicketing: 'Open Ticketing',
                     addTicketing: 'Add Ticketing',
+                    upgradePlan: 'Upgrade Plan',
                     duplicate: 'Duplicate Event',
                     copySuffix: 'Copy',
                 },
@@ -3315,7 +3324,23 @@ export const en = {
             pending: 'Pending',
         },
         publicUrl: {
+            title: 'Public Link',
             slugNotSet: 'Organization slug not set. Please set a slug in organization settings to generate public URLs.',
+            actions: {
+                copy: 'Copy',
+                copied: 'Copied!',
+                twitter: 'Twitter',
+                facebook: 'Facebook',
+                email: 'Email',
+                downloadPng: 'Download PNG',
+            },
+            messages: {
+                emailBody: 'Check out this event: {{url}}',
+            },
+            qr: {
+                title: 'QR Code',
+                description: 'Scan to open this link. Download for posters or print materials.',
+            },
         },
         detail: {
             title: 'Ticketing',

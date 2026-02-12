@@ -7,10 +7,15 @@
 import { useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getLink, useRouteLink } from '@/utils/routes'
+import { getLink, RouteKeys, useRouteLink } from '@/utils/routes'
 import { supabase } from '@/lib/supabase'
 import { USE_FAKE_DATA } from '@/data/config'
-import { getTicketedEventByIdAdmin, getTicketTypesForEventAdmin } from '@/data/services'
+import {
+  createStaffValidationLinkForEventAdmin,
+  getTicketedEventByIdAdmin,
+  getTicketTypesForEventAdmin,
+  getTicketTypesTotalCountForEventAdmin,
+} from '@/data/services'
 import { formatCurrency, type TicketedEvent, type TicketType } from '@/types/ticketing'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { showError, showSuccess } from '@/utils/toast'
@@ -31,14 +36,6 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 
 function isUuid(value: string | null | undefined): value is string {
   return !!value && UUID_PATTERN.test(value)
-}
-
-async function hashToken(token: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(token)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
 function formatDateRange(start: string, end: string, fallback: string): string {
@@ -150,16 +147,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
     refetch: refetchTicketTypeCount,
   } = useQuery<number>({
     queryKey: ['ticket-types-total-count', id],
-    queryFn: async () => {
-      const supabaseAny = supabase as any
-      const { count, error } = await supabaseAny
-        .from('ticket_types')
-        .select('id', { head: true, count: 'exact' })
-        .eq('ticketed_event_id', id)
-
-      if (error) throw error
-      return count ?? 0
-    },
+    queryFn: () => getTicketTypesTotalCountForEventAdmin(id),
     enabled: hasValidEventId && !!event,
     refetchOnReconnect: true,
     refetchOnWindowFocus: true,
@@ -230,40 +218,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
       if (!hasValidEventId) throw new ValidationError(t('ticketing.detail.staffLink.missingEventId'))
       if (USE_FAKE_DATA) throw new ValidationError(t('ticketing.detail.staffLink.demoBlocked'))
       if (!isOnline) throw new NetworkError()
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new ValidationError(t('common.error.permissionDenied'))
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('org_id')
-        .eq('id', user.id)
-        .single()
-
-      if (!userData?.org_id) throw new ValidationError(t('common.error.permissionDenied'))
-
-      const array = new Uint8Array(32)
-      window.crypto.getRandomValues(array)
-      const token = Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('')
-      const tokenHash = await hashToken(token)
-
-      const expiresAt = new Date()
-      expiresAt.setDate(expiresAt.getDate() + 7)
-
-      const { error } = await supabase.from('ticket_staff_links').insert({
-        org_id: userData.org_id,
-        ticketed_event_id: id,
-        token_hash: tokenHash,
-        expires_at: expiresAt.toISOString(),
-        created_by_user_id: user.id,
-      })
-
-      if (error) throw error
-
-      const baseUrl = window.location.origin
-      return `${baseUrl}/tickets/validate/${token}`
+      return createStaffValidationLinkForEventAdmin(id)
     },
     onSuccess: async (link) => {
       try {
@@ -506,7 +461,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
         {event.status === 'published' ? (
           <PublicUrlShare
             orgId={event.org_id}
-            path={`tickets/events/${event.id}`}
+            path={getLink(RouteKeys.PORTAL_TICKET_EVENT_DETAIL, { id: event.id })}
             title={t('ticketing.detail.share.title')}
             description={t('ticketing.detail.share.description')}
           />

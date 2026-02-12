@@ -8,9 +8,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeCanvas } from 'qrcode.react'
-import { supabase } from '@/lib/supabase'
 import { QUERY_KEY_ORG_SLUG } from '@/components/admin/PublicUrlBanner'
 import { getLink, RouteKeys } from '@/utils/routes'
+import { getOrganizationSlug } from '@/data/services/organizationService'
+import { useT } from '@/i18n/useI18n'
 
 interface PublicUrlShareProps {
   orgId: string
@@ -21,7 +22,8 @@ interface PublicUrlShareProps {
 
 const QR_SIZE = 256
 
-export default function PublicUrlShare({ orgId, path, title = 'Public Link', description }: PublicUrlShareProps) {
+export default function PublicUrlShare({ orgId, path, title, description }: PublicUrlShareProps) {
+  const t = useT()
   const [copied, setCopied] = useState(false)
   const [publicUrl, setPublicUrl] = useState<string | null>(null)
   const qrWrapperRef = useRef<HTMLDivElement>(null)
@@ -30,17 +32,11 @@ export default function PublicUrlShare({ orgId, path, title = 'Public Link', des
   const { data: orgData } = useQuery({
     queryKey: [QUERY_KEY_ORG_SLUG, orgId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('slug')
-        .eq('id', orgId)
-        .single()
-
-      if (error || !data?.slug) {
+      const { data, error } = await getOrganizationSlug(orgId)
+      if (error || !data) {
         return null
       }
-
-      return data.slug
+      return data
     },
     enabled: !!orgId,
   })
@@ -93,12 +89,14 @@ export default function PublicUrlShare({ orgId, path, title = 'Public Link', des
     link.click()
   }
 
+  const resolvedTitle = title || t('ticketing.publicUrl.title')
+
   if (!orgData) {
     return (
       <div className="pa-card">
-        <h3 className="pa-card-title">{title}</h3>
+        <h3 className="pa-card-title">{resolvedTitle}</h3>
         <p className="text-gray-500 text-sm">
-          Organization slug not set. Please set a slug in organization settings to generate public URLs.
+          {t('ticketing.publicUrl.slugNotSet')}
         </p>
       </div>
     )
@@ -107,15 +105,15 @@ export default function PublicUrlShare({ orgId, path, title = 'Public Link', des
   if (!publicUrl) {
     return (
       <div className="pa-card">
-        <h3 className="pa-card-title">{title}</h3>
-        <p className="text-gray-500">Loading...</p>
+        <h3 className="pa-card-title">{resolvedTitle}</h3>
+        <p className="text-gray-500">{t('common.loading')}</p>
       </div>
     )
   }
 
   return (
     <div className="pa-card">
-      <h3 className="pa-card-title">{title}</h3>
+      <h3 className="pa-card-title">{resolvedTitle}</h3>
       {description && <p className="text-gray-600 text-sm mb-4">{description}</p>}
       
       <div className="flex items-center gap-2 mb-4">
@@ -133,12 +131,12 @@ export default function PublicUrlShare({ orgId, path, title = 'Public Link', des
           {copied ? (
             <>
               <span className="material-symbols-outlined text-sm mr-1">check</span>
-              Copied!
+              {t('ticketing.publicUrl.actions.copied')}
             </>
           ) : (
             <>
               <span className="material-symbols-outlined text-sm mr-1">content_copy</span>
-              Copy
+              {t('ticketing.publicUrl.actions.copy')}
             </>
           )}
         </button>
@@ -147,13 +145,13 @@ export default function PublicUrlShare({ orgId, path, title = 'Public Link', des
       <div className="flex flex-wrap gap-2">
         {/* Social sharing buttons */}
         <a
-          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(publicUrl)}`}
+          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(resolvedTitle)}&url=${encodeURIComponent(publicUrl)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="pa-button pa-button-sm pa-button-secondary"
         >
           <span className="material-symbols-outlined text-sm mr-1">share</span>
-          Twitter
+          {t('ticketing.publicUrl.actions.twitter')}
         </a>
         <a
           href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(publicUrl)}`}
@@ -162,20 +160,20 @@ export default function PublicUrlShare({ orgId, path, title = 'Public Link', des
           className="pa-button pa-button-sm pa-button-secondary"
         >
           <span className="material-symbols-outlined text-sm mr-1">share</span>
-          Facebook
+          {t('ticketing.publicUrl.actions.facebook')}
         </a>
         <a
-          href={`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`Check out this event: ${publicUrl}`)}`}
+          href={`mailto:?subject=${encodeURIComponent(resolvedTitle)}&body=${encodeURIComponent(t('ticketing.publicUrl.messages.emailBody', { url: publicUrl }))}`}
           className="pa-button pa-button-sm pa-button-secondary"
         >
           <span className="material-symbols-outlined text-sm mr-1">email</span>
-          Email
+          {t('ticketing.publicUrl.actions.email')}
         </a>
       </div>
 
       <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-xs text-gray-500 mb-2">QR Code</p>
-        <p className="text-xs text-gray-500 mb-3">Scan to open this link. Download for posters or print materials.</p>
+        <p className="text-xs text-gray-500 mb-2">{t('ticketing.publicUrl.qr.title')}</p>
+        <p className="text-xs text-gray-500 mb-3">{t('ticketing.publicUrl.qr.description')}</p>
         <div className="flex flex-col items-start gap-3">
           <div ref={qrWrapperRef} className="rounded-lg border border-gray-200 bg-white p-3 inline-block">
             <QRCodeCanvas
@@ -192,7 +190,7 @@ export default function PublicUrlShare({ orgId, path, title = 'Public Link', des
             className="pa-button pa-button-sm pa-button-secondary"
           >
             <span className="material-symbols-outlined text-sm mr-1">download</span>
-            Download PNG
+            {t('ticketing.publicUrl.actions.downloadPng')}
           </button>
         </div>
       </div>
