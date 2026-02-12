@@ -313,6 +313,7 @@ export const adminMenuItems: MenuItemDefinition[] = [
         requiresOrg: true,
         children: [
             { text: 'Events', icon: 'event', routeKey: 'admin.ticketingEvents', requiresOrg: true },
+            { text: 'Seat Maps', icon: 'event_seat', routeKey: 'admin.ticketingEvents.seatMaps.list', requiresOrg: true },
             { text: 'Orders', icon: 'receipt_long', routeKey: 'admin.ticketingOrders', requiresOrg: true },
             { text: 'Gate Entry', icon: 'qr_code_scanner', routeKey: 'admin.ticketingScanner', requiresOrg: true },
         ],
@@ -467,6 +468,7 @@ export const adminGlobalNavSections: NavigationSection[] = [
                 label: '',
                 items: [
                     { routeKey: 'admin.ticketingEvents', text: 'Events', icon: 'event', description: 'Create and manage ticketed events' },
+                    { routeKey: 'admin.ticketingEvents.seatMaps.list', text: 'Seat Maps', icon: 'event_seat', description: 'Build and manage seat maps' },
                     { routeKey: 'admin.ticketingOrders', text: 'Orders', icon: 'receipt_long', description: 'Search purchases and process refunds' },
                     { routeKey: 'admin.ticketingScanner', text: 'Gate Entry', icon: 'qr_code_scanner', description: 'Ticket validation' },
                 ],

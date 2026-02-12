@@ -455,6 +455,118 @@ export interface ReservedCapacitySnapshot {
   capacityRemaining: number
 }
 
+export interface AdminSeatMapListItem {
+  id: string
+  name: string
+  ticketed_event_id: string
+  chart_image_url: string | null
+  created_at: string
+  updated_at: string
+  event_title: string
+  event_status: TicketedEvent['status']
+  event_starts_at: string
+  seat_count: number
+}
+
+export async function getSeatMapsForOrgAdmin(orgId: string): Promise<AdminSeatMapListItem[]> {
+  if (!orgId) {
+    throw new ValidationError('Organization is required')
+  }
+
+  if (USE_FAKE_DATA) {
+    return []
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    const { data, error } = await supabaseAny
+      .from('seat_maps')
+      .select(`
+        id,
+        name,
+        ticketed_event_id,
+        chart_image_url,
+        created_at,
+        updated_at,
+        ticketed_events!inner(
+          id,
+          title,
+          status,
+          starts_at,
+          org_id
+        )
+      `)
+      .eq('ticketed_events.org_id', orgId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    const seatMaps = (data ?? []) as Array<{
+      id: string
+      name: string
+      ticketed_event_id: string
+      chart_image_url: string | null
+      created_at: string
+      updated_at: string
+      ticketed_events:
+        | {
+            id: string
+            title: string
+            status: TicketedEvent['status']
+            starts_at: string
+            org_id: string
+          }
+        | Array<{
+            id: string
+            title: string
+            status: TicketedEvent['status']
+            starts_at: string
+            org_id: string
+          }>
+        | null
+    }>
+
+    const seatMapIds = seatMaps.map((item) => item.id)
+    let seatCountByMap = new Map<string, number>()
+
+    if (seatMapIds.length > 0) {
+      const { data: seatRows, error: seatRowsError } = await supabaseAny
+        .from('seat_map_sections')
+        .select('seat_map_id')
+        .in('seat_map_id', seatMapIds)
+
+      if (seatRowsError) throw seatRowsError
+
+      seatCountByMap = (seatRows as Array<{ seat_map_id: string }>).reduce((acc, row) => {
+        const current = acc.get(row.seat_map_id) ?? 0
+        acc.set(row.seat_map_id, current + 1)
+        return acc
+      }, new Map<string, number>())
+    }
+
+    return seatMaps.map((item) => {
+      const event = Array.isArray(item.ticketed_events)
+        ? item.ticketed_events[0]
+        : item.ticketed_events
+
+      return {
+        id: item.id,
+        name: item.name,
+        ticketed_event_id: item.ticketed_event_id,
+        chart_image_url: item.chart_image_url,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        event_title: event?.title ?? 'Untitled event',
+        event_status: event?.status ?? 'draft',
+        event_starts_at: event?.starts_at ?? item.created_at,
+        seat_count: seatCountByMap.get(item.id) ?? 0,
+      }
+    })
+  } catch (error) {
+    throw classifySupabaseError(error, 'Seat maps')
+  }
+}
+
 export async function getReservedCapacitySnapshot(seatMapId: string): Promise<ReservedCapacitySnapshot> {
   if (!seatMapId) {
     throw new ValidationError('Seat map is required')
@@ -845,6 +957,54 @@ export async function deleteSeat(sectionId: string): Promise<void> {
     if (error) throw error
   } catch (error) {
     throw classifySupabaseError(error, 'Delete seat')
+  }
+}
+
+export async function deleteSeatMapAdmin(seatMapId: string): Promise<void> {
+  if (!seatMapId) {
+    throw new ValidationError('Seat map is required')
+  }
+
+  if (USE_FAKE_DATA) {
+    throw new ValidationError('Deleting seat maps is unavailable in demo mode')
+  }
+
+  try {
+    const supabaseAny = supabase as any
+
+    const { count: assignmentCount, error: assignmentError } = await supabaseAny
+      .from('seat_assignments')
+      .select('id, seat_map_sections!inner(seat_map_id)', { count: 'exact', head: true })
+      .eq('seat_map_sections.seat_map_id', seatMapId)
+
+    if (assignmentError) throw assignmentError
+
+    if ((assignmentCount ?? 0) > 0) {
+      throw new ValidationError('Cannot delete a seat map that has sold or assigned seats')
+    }
+
+    const { error: detachError } = await supabaseAny
+      .from('ticket_types')
+      .update({ seat_map_id: null })
+      .eq('seat_map_id', seatMapId)
+
+    if (detachError) throw detachError
+
+    const { error: deleteSectionsError } = await supabaseAny
+      .from('seat_map_sections')
+      .delete()
+      .eq('seat_map_id', seatMapId)
+
+    if (deleteSectionsError) throw deleteSectionsError
+
+    const { error: deleteMapError } = await supabaseAny
+      .from('seat_maps')
+      .delete()
+      .eq('id', seatMapId)
+
+    if (deleteMapError) throw deleteMapError
+  } catch (error) {
+    throw classifySupabaseError(error, 'Delete seat map')
   }
 }
 
