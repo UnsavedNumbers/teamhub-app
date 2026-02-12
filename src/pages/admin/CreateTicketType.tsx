@@ -63,6 +63,30 @@ function shouldRetryQuery(attempt: number, error: unknown): boolean {
   return classified.retryable && attempt < 1
 }
 
+const isLocalhostEnvironment = (): boolean => {
+  if (typeof window === 'undefined') return false
+  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+}
+
+const LOCALHOST_TICKET_TYPE_PRESETS = [
+  { name: 'General Admission', description: 'Standard entry', price: '15.00', capacity: '150' },
+  { name: 'Student', description: 'Student discounted entry', price: '8.00', capacity: '100' },
+  { name: 'VIP', description: 'Premium seating and perks', price: '35.00', capacity: '40' },
+] as const
+
+const toLocalDate = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const toLocalTime = (date: Date): string => {
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
 export default function CreateTicketType() {
   const t = useT()
   const queryClient = useQueryClient()
@@ -134,6 +158,37 @@ export default function CreateTicketType() {
   const [seatMapId, setSeatMapId] = useState<string>('')
   const [formError, setFormError] = useState<string | null>(null)
   const [seatMapNotice, setSeatMapNotice] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLocalhostEnvironment()) return
+    if (name.trim() || description.trim() || (price.trim() && price.trim() !== '0.00') || capacity.trim()) return
+
+    const preset = LOCALHOST_TICKET_TYPE_PRESETS[ticketTypesList.length]
+    if (!preset) return
+
+    setName(preset.name)
+    setDescription(preset.description)
+    setPrice(preset.price)
+    setCapacity(preset.capacity)
+  }, [ticketTypesList.length, name, description, price, capacity])
+
+  useEffect(() => {
+    if (!isLocalhostEnvironment()) return
+    if (salesStartDate || salesStartTime || salesEndDate || salesEndTime) return
+
+    const now = new Date()
+    const eventStartRaw = (event as { starts_at?: string | null } | null)?.starts_at ?? null
+    const eventStart = eventStartRaw ? new Date(eventStartRaw) : null
+
+    const defaultEnd = eventStart && !Number.isNaN(eventStart.getTime())
+      ? eventStart
+      : new Date(now.getTime() + 24 * 60 * 60 * 1000)
+
+    setSalesStartDate(toLocalDate(now))
+    setSalesStartTime(toLocalTime(now))
+    setSalesEndDate(toLocalDate(defaultEnd))
+    setSalesEndTime(toLocalTime(defaultEnd))
+  }, [event, salesStartDate, salesStartTime, salesEndDate, salesEndTime])
 
   const reservedCapacityPreviewQuery = useQuery({
     queryKey: ['reserved-capacity-preview', seatMapId],

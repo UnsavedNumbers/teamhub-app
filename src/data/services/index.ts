@@ -46,6 +46,7 @@ export * from './licenseTiersService'
 
 // Ticketing Services
 export * from './ticketingService'
+export * from './venueService'
 
 // Re-export types from fake data that services use
 export type { UserContext, PermissionSet } from '../fake/userContext'

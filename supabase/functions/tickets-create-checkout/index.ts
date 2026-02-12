@@ -100,6 +100,24 @@ serve(async (req) => {
   })
   // Service role client without user auth for RLS-protected tables
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
+  let pendingOrderId: string | null = null
+  const decrementedCapacities: Array<{ ticket_type_id: string; quantity: number }> = []
+  let rollbackAttempted = false
+
+  const rollbackPendingOrder = async () => {
+    if (!pendingOrderId || rollbackAttempted) return
+    rollbackAttempted = true
+
+    for (const entry of decrementedCapacities) {
+      await supabaseAdmin.rpc("increment_ticket_capacity", {
+        p_ticket_type_id: entry.ticket_type_id,
+        p_quantity: entry.quantity,
+      })
+    }
+    await supabaseAdmin.from("seat_holds").delete().eq("order_id", pendingOrderId)
+    await supabaseAdmin.from("ticket_holds").delete().eq("order_id", pendingOrderId)
+    await supabaseAdmin.from("ticket_orders").delete().eq("id", pendingOrderId)
+  }
 
   // Parse payload
   let payload: any
@@ -315,20 +333,7 @@ serve(async (req) => {
     if (orderError || !order) {
       return json(req, { error: "Failed to create order" }, 500)
     }
-
-    const decrementedCapacities: Array<{ ticket_type_id: string; quantity: number }> = []
-
-    const rollbackOrder = async () => {
-      for (const entry of decrementedCapacities) {
-        await supabaseAdmin.rpc("increment_ticket_capacity", {
-          p_ticket_type_id: entry.ticket_type_id,
-          p_quantity: entry.quantity,
-        })
-      }
-      await supabaseAdmin.from("seat_holds").delete().eq("order_id", order.id)
-      await supabaseAdmin.from("ticket_holds").delete().eq("order_id", order.id)
-      await supabaseAdmin.from("ticket_orders").delete().eq("id", order.id)
-    }
+    pendingOrderId = order.id
 
     // Calculate totals and create holds in transaction
     let subtotalCents = 0
@@ -357,7 +362,7 @@ serve(async (req) => {
         })
 
         if (holdError) {
-          await rollbackOrder()
+          await rollbackPendingOrder()
           return json(req, { error: holdError.message || "Seats no longer available" }, 400)
         }
       } else {
@@ -380,7 +385,7 @@ serve(async (req) => {
             .gte("capacity_remaining", item.quantity)
 
           if (capacityError) {
-            await rollbackOrder()
+            await rollbackPendingOrder()
             return json(req, { error: "Failed to reserve capacity" }, 500)
           }
 
@@ -396,7 +401,7 @@ serve(async (req) => {
     const { error: itemsError } = await supabaseAdmin.from("ticket_order_items").insert(orderItems)
 
     if (itemsError) {
-      await rollbackOrder()
+      await rollbackPendingOrder()
       return json(req, { error: "Failed to create order items" }, 500)
     }
 
@@ -405,7 +410,7 @@ serve(async (req) => {
       const { error: holdsError } = await supabaseAdmin.from("ticket_holds").insert(holds)
 
       if (holdsError) {
-        await rollbackOrder()
+        await rollbackPendingOrder()
         return json(req, { error: "Failed to create holds" }, 500)
       }
     }
@@ -427,7 +432,7 @@ serve(async (req) => {
       .eq("id", order.id)
 
     if (updateError) {
-      await rollbackOrder()
+      await rollbackPendingOrder()
       return json(req, { error: "Failed to update order totals" }, 500)
     }
 
@@ -471,11 +476,11 @@ serve(async (req) => {
     // Use org-scoped URLs if org_slug is provided, otherwise fall back to old pattern
     const derivedOrgSlug = orgSlug || org.slug || ""
     const successUrl = derivedOrgSlug
-      ? getOrgTicketOrderUrl(derivedOrgSlug, normalizedBaseUrl)
-      : getFullUrl('portal.ticketOrderSuccess', normalizedBaseUrl) + `/order/${order.id}`
+      ? getOrgTicketOrderUrl(derivedOrgSlug, order.id, normalizedBaseUrl)
+      : getFullUrl('portal.ticketOrderSuccess', normalizedBaseUrl, { orderId: order.id })
     const cancelUrl = derivedOrgSlug
       ? getOrgTicketEventUrl(derivedOrgSlug, ticketedEventId, normalizedBaseUrl)
-      : getFullUrl('portal.ticketEventDetail', normalizedBaseUrl) + `/events/${ticketedEventId}`
+      : getFullUrl('portal.ticketEventDetail', normalizedBaseUrl, { eventId: ticketedEventId })
 
     const sessionParams: any = {
       payment_method_types: ["card"],
@@ -508,7 +513,7 @@ serve(async (req) => {
     try {
       session = await stripe.checkout.sessions.create(sessionParams)
     } catch {
-      await rollbackOrder()
+      await rollbackPendingOrder()
       return json(req, { error: "Payment setup failed, please try again" }, 500)
     }
 
@@ -528,6 +533,7 @@ serve(async (req) => {
       order_id: order.id,
     })
   } catch (error: any) {
+    await rollbackPendingOrder()
     console.error("Error creating checkout:", error)
     return json(req, { error: error.message || "Internal server error" }, 500)
   }

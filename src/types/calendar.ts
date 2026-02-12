@@ -301,6 +301,7 @@ export interface TicketingFormData {
     sales_start_at: string
     sales_end_at: string
     status: string
+    internal_description: string
     event_description: string
     ticket_banner_url: string
     ticket_types: TicketTypeFormData[]

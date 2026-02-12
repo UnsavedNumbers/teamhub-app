@@ -794,7 +794,8 @@ export default function TicketingEvents() {
   const isMobile = useIsMobile()
   const queryClient = useQueryClient()
 
-  const createEventPath = useRouteLink('admin.ticketingEvents.create') || useRouteLink('admin.events.create') || '/admin/ticketing/events/new'
+  const baseCreateEventPath = useRouteLink('admin.events.create') || '/admin/events/new'
+  const createEventPath = `${baseCreateEventPath}?ticketed=1&from=ticketing`
 
   useEffect(() => {
     setSearchInput(filters.search || '')

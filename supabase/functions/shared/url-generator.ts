@@ -271,6 +271,11 @@ function getRoutePath(routeKey: string): string {
     }
   }
   
+  // Handle both string paths and objects with path property
+  if (typeof current === 'string') {
+    return current
+  }
+  
   if (typeof current === 'object' && 'path' in current) {
     return current.path
   }

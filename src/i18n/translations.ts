@@ -2620,6 +2620,7 @@ export const en = {
             ticketing: {
                 isTicketed: 'This is a ticketed event?',
                 title: 'Ticketing',
+                setupHint: 'Configure ticketing details now, or keep it in draft and finish later.',
                 eventType: {
                     label: 'Ticketed Event Type',
                     helper: 'Used for ticket sales and display.',
@@ -2630,6 +2631,7 @@ export const en = {
                     other: 'Other',
                 },
                 salesWindow: {
+                    immediate: 'Start selling immediately',
                     start: 'Sales Start',
                     end: 'Sales End',
                     optional: 'Optional',
@@ -2646,6 +2648,21 @@ export const en = {
                     label: 'Status',
                     draft: 'Draft',
                     published: 'Published',
+                },
+                internalDescription: {
+                    label: 'Internal Description',
+                    placeholder: 'Internal notes for staff only',
+                },
+                publicDescription: {
+                    label: 'Public Description',
+                    placeholder: 'Visible to fans and ticket buyers',
+                },
+                banner: {
+                    urlLabel: 'Banner Image URL',
+                    urlPlaceholder: 'https://...',
+                    uploadLabel: 'Upload Banner Image',
+                    uploadButton: 'Choose Banner',
+                    uploadHelper: 'Recommended: 1600x900 JPG/PNG (max 5MB).',
                 },
                 ticketTypes: {
                     label: 'Ticket Types',
@@ -3436,6 +3453,10 @@ export const en = {
                 activeTicketTypes: 'Active ticket types',
                 availableCapacity: 'Available capacity',
                 totalTicketTypes: '{{count}} configured',
+                internalDescription: 'Internal description',
+                publicDescription: 'Public description',
+                banner: 'Banner',
+                bannerAlt: 'Ticket event banner',
                 name: 'Name',
                 price: 'Price',
                 capacity: 'Capacity',
@@ -3447,6 +3468,7 @@ export const en = {
                 tbd: 'TBD',
                 unavailable: '-',
                 unlimited: 'Unlimited',
+                notProvided: 'Not provided',
                 connection: {
                     online: 'Online',
                     offline: 'Offline',
@@ -3505,6 +3527,7 @@ export const en = {
                 generateStaffLink: 'Generate Staff Link',
                 generatingStaffLink: 'Generating...',
                 openScanner: 'Open Scanner',
+                editTicketingDetails: 'Edit Ticketing Details',
             },
             share: {
                 title: 'Public event URL',
@@ -3522,16 +3545,27 @@ export const en = {
         seatMaps: {
             title: 'Seat Maps',
             subtitle: 'Create and manage reserved seating maps for ticketed events.',
+            status: {
+                draft: 'Draft',
+                published: 'Published',
+            },
             table: {
                 title: 'Seat Maps',
                 name: 'Seat Map',
                 event: 'Event',
+                venue: 'Venue',
+                noVenue: 'No venue',
+                usage: 'Usage',
+                usageSingular: '{{count}} ticket type',
+                usagePlural: '{{count}} ticket types',
                 seats: 'Seats',
                 updated: 'Updated',
                 actions: 'Actions',
             },
             form: {
                 eventLabel: 'Ticketed Event',
+                venueLabel: 'Venue',
+                noVenue: 'No venue selected',
                 selectEvent: 'Select an event',
                 nameLabel: 'Seat Map Name',
                 namePlaceholder: 'e.g., Main Gym Floor',
@@ -3540,9 +3574,13 @@ export const en = {
             actions: {
                 create: 'Create Seat Map',
                 creating: 'Creating...',
+                publish: 'Publish',
+                clone: 'Clone',
+                cloning: 'Cloning...',
                 edit: 'Edit',
                 delete: 'Delete',
                 deleting: 'Deleting...',
+                deleteBlockedByUsage: 'Used by ticket types',
             },
             notices: {
                 readOnlyTitle: 'Read-only mode',
@@ -3558,15 +3596,23 @@ export const en = {
                 title: 'Delete Seat Map',
                 description: 'Delete "{{name}}"? This removes unassigned seats and detaches ticket types.',
             },
+            cloneDialog: {
+                title: 'Clone Seat Map',
+                description: 'Create a copy of "{{name}}"?',
+            },
             toasts: {
                 created: 'Seat map created successfully',
                 deleted: 'Seat map deleted successfully',
+                published: 'Seat map published successfully',
+                cloned: 'Seat map cloned successfully',
             },
             errors: {
                 eventRequired: 'Select a ticketed event before creating a seat map.',
                 nameRequired: 'Seat map name is required.',
                 createFailed: 'Failed to create seat map.',
                 deleteFailed: 'Failed to delete seat map.',
+                publishFailed: 'Failed to publish seat map.',
+                cloneFailed: 'Failed to clone seat map.',
             },
         },
         reservedSeating: {
@@ -6866,6 +6912,7 @@ export const es = {
             ticketing: {
                 isTicketed: '¿Este es un evento con entradas?',
                 title: 'Venta de Entradas',
+                setupHint: 'Configura los detalles de entradas ahora o guárdalo en borrador para terminar después.',
                 eventType: {
                     label: 'Tipo de Evento con Entradas',
                     helper: 'Utilizado para venta y visualización de entradas.',
@@ -6876,6 +6923,7 @@ export const es = {
                     other: 'Otro',
                 },
                 salesWindow: {
+                    immediate: 'Iniciar ventas inmediatamente',
                     start: 'Inicio de Ventas',
                     end: 'Fin de Ventas',
                     optional: 'Opcional',
@@ -6892,6 +6940,21 @@ export const es = {
                     label: 'Estado',
                     draft: 'Borrador',
                     published: 'Publicado',
+                },
+                internalDescription: {
+                    label: 'Descripción interna',
+                    placeholder: 'Notas internas solo para el staff',
+                },
+                publicDescription: {
+                    label: 'Descripción pública',
+                    placeholder: 'Visible para fans y compradores de entradas',
+                },
+                banner: {
+                    urlLabel: 'URL de imagen de banner',
+                    urlPlaceholder: 'https://...',
+                    uploadLabel: 'Subir imagen de banner',
+                    uploadButton: 'Elegir banner',
+                    uploadHelper: 'Recomendado: 1600x900 JPG/PNG (máx 5MB).',
                 },
                 ticketTypes: {
                     label: 'Tipos de Entradas',
@@ -7200,6 +7263,10 @@ export const es = {
                 salesEndLabel: 'Las ventas terminan',
                 teamScope: 'Alcance',
                 lastUpdated: 'Ultima actualizacion',
+                internalDescription: 'Descripción interna',
+                publicDescription: 'Descripción pública',
+                banner: 'Banner',
+                bannerAlt: 'Banner del evento con entradas',
                 name: 'Nombre',
                 price: 'Precio',
                 capacity: 'Capacidad',
@@ -7211,6 +7278,7 @@ export const es = {
                 tbd: 'Por definir',
                 unavailable: '-',
                 unlimited: 'Ilimitado',
+                notProvided: 'No proporcionado',
                 status: {
                     draft: 'Borrador',
                     published: 'Publicado',
@@ -7260,6 +7328,7 @@ export const es = {
                 generateStaffLink: 'Generar enlace de staff',
                 generatingStaffLink: 'Generando...',
                 openScanner: 'Abrir scanner',
+                editTicketingDetails: 'Editar detalles de entradas',
             },
             share: {
                 title: 'URL publica del evento',
@@ -7272,6 +7341,79 @@ export const es = {
                 demoBlocked: 'El modo demo esta habilitado. Los enlaces de staff no estan disponibles.',
                 offlineBlocked: 'Estas sin conexion. Reconecta e intenta de nuevo.',
                 missingEventId: 'Se requiere el ID del evento para generar un enlace de staff.',
+            },
+        },
+        seatMaps: {
+            title: 'Mapas de asientos',
+            subtitle: 'Crea y administra mapas de asientos reservados para eventos con entradas.',
+            status: {
+                draft: 'Borrador',
+                published: 'Publicado',
+            },
+            table: {
+                title: 'Mapas de asientos',
+                name: 'Mapa',
+                event: 'Evento',
+                venue: 'Sede',
+                noVenue: 'Sin sede',
+                usage: 'Uso',
+                usageSingular: '{{count}} tipo de entrada',
+                usagePlural: '{{count}} tipos de entrada',
+                seats: 'Asientos',
+                updated: 'Actualizado',
+                actions: 'Acciones',
+            },
+            form: {
+                eventLabel: 'Evento con entradas',
+                venueLabel: 'Sede',
+                noVenue: 'Sin sede seleccionada',
+                selectEvent: 'Selecciona un evento',
+                nameLabel: 'Nombre del mapa',
+                namePlaceholder: 'p. ej., Cancha principal',
+                searchPlaceholder: 'Buscar mapas de asientos',
+            },
+            actions: {
+                create: 'Crear mapa de asientos',
+                creating: 'Creando...',
+                publish: 'Publicar',
+                clone: 'Clonar',
+                cloning: 'Clonando...',
+                edit: 'Editar',
+                delete: 'Eliminar',
+                deleting: 'Eliminando...',
+                deleteBlockedByUsage: 'Usado por tipos de entrada',
+            },
+            notices: {
+                readOnlyTitle: 'Modo solo lectura',
+                offline: 'Estas sin conexion. Reconecta para crear o eliminar mapas de asientos.',
+                demoMode: 'El modo demo esta activo. Las acciones de escritura estan deshabilitadas.',
+            },
+            empty: {
+                noSeatMaps: 'Aun no hay mapas de asientos para esta organizacion.',
+                orgMissingTitle: 'No hay organizacion seleccionada',
+                orgMissingDescription: 'Selecciona una organizacion para administrar mapas de asientos.',
+            },
+            deleteDialog: {
+                title: 'Eliminar mapa de asientos',
+                description: '¿Eliminar "{{name}}"? Esto elimina asientos no asignados y desvincula tipos de entrada.',
+            },
+            cloneDialog: {
+                title: 'Clonar mapa de asientos',
+                description: '¿Crear una copia de "{{name}}"?',
+            },
+            toasts: {
+                created: 'Mapa de asientos creado correctamente',
+                deleted: 'Mapa de asientos eliminado correctamente',
+                published: 'Mapa de asientos publicado correctamente',
+                cloned: 'Mapa de asientos clonado correctamente',
+            },
+            errors: {
+                eventRequired: 'Selecciona un evento con entradas antes de crear un mapa de asientos.',
+                nameRequired: 'El nombre del mapa de asientos es obligatorio.',
+                createFailed: 'No se pudo crear el mapa de asientos.',
+                deleteFailed: 'No se pudo eliminar el mapa de asientos.',
+                publishFailed: 'No se pudo publicar el mapa de asientos.',
+                cloneFailed: 'No se pudo clonar el mapa de asientos.',
             },
         },
         reservedSeating: {
