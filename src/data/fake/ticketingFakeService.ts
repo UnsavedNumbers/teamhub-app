@@ -94,9 +94,9 @@ export function getFakeTicketTypesTotalCount(eventId: string, orgId?: string | n
 export function createFakeStaffValidationLink(ticketedEventId: string): string {
   const token = randomCode(24)
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-  const fallbackUrl = `/tickets/validate/${token}`
-  if (!ticketedEventId) return `${baseUrl}${fallbackUrl}`
-  return `${baseUrl}/tickets/validate/${token}`
+  const validatePath = getLink(RouteKeys.PORTAL_TICKET_VALIDATE, { token })
+  if (!ticketedEventId) return `${baseUrl}${validatePath}`
+  return `${baseUrl}${validatePath}`
 }
 
 export function getFakeTicketOrderById(orderId: string, orgId?: string | null) {
