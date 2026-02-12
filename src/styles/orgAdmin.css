@@ -1137,6 +1137,19 @@ html.dark .oa-card .pa-table-card:hover {
     box-shadow: none;
 }
 
+/* Ticketing accessory forms: enforce ample and consistent spacing between sections/cards */
+.oa-ticketing-form-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-8);
+}
+
+.oa-ticketing-field-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-5);
+}
+
 /* Empty states inside oa-cards should not have card styling */
 .oa-card .pa-card,
 .oa-card .pa-empty,
@@ -4597,32 +4610,34 @@ html.dark .oa-form-textarea {
     padding: 4px;
     gap: 4px;
     border: 1px solid var(--pa-border-subtle);
-    background: var(--pa-surface-subtle);
+    background: var(--pa-surface-panel);
 }
 
 html.dark .oa-segmented {
-    background: var(--pa-surface-panel);
+    background: var(--pa-surface-subtle);
     border-color: var(--pa-border-subtle);
 }
 
 .oa-segmented__button {
     flex: 1;
-    border: none;
-    background: transparent;
+    border: 1px solid var(--pa-border-primary);
+    background: color-mix(in srgb, var(--pa-primary) 10%, var(--pa-surface));
     padding: 8px 12px;
     border-radius: 8px;
     font-size: 0.9rem;
     font-weight: 600;
-    color: var(--pa-text-muted);
+    color: var(--pa-text-primary);
     transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
     cursor: pointer;
 }
 
 .oa-segmented__button:hover {
     color: var(--pa-text-primary);
+    background: color-mix(in srgb, var(--pa-primary) 16%, var(--pa-surface));
 }
 
 .oa-segmented__button.is-active {
+    border-color: var(--pa-border-subtle);
     background: var(--pa-surface);
     color: var(--pa-text-primary);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);

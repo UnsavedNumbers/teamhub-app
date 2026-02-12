@@ -861,13 +861,6 @@ const admin = {
             icon: 'add',
             requiresOrg: true,
         },
-        detail: {
-            path: '/admin/ticketing/events/:id',
-            params: ['id'] as const,
-            label: 'Event Details',
-            icon: 'event',
-            requiresOrg: true,
-        },
         ticketTypes: {
             create: {
                 path: '/admin/ticketing/events/:id/ticket-types/new',

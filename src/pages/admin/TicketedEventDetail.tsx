@@ -17,6 +17,11 @@ import PublicUrlShare from '@/components/ticketing/PublicUrlShare'
 import { useT } from '@/i18n/useI18n'
 import '../../styles/orgAdmin.css'
 
+interface TicketedEventDetailProps {
+  ticketedEventId?: string
+  embedded?: boolean
+}
+
 async function hashToken(token: string): Promise<string> {
   const encoder = new TextEncoder()
   const data = encoder.encode(token)
@@ -68,9 +73,10 @@ function formatSalesWindow(start?: string | null, end?: string | null) {
   return 'Opens automatically when event is published'
 }
 
-export default function TicketedEventDetail() {
+export default function TicketedEventDetail({ ticketedEventId, embedded = false }: TicketedEventDetailProps) {
   const t = useT()
-  const { id } = useParams<{ id: string }>()
+  const { id: routeId } = useParams<{ id: string }>()
+  const id = ticketedEventId ?? routeId
   const navigate = useNavigate()
   const scannerPath = useRouteLink('admin.ticketingScanner')
   const addTicketTypePath = useRouteLink('admin.ticketingEvents.ticketTypes.create', { id: id ?? '' })
@@ -140,6 +146,19 @@ export default function TicketedEventDetail() {
   })
 
   if (!id) {
+    if (embedded) {
+      return (
+        <div className="oa-card oa-p-6">
+          <EmptyState
+            icon="event"
+            title="Event missing"
+            description="We could not determine which ticketed event to show."
+            noCard
+          />
+        </div>
+      )
+    }
+
     return (
       <div className="oa-page-container">
         <EmptyState
@@ -154,6 +173,21 @@ export default function TicketedEventDetail() {
   }
 
   if (eventLoading && !event) {
+    if (embedded) {
+      return (
+        <div style={{ padding: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '32px' }}>
+            <div className="oa-skeleton" style={{ height: '250px' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="oa-skeleton" style={{ height: '60px' }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="oa-page-container">
         <div style={{ padding: '24px' }}>
@@ -177,6 +211,19 @@ export default function TicketedEventDetail() {
   }
 
   if (!event) {
+    if (embedded) {
+      return (
+        <div className="oa-card oa-p-6">
+          <EmptyState
+            icon="event_busy"
+            title={eventError ? 'Unable to load event' : 'Event not found'}
+            description={eventError ? 'Something went wrong while loading this ticketed event.' : 'This event may have been deleted.'}
+            noCard
+          />
+        </div>
+      )
+    }
+
     return (
       <div className="oa-page-container">
         <EmptyState
@@ -196,30 +243,7 @@ export default function TicketedEventDetail() {
     ? `${event.venue_name} (${[event.venue_city, event.venue_state].filter(Boolean).join(', ')})`
     : [event.venue_city, event.venue_state].filter(Boolean).join(', ') || 'TBD'
 
-  return (
-    <div className="oa-page-container">
-      <AdminPageHeader
-        title={event.title}
-        subtitle={`Status: ${event.status}`}
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <OrgAdminButton
-              variant="secondary"
-              icon={generateStaffLinkMutation.isPending ? 'hourglass_empty' : 'admin_panel_settings'}
-              onClick={() => generateStaffLinkMutation.mutate()}
-              disabled={generateStaffLinkMutation.isPending}
-            >
-              {generateStaffLinkMutation.isPending ? 'Generating...' : 'Generate Staff Link'}
-            </OrgAdminButton>
-            <OrgAdminButton as={Link} to={scannerPath} icon="qr_code_scanner">
-              Open Scanner
-            </OrgAdminButton>
-          </div>
-        }
-      >
-        {event.description && <p className="oa-page-description">{event.description}</p>}
-      </AdminPageHeader>
-
+  const ticketingContent = (
       <div className="oa-space-y-6">
         <div className="oa-grid oa-grid-cols-1 md:oa-grid-cols-2 oa-gap-6">
           <div className="oa-card">
@@ -360,6 +384,37 @@ export default function TicketedEventDetail() {
           )}
         </div>
       </div>
+  )
+
+  if (embedded) {
+    return ticketingContent
+  }
+
+  return (
+    <div className="oa-page-container">
+      <AdminPageHeader
+        title={event.title}
+        subtitle={`Status: ${event.status}`}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <OrgAdminButton
+              variant="secondary"
+              icon={generateStaffLinkMutation.isPending ? 'hourglass_empty' : 'admin_panel_settings'}
+              onClick={() => generateStaffLinkMutation.mutate()}
+              disabled={generateStaffLinkMutation.isPending}
+            >
+              {generateStaffLinkMutation.isPending ? 'Generating...' : 'Generate Staff Link'}
+            </OrgAdminButton>
+            <OrgAdminButton as={Link} to={scannerPath} icon="qr_code_scanner">
+              Open Scanner
+            </OrgAdminButton>
+          </div>
+        }
+      >
+        {event.description && <p className="oa-page-description">{event.description}</p>}
+      </AdminPageHeader>
+
+      {ticketingContent}
     </div>
   )
 }

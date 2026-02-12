@@ -10,7 +10,7 @@ import { useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { AdminPageHeader, Card, Button, Input } from '@/components/admin'
 import { FileUpload } from '@/components/common/FileUpload'
-import { useRouteLink } from '@/utils/routes'
+import { getLink, useRouteLink } from '@/utils/routes'
 import type { TicketedEventType, TicketedEventStatus } from '@/types/ticketing'
 import { uploadTicketBanner } from '@/data/services/organizationService'
 import '../../styles/orgAdmin.css'
@@ -68,7 +68,7 @@ export default function CreateTicketedEvent() {
           sales_start_at: formData.sales_start_at || null,
           sales_end_at: formData.sales_end_at || null,
         } as any)
-        .select('id')
+        .select('id,event_id')
         .single()
 
       if (error) throw error
@@ -83,7 +83,11 @@ export default function CreateTicketedEvent() {
       return data
     },
     onSuccess: (data) => {
-      navigate(useRouteLink('admin.ticketingEvents.detail', { id: data.id }))
+      if (data.event_id) {
+        navigate(`${getLink('admin.events.detail', { id: data.event_id })}?view=ticketing`)
+      } else {
+        navigate(useRouteLink('admin.ticketingEvents.list'))
+      }
     },
   })
 

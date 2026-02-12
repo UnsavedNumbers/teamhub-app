@@ -185,7 +185,6 @@ const TicketingOrderDetail = lazy(() => import('./pages/admin/TicketingOrderDeta
 const CreateTicketedEvent = lazy(() => import('./pages/admin/CreateTicketedEvent'))
 const CreateTicketType = lazy(() => import('./pages/admin/CreateTicketType'))
 const SeatMapBuilder = lazy(() => import('./pages/admin/ticketing/SeatMapBuilder'))
-const TicketedEventDetail = lazy(() => import('./pages/admin/TicketedEventDetail'))
 const CompTicketsPage = lazy(() => import('./pages/admin/CompTicketsPage'))
 const ValidationDashboard = lazy(() => import('./pages/admin/ValidationDashboard'))
 const CreateFee = lazy(() => import('./pages/admin/CreateFee'))
@@ -570,8 +569,7 @@ function AppWithTheme() {
               <Route path="ticketing/events/new" element={<FeatureGateRoute routeKey="admin.ticketingEvents.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateTicketedEvent /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/:id/ticket-types/new" element={<FeatureGateRoute routeKey="admin.ticketingEvents.ticketTypes.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateTicketType /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/:eventId/seat-maps/:seatMapId" element={<FeatureGateRoute routeKey="admin.ticketingEvents.seatMaps.builder"><Suspense fallback={<AdminLoadingSpinner />}><SeatMapBuilder /></Suspense></FeatureGateRoute>} />
-              <Route path="ticketing/events/:id" element={<FeatureGateRoute routeKey="admin.ticketingEvents.detail"><Suspense fallback={<AdminLoadingSpinner />}><TicketedEventDetail /></Suspense></FeatureGateRoute>} />
-              <Route path="ticketing/events/:id/dashboard" element={<FeatureGateRoute routeKey="admin.ticketingEvents.detail"><Suspense fallback={<AdminLoadingSpinner />}><ValidationDashboard /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/events/:id/dashboard" element={<FeatureGateRoute routeKey="admin.ticketingEvents.list"><Suspense fallback={<AdminLoadingSpinner />}><ValidationDashboard /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/comp-tickets" element={<FeatureGateRoute routeKey="admin.ticketingEvents.create"><Suspense fallback={<AdminLoadingSpinner />}><CompTicketsPage /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/orders" element={<FeatureGateRoute routeKey="admin.ticketingOrders"><Suspense fallback={<AdminLoadingSpinner />}><TicketingOrders /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/orders/:orderId" element={<FeatureGateRoute routeKey="admin.ticketingOrders"><Suspense fallback={<AdminLoadingSpinner />}><TicketingOrderDetail /></Suspense></FeatureGateRoute>} />

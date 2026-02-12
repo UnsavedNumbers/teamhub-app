@@ -65,7 +65,7 @@ export default function SeatMapBulkGenerator({ onGenerate, loading = false }: Se
   }
 
   return (
-    <form onSubmit={onSubmit} className="oa-space-y-4">
+    <form onSubmit={onSubmit} className="oa-ticketing-field-stack">
       {error && (
         <div className="oa-card oa-card--bordered oa-text-danger" style={{ background: 'var(--oa-danger-bg)', border: 'none' }}>
           {error}
@@ -73,8 +73,8 @@ export default function SeatMapBulkGenerator({ onGenerate, loading = false }: Se
       )}
 
       <div className="oa-form-grid oa-form-grid-2 oa-gap-4">
-        <div>
-          <label className="oa-label">{t('ticketing.reservedSeating.bulkGenerator.sectionName')}</label>
+        <div className="oa-form-group">
+          <label className="pa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.sectionName')}</label>
           <input
             value={sectionName}
             onChange={(event) => setSectionName(event.target.value)}
@@ -85,8 +85,8 @@ export default function SeatMapBulkGenerator({ onGenerate, loading = false }: Se
         </div>
 
         <div className="oa-form-grid oa-form-grid-2 oa-gap-3">
-          <div>
-            <label className="oa-label">{t('ticketing.reservedSeating.bulkGenerator.rowStart')}</label>
+          <div className="oa-form-group">
+            <label className="pa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.rowStart')}</label>
             <input
               type="number"
               min={1}
@@ -96,8 +96,8 @@ export default function SeatMapBulkGenerator({ onGenerate, loading = false }: Se
               required
             />
           </div>
-          <div>
-            <label className="oa-label">{t('ticketing.reservedSeating.bulkGenerator.rowEnd')}</label>
+          <div className="oa-form-group">
+            <label className="pa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.rowEnd')}</label>
             <input
               type="number"
               min={1}
@@ -110,8 +110,8 @@ export default function SeatMapBulkGenerator({ onGenerate, loading = false }: Se
         </div>
 
         <div className="oa-form-grid oa-form-grid-2 oa-gap-3">
-          <div>
-            <label className="oa-label">{t('ticketing.reservedSeating.bulkGenerator.seatStart')}</label>
+          <div className="oa-form-group">
+            <label className="pa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.seatStart')}</label>
             <input
               type="number"
               min={1}
@@ -121,8 +121,8 @@ export default function SeatMapBulkGenerator({ onGenerate, loading = false }: Se
               required
             />
           </div>
-          <div>
-            <label className="oa-label">{t('ticketing.reservedSeating.bulkGenerator.seatEnd')}</label>
+          <div className="oa-form-group">
+            <label className="pa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.seatEnd')}</label>
             <input
               type="number"
               min={1}

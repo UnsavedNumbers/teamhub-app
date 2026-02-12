@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useT } from '@/i18n/useI18n'
 import { getEventDetails } from '@/data/services/eventsService'
 import { supabase } from '@/lib/supabase'
 import { showError, showSuccess } from '@/utils/toast'
 import { getLink } from '@/utils/routes'
+import { getReasonIcon, getReasonMessage, shouldShowUpgradePrompt, useFeatureGate } from '@/lib/featureGate'
 import type { CalendarEvent, EventLocation } from '@/types/calendar'
 import { formatEventDate, formatEventTimeRange } from '@/types/calendar'
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { ConfirmDialog, EmptyState } from '@/components/admin'
+import TicketedEventDetail from '@/pages/admin/TicketedEventDetail'
 import '../../styles/orgAdmin.css'
 
 interface CommuteSummary {
@@ -145,8 +147,10 @@ function hasRecurringSchedule(recurringPattern: CalendarEvent['recurring_pattern
 export default function AdminEventDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const t = useT()
   const { context, isReady } = useUserContext()
+  const { allowed: ticketingAllowed, loading: ticketingGateLoading, reason_code: ticketingReasonCode } = useFeatureGate('ticketing')
 
   const [event, setEvent] = useState<CalendarEvent | null>(null)
   const [loading, setLoading] = useState(true)
@@ -522,6 +526,13 @@ export default function AdminEventDetail() {
   const relativeTime = getRelativeTimeLabel(event.start_time)
   const timezoneDisplay = formatTimezoneDisplay(event.timezone, event.start_time)
   const isRecurring = hasRecurringSchedule(event.recurring_pattern)
+  const currentView = searchParams.get('view') === 'ticketing' ? 'ticketing' : 'details'
+
+  const setView = (view: 'details' | 'ticketing') => {
+    const next = new URLSearchParams(searchParams)
+    next.set('view', view)
+    setSearchParams(next, { replace: true })
+  }
 
   /* ------------------------------------------------------------------ */
   /*  Main render                                                        */
@@ -552,6 +563,69 @@ export default function AdminEventDetail() {
       />
 
       <div className="space-y-6">
+        <div className="oa-segmented" role="tablist" aria-label="Event detail sections">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={currentView === 'details'}
+            className={`oa-segmented__button ${currentView === 'details' ? 'is-active' : ''}`}
+            onClick={() => setView('details')}
+          >
+            Event Details
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={currentView === 'ticketing'}
+            className={`oa-segmented__button ${currentView === 'ticketing' ? 'is-active' : ''}`}
+            onClick={() => setView('ticketing')}
+          >
+            Ticketing
+          </button>
+        </div>
+
+        {currentView === 'ticketing' ? (
+          ticketingGateLoading ? (
+            <div className="oa-card" style={{ padding: 'var(--pa-space-6)' }}>
+              <div className="oa-skeleton" style={{ height: 120 }} />
+            </div>
+          ) : !ticketingAllowed ? (
+            <section className="oa-card" style={{ padding: 'var(--pa-space-6)' }}>
+              <div className="text-center" style={{ maxWidth: 560, margin: '0 auto' }}>
+                <span className="material-symbols-rounded text-6xl text-amber-500 mb-4 block">
+                  {getReasonIcon(ticketingReasonCode as any)}
+                </span>
+                <h2 className="text-xl font-semibold" style={{ marginBottom: 'var(--pa-space-2)' }}>Feature Unavailable</h2>
+                <p style={{ color: 'var(--pa-text-muted)', marginBottom: 'var(--pa-space-5)' }}>
+                  {getReasonMessage(ticketingReasonCode as any)}
+                </p>
+                {shouldShowUpgradePrompt(ticketingReasonCode as any) && (
+                  <a href={getLink('admin.organization.billing')} className="oa-btn oa-btn--primary">
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>workspace_premium</span>
+                    Upgrade Plan
+                  </a>
+                )}
+              </div>
+            </section>
+          ) : event.ticketed_event?.id ? (
+            <TicketedEventDetail ticketedEventId={event.ticketed_event.id} embedded />
+          ) : (
+            <section className="oa-card" style={{ padding: 'var(--pa-space-6)' }}>
+              <div className="oa-empty-hint" style={{ marginBottom: 'var(--pa-space-4)' }}>
+                <span className="material-symbols-outlined">confirmation_number</span>
+                <p>{t('admin.events.detailPage.noTicketing')}</p>
+              </div>
+              <button
+                className="oa-btn oa-btn--secondary oa-btn--compact"
+                onClick={() => navigate(getLink('admin.events.edit', { id: event.id }))}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+                {t('admin.events.detailPage.actions.addTicketing')}
+              </button>
+            </section>
+          )
+        ) : (
+          <>
         {/* ── Cancelled banner ────────────────────────────────────── */}
         {event.is_cancelled && (
           <div className="oa-cancelled-banner">
@@ -986,53 +1060,6 @@ export default function AdminEventDetail() {
               )}
             </section>
 
-            {/* Ticketing ────────────────────────────────────────────── */}
-            <section className="oa-card" style={{ padding: 'var(--pa-space-6)' }}>
-              <h2 className="oa-card-title" style={{ marginBottom: 'var(--pa-space-5)' }}>
-                <span className="material-symbols-outlined">confirmation_number</span>
-                {t('admin.events.ticketing.title')}
-              </h2>
-
-              {event.ticketed_event ? (
-                <div className="space-y-3">
-                  <div className="oa-stat-item">
-                    <span className="material-symbols-outlined">info</span>
-                    <div>
-                      <div className="oa-stat-item__label">{t('admin.events.detailPage.ticketStatusLabel')}</div>
-                      <div className="oa-stat-item__value">{event.ticketed_event.status}</div>
-                    </div>
-                  </div>
-                  <div className="oa-stat-item">
-                    <span className="material-symbols-outlined">category</span>
-                    <div>
-                      <div className="oa-stat-item__label">{t('admin.events.detailPage.ticketTypesLabel')}</div>
-                      <div className="oa-stat-item__value">{event.ticketed_event.ticket_types?.length || 0}</div>
-                    </div>
-                  </div>
-                  <button
-                    className="oa-btn oa-btn--secondary oa-btn--compact"
-                    onClick={() => navigate(getLink('admin.ticketingEvents.detail', { id: event.ticketed_event!.id }))}
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>confirmation_number</span>
-                    {t('admin.events.detailPage.actions.openTicketing')}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="oa-empty-hint">
-                    <span className="material-symbols-outlined">confirmation_number</span>
-                    <p>{t('admin.events.detailPage.noTicketing')}</p>
-                  </div>
-                  <button
-                    className="oa-btn oa-btn--secondary oa-btn--compact"
-                    onClick={() => navigate(getLink('admin.events.edit', { id: event.id }))}
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
-                    {t('admin.events.detailPage.actions.addTicketing')}
-                  </button>
-                </div>
-              )}
-            </section>
           </div>
         </div>
 
@@ -1064,6 +1091,8 @@ export default function AdminEventDetail() {
               </button>
             </div>
           </section>
+        )}
+          </>
         )}
       </div>
 
