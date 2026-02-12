@@ -75,7 +75,7 @@ const formatDateTimeRange = (start: string, end: string, timezone?: string | nul
   const dateFormatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', timeZone: timezone || undefined })
   const timeFormatter = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZone: timezone || undefined })
   if (sameDay) {
-    return `${dateFormatter.format(startDate)} · ${timeFormatter.format(startDate)} - ${timeFormatter.format(endDate)}`
+    return `${dateFormatter.format(startDate)} ï¿½ ${timeFormatter.format(startDate)} - ${timeFormatter.format(endDate)}`
   }
   return `${dateFormatter.format(startDate)} ${timeFormatter.format(startDate)} - ${dateFormatter.format(endDate)} ${timeFormatter.format(endDate)}`
 }
@@ -205,7 +205,7 @@ function ActiveFilterChips({
             onClick={() => onRemove(chip.key, chip.value)}
             aria-label="Remove filter"
           >
-            ×
+            ï¿½
           </button>
         </span>
       ))}
@@ -264,7 +264,7 @@ function PublicTicketingHero({ orgId }: { orgId?: string }) {
       </div>
       <div className="oa-ticketing-hero-link">
         <div className="oa-ticketing-hero-url" role="status" aria-live="polite">
-          {isLoading ? 'Loading public link…' : slugMissing ? 'Set your organization slug to enable public sales.' : publicUrl}
+          {isLoading ? 'Loading public linkï¿½' : slugMissing ? 'Set your organization slug to enable public sales.' : publicUrl}
         </div>
         <div className="oa-ticketing-hero-actions">
           {slugMissing ? (
@@ -582,17 +582,17 @@ function ListView({ events, onView, onDuplicate, onDelete }: { events: TicketedE
               <div className="oa-ticket-list__title">{event.title}</div>
               <div className="oa-ticket-list__meta">
                 {formatDateTimeRange(event.starts_at, event.ends_at, event.timezone)}
-                {event.venue?.name ? ` · ${event.venue.name}` : ''}
+                {event.venue?.name ? ` ï¿½ ${event.venue.name}` : ''}
               </div>
               <div className="oa-ticket-list__meta oa-ticket-list__meta--sub">
-                {event.program?.name ? `${event.program.name}` : ''}{event.opponent ? ` · ${event.is_home ? 'Home' : 'Away'} vs ${event.opponent}` : ''}
+                {event.program?.name ? `${event.program.name}` : ''}{event.opponent ? ` ï¿½ ${event.is_home ? 'Home' : 'Away'} vs ${event.opponent}` : ''}
               </div>
             </div>
           </div>
           <div className="oa-ticket-list__actions">
             {event.ticket_progress_pct !== null && event.ticket_progress_pct !== undefined && (
               <div className="oa-ticket-list__stat">
-                {event.tickets_sold || 0}/{event.capacity_total || '—'}
+                {event.tickets_sold || 0}/{event.capacity_total || 'ï¿½'}
               </div>
             )}
             <div className="oa-ticket-list__price">{formatCurrency(event.revenue_cents || 0)}</div>
@@ -633,11 +633,11 @@ function TableView({
     const cols: any[] = [
       { id: 'title', label: 'Event', sortable: true, render: (row: TicketedEvent) => <div className="oa-font-semibold">{row.title}</div> },
       { id: 'starts_at', label: 'Date', sortable: true, render: (row: TicketedEvent) => <span className="oa-text-sm oa-text-muted">{formatDateTimeRange(row.starts_at, row.ends_at, row.timezone)}</span> },
-      { id: 'program', label: 'Program', render: (row: TicketedEvent) => row.program?.name || '—' },
-      { id: 'season', label: 'Season', render: (row: TicketedEvent) => row.season?.name || '—' },
-      { id: 'venue', label: 'Venue', render: (row: TicketedEvent) => row.venue?.name || row.venue_name || '—' },
+      { id: 'program', label: 'Program', render: (row: TicketedEvent) => row.program?.name || 'ï¿½' },
+      { id: 'season', label: 'Season', render: (row: TicketedEvent) => row.season?.name || 'ï¿½' },
+      { id: 'venue', label: 'Venue', render: (row: TicketedEvent) => row.venue?.name || row.venue_name || 'ï¿½' },
       { id: 'status', label: 'Status', render: (row: TicketedEvent) => <Badge variant={eventStatusVariant[row.status] || 'neutral'}>{row.status}</Badge> },
-      { id: 'sale_status', label: 'Sale', render: (row: TicketedEvent) => row.sale_status ? <Badge variant={saleStatusTone[row.sale_status].variant}>{saleStatusTone[row.sale_status].label}</Badge> : '—' },
+      { id: 'sale_status', label: 'Sale', render: (row: TicketedEvent) => row.sale_status ? <Badge variant={saleStatusTone[row.sale_status].variant}>{saleStatusTone[row.sale_status].label}</Badge> : 'ï¿½' },
       { id: 'tickets', label: 'Tickets', sortable: true, render: (row: TicketedEvent) => `${row.tickets_sold || 0}${row.capacity_total ? ` / ${row.capacity_total}` : ''}` },
       { id: 'revenue', label: 'Revenue', sortable: true, render: (row: TicketedEvent) => formatCurrency(row.revenue_cents || 0) },
       { id: 'actions', label: '', render: (row: TicketedEvent) => (
@@ -741,7 +741,7 @@ function PaginationControls({
   return (
     <div className="oa-flex oa-justify-between oa-items-center oa-mt-4 oa-flex-wrap oa-gap-2">
       <div className="oa-text-sm oa-text-muted">
-        Page {page} of {totalPages} · {total} results
+        Page {page} of {totalPages} ï¿½ {total} results
       </div>
       <div className="oa-flex oa-gap-2 oa-items-center">
         <select className="oa-input" value={perPage} onChange={(e) => onPerPageChange(Number(e.target.value))}>

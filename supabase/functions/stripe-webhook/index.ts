@@ -552,13 +552,20 @@ serve(async (req) => {
           // Pass raw tokens for QR code generation and access links
           const baseUrl = Deno.env.get("SUPABASE_URL")?.replace("/rest/v1", "") || ""
           try {
-            // Map tickets to include raw tokens for email
-            const ticketsForEmail = ticketsWithRawTokens.map(({ ticket, qr_token_raw }) => ({
-              id: ticket.id || null, // Will be set after insert
-              qr_token_raw,
-              entry_code: ticket.entry_code,
-              ticket_type_id: ticket.ticket_type_id,
-            }))
+            // Map inserted tickets to include raw tokens for email
+            const ticketsForEmail = insertedTickets.map((insertedTicket) => {
+              const matched = ticketsWithRawTokens.find(
+                ({ ticket }) =>
+                  ticket.entry_code === insertedTicket.entry_code &&
+                  ticket.ticket_type_id === insertedTicket.ticket_type_id,
+              )
+              return {
+                id: insertedTicket.id,
+                qr_token_raw: matched?.qr_token_raw || "",
+                entry_code: insertedTicket.entry_code,
+                ticket_type_id: insertedTicket.ticket_type_id,
+              }
+            })
             
             await fetch(`${baseUrl}/functions/v1/tickets-send-receipt`, {
               method: "POST",
