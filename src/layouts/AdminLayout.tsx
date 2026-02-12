@@ -94,6 +94,7 @@ export default function AdminLayout() {
       requiresOrg: true,
       children: [
         { routeKey: 'admin.ticketingEvents.list', text: t('admin.navigation.ticketedEvents'), icon: 'event', path: getLink('admin.ticketingEvents.list'), requiresOrg: true },
+        { routeKey: 'admin.ticketingEvents.seatMaps.list', text: t('admin.navigation.seatMaps'), icon: 'event_seat', path: getLink('admin.ticketingEvents.seatMaps.list'), requiresOrg: true },
         { routeKey: 'admin.ticketingOrders', text: t('admin.navigation.ticketingOrders'), icon: 'receipt_long', path: getLink('admin.ticketingOrders'), requiresOrg: true },
         { routeKey: 'admin.ticketingScanner', text: t('admin.navigation.gateEntry'), icon: 'qr_code_scanner', path: getLink('admin.ticketingScanner'), requiresOrg: true },
       ],
@@ -134,7 +135,7 @@ export default function AdminLayout() {
       ],
     },
     {
-      label: 'Account',
+      label: t('admin.navigation.account'),
       icon: 'account_circle',
       path: getPath(RouteKeys.ADMIN_SETTINGS),
       requiresOrg: false,
@@ -298,7 +299,7 @@ export default function AdminLayout() {
                     <div
                       className="oa-nav-link-top"
                       style={{ opacity: 0.4, cursor: 'not-allowed' }}
-                      title="Requires organization setup"
+                      title={t('admin.navigation.requiresOrganizationSetup')}
                     >
                       <span className="material-symbols-outlined">{item.icon}</span>
                       <span>{item.label}</span>
@@ -308,7 +309,7 @@ export default function AdminLayout() {
               }
 
               // Dashboard should never show as active (always white like unselected items)
-              const isDashboard = item.label === 'Dashboard'
+              const isDashboard = item.label === t('admin.navigation.dashboard')
               const shouldShowActive = !isDashboard && active
 
               return (
@@ -356,7 +357,7 @@ export default function AdminLayout() {
                             <div
                               className="oa-nav-link"
                               style={{ opacity: 0.4, cursor: 'not-allowed' }}
-                              title="Requires organization setup"
+                              title={t('admin.navigation.requiresOrganizationSetup')}
                             >
                               <span className="material-symbols-outlined">{child.icon}</span>
                               <span>{child.text}</span>
