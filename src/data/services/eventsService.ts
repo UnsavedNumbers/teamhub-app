@@ -1019,7 +1019,7 @@ export async function createEvent(
                 team_id: formData.team_id || null,
                 event_type: formData.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
                 title: formData.title,
-                description: formData.notes || null,
+                description: formData.ticketing.internal_description?.trim() || formData.notes || null,
                 starts_at: start.toISOString(),
                 ends_at: end.toISOString(),
                 timezone: formData.timezone,
@@ -1034,6 +1034,8 @@ export async function createEvent(
                 sales_start_at: formData.ticketing.sales_start_at ? new Date(formData.ticketing.sales_start_at).toISOString() : null,
                 sales_end_at: formData.ticketing.sales_end_at ? new Date(formData.ticketing.sales_end_at).toISOString() : (end.toISOString()),
                 status: formData.ticketing.status as Database['public']['Enums']['ticketed_event_status'],
+                event_description: formData.ticketing.event_description?.trim() || null,
+                ticket_banner_url: formData.ticketing.ticket_banner_url?.trim() || null,
             }
 
             const { data: ticketedEvent, error: ticketedEventError } = await supabase
@@ -1175,7 +1177,7 @@ export async function updateEvent(
                     team_id: formData.team_id ?? undefined,
                     event_type: formData.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
                     title: formData.title,
-                    description: formData.notes || null,
+                    description: formData.ticketing.internal_description?.trim() || formData.notes || null,
                     starts_at: start.toISOString(),
                     ends_at: end.toISOString(),
                     timezone: formData.timezone,
@@ -1184,6 +1186,8 @@ export async function updateEvent(
                     // ... other fields
                     sales_start_at: formData.ticketing.sales_start_at ? new Date(formData.ticketing.sales_start_at).toISOString() : null,
                     sales_end_at: formData.ticketing.sales_end_at ? new Date(formData.ticketing.sales_end_at).toISOString() : (end.toISOString()),
+                    event_description: formData.ticketing.event_description?.trim() || null,
+                    ticket_banner_url: formData.ticketing.ticket_banner_url?.trim() || null,
 
                 }
 

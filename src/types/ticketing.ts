@@ -23,12 +23,36 @@ export interface SeatAttributes {
 
 export interface SeatMap {
   id: string
-  ticketed_event_id: string
+  org_id: string
+  venue_id: string | null
+  team_id: string | null
+  ticketed_event_id: string | null  // legacy, nullable after migration
   name: string
   chart_image_url: string | null
   metadata: Record<string, unknown>
+  status: 'draft' | 'published'
+  version: number
+  published_at: string | null
+  published_snapshot_id: string | null
   created_at: string
   updated_at: string
+  // Joined relations (optional)
+  venue?: Venue | null
+  team?: { id: string; name: string } | null
+  usage_count?: number
+}
+
+export interface SeatMapSnapshot {
+  id: string
+  seat_map_id: string
+  version: number
+  name: string
+  chart_image_url: string | null
+  metadata: Record<string, unknown>
+  sections_data: unknown[]
+  section_count: number
+  published_at: string
+  created_at: string
 }
 
 export interface SeatMapSection {
@@ -110,15 +134,31 @@ export interface TicketingSeason {
   is_active?: boolean | null
 }
 
-export interface TicketingVenue {
+export interface Venue {
   id: string
   org_id: string
   name: string
+  google_place_id?: string | null
   address?: string | null
+  address_line1?: string | null
+  address_line2?: string | null
   city?: string | null
   state?: string | null
+  postal_code?: string | null
+  country?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  maps_url?: string | null
+  is_virtual?: boolean
+  virtual_link?: string | null
   capacity?: number | null
+  default_seat_map_id?: string | null
+  created_at?: string
+  updated_at?: string
 }
+
+/** @deprecated Use Venue instead */
+export type TicketingVenue = Venue
 
 export interface TicketedEvent {
   id: string
@@ -168,7 +208,7 @@ export interface TicketedEvent {
   // Relations (optional)
   program?: TicketingProgram | null
   season?: TicketingSeason | null
-  venue?: TicketingVenue | null
+  venue?: Venue | null
 
   // Derived metrics (for admin dashboards)
   tickets_sold?: number

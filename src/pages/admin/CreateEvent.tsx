@@ -1,7 +1,7 @@
-
+﻿
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useForm, Controller, useFieldArray } from 'react-hook-form'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useForm, Controller } from 'react-hook-form'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
@@ -36,9 +36,9 @@ import {
 import { API_TIMEOUT_MS } from '../../constants/api'
 import { STORAGE_KEYS, STORAGE_EXPIRY } from '../../constants/storage'
 import { getDefaultEventVisibility } from '../../utils/fanVisibilityHelpers'
-import { uploadTicketBanner } from '../../data/services/organizationService'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { logEvent } from '../../utils/eventLogger'
+import { uploadTicketBanner } from '../../data/services/organizationService'
 import '../../styles/orgAdmin.css'
 
 const STORAGE_KEY = STORAGE_KEYS.FORM_AUTOSAVE
@@ -102,6 +102,7 @@ const buildLocalhostEventDefaults = (): Partial<EventFormData> => {
       sales_start_at: '',
       sales_end_at: '',
       status: 'draft',
+      internal_description: 'Internal ticketing notes for staff and operations.',
       event_description: 'Test ticketed event for local development.',
       ticket_banner_url: '',
       ticket_types: [
@@ -137,17 +138,19 @@ export default function CreateEvent() {
   const [showLocationDetails, setShowLocationDetails] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
   const [draftSaved, setDraftSaved] = useState(false)
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
   const [orgVisibilityDefaults, setOrgVisibilityDefaults] = useState<Record<string, boolean> | null>(null)
   const [visibility, setVisibility] = useState<'public' | 'private'>('private')
-  const [bannerFile, setBannerFile] = useState<File | null>(null)
   const [hasStructure, setHasStructure] = useState(!isLocalhostEnvironment()) // Whether selected sport has program/season/team structure (start false on localhost so cascade runs fully)
 
   const t = useT()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const hasRestoredRef = useRef(false)
   const previousSportIdRef = useRef<string | undefined>(undefined)
   const previousProgramIdRef = useRef<string | undefined>(undefined)
+  const startsAsTicketed = searchParams.get('ticketed') === '1' || searchParams.get('from') === 'ticketing'
   
   // Feature gate for ticketing
   const { allowed: ticketingAllowed, loading: ticketingGateLoading } = useFeatureGate('ticketing')
@@ -193,12 +196,13 @@ export default function CreateEvent() {
     rsvp_enabled: false,
     rsvp_type: null,
     ticketing: {
-      is_ticketed: false,
+      is_ticketed: startsAsTicketed,
       event_type: 'other',
       sales_immediate: true,
       sales_start_at: '',
       sales_end_at: '',
       status: 'draft',
+      internal_description: '',
       event_description: '',
       ticket_banner_url: '',
       ticket_types: []
@@ -277,7 +281,7 @@ export default function CreateEvent() {
   const watchSeasonId = watch('season_id')
   const watchRSVPEnabled = watch('rsvp_enabled')
   const watchTicketingEnabled = watch('ticketing.is_ticketed')
-  const watchTicketSalesImmediate = watch('ticketing.sales_immediate')
+  const watchTicketingSalesImmediate = watch('ticketing.sales_immediate')
   const watchEventType = watch('type')
 
   useEffect(() => {
@@ -312,12 +316,6 @@ export default function CreateEvent() {
   // Watch all form values for persistence
   const formValues = watch()
   
-  // Ticket types field array
-  const { fields: ticketTypeFields, append: appendTicketType, remove: removeTicketType } = useFieldArray({
-    control,
-    name: 'ticketing.ticket_types',
-  })
-
   // Note: We do NOT clear saved drafts on unmount - users should be able to navigate
   // away to look up information and come back to their form. Drafts expire after 2 hours
   // or are cleared on successful submit.
@@ -375,7 +373,7 @@ export default function CreateEvent() {
     }
   }, [formValues, showLocationDetails, showRecurring])
 
-  // Cascade: Sport → Program → Season → Team. Each step populates the next dropdown.
+  // Cascade: Sport â†’ Program â†’ Season â†’ Team. Each step populates the next dropdown.
 
   const fetchProgramsForSport = useCallback(async (sportId: string) => {
     if (!isReady || !context?.orgId) return
@@ -692,22 +690,8 @@ export default function CreateEvent() {
         return
       }
 
-      // Ticketing sales window defaults
-      const salesImmediate = data.ticketing?.sales_immediate ?? true
-      const salesStartAt = salesImmediate
-        ? null
-        : (data.ticketing?.sales_start_at ? new Date(data.ticketing.sales_start_at) : null)
-      const salesEndAt = salesImmediate
-        ? null
-        : (data.ticketing?.sales_end_at ? new Date(data.ticketing.sales_end_at) : null)
-      const resolvedSalesEnd =
-        data.ticketing?.is_ticketed && !salesImmediate && !salesEndAt
-          ? end
-          : salesEndAt || null
-
       const resolvedTeamId = data.team_id || null
-
-      let selectedTeamOrgId: string | null = null
+      let resolvedOrgId = context.orgId
       if (resolvedTeamId) {
         const { data: selectedTeam, error: selectedTeamError } = await supabase
           .from('teams')
@@ -728,7 +712,13 @@ export default function CreateEvent() {
           setSaving(false)
           return
         }
-        selectedTeamOrgId = selectedTeam.org_id
+        resolvedOrgId = selectedTeam.org_id
+      }
+
+      if (!resolvedOrgId) {
+        setError(t('errors.missingOrganization'))
+        setSaving(false)
+        return
       }
 
       // 1. Insert Event
@@ -800,31 +790,35 @@ export default function CreateEvent() {
            if (recurError) throw recurError
       }
 
-      // 4. Handle Ticketing
+      // 4. Optional ticketing setup
       if (data.ticketing?.is_ticketed) {
-        const orgId = context.orgId || selectedTeamOrgId
-        if (!orgId) {
-          throw new Error('Failed to resolve organization ID for ticketing')
-        }
-        let finalBannerUrl = data.ticketing.ticket_banner_url?.trim() || null
+        const salesImmediate = data.ticketing.sales_immediate ?? true
+        const salesStartAt = salesImmediate ? null : (data.ticketing.sales_start_at ? new Date(data.ticketing.sales_start_at) : null)
+        const salesEndAt = salesImmediate ? null : (data.ticketing.sales_end_at ? new Date(data.ticketing.sales_end_at) : null)
+        const resolvedSalesEnd = !salesImmediate && !salesEndAt ? end : salesEndAt
 
-        // Build ticketed_events insert
+        let finalBannerUrl = data.ticketing.ticket_banner_url?.trim() || null
+        if (bannerFile) {
+          const { path, error: uploadError } = await uploadTicketBanner(resolvedOrgId, eventDataAny.id, bannerFile)
+          if (uploadError) throw new Error(`Banner upload failed: ${uploadError.message}`)
+          if (path) finalBannerUrl = path
+        }
+
         type TicketedEventInsert = Database['public']['Tables']['ticketed_events']['Insert']
         const ticketedEventData: TicketedEventInsert = {
           event_id: eventDataAny.id,
-          org_id: orgId,
-          team_id: resolvedTeamId,
+          org_id: resolvedOrgId,
+          team_id: resolvedTeamId as unknown as TicketedEventInsert['team_id'],
           event_type: data.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
           title: data.title,
-          description: data.notes || null,
+          description: data.ticketing.internal_description?.trim() || null,
           event_description: data.ticketing.event_description?.trim() || null,
-          ticket_banner_url: finalBannerUrl,
-          cover_image_path: finalBannerUrl,
-          starts_at: new Date(data.start_time).toISOString(),
+          starts_at: start.toISOString(),
           ends_at: end.toISOString(),
           timezone: data.timezone,
           venue_name: data.location.venue_name?.trim() || null,
           venue_address_line1: data.location.address_line1?.trim() || null,
+          venue_address_line2: data.location.address_line2?.trim() || null,
           venue_city: data.location.city?.trim() || null,
           venue_state: data.location.state?.trim() || null,
           venue_postal_code: data.location.postal_code?.trim() || null,
@@ -834,95 +828,10 @@ export default function CreateEvent() {
           sales_start_at: salesStartAt ? salesStartAt.toISOString() : null,
           sales_end_at: resolvedSalesEnd ? resolvedSalesEnd.toISOString() : null,
           status: data.ticketing.status as Database['public']['Enums']['ticketed_event_status'],
+          ticket_banner_url: finalBannerUrl,
         }
-
-        const { data: ticketedEventDataResult, error: ticketedEventError } = await supabase
-          .from('ticketed_events')
-          .insert(ticketedEventData)
-          .select('id')
-          .single()
-
-        if (ticketedEventError) {
-          throw new Error(`Ticketing setup failed: ${ticketedEventError.message}`)
-        }
-
-        if (!ticketedEventDataResult) {
-          throw new Error('Failed to create ticketed event')
-        }
-
-        const ticketedEventId = ticketedEventDataResult.id
-
-        if (bannerFile) {
-          const { path, error: uploadError } = await uploadTicketBanner(orgId, ticketedEventId, bannerFile)
-          if (uploadError) {
-            console.error('Ticket banner upload failed:', uploadError)
-          }
-
-          if (!uploadError && path) {
-            finalBannerUrl = path
-            const { error: updateBannerError } = await supabase
-              .from('ticketed_events')
-              .update({
-                ticket_banner_url: finalBannerUrl,
-                cover_image_path: finalBannerUrl,
-              })
-              .eq('id', ticketedEventId)
-
-            if (updateBannerError) {
-              console.error('Ticket banner URL save failed:', updateBannerError)
-            }
-          }
-        }
-
-        // Insert ticket types
-        if (data.ticketing.ticket_types && data.ticketing.ticket_types.length > 0) {
-          const hasReservedTypesWithoutSeatMap = data.ticketing.ticket_types.some(
-            (ticketType) => ticketType.name.trim() !== '' && ticketType.seating_mode === 'reserved_seating',
-          )
-          if (hasReservedTypesWithoutSeatMap) {
-            throw new Error(t('admin.events.ticketing.ticketTypes.mode.requiresSeatMap'))
-          }
-
-          type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert'] & {
-            seating_mode?: 'general_admission' | 'reserved_seating'
-          }
-          const ticketTypeInserts: TicketTypeInsert[] = data.ticketing.ticket_types
-            .filter(tt => tt.name.trim() !== '')
-            .map((tt, index) => {
-              const priceDollars = parseFloat(tt.price_dollars)
-              const priceCents = Number.isFinite(priceDollars) && priceDollars >= 0 
-                ? Math.round(priceDollars * 100) 
-                : 0
-              
-              const capacityStr = tt.capacity.trim()
-              const capacity = capacityStr === '' ? null : parseInt(capacityStr)
-              const capacityTotal = capacity !== null && !isNaN(capacity) && capacity > 0 ? capacity : null
-              const capacityRemaining = capacityTotal
-
-              return {
-                org_id: orgId,
-                ticketed_event_id: ticketedEventId,
-                name: tt.name.trim(),
-                price_cents: priceCents,
-                currency: 'USD',
-                capacity_total: capacityTotal,
-                capacity_remaining: capacityRemaining,
-                sort_order: index,
-                is_active: true,
-                seating_mode: tt.seating_mode === 'reserved_seating' ? 'reserved_seating' : 'general_admission',
-              } satisfies TicketTypeInsert
-            })
-
-          if (ticketTypeInserts.length > 0) {
-            const { error: ticketTypesError } = await supabase
-              .from('ticket_types')
-              .insert(ticketTypeInserts)
-
-            if (ticketTypesError) {
-              throw new Error(`Failed to create ticket types: ${ticketTypesError.message}`)
-            }
-          }
-        }
+        const { error: ticketedEventError } = await supabase.from('ticketed_events').insert(ticketedEventData)
+        if (ticketedEventError) throw new Error(`Ticketing setup failed: ${ticketedEventError.message}`)
       }
 
       // Clear saved form data on successful submission
@@ -948,19 +857,13 @@ export default function CreateEvent() {
         }
       }
 
-      // Success message for ticketed events
       if (data.ticketing?.is_ticketed) {
-        const ticketTypesCount = data.ticketing.ticket_types?.filter(tt => tt.name.trim() !== '').length || 0
-        if (ticketTypesCount === 0) {
-          showSuccess(t('admin.events.ticketing.success.noTypes'))
-        } else {
-          showSuccess(t('admin.events.ticketing.success.created'))
-        }
+        showSuccess('Event and ticketing details created. Continue setup on the Ticketing tab.')
+        navigate(`${getLink('admin.events.detail', { id: eventDataAny.id })}?view=ticketing`)
       } else {
         showSuccess(t('admin.events.ticketing.success.created'))
+        navigate(getLink(RouteKeys.ADMIN_EVENTS))
       }
-
-      navigate(getLink(RouteKeys.ADMIN_EVENTS))
     } catch (err: unknown) {
       // Parse database errors and show friendly messages
       const rawError = getErrorMessage(err) || ''
@@ -1306,7 +1209,7 @@ export default function CreateEvent() {
           {!ticketingGateLoading && ticketingAllowed && (
             <Card title={t('admin.events.ticketing.title')} className="oa-mb-6">
               <div className="oa-form-section-body">
-                <p className="oa-form-section-subtitle oa-mb-4">Activate ticket sales, control the sales window, and manage inventory.</p>
+                <p className="oa-form-section-subtitle oa-mb-4">{t('admin.events.ticketing.setupHint')}</p>
                 <div className="oa-checkbox-stack">
                   <Controller 
                     name="ticketing.is_ticketed" 
@@ -1320,369 +1223,139 @@ export default function CreateEvent() {
                     )} 
                   />
                 </div>
-
                 {watchTicketingEnabled && (
-                  <div className="oa-card oa-ticket-card oa-mb-4">
-                    <div className="oa-mb-4">
-                      <Controller
-                        name="notes"
-                        control={control}
-                        render={({ field }) => (
-                          <div className="oa-space-y-2">
-                            <label className="oa-label">Internal Notes / Description</label>
-                            <textarea
-                              className="oa-input oa-textarea"
+                  <div className="oa-space-y-4 oa-mt-4">
+                    <div className="oa-form-grid oa-form-grid-2 oa-form-grid-tablet-2col">
+                      <div className="oa-select-wrapper">
+                        <Controller
+                          name="ticketing.event_type"
+                          control={control}
+                          render={({ field }) => (
+                            <Select
                               {...field}
-                              placeholder="Internal notes (not shown to public)"
-                              rows={2}
+                              label={t('admin.events.ticketing.eventType.label')}
+                              options={[
+                                { value: 'game', label: t('admin.events.ticketing.eventType.game') },
+                                { value: 'tournament', label: t('admin.events.ticketing.eventType.tournament') },
+                                { value: 'concert', label: t('admin.events.ticketing.eventType.concert') },
+                                { value: 'fundraiser', label: t('admin.events.ticketing.eventType.fundraiser') },
+                                { value: 'other', label: t('admin.events.ticketing.eventType.other') },
+                              ]}
                             />
-                          </div>
-                        )}
-                      />
-                    </div>
-
-                    <div className="oa-mb-4">
-                      <Controller
-                        name="ticketing.event_description"
-                        control={control}
-                        rules={{ maxLength: { value: 500, message: 'Max 500 characters' } }}
-                        render={({ field }) => (
-                          <div className="oa-space-y-2">
-                            <label className="oa-label">Public Event Description</label>
-                            <textarea
-                              className="oa-input oa-textarea oa-textarea-expand"
+                          )}
+                        />
+                      </div>
+                      <div className="oa-select-wrapper">
+                        <Controller
+                          name="ticketing.status"
+                          control={control}
+                          render={({ field }) => (
+                            <Select
                               {...field}
-                              placeholder="Description shown to public users..."
-                              rows={4}
-                              maxLength={500}
+                              label={t('admin.events.ticketing.status.label')}
+                              options={[
+                                { value: 'draft', label: t('admin.events.ticketing.status.draft') },
+                                { value: 'published', label: t('admin.events.ticketing.status.published') },
+                              ]}
                             />
-                            {errors.ticketing?.event_description?.message && (
-                              <span className="oa-error-message">{errors.ticketing.event_description.message}</span>
-                            )}
-                          </div>
-                        )}
-                      />
+                          )}
+                        />
+                      </div>
                     </div>
 
-                    <div className="oa-mb-4">
-                      <FileUpload
-                        label="Ticket Banner Image"
-                        onFileSelect={setBannerFile}
-                        value={bannerFile}
-                        accept="image/*"
-                        maxSize={5 * 1024 * 1024}
-                        buttonText="Upload Banner"
-                        replaceText="Replace Banner"
-                        helperText="Suggested size: 1200 x 400 px (3:1). Max 5MB."
-                        showDropZone={true}
-                        fullWidth={true}
-                      />
-
-                      {watch('ticketing.ticket_banner_url') && !bannerFile && (
-                        <div className="oa-bg-surface-section oa-p-3 oa-rounded-lg oa-border oa-border-border-subtle oa-mt-4">
-                          <p className="oa-text-xs oa-font-bold oa-uppercase oa-text-muted oa-mb-2">Current Banner</p>
-                          <div className="oa-relative oa-w-full oa-h-32 oa-rounded-md oa-overflow-hidden oa-bg-gray-100 dark:oa-bg-gray-800">
-                            <img
-                              src={watch('ticketing.ticket_banner_url')}
-                              alt="Current Banner"
-                              className="oa-w-full oa-h-full oa-object-cover"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="oa-mb-4">
-                      <Controller
-                        name="ticketing.event_type"
-                        control={control}
-                        render={({ field }) => (
-                          <Select
-                            {...field}
-                            value={field.value || 'other'}
-                            label={t('admin.events.ticketing.eventType.label')}
-                            options={[
-                              { value: 'game', label: t('admin.events.ticketing.eventType.game') },
-                              { value: 'tournament', label: t('admin.events.ticketing.eventType.tournament') },
-                              { value: 'concert', label: t('admin.events.ticketing.eventType.concert') },
-                              { value: 'fundraiser', label: t('admin.events.ticketing.eventType.fundraiser') },
-                              { value: 'other', label: t('admin.events.ticketing.eventType.other') },
-                            ]}
-                          />
-                        )}
-                      />
-                      <p className="oa-text-xs oa-text-muted oa-mt-1">{t('admin.events.ticketing.eventType.helper')}</p>
-                    </div>
-
-                    <div className="oa-mb-4">
-                      <Controller
-                        name="ticketing.status"
-                        control={control}
-                        render={({ field }) => (
-                          <Select
-                            {...field}
-                            value={field.value || 'draft'}
-                            label={t('admin.events.ticketing.status.label')}
-                            options={[
-                              { value: 'draft', label: t('admin.events.ticketing.status.draft') },
-                              { value: 'published', label: t('admin.events.ticketing.status.published') },
-                            ]}
-                          />
-                        )}
-                      />
-                    </div>
-
-                    <div className="oa-mb-4">
+                    <div className="oa-checkbox-stack">
                       <Controller
                         name="ticketing.sales_immediate"
                         control={control}
-                        render={({ field }) => (
+                        render={({ field: { value, onChange } }) => (
                           <Checkbox
-                            checked={!!field.value}
-                            onChange={(e) => {
-                              field.onChange(e.target.checked)
-                              if (e.target.checked) {
-                                setValue('ticketing.sales_start_at', '', { shouldValidate: false })
-                                setValue('ticketing.sales_end_at', '', { shouldValidate: false })
-                              }
-                            }}
-                            label="Immediately"
+                            checked={!!value}
+                            onChange={(e) => onChange(e.target.checked)}
+                            label={t('admin.events.ticketing.salesWindow.immediate')}
                           />
                         )}
                       />
                     </div>
 
-                    {!watchTicketSalesImmediate && (
-                      <div className="oa-form-grid oa-form-grid-4 oa-form-grid-tablet-2col oa-mb-4">
+                    {!watchTicketingSalesImmediate && (
+                      <div className="oa-form-grid oa-form-grid-2 oa-form-grid-tablet-2col">
                         <Controller
                           name="ticketing.sales_start_at"
                           control={control}
-                          rules={{
-                            validate: () => true
-                          }}
                           render={({ field }) => (
                             <DateTimePicker
-                              label={t('admin.events.ticketing.salesWindow.startDate' as any)}
-                              value={field.value ? field.value.split('T')[0] : ''}
-                              min={new Date().toISOString().slice(0, 10)}
-                              onChange={(date) => {
-                                const time = field.value?.split('T')[1] || '00:00'
-                                field.onChange(`${date}T${time}`)
-                              }}
-                              error={errors.ticketing?.sales_start_at?.message}
+                              {...field}
+                              label={t('admin.events.ticketing.salesWindow.start')}
                             />
                           )}
                         />
-                        <div className="oa-max-w-xs">
-                          <Controller
-                            name="ticketing.sales_start_at"
-                            control={control}
-                            rules={{
-                              validate: (_value) => {
-                                if (watchTicketSalesImmediate) return true
-                                return true
-                              }
-                            }}
-                            render={({ field }) => (
-                              <TimePicker
-                                label={t('admin.events.ticketing.salesWindow.startTime' as any)}
-                                value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                                onChange={(time) => {
-                                  const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
-                                  field.onChange(`${date}T${time}`)
-                                }}
-                                error={errors.ticketing?.sales_start_at?.message}
-                              />
-                            )}
-                          />
-                        </div>
                         <Controller
                           name="ticketing.sales_end_at"
                           control={control}
-                          rules={{
-                            validate: (value) => {
-                              if (watchTicketSalesImmediate) return true
-                              const startAt = watch('ticketing.sales_start_at')
-                              if (startAt && value && new Date(value) <= new Date(startAt)) {
-                                return t('admin.events.ticketing.salesWindow.endAfterStart' as any)
-                              }
-                              const eventStart = watch('start_time')
-                              if (eventStart && value && new Date(value) > new Date(eventStart)) {
-                                return t('admin.events.ticketing.salesWindow.endNotAfterEventStart' as any)
-                              }
-                              return true
-                            }
-                          }}
                           render={({ field }) => (
                             <DateTimePicker
-                              label={t('admin.events.ticketing.salesWindow.endDate' as any)}
-                              value={field.value ? field.value.split('T')[0] : ''}
-                              max={watch('start_time')?.split('T')[0]}
-                              onChange={(date) => {
-                                const time = field.value?.split('T')[1] || '23:59'
-                                field.onChange(`${date}T${time}`)
-                              }}
-                              error={errors.ticketing?.sales_end_at?.message}
+                              {...field}
+                              label={t('admin.events.ticketing.salesWindow.end')}
                             />
                           )}
                         />
-                        <div className="oa-max-w-xs">
-                          <Controller
-                            name="ticketing.sales_end_at"
-                            control={control}
-                            rules={{
-                              validate: (value) => {
-                                if (watchTicketSalesImmediate) return true
-                                const startAt = watch('ticketing.sales_start_at')
-                                if (startAt && value && new Date(value) <= new Date(startAt)) {
-                                  return t('admin.events.ticketing.salesWindow.endAfterStart' as any)
-                                }
-                                const eventStart = watch('start_time')
-                                if (eventStart && value && new Date(value) > new Date(eventStart)) {
-                                  return t('admin.events.ticketing.salesWindow.endNotAfterEventStart' as any)
-                                }
-                                return true
-                              }
-                            }}
-                            render={({ field }) => (
-                              <TimePicker
-                                label={t('admin.events.ticketing.salesWindow.endTime' as any)}
-                                value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                                onChange={(time) => {
-                                  const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
-                                  field.onChange(`${date}T${time}`)
-                                }}
-                                error={errors.ticketing?.sales_end_at?.message}
-                              />
-                            )}
-                          />
-                        </div>
                       </div>
                     )}
 
-                    <div className="oa-mb-4">
-                      <div className="oa-flex oa-items-center oa-justify-between oa-mb-2">
-                        <label className="oa-label">{t('admin.events.ticketing.ticketTypes.label')}</label>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                            onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '', description: '', seating_mode: 'general_admission' })}
-                        >
-                          {t('admin.events.ticketing.ticketTypes.add')}
-                        </Button>
-                      </div>
-                      
-                      {ticketTypeFields.length === 0 ? (
-                        <p className="oa-text-sm oa-text-muted">{t('admin.events.ticketing.ticketTypes.none')}</p>
-                      ) : (
-                        <div className="oa-space-y-3">
-                          {ticketTypeFields.map((field, index) => (
-                            <div key={field.id} className="oa-ticket-type-card">
-                              <div className="oa-form-grid oa-form-grid-4 oa-mb-2">
-                                <Controller
-                                  name={`ticketing.ticket_types.${index}.name`}
-                                  control={control}
-                                  rules={{
-                                    validate: (value) => {
-                                      const price = watch(`ticketing.ticket_types.${index}.price_dollars`)
-                                      const capacity = watch(`ticketing.ticket_types.${index}.capacity`)
-                                      if (price || capacity) {
-                                        return value?.trim() ? true : t('admin.events.ticketing.ticketTypes.name.required')
-                                      }
-                                      return true
-                                    }
-                                  }}
-                                  render={({ field }) => (
-                                    <Input
-                                      {...field}
-                                      label={t('admin.events.ticketing.ticketTypes.name.label')}
-                                      placeholder={t('admin.events.ticketing.ticketTypes.name.placeholder')}
-                                      error={errors.ticketing?.ticket_types?.[index]?.name?.message}
-                                    />
-                                  )}
-                                />
-                                <Controller
-                                  name={`ticketing.ticket_types.${index}.price_dollars`}
-                                  control={control}
-                                  rules={{
-                                    validate: (value) => {
-                                      const name = watch(`ticketing.ticket_types.${index}.name`)
-                                      if (name?.trim()) {
-                                        const parsed = parseFloat(value || '0')
-                                        if (isNaN(parsed) || parsed < 0) {
-                                          return 'Price must be a valid number >= 0'
-                                        }
-                                      }
-                                      return true
-                                    }
-                                  }}
-                                  render={({ field }) => (
-                                    <Input
-                                      {...field}
-                                      type="number"
-                                      step="0.01"
-                                      min="0"
-                                      label="Price ($)"
-                                      placeholder="0.00"
-                                      error={errors.ticketing?.ticket_types?.[index]?.price_dollars?.message}
-                                    />
-                                  )}
-                                />
-                                <Controller
-                                  name={`ticketing.ticket_types.${index}.seating_mode`}
-                                  control={control}
-                                  render={({ field }) => (
-                                    <Select
-                                      {...field}
-                                      value={field.value || 'general_admission'}
-                                      label={t('admin.events.ticketing.ticketTypes.mode.label')}
-                                      options={[
-                                        { value: 'general_admission', label: t('admin.events.ticketing.ticketTypes.mode.generalAdmission') },
-                                        { value: 'reserved_seating', label: t('admin.events.ticketing.ticketTypes.mode.reservedSeating') },
-                                      ]}
-                                    />
-                                  )}
-                                />
-                                <div className="oa-ticket-type-actions">
-                                  <Controller
-                                    name={`ticketing.ticket_types.${index}.capacity`}
-                                    control={control}
-                                    rules={{
-                                      validate: (value) => {
-                                        if (value?.trim()) {
-                                          const parsed = parseInt(value)
-                                          if (isNaN(parsed) || parsed <= 0) {
-                                            return t('admin.events.ticketing.ticketTypes.capacity.invalid')
-                                          }
-                                        }
-                                        return true
-                                      }
-                                    }}
-                                    render={({ field }) => (
-                                      <Input
-                                        {...field}
-                                        type="number"
-                                        min="1"
-                                        label={t('admin.events.ticketing.ticketTypes.capacity.label')}
-                                        placeholder={t('admin.events.ticketing.ticketTypes.capacity.placeholder')}
-                                        error={errors.ticketing?.ticket_types?.[index]?.capacity?.message}
-                                      />
-                                    )}
-                                  />
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    onClick={() => removeTicketType(index)}
-                                  >
-                                    {t('admin.events.ticketing.ticketTypes.remove')}
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                    <div className="oa-notes-group">
+                      <label className="oa-label">{t('admin.events.ticketing.internalDescription.label')}</label>
+                      <Controller
+                        name="ticketing.internal_description"
+                        control={control}
+                        render={({ field }) => (
+                          <textarea
+                            className="oa-input oa-textarea oa-textarea-expand"
+                            {...field}
+                            placeholder={t('admin.events.ticketing.internalDescription.placeholder')}
+                          />
+                        )}
+                      />
                     </div>
+
+                    <div className="oa-notes-group">
+                      <label className="oa-label">{t('admin.events.ticketing.publicDescription.label')}</label>
+                      <Controller
+                        name="ticketing.event_description"
+                        control={control}
+                        render={({ field }) => (
+                          <textarea
+                            className="oa-input oa-textarea oa-textarea-expand"
+                            {...field}
+                            placeholder={t('admin.events.ticketing.publicDescription.placeholder')}
+                          />
+                        )}
+                      />
+                    </div>
+
+                    <Controller
+                      name="ticketing.ticket_banner_url"
+                      control={control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          type="url"
+                          label={t('admin.events.ticketing.banner.urlLabel')}
+                          placeholder={t('admin.events.ticketing.banner.urlPlaceholder')}
+                        />
+                      )}
+                    />
+
+                    <FileUpload
+                      label={t('admin.events.ticketing.banner.uploadLabel')}
+                      onFileSelect={setBannerFile}
+                      value={bannerFile}
+                      accept="image/*"
+                      maxSize={5 * 1024 * 1024}
+                      buttonText={t('admin.events.ticketing.banner.uploadButton')}
+                      helperText={t('admin.events.ticketing.banner.uploadHelper')}
+                      showDropZone
+                      fullWidth
+                    />
                   </div>
                 )}
               </div>
@@ -1811,3 +1484,4 @@ export default function CreateEvent() {
     </div>
   )
 }
+

@@ -450,6 +450,36 @@ export async function getSeatMapsForEvent(ticketedEventId: string): Promise<Seat
   }
 }
 
+/**
+ * Fetch all seat maps owned by an org, optionally filtered by venue/team/status.
+ */
+export async function getSeatMapsForOrg(
+  orgId: string,
+  filters?: { venueId?: string; teamId?: string; status?: 'draft' | 'published' },
+): Promise<SeatMap[]> {
+  if (!orgId) throw new ValidationError('Organization is required')
+
+  try {
+    const supabaseAny = supabase as any
+    let query = supabaseAny
+      .from('seat_maps')
+      .select('*, venues(id, name), teams(id, name)')
+      .eq('org_id', orgId)
+      .order('updated_at', { ascending: false })
+
+    if (filters?.venueId) query = query.eq('venue_id', filters.venueId)
+    if (filters?.teamId) query = query.eq('team_id', filters.teamId)
+    if (filters?.status) query = query.eq('status', filters.status)
+
+    const { data, error } = await query
+    if (error) throw error
+
+    return (data ?? []) as SeatMap[]
+  } catch (error) {
+    throw classifySupabaseError(error, 'Seat maps')
+  }
+}
+
 export interface ReservedCapacitySnapshot {
   capacityTotal: number
   capacityRemaining: number
@@ -458,14 +488,25 @@ export interface ReservedCapacitySnapshot {
 export interface AdminSeatMapListItem {
   id: string
   name: string
-  ticketed_event_id: string
+  org_id: string
+  venue_id: string | null
+  team_id: string | null
+  ticketed_event_id: string | null
+  status: 'draft' | 'published'
+  version: number
   chart_image_url: string | null
   created_at: string
   updated_at: string
+  published_at: string | null
+  venue_name: string | null
+  team_name: string | null
+  /** Legacy: event title when seat map was event-scoped */
   event_title: string
   event_status: TicketedEvent['status']
   event_starts_at: string
   seat_count: number
+  /** How many events currently reference this seat map */
+  usage_count: number
 }
 
 export async function getSeatMapsForOrgAdmin(orgId: string): Promise<AdminSeatMapListItem[]> {
@@ -484,11 +525,19 @@ export async function getSeatMapsForOrgAdmin(orgId: string): Promise<AdminSeatMa
       .select(`
         id,
         name,
+        org_id,
+        venue_id,
+        team_id,
         ticketed_event_id,
+        status,
+        version,
         chart_image_url,
         created_at,
         updated_at,
-        ticketed_events!inner(
+        published_at,
+        venues(id, name),
+        teams(id, name),
+        ticketed_events(
           id,
           title,
           status,
@@ -496,18 +545,26 @@ export async function getSeatMapsForOrgAdmin(orgId: string): Promise<AdminSeatMa
           org_id
         )
       `)
-      .eq('ticketed_events.org_id', orgId)
-      .order('created_at', { ascending: false })
+      .eq('org_id', orgId)
+      .order('updated_at', { ascending: false })
 
     if (error) throw error
 
     const seatMaps = (data ?? []) as Array<{
       id: string
       name: string
-      ticketed_event_id: string
+      org_id: string
+      venue_id: string | null
+      team_id: string | null
+      ticketed_event_id: string | null
+      status: string
+      version: number
       chart_image_url: string | null
       created_at: string
       updated_at: string
+      published_at: string | null
+      venues: { id: string; name: string } | null
+      teams: { id: string; name: string } | null
       ticketed_events:
         | {
             id: string
@@ -544,6 +601,25 @@ export async function getSeatMapsForOrgAdmin(orgId: string): Promise<AdminSeatMa
       }, new Map<string, number>())
     }
 
+    // Count events referencing each seat map
+    let usageCountByMap = new Map<string, number>()
+    if (seatMapIds.length > 0) {
+      const { data: usageRows, error: usageError } = await supabaseAny
+        .from('events')
+        .select('seat_map_id')
+        .in('seat_map_id', seatMapIds)
+
+      if (!usageError && usageRows) {
+        usageCountByMap = (usageRows as Array<{ seat_map_id: string }>).reduce((acc, row) => {
+          if (row.seat_map_id) {
+            const current = acc.get(row.seat_map_id) ?? 0
+            acc.set(row.seat_map_id, current + 1)
+          }
+          return acc
+        }, new Map<string, number>())
+      }
+    }
+
     return seatMaps.map((item) => {
       const event = Array.isArray(item.ticketed_events)
         ? item.ticketed_events[0]
@@ -552,14 +628,23 @@ export async function getSeatMapsForOrgAdmin(orgId: string): Promise<AdminSeatMa
       return {
         id: item.id,
         name: item.name,
+        org_id: item.org_id,
+        venue_id: item.venue_id,
+        team_id: item.team_id,
         ticketed_event_id: item.ticketed_event_id,
+        status: (item.status ?? 'draft') as 'draft' | 'published',
+        version: item.version ?? 1,
         chart_image_url: item.chart_image_url,
         created_at: item.created_at,
         updated_at: item.updated_at,
+        published_at: item.published_at ?? null,
+        venue_name: item.venues?.name ?? null,
+        team_name: item.teams?.name ?? null,
         event_title: event?.title ?? 'Untitled event',
         event_status: event?.status ?? 'draft',
         event_starts_at: event?.starts_at ?? item.created_at,
         seat_count: seatCountByMap.get(item.id) ?? 0,
+        usage_count: usageCountByMap.get(item.id) ?? 0,
       }
     })
   } catch (error) {
@@ -602,22 +687,61 @@ export async function getReservedCapacitySnapshot(seatMapId: string): Promise<Re
   }
 }
 
-export async function createSeatMap(ticketedEventId: string, name: string): Promise<SeatMap> {
-  if (!ticketedEventId) {
-    throw new ValidationError('Ticketed event is required')
-  }
+export interface CreateSeatMapInput {
+  name: string
+  org_id: string
+  venue_id?: string | null
+  team_id?: string | null
+  /** @deprecated Use venue_id instead. Kept for backwards compat. */
+  ticketed_event_id?: string | null
+}
 
-  if (!name.trim()) {
+export async function createSeatMap(input: CreateSeatMapInput): Promise<SeatMap>
+/**
+ * @deprecated Use the CreateSeatMapInput overload instead.
+ */
+export async function createSeatMap(ticketedEventId: string, name: string): Promise<SeatMap>
+export async function createSeatMap(
+  inputOrEventId: CreateSeatMapInput | string,
+  maybeName?: string,
+): Promise<SeatMap> {
+  // Normalise legacy (ticketedEventId, name) signature to CreateSeatMapInput
+  const input: CreateSeatMapInput =
+    typeof inputOrEventId === 'string'
+      ? { org_id: '', ticketed_event_id: inputOrEventId, name: maybeName ?? '' }
+      : inputOrEventId
+
+  if (!input.name.trim()) {
     throw new ValidationError('Seat map name is required')
+  }
+  if (!input.org_id && !input.ticketed_event_id) {
+    throw new ValidationError('Organization or ticketed event is required')
   }
 
   try {
     const supabaseAny = supabase as any
+
+    // If only ticketed_event_id provided (legacy path), resolve org_id from it
+    let orgId = input.org_id
+    if (!orgId && input.ticketed_event_id) {
+      const { data: te } = await supabaseAny
+        .from('ticketed_events')
+        .select('org_id')
+        .eq('id', input.ticketed_event_id)
+        .maybeSingle()
+      orgId = te?.org_id ?? ''
+    }
+
     const { data, error } = await supabaseAny
       .from('seat_maps')
       .insert({
-        ticketed_event_id: ticketedEventId,
-        name: name.trim(),
+        name: input.name.trim(),
+        org_id: orgId,
+        venue_id: input.venue_id ?? null,
+        team_id: input.team_id ?? null,
+        ticketed_event_id: input.ticketed_event_id ?? null,
+        status: 'draft',
+        version: 1,
       })
       .select('*')
       .single()
@@ -682,19 +806,25 @@ export async function uploadSeatMapChart(seatMapId: string, file: File): Promise
     let orgId: string | null = null
     const { data: seatMapRecord, error: seatMapError } = await supabaseAny
       .from('seat_maps')
-      .select('ticketed_event_id')
+      .select('org_id, ticketed_event_id')
       .eq('id', seatMapId)
       .maybeSingle()
 
-    if (!seatMapError && seatMapRecord?.ticketed_event_id) {
-      const { data: ticketedEventRecord, error: ticketedEventError } = await supabaseAny
-        .from('ticketed_events')
-        .select('org_id')
-        .eq('id', seatMapRecord.ticketed_event_id)
-        .maybeSingle()
+    if (!seatMapError && seatMapRecord) {
+      // Prefer direct org_id (new schema)
+      if (seatMapRecord.org_id) {
+        orgId = seatMapRecord.org_id
+      } else if (seatMapRecord.ticketed_event_id) {
+        // Legacy fallback via ticketed_events
+        const { data: ticketedEventRecord, error: ticketedEventError } = await supabaseAny
+          .from('ticketed_events')
+          .select('org_id')
+          .eq('id', seatMapRecord.ticketed_event_id)
+          .maybeSingle()
 
-      if (!ticketedEventError && ticketedEventRecord?.org_id) {
-        orgId = ticketedEventRecord.org_id
+        if (!ticketedEventError && ticketedEventRecord?.org_id) {
+          orgId = ticketedEventRecord.org_id
+        }
       }
     }
 
@@ -983,6 +1113,7 @@ export async function deleteSeatMapAdmin(seatMapId: string): Promise<void> {
       throw new ValidationError('Cannot delete a seat map that has sold or assigned seats')
     }
 
+    // Detach ticket types
     const { error: detachError } = await supabaseAny
       .from('ticket_types')
       .update({ seat_map_id: null })
@@ -990,6 +1121,37 @@ export async function deleteSeatMapAdmin(seatMapId: string): Promise<void> {
 
     if (detachError) throw detachError
 
+    // Clear any default references pointing to this seat map
+    await supabaseAny
+      .from('venues')
+      .update({ default_seat_map_id: null })
+      .eq('default_seat_map_id', seatMapId)
+
+    await supabaseAny
+      .from('teams')
+      .update({ default_seat_map_id: null })
+      .eq('default_seat_map_id', seatMapId)
+
+    await supabaseAny
+      .from('organizations')
+      .update({ default_seat_map_id: null })
+      .eq('default_seat_map_id', seatMapId)
+
+    // Detach events referencing this seat map
+    await supabaseAny
+      .from('events')
+      .update({ seat_map_id: null })
+      .eq('seat_map_id', seatMapId)
+
+    // Delete snapshots
+    const { error: deleteSnapshotsError } = await supabaseAny
+      .from('seat_map_snapshots')
+      .delete()
+      .eq('seat_map_id', seatMapId)
+
+    if (deleteSnapshotsError) throw deleteSnapshotsError
+
+    // Delete sections
     const { error: deleteSectionsError } = await supabaseAny
       .from('seat_map_sections')
       .delete()
@@ -997,6 +1159,7 @@ export async function deleteSeatMapAdmin(seatMapId: string): Promise<void> {
 
     if (deleteSectionsError) throw deleteSectionsError
 
+    // Delete map
     const { error: deleteMapError } = await supabaseAny
       .from('seat_maps')
       .delete()
@@ -1653,18 +1816,52 @@ export async function validateTicketScan(
       }
     }
 
-    const response = await fetch(`${FUNCTIONS_URL}/tickets-validate-scan`, {
+    const url = `${FUNCTIONS_URL}/tickets-validate-scan`
+    const response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(request),
     })
+    const responseText = await response.text()
+    let responseBody: any = null
+    let responseParseError: string | null = null
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      return createServiceResponse<ValidateScanResponse>(null, new Error(errorData.error || 'Validation failed'))
+    try {
+      responseBody = responseText ? JSON.parse(responseText) : null
+    } catch (parseError: any) {
+      responseParseError = parseError?.message || 'Failed to parse JSON response'
     }
 
-    const data = await response.json()
+    const debugClient = {
+      endpoint: url,
+      request: {
+        ticketed_event_id: request.ticketed_event_id,
+        entry_code: request.entry_code || null,
+        qr_token_raw_preview: request.qr_token_raw ? `${request.qr_token_raw.slice(0, 4)}...${request.qr_token_raw.slice(-4)}` : null,
+        client_device_id: request.client_device_id || null,
+        has_staff_link_token: Boolean(staffLinkToken),
+      },
+      response: {
+        status: response.status,
+        ok: response.ok,
+        content_type: response.headers.get('content-type'),
+        parse_error: responseParseError,
+        raw_text: responseText,
+      },
+    }
+
+    if (!response.ok) {
+      const errorMessage = responseBody?.error || 'Validation failed'
+      return createServiceResponse<ValidateScanResponse>(
+        null,
+        new Error(`${errorMessage} | debug=${JSON.stringify(debugClient)}`),
+      )
+    }
+
+    const data = {
+      ...(responseBody || {}),
+      debug_client: debugClient,
+    } as ValidateScanResponse
     return createServiceResponse<ValidateScanResponse>(data, null)
   } catch (error: any) {
     return createServiceResponse<ValidateScanResponse>(null, error)

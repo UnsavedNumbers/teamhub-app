@@ -159,6 +159,8 @@ export default function AdminEventDetail() {
 
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false)
+  const [confirmTicketingStatusOpen, setConfirmTicketingStatusOpen] = useState(false)
+  const [pendingTicketingStatus, setPendingTicketingStatus] = useState<'draft' | 'published' | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
 
   const [commuteStartLocation, setCommuteStartLocation] = useState<string>(() => {
@@ -419,6 +421,55 @@ export default function AdminEventDetail() {
     }
   }
 
+  const handleUpdateTicketingStatus = async (nextStatus: 'draft' | 'published') => {
+    if (!event?.ticketed_event?.id) return
+
+    try {
+      setActionLoading(true)
+      const { data: updatedTicketedEvent, error: updateError } = await supabase
+        .from('ticketed_events')
+        .update({ status: nextStatus })
+        .eq('id', event.ticketed_event.id)
+        .select('id, status')
+        .maybeSingle()
+
+      if (updateError) throw updateError
+      if (!updatedTicketedEvent) {
+        throw new Error('Unable to update ticketing status. Please refresh and try again.')
+      }
+
+      setEvent((prev) => {
+        if (!prev?.ticketed_event) return prev
+        return {
+          ...prev,
+          ticketed_event: {
+            ...prev.ticketed_event,
+            status: nextStatus,
+          },
+        }
+      })
+
+      showSuccess(nextStatus === 'published' ? 'Ticketing published' : 'Ticketing switched to draft')
+      await fetchEvent()
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to update ticketing status')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleRequestTicketingStatusChange = (nextStatus: 'draft' | 'published') => {
+    setPendingTicketingStatus(nextStatus)
+    setConfirmTicketingStatusOpen(true)
+  }
+
+  const handleConfirmTicketingStatusChange = async () => {
+    if (!pendingTicketingStatus) return
+    setConfirmTicketingStatusOpen(false)
+    await handleUpdateTicketingStatus(pendingTicketingStatus)
+    setPendingTicketingStatus(null)
+  }
+
   const isPast = event ? new Date(event.end_time || event.start_time) < new Date() : false
 
   // Relative time helper
@@ -555,9 +606,31 @@ export default function AdminEventDetail() {
               <button
                 className="oa-btn oa-btn--primary"
                 onClick={() => navigate(getLink('admin.events.edit', { id: event.id }))}
+                disabled={actionLoading}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
                 {t('admin.events.edit')}
+              </button>
+            )}
+            {!isPast && event.ticketed_event?.id && event.ticketed_event.status === 'published' && (
+              <button
+                className="oa-btn oa-btn--secondary"
+                onClick={() => handleRequestTicketingStatusChange('draft')}
+                disabled={actionLoading}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit_note</span>
+                Switch to Draft
+              </button>
+            )}
+            {!isPast && event.ticketed_event?.id && event.ticketed_event.status === 'draft' && (
+              <button
+                type="button"
+                className="oa-btn oa-btn--primary"
+                onClick={() => { void handleUpdateTicketingStatus('published') }}
+                disabled={actionLoading}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>publish</span>
+                Publish
               </button>
             )}
           </div>
@@ -587,7 +660,10 @@ export default function AdminEventDetail() {
         </div>
 
         {currentView === 'ticketing' ? (
-          ticketingGateLoading ? (
+          // If event has ticketing enabled, show it regardless of feature gate
+          event.ticketed_event?.id ? (
+            <TicketedEventDetail ticketedEventId={event.ticketed_event.id} embedded />
+          ) : ticketingGateLoading ? (
             <div className="oa-card" style={{ padding: 'var(--pa-space-6)' }}>
               <div className="oa-skeleton" style={{ height: 120 }} />
             </div>
@@ -611,8 +687,6 @@ export default function AdminEventDetail() {
                 )}
               </div>
             </section>
-          ) : event.ticketed_event?.id ? (
-            <TicketedEventDetail ticketedEventId={event.ticketed_event.id} embedded />
           ) : (
             <section className="oa-card" style={{ padding: 'var(--pa-space-6)' }}>
               <div className="oa-empty-hint" style={{ marginBottom: 'var(--pa-space-4)' }}>
@@ -1119,6 +1193,23 @@ export default function AdminEventDetail() {
         variant="danger"
         onConfirm={() => { void handleDeleteEvent() }}
         onCancel={() => setConfirmDeleteOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmTicketingStatusOpen}
+        title={pendingTicketingStatus === 'published' ? 'Publish Ticketing' : 'Switch Ticketing to Draft'}
+        description={
+          pendingTicketingStatus === 'published'
+            ? 'This will make ticketing live for this event. Continue?'
+            : 'This will move ticketing back to draft and hide public ticketing access. Continue?'
+        }
+        confirmLabel={pendingTicketingStatus === 'published' ? 'Publish' : 'Switch to Draft'}
+        variant="primary"
+        onConfirm={() => { void handleConfirmTicketingStatusChange() }}
+        onCancel={() => {
+          setConfirmTicketingStatusOpen(false)
+          setPendingTicketingStatus(null)
+        }}
       />
     </div>
   )

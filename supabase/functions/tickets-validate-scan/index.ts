@@ -41,6 +41,34 @@ function normalizeEntryCode(code: string): string {
   return code.toUpperCase().replace(/[^A-Z0-9]/g, "")
 }
 
+function buildEntryCodeCandidates(code: string): string[] {
+  const rawUpper = code.toUpperCase().trim()
+  const normalized = normalizeEntryCode(code)
+  const candidates = new Set<string>()
+
+  if (rawUpper) candidates.add(rawUpper)
+  if (normalized) candidates.add(normalized)
+
+  if (normalized.length >= 8) {
+    const dashed8 = `${normalized.slice(0, 4)}-${normalized.slice(4, 8)}`
+    candidates.add(dashed8)
+  }
+  if (normalized.length >= 12) {
+    const dashed12 = `${normalized.slice(0, 4)}-${normalized.slice(4, 8)}-${normalized.slice(8, 12)}`
+    candidates.add(dashed12)
+  }
+
+  return Array.from(candidates)
+}
+
+function previewValue(value: string | undefined): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  if (trimmed.length <= 8) return trimmed
+  return `${trimmed.slice(0, 4)}...${trimmed.slice(-4)}`
+}
+
 serve(async (req) => {
   // Preflight
   if (req.method === "OPTIONS") {
@@ -77,6 +105,10 @@ serve(async (req) => {
   const clientDeviceId = payload?.client_device_id as string | undefined
   const forceValidate = payload?.force_validate as boolean | undefined // Skip event check
   const crossEventAdmission = payload?.cross_event_admission as boolean | undefined // Log cross-event
+  const normalizedEntryFromPayload = entryCode ? normalizeEntryCode(entryCode) : null
+  const normalizedFromQrPayload = qrTokenRaw ? normalizeEntryCode(qrTokenRaw) : null
+  let qrTokenHash: string | null = null
+  const lookupAttempts: Array<Record<string, unknown>> = []
 
   if (!ticketedEventId) {
     return json(req, { error: "Missing ticketed_event_id" }, 400)
@@ -210,27 +242,41 @@ serve(async (req) => {
 
   if (entryCode) {
     const normalized = normalizeEntryCode(entryCode)
-    // For manual entry, require event match for scoping (unless force_validate)
-    let query = supabase
+    const entryCandidates = buildEntryCodeCandidates(entryCode)
+    const query = supabase
       .from("tickets")
       .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
-      .eq("entry_code", normalized)
-    
-    // Scope to event if provided and not forcing
-    if (ticketedEventId && !forceValidate) {
-      query = query.eq("ticketed_event_id", ticketedEventId)
-    }
-    
-    const { data } = await query.single()
-    ticket = data
+      .in("entry_code", entryCandidates)
+
+    const { data, error } = await query.limit(10)
+    const matchedTicket = (data ?? []).find((row) => row.ticketed_event_id === ticketedEventId) ?? (data ?? [])[0] ?? null
+    lookupAttempts.push({
+      strategy: "entry_code",
+      normalized_input: normalized,
+      candidates: entryCandidates,
+      matched: Boolean(matchedTicket),
+      ticket_id: matchedTicket?.id ?? null,
+      matched_count: (data ?? []).length,
+      query_error_code: error?.code ?? null,
+      query_error_message: error?.message ?? null,
+    })
+    ticket = matchedTicket
   } else if (qrTokenRaw) {
     // First try to find by qr_token_hash
-    const qrTokenHash = await hashToken(qrTokenRaw)
-    const { data: tokenMatch } = await supabase
+    qrTokenHash = await hashToken(qrTokenRaw)
+    const { data: tokenMatch, error: qrHashError } = await supabase
       .from("tickets")
       .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
       .eq("qr_token_hash", qrTokenHash)
-      .single()
+      .maybeSingle()
+    lookupAttempts.push({
+      strategy: "qr_token_hash",
+      hash_prefix: qrTokenHash.slice(0, 12),
+      matched: Boolean(tokenMatch),
+      ticket_id: tokenMatch?.id ?? null,
+      query_error_code: qrHashError?.code ?? null,
+      query_error_message: qrHashError?.message ?? null,
+    })
     
     if (tokenMatch) {
       ticket = tokenMatch
@@ -238,22 +284,116 @@ serve(async (req) => {
       // QR code might contain entry_code instead of qr_token (common for displayed QR codes)
       // Normalize and try entry_code lookup
       const normalizedFromQr = normalizeEntryCode(qrTokenRaw)
-      let query = supabase
+      const entryCandidates = buildEntryCodeCandidates(qrTokenRaw)
+      const query = supabase
         .from("tickets")
         .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
-        .eq("entry_code", normalizedFromQr)
-      
-      // Scope to event if provided and not forcing
-      if (ticketedEventId && !forceValidate) {
-        query = query.eq("ticketed_event_id", ticketedEventId)
-      }
-      
-      const { data: entryCodeMatch } = await query.single()
+        .in("entry_code", entryCandidates)
+
+      const { data: entryCodeMatches, error: qrAsEntryError } = await query.limit(10)
+      const entryCodeMatch = (entryCodeMatches ?? []).find((row) => row.ticketed_event_id === ticketedEventId) ?? (entryCodeMatches ?? [])[0] ?? null
+      lookupAttempts.push({
+        strategy: "qr_as_entry_code",
+        normalized_input: normalizedFromQr,
+        candidates: entryCandidates,
+        matched: Boolean(entryCodeMatch),
+        ticket_id: entryCodeMatch?.id ?? null,
+        matched_count: (entryCodeMatches ?? []).length,
+        query_error_code: qrAsEntryError?.code ?? null,
+        query_error_message: qrAsEntryError?.message ?? null,
+      })
       ticket = entryCodeMatch
     }
   }
 
   if (!ticket) {
+    const debug: Record<string, unknown> = {
+      timestamp: new Date().toISOString(),
+      request: {
+        ticketed_event_id: ticketedEventId,
+        selected_event_id: selectedEventId ?? null,
+        force_validate: Boolean(forceValidate),
+        cross_event_admission: Boolean(crossEventAdmission),
+        entry_code_raw_preview: previewValue(entryCode),
+        entry_code_normalized: normalizedEntryFromPayload,
+        qr_token_raw_preview: previewValue(qrTokenRaw),
+        qr_as_entry_code_normalized: normalizedFromQrPayload,
+        qr_token_hash_prefix: qrTokenHash ? qrTokenHash.slice(0, 12) : null,
+      },
+      auth_context: {
+        scanner_user_id: scannerUserId,
+        org_id: orgId,
+        authorized_event_id: authorizedEventId,
+      },
+      lookup_attempts: lookupAttempts,
+    }
+
+    if (normalizedEntryFromPayload || normalizedFromQrPayload) {
+      const normalizedCandidate = normalizedEntryFromPayload || normalizedFromQrPayload
+      const entryCandidates = buildEntryCodeCandidates(normalizedCandidate as string)
+
+      const { count: codeAnyCount, error: codeAnyError } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .in("entry_code", entryCandidates)
+
+      const { count: codeInOrgCount, error: codeInOrgError } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .in("entry_code", entryCandidates)
+        .eq("org_id", orgId as string)
+
+      const { count: codeInEventCount, error: codeInEventError } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .in("entry_code", entryCandidates)
+        .eq("ticketed_event_id", ticketedEventId)
+
+      debug.entry_code_existence = {
+        normalized_candidate: normalizedCandidate,
+        candidates: entryCandidates,
+        any_org_count: codeAnyCount ?? 0,
+        org_scoped_count: codeInOrgCount ?? 0,
+        event_scoped_count: codeInEventCount ?? 0,
+        errors: {
+          any_org: codeAnyError?.message ?? null,
+          org_scoped: codeInOrgError?.message ?? null,
+          event_scoped: codeInEventError?.message ?? null,
+        },
+      }
+    }
+
+    if (qrTokenHash) {
+      const { count: hashAnyCount, error: hashAnyError } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("qr_token_hash", qrTokenHash)
+
+      const { count: hashInOrgCount, error: hashInOrgError } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("qr_token_hash", qrTokenHash)
+        .eq("org_id", orgId as string)
+
+      const { count: hashInEventCount, error: hashInEventError } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("qr_token_hash", qrTokenHash)
+        .eq("ticketed_event_id", ticketedEventId)
+
+      debug.qr_hash_existence = {
+        hash_prefix: qrTokenHash.slice(0, 12),
+        any_org_count: hashAnyCount ?? 0,
+        org_scoped_count: hashInOrgCount ?? 0,
+        event_scoped_count: hashInEventCount ?? 0,
+        errors: {
+          any_org: hashAnyError?.message ?? null,
+          org_scoped: hashInOrgError?.message ?? null,
+          event_scoped: hashInEventError?.message ?? null,
+        },
+      }
+    }
+
     // Record scan attempt
     await supabase.from("ticket_scans").insert({
       org_id: orgId!,
@@ -269,6 +409,7 @@ serve(async (req) => {
       result: "invalid",
       reason: "not_found",
       message: "Ticket not found",
+      debug,
     })
   }
 

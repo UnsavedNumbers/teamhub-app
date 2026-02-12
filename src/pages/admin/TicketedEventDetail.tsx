@@ -408,11 +408,16 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
     const updatedAt = new Date(event.updated_at)
     return Number.isNaN(updatedAt.getTime()) ? t('ticketing.detail.values.unavailable') : updatedAt.toLocaleString()
   })()
+  const internalDescription = event.description?.trim() || t('ticketing.detail.values.notProvided')
+  const publicDescription = event.event_description?.trim() || t('ticketing.detail.values.notProvided')
+  const bannerUrl = event.ticket_banner_url || event.cover_image_path || null
+  const editEventPath = event.event_id ? getLink('admin.events.edit', { id: event.event_id }) : null
 
   const hasOfflineReadOnlyNotice = !isOnline
   const hasDemoReadOnlyNotice = USE_FAKE_DATA
-  const hasOnlyInactiveTicketTypes = totalTicketTypeCount > 0 && ticketTypesList.length === 0
-  const hasDeletedAllVisibleTicketTypes = hadTicketTypesRef.current && ticketTypesList.length === 0 && totalTicketTypeCount === 0
+  const displayedTotalTicketTypeCount = Math.max(totalTicketTypeCount, ticketTypesList.length)
+  const hasOnlyInactiveTicketTypes = displayedTotalTicketTypeCount > 0 && ticketTypesList.length === 0
+  const hasDeletedAllVisibleTicketTypes = hadTicketTypesRef.current && ticketTypesList.length === 0 && displayedTotalTicketTypeCount === 0
   const activeTicketTypesCount = ticketTypesList.filter((type) => type.is_active).length
   const hasFiniteCapacity = ticketTypesList.some((type) => type.capacity_total !== null)
   const totalCapacity = hasFiniteCapacity
@@ -460,7 +465,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
             <div>
               <p className="oa-ticketing-kpi__label">{t('ticketing.detail.labels.activeTicketTypes')}</p>
               <p className="oa-ticketing-kpi__value">
-                {activeTicketTypesCount}/{totalTicketTypeCount}
+                {activeTicketTypesCount}/{displayedTotalTicketTypeCount}
               </p>
             </div>
           </div>
@@ -522,6 +527,29 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
           </div>
         </div>
 
+        <div className="oa-grid oa-grid-cols-1 md:oa-grid-cols-2 oa-gap-4" style={{ marginTop: 'var(--pa-space-4)' }}>
+          <div className="oa-ticketing-meta-item">
+            <span className="oa-ticketing-meta-item__label">{t('ticketing.detail.labels.internalDescription')}</span>
+            <p className="oa-ticketing-meta-item__value">{internalDescription}</p>
+          </div>
+          <div className="oa-ticketing-meta-item">
+            <span className="oa-ticketing-meta-item__label">{t('ticketing.detail.labels.publicDescription')}</span>
+            <p className="oa-ticketing-meta-item__value">{publicDescription}</p>
+          </div>
+        </div>
+
+        {bannerUrl && (
+          <div style={{ marginTop: 'var(--pa-space-4)' }}>
+            <span className="oa-ticketing-meta-item__label">{t('ticketing.detail.labels.banner')}</span>
+            <img
+              src={bannerUrl}
+              alt={t('ticketing.detail.labels.bannerAlt')}
+              className="oa-w-full"
+              style={{ marginTop: 'var(--pa-space-2)', maxHeight: 220, objectFit: 'cover', borderRadius: 'var(--pa-radius-lg)' }}
+            />
+          </div>
+        )}
+
         <div className="oa-ticketing-overview__actions">
           <OrgAdminButton
             variant="secondary"
@@ -538,6 +566,12 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
             {t('ticketing.detail.actions.openScanner')}
           </OrgAdminButton>
 
+          {editEventPath && (
+            <OrgAdminButton as={Link} to={editEventPath} icon="edit_note">
+              {t('ticketing.detail.actions.editTicketingDetails')}
+            </OrgAdminButton>
+          )}
+
           <OrgAdminButton
             size="compact"
             icon="add"
@@ -553,7 +587,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
       {event.status === 'published' ? (
         <PublicUrlShare
           orgId={event.org_id}
-          path={getLink(RouteKeys.PORTAL_TICKET_EVENT_DETAIL, { id: event.id })}
+          path={getLink(RouteKeys.PORTAL_TICKET_EVENT_DETAIL, { eventId: event.id })}
           title={t('ticketing.detail.share.title')}
           description={t('ticketing.detail.share.description')}
         />
@@ -570,7 +604,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
         <div className="oa-ticketing-types-card__header">
           <h2 className="oa-card-title">{t('ticketing.detail.sections.ticketTypes')}</h2>
           <span className="oa-ticketing-types-card__count">
-            {t('ticketing.detail.labels.totalTicketTypes', { count: totalTicketTypeCount })}
+            {t('ticketing.detail.labels.totalTicketTypes', { count: displayedTotalTicketTypeCount })}
           </span>
         </div>
 

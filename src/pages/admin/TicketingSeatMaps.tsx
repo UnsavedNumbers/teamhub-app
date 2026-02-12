@@ -8,10 +8,10 @@ import {
   createSeatMap,
   deleteSeatMapAdmin,
   getSeatMapsForOrgAdmin,
-  getTicketedEvents,
   type AdminSeatMapListItem,
 } from '@/data/services'
-import type { TicketedEvent } from '@/types/ticketing'
+import { getVenuesForOrg, publishSeatMap, cloneSeatMap } from '@/data/services/venueService'
+import type { Venue } from '@/types/ticketing'
 import { classifySupabaseError } from '@/utils/supabaseErrorHandler'
 import {
   AdminPageHeader,
@@ -45,9 +45,10 @@ export default function TicketingSeatMaps() {
   const { isOffline } = useOffline()
 
   const [search, setSearch] = useState('')
-  const [selectedEventId, setSelectedEventId] = useState('')
+  const [selectedVenueId, setSelectedVenueId] = useState('')
   const [newSeatMapName, setNewSeatMapName] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<AdminSeatMapListItem | null>(null)
+  const [cloneTarget, setCloneTarget] = useState<AdminSeatMapListItem | null>(null)
 
   const orgId = context.orgId || ''
 
@@ -57,27 +58,33 @@ export default function TicketingSeatMaps() {
     enabled: isReady && !!orgId,
   })
 
-  const ticketedEventsQuery = useQuery<TicketedEvent[]>({
-    queryKey: ['admin-ticketed-events-for-seat-maps', orgId],
-    queryFn: () => getTicketedEvents({ org_id: orgId }),
+  const venuesQuery = useQuery<Venue[]>({
+    queryKey: ['admin-venues', orgId],
+    queryFn: () => getVenuesForOrg(orgId),
     enabled: isReady && !!orgId,
   })
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedEventId) throw new Error(t('ticketing.seatMaps.errors.eventRequired'))
       const name = newSeatMapName.trim()
       if (!name) throw new Error(t('ticketing.seatMaps.errors.nameRequired'))
-      return createSeatMap(selectedEventId, name)
+      return createSeatMap({
+        name,
+        org_id: orgId,
+        venue_id: selectedVenueId || null,
+      })
     },
     onSuccess: (created) => {
       setNewSeatMapName('')
       showSuccessToast(t('ticketing.seatMaps.toasts.created'))
       void queryClient.invalidateQueries({ queryKey: ['admin-seat-maps', orgId] })
-      const builderPath = getLink('admin.ticketingEvents.seatMaps.builder', {
-        eventId: created.ticketed_event_id,
-        seatMapId: created.id,
-      })
+      // Navigate to builder — use legacy event-scoped route if event present, otherwise seat-map list
+      const builderPath = created.ticketed_event_id
+        ? getLink('admin.ticketingEvents.seatMaps.builder', {
+            eventId: created.ticketed_event_id,
+            seatMapId: created.id,
+          })
+        : getLink('admin.ticketingEvents.seatMaps.list')
       navigate(builderPath)
     },
     onError: (error) => {
@@ -97,6 +104,30 @@ export default function TicketingSeatMaps() {
     },
   })
 
+  const publishMutation = useMutation({
+    mutationFn: async (seatMapId: string) => publishSeatMap(seatMapId),
+    onSuccess: () => {
+      showSuccessToast(t('ticketing.seatMaps.toasts.published'))
+      void queryClient.invalidateQueries({ queryKey: ['admin-seat-maps', orgId] })
+    },
+    onError: (error) => {
+      showErrorToast(classifySupabaseError(error).message || t('ticketing.seatMaps.errors.publishFailed'))
+    },
+  })
+
+  const cloneMutation = useMutation({
+    mutationFn: async (params: { seatMapId: string; newName: string }) =>
+      cloneSeatMap({ sourceSeatMapId: params.seatMapId, newName: params.newName }),
+    onSuccess: () => {
+      showSuccessToast(t('ticketing.seatMaps.toasts.cloned'))
+      setCloneTarget(null)
+      void queryClient.invalidateQueries({ queryKey: ['admin-seat-maps', orgId] })
+    },
+    onError: (error) => {
+      showErrorToast(classifySupabaseError(error).message || t('ticketing.seatMaps.errors.cloneFailed'))
+    },
+  })
+
   const isWriteBlocked = isOffline || USE_FAKE_DATA
 
   const filteredSeatMaps = useMemo(() => {
@@ -107,21 +138,23 @@ export default function TicketingSeatMaps() {
     return items.filter((item) => {
       return (
         item.name.toLowerCase().includes(term) ||
-        item.event_title.toLowerCase().includes(term)
+        item.event_title.toLowerCase().includes(term) ||
+        (item.venue_name ?? '').toLowerCase().includes(term) ||
+        (item.team_name ?? '').toLowerCase().includes(term)
       )
     })
   }, [seatMapsQuery.data, search])
 
-  const eventOptions = useMemo(() => {
-    const events = ticketedEventsQuery.data ?? []
+  const venueOptions = useMemo(() => {
+    const venues = venuesQuery.data ?? []
     return [
-      { value: '', label: t('ticketing.seatMaps.form.selectEvent') },
-      ...events.map((event) => ({
-        value: event.id,
-        label: `${event.title} • ${formatDate(event.starts_at)}`,
+      { value: '', label: t('ticketing.seatMaps.form.noVenue') },
+      ...venues.map((v) => ({
+        value: v.id,
+        label: v.name + (v.city ? ` — ${v.city}` : ''),
       })),
     ]
-  }, [ticketedEventsQuery.data, t])
+  }, [venuesQuery.data, t])
 
   const columns: ColumnConfig<AdminSeatMapListItem>[] = [
     {
@@ -130,19 +163,36 @@ export default function TicketingSeatMaps() {
       sortable: true,
       render: (row) => (
         <div className="oa-flex oa-flex-col oa-gap-1">
-          <span className="oa-font-bold oa-text-slate-900">{row.name}</span>
-          <span className="oa-text-xs oa-text-slate-500">{row.id}</span>
+          <div className="oa-flex oa-items-center oa-gap-2">
+            <span className="oa-font-bold oa-text-slate-900">{row.name}</span>
+            {row.status === 'published' ? (
+              <span className="oa-inline-flex oa-items-center oa-rounded-full oa-bg-green-100 oa-px-2 oa-py-0.5 oa-text-xs oa-font-medium oa-text-green-700">
+                {t('ticketing.seatMaps.status.published')}
+              </span>
+            ) : (
+              <span className="oa-inline-flex oa-items-center oa-rounded-full oa-bg-amber-100 oa-px-2 oa-py-0.5 oa-text-xs oa-font-medium oa-text-amber-700">
+                {t('ticketing.seatMaps.status.draft')}
+              </span>
+            )}
+          </div>
+          {row.version > 1 && (
+            <span className="oa-text-xs oa-text-slate-400">v{row.version}</span>
+          )}
         </div>
       ),
     },
     {
-      id: 'event_title',
-      label: t('ticketing.seatMaps.table.event'),
+      id: 'venue_name',
+      label: t('ticketing.seatMaps.table.venue'),
       sortable: true,
       render: (row) => (
         <div className="oa-flex oa-flex-col oa-gap-1">
-          <span className="oa-text-sm oa-font-medium oa-text-slate-700">{row.event_title}</span>
-          <span className="oa-text-xs oa-text-slate-500">{formatDate(row.event_starts_at)}</span>
+          <span className="oa-text-sm oa-font-medium oa-text-slate-700">
+            {row.venue_name ?? t('ticketing.seatMaps.table.noVenue')}
+          </span>
+          {row.team_name && (
+            <span className="oa-text-xs oa-text-slate-500">{row.team_name}</span>
+          )}
         </div>
       ),
     },
@@ -151,6 +201,18 @@ export default function TicketingSeatMaps() {
       label: t('ticketing.seatMaps.table.seats'),
       sortable: true,
       render: (row) => <span className="oa-font-medium">{row.seat_count}</span>,
+    },
+    {
+      id: 'usage_count',
+      label: t('ticketing.seatMaps.table.usage'),
+      sortable: true,
+      render: (row) => (
+        <span className="oa-text-sm oa-text-slate-500">
+          {row.usage_count === 1
+            ? t('ticketing.seatMaps.table.usageSingular')
+            : t('ticketing.seatMaps.table.usagePlural', { count: String(row.usage_count) })}
+        </span>
+      ),
     },
     {
       id: 'updated_at',
@@ -164,20 +226,55 @@ export default function TicketingSeatMaps() {
       align: 'right',
       render: (row) => (
         <div className="oa-flex oa-items-center oa-gap-2 oa-justify-end">
-          <Link
-            to={getLink('admin.ticketingEvents.seatMaps.builder', {
-              eventId: row.ticketed_event_id,
-              seatMapId: row.id,
-            })}
-            className="oa-link"
-            onClick={(event) => event.stopPropagation()}
+          {row.status === 'draft' && (
+            <button
+              type="button"
+              className="oa-btn oa-btn--primary oa-btn--dense"
+              disabled={isWriteBlocked || publishMutation.isPending}
+              onClick={(event) => {
+                event.stopPropagation()
+                publishMutation.mutate(row.id)
+              }}
+            >
+              {t('ticketing.seatMaps.actions.publish')}
+            </button>
+          )}
+          <button
+            type="button"
+            className="oa-btn oa-btn--outline oa-btn--dense"
+            disabled={isWriteBlocked || cloneMutation.isPending}
+            onClick={(event) => {
+              event.stopPropagation()
+              setCloneTarget(row)
+            }}
           >
-            {t('ticketing.seatMaps.actions.edit')}
-          </Link>
+            {t('ticketing.seatMaps.actions.clone')}
+          </button>
+          {row.ticketed_event_id ? (
+            <Link
+              to={getLink('admin.ticketingEvents.seatMaps.builder', {
+                eventId: row.ticketed_event_id,
+                seatMapId: row.id,
+              })}
+              className="oa-link"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {t('ticketing.seatMaps.actions.edit')}
+            </Link>
+          ) : (
+            <Link
+              to={getLink('admin.ticketingEvents.seatMaps.list') + `?edit=${row.id}`}
+              className="oa-link"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {t('ticketing.seatMaps.actions.edit')}
+            </Link>
+          )}
           <button
             type="button"
             className="oa-btn oa-btn--danger oa-btn--dense"
-            disabled={isWriteBlocked || deleteMutation.isPending}
+            disabled={isWriteBlocked || deleteMutation.isPending || row.usage_count > 0}
+            title={row.usage_count > 0 ? t('ticketing.seatMaps.actions.deleteBlockedByUsage') : undefined}
             onClick={(event) => {
               event.stopPropagation()
               setDeleteTarget(row)
@@ -237,13 +334,13 @@ export default function TicketingSeatMaps() {
       <Card className="oa-mb-4">
         <div className="oa-grid oa-grid-cols-1 md:oa-grid-cols-3 oa-gap-3">
           <div className="oa-flex oa-flex-col oa-gap-2">
-            <label className="oa-label">{t('ticketing.seatMaps.form.eventLabel')}</label>
+            <label className="oa-label">{t('ticketing.seatMaps.form.venueLabel')}</label>
             <select
               className="oa-select"
-              value={selectedEventId}
-              onChange={(event) => setSelectedEventId(event.target.value)}
+              value={selectedVenueId}
+              onChange={(event) => setSelectedVenueId(event.target.value)}
             >
-              {eventOptions.map((option) => (
+              {venueOptions.map((option) => (
                 <option key={option.value || 'placeholder'} value={option.value}>
                   {option.label}
                 </option>
@@ -264,7 +361,7 @@ export default function TicketingSeatMaps() {
           <div className="oa-flex oa-items-end oa-justify-end">
             <OrgAdminButton
               icon="add"
-              disabled={isWriteBlocked || createMutation.isPending || !selectedEventId || !newSeatMapName.trim()}
+              disabled={isWriteBlocked || createMutation.isPending || !newSeatMapName.trim()}
               onClick={() => createMutation.mutate()}
             >
               {createMutation.isPending
@@ -294,15 +391,17 @@ export default function TicketingSeatMaps() {
           data={filteredSeatMaps}
           totalCount={filteredSeatMaps.length}
           rowsPerPage={Math.max(filteredSeatMaps.length, 10)}
-          loading={seatMapsQuery.isLoading || ticketedEventsQuery.isLoading}
+          loading={seatMapsQuery.isLoading || venuesQuery.isLoading}
           emptyMessage={t('ticketing.seatMaps.empty.noSeatMaps')}
           onRowClick={(row) => {
-            navigate(
-              getLink('admin.ticketingEvents.seatMaps.builder', {
-                eventId: row.ticketed_event_id,
-                seatMapId: row.id,
-              }),
-            )
+            if (row.ticketed_event_id) {
+              navigate(
+                getLink('admin.ticketingEvents.seatMaps.builder', {
+                  eventId: row.ticketed_event_id,
+                  seatMapId: row.id,
+                }),
+              )
+            }
           }}
         />
       </Card>
@@ -319,6 +418,24 @@ export default function TicketingSeatMaps() {
         onConfirm={() => {
           if (!deleteTarget) return
           deleteMutation.mutate(deleteTarget.id)
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!cloneTarget}
+        title={t('ticketing.seatMaps.cloneDialog.title')}
+        description={t('ticketing.seatMaps.cloneDialog.description', { name: cloneTarget?.name || '' })}
+        confirmLabel={cloneMutation.isPending ? t('ticketing.seatMaps.actions.cloning') : t('ticketing.seatMaps.actions.clone')}
+        variant="primary"
+        onCancel={() => {
+          if (!cloneMutation.isPending) setCloneTarget(null)
+        }}
+        onConfirm={() => {
+          if (!cloneTarget) return
+          cloneMutation.mutate({
+            seatMapId: cloneTarget.id,
+            newName: `${cloneTarget.name} (copy)`,
+          })
         }}
       />
     </div>

@@ -93,7 +93,15 @@ export default function SeatMapBuilder() {
             : t('ticketing.reservedSeating.builder.errors.offlineWriteBlocked'),
         )
       }
-      return createSeatMap(eventId, seatMapName.trim())
+      // Resolve org_id from event context if available
+      const orgId = eventQuery.data?.org_id ?? ''
+      const venueId = (eventQuery.data as any)?.venue_id ?? null
+      return createSeatMap({
+        name: seatMapName.trim(),
+        org_id: orgId,
+        venue_id: venueId,
+        ticketed_event_id: eventId,
+      })
     },
     onSuccess: async (created) => {
       showSuccess(t('ticketing.reservedSeating.builder.seatMapSaved'))
