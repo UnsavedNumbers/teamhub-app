@@ -29,6 +29,7 @@ interface Event {
   type: string
   start_time: string
   end_time: string
+  timezone?: string | null
   arrival_time: string | null
   location: string | null
   notes: string | null
@@ -173,6 +174,32 @@ END:VCALENDAR`
   } catch (err) {
     console.error('Error generating Apple Calendar link:', err)
     return null
+  }
+}
+
+function formatTimezoneDisplay(timeZone: string | null | undefined, referenceDate: string): string {
+  if (!timeZone) return ''
+
+  const parsedDate = new Date(referenceDate)
+  if (Number.isNaN(parsedDate.getTime())) return timeZone
+
+  try {
+    const longParts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      timeZoneName: 'long',
+    }).formatToParts(parsedDate)
+    const shortParts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      timeZoneName: 'short',
+    }).formatToParts(parsedDate)
+
+    const longName = longParts.find(part => part.type === 'timeZoneName')?.value
+    const shortName = shortParts.find(part => part.type === 'timeZoneName')?.value
+
+    if (longName && shortName) return `${longName} (${shortName})`
+    return longName || shortName || timeZone
+  } catch {
+    return timeZone
   }
 }
 
@@ -424,6 +451,7 @@ export default function EventDetail() {
         type: eventData.type,
         start_time: eventData.start_time,
         end_time: eventData.end_time,
+        timezone: eventData.timezone,
         arrival_time: eventData.arrival_time,
         location: buildVenueAddress(eventData.event_location || null),
         notes: eventData.notes,
@@ -535,14 +563,19 @@ export default function EventDetail() {
     setSaving(null)
   }
 
-  function formatDate(dateStr: string) {
+  function formatDate(dateStr: string, timezone?: string | null) {
     return new Date(dateStr).toLocaleDateString('en-US', {
-      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+      ...(timezone ? { timeZone: timezone } : {}),
     })
   }
 
-  function formatTime(dateStr: string) {
-    return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  function formatTime(dateStr: string, timezone?: string | null) {
+    return new Date(dateStr).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      ...(timezone ? { timeZone: timezone } : {}),
+    })
   }
 
   const handleDelete = async () => {
@@ -635,6 +668,7 @@ export default function EventDetail() {
 
   // Check if we have a banner image
   const bannerUrl = event.ticketed_event?.ticket_banner_url
+  const timezoneLabel = formatTimezoneDisplay(event.timezone, event.start_time)
   
   return (
     <PortalLayout
@@ -670,7 +704,10 @@ export default function EventDetail() {
             
             <h1 className="event-hero-title">{event.title}</h1>
             <p className="event-hero-meta">
-              {formatDate(event.start_time)}<span className="meta-separator"> • </span><span className="meta-time">{formatTime(event.start_time)} - {formatTime(event.end_time)}</span>
+              {formatDate(event.start_time, event.timezone)}
+              <span className="meta-separator"> • </span>
+              <span className="meta-time">{formatTime(event.start_time, event.timezone)} - {formatTime(event.end_time, event.timezone)}</span>
+              {timezoneLabel && <><span className="meta-separator"> • </span><span className="meta-time">{timezoneLabel}</span></>}
             </p>
             <p className="event-hero-team">{event.team.name}</p>
             
@@ -683,8 +720,8 @@ export default function EventDetail() {
                 </div>
                 {event.arrival_time && (
                   <div>
-                    <p className="quick-info-label">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time) })}</p>
-                    <p className="quick-info-value">{formatTime(event.arrival_time)}</p>
+                    <p className="quick-info-label">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time, event.timezone) })}</p>
+                    <p className="quick-info-value">{formatTime(event.arrival_time, event.timezone)}</p>
                   </div>
                 )}
                 {venueAddress && (
@@ -765,7 +802,8 @@ export default function EventDetail() {
             <div>
               <PageTitle>{event.title}</PageTitle>
               <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
-                {formatDate(event.start_time)} • {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                {formatDate(event.start_time, event.timezone)} • {formatTime(event.start_time, event.timezone)} - {formatTime(event.end_time, event.timezone)}
+                {timezoneLabel ? ` • ${timezoneLabel}` : ''}
               </p>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-2">
                 {event.team.name}
@@ -804,8 +842,8 @@ export default function EventDetail() {
             </div>
             {event.arrival_time && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time) })}</p>
-                <p className="text-lg font-black text-slate-900 dark:text-white">{formatTime(event.arrival_time)}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time, event.timezone) })}</p>
+                <p className="text-lg font-black text-slate-900 dark:text-white">{formatTime(event.arrival_time, event.timezone)}</p>
               </div>
             )}
             {venueAddress && (

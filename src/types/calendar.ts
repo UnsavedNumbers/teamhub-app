@@ -309,8 +309,10 @@ export interface TicketingFormData {
 export interface TicketTypeFormData {
     /** Present when editing an existing ticket type */
     id?: string
+    seat_map_id?: string | null
     /** Sold count for display/validation; from DB (capacity_total - capacity_remaining) */
     soldCount?: number
+    seating_mode?: 'general_admission' | 'reserved_seating'
     name: string
     description: string
     price_dollars: string

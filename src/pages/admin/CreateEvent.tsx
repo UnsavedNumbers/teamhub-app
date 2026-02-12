@@ -38,7 +38,7 @@ import { STORAGE_KEYS, STORAGE_EXPIRY } from '../../constants/storage'
 import { getDefaultEventVisibility } from '../../utils/fanVisibilityHelpers'
 import { uploadTicketBanner } from '../../data/services/organizationService'
 import { getLink, RouteKeys } from '../../utils/routes'
-import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
+import { logEvent } from '../../utils/eventLogger'
 import '../../styles/orgAdmin.css'
 
 const STORAGE_KEY = STORAGE_KEYS.FORM_AUTOSAVE
@@ -105,9 +105,9 @@ const buildLocalhostEventDefaults = (): Partial<EventFormData> => {
       event_description: 'Test ticketed event for local development.',
       ticket_banner_url: '',
       ticket_types: [
-        { name: 'General Admission', description: 'Standard entry', price_dollars: '15.00', capacity: '150' },
-        { name: 'Student', description: 'Student discounted entry', price_dollars: '8.00', capacity: '100' },
-        { name: 'VIP', description: 'Premium seating and perks', price_dollars: '35.00', capacity: '40' }
+        { name: 'General Admission', description: 'Standard entry', price_dollars: '15.00', capacity: '150', seating_mode: 'general_admission' },
+        { name: 'Student', description: 'Student discounted entry', price_dollars: '8.00', capacity: '100', seating_mode: 'general_admission' },
+        { name: 'VIP', description: 'Premium seating and perks', price_dollars: '35.00', capacity: '40', seating_mode: 'general_admission' }
       ]
     }
   }
@@ -737,8 +737,8 @@ export default function CreateEvent() {
         org_id: context.orgId,
         title: data.title,
         type: data.type,
-        team_id: resolvedTeamId,
-        season_id: hasStructure ? data.season_id! : null,
+        team_id: resolvedTeamId as unknown as EventInsert['team_id'],
+        season_id: (hasStructure ? data.season_id! : null) as unknown as EventInsert['season_id'],
         start_time: start.toISOString(),
         end_time: end.toISOString(),
         arrival_time: arrival ? arrival.toISOString() : null,
@@ -876,7 +876,16 @@ export default function CreateEvent() {
 
         // Insert ticket types
         if (data.ticketing.ticket_types && data.ticketing.ticket_types.length > 0) {
-          type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert']
+          const hasReservedTypesWithoutSeatMap = data.ticketing.ticket_types.some(
+            (ticketType) => ticketType.name.trim() !== '' && ticketType.seating_mode === 'reserved_seating',
+          )
+          if (hasReservedTypesWithoutSeatMap) {
+            throw new Error(t('admin.events.ticketing.ticketTypes.mode.requiresSeatMap'))
+          }
+
+          type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert'] & {
+            seating_mode?: 'general_admission' | 'reserved_seating'
+          }
           const ticketTypeInserts: TicketTypeInsert[] = data.ticketing.ticket_types
             .filter(tt => tt.name.trim() !== '')
             .map((tt, index) => {
@@ -900,6 +909,7 @@ export default function CreateEvent() {
                 capacity_remaining: capacityRemaining,
                 sort_order: index,
                 is_active: true,
+                seating_mode: tt.seating_mode === 'reserved_seating' ? 'reserved_seating' : 'general_admission',
               } satisfies TicketTypeInsert
             })
 
@@ -1556,7 +1566,7 @@ export default function CreateEvent() {
                         <Button
                           type="button"
                           variant="ghost"
-                            onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '', description: '' })}
+                            onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '', description: '', seating_mode: 'general_admission' })}
                         >
                           {t('admin.events.ticketing.ticketTypes.add')}
                         </Button>
@@ -1568,7 +1578,7 @@ export default function CreateEvent() {
                         <div className="oa-space-y-3">
                           {ticketTypeFields.map((field, index) => (
                             <div key={field.id} className="oa-ticket-type-card">
-                              <div className="oa-form-grid oa-form-grid-3 oa-mb-2">
+                              <div className="oa-form-grid oa-form-grid-4 oa-mb-2">
                                 <Controller
                                   name={`ticketing.ticket_types.${index}.name`}
                                   control={control}
@@ -1615,6 +1625,21 @@ export default function CreateEvent() {
                                       label="Price ($)"
                                       placeholder="0.00"
                                       error={errors.ticketing?.ticket_types?.[index]?.price_dollars?.message}
+                                    />
+                                  )}
+                                />
+                                <Controller
+                                  name={`ticketing.ticket_types.${index}.seating_mode`}
+                                  control={control}
+                                  render={({ field }) => (
+                                    <Select
+                                      {...field}
+                                      value={field.value || 'general_admission'}
+                                      label={t('admin.events.ticketing.ticketTypes.mode.label')}
+                                      options={[
+                                        { value: 'general_admission', label: t('admin.events.ticketing.ticketTypes.mode.generalAdmission') },
+                                        { value: 'reserved_seating', label: t('admin.events.ticketing.ticketTypes.mode.reservedSeating') },
+                                      ]}
                                     />
                                   )}
                                 />
