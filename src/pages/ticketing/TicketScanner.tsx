@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getTicketedEvents, validateTicketScan, exchangeStaffLink } from '@/data/services'
 import { useOffline } from '@/hooks/useOffline'
 import { useT } from '@/i18n/useI18n'
+import { getLink, RouteKeys } from '@/utils/routes'
 import type { ValidateScanResponse, TicketScanResult, OrderContext } from '@/types/ticketing'
 import { QRCodeScanner, type QRCodeScannerHandle } from '@/components/ticketing/QRCodeScanner'
 import { ValidationResultBanner } from '@/components/ticketing/ValidationResultBanner'
@@ -26,6 +27,8 @@ interface ValidationResult {
   message?: string
   ticketTypeName?: string
 }
+
+type ScannerMode = 'physical' | 'camera'
 
 export default function TicketScanner() {
   const { token, eventId } = useParams<{ token?: string; eventId?: string }>()
@@ -43,6 +46,8 @@ export default function TicketScanner() {
   const [staffLinkSession, setStaffLinkSession] = useState<any>(null)
   const [orderContext, setOrderContext] = useState<OrderContext | null>(null)
   const [isValidating, setIsValidating] = useState(false)
+  const [scannerMode, setScannerMode] = useState<ScannerMode>('physical')
+  const [isCameraOpen, setIsCameraOpen] = useState(false)
   const [pendingCount] = useState(0)
   
   const inputRef = useRef<HTMLInputElement>(null)
@@ -87,10 +92,16 @@ export default function TicketScanner() {
 
   // Auto-focus input
   useEffect(() => {
-    if (inputRef.current && !validationResult && !isValidating) {
+    if (scannerMode === 'physical' && inputRef.current && !validationResult && !isValidating && !isOffline) {
       inputRef.current.focus()
     }
-  }, [validationResult, isValidating])
+  }, [scannerMode, validationResult, isValidating, isOffline])
+
+  useEffect(() => {
+    if (scannerMode === 'physical' && isCameraOpen) {
+      setIsCameraOpen(false)
+    }
+  }, [scannerMode, isCameraOpen])
 
   // Format entry code as user types
   const handleCodeChange = useCallback((value: string) => {
@@ -135,7 +146,7 @@ export default function TicketScanner() {
         setValidationResult({
           result: 'invalid',
           reason: 'not_found',
-          message: error?.message || 'Validation failed',
+          message: error?.message || t('ticketing.validation.validationFailed'),
         })
         setTimeout(() => {
           setValidationResult(null)
@@ -191,7 +202,7 @@ export default function TicketScanner() {
       setValidationResult({
         result: 'invalid',
         reason: 'not_found',
-        message: error.message || 'Validation failed',
+        message: error.message || t('ticketing.validation.validationFailed'),
       })
       setTimeout(() => {
         setValidationResult(null)
@@ -200,7 +211,7 @@ export default function TicketScanner() {
     } finally {
       setIsValidating(false)
     }
-  }, [selectedEventId, isValidating, token])
+  }, [selectedEventId, isValidating, token, t])
 
   // Handle manual entry submission
   const handleManualSubmit = useCallback(async (e?: React.FormEvent) => {
@@ -231,7 +242,7 @@ export default function TicketScanner() {
         setValidationResult({
           result: 'invalid',
           reason: 'not_found',
-          message: error?.message || 'Validation failed',
+          message: error?.message || t('ticketing.validation.validationFailed'),
         })
         setTimeout(() => {
           setValidationResult(null)
@@ -286,7 +297,7 @@ export default function TicketScanner() {
       setValidationResult({
         result: 'invalid',
         reason: 'not_found',
-        message: error.message || 'Validation failed',
+        message: error.message || t('ticketing.validation.validationFailed'),
       })
       setTimeout(() => {
         setValidationResult(null)
@@ -294,7 +305,7 @@ export default function TicketScanner() {
     } finally {
       setIsValidating(false)
     }
-  }, [selectedEventId, entryCode, isValidating, isOffline, token])
+  }, [selectedEventId, entryCode, isValidating, isOffline, token, t])
 
   // Handle event mismatch confirmation
   const handleAdmitAnyway = useCallback(async () => {
@@ -323,7 +334,7 @@ export default function TicketScanner() {
         setValidationResult({
           result: 'invalid',
           reason: 'not_found',
-          message: error?.message || 'Validation failed',
+          message: error?.message || t('ticketing.validation.validationFailed'),
         })
         return
       }
@@ -366,12 +377,12 @@ export default function TicketScanner() {
       setValidationResult({
         result: 'invalid',
         reason: 'not_found',
-        message: error.message || 'Validation failed',
+        message: error.message || t('ticketing.validation.validationFailed'),
       })
     } finally {
       setIsValidating(false)
     }
-  }, [validationResult, selectedEventId, token])
+  }, [validationResult, selectedEventId, token, t])
 
   // Handle "Validate Next" for multi-ticket orders
   const handleValidateNext = useCallback(async () => {
@@ -393,12 +404,12 @@ export default function TicketScanner() {
       setValidationResult({
         result: 'invalid',
         reason: 'not_found',
-        message: error.message || 'Validation failed',
+        message: error.message || t('ticketing.validation.validationFailed'),
       })
     } finally {
       setIsValidating(false)
     }
-  }, [orderContext])
+  }, [orderContext, t])
 
   // Handle offline retry
   useEffect(() => {
@@ -425,57 +436,91 @@ export default function TicketScanner() {
     : selectedEventId
       ? eventList.find((event: any) => event.id === selectedEventId) || (
         directEventId && selectedEventId === directEventId
-          ? { id: directEventId, title: `Event ${directEventId.slice(0, 8)}` }
+          ? { id: directEventId, title: t('ticketing.scanner.eventFallbackTitle', { shortId: directEventId.slice(0, 8) }) }
           : null
       )
       : null
 
+  const scannerColorRoles = {
+    '--scanner-color-primary': 'var(--org-color-primary, var(--org-btn-primary-bg))',
+    '--scanner-color-primary-hover': 'var(--org-btn-primary-hover)',
+    '--scanner-color-primary-active': 'var(--org-btn-primary-active)',
+    '--scanner-color-on-primary': 'var(--org-btn-primary-text)',
+    '--scanner-color-secondary': 'var(--org-color-secondary, var(--org-link-color))',
+    '--scanner-color-secondary-hover': 'var(--org-color-tertiary, var(--org-link-hover))',
+    '--scanner-color-tertiary': 'var(--org-color-tertiary, var(--org-border-active))',
+    '--scanner-color-tertiary-bg': 'color-mix(in srgb, var(--org-color-tertiary, #64748b) 14%, transparent)',
+  } as React.CSSProperties
+
   return (
-    <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white p-3 sm:p-4 md:p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-4 md:mb-6">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#111418] dark:text-white mb-2 uppercase tracking-tight">
+    <div
+      style={scannerColorRoles}
+      className="min-h-screen bg-[var(--org-surface-page,#f6f7f8)] text-[var(--org-text-primary,#111418)] p-3 sm:p-4 md:p-6"
+    >
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-4 md:mb-6 rounded-2xl border border-[var(--org-border-default,#dce7f6)] bg-[var(--org-surface-card,#fff)] p-4 sm:p-6 shadow-sm">
+          <div className="h-1.5 w-16 rounded-full bg-[var(--scanner-color-secondary)] mb-4" />
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[var(--org-text-primary,#111418)] uppercase tracking-tight">
             {t('ticketing.scanner.title')}
           </h1>
-          {isOffline && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 sm:p-4 mb-3 md:mb-4">
-              <p className="text-sm sm:text-base text-yellow-800 dark:text-yellow-200">
-                <strong>{t('ticketing.scanner.connectionLost')}</strong> {t('ticketing.scanner.connectionLostDesc')}
-              </p>
-              {pendingCount > 0 && (
-                <p className="text-xs sm:text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                  {pendingCount} validation{pendingCount !== 1 ? 's' : ''} queued for sync
-                </p>
-              )}
-            </div>
-          )}
-          
-          {showWarning && heapSize !== null && (
-            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 sm:p-4 mb-3 md:mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <p className="text-sm sm:text-base text-orange-800 dark:text-orange-200">
-                <strong>High memory usage:</strong> {heapSize}MB used. Consider refreshing the page.
-              </p>
-              <button
-                onClick={dismissWarning}
-                className="text-sm sm:text-base px-3 py-1.5 sm:px-0 sm:py-0 text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-200 whitespace-nowrap"
-              >
-                Dismiss
-              </button>
+          <p className="mt-1 text-sm sm:text-base text-[var(--org-text-secondary,#617589)]">
+            {t('ticketing.scanner.subtitle')}
+          </p>
+          {currentEvent && (
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--org-surface-card-header,#f3f4f6)] border border-[var(--org-border-default,#dce7f6)] px-3 py-1.5 text-sm">
+              <span className="font-medium text-[var(--scanner-color-secondary)]">{t('ticketing.scanner.validatingFor')}</span>
+              <span className="font-semibold text-[var(--org-text-primary,#111418)]">{currentEvent.title}</span>
             </div>
           )}
         </div>
 
-        {/* Event Selector (admin route only) */}
+        {isOffline && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-3 sm:p-4 mb-3 md:mb-4">
+            <p className="text-sm sm:text-base text-yellow-800 dark:text-yellow-200">
+              <strong>{t('ticketing.scanner.connectionLost')}</strong> {t('ticketing.scanner.connectionLostDesc')}
+            </p>
+            {pendingCount > 0 && (
+              <p className="text-xs sm:text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                {t('ticketing.scanner.queuedCount', {
+                  count: pendingCount,
+                  plural: pendingCount === 1 ? '' : 's',
+                })}
+              </p>
+            )}
+          </div>
+        )}
+
+        {showWarning && heapSize !== null && (
+          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-3 sm:p-4 mb-3 md:mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <p className="text-sm sm:text-base text-orange-800 dark:text-orange-200">
+              <strong>{t('ticketing.scanner.memoryWarningTitle')}</strong> {t('ticketing.scanner.memoryWarningDesc', { heapSize })}
+            </p>
+            <button
+              onClick={dismissWarning}
+              className="text-sm sm:text-base px-3 py-1.5 sm:px-0 sm:py-0 text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-200 whitespace-nowrap"
+            >
+              {t('ticketing.scanner.dismissMemoryWarning')}
+            </button>
+          </div>
+        )}
+
         {!token && !directEventId && eventList.length > 0 && (
-          <div className="mb-4 md:mb-6">
-            <label className="block text-sm sm:text-base font-medium text-[#111418] dark:text-white mb-2">
+          <div className="mb-4 md:mb-6 rounded-xl border border-[var(--org-border-default,#dce7f6)] bg-[var(--org-surface-card,#fff)] p-4 shadow-sm">
+            <label className="block text-sm sm:text-base font-medium text-[var(--scanner-color-secondary)] mb-2">
               {t('ticketing.scanner.selectEvent')}
             </label>
             <select
               value={selectedEventId || ''}
-              onChange={(e) => setSelectedEventId(e.target.value)}
-              className="w-full px-3 sm:px-4 py-3 sm:py-2.5 text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-[#111418] dark:text-white focus:ring-2 focus:ring-[#137fec] focus:border-[#137fec]"
+              onChange={(e) => {
+                const nextEventId = e.target.value
+                setSelectedEventId(nextEventId || null)
+                navigate(
+                  nextEventId
+                    ? getLink(RouteKeys.ADMIN_TICKETING_SCANNER_EVENT, { eventId: nextEventId })
+                    : getLink(RouteKeys.ADMIN_TICKETING_SCANNER),
+                )
+              }}
+              className="w-full px-3 sm:px-4 py-3 sm:py-2.5 text-base border border-[var(--org-border-default,#d1d5db)] rounded-lg bg-[var(--org-surface-primary,#fff)] text-[var(--org-text-primary,#111418)] focus:ring-2 focus:ring-[var(--scanner-color-tertiary-bg)] focus:border-[var(--scanner-color-tertiary)]"
             >
               <option value="">{t('ticketing.scanner.chooseEvent')}</option>
               {eventList.map((event: any) => (
@@ -487,140 +532,223 @@ export default function TicketScanner() {
           </div>
         )}
 
-        {/* Fixed Event Display (staff link or event-specific admin route) */}
-        {(token || directEventId) && currentEvent && (
-          <div className="mb-4 md:mb-6 bg-[#137fec]/10 border border-[#137fec]/20 rounded-lg p-3 sm:p-4">
-            <p className="text-xs sm:text-sm text-[#137fec] font-medium">{t('ticketing.scanner.validatingFor')}</p>
-            <p className="text-base sm:text-lg font-bold text-[#111418] dark:text-white">{currentEvent.title}</p>
-          </div>
-        )}
-
         {!selectedEventId && !token && (
-          <div className="text-center py-8 sm:py-12 text-sm sm:text-base text-gray-500">
+          <div className="text-center py-10 sm:py-14 text-sm sm:text-base text-[var(--org-text-secondary,#64748b)] bg-[var(--org-surface-card,#fff)] rounded-xl border border-dashed border-[var(--org-border-default,#d1d5db)]">
             {t('ticketing.scanner.selectEventPrompt')}
           </div>
         )}
 
         {(selectedEventId || token) && (
           <>
-            {/* Main scanner area - mobile-first responsive layout */}
-            <div className="mb-4 md:mb-6 flex flex-col lg:grid lg:grid-cols-2 gap-4 md:gap-6">
-              {/* Camera section */}
-              <section className="order-1">
-                <div className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm overflow-hidden">
-                  <QRCodeScanner
-                    ref={scannerRef}
-                    onScan={handleQRScan}
-                    onError={(error) => {
-                      console.warn('Camera error:', error)
-                    }}
-                    isEnabled={!!selectedEventId && !isValidating}
-                  />
-                </div>
-              </section>
-
-              {/* Manual entry section */}
-              <section className="order-2">
-                <form onSubmit={handleManualSubmit} className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm p-4 sm:p-5 md:p-6">
-                  <label className="block text-sm sm:text-base font-medium text-[#111418] dark:text-white mb-3">
-                    Manual Entry
+            <section className="mb-4 md:mb-6 rounded-2xl border border-[var(--org-border-default,#dce7f6)] bg-[var(--org-surface-card,#fff)] p-4 sm:p-5 md:p-6 shadow-sm">
+              <form onSubmit={handleManualSubmit}>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                  <label className="text-sm sm:text-base font-bold text-[var(--scanner-color-secondary)] uppercase tracking-wide">
+                    {t('ticketing.scanner.manualEntry')}
                   </label>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={entryCode}
-                      onChange={(e) => handleCodeChange(e.target.value)}
-                      placeholder="XXXX-XXXX-XXXX"
-                      className="flex-1 text-xl sm:text-2xl font-mono text-center px-3 sm:px-4 py-4 sm:py-4 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-[#111418] dark:text-white focus:ring-2 focus:ring-[#137fec] focus:border-[#137fec] uppercase tracking-wider min-h-[56px]"
-                      maxLength={14} // XXXX-XXXX-XXXX
-                      disabled={!selectedEventId || isValidating || isOffline}
-                      autoComplete="off"
-                      autoCapitalize="characters"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!selectedEventId || !entryCode.trim() || isValidating || isOffline}
-                      className="w-full sm:w-auto px-6 sm:px-8 py-4 bg-[#137fec] text-white font-black text-base sm:text-lg rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors uppercase tracking-wider shadow-[0_8px_15px_-3px_rgba(19,127,236,0.3),0_4px_6px_-2px_rgba(19,127,236,0.05)] min-h-[56px]"
-                    >
-                      {isValidating ? 'Validating...' : 'Validate'}
-                    </button>
-                  </div>
-                  {pendingValidation && (
-                    <p className="mt-2 text-xs sm:text-sm text-yellow-600 dark:text-yellow-400">
-                      Queued for validation when connection is restored...
+                  <span className="inline-flex items-center rounded-full border border-[var(--org-border-default,#dce7f6)] bg-[var(--scanner-color-tertiary-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--scanner-color-secondary)]">
+                    {scannerMode === 'physical' ? t('ticketing.scanner.physicalScanner') : t('ticketing.scanner.phoneCamera')}
+                  </span>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={entryCode}
+                    onChange={(e) => handleCodeChange(e.target.value)}
+                    onBlur={() => {
+                      if (scannerMode === 'physical' && !isValidating && !isOffline) {
+                        window.setTimeout(() => inputRef.current?.focus(), 0)
+                      }
+                    }}
+                    placeholder={t('ticketing.scanner.entryCodePlaceholder')}
+                    className="flex-1 text-xl sm:text-2xl font-mono text-center px-3 sm:px-4 py-4 border-2 border-[var(--org-border-default,#c9daee)] rounded-lg bg-[var(--org-surface-primary,#fff)] text-[var(--org-text-primary,#111418)] focus:ring-2 focus:ring-[var(--scanner-color-tertiary-bg)] focus:border-[var(--scanner-color-tertiary)] uppercase tracking-wider min-h-[56px] transition-all"
+                    maxLength={14}
+                    disabled={!selectedEventId || isValidating || isOffline}
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    aria-label={t('ticketing.scanner.manualEntry')}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!selectedEventId || !entryCode.trim() || isValidating || isOffline}
+                    className="w-full sm:w-auto px-6 sm:px-8 py-4 bg-[var(--scanner-color-primary)] text-[var(--scanner-color-on-primary)] font-black text-base sm:text-lg rounded-lg hover:bg-[var(--scanner-color-primary-hover)] active:bg-[var(--scanner-color-primary-active)] disabled:bg-[var(--org-btn-disabled-bg,#94a3b8)] disabled:text-[var(--org-btn-disabled-text,#e2e8f0)] disabled:cursor-not-allowed transition-colors uppercase tracking-wider shadow-sm min-h-[56px]"
+                  >
+                    {isValidating ? t('ticketing.scanner.validating') : t('ticketing.scanner.validate')}
+                  </button>
+                </div>
+                {pendingValidation && (
+                  <p className="mt-2 text-xs sm:text-sm text-yellow-600 dark:text-yellow-400">
+                    {t('ticketing.scanner.queuedForValidation')}
+                  </p>
+                )}
+              </form>
+            </section>
+
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6">
+              <section className="xl:col-span-7 space-y-4">
+                <div className="rounded-2xl border border-[var(--org-border-default,#dce7f6)] bg-[var(--org-surface-card,#fff)] p-4 sm:p-5 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                    <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-[var(--scanner-color-secondary)]">
+                      {t('ticketing.scanner.scannerMode')}
                     </p>
-                  )}
-                </form>
-              </section>
-            </div>
-
-            {/* Validation result overlay */}
-            {validationResult && (
-              <ValidationResultBanner
-                result={validationResult}
-                onAdmitAnyway={'event_mismatch' in validationResult && validationResult.event_mismatch ? handleAdmitAnyway : undefined}
-                onDismiss={() => {
-                  setValidationResult(null)
-                  scannerRef.current?.resume()
-                }}
-              />
-            )}
-
-            {/* Order context panel */}
-            {orderContext && !validationResult && (
-              <OrderContextPanel
-                context={orderContext}
-                onValidateNext={handleValidateNext}
-              />
-            )}
-
-            {/* Session Counts */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 md:mb-6">
-              <div className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm p-3 sm:p-4">
-                <p className="text-xs sm:text-sm text-[#617589] dark:text-gray-400">{t('ticketing.scanner.validatedThisSession')}</p>
-                <p className="text-2xl sm:text-3xl font-black text-[#111418] dark:text-white">{sessionCounts.validated}</p>
-              </div>
-              {sessionCounts.remainingCapacity !== null && (
-                <div className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm p-3 sm:p-4">
-                  <p className="text-xs sm:text-sm text-[#617589] dark:text-gray-400">{t('ticketing.scanner.remainingCapacity')}</p>
-                  <p className="text-2xl sm:text-3xl font-black text-[#111418] dark:text-white">{sessionCounts.remainingCapacity}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Validation History */}
-            {validationHistory.length > 0 && (
-              <div className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm p-3 sm:p-4">
-                <h3 className="text-base sm:text-lg font-black text-[#111418] dark:text-white mb-3 uppercase tracking-tight">
-                  {t('ticketing.scanner.recentScans')}
-                </h3>
-                <div className="space-y-2 max-h-64 sm:max-h-80 overflow-y-auto">
-                  {validationHistory.map((result, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3 p-2.5 sm:p-2 rounded-lg ${
-                        result.result === 'valid'
-                          ? 'bg-[#10b981]/10'
-                          : result.result === 'already_used'
-                          ? 'bg-orange-50 dark:bg-orange-900/20'
-                          : 'bg-red-50 dark:bg-red-900/20'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <span className="font-mono text-sm sm:text-base font-bold text-[#111418] dark:text-white">{result.code}</span>
-                        <span className="text-xs sm:text-sm text-[#617589] dark:text-gray-400">
-                          {result.ticketTypeName && `(${result.ticketTypeName})`}
-                        </span>
-                      </div>
-                      <div className="text-xs text-[#617589] dark:text-gray-500 sm:text-right">
-                        {result.timestamp.toLocaleTimeString()}
-                      </div>
+                    <div className="inline-flex rounded-lg bg-[var(--org-surface-card-header,#eef4fc)] p-1 border border-[var(--org-border-default,#dce7f6)]">
+                      <button
+                        type="button"
+                        onClick={() => setScannerMode('physical')}
+                        className={`px-3 sm:px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+                          scannerMode === 'physical'
+                            ? 'bg-[var(--org-surface-primary,#fff)] text-[var(--scanner-color-primary)] shadow-sm border-b-2 border-[var(--scanner-color-secondary)]'
+                            : 'text-[var(--org-text-secondary,#64748b)] hover:text-[var(--scanner-color-secondary-hover)] hover:bg-[var(--scanner-color-tertiary-bg)]'
+                        }`}
+                        aria-pressed={scannerMode === 'physical'}
+                      >
+                        {t('ticketing.scanner.physicalScanner')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setScannerMode('camera')}
+                        className={`px-3 sm:px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+                          scannerMode === 'camera'
+                            ? 'bg-[var(--org-surface-primary,#fff)] text-[var(--scanner-color-primary)] shadow-sm border-b-2 border-[var(--scanner-color-secondary)]'
+                            : 'text-[var(--org-text-secondary,#64748b)] hover:text-[var(--scanner-color-secondary-hover)] hover:bg-[var(--scanner-color-tertiary-bg)]'
+                        }`}
+                        aria-pressed={scannerMode === 'camera'}
+                      >
+                        {t('ticketing.scanner.phoneCamera')}
+                      </button>
                     </div>
-                  ))}
+                  </div>
+
+                  <p className="text-sm text-[var(--org-text-secondary,#617589)] mb-4">
+                    {scannerMode === 'physical'
+                      ? t('ticketing.scanner.modePhysicalDescription')
+                      : t('ticketing.scanner.modeCameraDescription')}
+                  </p>
+
+                  {scannerMode === 'physical' ? (
+                    <div className="rounded-xl border border-[var(--scanner-color-tertiary)] bg-[var(--scanner-color-tertiary-bg)] p-4">
+                      <p className="text-sm font-bold text-[var(--org-text-primary,#111418)] mb-1">
+                        {t('ticketing.scanner.physicalReadyTitle')}
+                      </p>
+                      <p className="text-xs sm:text-sm text-[var(--org-text-secondary,#617589)]">
+                        {t('ticketing.scanner.physicalReadyDesc')}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {!isCameraOpen ? (
+                        <div className="rounded-xl border border-dashed border-[var(--scanner-color-tertiary)] bg-[var(--scanner-color-tertiary-bg)] p-5 text-center">
+                          <p className="text-sm font-semibold text-[var(--org-text-primary,#111418)] mb-1">
+                            {t('ticketing.scanner.cameraReadyTitle')}
+                          </p>
+                          <p className="text-xs sm:text-sm text-[var(--org-text-secondary,#617589)] mb-4">
+                            {t('ticketing.scanner.cameraReadyDesc')}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setIsCameraOpen(true)}
+                            className="inline-flex items-center justify-center px-5 py-2.5 border border-[var(--org-btn-secondary-border,#cbd5e1)] bg-[var(--org-btn-secondary-bg,transparent)] text-[var(--org-btn-secondary-text,var(--org-text-primary,#111418))] font-bold rounded-lg hover:bg-[var(--org-btn-secondary-hover,var(--scanner-color-tertiary-bg))] transition-colors"
+                          >
+                            {t('ticketing.scanner.openCamera')}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl overflow-hidden border border-[var(--org-border-default,#dce7f6)]">
+                          <div className="flex items-center justify-between px-3 py-2 bg-[var(--org-surface-card-header,#f2f7fe)] border-b border-[var(--org-border-default,#dce7f6)]">
+                            <p className="text-xs sm:text-sm font-semibold text-[var(--scanner-color-secondary)]">
+                              {t('ticketing.scanner.cameraHint')}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setIsCameraOpen(false)}
+                              className="text-xs sm:text-sm text-[var(--scanner-color-secondary)] hover:text-[var(--scanner-color-secondary-hover)] font-semibold"
+                            >
+                              {t('ticketing.scanner.closeCamera')}
+                            </button>
+                          </div>
+                          <QRCodeScanner
+                            ref={scannerRef}
+                            onScan={handleQRScan}
+                            onError={(error) => {
+                              console.warn('Camera error:', error)
+                            }}
+                            isEnabled={Boolean(selectedEventId) && !isValidating && scannerMode === 'camera' && isCameraOpen}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+
+                {validationResult && (
+                  <ValidationResultBanner
+                    result={validationResult}
+                    onAdmitAnyway={'event_mismatch' in validationResult && validationResult.event_mismatch ? handleAdmitAnyway : undefined}
+                    onDismiss={() => {
+                      setValidationResult(null)
+                      scannerRef.current?.resume()
+                    }}
+                  />
+                )}
+
+                {orderContext && !validationResult && (
+                  <OrderContextPanel
+                    context={orderContext}
+                    onValidateNext={handleValidateNext}
+                  />
+                )}
+              </section>
+
+              <aside className="xl:col-span-5 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-3 sm:gap-4">
+                  <div className="bg-[var(--org-surface-card,#fff)] rounded-xl border border-[var(--org-border-default,#dce7f6)] shadow-sm p-4">
+                    <p className="text-xs sm:text-sm text-[var(--scanner-color-secondary)]">{t('ticketing.scanner.validatedThisSession')}</p>
+                    <p className="text-3xl font-black text-[var(--scanner-color-primary)] mt-1">{sessionCounts.validated}</p>
+                  </div>
+                  {sessionCounts.remainingCapacity !== null && (
+                    <div className="bg-[var(--org-surface-card,#fff)] rounded-xl border border-[var(--org-border-default,#dce7f6)] shadow-sm p-4">
+                      <p className="text-xs sm:text-sm text-[var(--scanner-color-secondary)]">{t('ticketing.scanner.remainingCapacity')}</p>
+                      <p className="text-3xl font-black text-[var(--scanner-color-primary)] mt-1">{sessionCounts.remainingCapacity}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-[var(--org-surface-card,#fff)] rounded-xl border border-[var(--org-border-default,#dce7f6)] shadow-sm p-4">
+                  <h3 className="text-base sm:text-lg font-black text-[var(--scanner-color-secondary)] mb-3 uppercase tracking-tight">
+                    {t('ticketing.scanner.recentScans')}
+                  </h3>
+                  {validationHistory.length === 0 ? (
+                    <p className="text-sm text-[var(--org-text-secondary,#617589)]">{t('ticketing.scanner.noScansYet')}</p>
+                  ) : (
+                    <div className="space-y-2 max-h-72 sm:max-h-96 overflow-y-auto">
+                      {validationHistory.map((result, idx) => (
+                        <div
+                          key={idx}
+                          className={`flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3 p-2.5 rounded-lg ${
+                            result.result === 'valid'
+                              ? 'bg-[#10b981]/10'
+                              : result.result === 'already_used'
+                              ? 'bg-orange-50 dark:bg-orange-900/20'
+                              : 'bg-red-50 dark:bg-red-900/20'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <span className="font-mono text-sm sm:text-base font-bold text-[var(--org-text-primary,#111418)]">{result.code}</span>
+                            <span className="text-xs sm:text-sm text-[var(--org-text-secondary,#617589)]">
+                              {result.ticketTypeName && `(${result.ticketTypeName})`}
+                            </span>
+                          </div>
+                          <div className="text-xs text-[var(--org-text-muted,#94a3b8)] sm:text-right">
+                            {result.timestamp.toLocaleTimeString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </aside>
+            </div>
           </>
         )}
       </div>

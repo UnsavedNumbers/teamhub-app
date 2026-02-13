@@ -10,6 +10,7 @@ import { USE_FAKE_DATA } from '../config'
 import type {
   TicketedEvent,
   TicketType,
+  TicketSeatingMode,
   TicketOrder,
   TicketOrderItem,
   Ticket,
@@ -277,6 +278,88 @@ export async function getTicketTypesForEventAdmin(ticketedEventId: string) {
   }
 }
 
+/**
+ * Get all ticket types for an event (admin/internal use, including inactive)
+ */
+export async function getAllTicketTypesForEventAdmin(ticketedEventId: string): Promise<TicketType[]> {
+  if (!ticketedEventId) {
+    throw new ValidationError('Ticketed event is required')
+  }
+
+  if (USE_FAKE_DATA) {
+    return getFakeTicketTypes(ticketedEventId, null)
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    const { data, error } = await supabaseAny
+      .from('ticket_types')
+      .select('*')
+      .eq('ticketed_event_id', ticketedEventId)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+
+    if (error) throw error
+
+    return normalizeSupabaseResponse<TicketType[]>(data as unknown as TicketType[], true)
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticket types')
+  }
+}
+
+export interface TicketTypeSalesSnapshot {
+  ticketTypeId: string
+  soldCount: number
+  purchasedCount: number
+}
+
+export async function getTicketTypeSalesSnapshotForEventAdmin(
+  ticketedEventId: string,
+): Promise<Record<string, TicketTypeSalesSnapshot>> {
+  if (!ticketedEventId) {
+    throw new ValidationError('Ticketed event is required')
+  }
+
+  if (USE_FAKE_DATA) {
+    return {}
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    const { data, error } = await supabaseAny
+      .from('tickets')
+      .select('ticket_type_id, status')
+      .eq('ticketed_event_id', ticketedEventId)
+
+    if (error) throw error
+
+    const rows = (data ?? []) as Array<{ ticket_type_id: string | null; status: string | null }>
+    const salesByType: Record<string, TicketTypeSalesSnapshot> = {}
+
+    for (const row of rows) {
+      const ticketTypeId = row.ticket_type_id
+      if (!ticketTypeId) continue
+
+      if (!salesByType[ticketTypeId]) {
+        salesByType[ticketTypeId] = {
+          ticketTypeId,
+          soldCount: 0,
+          purchasedCount: 0,
+        }
+      }
+
+      salesByType[ticketTypeId].soldCount += 1
+      if (row.status === 'active' || row.status === 'used') {
+        salesByType[ticketTypeId].purchasedCount += 1
+      }
+    }
+
+    return salesByType
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticket type sales snapshot')
+  }
+}
+
 export async function getTicketTypesTotalCountForEventAdmin(ticketedEventId: string): Promise<number> {
   if (!ticketedEventId) {
     throw new ValidationError('Ticketed event is required')
@@ -424,6 +507,126 @@ export async function createTicketType(
     }
 
     return createServiceResponse<TicketType>(data as unknown as TicketType, null)
+  } catch (error: unknown) {
+    return createServiceResponse<TicketType>(null, error as Error)
+  }
+}
+
+type TicketTypeUpdatePayload = Database['public']['Tables']['ticket_types']['Update'] & {
+  seating_mode?: TicketSeatingMode
+  seat_map_id?: string | null
+}
+
+export async function updateTicketType(
+  ticketTypeId: string,
+  updates: TicketTypeUpdatePayload,
+) {
+  try {
+    assertNotDemoMode('update ticket types')
+
+    if (!ticketTypeId) {
+      throw new ValidationError('Ticket type is required')
+    }
+
+    if (Object.keys(updates).length === 0) {
+      throw new ValidationError('No ticket type changes were provided')
+    }
+
+    const supabaseAny = supabase as any
+    const { data: existingType, error: existingTypeError } = await supabaseAny
+      .from('ticket_types')
+      .select('id, price_cents, seating_mode, sales_start_at, sales_end_at')
+      .eq('id', ticketTypeId)
+      .single()
+
+    if (existingTypeError) {
+      return createServiceResponse<TicketType>(null, existingTypeError)
+    }
+
+    const {
+      data: ticketRows,
+      error: ticketRowsError,
+    } = await supabaseAny
+      .from('tickets')
+      .select('status')
+      .eq('ticket_type_id', ticketTypeId)
+
+    if (ticketRowsError) {
+      return createServiceResponse<TicketType>(null, ticketRowsError)
+    }
+
+    const soldCount = (ticketRows ?? []).length
+    const purchasedCount = (ticketRows ?? []).filter(
+      (row: { status: string | null }) => row.status === 'active' || row.status === 'used',
+    ).length
+
+    const existingPrice = Number(existingType?.price_cents ?? 0)
+    const existingSeatingMode = (existingType?.seating_mode ?? 'general_admission') as TicketSeatingMode
+
+    if (soldCount > 0) {
+      const nextPrice = updates.price_cents
+      if (typeof nextPrice === 'number' && nextPrice !== existingPrice) {
+        return createServiceResponse<TicketType>(
+          null,
+          new ValidationError('Price cannot be changed once tickets have been sold. Create a new ticket type and make this one inactive.'),
+        )
+      }
+
+      const nextSeatingMode = updates.seating_mode
+      if (nextSeatingMode && nextSeatingMode !== existingSeatingMode) {
+        return createServiceResponse<TicketType>(
+          null,
+          new ValidationError('Seating mode cannot be changed once tickets have been sold. Create a new ticket type and make this one inactive.'),
+        )
+      }
+    }
+
+    if (typeof updates.capacity_total === 'number' && updates.capacity_total < purchasedCount) {
+      return createServiceResponse<TicketType>(
+        null,
+        new ValidationError(`Capacity cannot be lower than ${purchasedCount} purchased ticket(s).`),
+      )
+    }
+
+    const existingSalesStartAt = existingType?.sales_start_at as string | null | undefined
+    if (
+      existingSalesStartAt &&
+      new Date(existingSalesStartAt).getTime() < Date.now() &&
+      updates.sales_start_at !== undefined &&
+      updates.sales_start_at !== existingSalesStartAt
+    ) {
+      return createServiceResponse<TicketType>(
+        null,
+        new ValidationError('Sales start is already in the past and can no longer be edited.'),
+      )
+    }
+
+    const effectiveSalesStart = updates.sales_start_at !== undefined
+      ? updates.sales_start_at
+      : ((existingType?.sales_start_at as string | null | undefined) ?? null)
+    const effectiveSalesEnd = updates.sales_end_at !== undefined
+      ? updates.sales_end_at
+      : ((existingType?.sales_end_at as string | null | undefined) ?? null)
+
+    if (effectiveSalesStart && effectiveSalesEnd && new Date(effectiveSalesEnd) <= new Date(effectiveSalesStart)) {
+      return createServiceResponse<TicketType>(
+        null,
+        new ValidationError('Sales end must occur after the sales start.'),
+      )
+    }
+
+    const { data, error } = await supabaseAny
+      .from('ticket_types')
+      .update(updates)
+      .eq('id', ticketTypeId)
+      .select('*')
+      .single()
+
+    if (error) {
+      return createServiceResponse<TicketType>(null, error)
+    }
+
+    return createServiceResponse<TicketType>(data as TicketType, null)
   } catch (error: unknown) {
     return createServiceResponse<TicketType>(null, error as Error)
   }
