@@ -409,7 +409,7 @@ export default function SeatMapBuilder() {
           <div className="oa-ticketing-field-stack">
             <div className="oa-form-grid oa-form-grid-2 oa-gap-4">
               <div className="oa-form-group">
-                <label className="pa-label oa-label">{t('ticketing.reservedSeating.builder.mapName')}</label>
+                <label className="oa-label oa-label">{t('ticketing.reservedSeating.builder.mapName')}</label>
                 <input
                   className="oa-input"
                   value={seatMapName}
@@ -417,7 +417,7 @@ export default function SeatMapBuilder() {
                 />
               </div>
               <div className="oa-form-group">
-                <label className="pa-label oa-label" style={{ visibility: 'hidden' }} aria-hidden="true">
+                <label className="oa-label oa-label" style={{ visibility: 'hidden' }} aria-hidden="true">
                   {t('ticketing.reservedSeating.builder.mapName')}
                 </label>
                 <button
@@ -445,7 +445,7 @@ export default function SeatMapBuilder() {
             </div>
 
             <div className="oa-form-group">
-              <label className="pa-label oa-label">{t('ticketing.reservedSeating.builder.chartUploadLabel')}</label>
+              <label className="oa-label oa-label">{t('ticketing.reservedSeating.builder.chartUploadLabel')}</label>
               <input
                 type="file"
                 accept="image/*"
@@ -609,4 +609,5 @@ export default function SeatMapBuilder() {
     </div>
   )
 }
+
 

@@ -752,12 +752,10 @@ export default function FanEventDetail() {
                     ? 'This event does not require tickets.'
                     : 'This event has already taken place.'}
                 </p>
-                {event.arrival_time && (
-                  <div className="fan-event-arrival-time">
-                    <span className="material-symbols-outlined">schedule</span>
-                    <span>Arrive by: {formatEventTime(event.arrival_time)}</span>
-                  </div>
-                )}
+                <div className="fan-event-arrival-time">
+                  <span className="material-symbols-outlined">schedule</span>
+                  <span>Starts at: {formatEventTime(event.start_time)}</span>
+                </div>
               </>
             )}
           </div>
@@ -899,7 +897,7 @@ export default function FanEventDetail() {
                             </div>
                           </div>
                           {(() => {
-                            const targetTime = event.arrival_time || event.start_time
+                            const targetTime = event.start_time
                             const durationText = commuteSummary.durationInTraffic || commuteSummary.duration
                             const hoursMatch = durationText.match(/(\d+)\s*hour/)
                             const minsMatch = durationText.match(/(\d+)\s*min/)
@@ -926,7 +924,7 @@ export default function FanEventDetail() {
                                       minute: '2-digit',
                                       ...(event.timezone ? { timeZone: event.timezone } : {}),
                                     })}
-                                    {event.arrival_time ? ' (arrival time)' : ' (start time)'}
+                                    {' (start time)'}
                                   </p>
                                 </div>
                               )

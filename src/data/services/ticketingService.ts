@@ -44,7 +44,7 @@ import {
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
 const FUNCTIONS_URL = `${SUPABASE_URL.replace('/rest/v1', '')}/functions/v1`
-const FAN_VISIBLE_EVENT_OR_FILTER = 'visibility.eq.visible,visibility.is.null'
+const FAN_VISIBLE_EVENT_OR_FILTER = 'visibility.eq.public,visibility.is.null'
 
 function isFanVisibleEvent(
   event:
@@ -56,7 +56,7 @@ function isFanVisibleEvent(
     | undefined,
 ): boolean {
   if (!event) return false
-  return event.status === 'published' && event.visibility !== 'hidden'
+  return event.status === 'published' && (event.visibility === 'public' || event.visibility == null)
 }
 
 // ============================================================================

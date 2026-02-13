@@ -95,7 +95,7 @@ export function GalleryCreateModal({
         <form className="pa-space-y-3" onSubmit={handleSubmit}>
           <div className="pa-grid pa-grid-cols-2 pa-gap-3">
             <div>
-              <label className="pa-label">Entity type</label>
+              <label className="oa-label">Entity type</label>
               <select
                 className="pa-input"
                 value={entityType}
@@ -111,7 +111,7 @@ export function GalleryCreateModal({
               </select>
             </div>
             <div>
-              <label className="pa-label">Entity ID</label>
+              <label className="oa-label">Entity ID</label>
               <Input
                 value={entityId}
                 onChange={(e) => setEntityId(e.target.value)}
@@ -122,12 +122,12 @@ export function GalleryCreateModal({
           </div>
 
           <div>
-            <label className="pa-label">Name</label>
+            <label className="oa-label">Name</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required />
           </div>
 
           <div>
-            <label className="pa-label">Description</label>
+            <label className="oa-label">Description</label>
             <textarea
               className="pa-input"
               value={description}
@@ -138,7 +138,7 @@ export function GalleryCreateModal({
           </div>
 
           <div>
-            <label className="pa-label">Visibility</label>
+            <label className="oa-label">Visibility</label>
             <select className="pa-input" value={visibility} onChange={(e) => setVisibility(e.target.value as any)}>
               <option value="public">Public</option>
               <option value="team">Team only</option>
@@ -159,3 +159,4 @@ export function GalleryCreateModal({
     </div>
   )
 }
+

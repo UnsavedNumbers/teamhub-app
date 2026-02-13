@@ -32,7 +32,7 @@ import {
     isValidEventTimeOrder,
     RecurringEditMode,
 } from '../../types/calendar'
-import { uploadTicketBanner } from '../../data/services/organizationService'
+import { deleteTicketBanner, getTicketBannerPublicUrl, uploadTicketBanner } from '../../data/services/organizationService'
 import { validateDeleteEvent, validateCancelEvent, validateUpdateEvent, EVENT_ERRORS } from '../../utils/eventValidation'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
@@ -66,6 +66,8 @@ export default function EditEvent() {
   const [hasPaidOrders, setHasPaidOrders] = useState(false)
   const [ticketedEventId, setTicketedEventId] = useState<string | null>(null)
   const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [bannerFilePreviewUrl, setBannerFilePreviewUrl] = useState<string | null>(null)
+  const [removingBanner, setRemovingBanner] = useState(false)
   const [isPastEvent, setIsPastEvent] = useState(false)
   const [visibility, setVisibility] = useState<'public' | 'private'>('private')
 
@@ -131,7 +133,22 @@ export default function EditEvent() {
   const watchRSVPEnabled = watch('rsvp_enabled')
   const watchTicketingEnabled = watch('ticketing.is_ticketed')
   const watchTicketingSalesImmediate = watch('ticketing.sales_immediate')
+  const watchTicketingBannerUrl = watch('ticketing.ticket_banner_url')
+  const watchTitle = watch('title')
 
+  useEffect(() => {
+    if (!bannerFile) {
+      setBannerFilePreviewUrl(null)
+      return
+    }
+
+    const objectUrl = URL.createObjectURL(bannerFile)
+    setBannerFilePreviewUrl(objectUrl)
+
+    return () => {
+      URL.revokeObjectURL(objectUrl)
+    }
+  }, [bannerFile])
 
 
   const fetchEvent = useCallback(async () => {
@@ -917,6 +934,58 @@ export default function EditEvent() {
     }
   }
 
+  const storedBannerPreviewUrl = getTicketBannerPublicUrl(watchTicketingBannerUrl)
+  const bannerPreviewUrl = bannerFilePreviewUrl || storedBannerPreviewUrl
+
+  const handleRemoveBanner = async () => {
+    if (removingBanner || saving) return
+
+    const existingBannerValue = watchTicketingBannerUrl?.trim() || ''
+    const hasPersistedBanner = existingBannerValue.length > 0
+
+    if (!hasPersistedBanner && !bannerFile) return
+
+    const confirmed = window.confirm('Remove this banner image?')
+    if (!confirmed) return
+
+    if (hasPersistedBanner && isOffline) {
+      showError('You are offline. Reconnect to remove the banner from storage.')
+      return
+    }
+
+    if (hasPersistedBanner && USE_FAKE_DATA) {
+      showError('Demo mode: Banner removal from storage is disabled.')
+      return
+    }
+
+    setRemovingBanner(true)
+
+    try {
+      if (hasPersistedBanner) {
+        const { error: deleteError } = await deleteTicketBanner(existingBannerValue)
+        if (deleteError) throw deleteError
+
+        if (ticketedEventId) {
+          const { error: clearError } = await supabase
+            .from('ticketed_events')
+            .update({ ticket_banner_url: null } as any)
+            .eq('id', ticketedEventId)
+
+          if (clearError) throw clearError
+        }
+      }
+
+      setValue('ticketing.ticket_banner_url', '', { shouldDirty: true })
+      setBannerFile(null)
+      showSuccess('Banner removed.')
+    } catch (err) {
+      const message = getErrorMessage(err) || 'Failed to remove banner.'
+      showError(message)
+    } finally {
+      setRemovingBanner(false)
+    }
+  }
+
   const eventTypeOptions = (Object.keys(EVENT_TYPE_LABELS) as EventType[]).map(key => ({
       value: key,
       label: EVENT_TYPE_LABELS[key]
@@ -1273,6 +1342,64 @@ export default function EditEvent() {
                         )}
                       />
                     </div>
+
+                    {bannerPreviewUrl && (
+                      <div>
+                        <div style={{ marginBottom: '8px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--org-text-secondary)' }}>
+                          Page header preview
+                        </div>
+                        <div
+                          style={{
+                            position: 'relative',
+                            minHeight: 140,
+                            borderRadius: 12,
+                            overflow: 'hidden',
+                            backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.18) 65%, rgba(0,0,0,0) 100%), url(${bannerPreviewUrl})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={handleRemoveBanner}
+                            disabled={removingBanner || saving}
+                            title="Remove banner"
+                            aria-label="Remove banner"
+                            style={{
+                              position: 'absolute',
+                              top: 10,
+                              right: 10,
+                              width: 32,
+                              height: 32,
+                              borderRadius: 999,
+                              border: '1px solid rgba(255,255,255,0.6)',
+                              background: 'rgba(17,24,39,0.6)',
+                              color: '#fff',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: removingBanner || saving ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                              close
+                            </span>
+                          </button>
+
+                          <div style={{ padding: '16px', color: '#fff' }}>
+                            <p style={{ margin: 0, fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.95 }}>
+                              Official Event
+                            </p>
+                            <h4 style={{ margin: '8px 0 0', fontSize: '1.05rem', lineHeight: 1.2, fontWeight: 800 }}>
+                              {watchTitle?.trim() || 'Event title'}
+                            </h4>
+                          </div>
+                        </div>
+                        <p className="oa-body-xs oa-mt-2">
+                          {bannerFile ? 'Previewing selected upload. Save the event to publish this new banner.' : 'Current uploaded banner.'}
+                        </p>
+                      </div>
+                    )}
 
                     <Controller
                       name="ticketing.ticket_banner_url"
