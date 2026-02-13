@@ -327,6 +327,8 @@ export default function TicketScanner() {
         {
           ticketed_event_id: selectedEventId!,
           qr_token_raw: qrToken,
+          force_validate: true,
+          cross_event_admission: true,
         },
         token,
       )
@@ -468,9 +470,28 @@ export default function TicketScanner() {
             {t('ticketing.scanner.subtitle')}
           </p>
           {currentEvent && (
-            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--org-surface-card-header,#f3f4f6)] border border-[var(--org-border-default,#dce7f6)] px-3 py-1.5 text-sm">
-              <span className="font-medium text-[var(--scanner-color-secondary)]">{t('ticketing.scanner.validatingFor')}</span>
-              <span className="font-semibold text-[var(--org-text-primary,#111418)]">{currentEvent.title}</span>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 rounded-full bg-[var(--org-surface-card-header,#f3f4f6)] border border-[var(--org-border-default,#dce7f6)] px-3 py-1.5 text-sm">
+                <span className="font-medium text-[var(--scanner-color-secondary)]">{t('ticketing.scanner.validatingFor')}</span>
+                <span className="font-semibold text-[var(--org-text-primary,#111418)]">{currentEvent.title}</span>
+              </div>
+              {!token && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedEventId(null)
+                    setValidationResult(null)
+                    setOrderContext(null)
+                    setEntryCode('')
+                    setScannerMode('physical')
+                    setIsCameraOpen(false)
+                    navigate(getLink(RouteKeys.ADMIN_TICKETING_SCANNER))
+                  }}
+                  className="inline-flex items-center rounded-full border border-[var(--org-border-default,#dce7f6)] bg-[var(--org-surface-card,#fff)] px-3 py-1.5 text-sm font-semibold text-[var(--scanner-color-secondary)] hover:text-[var(--scanner-color-secondary-hover)] hover:bg-[var(--scanner-color-tertiary-bg)] transition-colors"
+                >
+                  {t('ticketing.scanner.switchEvents')}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -691,7 +712,13 @@ export default function TicketScanner() {
                 {validationResult && (
                   <ValidationResultBanner
                     result={validationResult}
-                    onAdmitAnyway={'event_mismatch' in validationResult && validationResult.event_mismatch ? handleAdmitAnyway : undefined}
+                    onAdmitAnyway={
+                      'event_mismatch' in validationResult &&
+                      validationResult.event_mismatch &&
+                      Boolean(validationResult.qr_token_raw)
+                        ? handleAdmitAnyway
+                        : undefined
+                    }
                     onDismiss={() => {
                       setValidationResult(null)
                       scannerRef.current?.resume()

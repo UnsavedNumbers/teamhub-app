@@ -362,6 +362,8 @@ export interface ValidateScanRequest {
   qr_token_raw?: string
   entry_code?: string
   client_device_id?: string
+  force_validate?: boolean
+  cross_event_admission?: boolean
 }
 
 export interface OrderContext {

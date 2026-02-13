@@ -230,6 +230,7 @@ serve(async (req) => {
     const query = supabase
       .from("tickets")
       .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
+      .eq("org_id", orgId!)
       .in("entry_code", entryCandidates)
 
     const { data } = await query.limit(10)
@@ -245,6 +246,7 @@ serve(async (req) => {
       const { data: entryCodeMatches } = await supabase
         .from("tickets")
         .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
+        .eq("org_id", orgId!)
         .in("entry_code", entryCandidates)
         .limit(10)
 
@@ -261,6 +263,7 @@ serve(async (req) => {
     const { data: tokenMatch } = await supabase
       .from("tickets")
       .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
+      .eq("org_id", orgId!)
       .eq("qr_token_hash", qrTokenHash)
       .maybeSingle()
     
@@ -273,6 +276,7 @@ serve(async (req) => {
       const query = supabase
         .from("tickets")
         .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
+        .eq("org_id", orgId!)
         .in("entry_code", entryCandidates)
 
       const { data: entryCodeMatches } = await query.limit(10)
