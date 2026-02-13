@@ -17,8 +17,8 @@ function OrgLandingContent({ org }: { org: OrgContext }) {
 
   // Check if ticketing is enabled and has events
   const { data: eventsResponse } = useQuery({
-    queryKey: ['ticketed-events', 'published', org.id, 'preview'],
-    queryFn: () => getTicketedEvents({ org_id: org.id, status: 'published', upcoming_only: true }),
+    queryKey: ['ticketed-events', 'published', org.id, 'fan-visible', 'upcoming', 'preview'],
+    queryFn: () => getTicketedEvents({ org_id: org.id, status: 'published', upcoming_only: true, fan_visible_only: true }),
     select: (data: any) => {
       const events = Array.isArray(data) ? data : data?.data || []
       return events.slice(0, 3) // Preview first 3 events

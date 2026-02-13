@@ -78,6 +78,7 @@ export default function TicketingSeatMaps() {
       setNewSeatMapName('')
       showSuccessToast(t('ticketing.seatMaps.toasts.created'))
       void queryClient.invalidateQueries({ queryKey: ['admin-seat-maps', orgId] })
+      void queryClient.invalidateQueries({ queryKey: ['seat-maps'] })
       // Navigate to builder — use legacy event-scoped route if event present, otherwise seat-map list
       const builderPath = created.ticketed_event_id
         ? getLink('admin.ticketingEvents.seatMaps.builder', {
@@ -98,6 +99,7 @@ export default function TicketingSeatMaps() {
       showSuccessToast(t('ticketing.seatMaps.toasts.deleted'))
       setDeleteTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['admin-seat-maps', orgId] })
+      void queryClient.invalidateQueries({ queryKey: ['seat-maps'] })
     },
     onError: (error) => {
       showErrorToast(classifySupabaseError(error).message || t('ticketing.seatMaps.errors.deleteFailed'))
@@ -109,6 +111,7 @@ export default function TicketingSeatMaps() {
     onSuccess: () => {
       showSuccessToast(t('ticketing.seatMaps.toasts.published'))
       void queryClient.invalidateQueries({ queryKey: ['admin-seat-maps', orgId] })
+      void queryClient.invalidateQueries({ queryKey: ['seat-maps'] })
     },
     onError: (error) => {
       showErrorToast(classifySupabaseError(error).message || t('ticketing.seatMaps.errors.publishFailed'))
@@ -122,6 +125,7 @@ export default function TicketingSeatMaps() {
       showSuccessToast(t('ticketing.seatMaps.toasts.cloned'))
       setCloneTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['admin-seat-maps', orgId] })
+      void queryClient.invalidateQueries({ queryKey: ['seat-maps'] })
     },
     onError: (error) => {
       showErrorToast(classifySupabaseError(error).message || t('ticketing.seatMaps.errors.cloneFailed'))
