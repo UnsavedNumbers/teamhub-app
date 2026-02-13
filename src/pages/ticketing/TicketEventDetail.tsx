@@ -168,9 +168,13 @@ export default function TicketEventDetail() {
     const now = new Date()
     const starts = event.sales_start_at ? new Date(event.sales_start_at) : null
     const ends = event.sales_end_at ? new Date(event.sales_end_at) : null
+    const eventEndsAt = new Date(event.ends_at)
 
     if (event.status !== 'published') {
       return { isOnSale: false, message: 'Ticket sales are not currently open.' }
+    }
+    if (!Number.isNaN(eventEndsAt.getTime()) && eventEndsAt < now) {
+      return { isOnSale: false, message: 'This event has ended.' }
     }
     if (starts && starts > now) {
       return { isOnSale: false, message: 'Ticket sales have not started yet.' }
@@ -185,6 +189,31 @@ export default function TicketEventDetail() {
     () => ticketTypes.some((type) => type.capacity_remaining === null || type.capacity_remaining > 0),
     [ticketTypes],
   )
+  const isSoldOut = useMemo(
+    () => ticketTypes.length > 0 && !hasAvailableTickets,
+    [hasAvailableTickets, ticketTypes.length],
+  )
+  const noActiveTicketTypes = ticketTypes.length === 0
+  const emptyTicketStateMessage = useMemo(() => {
+    if (!event) return 'No tickets are currently available for this event.'
+
+    const now = Date.now()
+    const eventEnd = new Date(event.ends_at).getTime()
+    if (!Number.isNaN(eventEnd) && eventEnd < now) {
+      return 'This event has ended.'
+    }
+
+    if (event.sale_status === 'sold_out' || isSoldOut) {
+      return 'This event is sold out.'
+    }
+
+    const salesStart = event.sales_start_at ? new Date(event.sales_start_at).getTime() : null
+    if (salesStart !== null && !Number.isNaN(salesStart) && salesStart > now) {
+      return 'Tickets for this event are coming soon.'
+    }
+
+    return 'No tickets are currently available for this event.'
+  }, [event, isSoldOut])
 
   const emailIsValid = EMAIL_REGEX.test(purchaserEmail.trim())
   const emailError = emailTouched && !emailIsValid ? 'Enter a valid email address.' : null
@@ -196,7 +225,8 @@ export default function TicketEventDetail() {
       if (!eventId) throw new Error('Missing event')
       if (isOffline) throw new Error('You are offline. Please reconnect to checkout.')
       if (!salesStatus.isOnSale) throw new Error(salesStatus.message)
-      if (!hasAvailableTickets) throw new Error('Tickets are sold out.')
+      if (noActiveTicketTypes) throw new Error(emptyTicketStateMessage)
+      if (isSoldOut) throw new Error('This event is sold out.')
 
       const trimmedEmail = purchaserEmail.trim()
       if (!EMAIL_REGEX.test(trimmedEmail)) throw new Error('Enter a valid email address.')
@@ -314,7 +344,8 @@ export default function TicketEventDetail() {
     checkoutMutation.isPending ||
     isOffline ||
     !salesStatus.isOnSale ||
-    !hasAvailableTickets ||
+    isSoldOut ||
+    noActiveTicketTypes ||
     cart.length === 0 ||
     !emailIsValid ||
     cart.some(
@@ -413,7 +444,7 @@ export default function TicketEventDetail() {
                   </div>
                 )}
                 {!ticketTypesQuery.isLoading && !ticketTypesQuery.isError && ticketTypes.length === 0 && (
-                  <div className="p-6 text-center text-gray-500">Tickets are not available for this event.</div>
+                  <div className="p-6 text-center text-gray-500">{emptyTicketStateMessage}</div>
                 )}
                 {ticketTypes.map((ticketType, idx) => {
                   const cartItem = cart.find((item) => item.ticket_type_id === ticketType.id)
@@ -530,9 +561,14 @@ export default function TicketEventDetail() {
                         {salesStatus.message}
                       </div>
                     )}
-                    {!hasAvailableTickets && (
+                    {isSoldOut && (
                       <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                        Tickets are sold out for this event.
+                        This event is sold out.
+                      </div>
+                    )}
+                    {noActiveTicketTypes && (
+                      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                        {emptyTicketStateMessage}
                       </div>
                     )}
 

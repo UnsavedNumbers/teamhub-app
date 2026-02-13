@@ -44,6 +44,20 @@ import {
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
 const FUNCTIONS_URL = `${SUPABASE_URL.replace('/rest/v1', '')}/functions/v1`
+const FAN_VISIBLE_EVENT_OR_FILTER = 'visibility.eq.visible,visibility.is.null'
+
+function isFanVisibleEvent(
+  event:
+    | {
+      status?: string | null
+      visibility?: string | null
+    }
+    | null
+    | undefined,
+): boolean {
+  if (!event) return false
+  return event.status === 'published' && event.visibility !== 'hidden'
+}
 
 // ============================================================================
 // Ticketed Events
@@ -53,6 +67,7 @@ export async function getTicketedEvents(filters?: {
   org_id?: string
   status?: 'published' | 'draft' | 'cancelled' | 'completed'
   upcoming_only?: boolean
+  fan_visible_only?: boolean
 }) {
   if (USE_FAKE_DATA) {
     return getFakeTicketedEvents(filters)
@@ -70,6 +85,10 @@ export async function getTicketedEvents(filters?: {
 
     if (filters?.status) {
       query = query.eq('status', filters.status)
+    }
+
+    if (filters?.fan_visible_only) {
+      query = query.eq('status', 'published').or(FAN_VISIBLE_EVENT_OR_FILTER)
     }
 
     if (filters?.upcoming_only) {
@@ -96,7 +115,9 @@ export async function getTicketedEventById(id: string, orgId: string) {
 
   if (USE_FAKE_DATA) {
     const event = getFakeTicketedEvent(id, orgId)
-    if (!event) throw new Error('Ticketed event not found')
+    if (!event || !isFanVisibleEvent(event as { status?: string | null; visibility?: string | null })) {
+      throw new Error('Ticketed event not found')
+    }
     return event
   }
 
@@ -106,6 +127,8 @@ export async function getTicketedEventById(id: string, orgId: string) {
       .select('*')
       .eq('id', id)
       .eq('org_id', orgId) // CRITICAL: Always filter by org_id for public routes
+      .eq('status', 'published')
+      .or(FAN_VISIBLE_EVENT_OR_FILTER)
       .single()
 
     if (error) throw error
@@ -123,7 +146,7 @@ export async function getTicketedEventById(id: string, orgId: string) {
 export async function getPublicTicketedEventById(id: string) {
   if (USE_FAKE_DATA) {
     const event = getFakeTicketedEvent(id, null)
-    if (!event || event.status !== 'published') {
+    if (!event || !isFanVisibleEvent(event as { status?: string | null; visibility?: string | null })) {
       throw new Error('Ticketed event not found')
     }
     return event
@@ -135,6 +158,7 @@ export async function getPublicTicketedEventById(id: string) {
       .select('*')
       .eq('id', id)
       .eq('status', 'published')
+      .or(FAN_VISIBLE_EVENT_OR_FILTER)
       .single()
 
     if (error) throw error
@@ -191,14 +215,14 @@ export async function getTicketTypesForEvent(ticketedEventId: string, orgId: str
     // First verify the event belongs to the org
     const { data: event, error: eventError } = await supabase
       .from('ticketed_events')
-      .select('id, org_id')
+      .select('id, org_id, status, visibility')
       .eq('id', ticketedEventId)
       .eq('org_id', orgId)
       .single()
 
     if (eventError) throw eventError
 
-    if (!event) {
+    if (!event || !isFanVisibleEvent(event)) {
       return normalizeSupabaseResponse<TicketType[]>([], true)
     }
 
@@ -229,13 +253,12 @@ export async function getPublicTicketTypesForEvent(ticketedEventId: string) {
   try {
     const { data: event, error: eventError } = await supabase
       .from('ticketed_events')
-      .select('id, status')
+      .select('id, status, visibility')
       .eq('id', ticketedEventId)
-      .eq('status', 'published')
       .single()
 
     if (eventError) throw eventError
-    if (!event) {
+    if (!isFanVisibleEvent(event)) {
       return normalizeSupabaseResponse<TicketType[]>([], true)
     }
 

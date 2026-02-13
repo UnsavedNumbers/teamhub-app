@@ -162,6 +162,8 @@ export default function AdminEventDetail() {
   const [confirmTicketingStatusOpen, setConfirmTicketingStatusOpen] = useState(false)
   const [pendingTicketingStatus, setPendingTicketingStatus] = useState<'draft' | 'published' | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [ticketingSoldCount, setTicketingSoldCount] = useState<number>(0)
+  const [ticketingSoldCountLoading, setTicketingSoldCountLoading] = useState(false)
 
   const [commuteStartLocation, setCommuteStartLocation] = useState<string>(() => {
     const saved = localStorage.getItem('commuteStartLocation')
@@ -205,6 +207,42 @@ export default function AdminEventDetail() {
   useEffect(() => {
     void fetchEvent()
   }, [fetchEvent])
+
+  useEffect(() => {
+    const ticketedEventId = event?.ticketed_event?.id
+    if (!ticketedEventId) {
+      setTicketingSoldCount(0)
+      setTicketingSoldCountLoading(false)
+      return
+    }
+
+    let active = true
+    setTicketingSoldCountLoading(true)
+    void (async () => {
+      try {
+        const { count, error } = await supabase
+          .from('tickets')
+          .select('id', { head: true, count: 'exact' })
+          .eq('ticketed_event_id', ticketedEventId)
+          .in('status', ['active', 'used'])
+
+        if (!active) return
+        if (error) {
+          setTicketingSoldCount(0)
+          return
+        }
+
+        setTicketingSoldCount(count ?? 0)
+      } finally {
+        if (!active) return
+        setTicketingSoldCountLoading(false)
+      }
+    })()
+
+    return () => {
+      active = false
+    }
+  }, [event?.ticketed_event?.id])
 
   useEffect(() => {
     const fetchCommuteSummary = async () => {
@@ -426,11 +464,36 @@ export default function AdminEventDetail() {
 
     try {
       setActionLoading(true)
-      const { data: updatedTicketedEvent, error: updateError } = await supabase
+      const ticketedEventId = event.ticketed_event.id
+
+      if (nextStatus === 'draft') {
+        const { count: soldCount, error: soldCountError } = await supabase
+          .from('tickets')
+          .select('id', { head: true, count: 'exact' })
+          .eq('ticketed_event_id', ticketedEventId)
+          .in('status', ['active', 'used'])
+
+        if (soldCountError) throw soldCountError
+        if ((soldCount ?? 0) > 0) {
+          throw new Error('Cannot unpublish ticketing after tickets have been sold.')
+        }
+      }
+
+      const updatePayload: { status: 'draft' | 'published'; visibility?: 'hidden' } = {
+        status: nextStatus,
+      }
+      if (nextStatus === 'draft') {
+        updatePayload.visibility = 'hidden'
+      }
+
+      const supabaseAny = supabase as any
+      // Ticketed event visibility enum is newer than some generated client types.
+      // Use an untyped query here to avoid false-positive TS mismatches.
+      const { data: updatedTicketedEvent, error: updateError } = await supabaseAny
         .from('ticketed_events')
-        .update({ status: nextStatus })
-        .eq('id', event.ticketed_event.id)
-        .select('id, status')
+        .update(updatePayload)
+        .eq('id', ticketedEventId)
+        .select('id, status, visibility')
         .maybeSingle()
 
       if (updateError) throw updateError
@@ -445,6 +508,9 @@ export default function AdminEventDetail() {
           ticketed_event: {
             ...prev.ticketed_event,
             status: nextStatus,
+            visibility: (updatedTicketedEvent as { visibility?: 'visible' | 'hidden' | null } | null)?.visibility
+              ?? prev.ticketed_event.visibility
+              ?? null,
           },
         }
       })
@@ -459,6 +525,10 @@ export default function AdminEventDetail() {
   }
 
   const handleRequestTicketingStatusChange = (nextStatus: 'draft' | 'published') => {
+    if (nextStatus === 'draft' && hasTicketingSales) {
+      showError('Cannot unpublish ticketing after tickets have been sold.')
+      return
+    }
     setPendingTicketingStatus(nextStatus)
     setConfirmTicketingStatusOpen(true)
   }
@@ -471,6 +541,7 @@ export default function AdminEventDetail() {
   }
 
   const isPast = event ? new Date(event.end_time || event.start_time) < new Date() : false
+  const hasTicketingSales = ticketingSoldCount > 0
 
   // Relative time helper
   const getRelativeTimeLabel = (dateStr: string): string => {
@@ -616,7 +687,8 @@ export default function AdminEventDetail() {
               <button
                 className="oa-btn oa-btn--secondary"
                 onClick={() => handleRequestTicketingStatusChange('draft')}
-                disabled={actionLoading}
+                disabled={actionLoading || ticketingSoldCountLoading || hasTicketingSales}
+                title={hasTicketingSales ? 'Cannot unpublish ticketing after tickets have been sold.' : undefined}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit_note</span>
                 Switch to Draft

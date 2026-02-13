@@ -83,7 +83,7 @@ export default function TicketScanner() {
 
   // Load events (admin route) or use fixed event (staff link)
   const { data: events } = useQuery({
-    queryKey: ['ticketed-events', 'published'],
+    queryKey: ['ticketed-events', 'published', 'scanner'],
     queryFn: () => getTicketedEvents({ status: 'published', upcoming_only: true }),
     enabled: !token, // Only load if admin route
   })
