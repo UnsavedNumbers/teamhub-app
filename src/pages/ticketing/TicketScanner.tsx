@@ -83,7 +83,7 @@ export default function TicketScanner() {
   }, [token, directEventId])
 
   // Load events (admin route) or use fixed event (staff link)
-  const { data: events } = useQuery({
+  const { data: events, isLoading: eventsLoading } = useQuery({
     queryKey: ['ticketed-events', 'published', 'scanner'],
     queryFn: () => getTicketedEvents({ status: 'published', upcoming_only: true }),
     enabled: !token, // Only load if admin route
@@ -437,11 +437,7 @@ export default function TicketScanner() {
       ? { id: staffLinkSession.ticketed_event_id, title: staffLinkSession.event_title }
       : null
     : selectedEventId
-      ? eventList.find((event: any) => event.id === selectedEventId) || (
-        directEventId && selectedEventId === directEventId
-          ? { id: directEventId, title: t('ticketing.scanner.eventFallbackTitle', { shortId: directEventId.slice(0, 8) }) }
-          : null
-      )
+      ? eventList.find((event: any) => event.id === selectedEventId) || null
       : null
 
   const scannerColorRoles = {
@@ -469,7 +465,12 @@ export default function TicketScanner() {
           <p className="mt-1 text-sm sm:text-base text-[var(--org-text-secondary,#617589)]">
             {t('ticketing.scanner.subtitle')}
           </p>
-          {currentEvent && (
+          {eventsLoading && directEventId ? (
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--org-surface-card-header,#f3f4f6)] border border-[var(--org-border-default,#dce7f6)] px-3 py-1.5 text-sm">
+              <span className="h-4 w-24 rounded bg-[var(--org-border-default,#dce7f6)] animate-pulse" />
+              <span className="h-4 w-40 rounded bg-[var(--org-border-default,#dce7f6)] animate-pulse" />
+            </div>
+          ) : currentEvent && (
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-2 rounded-full bg-[var(--org-surface-card-header,#f3f4f6)] border border-[var(--org-border-default,#dce7f6)] px-3 py-1.5 text-sm">
                 <span className="font-medium text-[var(--scanner-color-secondary)]">{t('ticketing.scanner.validatingFor')}</span>

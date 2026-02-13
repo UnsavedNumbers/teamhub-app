@@ -178,10 +178,10 @@ function DashboardSkeleton() {
 // ─── Quick-action configs ───────────────────────────────────────────────
 function useQuickActions(navigate: NavigateFunction, t: TFunc) {
   return [
-    { icon: 'add_circle', label: t('admin.dashboard.actionNewEvent'), onClick: () => navigate(getLink('admin.events.create')), img: IMG.cardSchedule },
-    { icon: 'person_add', label: t('admin.dashboard.actionAddUser'), onClick: () => navigate(getLink('admin.users.create')), img: IMG.cardPlayers },
+    { icon: 'qr_code_scanner', label: t('admin.dashboard.actionNewEvent'), onClick: () => navigate(getLink('admin.ticketingScanner')), img: IMG.cardSchedule },
+    { icon: 'video_library', label: t('admin.dashboard.actionAddUser'), onClick: () => navigate(getLink('admin.videos.list')), img: IMG.cardPlayers },
     { icon: 'request_quote', label: t('admin.dashboard.actionAssignFee'), onClick: () => navigate(getLink('admin.payments.create')), img: IMG.cardPayments },
-    { icon: 'group_add', label: t('admin.dashboard.actionManageTeams'), onClick: () => navigate(getLink('admin.teams.list')), img: IMG.cardTraining },
+    { icon: 'add_circle', label: t('admin.dashboard.actionManageTeams'), onClick: () => navigate(getLink('admin.events.create')), img: IMG.cardTraining },
     { icon: 'photo_library', label: t('admin.dashboard.actionPhotos'), onClick: () => navigate(getLink('admin.photos.list')), img: IMG.cardField },
     { icon: 'campaign', label: t('admin.dashboard.actionAnnouncement'), onClick: () => navigate(getLink('admin.announcements')), img: IMG.cardUniforms },
   ]
@@ -208,11 +208,11 @@ function StadiumDashboard({ stats, recentActivity, upcomingEvents, t, navigate, 
           <h1 className="dash-stadium-headline">{t(getGreetingKey())}</h1>
           <p className="dash-stadium-sub">{t('admin.dashboard.heroTagline')}</p>
           <div className="dash-stadium-hero-actions">
-            <Button variant="primary" onClick={() => navigate(getLink('admin.events.create'))}>
+            <Button variant="primary" onClick={() => navigate(getLink('admin.ticketingScanner'))}>
               <span className="material-symbols-outlined oa-icon-sm" aria-hidden>add</span>
               {t('admin.dashboard.actionNewEvent')}
             </Button>
-            <Button variant="ghost" onClick={() => navigate(getLink('admin.teams.list'))}
+            <Button variant="ghost" onClick={() => navigate(getLink('admin.events.create'))}
               style={{ color: '#fff', borderColor: 'rgba(255,255,255,.4)' }}>
               {t('admin.dashboard.actionManageTeams')}
             </Button>

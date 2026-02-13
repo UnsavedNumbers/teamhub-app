@@ -6,6 +6,8 @@ type SeasonsRow = Database['public']['Tables']['seasons']['Row']
 const defaultTeam: TeamsRow = {
   id: '950e8400-e29b-41d4-a716-446655440004',
   created_at: '2026-01-01T00:00:00Z',
+  default_seat_map_id: null,
+  home_venue_id: null,
   invite_code: 'INV123',
   is_active: true,
   level_id: null,
