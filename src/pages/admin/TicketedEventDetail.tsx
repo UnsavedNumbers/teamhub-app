@@ -411,7 +411,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
   const internalDescription = event.description?.trim() || t('ticketing.detail.values.notProvided')
   const publicDescription = event.event_description?.trim() || t('ticketing.detail.values.notProvided')
   const bannerUrl = event.ticket_banner_url || event.cover_image_path || null
-  const editEventPath = event.event_id ? getLink('admin.events.edit', { id: event.event_id }) : null
+  const editTicketTypePath = getLink('admin.ticketingEvents.ticketTypes.edit', { id })
 
   const hasOfflineReadOnlyNotice = !isOnline
   const hasDemoReadOnlyNotice = USE_FAKE_DATA
@@ -566,11 +566,9 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
             {t('ticketing.detail.actions.openScanner')}
           </OrgAdminButton>
 
-          {editEventPath && (
-            <OrgAdminButton as={Link} to={editEventPath} icon="edit_note">
-              {t('ticketing.detail.actions.editTicketingDetails')}
-            </OrgAdminButton>
-          )}
+          <OrgAdminButton as={Link} to={editTicketTypePath} icon="edit_note">
+            {t('ticketing.detail.actions.editTicketingDetails')}
+          </OrgAdminButton>
 
           <OrgAdminButton
             size="compact"

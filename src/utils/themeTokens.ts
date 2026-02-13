@@ -13,6 +13,11 @@ import { getDefaultTheme } from '../config/themes'
  * Token interface defining all theme-derived CSS custom properties
  */
 export interface ThemeTokens {
+  // Explicit color-role tokens
+  '--org-color-primary': string
+  '--org-color-secondary': string
+  '--org-color-tertiary': string
+
   // Existing action tokens (platform admin compatibility)
   '--pa-theme-action-primary': string
   '--pa-theme-action-hover': string
@@ -69,6 +74,9 @@ export interface ThemeTokens {
 }
 
 export const THEME_TOKEN_NAMES = [
+  '--org-color-primary',
+  '--org-color-secondary',
+  '--org-color-tertiary',
   '--pa-theme-action-primary',
   '--pa-theme-action-hover',
   '--pa-theme-action-active',
@@ -156,6 +164,10 @@ export function getPlatformAdminFixedTokens(): ThemeTokens {
   const disabledText = '#9AA4B2'
 
   return {
+    '--org-color-primary': primary,
+    '--org-color-secondary': primaryHover,
+    '--org-color-tertiary': '#6B7280',
+
     '--pa-theme-action-primary': primary,
     '--pa-theme-action-hover': primaryHover,
     '--pa-theme-action-active': primaryActive,
@@ -276,6 +288,10 @@ function generateDefaultTokens(isDark: boolean): ThemeTokens {
     const fallbackBorder = isDark ? '#334155' : '#E2E8F0'
     
     return {
+      '--org-color-primary': fallbackColor,
+      '--org-color-secondary': '#0d6bc2',
+      '--org-color-tertiary': isDark ? '#94A3B8' : '#64748B',
+
       '--pa-theme-action-primary': fallbackColor,
       '--pa-theme-action-hover': '#0d6bc2',
       '--pa-theme-action-active': '#0b5ba0',
@@ -372,10 +388,13 @@ export function generateTokens(theme: Theme, isDark: boolean): ThemeTokens {
     // Safely parse primary color for derived tokens
     const primary = safeParseColor(theme.colors.primary, defaultTheme.colors.primary)
     const secondary = safeParseColor(theme.colors.secondary, defaultTheme.colors.secondary)
+    const tertiary = safeParseColor(theme.colors.accent, defaultTheme.colors.accent)
 
     // For dark mode, adjust primary/secondary if no dark mode overrides exist
     const shouldAdjust = isDark && !theme.darkModeOverrides
     const adjustedPrimary = shouldAdjust ? adjustForDarkMode(primary) : primary
+    const adjustedSecondary = shouldAdjust ? adjustForDarkMode(secondary) : secondary
+    const adjustedTertiary = shouldAdjust ? adjustForDarkMode(tertiary) : tertiary
     
     // Generate derived colors for compatibility tokens
     const actionActive = adjustedPrimary.darken(0.1)
@@ -385,6 +404,11 @@ export function generateTokens(theme: Theme, isDark: boolean): ThemeTokens {
     const focusRing = adjustedPrimary.alpha(0.5)
 
     const tokens: ThemeTokens = {
+      // -- Explicit Color Roles --
+      '--org-color-primary': adjustedPrimary.toHex(),
+      '--org-color-secondary': adjustedSecondary.toHex(),
+      '--org-color-tertiary': adjustedTertiary.toHex(),
+
       // -- Platform Admin Legacy / Core Tokens (for backward compatibility) --
       '--pa-theme-action-primary': button.primary.bg,
       '--pa-theme-action-hover': button.primary.hover,

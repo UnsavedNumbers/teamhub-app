@@ -869,6 +869,13 @@ const admin = {
                 icon: 'confirmation_number',
                 requiresOrg: true,
             },
+            edit: {
+                path: '/admin/ticketing/events/:id/ticket-types/edit',
+                params: ['id'] as const,
+                label: 'Edit Ticket Type',
+                icon: 'edit',
+                requiresOrg: true,
+            },
         },
         seatMaps: {
             list: {
