@@ -265,7 +265,7 @@ export async function createFakeCheckoutSession(
     : getLink(RouteKeys.PORTAL_TICKET_ORDER_SUCCESS, { orderId })
   const checkoutUrl = baseUrl ? `${baseUrl}${orderPath}` : orderPath
 
-  return createServiceResponse({ checkout_url: checkoutUrl, order_id: orderId }, null)
+  return createServiceResponse({ checkout_url: checkoutUrl, order_id: orderId, purchaser_email: email }, null)
 }
 
 export async function resendFakeTickets(

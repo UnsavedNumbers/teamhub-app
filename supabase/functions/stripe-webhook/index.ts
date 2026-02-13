@@ -560,6 +560,17 @@ serve(async (req) => {
             processed_at: new Date().toISOString(),
           }
 
+          // Sync purchaser email/name from Stripe session (customer may have changed it during checkout)
+          // This ensures our ticket receipt and Stripe receipt go to the email the customer actually used
+          const sessionEmail = (session.customer_details?.email ?? session.customer_email) as string | undefined
+          if (sessionEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sessionEmail)) {
+            orderUpdateData.purchaser_email = sessionEmail
+            const sessionName = (session.customer_details?.name ?? null) as string | null
+            if (sessionName?.trim()) {
+              orderUpdateData.purchaser_name = sessionName.trim()
+            }
+          }
+
           if (stripeChargeId) {
             orderUpdateData.stripe_charge_id = stripeChargeId
           }

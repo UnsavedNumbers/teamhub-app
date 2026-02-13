@@ -353,6 +353,8 @@ export interface CreateCheckoutRequest {
 export interface CreateCheckoutResponse {
   checkout_url: string
   order_id: string
+  /** Email used for checkout (echoed for confirmation; receipts sent to Stripe-verified email after payment) */
+  purchaser_email?: string
 }
 
 export interface ValidateScanRequest {

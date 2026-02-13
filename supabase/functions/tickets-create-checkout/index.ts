@@ -504,6 +504,7 @@ serve(async (req) => {
     // Add destination charge configuration
     sessionParams.payment_intent_data = {
       application_fee_amount: platformFeeCents,
+      receipt_email: purchaserEmail,
       transfer_data: {
         destination: org.payout_account_id,
       },
@@ -531,6 +532,7 @@ serve(async (req) => {
     return json(req, {
       checkout_url: session.url,
       order_id: order.id,
+      purchaser_email: purchaserEmail,
     })
   } catch (error: any) {
     await rollbackPendingOrder()
