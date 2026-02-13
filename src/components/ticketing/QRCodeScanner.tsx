@@ -95,7 +95,6 @@ export const QRCodeScanner = forwardRef<QRCodeScannerHandle, QRCodeScannerProps>
             const avgTime = decodeTimes.current.reduce((a, b) => a + b, 0) / decodeTimes.current.length
             if (avgTime > 150 && fps > 5) {
               setFps(5) // Reduce FPS on slow devices
-              console.log('Reduced FPS to 5 for performance')
             }
           }
           

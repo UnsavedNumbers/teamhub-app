@@ -82,8 +82,54 @@ describe('MyTickets', () => {
     renderPage()
 
     expect(await screen.findByText('Past Championship')).toBeInTheDocument()
-    expect(screen.getByText(/Order #/)).toBeInTheDocument()
+    expect(screen.getByText(/1 Order/)).toBeInTheDocument()
     expect(screen.getAllByTestId('my-ticket-card')).toHaveLength(1)
+  })
+
+  test('groups same-event tickets into one swipeable carousel with mobile entry actions', async () => {
+    const event = createMockTicketedEvent({
+      id: 'event-grouped',
+      title: 'Regional Finals',
+      starts_at: '2026-04-20T18:00:00.000Z',
+    })
+
+    const orderOne = createMockTicketOrder({
+      id: 'order-group-1',
+      ticketed_event_id: event.id,
+      created_at: '2026-03-01T00:00:00.000Z',
+    })
+    const orderTwo = createMockTicketOrder({
+      id: 'order-group-2',
+      ticketed_event_id: event.id,
+      created_at: '2026-03-02T00:00:00.000Z',
+    })
+
+    const ticketOne = {
+      ...createMockTicket({ id: 'ticket-group-1', order_id: orderOne.id, ticketed_event_id: event.id }),
+      ticketed_events: event,
+    }
+    const ticketTwo = {
+      ...createMockTicket({ id: 'ticket-group-2', order_id: orderTwo.id, ticketed_event_id: event.id }),
+      ticketed_events: event,
+      seat_info: { section: 'GA', row: '5', seat: '13' },
+    }
+
+    mockGetMyTicketOrders.mockResolvedValue([orderOne, orderTwo])
+    mockGetTicketsForOrder.mockImplementation(async (orderId: string) => {
+      if (orderId === orderOne.id) return [ticketOne]
+      if (orderId === orderTwo.id) return [ticketTwo]
+      return []
+    })
+
+    renderPage()
+
+    expect(await screen.findByText('Regional Finals')).toBeInTheDocument()
+    expect(screen.getByText('Ticket 1 of 2')).toBeInTheDocument()
+    expect(screen.getByText('Ticket 2 of 2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Add to Google Wallet/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Add to Apple Wallet/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Print Ticket/i })).toBeInTheDocument()
+    expect(screen.getAllByTestId('my-ticket-card')).toHaveLength(2)
   })
 
   test('[TE-E2E-022] shows empty lifecycle state when no records exist', async () => {

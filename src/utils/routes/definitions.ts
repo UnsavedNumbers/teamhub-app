@@ -898,6 +898,13 @@ const admin = {
         icon: 'qr_code_scanner',
         requiresOrg: true,
     },
+    ticketingScannerEvent: {
+        path: '/admin/ticketing/scanner/:eventId',
+        params: ['eventId'] as const,
+        label: 'Ticket Scanner (Event)',
+        icon: 'qr_code_scanner',
+        requiresOrg: true,
+    },
 
     // Uniforms
     uniforms: {

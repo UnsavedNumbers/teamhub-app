@@ -565,6 +565,7 @@ function AppWithTheme() {
               <Route path="payments/new" element={<FeatureGateRoute routeKey="admin.payments.fees.create"><CreateFee /></FeatureGateRoute>} />
             
               {/* Ticketing */}
+              <Route path="ticketing/scanner/:eventId" element={<FeatureGateRoute routeKey="admin.ticketingScanner"><TicketScanner /></FeatureGateRoute>} />
               <Route path="ticketing/scanner" element={<FeatureGateRoute routeKey="admin.ticketingScanner"><TicketScanner /></FeatureGateRoute>} />
               <Route path="ticketing/events" element={<FeatureGateRoute routeKey="admin.ticketingEvents.list"><Suspense fallback={<AdminLoadingSpinner />}><TicketingEvents /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/seat-maps" element={<FeatureGateRoute routeKey="admin.ticketingEvents.seatMaps.list"><Suspense fallback={<AdminLoadingSpinner />}><TicketingSeatMaps /></Suspense></FeatureGateRoute>} />

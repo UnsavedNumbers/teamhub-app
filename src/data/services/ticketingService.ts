@@ -436,15 +436,52 @@ export async function getSeatMapsForEvent(ticketedEventId: string): Promise<Seat
 
   try {
     const supabaseAny = supabase as any
+    const { data: eventData, error: eventError } = await supabaseAny
+      .from('ticketed_events')
+      .select('id, org_id, venue_id, team_id')
+      .eq('id', ticketedEventId)
+      .single()
+
+    if (eventError) throw eventError
+    if (!eventData?.org_id) {
+      return []
+    }
+
     const { data, error } = await supabaseAny
       .from('seat_maps')
       .select('*')
-      .eq('ticketed_event_id', ticketedEventId)
-      .order('created_at', { ascending: false })
+      .eq('org_id', eventData.org_id)
+      .order('updated_at', { ascending: false })
 
     if (error) throw error
 
-    return normalizeSupabaseResponse<SeatMap[]>(data as unknown as SeatMap[], true)
+    const seatMaps = normalizeSupabaseResponse<SeatMap[]>(data as unknown as SeatMap[], true)
+
+    // Relevance order for event setup UI:
+    // event-linked maps -> venue maps -> team maps -> org-level maps -> everything else in org
+    const relevanceRank = (seatMap: SeatMap): number => {
+      if (seatMap.ticketed_event_id === ticketedEventId) {
+        return 0
+      }
+      if (eventData.venue_id && seatMap.venue_id === eventData.venue_id) {
+        return 1
+      }
+      if (eventData.team_id && seatMap.team_id === eventData.team_id) {
+        return 2
+      }
+      if (!seatMap.venue_id && !seatMap.team_id && !seatMap.ticketed_event_id) {
+        return 3
+      }
+      return 4
+    }
+
+    return seatMaps.sort((a, b) => {
+      const rankDiff = relevanceRank(a) - relevanceRank(b)
+      if (rankDiff !== 0) {
+        return rankDiff
+      }
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    })
   } catch (error) {
     throw classifySupabaseError(error, 'Seat maps')
   }
@@ -1822,46 +1859,17 @@ export async function validateTicketScan(
       headers,
       body: JSON.stringify(request),
     })
-    const responseText = await response.text()
-    let responseBody: any = null
-    let responseParseError: string | null = null
-
-    try {
-      responseBody = responseText ? JSON.parse(responseText) : null
-    } catch (parseError: any) {
-      responseParseError = parseError?.message || 'Failed to parse JSON response'
-    }
-
-    const debugClient = {
-      endpoint: url,
-      request: {
-        ticketed_event_id: request.ticketed_event_id,
-        entry_code: request.entry_code || null,
-        qr_token_raw_preview: request.qr_token_raw ? `${request.qr_token_raw.slice(0, 4)}...${request.qr_token_raw.slice(-4)}` : null,
-        client_device_id: request.client_device_id || null,
-        has_staff_link_token: Boolean(staffLinkToken),
-      },
-      response: {
-        status: response.status,
-        ok: response.ok,
-        content_type: response.headers.get('content-type'),
-        parse_error: responseParseError,
-        raw_text: responseText,
-      },
-    }
+    const responseBody = await response.json().catch(() => null)
 
     if (!response.ok) {
       const errorMessage = responseBody?.error || 'Validation failed'
       return createServiceResponse<ValidateScanResponse>(
         null,
-        new Error(`${errorMessage} | debug=${JSON.stringify(debugClient)}`),
+        new Error(errorMessage),
       )
     }
 
-    const data = {
-      ...(responseBody || {}),
-      debug_client: debugClient,
-    } as ValidateScanResponse
+    const data = (responseBody || {}) as ValidateScanResponse
     return createServiceResponse<ValidateScanResponse>(data, null)
   } catch (error: any) {
     return createServiceResponse<ValidateScanResponse>(null, error)

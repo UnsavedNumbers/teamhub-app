@@ -109,7 +109,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
   const hasEventId = id.length > 0
   const hasValidEventId = isUuid(id)
   const navigate = useNavigate()
-  const scannerPath = useRouteLink('admin.ticketingScanner')
+  const scannerPath = useRouteLink('admin.ticketingScannerEvent', { eventId: id || '' })
   const addTicketTypePath = useRouteLink('admin.ticketingEvents.ticketTypes.create', { id: id || '' })
   const eventsPath = useRouteLink('admin.ticketingEvents.list')
 

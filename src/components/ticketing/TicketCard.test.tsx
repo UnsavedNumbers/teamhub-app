@@ -7,6 +7,10 @@ vi.mock('qrcode.react', () => ({
   QRCodeSVG: () => <div data-testid="qr-code" />,
 }))
 
+vi.mock('@/i18n/useI18n', () => ({
+  useT: () => () => 'seat',
+}))
+
 const mockTicket: Ticket & { ticket_types?: Pick<TicketType, 'name' | 'description'> } = {
   id: 't1',
   org_id: 'o1',
@@ -45,5 +49,21 @@ describe('TicketCard', () => {
   test('renders venue info', () => {
     render(<TicketCard ticket={mockTicket} event={mockEvent} />)
     expect(screen.getByText(/Main Arena|Riverside/)).toBeInTheDocument()
+  })
+
+  test('renders prominent used state for used tickets', () => {
+    render(
+      <TicketCard
+        ticket={{
+          ...mockTicket,
+          status: 'used',
+          used_at: '2026-03-15T20:00:00Z',
+        }}
+        event={mockEvent}
+      />,
+    )
+
+    expect(screen.getAllByText('Used').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Scanned/i).length).toBeGreaterThan(0)
   })
 })

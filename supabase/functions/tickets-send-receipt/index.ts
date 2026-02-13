@@ -441,7 +441,6 @@ serve(async (req) => {
     } else {
       // Link already exists (T10: idempotent) - we can't get the raw token from hash
       // For guest users, we'll use a generic message or they can request access
-      console.log("Access link already exists for this order")
     }
 
     // Build ticket URL

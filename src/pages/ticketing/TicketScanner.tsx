@@ -28,12 +28,13 @@ interface ValidationResult {
 }
 
 export default function TicketScanner() {
-  const { token } = useParams<{ token?: string }>()
+  const { token, eventId } = useParams<{ token?: string; eventId?: string }>()
+  const directEventId = eventId?.trim() || null
   const navigate = useNavigate()
   const { isOffline } = useOffline()
   const t = useT()
   
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(directEventId)
   const [entryCode, setEntryCode] = useState('')
   const [validationResult, setValidationResult] = useState<ValidateScanResponse | { status: 'validating'; code?: string } | null>(null)
   const [validationHistory, setValidationHistory] = useState<ValidationResult[]>([])
@@ -67,6 +68,13 @@ export default function TicketScanner() {
         .catch(() => navigate('/'))
     }
   }, [token, navigate])
+
+  // Event-scoped scanner route (/admin/ticketing/scanner/:eventId)
+  useEffect(() => {
+    if (!token && directEventId) {
+      setSelectedEventId(directEventId)
+    }
+  }, [token, directEventId])
 
   // Load events (admin route) or use fixed event (staff link)
   const { data: events } = useQuery({
@@ -218,8 +226,6 @@ export default function TicketScanner() {
         },
         token,
       )
-      console.log('data-------------', data)
-      console.log('error----------', error)
 
       if (error || !data) {
         setValidationResult({
@@ -416,7 +422,13 @@ export default function TicketScanner() {
     ? staffLinkSession
       ? { id: staffLinkSession.ticketed_event_id, title: staffLinkSession.event_title }
       : null
-    : eventList.find((e: any) => e.id === selectedEventId)
+    : selectedEventId
+      ? eventList.find((event: any) => event.id === selectedEventId) || (
+        directEventId && selectedEventId === directEventId
+          ? { id: directEventId, title: `Event ${directEventId.slice(0, 8)}` }
+          : null
+      )
+      : null
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white p-3 sm:p-4 md:p-6">
@@ -455,7 +467,7 @@ export default function TicketScanner() {
         </div>
 
         {/* Event Selector (admin route only) */}
-        {!token && eventList.length > 0 && (
+        {!token && !directEventId && eventList.length > 0 && (
           <div className="mb-4 md:mb-6">
             <label className="block text-sm sm:text-base font-medium text-[#111418] dark:text-white mb-2">
               {t('ticketing.scanner.selectEvent')}
@@ -475,8 +487,8 @@ export default function TicketScanner() {
           </div>
         )}
 
-        {/* Fixed Event Display (staff link) */}
-        {token && currentEvent && (
+        {/* Fixed Event Display (staff link or event-specific admin route) */}
+        {(token || directEventId) && currentEvent && (
           <div className="mb-4 md:mb-6 bg-[#137fec]/10 border border-[#137fec]/20 rounded-lg p-3 sm:p-4">
             <p className="text-xs sm:text-sm text-[#137fec] font-medium">{t('ticketing.scanner.validatingFor')}</p>
             <p className="text-base sm:text-lg font-bold text-[#111418] dark:text-white">{currentEvent.title}</p>
