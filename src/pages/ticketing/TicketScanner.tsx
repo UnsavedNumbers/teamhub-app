@@ -488,7 +488,7 @@ export default function TicketScanner() {
                     setIsCameraOpen(false)
                     navigate(getLink(RouteKeys.ADMIN_TICKETING_SCANNER))
                   }}
-                  className="inline-flex items-center rounded-full border border-[var(--org-border-default,#dce7f6)] bg-[var(--org-surface-card,#fff)] px-3 py-1.5 text-sm font-semibold text-[var(--scanner-color-secondary)] hover:text-[var(--scanner-color-secondary-hover)] hover:bg-[var(--scanner-color-tertiary-bg)] transition-colors"
+                  className="inline-flex items-center rounded-full border border-[var(--org-border-default,#dce7f6)] bg-[var(--org-surface-card,#fff)] px-3 py-1.5 text-sm font-semibold text-[var(--scanner-color-secondary)] hover:text-[var(--org-text-primary,#111418)] hover:bg-[var(--scanner-color-tertiary-bg)] transition-colors"
                 >
                   {t('ticketing.scanner.switchEvents')}
                 </button>

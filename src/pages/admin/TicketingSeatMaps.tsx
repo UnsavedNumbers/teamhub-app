@@ -133,6 +133,9 @@ export default function TicketingSeatMaps() {
   })
 
   const isWriteBlocked = isOffline || USE_FAKE_DATA
+  const seatMapsLoadError = seatMapsQuery.isError
+    ? classifySupabaseError(seatMapsQuery.error).message
+    : null
 
   const filteredSeatMaps = useMemo(() => {
     const items = seatMapsQuery.data ?? []
@@ -331,6 +334,15 @@ export default function TicketingSeatMaps() {
               ? t('ticketing.seatMaps.notices.offline')
               : t('ticketing.seatMaps.notices.demoMode')
           }
+          className="oa-mb-4"
+        />
+      )}
+
+      {seatMapsLoadError && (
+        <InlineNotice
+          tone="error"
+          title="Unable to load seat maps"
+          message={seatMapsLoadError}
           className="oa-mb-4"
         />
       )}
