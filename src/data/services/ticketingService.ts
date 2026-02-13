@@ -32,6 +32,9 @@ import { classifySupabaseError, ValidationError } from '@/utils/supabaseErrorHan
 import { getLink, RouteKeys } from '@/utils/routes'
 import {
   createFakeCheckoutSession,
+  getFakeSeatMapWithSeats,
+  getFakeSeatMapsForEvent,
+  getFakeSeatMapsForOrgAdmin,
   createFakeStaffValidationLink,
   getFakeTicketTypesTotalCount,
   getFakeMyTicketOrders,
@@ -45,6 +48,7 @@ import {
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
 const FUNCTIONS_URL = `${SUPABASE_URL.replace('/rest/v1', '')}/functions/v1`
 const FAN_VISIBLE_EVENT_OR_FILTER = 'visibility.eq.public,visibility.is.null'
+const SEAT_MAP_CHART_BUCKET = 'ticketing-seat-maps'
 
 function isFanVisibleEvent(
   event:
@@ -57,6 +61,86 @@ function isFanVisibleEvent(
 ): boolean {
   if (!event) return false
   return event.status === 'published' && (event.visibility === 'public' || event.visibility == null)
+}
+
+function isMissingColumnError(error: unknown): boolean {
+  const typedError = error as { code?: string; message?: string } | null
+  const message = String(typedError?.message ?? '').toLowerCase()
+  return typedError?.code === '42703' || message.includes('column') && message.includes('does not exist')
+}
+
+function normalizeSeatMapStatus(status: unknown): 'draft' | 'published' {
+  return status === 'published' ? 'published' : 'draft'
+}
+
+function normalizeBucketStoragePath(value: string, bucket: string): string {
+  const trimmed = value.trim().replace(/^\/+/, '')
+  if (trimmed.startsWith(`${bucket}/`)) {
+    return trimmed.slice(bucket.length + 1)
+  }
+  return trimmed
+}
+
+function extractStoragePathFromBucketUrl(url: string, bucket: string): string | null {
+  try {
+    const parsed = new URL(url)
+    const markers = [
+      `/storage/v1/object/public/${bucket}/`,
+      `/storage/v1/object/sign/${bucket}/`,
+      `/storage/v1/object/${bucket}/`,
+    ]
+
+    for (const marker of markers) {
+      const markerIndex = parsed.pathname.indexOf(marker)
+      if (markerIndex >= 0) {
+        const rawPath = parsed.pathname.slice(markerIndex + marker.length)
+        return decodeURIComponent(rawPath).replace(/^\/+/, '')
+      }
+    }
+  } catch {
+    return null
+  }
+
+  return null
+}
+
+type SeatMapLookupRow = {
+  id: string
+  name: string | null
+  org_id?: string | null
+  venue_id?: string | null
+  team_id?: string | null
+  ticketed_event_id?: string | null
+  status?: string | null
+  version?: number | null
+  chart_image_url?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+  published_at?: string | null
+  metadata?: Record<string, unknown> | null
+  published_snapshot_id?: string | null
+}
+
+function toSeatMapDomain(row: SeatMapLookupRow, orgIdFallback: string): SeatMap {
+  const createdAt = row.created_at ?? row.updated_at ?? new Date().toISOString()
+  const updatedAt = row.updated_at ?? row.created_at ?? createdAt
+
+  return {
+    id: row.id,
+    org_id: row.org_id ?? orgIdFallback,
+    venue_id: row.venue_id ?? null,
+    team_id: row.team_id ?? null,
+    ticketed_event_id: row.ticketed_event_id ?? null,
+    name: row.name?.trim() || 'Untitled seat map',
+    chart_image_url: row.chart_image_url ?? null,
+    metadata: row.metadata ?? {},
+    status: normalizeSeatMapStatus(row.status),
+    version: row.version ?? 1,
+    published_at: row.published_at ?? null,
+    published_snapshot_id: row.published_snapshot_id ?? null,
+    created_at: createdAt,
+    updated_at: updatedAt,
+  }
 }
 
 // ============================================================================
@@ -612,16 +696,23 @@ export async function updateTicketType(
     }
 
     const existingSalesStartAt = existingType?.sales_start_at as string | null | undefined
+    const existingSalesStartMs = existingSalesStartAt ? new Date(existingSalesStartAt).getTime() : NaN
     if (
       existingSalesStartAt &&
-      new Date(existingSalesStartAt).getTime() < Date.now() &&
-      updates.sales_start_at !== undefined &&
-      updates.sales_start_at !== existingSalesStartAt
+      Number.isFinite(existingSalesStartMs) &&
+      existingSalesStartMs < Date.now() &&
+      updates.sales_start_at !== undefined
     ) {
-      return createServiceResponse<TicketType>(
-        null,
-        new ValidationError('Sales start is already in the past and can no longer be edited.'),
-      )
+      const nextSalesStartRaw = updates.sales_start_at
+      const nextSalesStartMs = nextSalesStartRaw ? new Date(nextSalesStartRaw).getTime() : NaN
+      const hasChangedStart = !Number.isFinite(nextSalesStartMs) || nextSalesStartMs !== existingSalesStartMs
+
+      if (hasChangedStart) {
+        return createServiceResponse<TicketType>(
+          null,
+          new ValidationError('Sales start is already in the past and can no longer be edited.'),
+        )
+      }
     }
 
     const effectiveSalesStart = updates.sales_start_at !== undefined
@@ -660,6 +751,10 @@ export async function getSeatMapsForEvent(ticketedEventId: string): Promise<Seat
     throw new ValidationError('Ticketed event is required')
   }
 
+  if (USE_FAKE_DATA) {
+    return getFakeSeatMapsForEvent(ticketedEventId)
+  }
+
   try {
     const supabaseAny = supabase as any
     const { data: eventData, error: eventError } = await supabaseAny
@@ -673,15 +768,66 @@ export async function getSeatMapsForEvent(ticketedEventId: string): Promise<Seat
       return []
     }
 
-    const { data, error } = await supabaseAny
-      .from('seat_maps')
-      .select('*')
-      .eq('org_id', eventData.org_id)
-      .order('updated_at', { ascending: false })
+    const seatMapById = new Map<string, SeatMapLookupRow>()
+    const mergeSeatMaps = (rows: unknown[] | null | undefined) => {
+      for (const row of rows ?? []) {
+        const typedRow = row as SeatMapLookupRow
+        if (typedRow?.id) {
+          seatMapById.set(typedRow.id, typedRow)
+        }
+      }
+    }
 
-    if (error) throw error
+    const tryMergeSeatMapQuery = async (queryFactory: () => Promise<{ data: unknown[] | null; error: unknown }>) => {
+      const { data, error } = await queryFactory()
+      if (error) {
+        if (isMissingColumnError(error)) {
+          return
+        }
+        throw error
+      }
+      mergeSeatMaps(data)
+    }
 
-    const seatMaps = normalizeSupabaseResponse<SeatMap[]>(data as unknown as SeatMap[], true)
+    await tryMergeSeatMapQuery(() =>
+      supabaseAny
+        .from('seat_maps')
+        .select('*')
+        .eq('org_id', eventData.org_id)
+        .order('updated_at', { ascending: false }),
+    )
+
+    await tryMergeSeatMapQuery(() =>
+      supabaseAny
+        .from('seat_maps')
+        .select('*')
+        .eq('ticketed_event_id', ticketedEventId)
+        .order('updated_at', { ascending: false }),
+    )
+
+    if (eventData.venue_id) {
+      await tryMergeSeatMapQuery(() =>
+        supabaseAny
+          .from('seat_maps')
+          .select('*')
+          .eq('venue_id', eventData.venue_id)
+          .order('updated_at', { ascending: false }),
+      )
+    }
+
+    if (eventData.team_id) {
+      await tryMergeSeatMapQuery(() =>
+        supabaseAny
+          .from('seat_maps')
+          .select('*')
+          .eq('team_id', eventData.team_id)
+          .order('updated_at', { ascending: false }),
+      )
+    }
+
+    const seatMaps = Array.from(seatMapById.values()).map((row) =>
+      toSeatMapDomain(row, eventData.org_id),
+    )
 
     // Relevance order for event setup UI:
     // event-linked maps -> venue maps -> team maps -> org-level maps -> everything else in org
@@ -721,6 +867,33 @@ export async function getSeatMapsForOrg(
   filters?: { venueId?: string; teamId?: string; status?: 'draft' | 'published' },
 ): Promise<SeatMap[]> {
   if (!orgId) throw new ValidationError('Organization is required')
+
+  if (USE_FAKE_DATA) {
+    const rows = getFakeSeatMapsForOrgAdmin(orgId)
+    const mapped = rows.map((row) => ({
+      id: row.id,
+      org_id: row.org_id,
+      venue_id: row.venue_id,
+      team_id: row.team_id,
+      ticketed_event_id: row.ticketed_event_id,
+      name: row.name,
+      chart_image_url: row.chart_image_url,
+      metadata: {},
+      status: row.status,
+      version: row.version,
+      published_at: row.published_at,
+      published_snapshot_id: null,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    }))
+
+    return mapped.filter((seatMap) => {
+      if (filters?.venueId && seatMap.venue_id !== filters.venueId) return false
+      if (filters?.teamId && seatMap.team_id !== filters.teamId) return false
+      if (filters?.status && seatMap.status !== filters.status) return false
+      return true
+    })
+  }
 
   try {
     const supabaseAny = supabase as any
@@ -778,205 +951,216 @@ export async function getSeatMapsForOrgAdmin(orgId: string): Promise<AdminSeatMa
   }
 
   if (USE_FAKE_DATA) {
-    return []
+    return getFakeSeatMapsForOrgAdmin(orgId)
   }
 
   try {
     const supabaseAny = supabase as any
-    type RawSeatMapRecord = {
-      id: string
-      name: string | null
-      org_id?: string | null
-      venue_id?: string | null
-      team_id?: string | null
-      ticketed_event_id?: string | null
-      status?: string | null
-      version?: number | null
-      chart_image_url?: string | null
-      created_at?: string | null
-      updated_at?: string | null
-      published_at?: string | null
-    }
-
-    const seatMapById = new Map<string, RawSeatMapRecord>()
-    const mergeRows = (rows: unknown[] | null | undefined) => {
+    const seatMapById = new Map<string, SeatMapLookupRow>()
+    const mergeSeatMaps = (rows: unknown[] | null | undefined) => {
       for (const row of rows ?? []) {
-        const typed = row as RawSeatMapRecord
+        const typed = row as SeatMapLookupRow
         if (typed?.id) {
           seatMapById.set(typed.id, typed)
         }
       }
     }
 
-    const { data: primaryRows, error: primaryError } = await supabaseAny
-      .from('seat_maps')
-      .select('*')
-      .eq('org_id', orgId)
-      .order('updated_at', { ascending: false })
-
-    if (!primaryError) {
-      mergeRows(primaryRows as unknown[])
+    const tryMergeSeatMapQuery = async (queryFactory: () => Promise<{ data: unknown[] | null; error: unknown }>) => {
+      const { data, error } = await queryFactory()
+      if (error) {
+        if (isMissingColumnError(error)) {
+          return
+        }
+        throw error
+      }
+      mergeSeatMaps(data)
     }
 
-    // Legacy fallback: older schemas/policies may still scope seat_maps via ticketed_events.org_id.
-    if (seatMapById.size === 0) {
-      const { data: legacyRows, error: legacyError } = await supabaseAny
+    // Current schema path.
+    await tryMergeSeatMapQuery(() =>
+      supabaseAny
         .from('seat_maps')
-        .select('*, ticketed_events!inner(id, org_id)')
-        .eq('ticketed_events.org_id', orgId)
-        .order('updated_at', { ascending: false })
-
-      if (legacyError && primaryError) throw primaryError
-      if (legacyError) throw legacyError
-      mergeRows(legacyRows as unknown[])
-    } else if (primaryError) {
-      throw primaryError
-    }
-
-    const seatMaps = Array.from(seatMapById.values()).sort((a, b) => {
-      const aTime = new Date(a.updated_at ?? a.created_at ?? '').getTime()
-      const bTime = new Date(b.updated_at ?? b.created_at ?? '').getTime()
-      if (Number.isNaN(aTime) || Number.isNaN(bTime)) return 0
-      return bTime - aTime
-    })
-
-    const venueIds = Array.from(
-      new Set(
-        seatMaps
-          .map((item) => item.venue_id)
-          .filter((value): value is string => Boolean(value)),
-      ),
+        .select('*')
+        .eq('org_id', orgId)
+        .order('updated_at', { ascending: false }),
     )
-    let venueNameById = new Map<string, string>()
 
-    if (venueIds.length > 0) {
-      const { data: venueRows, error: venueRowsError } = await supabaseAny
-        .from('venues')
-        .select('id, name')
-        .in('id', venueIds)
+    // Resolve org-scoped entity IDs and support legacy seat map records without org_id.
+    const [{ data: orgEvents, error: orgEventsError }, { data: orgVenues, error: orgVenuesError }, { data: orgTeams, error: orgTeamsError }] = await Promise.all([
+      supabaseAny.from('ticketed_events').select('id, title, status, starts_at').eq('org_id', orgId),
+      supabaseAny.from('venues').select('id').eq('org_id', orgId),
+      supabaseAny.from('teams').select('id').eq('org_id', orgId),
+    ])
 
-      if (!venueRowsError && venueRows) {
-        venueNameById = new Map(
-          (venueRows as Array<{ id: string; name: string }>).map((venue) => [venue.id, venue.name]),
-        )
-      }
-    }
+    if (orgEventsError) throw orgEventsError
+    if (orgVenuesError) throw orgVenuesError
+    if (orgTeamsError) throw orgTeamsError
 
-    const teamIds = Array.from(
-      new Set(
-        seatMaps
-          .map((item) => item.team_id)
-          .filter((value): value is string => Boolean(value)),
-      ),
-    )
-    let teamNameById = new Map<string, string>()
-
-    if (teamIds.length > 0) {
-      const { data: teamRows, error: teamRowsError } = await supabaseAny
-        .from('teams')
-        .select('id, name')
-        .in('id', teamIds)
-
-      if (!teamRowsError && teamRows) {
-        teamNameById = new Map(
-          (teamRows as Array<{ id: string; name: string }>).map((team) => [team.id, team.name]),
-        )
-      }
-    }
-
-    const ticketedEventIds = Array.from(
-      new Set(
-        seatMaps
-          .map((item) => item.ticketed_event_id)
-          .filter((value): value is string => Boolean(value)),
-      ),
-    )
-    let eventById = new Map<string, {
+    const orgEventRows = (orgEvents ?? []) as Array<{
       id: string
       title: string
       status: TicketedEvent['status']
       starts_at: string
-      org_id: string
+    }>
+    const orgEventIds = orgEventRows.map((event) => event.id)
+    const orgVenueIds = (orgVenues ?? []).map((venue: { id: string }) => venue.id)
+    const orgTeamIds = (orgTeams ?? []).map((team: { id: string }) => team.id)
+
+    if (orgEventIds.length > 0) {
+      await tryMergeSeatMapQuery(() =>
+        supabaseAny
+          .from('seat_maps')
+          .select('*')
+          .in('ticketed_event_id', orgEventIds)
+          .order('updated_at', { ascending: false }),
+      )
+    }
+
+    if (orgVenueIds.length > 0) {
+      await tryMergeSeatMapQuery(() =>
+        supabaseAny
+          .from('seat_maps')
+          .select('*')
+          .in('venue_id', orgVenueIds)
+          .order('updated_at', { ascending: false }),
+      )
+    }
+
+    if (orgTeamIds.length > 0) {
+      await tryMergeSeatMapQuery(() =>
+        supabaseAny
+          .from('seat_maps')
+          .select('*')
+          .in('team_id', orgTeamIds)
+          .order('updated_at', { ascending: false }),
+      )
+    }
+
+    const seatMaps = Array.from(seatMapById.values())
+      .map((row) => toSeatMapDomain(row, orgId))
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+
+    if (seatMaps.length === 0) {
+      return []
+    }
+
+    const seatMapIds = seatMaps.map((seatMap) => seatMap.id)
+    const venueIds = Array.from(
+      new Set(seatMaps.map((item) => item.venue_id).filter((value): value is string => Boolean(value))),
+    )
+    const teamIds = Array.from(
+      new Set(seatMaps.map((item) => item.team_id).filter((value): value is string => Boolean(value))),
+    )
+    const ticketedEventIds = Array.from(
+      new Set(seatMaps.map((item) => item.ticketed_event_id).filter((value): value is string => Boolean(value))),
+    )
+
+    const [venueResult, teamResult, eventResult, seatCountResult] = await Promise.all([
+      venueIds.length > 0
+        ? supabaseAny.from('venues').select('id, name').in('id', venueIds)
+        : Promise.resolve({ data: [], error: null }),
+      teamIds.length > 0
+        ? supabaseAny.from('teams').select('id, name').in('id', teamIds)
+        : Promise.resolve({ data: [], error: null }),
+      ticketedEventIds.length > 0
+        ? supabaseAny.from('ticketed_events').select('id, title, status, starts_at').in('id', ticketedEventIds)
+        : Promise.resolve({ data: [], error: null }),
+      supabaseAny.from('seat_map_sections').select('seat_map_id').in('seat_map_id', seatMapIds),
+    ])
+
+    if (venueResult.error && !isMissingColumnError(venueResult.error)) throw venueResult.error
+    if (teamResult.error && !isMissingColumnError(teamResult.error)) throw teamResult.error
+    if (eventResult.error && !isMissingColumnError(eventResult.error)) throw eventResult.error
+    if (seatCountResult.error && !isMissingColumnError(seatCountResult.error)) throw seatCountResult.error
+
+    const venueNameById = new Map(
+      ((venueResult.data ?? []) as Array<{ id: string; name: string }>).map((venue) => [venue.id, venue.name]),
+    )
+    const teamNameById = new Map(
+      ((teamResult.data ?? []) as Array<{ id: string; name: string }>).map((team) => [team.id, team.name]),
+    )
+
+    const eventById = new Map<string, {
+      id: string
+      title: string
+      status: TicketedEvent['status']
+      starts_at: string
     }>()
 
-    if (ticketedEventIds.length > 0) {
-      const { data: eventRows, error: eventRowsError } = await supabaseAny
-        .from('ticketed_events')
-        .select('id, title, status, starts_at, org_id')
-        .in('id', ticketedEventIds)
-
-      if (!eventRowsError && eventRows) {
-        eventById = new Map(
-          (eventRows as Array<{
-            id: string
-            title: string
-            status: TicketedEvent['status']
-            starts_at: string
-            org_id: string
-          }>).map((event) => [event.id, event]),
-        )
-      }
+    for (const event of orgEventRows) {
+      eventById.set(event.id, event)
+    }
+    for (const event of (eventResult.data ?? []) as Array<{
+      id: string
+      title: string
+      status: TicketedEvent['status']
+      starts_at: string
+    }>) {
+      eventById.set(event.id, event)
     }
 
-    const seatMapIds = seatMaps.map((item) => item.id)
-    let seatCountByMap = new Map<string, number>()
+    const seatCountByMap = ((seatCountResult.data ?? []) as Array<{ seat_map_id: string }>).reduce((acc, row) => {
+      const current = acc.get(row.seat_map_id) ?? 0
+      acc.set(row.seat_map_id, current + 1)
+      return acc
+    }, new Map<string, number>())
 
-    if (seatMapIds.length > 0) {
-      const { data: seatRows, error: seatRowsError } = await supabaseAny
-        .from('seat_map_sections')
-        .select('seat_map_id')
-        .in('seat_map_id', seatMapIds)
-
-      if (!seatRowsError && seatRows) {
-        seatCountByMap = (seatRows as Array<{ seat_map_id: string }>).reduce((acc, row) => {
-          const current = acc.get(row.seat_map_id) ?? 0
-          acc.set(row.seat_map_id, current + 1)
-          return acc
-        }, new Map<string, number>())
-      }
+    const usageCountByMap = new Map<string, number>()
+    const incrementUsage = (seatMapId: string | null | undefined) => {
+      if (!seatMapId) return
+      usageCountByMap.set(seatMapId, (usageCountByMap.get(seatMapId) ?? 0) + 1)
     }
 
-    // Count events referencing each seat map
-    let usageCountByMap = new Map<string, number>()
-    if (seatMapIds.length > 0) {
-      const { data: usageRows, error: usageError } = await supabaseAny
-        .from('events')
-        .select('seat_map_id')
-        .eq('org_id', orgId)
-        .in('seat_map_id', seatMapIds)
+    const { data: ticketTypeUsageRows, error: ticketTypeUsageError } = await supabaseAny
+      .from('ticket_types')
+      .select('seat_map_id')
+      .eq('org_id', orgId)
+      .in('seat_map_id', seatMapIds)
 
-      if (!usageError && usageRows) {
-        usageCountByMap = (usageRows as Array<{ seat_map_id: string }>).reduce((acc, row) => {
-          if (row.seat_map_id) {
-            const current = acc.get(row.seat_map_id) ?? 0
-            acc.set(row.seat_map_id, current + 1)
-          }
-          return acc
-        }, new Map<string, number>())
-      }
+    if (ticketTypeUsageError && !isMissingColumnError(ticketTypeUsageError)) {
+      throw ticketTypeUsageError
+    }
+    for (const row of (ticketTypeUsageRows ?? []) as Array<{ seat_map_id: string | null }>) {
+      incrementUsage(row.seat_map_id)
+    }
+
+    const { data: eventUsageRows, error: eventUsageError } = await supabaseAny
+      .from('events')
+      .select('seat_map_id')
+      .eq('org_id', orgId)
+      .in('seat_map_id', seatMapIds)
+
+    if (eventUsageError && !isMissingColumnError(eventUsageError)) {
+      throw eventUsageError
+    }
+    for (const row of (eventUsageRows ?? []) as Array<{ seat_map_id: string | null }>) {
+      incrementUsage(row.seat_map_id)
     }
 
     return seatMaps.map((item) => {
-      const event = item.ticketed_event_id ? eventById.get(item.ticketed_event_id) : null
+      const event = item.ticketed_event_id ? eventById.get(item.ticketed_event_id) ?? null : null
+      const createdAt = item.created_at
+      const updatedAt = item.updated_at
 
       return {
         id: item.id,
-        name: item.name?.trim() || 'Untitled seat map',
-        org_id: item.org_id ?? orgId,
-        venue_id: item.venue_id ?? null,
-        team_id: item.team_id ?? null,
-        ticketed_event_id: item.ticketed_event_id ?? null,
-        status: (item.status ?? 'draft') as 'draft' | 'published',
-        version: item.version ?? 1,
-        chart_image_url: item.chart_image_url ?? null,
-        created_at: item.created_at ?? item.updated_at ?? new Date().toISOString(),
-        updated_at: item.updated_at ?? item.created_at ?? new Date().toISOString(),
-        published_at: item.published_at ?? null,
+        name: item.name,
+        org_id: item.org_id,
+        venue_id: item.venue_id,
+        team_id: item.team_id,
+        ticketed_event_id: item.ticketed_event_id,
+        status: item.status,
+        version: item.version,
+        chart_image_url: item.chart_image_url,
+        created_at: createdAt,
+        updated_at: updatedAt,
+        published_at: item.published_at,
         venue_name: item.venue_id ? venueNameById.get(item.venue_id) ?? null : null,
         team_name: item.team_id ? teamNameById.get(item.team_id) ?? null : null,
         event_title: event?.title ?? 'Untitled event',
         event_status: event?.status ?? 'draft',
-        event_starts_at: event?.starts_at ?? item.created_at ?? item.updated_at ?? new Date().toISOString(),
+        event_starts_at: event?.starts_at ?? createdAt,
         seat_count: seatCountByMap.get(item.id) ?? 0,
         usage_count: usageCountByMap.get(item.id) ?? 0,
       }
@@ -1118,7 +1302,11 @@ export async function updateSeatMap(
   }
 }
 
-export async function uploadSeatMapChart(seatMapId: string, file: File): Promise<string> {
+export async function uploadSeatMapChart(
+  seatMapId: string,
+  file: File,
+  options?: { ticketedEventId?: string | null },
+): Promise<string> {
   if (!seatMapId) {
     throw new ValidationError('Seat map is required')
   }
@@ -1133,38 +1321,114 @@ export async function uploadSeatMapChart(seatMapId: string, file: File): Promise
 
   try {
     const supabaseAny = supabase as any
-    const safeFileName = file.name.replace(/\s+/g, '-').replace(/\//g, '-')
-    const timestampedFileName = `${Date.now()}-${safeFileName}`
-    const bucket = 'ticketing-seat-maps'
+    const generateObjectUuid = (): string => {
+      if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+        return crypto.randomUUID()
+      }
+
+      // Fallback UUID v4 generator for environments without crypto.randomUUID
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+        const random = Math.random() * 16 | 0
+        const value = char === 'x' ? random : (random & 0x3 | 0x8)
+        return value.toString(16)
+      })
+    }
+
+    const objectId = generateObjectUuid()
+    const bucket = SEAT_MAP_CHART_BUCKET
 
     let orgId: string | null = null
+    let resolvedTicketedEventId: string | null = options?.ticketedEventId ?? null
     const { data: seatMapRecord, error: seatMapError } = await supabaseAny
       .from('seat_maps')
-      .select('org_id, ticketed_event_id')
+      .select('org_id, ticketed_event_id, team_id, venue_id')
       .eq('id', seatMapId)
       .maybeSingle()
 
     if (!seatMapError && seatMapRecord) {
+      if (seatMapRecord.ticketed_event_id) {
+        resolvedTicketedEventId = seatMapRecord.ticketed_event_id
+      }
+
+      // Ensure seat map keeps its originating event relationship when available.
+      if (!seatMapRecord.ticketed_event_id && resolvedTicketedEventId) {
+        try {
+          await supabaseAny
+            .from('seat_maps')
+            .update({ ticketed_event_id: resolvedTicketedEventId })
+            .eq('id', seatMapId)
+        } catch {
+          // Best-effort sync only; continue with upload attempts.
+        }
+      }
+
       // Prefer direct org_id (new schema)
       if (seatMapRecord.org_id) {
         orgId = seatMapRecord.org_id
-      } else if (seatMapRecord.ticketed_event_id) {
+      } else if (resolvedTicketedEventId) {
         // Legacy fallback via ticketed_events
         const { data: ticketedEventRecord, error: ticketedEventError } = await supabaseAny
           .from('ticketed_events')
-          .select('org_id')
-          .eq('id', seatMapRecord.ticketed_event_id)
+          .select('org_id, team_id')
+          .eq('id', resolvedTicketedEventId)
           .maybeSingle()
 
         if (!ticketedEventError && ticketedEventRecord?.org_id) {
           orgId = ticketedEventRecord.org_id
+
+          // Backfill missing org_id to align with newer seat map/storage policies.
+          try {
+            await supabaseAny
+              .from('seat_maps')
+              .update({
+                org_id: ticketedEventRecord.org_id,
+                team_id: seatMapRecord.team_id ?? ticketedEventRecord.team_id ?? null,
+              })
+              .eq('id', seatMapId)
+          } catch {
+            // Best-effort backfill only.
+          }
+        }
+      } else if (seatMapRecord.team_id) {
+        const { data: teamRecord, error: teamError } = await supabaseAny
+          .from('teams')
+          .select('org_id')
+          .eq('id', seatMapRecord.team_id)
+          .maybeSingle()
+
+        if (!teamError && teamRecord?.org_id) {
+          orgId = teamRecord.org_id
+        }
+      } else if (seatMapRecord.venue_id) {
+        const { data: venueRecord, error: venueError } = await supabaseAny
+          .from('venues')
+          .select('org_id')
+          .eq('id', seatMapRecord.venue_id)
+          .maybeSingle()
+
+        if (!venueError && venueRecord?.org_id) {
+          orgId = venueRecord.org_id
+        }
+      }
+
+      if (!seatMapRecord.org_id && orgId) {
+        try {
+          await supabaseAny
+            .from('seat_maps')
+            .update({ org_id: orgId })
+            .eq('id', seatMapId)
+        } catch {
+          // Best-effort backfill only.
         }
       }
     }
 
+    // Try several path shapes for compatibility with historical storage policies.
+    // Some environments expect seat_map_id in folder index 1, others in index 2/3.
     const pathCandidates = [
-      orgId ? `${orgId}/${seatMapId}/${timestampedFileName}` : null,
-      `${seatMapId}/${timestampedFileName}`,
+      `${seatMapId}/${objectId}`,
+      orgId ? `${orgId}/${seatMapId}/${objectId}` : null,
+      orgId ? `${orgId}/${objectId}/${seatMapId}` : null,
     ].filter((candidate): candidate is string => Boolean(candidate))
 
     let uploadedPath: string | null = null
@@ -1200,6 +1464,55 @@ export async function uploadSeatMapChart(seatMapId: string, file: File): Promise
     return publicUrl
   } catch (error) {
     throw classifySupabaseError(error, 'Upload seat map chart')
+  }
+}
+
+export async function removeSeatMapChart(
+  seatMapId: string,
+  chartImageUrl?: string | null,
+): Promise<void> {
+  if (!seatMapId) {
+    throw new ValidationError('Seat map is required')
+  }
+
+  try {
+    const supabaseAny = supabase as any
+
+    let resolvedChartValue = chartImageUrl?.trim() ?? ''
+    if (!resolvedChartValue) {
+      const { data: seatMapRecord, error: seatMapError } = await supabaseAny
+        .from('seat_maps')
+        .select('chart_image_url')
+        .eq('id', seatMapId)
+        .maybeSingle()
+
+      if (seatMapError) throw seatMapError
+      resolvedChartValue = (seatMapRecord?.chart_image_url ?? '').trim()
+    }
+
+    if (resolvedChartValue) {
+      const isUrlValue = /^(https?:\/\/|data:)/i.test(resolvedChartValue)
+      const storagePath = isUrlValue
+        ? extractStoragePathFromBucketUrl(resolvedChartValue, SEAT_MAP_CHART_BUCKET)
+        : normalizeBucketStoragePath(resolvedChartValue, SEAT_MAP_CHART_BUCKET)
+
+      if (storagePath) {
+        const { error: removeError } = await supabaseAny.storage
+          .from(SEAT_MAP_CHART_BUCKET)
+          .remove([storagePath])
+
+        if (removeError) throw removeError
+      }
+    }
+
+    const { error: clearError } = await supabaseAny
+      .from('seat_maps')
+      .update({ chart_image_url: null })
+      .eq('id', seatMapId)
+
+    if (clearError) throw clearError
+  } catch (error) {
+    throw classifySupabaseError(error, 'Remove seat map chart')
   }
 }
 
@@ -1508,6 +1821,14 @@ export async function deleteSeatMapAdmin(seatMapId: string): Promise<void> {
 export async function getSeatMapWithSeats(seatMapId: string): Promise<SeatMapWithSections> {
   if (!seatMapId) {
     throw new ValidationError('Seat map is required')
+  }
+
+  if (USE_FAKE_DATA) {
+    const fakeSeatMap = getFakeSeatMapWithSeats(seatMapId)
+    if (!fakeSeatMap) {
+      throw new Error('Seat map not found')
+    }
+    return fakeSeatMap
   }
 
   try {

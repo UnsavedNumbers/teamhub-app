@@ -344,6 +344,10 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
     cart.some(
       (item) => item.ticketType.seating_mode === 'reserved_seating' && (item.seat_selections?.length ?? 0) !== item.quantity,
     )
+  const shouldShowOrderSummary =
+    !ticketTypesQuery.isLoading &&
+    !ticketTypesQuery.isError &&
+    hasAvailableTickets
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white">
@@ -397,7 +401,9 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
               </div>
               <div className="flex items-center gap-2 min-w-0">
                 <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>location_on</span>
-                <span className="text-sm font-medium text-[#617589] dark:text-gray-400 whitespace-nowrap">{venue}</span>
+                <span className="min-w-0 text-sm font-medium text-[#617589] dark:text-gray-400 whitespace-normal break-words leading-5">
+                  {venue}
+                </span>
               </div>
               <div className="flex items-center gap-2 min-w-0">
                 <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>schedule</span>
@@ -534,99 +540,101 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
             </div>
 
             {/* Right Column: Sticky Order Summary */}
-            <div className="w-full lg:w-[380px]">
-              <div className="sticky top-24">
-                <div className="bg-white dark:bg-gray-900 rounded-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] border border-[#f0f2f4] dark:border-gray-800 overflow-hidden">
-                  <div className="bg-[#111418] dark:bg-black p-4 text-white">
-                    <h3 className="font-bold text-lg uppercase tracking-widest">Order Summary</h3>
-                  </div>
-                  <div className="p-6">
-                    <div className="space-y-4 mb-6">
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-[#617589] dark:text-gray-400">Subtotal</span>
-                        <span className="font-bold text-[#111418] dark:text-white">{formatCurrency(totalCents)}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-[#617589] dark:text-gray-400">Service Fee</span>
-                        <span className="font-bold text-[#111418] dark:text-white">$0.00</span>
-                      </div>
-                      <div className="h-px bg-[#f0f2f4] dark:bg-gray-800 my-2" />
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold text-[#111418] dark:text-white uppercase">Total</span>
-                        <span className="text-3xl font-black text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>{formatCurrency(totalCents)}</span>
-                      </div>
+            {shouldShowOrderSummary && (
+              <div className="w-full lg:w-[380px]">
+                <div className="sticky top-24">
+                  <div className="bg-white dark:bg-gray-900 rounded-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] border border-[#f0f2f4] dark:border-gray-800 overflow-hidden">
+                    <div className="bg-[#111418] dark:bg-black p-4 text-white">
+                      <h3 className="font-bold text-lg uppercase tracking-widest">Order Summary</h3>
                     </div>
-
-                    {isOffline && (
-                      <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
-                        You are offline. Checkout is unavailable until you reconnect.
-                      </div>
-                    )}
-                    {!salesStatus.isOnSale && (
-                      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                        {salesStatus.message}
-                      </div>
-                    )}
-                    {isSoldOut && (
-                      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                        This event is sold out.
-                      </div>
-                    )}
-                    {noActiveTicketTypes && (
-                      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                        {emptyTicketStateMessage}
-                      </div>
-                    )}
-
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault()
-                        setEmailTouched(true)
-                        checkoutMutation.mutate()
-                      }}
-                    >
-                      <div className="mb-4">
-                        <label className="block text-sm font-medium text-[#111418] dark:text-white mb-2">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          value={purchaserEmail}
-                          onChange={(e) => setPurchaserEmail(e.target.value)}
-                          onBlur={() => setEmailTouched(true)}
-                          placeholder="your@email.com"
-                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[#111418] dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
-                          style={{ '--tw-ring-color': 'var(--org-btn-primary-bg)' } as CSSProperties}
-                          required
-                        />
-                        {emailError && <p className="mt-1 text-xs text-red-500">{emailError}</p>}
+                    <div className="p-6">
+                      <div className="space-y-4 mb-6">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-[#617589] dark:text-gray-400">Subtotal</span>
+                          <span className="font-bold text-[#111418] dark:text-white">{formatCurrency(totalCents)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-[#617589] dark:text-gray-400">Service Fee</span>
+                          <span className="font-bold text-[#111418] dark:text-white">$0.00</span>
+                        </div>
+                        <div className="h-px bg-[#f0f2f4] dark:bg-gray-800 my-2" />
+                        <div className="flex justify-between items-center">
+                          <span className="text-lg font-bold text-[#111418] dark:text-white uppercase">Total</span>
+                          <span className="text-3xl font-black text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>{formatCurrency(totalCents)}</span>
+                        </div>
                       </div>
 
-                      {submitError && <p className="mb-4 text-xs text-red-500">{submitError}</p>}
+                      {isOffline && (
+                        <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
+                          You are offline. Checkout is unavailable until you reconnect.
+                        </div>
+                      )}
+                      {!salesStatus.isOnSale && (
+                        <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                          {salesStatus.message}
+                        </div>
+                      )}
+                      {isSoldOut && (
+                        <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                          This event is sold out.
+                        </div>
+                      )}
+                      {noActiveTicketTypes && (
+                        <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                          {emptyTicketStateMessage}
+                        </div>
+                      )}
 
-                      <button
-                        type="submit"
-                        disabled={checkoutDisabled}
-                        className="w-full bg-[var(--org-btn-primary-bg)] hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed text-[var(--org-btn-primary-text)] font-black py-4 rounded-lg shadow-[0_8px_0px_0px_rgba(0,0,0,0.2)] transition-all active:translate-y-1 active:shadow-none uppercase tracking-widest mb-6"
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault()
+                          setEmailTouched(true)
+                          checkoutMutation.mutate()
+                        }}
                       >
-                        {checkoutMutation.isPending ? 'Processing...' : 'Checkout Now'}
-                      </button>
-                    </form>
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-[#111418] dark:text-white mb-2">
+                            Email
+                          </label>
+                          <input
+                            type="email"
+                            value={purchaserEmail}
+                            onChange={(e) => setPurchaserEmail(e.target.value)}
+                            onBlur={() => setEmailTouched(true)}
+                            placeholder="your@email.com"
+                            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[#111418] dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
+                            style={{ '--tw-ring-color': 'var(--org-btn-primary-bg)' } as CSSProperties}
+                            required
+                          />
+                          {emailError && <p className="mt-1 text-xs text-red-500">{emailError}</p>}
+                        </div>
 
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3 text-xs text-[#617589] dark:text-gray-500">
-                        <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)] text-sm" style={{ color: 'var(--org-btn-primary-bg)' }}>verified_user</span>
-                        <p>Secure SSL Encrypted Checkout via YouthSports Payment Gateway.</p>
-                      </div>
-                      <div className="flex items-start gap-3 text-xs text-[#617589] dark:text-gray-500">
-                        <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)] text-sm" style={{ color: 'var(--org-btn-primary-bg)' }}>confirmation_number</span>
-                        <p>Instant digital ticket delivery to your registered email address.</p>
+                        {submitError && <p className="mb-4 text-xs text-red-500">{submitError}</p>}
+
+                        <button
+                          type="submit"
+                          disabled={checkoutDisabled}
+                          className="w-full bg-[var(--org-btn-primary-bg)] hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed text-[var(--org-btn-primary-text)] font-black py-4 rounded-lg shadow-[0_8px_0px_0px_rgba(0,0,0,0.2)] transition-all active:translate-y-1 active:shadow-none uppercase tracking-widest mb-6"
+                        >
+                          {checkoutMutation.isPending ? 'Processing...' : 'Checkout Now'}
+                        </button>
+                      </form>
+
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-3 text-xs text-[#617589] dark:text-gray-500">
+                          <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)] text-sm" style={{ color: 'var(--org-btn-primary-bg)' }}>verified_user</span>
+                          <p>Secure SSL Encrypted Checkout via YouthSports Payment Gateway.</p>
+                        </div>
+                        <div className="flex items-start gap-3 text-xs text-[#617589] dark:text-gray-500">
+                          <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)] text-sm" style={{ color: 'var(--org-btn-primary-bg)' }}>confirmation_number</span>
+                          <p>Instant digital ticket delivery to your registered email address.</p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </main>

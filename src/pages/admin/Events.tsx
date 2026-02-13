@@ -46,6 +46,7 @@ const DEFAULT_FILTERS: EventsFiltersType = {
     seasonIds: [],
     status: [],
     locationSearch: '',
+    visibleToFans: false,
 }
 
 export default function Events() {
@@ -154,6 +155,7 @@ export default function Events() {
                 teamIds: filters.teamIds.length > 0 ? filters.teamIds : undefined,
                 seasonIds: filters.seasonIds.length > 0 ? filters.seasonIds : undefined,
                 status: filters.status.length > 0 ? filters.status : undefined,
+                visibleToFans: filters.visibleToFans || undefined,
                 orderBy,
                 order,
                 offset: page * rowsPerPage,

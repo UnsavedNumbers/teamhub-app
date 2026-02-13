@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase'
 import { USE_FAKE_DATA } from '@/data/config'
 import { classifySupabaseError, ValidationError } from '@/utils/supabaseErrorHandler'
 import type { Venue } from '@/types/ticketing'
+import { getFakeVenuesForOrg } from '@/data/fake/ticketingFakeService'
 
 // ============================================================================
 // CRUD
@@ -16,7 +17,7 @@ import type { Venue } from '@/types/ticketing'
 export async function getVenuesForOrg(orgId: string): Promise<Venue[]> {
   if (!orgId) throw new ValidationError('Organization is required')
 
-  if (USE_FAKE_DATA) return []
+  if (USE_FAKE_DATA) return getFakeVenuesForOrg(orgId)
 
   try {
     const { data, error } = await (supabase as any)

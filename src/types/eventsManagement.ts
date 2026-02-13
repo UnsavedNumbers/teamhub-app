@@ -20,6 +20,7 @@ export interface EventsFilters {
     seasonIds: string[]
     status: EventStatus[]
     locationSearch: string
+    visibleToFans: boolean
 }
 
 export interface EventsViewState {
