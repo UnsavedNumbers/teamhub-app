@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useT } from '@/i18n/useI18n'
 import type { BulkSeatConfig } from '@/types/ticketing'
+import { Checkbox } from '@/components/platformAdmin'
 
 interface SeatMapBulkGeneratorProps {
   onGenerate: (config: BulkSeatConfig) => Promise<unknown> | void
@@ -136,36 +137,65 @@ export default function SeatMapBulkGenerator({ onGenerate, loading = false }: Se
       </div>
 
       <div className="oa-form-grid oa-form-grid-2 oa-gap-3">
-        <label className="oa-checkbox-wrapper">
-          <input type="checkbox" checked={accessible} onChange={(event) => setAccessible(event.target.checked)} />
-          <span>{t('ticketing.reservedSeating.bulkGenerator.attributes.accessible')}</span>
-        </label>
-        <label className="oa-checkbox-wrapper">
-          <input type="checkbox" checked={obstructed} onChange={(event) => setObstructed(event.target.checked)} />
-          <span>{t('ticketing.reservedSeating.bulkGenerator.attributes.obstructed')}</span>
-        </label>
-        <label className="oa-checkbox-wrapper">
-          <input
-            type="checkbox"
-            checked={companionRequired}
-            onChange={(event) => setCompanionRequired(event.target.checked)}
-          />
-          <span>{t('ticketing.reservedSeating.bulkGenerator.attributes.companionRequired')}</span>
-        </label>
-        <label className="oa-checkbox-wrapper">
-          <input type="checkbox" checked={vip} onChange={(event) => setVip(event.target.checked)} />
-          <span>{t('ticketing.reservedSeating.bulkGenerator.attributes.vip')}</span>
-        </label>
+        <Checkbox
+          checked={accessible}
+          onChange={(event) => setAccessible(event.target.checked)}
+          disabled={loading}
+          label={t('ticketing.reservedSeating.bulkGenerator.attributes.accessible')}
+        />
+        <Checkbox
+          checked={obstructed}
+          onChange={(event) => setObstructed(event.target.checked)}
+          disabled={loading}
+          label={t('ticketing.reservedSeating.bulkGenerator.attributes.obstructed')}
+        />
+        <Checkbox
+          checked={companionRequired}
+          onChange={(event) => setCompanionRequired(event.target.checked)}
+          disabled={loading}
+          label={t('ticketing.reservedSeating.bulkGenerator.attributes.companionRequired')}
+        />
+        <Checkbox
+          checked={vip}
+          onChange={(event) => setVip(event.target.checked)}
+          disabled={loading}
+          label={t('ticketing.reservedSeating.bulkGenerator.attributes.vip')}
+        />
       </div>
 
-      <div className="oa-flex oa-justify-between oa-items-center oa-gap-4">
-        <p className="oa-text-muted">
-          {t('ticketing.reservedSeating.bulkGenerator.preview', { count: totalSeats })}
-        </p>
-        <button type="submit" className="oa-btn oa-btn-primary" disabled={loading || totalSeats <= 0}>
-          {loading
-            ? t('ticketing.reservedSeating.bulkGenerator.generating')
-            : t('ticketing.reservedSeating.bulkGenerator.generate')}
+      <div className="oa-flex oa-justify-end oa-items-center oa-gap-4">
+        <button
+          type="submit"
+          className="oa-btn oa-btn-primary"
+          disabled={loading || totalSeats <= 0}
+          style={{ minWidth: 164, minHeight: 124, padding: '10px 14px' }}
+        >
+          {loading ? (
+            t('ticketing.reservedSeating.bulkGenerator.generating')
+          ) : (
+            <span
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                lineHeight: 1,
+                gap: 6,
+              }}
+            >
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {t('ticketing.reservedSeating.bulkGenerator.generateVerb')}
+              </span>
+              <span style={{ fontSize: '3.25rem', fontWeight: 900, lineHeight: 0.9 }}>
+                {totalSeats.toLocaleString()}
+              </span>
+              <span style={{ fontSize: '0.95rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                {totalSeats === 1
+                  ? t('ticketing.reservedSeating.bulkGenerator.seatNoun')
+                  : t('ticketing.reservedSeating.bulkGenerator.seatsNoun')}
+              </span>
+            </span>
+          )}
         </button>
       </div>
     </form>

@@ -18,12 +18,14 @@ import {
   getSeatMapWithSeats,
   getTicketedEventByIdAdmin,
   importSeatRows,
+  removeSeatMapChart,
   updateSeat,
   updateSeatMap,
   uploadSeatMapChart,
 } from '@/data/services'
 import { useT } from '@/i18n/useI18n'
 import { NotFoundError, RLSError } from '@/utils/supabaseErrorHandler'
+import { cn } from '@/utils/cn'
 
 function parseBoolean(value: string): boolean {
   return ['1', 'true', 'yes', 'y'].includes(value.trim().toLowerCase())
@@ -39,12 +41,17 @@ export default function SeatMapBuilder() {
   const navigate = useNavigate()
   const location = useLocation()
   const { isOffline, retry } = useOffline()
-  const { eventId, seatMapId } = useParams<{ eventId: string; seatMapId: string }>()
+  const { eventId: eventIdParam, seatMapId } = useParams<{ eventId?: string; seatMapId: string }>()
+  const eventId = eventIdParam ?? null
+  const hasEventContext = Boolean(eventId)
   const isDraftSeatMap = seatMapId === 'new'
   const persistedSeatMapId = !isDraftSeatMap ? seatMapId : null
-  const hasInvalidParams = !eventId || !seatMapId || !isUuid(eventId) || (!isDraftSeatMap && !isUuid(seatMapId))
+  const hasValidEventId = !eventId || USE_FAKE_DATA || isUuid(eventId)
+  const hasValidSeatMapId = !!seatMapId && (isDraftSeatMap || USE_FAKE_DATA || isUuid(seatMapId))
+  const hasInvalidParams = !hasValidEventId || !hasValidSeatMapId || (!eventId && isDraftSeatMap)
 
   const eventsPath = useRouteLink('admin.ticketingEvents.list')
+  const seatMapsPath = useRouteLink('admin.ticketingEvents.seatMaps.list')
 
   const [seatMapName, setSeatMapName] = useState('')
   const [csvFile, setCsvFile] = useState<File | null>(null)
@@ -55,19 +62,19 @@ export default function SeatMapBuilder() {
   const eventQuery = useQuery({
     queryKey: ['ticketed-event', eventId],
     queryFn: () => getTicketedEventByIdAdmin(eventId!),
-    enabled: Boolean(eventId && isUuid(eventId)),
+    enabled: Boolean(eventId && (USE_FAKE_DATA || isUuid(eventId))),
   })
 
   const detailPath = eventQuery.data?.event_id
     ? `${getLink('admin.events.detail', { id: eventQuery.data.event_id })}?view=ticketing`
     : eventsPath
 
-  const returnTo = new URLSearchParams(location.search).get('returnTo') ?? detailPath
+  const returnTo = new URLSearchParams(location.search).get('returnTo') ?? (hasEventContext ? detailPath : seatMapsPath)
 
   const seatMapQuery = useQuery({
     queryKey: ['seat-map-builder', seatMapId],
     queryFn: () => getSeatMapWithSeats(seatMapId!),
-    enabled: Boolean(persistedSeatMapId && isUuid(persistedSeatMapId)),
+    enabled: Boolean(persistedSeatMapId && (USE_FAKE_DATA || isUuid(persistedSeatMapId))),
     refetchInterval: persistedSeatMapId ? 15000 : false,
   })
 
@@ -95,7 +102,7 @@ export default function SeatMapBuilder() {
       }
       // Resolve org_id from event context if available
       const orgId = eventQuery.data?.org_id ?? ''
-      const venueId = (eventQuery.data as any)?.venue_id ?? null
+      const venueId = eventQuery.data?.venue_id ?? null
       return createSeatMap({
         name: seatMapName.trim(),
         org_id: orgId,
@@ -153,13 +160,34 @@ export default function SeatMapBuilder() {
             : t('ticketing.reservedSeating.builder.errors.offlineWriteBlocked'),
         )
       }
-      await uploadSeatMapChart(persistedSeatMapId, file)
+      await uploadSeatMapChart(persistedSeatMapId, file, { ticketedEventId: eventId })
     },
     onSuccess: async () => {
       showSuccess(t('ticketing.reservedSeating.builder.chartUploaded'))
       await queryClient.invalidateQueries({ queryKey: ['seat-map-builder', persistedSeatMapId] })
     },
     onError: (error: any) => showError(error.message || t('ticketing.reservedSeating.builder.errors.chartUploadFailed')),
+  })
+
+  const chartRemoveMutation = useMutation({
+    mutationFn: async () => {
+      if (!persistedSeatMapId) {
+        throw new Error(t('ticketing.reservedSeating.builder.errors.seatMapMissing'))
+      }
+      if (isWriteBlocked) {
+        throw new Error(
+          USE_FAKE_DATA
+            ? t('ticketing.reservedSeating.builder.errors.demoModeWriteBlocked')
+            : t('ticketing.reservedSeating.builder.errors.offlineWriteBlocked'),
+        )
+      }
+      await removeSeatMapChart(persistedSeatMapId, seatMapQuery.data?.chart_image_url)
+    },
+    onSuccess: async () => {
+      showSuccess(t('ticketing.reservedSeating.builder.chartRemoved'))
+      await queryClient.invalidateQueries({ queryKey: ['seat-map-builder', persistedSeatMapId] })
+    },
+    onError: (error: any) => showError(error.message || t('ticketing.reservedSeating.builder.errors.chartRemoveFailed')),
   })
 
   const bulkMutation = useMutation({
@@ -302,7 +330,7 @@ export default function SeatMapBuilder() {
     }
   }, [seats.length])
 
-  const loadError = (eventQuery.error ?? seatMapQuery.error) as Error | null
+  const loadError = ((hasEventContext ? eventQuery.error : null) ?? seatMapQuery.error) as Error | null
   const loadErrorMessage = loadError?.message?.toLowerCase() ?? ''
   const isPermissionError = loadError instanceof RLSError || loadErrorMessage.includes('permission') || loadErrorMessage.includes('access denied') || loadErrorMessage.includes('rls')
   const isNotFoundError = loadError instanceof NotFoundError || loadErrorMessage.includes('not found')
@@ -321,7 +349,7 @@ export default function SeatMapBuilder() {
     )
   }
 
-  if (eventQuery.isLoading || (!isDraftSeatMap && seatMapQuery.isLoading)) {
+  if ((hasEventContext && eventQuery.isLoading) || (!isDraftSeatMap && seatMapQuery.isLoading)) {
     return (
       <div className="oa-flex oa-justify-center oa-pt-12">
         <AdminLoadingSpinner />
@@ -329,7 +357,7 @@ export default function SeatMapBuilder() {
     )
   }
 
-  if (isOffline && (!eventQuery.data || (!isDraftSeatMap && !seatMapQuery.data))) {
+  if (isOffline && ((hasEventContext && !eventQuery.data) || (!isDraftSeatMap && !seatMapQuery.data))) {
     return (
       <div className="oa-page-container">
         <EmptyState
@@ -340,7 +368,9 @@ export default function SeatMapBuilder() {
             label: t('ticketing.reservedSeating.builder.retry'),
             onClick: () => {
               retry()
-              eventQuery.refetch()
+              if (hasEventContext) {
+                eventQuery.refetch()
+              }
               if (!isDraftSeatMap) {
                 seatMapQuery.refetch()
               }
@@ -366,7 +396,7 @@ export default function SeatMapBuilder() {
     )
   }
 
-  if (!eventQuery.data || (!isDraftSeatMap && !seatMapQuery.data) || isNotFoundError) {
+  if ((hasEventContext && !eventQuery.data) || (!isDraftSeatMap && !seatMapQuery.data) || isNotFoundError) {
     return (
       <div className="oa-page-container">
         <EmptyState
@@ -384,7 +414,11 @@ export default function SeatMapBuilder() {
     <div className="oa-page-container oa-space-y-6">
       <AdminPageHeader
         title={t('ticketing.reservedSeating.builder.title')}
-        subtitle={`${eventQuery.data.title} • ${t('ticketing.reservedSeating.builder.totalSeats', { count: seatCount })}`}
+        subtitle={
+          hasEventContext && eventQuery.data
+            ? `${eventQuery.data.title} | ${t('ticketing.reservedSeating.builder.totalSeats', { count: seatCount })}`
+            : t('ticketing.reservedSeating.builder.totalSeats', { count: seatCount })
+        }
         actions={
           <OrgAdminButton as={Link} to={returnTo} icon="arrow_back">
             {t('ticketing.reservedSeating.builder.backToEvent')}
@@ -406,68 +440,142 @@ export default function SeatMapBuilder() {
         )}
 
         <Card title={t('ticketing.reservedSeating.builder.mapDetails')}>
-          <div className="oa-ticketing-field-stack">
-            <div className="oa-form-grid oa-form-grid-2 oa-gap-4">
-              <div className="oa-form-group">
-                <label className="oa-label oa-label">{t('ticketing.reservedSeating.builder.mapName')}</label>
-                <input
-                  className="oa-input"
-                  value={seatMapName}
-                  onChange={(event) => setSeatMapName(event.target.value)}
-                />
-              </div>
-              <div className="oa-form-group">
-                <label className="oa-label oa-label" style={{ visibility: 'hidden' }} aria-hidden="true">
-                  {t('ticketing.reservedSeating.builder.mapName')}
-                </label>
-                <button
-                  className="oa-btn oa-btn-secondary"
-                  type="button"
-                  disabled={
-                    !seatMapName.trim() ||
-                    createSeatMapMutation.isPending ||
-                    updateNameMutation.isPending ||
-                    isWriteBlocked
-                  }
-                  onClick={() => {
-                    if (isDraftSeatMap) {
-                      createSeatMapMutation.mutate()
-                      return
+          <div className="oa-form-grid oa-form-grid-2 oa-gap-6">
+            <div className="oa-ticketing-field-stack">
+              <div className="oa-form-grid oa-form-grid-2 oa-gap-4">
+                <div className="oa-form-group">
+                  <label className="oa-label oa-label">{t('ticketing.reservedSeating.builder.mapName')}</label>
+                  <input
+                    className="oa-input"
+                    value={seatMapName}
+                    onChange={(event) => setSeatMapName(event.target.value)}
+                  />
+                </div>
+                <div className="oa-form-group">
+                  <label className="oa-label oa-label" style={{ visibility: 'hidden' }} aria-hidden="true">
+                    {t('ticketing.reservedSeating.builder.mapName')}
+                  </label>
+                  <button
+                    className="oa-btn oa-btn-secondary"
+                    type="button"
+                    disabled={
+                      !seatMapName.trim() ||
+                      createSeatMapMutation.isPending ||
+                      updateNameMutation.isPending ||
+                      isWriteBlocked
                     }
-                    updateNameMutation.mutate()
+                    onClick={() => {
+                      if (isDraftSeatMap) {
+                        createSeatMapMutation.mutate()
+                        return
+                      }
+                      updateNameMutation.mutate()
+                    }}
+                  >
+                    {createSeatMapMutation.isPending || updateNameMutation.isPending
+                      ? t('common.saving')
+                      : (isDraftSeatMap ? t('ticketing.reservedSeating.builder.saveSeatMapCta') : t('common.save'))}
+                  </button>
+                </div>
+              </div>
+
+              <div className="oa-form-group">
+                <label className="oa-label oa-label">{t('ticketing.reservedSeating.builder.chartUploadLabel')}</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={isDraftSeatMap || chartUploadMutation.isPending || isWriteBlocked}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    if (file) {
+                      chartUploadMutation.mutate(file)
+                    }
                   }}
-                >
-                  {createSeatMapMutation.isPending || updateNameMutation.isPending
-                    ? t('common.saving')
-                    : (isDraftSeatMap ? t('ticketing.reservedSeating.builder.saveSeatMapCta') : t('common.save'))}
-                </button>
+                />
+                <p className="oa-text-muted">
+                  {isDraftSeatMap
+                    ? t('ticketing.reservedSeating.builder.saveBeforeChartUpload')
+                    : t('ticketing.reservedSeating.builder.chartUploadHint')}
+                </p>
               </div>
             </div>
 
             <div className="oa-form-group">
-              <label className="oa-label oa-label">{t('ticketing.reservedSeating.builder.chartUploadLabel')}</label>
-              <input
-                type="file"
-                accept="image/*"
-                disabled={isDraftSeatMap || chartUploadMutation.isPending || isWriteBlocked}
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (file) {
-                    chartUploadMutation.mutate(file)
-                  }
+              <label className="oa-label oa-label">{t('ticketing.reservedSeating.builder.chartPreviewTitle')}</label>
+              <div
+                style={{
+                  position: 'relative',
+                  minHeight: 220,
+                  border: '1px solid var(--oa-border-light)',
+                  borderRadius: 10,
+                  background: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 8,
+                  overflow: 'hidden',
                 }}
-              />
-              <p className="oa-text-muted">
-                {isDraftSeatMap
-                  ? t('ticketing.reservedSeating.builder.saveBeforeChartUpload')
-                  : t('ticketing.reservedSeating.builder.chartUploadHint')}
-              </p>
+              >
+                {seatMapQuery.data?.chart_image_url ? (
+                  <>
+                    <img
+                      src={seatMapQuery.data.chart_image_url}
+                      alt={t('ticketing.reservedSeating.builder.chartPreviewAlt')}
+                      style={{
+                        width: '100%',
+                        maxHeight: 320,
+                        objectFit: 'contain',
+                        borderRadius: 8,
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => chartRemoveMutation.mutate()}
+                      disabled={chartRemoveMutation.isPending || isWriteBlocked}
+                      aria-label={t('ticketing.reservedSeating.builder.removeChart')}
+                      title={t('ticketing.reservedSeating.builder.removeChart')}
+                      style={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        width: 32,
+                        height: 32,
+                        borderRadius: 999,
+                        border: '1px solid rgba(255,255,255,0.7)',
+                        background: 'rgba(17,24,39,0.6)',
+                        color: '#fff',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: chartRemoveMutation.isPending || isWriteBlocked ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                        close
+                      </span>
+                    </button>
+                  </>
+                ) : (
+                  <p className="oa-text-muted" style={{ margin: 0 }}>
+                    {t('ticketing.reservedSeating.builder.chartPreviewEmpty')}
+                  </p>
+                )}
+              </div>
               {seatMapQuery.data?.chart_image_url && (
-                <img
-                  src={seatMapQuery.data.chart_image_url}
-                  alt={t('ticketing.reservedSeating.builder.chartPreviewAlt')}
-                  style={{ maxHeight: 220, borderRadius: 8, border: '1px solid var(--oa-border-light)' }}
-                />
+                <button
+                  type="button"
+                  className="oa-btn oa-btn-text oa-text-danger"
+                  onClick={() => chartRemoveMutation.mutate()}
+                  disabled={chartRemoveMutation.isPending || isWriteBlocked}
+                  style={{ marginTop: 8 }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16, marginRight: 4 }}>
+                    delete
+                  </span>
+                  {chartRemoveMutation.isPending
+                    ? t('common.saving')
+                    : t('ticketing.reservedSeating.builder.removeChart')}
+                </button>
               )}
             </div>
           </div>
@@ -543,6 +651,27 @@ export default function SeatMapBuilder() {
                     <tbody>
                       {seats.map((seat) => {
                         const attributes = (seat.seat_attributes ?? {}) as Record<string, unknown>
+                        const seatAttributeOptions: Array<{
+                          key: 'accessible' | 'obstructed_view' | 'companion_required' | 'vip'
+                          label: string
+                        }> = [
+                          {
+                            key: 'accessible',
+                            label: t('ticketing.reservedSeating.builder.attributes.accessible'),
+                          },
+                          {
+                            key: 'obstructed_view',
+                            label: t('ticketing.reservedSeating.builder.attributes.obstructed'),
+                          },
+                          {
+                            key: 'companion_required',
+                            label: t('ticketing.reservedSeating.builder.attributes.companion'),
+                          },
+                          {
+                            key: 'vip',
+                            label: t('ticketing.reservedSeating.builder.attributes.vip'),
+                          },
+                        ]
 
                         return (
                           <tr key={seat.id}>
@@ -550,39 +679,32 @@ export default function SeatMapBuilder() {
                             <td>{seat.row_identifier}</td>
                             <td>{seat.seat_identifier}</td>
                             <td>
-                              <div className="oa-flex oa-gap-2 oa-flex-wrap">
-                                <label className="oa-checkbox-wrapper">
-                                  <input
-                                    type="checkbox"
-                                    checked={Boolean(attributes.accessible)}
-                                    disabled={toggleSeatAttributeMutation.isPending || isWriteBlocked}
-                                    onChange={(event) => {
-                                      toggleSeatAttributeMutation.mutate({
-                                        sectionId: seat.id,
-                                        key: 'accessible',
-                                        value: event.target.checked,
-                                        currentAttributes: attributes,
-                                      })
-                                    }}
-                                  />
-                                  <span>{t('ticketing.reservedSeating.builder.attributes.accessible')}</span>
-                                </label>
-                                <label className="oa-checkbox-wrapper">
-                                  <input
-                                    type="checkbox"
-                                    checked={Boolean(attributes.obstructed_view)}
-                                    disabled={toggleSeatAttributeMutation.isPending || isWriteBlocked}
-                                    onChange={(event) => {
-                                      toggleSeatAttributeMutation.mutate({
-                                        sectionId: seat.id,
-                                        key: 'obstructed_view',
-                                        value: event.target.checked,
-                                        currentAttributes: attributes,
-                                      })
-                                    }}
-                                  />
-                                  <span>{t('ticketing.reservedSeating.builder.attributes.obstructed')}</span>
-                                </label>
+                              <div
+                                className="oa-toggle-group"
+                                role="group"
+                                aria-label={`${seat.section_name} ${seat.row_identifier} ${seat.seat_identifier} attributes`}
+                              >
+                                {seatAttributeOptions.map((option) => {
+                                  const isActive = Boolean(attributes[option.key])
+                                  return (
+                                    <button
+                                      key={option.key}
+                                      type="button"
+                                      className={cn('oa-toggle-btn', isActive && 'active')}
+                                      onClick={() => {
+                                        toggleSeatAttributeMutation.mutate({
+                                          sectionId: seat.id,
+                                          key: option.key,
+                                          value: !isActive,
+                                          currentAttributes: attributes,
+                                        })
+                                      }}
+                                      disabled={toggleSeatAttributeMutation.isPending || isWriteBlocked}
+                                    >
+                                      {option.label}
+                                    </button>
+                                  )
+                                })}
                               </div>
                             </td>
                             <td>

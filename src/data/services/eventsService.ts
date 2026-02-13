@@ -181,6 +181,7 @@ export interface EventsQueryParams {
     sportIds?: string[]
     eventTypes?: EventType[]
     status?: ('scheduled' | 'cancelled' | 'completed' | 'postponed')[]
+    visibleToFans?: boolean
     locationSearch?: string
 
     // Time context
@@ -284,6 +285,10 @@ export async function getCalendarEvents(
             query = query.eq('is_cancelled', false)
         }
 
+        if (params.visibleToFans) {
+            query = query.eq('visibility', 'public')
+        }
+
         // Apply sorting - use index-friendly ordering
         const sortColumn = params.orderBy || 'start_time'
         const sortOrder = params.order === 'desc' ? { ascending: false } : { ascending: true }
@@ -338,6 +343,9 @@ export async function getEvents(
             // Apply filters
             if (!params.includeCancelled) {
                 events = events.filter((e) => !e.is_cancelled)
+            }
+            if (params.visibleToFans) {
+                events = events.filter((e) => ((e as { visibility?: string | null }).visibility ?? null) === 'public')
             }
 
             // Debug logging in development
@@ -440,6 +448,10 @@ export async function getEvents(
             query = query.eq('is_cancelled', false)
         }
 
+        if (params.visibleToFans) {
+            query = query.eq('visibility', 'public')
+        }
+
         // Apply search (title, notes, venue_name)
         if (params.search && params.search.trim() !== '') {
             const searchTerm = `%${params.search.trim()}%`
@@ -503,6 +515,9 @@ export async function getEventsCount(
             if (!params.includeCancelled) {
                 events = events.filter((e) => !e.is_cancelled)
             }
+            if (params.visibleToFans) {
+                events = events.filter((e) => ((e as { visibility?: string | null }).visibility ?? null) === 'public')
+            }
 
             events = filterEventsByRole(events, permissions, childTeamMemberships, context.orgId)
 
@@ -558,6 +573,9 @@ export async function getEventsCount(
             }
         } else if (!params.includeCancelled) {
             query = query.eq('is_cancelled', false)
+        }
+        if (params.visibleToFans) {
+            query = query.eq('visibility', 'public')
         }
         if (params.search && params.search.trim() !== '') {
             const searchTerm = `%${params.search.trim()}%`

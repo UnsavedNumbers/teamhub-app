@@ -765,7 +765,14 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
               <tbody>
                 {ticketTypesList.map((type) => (
                   <tr key={type.id}>
-                    <td>{type.name}</td>
+                    <td>
+                      <Link
+                        to={`${editTicketTypePath}?ticketTypeId=${encodeURIComponent(type.id)}`}
+                        className="oa-link"
+                      >
+                        {type.name}
+                      </Link>
+                    </td>
                     <td>
                       <span className={`oa-badge oa-badge-${type.seating_mode === 'reserved_seating' ? 'info' : 'default'}`}>
                         {type.seating_mode === 'reserved_seating'
