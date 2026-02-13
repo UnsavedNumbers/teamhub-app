@@ -48,3 +48,25 @@ export function playSound(type: SoundType): Promise<void> {
     }
   })
 }
+
+/**
+ * Prime audio playback from a user gesture so later scan sounds are not blocked.
+ */
+export function unlockAudio(): void {
+  Object.values(sounds).forEach((sound) => {
+    const originalVolume = sound.volume
+    sound.volume = 0
+    sound.currentTime = 0
+    void sound.play()
+      .then(() => {
+        sound.pause()
+        sound.currentTime = 0
+      })
+      .catch(() => {
+        // Ignore unlock failures (autoplay policy or unsupported audio)
+      })
+      .finally(() => {
+        sound.volume = originalVolume
+      })
+  })
+}

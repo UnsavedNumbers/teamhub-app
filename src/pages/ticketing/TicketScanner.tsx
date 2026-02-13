@@ -19,6 +19,7 @@ import { ValidationResultBanner } from '@/components/ticketing/ValidationResultB
 import { OrderContextPanel } from '@/components/ticketing/OrderContextPanel'
 import { queueValidation } from '@/features/tickets/utils/offlineQueue'
 import { useMemoryMonitor } from '@/features/tickets/hooks/useMemoryMonitor'
+import { unlockAudio } from '@/utils/audio'
 
 interface ValidationResult {
   timestamp: Date
@@ -607,7 +608,10 @@ export default function TicketScanner() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setScannerMode('camera')}
+                        onClick={() => {
+                          unlockAudio()
+                          setScannerMode('camera')
+                        }}
                         className={`px-3 sm:px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
                           scannerMode === 'camera'
                             ? 'bg-[var(--org-surface-primary,#fff)] text-[var(--scanner-color-primary)] shadow-sm border-b-2 border-[var(--scanner-color-secondary)]'
@@ -647,7 +651,10 @@ export default function TicketScanner() {
                           </p>
                           <button
                             type="button"
-                            onClick={() => setIsCameraOpen(true)}
+                            onClick={() => {
+                              unlockAudio()
+                              setIsCameraOpen(true)
+                            }}
                             className="inline-flex items-center justify-center px-5 py-2.5 border border-[var(--org-btn-secondary-border,#cbd5e1)] bg-[var(--org-btn-secondary-bg,transparent)] text-[var(--org-btn-secondary-text,var(--org-text-primary,#111418))] font-bold rounded-lg hover:bg-[var(--org-btn-secondary-hover,var(--scanner-color-tertiary-bg))] transition-colors"
                           >
                             {t('ticketing.scanner.openCamera')}
