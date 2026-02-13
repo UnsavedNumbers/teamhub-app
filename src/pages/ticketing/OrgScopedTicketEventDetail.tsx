@@ -8,7 +8,12 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { useParams } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { createCheckoutSession, getTicketedEventById, getTicketTypesForEvent } from '@/data/services'
+import {
+  createCheckoutSession,
+  getTicketBannerPublicUrl,
+  getTicketedEventById,
+  getTicketTypesForEvent,
+} from '@/data/services'
 import { formatCurrency } from '@/types/ticketing'
 import type { SeatSelection, TicketType, TicketedEvent } from '@/types/ticketing'
 import type { OrgContext } from '@/utils/orgResolution'
@@ -27,32 +32,6 @@ interface CartItem {
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-function formatTimezoneDisplay(timeZone: string | null | undefined, referenceDate: string): string {
-  if (!timeZone) return ''
-
-  const parsedDate = new Date(referenceDate)
-  if (Number.isNaN(parsedDate.getTime())) return timeZone
-
-  try {
-    const longParts = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      timeZoneName: 'long',
-    }).formatToParts(parsedDate)
-    const shortParts = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      timeZoneName: 'short',
-    }).formatToParts(parsedDate)
-
-    const longName = longParts.find(part => part.type === 'timeZoneName')?.value
-    const shortName = shortParts.find(part => part.type === 'timeZoneName')?.value
-
-    if (longName && shortName) return `${longName} (${shortName})`
-    return longName || shortName || timeZone
-  } catch {
-    return timeZone
-  }
-}
 
 function TicketEventDetailContent({ org }: { org: OrgContext }) {
   const t = useT()
@@ -181,9 +160,13 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
     const now = new Date()
     const starts = event.sales_start_at ? new Date(event.sales_start_at) : null
     const ends = event.sales_end_at ? new Date(event.sales_end_at) : null
+    const eventEndsAt = new Date(event.ends_at)
 
     if (event.status !== 'published') {
       return { isOnSale: false, message: 'Ticket sales are not currently open.' }
+    }
+    if (!Number.isNaN(eventEndsAt.getTime()) && eventEndsAt < now) {
+      return { isOnSale: false, message: 'This event has ended.' }
     }
     if (starts && starts > now) {
       return { isOnSale: false, message: 'Ticket sales have not started yet.' }
@@ -198,6 +181,31 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
     () => ticketTypes.some((type) => type.capacity_remaining === null || type.capacity_remaining > 0),
     [ticketTypes],
   )
+  const isSoldOut = useMemo(
+    () => ticketTypes.length > 0 && !hasAvailableTickets,
+    [hasAvailableTickets, ticketTypes.length],
+  )
+  const noActiveTicketTypes = ticketTypes.length === 0
+  const emptyTicketStateMessage = useMemo(() => {
+    if (!event) return 'No tickets are currently available for this event.'
+
+    const now = Date.now()
+    const eventEnd = new Date(event.ends_at).getTime()
+    if (!Number.isNaN(eventEnd) && eventEnd < now) {
+      return 'This event has ended.'
+    }
+
+    if (event.sale_status === 'sold_out' || isSoldOut) {
+      return 'This event is sold out.'
+    }
+
+    const salesStart = event.sales_start_at ? new Date(event.sales_start_at).getTime() : null
+    if (salesStart !== null && !Number.isNaN(salesStart) && salesStart > now) {
+      return 'Tickets for this event are coming soon.'
+    }
+
+    return 'No tickets are currently available for this event.'
+  }, [event, isSoldOut])
 
   const emailIsValid = EMAIL_REGEX.test(purchaserEmail.trim())
   const emailError = emailTouched && !emailIsValid ? 'Enter a valid email address.' : null
@@ -209,7 +217,8 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
       if (!eventId) throw new Error('Missing event')
       if (isOffline) throw new Error('You are offline. Please reconnect to checkout.')
       if (!salesStatus.isOnSale) throw new Error(salesStatus.message)
-      if (!hasAvailableTickets) throw new Error('Tickets are sold out.')
+      if (noActiveTicketTypes) throw new Error(emptyTicketStateMessage)
+      if (isSoldOut) throw new Error('This event is sold out.')
 
       const trimmedEmail = purchaserEmail.trim()
       if (!EMAIL_REGEX.test(trimmedEmail)) throw new Error('Enter a valid email address.')
@@ -320,14 +329,16 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
     minute: '2-digit',
     hour12: true,
     timeZone: event.timezone,
+    timeZoneName: 'short',
   })
-  const timezoneLabel = formatTimezoneDisplay(event.timezone, event.starts_at)
+  const heroBannerUrl = getTicketBannerPublicUrl(event.ticket_banner_url) || getTicketBannerPublicUrl(event.cover_image_path)
 
   const checkoutDisabled =
     checkoutMutation.isPending ||
     isOffline ||
     !salesStatus.isOnSale ||
-    !hasAvailableTickets ||
+    isSoldOut ||
+    noActiveTicketTypes ||
     cart.length === 0 ||
     !emailIsValid ||
     cart.some(
@@ -354,11 +365,9 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
           <div
             className="relative min-h-[400px] flex flex-col justify-end bg-cover bg-center"
             style={{
-              backgroundImage: event.ticket_banner_url
-                ? `linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0) 100%), url(${event.ticket_banner_url})`
-                : event.cover_image_path
-                  ? `linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0) 100%), url(${event.cover_image_path})`
-                  : 'linear-gradient(to top, rgba(19,127,236,0.9) 0%, rgba(19,127,236,0.3) 100%)',
+              backgroundImage: heroBannerUrl
+                ? `linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0) 100%), url(${heroBannerUrl})`
+                : 'linear-gradient(to top, rgba(19,127,236,0.9) 0%, rgba(19,127,236,0.3) 100%)',
             }}
           >
             <div className="max-w-[1200px] mx-auto w-full px-6 md:px-10 pb-10">
@@ -382,24 +391,18 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
         <div className="bg-white dark:bg-gray-900 border-b border-[#f0f2f4] dark:border-gray-800 py-4">
           <div className="max-w-[1200px] mx-auto px-6 md:px-10 flex flex-wrap justify-between items-center gap-4">
             <div className="flex flex-col items-start md:flex-row md:items-center gap-4 md:gap-6 w-full md:w-auto">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>calendar_month</span>
-                <span className="text-sm font-medium text-[#617589] dark:text-gray-400">{dateFormatted}</span>
+                <span className="text-sm font-medium text-[#617589] dark:text-gray-400 whitespace-nowrap">{dateFormatted}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>location_on</span>
-                <span className="text-sm font-medium text-[#617589] dark:text-gray-400">{venue}</span>
+                <span className="text-sm font-medium text-[#617589] dark:text-gray-400 whitespace-nowrap">{venue}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>schedule</span>
-                <span className="text-sm font-medium text-[#617589] dark:text-gray-400">Doors open at {timeFormatted}</span>
+                <span className="text-sm font-medium text-[#617589] dark:text-gray-400 whitespace-nowrap">Doors open at {timeFormatted}</span>
               </div>
-              {timezoneLabel && (
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>public</span>
-                  <span className="text-sm font-medium text-[#617589] dark:text-gray-400">{timezoneLabel}</span>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -429,13 +432,21 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
                   </div>
                 )}
                 {!ticketTypesQuery.isLoading && !ticketTypesQuery.isError && ticketTypes.length === 0 && (
-                  <div className="p-6 text-center text-gray-500">Tickets are not available for this event.</div>
+                  <div className="p-6 text-center text-gray-500">{emptyTicketStateMessage}</div>
                 )}
                 {ticketTypes.map((ticketType, idx) => {
                   const cartItem = cart.find((item) => item.ticket_type_id === ticketType.id)
                   const quantity = cartItem?.quantity || 0
                   const available = ticketType.capacity_remaining ?? Infinity
                   const isSoldOut = available <= 0
+                  const lowInventoryThreshold = ticketType.capacity_total !== null
+                    ? Math.ceil(ticketType.capacity_total * 0.25)
+                    : null
+                  const isRunningOut =
+                    lowInventoryThreshold !== null &&
+                    ticketType.capacity_remaining !== null &&
+                    ticketType.capacity_remaining > 0 &&
+                    ticketType.capacity_remaining <= lowInventoryThreshold
 
                   return (
                     <div
@@ -466,7 +477,7 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
                           </div>
                           {ticketType.capacity_remaining !== null && (
                             <p className="text-xs text-[var(--org-text-secondary)] mt-1">
-                              {isSoldOut ? 'Sold out' : `${ticketType.capacity_remaining} left`}
+                              {isSoldOut ? 'Sold out' : isRunningOut ? 'Tickets are running out' : null}
                             </p>
                           )}
                         </div>
@@ -556,9 +567,14 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
                         {salesStatus.message}
                       </div>
                     )}
-                    {!hasAvailableTickets && (
+                    {isSoldOut && (
                       <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                        Tickets are sold out for this event.
+                        This event is sold out.
+                      </div>
+                    )}
+                    {noActiveTicketTypes && (
+                      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                        {emptyTicketStateMessage}
                       </div>
                     )}
 

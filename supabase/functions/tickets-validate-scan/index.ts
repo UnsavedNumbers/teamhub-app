@@ -61,14 +61,6 @@ function buildEntryCodeCandidates(code: string): string[] {
   return Array.from(candidates)
 }
 
-function previewValue(value: string | undefined): string | null {
-  if (!value) return null
-  const trimmed = value.trim()
-  if (!trimmed) return null
-  if (trimmed.length <= 8) return trimmed
-  return `${trimmed.slice(0, 4)}...${trimmed.slice(-4)}`
-}
-
 serve(async (req) => {
   // Preflight
   if (req.method === "OPTIONS") {
@@ -86,13 +78,7 @@ serve(async (req) => {
     return json(req, { error: "Server misconfigured" }, 500)
   }
 
-  // Client with user auth - used only for auth.getUser() to verify scanner identity
-  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
-    global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
-  })
-  // Admin client - bypasses RLS for ticket lookups. Scanner auth is enforced above;
-  // ticket lookup must see all tickets (scanner may be coach/org_admin, not platform admin).
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
   // Parse payload
   let payload: any
@@ -103,16 +89,12 @@ serve(async (req) => {
   }
 
   const ticketedEventId = payload?.ticketed_event_id as string | undefined
-  const selectedEventId = payload?.selected_event_id as string | undefined // For event mismatch detection
   const qrTokenRaw = payload?.qr_token_raw as string | undefined
   const entryCode = payload?.entry_code as string | undefined
   const clientDeviceId = payload?.client_device_id as string | undefined
   const forceValidate = payload?.force_validate as boolean | undefined // Skip event check
   const crossEventAdmission = payload?.cross_event_admission as boolean | undefined // Log cross-event
-  const normalizedEntryFromPayload = entryCode ? normalizeEntryCode(entryCode) : null
-  const normalizedFromQrPayload = qrTokenRaw ? normalizeEntryCode(qrTokenRaw) : null
   let qrTokenHash: string | null = null
-  const lookupAttempts: Array<Record<string, unknown>> = []
 
   if (!ticketedEventId) {
     return json(req, { error: "Missing ticketed_event_id" }, 400)
@@ -128,13 +110,13 @@ serve(async (req) => {
 
   let scannerUserId: string | null = null
   let orgId: string | null = null
-  let authorizedEventId: string | null = null
 
   if (authHeader && authHeader.startsWith("Bearer ")) {
     // Logged-in user
+    const accessToken = authHeader.replace("Bearer ", "")
     const {
       data: { user },
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser(accessToken)
 
     if (!user) {
       return json(req, { error: "Unauthorized" }, 401)
@@ -215,7 +197,6 @@ serve(async (req) => {
     }
 
     orgId = staffLink.org_id
-    authorizedEventId = staffLink.ticketed_event_id
 
     // Increment use count
     await supabaseAdmin
@@ -245,159 +226,67 @@ serve(async (req) => {
   let ticket: any = null
 
   if (entryCode) {
-    const normalized = normalizeEntryCode(entryCode)
     const entryCandidates = buildEntryCodeCandidates(entryCode)
     const query = supabaseAdmin
       .from("tickets")
       .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
+      .eq("org_id", orgId!)
       .in("entry_code", entryCandidates)
 
-    const { data, error } = await query.limit(10)
+    const { data } = await query.limit(10)
     const matchedTicket = (data ?? []).find((row) => row.ticketed_event_id === ticketedEventId) ?? (data ?? [])[0] ?? null
-    lookupAttempts.push({
-      strategy: "entry_code",
-      normalized_input: normalized,
-      candidates: entryCandidates,
-      matched: Boolean(matchedTicket),
-      ticket_id: matchedTicket?.id ?? null,
-      matched_count: (data ?? []).length,
-      query_error_code: error?.code ?? null,
-      query_error_message: error?.message ?? null,
-    })
     ticket = matchedTicket
   } else if (qrTokenRaw) {
+    const qrPayload = qrTokenRaw.trim()
+    const normalizedFromQr = normalizeEntryCode(qrPayload)
+    const looksLikeEntryCode = normalizedFromQr.length >= 6 && normalizedFromQr.length <= 16 && normalizedFromQr === normalizedFromQr.replace(/[^A-Z0-9]/g, "")
+
+    if (looksLikeEntryCode) {
+      const entryCandidates = buildEntryCodeCandidates(qrPayload)
+      const { data: entryCodeMatches } = await supabase
+        .from("tickets")
+        .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
+        .eq("org_id", orgId!)
+        .in("entry_code", entryCandidates)
+        .limit(10)
+
+      const entryCodeMatch = (entryCodeMatches ?? []).find((row) => row.ticketed_event_id === ticketedEventId) ?? (entryCodeMatches ?? [])[0] ?? null
+
+      if (entryCodeMatch) {
+        ticket = entryCodeMatch
+      }
+    }
+
+    if (!ticket) {
     // First try to find by qr_token_hash
-    qrTokenHash = await hashToken(qrTokenRaw)
-    const { data: tokenMatch, error: qrHashError } = await supabaseAdmin
+    qrTokenHash = await hashToken(qrPayload)
+    const { data: tokenMatch } = await supabase
       .from("tickets")
       .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
+      .eq("org_id", orgId!)
       .eq("qr_token_hash", qrTokenHash)
       .maybeSingle()
-    lookupAttempts.push({
-      strategy: "qr_token_hash",
-      hash_prefix: qrTokenHash.slice(0, 12),
-      matched: Boolean(tokenMatch),
-      ticket_id: tokenMatch?.id ?? null,
-      query_error_code: qrHashError?.code ?? null,
-      query_error_message: qrHashError?.message ?? null,
-    })
     
     if (tokenMatch) {
       ticket = tokenMatch
     } else {
       // QR code might contain entry_code instead of qr_token (common for displayed QR codes)
       // Normalize and try entry_code lookup
-      const normalizedFromQr = normalizeEntryCode(qrTokenRaw)
-      const entryCandidates = buildEntryCodeCandidates(qrTokenRaw)
-      const query = supabaseAdmin
+      const entryCandidates = buildEntryCodeCandidates(qrPayload)
+      const query = supabase
         .from("tickets")
         .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
+        .eq("org_id", orgId!)
         .in("entry_code", entryCandidates)
 
-      const { data: entryCodeMatches, error: qrAsEntryError } = await query.limit(10)
+      const { data: entryCodeMatches } = await query.limit(10)
       const entryCodeMatch = (entryCodeMatches ?? []).find((row) => row.ticketed_event_id === ticketedEventId) ?? (entryCodeMatches ?? [])[0] ?? null
-      lookupAttempts.push({
-        strategy: "qr_as_entry_code",
-        normalized_input: normalizedFromQr,
-        candidates: entryCandidates,
-        matched: Boolean(entryCodeMatch),
-        ticket_id: entryCodeMatch?.id ?? null,
-        matched_count: (entryCodeMatches ?? []).length,
-        query_error_code: qrAsEntryError?.code ?? null,
-        query_error_message: qrAsEntryError?.message ?? null,
-      })
       ticket = entryCodeMatch
+    }
     }
   }
 
   if (!ticket) {
-    const debug: Record<string, unknown> = {
-      timestamp: new Date().toISOString(),
-      request: {
-        ticketed_event_id: ticketedEventId,
-        selected_event_id: selectedEventId ?? null,
-        force_validate: Boolean(forceValidate),
-        cross_event_admission: Boolean(crossEventAdmission),
-        entry_code_raw_preview: previewValue(entryCode),
-        entry_code_normalized: normalizedEntryFromPayload,
-        qr_token_raw_preview: previewValue(qrTokenRaw),
-        qr_as_entry_code_normalized: normalizedFromQrPayload,
-        qr_token_hash_prefix: qrTokenHash ? qrTokenHash.slice(0, 12) : null,
-      },
-      auth_context: {
-        scanner_user_id: scannerUserId,
-        org_id: orgId,
-        authorized_event_id: authorizedEventId,
-      },
-      lookup_attempts: lookupAttempts,
-    }
-
-    if (normalizedEntryFromPayload || normalizedFromQrPayload) {
-      const normalizedCandidate = normalizedEntryFromPayload || normalizedFromQrPayload
-      const entryCandidates = buildEntryCodeCandidates(normalizedCandidate as string)
-
-      const { count: codeAnyCount, error: codeAnyError } = await supabaseAdmin
-        .from("tickets")
-        .select("id", { count: "exact", head: true })
-        .in("entry_code", entryCandidates)
-
-      const { count: codeInOrgCount, error: codeInOrgError } = await supabaseAdmin
-        .from("tickets")
-        .select("id", { count: "exact", head: true })
-        .in("entry_code", entryCandidates)
-        .eq("org_id", orgId as string)
-
-      const { count: codeInEventCount, error: codeInEventError } = await supabaseAdmin
-        .from("tickets")
-        .select("id", { count: "exact", head: true })
-        .in("entry_code", entryCandidates)
-        .eq("ticketed_event_id", ticketedEventId)
-
-      debug.entry_code_existence = {
-        normalized_candidate: normalizedCandidate,
-        candidates: entryCandidates,
-        any_org_count: codeAnyCount ?? 0,
-        org_scoped_count: codeInOrgCount ?? 0,
-        event_scoped_count: codeInEventCount ?? 0,
-        errors: {
-          any_org: codeAnyError?.message ?? null,
-          org_scoped: codeInOrgError?.message ?? null,
-          event_scoped: codeInEventError?.message ?? null,
-        },
-      }
-    }
-
-    if (qrTokenHash) {
-      const { count: hashAnyCount, error: hashAnyError } = await supabaseAdmin
-        .from("tickets")
-        .select("id", { count: "exact", head: true })
-        .eq("qr_token_hash", qrTokenHash)
-
-      const { count: hashInOrgCount, error: hashInOrgError } = await supabaseAdmin
-        .from("tickets")
-        .select("id", { count: "exact", head: true })
-        .eq("qr_token_hash", qrTokenHash)
-        .eq("org_id", orgId as string)
-
-      const { count: hashInEventCount, error: hashInEventError } = await supabaseAdmin
-        .from("tickets")
-        .select("id", { count: "exact", head: true })
-        .eq("qr_token_hash", qrTokenHash)
-        .eq("ticketed_event_id", ticketedEventId)
-
-      debug.qr_hash_existence = {
-        hash_prefix: qrTokenHash.slice(0, 12),
-        any_org_count: hashAnyCount ?? 0,
-        org_scoped_count: hashInOrgCount ?? 0,
-        event_scoped_count: hashInEventCount ?? 0,
-        errors: {
-          any_org: hashAnyError?.message ?? null,
-          org_scoped: hashInOrgError?.message ?? null,
-          event_scoped: hashInEventError?.message ?? null,
-        },
-      }
-    }
-
     // Record scan attempt
     await supabaseAdmin.from("ticket_scans").insert({
       org_id: orgId!,
@@ -413,7 +302,6 @@ serve(async (req) => {
       result: "invalid",
       reason: "not_found",
       message: "Ticket not found",
-      debug,
     })
   }
 

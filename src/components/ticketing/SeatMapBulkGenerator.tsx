@@ -1,4 +1,4 @@
-﻿import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { useT } from '@/i18n/useI18n'
 import type { BulkSeatConfig } from '@/types/ticketing'
 
@@ -74,7 +74,7 @@ export default function SeatMapBulkGenerator({ onGenerate, loading = false }: Se
 
       <div className="oa-form-grid oa-form-grid-2 oa-gap-4">
         <div className="oa-form-group">
-          <label className="pa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.sectionName')}</label>
+          <label className="oa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.sectionName')}</label>
           <input
             value={sectionName}
             onChange={(event) => setSectionName(event.target.value)}
@@ -86,7 +86,7 @@ export default function SeatMapBulkGenerator({ onGenerate, loading = false }: Se
 
         <div className="oa-form-grid oa-form-grid-2 oa-gap-3">
           <div className="oa-form-group">
-            <label className="pa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.rowStart')}</label>
+            <label className="oa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.rowStart')}</label>
             <input
               type="number"
               min={1}
@@ -97,7 +97,7 @@ export default function SeatMapBulkGenerator({ onGenerate, loading = false }: Se
             />
           </div>
           <div className="oa-form-group">
-            <label className="pa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.rowEnd')}</label>
+            <label className="oa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.rowEnd')}</label>
             <input
               type="number"
               min={1}
@@ -111,7 +111,7 @@ export default function SeatMapBulkGenerator({ onGenerate, loading = false }: Se
 
         <div className="oa-form-grid oa-form-grid-2 oa-gap-3">
           <div className="oa-form-group">
-            <label className="pa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.seatStart')}</label>
+            <label className="oa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.seatStart')}</label>
             <input
               type="number"
               min={1}
@@ -122,7 +122,7 @@ export default function SeatMapBulkGenerator({ onGenerate, loading = false }: Se
             />
           </div>
           <div className="oa-form-group">
-            <label className="pa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.seatEnd')}</label>
+            <label className="oa-label oa-label">{t('ticketing.reservedSeating.bulkGenerator.seatEnd')}</label>
             <input
               type="number"
               min={1}
@@ -171,4 +171,5 @@ export default function SeatMapBulkGenerator({ onGenerate, loading = false }: Se
     </form>
   )
 }
+
 

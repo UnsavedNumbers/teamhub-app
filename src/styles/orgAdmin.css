@@ -1753,8 +1753,12 @@ html.dark .oa-theme-active textarea:focus {
 
 .oa-label {
     display: block;
-    font: 600 16px/1.4 var(--pa-font-body);
-    color: var(--pa-n500);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--org-text-secondary, #64748B);
     margin-bottom: var(--pa-space-2);
 }
 
@@ -3955,7 +3959,7 @@ html.dark .oa-btn--ghost:hover:not(:disabled) {
 }
 
 .oa-theme-active .org-example-label,
-.oa-theme-active .pa-label {
+.oa-theme-active .oa-label {
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;

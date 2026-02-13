@@ -13,6 +13,7 @@ const defaultOrg: OrganizationsRow = {
   created_at: '2026-01-01T00:00:00Z',
   currency: 'usd',
   default_ticket_fees_cents: null,
+  default_seat_map_id: null,
   description: null,
   email: null,
   latitude: null,

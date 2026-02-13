@@ -3,12 +3,12 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
-  createTicketType,
+  getAllTicketTypesForEventAdmin,
   getReservedCapacitySnapshot,
   getSeatMapsForEvent,
+  getTicketTypeSalesSnapshotForEventAdmin,
   getTicketedEventByIdAdmin,
-  getTicketTypeSortMetricsForEventAdmin,
-  getTicketTypesForEventAdmin,
+  updateTicketType,
 } from '@/data/services'
 import { USE_FAKE_DATA } from '@/data/config'
 import type { TicketSeatingMode, TicketType } from '@/types/ticketing'
@@ -28,7 +28,7 @@ import { useT } from '@/i18n/useI18n'
 import { cn } from '@/utils/cn'
 import '../../styles/orgAdmin.css'
 
-type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert'] & {
+type TicketTypeUpdate = Database['public']['Tables']['ticket_types']['Update'] & {
   seating_mode?: TicketSeatingMode
   seat_map_id?: string | null
 }
@@ -42,6 +42,25 @@ function isUuid(value: string | null | undefined): value is string {
 function toIsoTimestamp(date: string, time: string): string | null {
   if (!date || !time) return null
   return new Date(`${date}T${time}`).toISOString()
+}
+
+function toLocalDate(value: string | null): string {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function toLocalTime(value: string | null): string {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${hours}:${minutes}`
 }
 
 function getErrorMessage(error: unknown, fallbackMessage: string): string {
@@ -63,31 +82,7 @@ function shouldRetryQuery(attempt: number, error: unknown): boolean {
   return classified.retryable && attempt < 1
 }
 
-const isLocalhostEnvironment = (): boolean => {
-  if (typeof window === 'undefined') return false
-  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-}
-
-const LOCALHOST_TICKET_TYPE_PRESETS = [
-  { name: 'General Admission', description: 'Standard entry', price: '15.00', capacity: '150' },
-  { name: 'Student', description: 'Student discounted entry', price: '8.00', capacity: '100' },
-  { name: 'VIP', description: 'Premium seating and perks', price: '35.00', capacity: '40' },
-] as const
-
-const toLocalDate = (date: Date): string => {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-const toLocalTime = (date: Date): string => {
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${hours}:${minutes}`
-}
-
-export default function CreateTicketType() {
+export default function EditTicketType() {
   const t = useT()
   const queryClient = useQueryClient()
   const { id } = useParams<{ id: string }>()
@@ -110,8 +105,8 @@ export default function CreateTicketType() {
   })
 
   const ticketTypesQuery = useQuery({
-    queryKey: ['ticket-types', ticketedEventId, 'count'],
-    queryFn: () => getTicketTypesForEventAdmin(ticketedEventId),
+    queryKey: ['ticket-types', ticketedEventId, 'all'],
+    queryFn: () => getAllTicketTypesForEventAdmin(ticketedEventId),
     enabled: hasValidEventParam,
     staleTime: 0,
     refetchOnMount: 'always',
@@ -120,9 +115,9 @@ export default function CreateTicketType() {
     retry: shouldRetryQuery,
   })
 
-  const ticketTypeMetricsQuery = useQuery({
-    queryKey: ['ticket-type-sort-metrics', ticketedEventId],
-    queryFn: () => getTicketTypeSortMetricsForEventAdmin(ticketedEventId),
+  const ticketTypeSalesQuery = useQuery({
+    queryKey: ['ticket-type-sales-snapshot', ticketedEventId],
+    queryFn: () => getTicketTypeSalesSnapshotForEventAdmin(ticketedEventId),
     enabled: hasValidEventParam,
     staleTime: 0,
     refetchOnMount: 'always',
@@ -145,6 +140,7 @@ export default function CreateTicketType() {
   const seatMapList = useMemo(() => seatMapsQuery.data ?? [], [seatMapsQuery.data])
   const hasSeatMaps = seatMapList.length > 0
 
+  const [selectedTicketTypeId, setSelectedTicketTypeId] = useState('')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('0.00')
@@ -160,35 +156,55 @@ export default function CreateTicketType() {
   const [seatMapNotice, setSeatMapNotice] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isLocalhostEnvironment()) return
-    if (name.trim() || description.trim() || (price.trim() && price.trim() !== '0.00') || capacity.trim()) return
+    if (!ticketTypesList.length) {
+      setSelectedTicketTypeId('')
+      return
+    }
 
-    const preset = LOCALHOST_TICKET_TYPE_PRESETS[ticketTypesList.length]
-    if (!preset) return
+    const selectedTypeExists = ticketTypesList.some((type) => type.id === selectedTicketTypeId)
+    if (selectedTypeExists) return
 
-    setName(preset.name)
-    setDescription(preset.description)
-    setPrice(preset.price)
-    setCapacity(preset.capacity)
-  }, [ticketTypesList.length, name, description, price, capacity])
+    const query = new URLSearchParams(location.search)
+    const requestedId = query.get('ticketTypeId')
+    if (requestedId && ticketTypesList.some((type) => type.id === requestedId)) {
+      setSelectedTicketTypeId(requestedId)
+      return
+    }
+
+    setSelectedTicketTypeId(ticketTypesList[0].id)
+  }, [location.search, selectedTicketTypeId, ticketTypesList])
+
+  const selectedTicketType = useMemo(
+    () => ticketTypesList.find((type) => type.id === selectedTicketTypeId) ?? null,
+    [selectedTicketTypeId, ticketTypesList],
+  )
+
+  const selectedSalesSnapshot = selectedTicketTypeId ? ticketTypeSalesQuery.data?.[selectedTicketTypeId] : null
+  const soldCount = selectedSalesSnapshot?.soldCount ?? 0
+  const purchasedCount = selectedSalesSnapshot?.purchasedCount ?? 0
+  const hasSoldTickets = soldCount > 0
+  const priceLocked = hasSoldTickets
+  const seatingModeLocked = hasSoldTickets
+  const salesStartLocked = Boolean(
+    selectedTicketType?.sales_start_at && new Date(selectedTicketType.sales_start_at).getTime() < Date.now(),
+  )
 
   useEffect(() => {
-    if (!isLocalhostEnvironment()) return
-    if (salesStartDate || salesStartTime || salesEndDate || salesEndTime) return
+    if (!selectedTicketType) return
 
-    const now = new Date()
-    const eventStartRaw = (event as { starts_at?: string | null } | null)?.starts_at ?? null
-    const eventStart = eventStartRaw ? new Date(eventStartRaw) : null
-
-    const defaultEnd = eventStart && !Number.isNaN(eventStart.getTime())
-      ? eventStart
-      : new Date(now.getTime() + 24 * 60 * 60 * 1000)
-
-    setSalesStartDate(toLocalDate(now))
-    setSalesStartTime(toLocalTime(now))
-    setSalesEndDate(toLocalDate(defaultEnd))
-    setSalesEndTime(toLocalTime(defaultEnd))
-  }, [event, salesStartDate, salesStartTime, salesEndDate, salesEndTime])
+    setName(selectedTicketType.name ?? '')
+    setDescription(selectedTicketType.description ?? '')
+    setPrice((selectedTicketType.price_cents / 100).toFixed(2))
+    setCapacity(selectedTicketType.capacity_total !== null ? String(selectedTicketType.capacity_total) : '')
+    setSalesStartDate(toLocalDate(selectedTicketType.sales_start_at))
+    setSalesStartTime(toLocalTime(selectedTicketType.sales_start_at))
+    setSalesEndDate(toLocalDate(selectedTicketType.sales_end_at))
+    setSalesEndTime(toLocalTime(selectedTicketType.sales_end_at))
+    setIsActive(selectedTicketType.is_active !== false)
+    setSeatingMode(selectedTicketType.seating_mode ?? 'general_admission')
+    setSeatMapId(selectedTicketType.seat_map_id ?? '')
+    setFormError(null)
+  }, [selectedTicketType])
 
   const reservedCapacityPreviewQuery = useQuery({
     queryKey: ['reserved-capacity-preview', seatMapId],
@@ -202,35 +218,10 @@ export default function CreateTicketType() {
   const detailPath = event?.event_id
     ? `${getLink('admin.events.detail', { id: event.event_id })}?view=ticketing`
     : eventsPath
+  const addTicketTypePath = useRouteLink('admin.ticketingEvents.ticketTypes.create', { id: ticketedEventId })
 
   useEffect(() => {
-    const query = new URLSearchParams(location.search)
-    const seatMapFromQuery = query.get('seatMapId')
-
-    if (!seatMapFromQuery) {
-      return
-    }
-
-    if (!isUuid(seatMapFromQuery)) {
-      setSeatMapNotice('The seat map in this link is invalid. Please choose a seat map manually.')
-      return
-    }
-
-    setSeatingMode('reserved_seating')
-    setSeatMapId(seatMapFromQuery)
-  }, [location.search])
-
-  useEffect(() => {
-    if (!hasSeatMaps && seatingMode === 'reserved_seating') {
-      setSeatingMode('general_admission')
-      setSeatMapId('')
-    }
-  }, [hasSeatMaps, seatingMode])
-
-  useEffect(() => {
-    if (!seatMapId || seatMapsQuery.isLoading) {
-      return
-    }
+    if (!seatMapId || seatMapsQuery.isLoading) return
 
     const selectedMapExists = seatMapList.some((map) => map.id === seatMapId)
     if (!selectedMapExists) {
@@ -245,52 +236,78 @@ export default function CreateTicketType() {
       eventId: ticketedEventId,
       seatMapId: 'new',
     })
-    navigate(`${builderPath}?returnTo=${encodeURIComponent(location.pathname)}`)
+    const returnTo = `${location.pathname}?ticketTypeId=${encodeURIComponent(selectedTicketTypeId)}`
+    navigate(`${builderPath}?returnTo=${encodeURIComponent(returnTo)}`)
   }
 
   const handleRetryDependencies = () => {
     void eventQuery.refetch()
     void ticketTypesQuery.refetch()
-    void ticketTypeMetricsQuery.refetch()
+    void ticketTypeSalesQuery.refetch()
     void seatMapsQuery.refetch()
   }
-
-  const mutation = useMutation<TicketType, Error, TicketTypeInsert>({
+  const mutation = useMutation<TicketType, Error, TicketTypeUpdate>({
     mutationFn: async (payload) => {
-      const result = await createTicketType(payload)
+      if (!selectedTicketTypeId) throw new ValidationError('Select a ticket type to edit.')
+      const result = await updateTicketType(selectedTicketTypeId, payload)
       if (result.error) {
         throw classifySupabaseError(result.error, 'Ticket type')
       }
       if (!result.data) {
-        throw new Error('Failed to create ticket type')
+        throw new Error('Failed to update ticket type')
       }
       return result.data
     },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['ticket-types', ticketedEventId] }),
+        queryClient.invalidateQueries({ queryKey: ['ticket-types', ticketedEventId, 'all'] }),
         queryClient.invalidateQueries({ queryKey: ['ticket-types', ticketedEventId, 'count'] }),
         queryClient.invalidateQueries({ queryKey: ['ticket-type-sort-metrics', ticketedEventId] }),
-        queryClient.invalidateQueries({ queryKey: ['ticketed-event', ticketedEventId] }),
+        queryClient.invalidateQueries({ queryKey: ['ticket-type-sales-snapshot', ticketedEventId] }),
       ])
-      showSuccess('Ticket type created')
+      showSuccess('Ticket type updated')
       navigate(detailPath)
     },
     onError: (error) => {
-      const message = getErrorMessage(error, 'Failed to create ticket type')
+      const message = getErrorMessage(error, 'Failed to update ticket type')
       setFormError(message)
       showError(message)
     },
   })
 
+  const submitDisabledReason = useMemo(() => {
+    if (mutation.isPending) return 'Saving ticket type...'
+    if (USE_FAKE_DATA) return 'Demo mode is enabled. Ticket types cannot be edited.'
+    if (!isOnline) return 'Cannot save while offline.'
+    if (!selectedTicketType) return 'Select a ticket type to edit.'
+    if (ticketTypesQuery.isLoading || ticketTypeSalesQuery.isLoading || seatMapsQuery.isLoading) {
+      return 'Ticket settings are still loading.'
+    }
+    if (ticketTypesQuery.isError || ticketTypeSalesQuery.isError || seatMapsQuery.isError) {
+      return 'Resolve loading errors before saving.'
+    }
+    return null
+  }, [
+    isOnline,
+    mutation.isPending,
+    seatMapsQuery.isError,
+    seatMapsQuery.isLoading,
+    selectedTicketType,
+    ticketTypeSalesQuery.isError,
+    ticketTypeSalesQuery.isLoading,
+    ticketTypesQuery.isError,
+    ticketTypesQuery.isLoading,
+  ])
+
   const handleSubmit = async (eventSubmit: FormEvent<HTMLFormElement>) => {
     eventSubmit.preventDefault()
 
-    if (!event) return
+    if (!event || !selectedTicketType) return
     if (mutation.isPending) return
 
     if (USE_FAKE_DATA) {
-      const demoMessage = 'Demo mode is enabled. Sign in to a live environment to create ticket types.'
+      const demoMessage = 'Demo mode is enabled. Sign in to a live environment to edit ticket types.'
       setFormError(demoMessage)
       showError(demoMessage)
       return
@@ -327,6 +344,17 @@ export default function CreateTicketType() {
     }
     const priceCents = Math.round(priceValue * 100)
 
+    if (priceLocked && priceCents !== selectedTicketType.price_cents) {
+      setFormError('Price cannot be changed once tickets have been sold. Create a new ticket type and make this one inactive.')
+      return
+    }
+
+    const existingSeatingMode = selectedTicketType.seating_mode ?? 'general_admission'
+    if (seatingModeLocked && seatingMode !== existingSeatingMode) {
+      setFormError('Seating mode cannot be changed once tickets have been sold. Create a new ticket type and make this one inactive.')
+      return
+    }
+
     const hasSalesStartDate = Boolean(salesStartDate)
     const hasSalesStartTime = Boolean(salesStartTime)
     const hasSalesEndDate = Boolean(salesEndDate)
@@ -349,6 +377,15 @@ export default function CreateTicketType() {
       return
     }
 
+    if (salesStartLocked && selectedTicketType.sales_start_at) {
+      const currentStart = new Date(selectedTicketType.sales_start_at).getTime()
+      const nextStart = salesStartIso ? new Date(salesStartIso).getTime() : NaN
+      if (currentStart !== nextStart) {
+        setFormError('Sales start is already in the past and can no longer be edited.')
+        return
+      }
+    }
+
     let capacityTotal: number | null = null
     let capacityRemaining: number | null = null
 
@@ -359,18 +396,27 @@ export default function CreateTicketType() {
           setFormError('Capacity must be a whole number greater than zero.')
           return
         }
+        if (numeric < purchasedCount) {
+          setFormError(`Capacity cannot be lower than ${purchasedCount} purchased ticket(s).`)
+          return
+        }
         capacityTotal = numeric
-        capacityRemaining = numeric
+        capacityRemaining = Math.max(numeric - purchasedCount, 0)
       }
     } else {
       if (!seatMapId) {
         setFormError(t('ticketing.reservedSeating.admin.reservedRequiresSeatMap'))
         return
       }
+
       try {
         const snapshot = await getReservedCapacitySnapshot(seatMapId)
         if (snapshot.capacityTotal <= 0) {
-          setFormError('This seat map has no available seats. Add seats before creating this ticket type.')
+          setFormError('This seat map has no available seats. Add seats before saving this ticket type.')
+          return
+        }
+        if (snapshot.capacityTotal < purchasedCount) {
+          setFormError(`Capacity cannot be lower than ${purchasedCount} purchased ticket(s).`)
           return
         }
         capacityTotal = snapshot.capacityTotal
@@ -381,27 +427,12 @@ export default function CreateTicketType() {
       }
     }
 
-    let nextSortOrder = ticketTypeMetricsQuery.data?.nextSortOrder ?? ticketTypesList.length
-    try {
-      const metrics = await queryClient.fetchQuery({
-        queryKey: ['ticket-type-sort-metrics', ticketedEventId],
-        queryFn: () => getTicketTypeSortMetricsForEventAdmin(ticketedEventId),
-        staleTime: 0,
-      })
-      nextSortOrder = metrics.nextSortOrder
-    } catch (error) {
-      setFormError(getErrorMessage(error, 'Unable to determine ticket type order.'))
-      return
-    }
-
     setFormError(null)
 
     mutation.mutate({
-      org_id: event.org_id,
-      ticketed_event_id: event.id,
       name: trimmedName,
       description: description.trim() || null,
-      price_cents: priceCents,
+      price_cents: priceLocked ? selectedTicketType.price_cents : priceCents,
       currency: 'USD',
       capacity_total: capacityTotal,
       capacity_remaining: capacityRemaining,
@@ -409,32 +440,9 @@ export default function CreateTicketType() {
       seat_map_id: seatingMode === 'reserved_seating' ? seatMapId : null,
       sales_start_at: salesStartIso,
       sales_end_at: salesEndIso,
-      sort_order: nextSortOrder,
       is_active: isActive,
     })
   }
-
-  const submitDisabledReason = useMemo(() => {
-    if (mutation.isPending) return 'Saving ticket type...'
-    if (USE_FAKE_DATA) return 'Demo mode is enabled. Ticket types cannot be created.'
-    if (!isOnline) return 'Cannot save while offline.'
-    if (ticketTypesQuery.isLoading || ticketTypeMetricsQuery.isLoading || seatMapsQuery.isLoading) {
-      return 'Ticket settings are still loading.'
-    }
-    if (ticketTypesQuery.isError || ticketTypeMetricsQuery.isError || seatMapsQuery.isError) {
-      return 'Resolve loading errors before saving.'
-    }
-    return null
-  }, [
-    isOnline,
-    mutation.isPending,
-    seatMapsQuery.isError,
-    seatMapsQuery.isLoading,
-    ticketTypeMetricsQuery.isError,
-    ticketTypeMetricsQuery.isLoading,
-    ticketTypesQuery.isError,
-    ticketTypesQuery.isLoading,
-  ])
 
   if (!hasEventParam) {
     return (
@@ -495,7 +503,7 @@ export default function CreateTicketType() {
           <EmptyState
             icon="wifi_off"
             title="Offline and no cached event data"
-            description="This page needs event data from the server before you can create ticket types."
+            description="This page needs event data from the server before you can edit ticket types."
             action={{ label: 'Retry', onClick: handleRetryDependencies }}
             noCard
           />
@@ -522,7 +530,7 @@ export default function CreateTicketType() {
 
   const dependencyError =
     (ticketTypesQuery.isError && !ticketTypesQuery.data && ticketTypesQuery.error) ||
-    (ticketTypeMetricsQuery.isError && !ticketTypeMetricsQuery.data && ticketTypeMetricsQuery.error) ||
+    (ticketTypeSalesQuery.isError && !ticketTypeSalesQuery.data && ticketTypeSalesQuery.error) ||
     (seatMapsQuery.isError && !seatMapsQuery.data && seatMapsQuery.error) ||
     null
 
@@ -549,7 +557,7 @@ export default function CreateTicketType() {
           <EmptyState
             icon="wifi_off"
             title="Offline and no cached ticket settings"
-            description="Reconnect to load seat maps and ticket metadata before creating a new ticket type."
+            description="Reconnect to load seat maps and ticket metadata before editing ticket types."
             action={{ label: 'Retry', onClick: handleRetryDependencies }}
             noCard
           />
@@ -570,10 +578,33 @@ export default function CreateTicketType() {
     )
   }
 
+  if (ticketTypesList.length === 0) {
+    return (
+      <div className="oa-page-container">
+        <AdminPageHeader
+          title="Edit Ticket Type"
+          subtitle={`For ${event.title}`}
+          actions={(
+            <OrgAdminButton as={Link} to={detailPath} icon="arrow_back">
+              Back to event
+            </OrgAdminButton>
+          )}
+        />
+        <EmptyState
+          icon="confirmation_number"
+          title="No ticket types to edit"
+          description="Create a ticket type first, then return here to edit it."
+          action={{ label: 'Add ticket type', onClick: () => navigate(addTicketTypePath) }}
+          noCard
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="oa-page-container">
       <AdminPageHeader
-        title="Add Ticket Type"
+        title="Edit Ticket Type"
         subtitle={`For ${event.title}`}
         actions={(
           <OrgAdminButton as={Link} to={detailPath} icon="arrow_back">
@@ -595,7 +626,7 @@ export default function CreateTicketType() {
           <InlineNotice
             tone="info"
             title="Demo mode"
-            message="This environment uses demo data. Creating ticket types is disabled."
+            message="This environment uses demo data. Editing ticket types is disabled."
           />
         )}
 
@@ -610,46 +641,40 @@ export default function CreateTicketType() {
         {formError && (
           <InlineNotice
             tone="error"
-            title="Unable to create ticket type"
+            title="Unable to update ticket type"
             message={formError}
             onClose={() => setFormError(null)}
           />
         )}
 
-        <Card title="Current Ticket Setup">
-          {ticketTypeMetricsQuery.isLoading ? (
-            <div className="oa-flex oa-justify-center oa-py-6">
-              <span className="oa-spinner" style={{ width: '28px', height: '28px', borderWidth: '3px' }} />
-            </div>
-          ) : ticketTypeMetricsQuery.data?.totalCount === 0 ? (
-            <EmptyState
-              icon="confirmation_number"
-              title="No ticket types yet"
-              description="This event has no ticket types. You're creating the first one."
-              noCard
-            />
-          ) : ticketTypeMetricsQuery.data && ticketTypeMetricsQuery.data.activeCount === 0 ? (
-            <EmptyState
-              icon="history"
-              title="All ticket types are inactive"
-              description="No active ticket types remain for this event. Create a new type to resume sales."
-              noCard
-            />
-          ) : (
-            <div className="oa-ticketing-field-stack">
-              <p className="oa-text-sm oa-text-muted">
-                {ticketTypeMetricsQuery.data?.activeCount ?? ticketTypesList.length} active ticket type(s) configured.
-              </p>
-              <p className="oa-text-sm oa-text-muted">
-                New ticket type sort order will start at #{(ticketTypeMetricsQuery.data?.nextSortOrder ?? ticketTypesList.length) + 1}.
-              </p>
-            </div>
-          )}
-        </Card>
-
         <form onSubmit={handleSubmit} className="oa-ticketing-form-stack">
+          <Card title="Select Ticket Type">
+            <div className="oa-ticketing-field-stack">
+              <label className="oa-label oa-label">Ticket type</label>
+              <select
+                className="oa-input"
+                value={selectedTicketTypeId}
+                onChange={(eventChange) => setSelectedTicketTypeId(eventChange.target.value)}
+              >
+                {ticketTypesList.map((ticketType) => (
+                  <option key={ticketType.id} value={ticketType.id}>
+                    {ticketType.name} {ticketType.is_active ? '(active)' : '(inactive)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </Card>
+
           <Card title="Ticket Type Details">
             <div className="oa-ticketing-field-stack">
+              {hasSoldTickets && (
+                <InlineNotice
+                  tone="info"
+                  title="Price and seating mode are locked"
+                  message="Tickets have already been sold for this type. Create a new ticket type and make this one inactive to change price or seating mode."
+                />
+              )}
+
               <Input
                 label="Ticket type name"
                 value={name}
@@ -678,16 +703,20 @@ export default function CreateTicketType() {
                   min="0"
                   step="0.01"
                   required
+                  disabled={priceLocked}
+                  helper={priceLocked ? 'Price is locked because tickets have already been sold.' : undefined}
                 />
                 {seatingMode === 'general_admission' ? (
                   <Input
                     label="Capacity (optional)"
                     type="number"
-                    min="1"
+                    min={purchasedCount > 0 ? String(purchasedCount) : '1'}
                     step="1"
                     value={capacity}
                     onChange={(eventChange) => setCapacity(eventChange.target.value)}
-                    helper="Leave empty for unlimited capacity"
+                    helper={purchasedCount > 0
+                      ? `Cannot be lower than ${purchasedCount} purchased ticket(s).`
+                      : 'Leave empty for unlimited capacity'}
                   />
                 ) : (
                   <Input
@@ -712,6 +741,7 @@ export default function CreateTicketType() {
                     type="button"
                     onClick={() => setSeatingMode('general_admission')}
                     className={cn('oa-toggle-btn', seatingMode === 'general_admission' && 'active')}
+                    disabled={seatingModeLocked}
                   >
                     {t('ticketing.reservedSeating.mode.generalAdmission')}
                   </button>
@@ -719,8 +749,8 @@ export default function CreateTicketType() {
                     type="button"
                     onClick={() => setSeatingMode('reserved_seating')}
                     className={cn('oa-toggle-btn', seatingMode === 'reserved_seating' && 'active')}
-                    disabled={!hasSeatMaps}
-                    aria-disabled={!hasSeatMaps}
+                    disabled={!hasSeatMaps || seatingModeLocked}
+                    aria-disabled={!hasSeatMaps || seatingModeLocked}
                   >
                     {t('ticketing.reservedSeating.mode.reservedSeating')}
                   </button>
@@ -748,6 +778,7 @@ export default function CreateTicketType() {
                     className="oa-input"
                     value={seatMapId}
                     onChange={(eventChange) => setSeatMapId(eventChange.target.value)}
+                    disabled={seatingModeLocked}
                   >
                     <option value="">{t('ticketing.reservedSeating.admin.selectSeatMap')}</option>
                     {seatMapList.map((seatMap) => (
@@ -776,7 +807,7 @@ export default function CreateTicketType() {
                         to={`${getLink('admin.ticketingEvents.seatMaps.builder', {
                           eventId: ticketedEventId,
                           seatMapId,
-                        })}?returnTo=${encodeURIComponent(`${location.pathname}?seatMapId=${seatMapId}`)}`}
+                        })}?returnTo=${encodeURIComponent(`${location.pathname}?ticketTypeId=${selectedTicketTypeId}`)}`}
                       >
                         {t('ticketing.reservedSeating.admin.manageSeats')}
                       </Button>
@@ -791,6 +822,12 @@ export default function CreateTicketType() {
             <div className="oa-form-grid oa-form-grid-2 oa-gap-4">
               <div className="oa-ticketing-field-stack">
                 <span className="oa-label oa-label">Sales start</span>
+                {salesStartLocked && (
+                  <InlineNotice
+                    tone="info"
+                    message="Sales start is already in the past and can no longer be edited."
+                  />
+                )}
                 <div className="oa-form-grid oa-form-grid-2 oa-gap-3">
                   <DatePicker
                     label="Date"
@@ -798,12 +835,14 @@ export default function CreateTicketType() {
                     minValue={new Date().toISOString().slice(0, 10)}
                     onChange={(value) => setSalesStartDate(value)}
                     helper="Optional"
+                    isDisabled={salesStartLocked}
                   />
                   <TimePicker
                     label="Time"
                     value={salesStartTime}
                     onChange={(value) => setSalesStartTime(value)}
                     helper="Begin sales"
+                    isDisabled={salesStartLocked}
                   />
                 </div>
               </div>
@@ -837,27 +876,25 @@ export default function CreateTicketType() {
             />
           </Card>
 
-          <Card>
-            <div className="oa-flex oa-justify-end oa-gap-3">
-              <Button
-                variant="secondary"
-                as={Link}
-                to={detailPath}
-                type="button"
-                disabled={mutation.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                type="submit"
-                disabled={Boolean(submitDisabledReason)}
-                title={submitDisabledReason || undefined}
-              >
-                {mutation.isPending ? 'Saving...' : 'Save ticket type'}
-              </Button>
-            </div>
-          </Card>
+          <div className="oa-flex oa-justify-end oa-gap-3">
+            <Button
+              variant="secondary"
+              as={Link}
+              to={detailPath}
+              type="button"
+              disabled={mutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={Boolean(submitDisabledReason)}
+              title={submitDisabledReason || undefined}
+            >
+              {mutation.isPending ? 'Saving...' : 'Save changes'}
+            </Button>
+          </div>
         </form>
       </div>
     </div>

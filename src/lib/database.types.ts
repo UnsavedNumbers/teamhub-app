@@ -2249,15 +2249,16 @@ export type Database = {
           location: string | null
           meeting_locations: Json | null
           notes: string | null
-          org_id: string | null
+          org_id: string
           overnight: boolean | null
           requires_travel: boolean | null
           return_time: string | null
           rsvp_enabled: boolean | null
           rsvp_type: string | null
-          season_id: string
+          season_id: string | null
+          seat_map_id: string | null
           start_time: string
-          team_id: string
+          team_id: string | null
           timezone: string
           title: string
           transportation_notes: string | null
@@ -2265,6 +2266,7 @@ export type Database = {
           type: Database["public"]["Enums"]["event_type"]
           uniform_notes: string | null
           updated_at: string | null
+          venue_id: string | null
           visibility: Database["public"]["Enums"]["event_visibility"] | null
           weather_dependent: boolean | null
         }
@@ -2290,15 +2292,16 @@ export type Database = {
           location?: string | null
           meeting_locations?: Json | null
           notes?: string | null
-          org_id?: string | null
+          org_id: string
           overnight?: boolean | null
           requires_travel?: boolean | null
           return_time?: string | null
           rsvp_enabled?: boolean | null
           rsvp_type?: string | null
-          season_id: string
+          season_id?: string | null
+          seat_map_id?: string | null
           start_time: string
-          team_id: string
+          team_id?: string | null
           timezone?: string
           title: string
           transportation_notes?: string | null
@@ -2306,6 +2309,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["event_type"]
           uniform_notes?: string | null
           updated_at?: string | null
+          venue_id?: string | null
           visibility?: Database["public"]["Enums"]["event_visibility"] | null
           weather_dependent?: boolean | null
         }
@@ -2331,15 +2335,16 @@ export type Database = {
           location?: string | null
           meeting_locations?: Json | null
           notes?: string | null
-          org_id?: string | null
+          org_id?: string
           overnight?: boolean | null
           requires_travel?: boolean | null
           return_time?: string | null
           rsvp_enabled?: boolean | null
           rsvp_type?: string | null
-          season_id?: string
+          season_id?: string | null
+          seat_map_id?: string | null
           start_time?: string
-          team_id?: string
+          team_id?: string | null
           timezone?: string
           title?: string
           transportation_notes?: string | null
@@ -2347,6 +2352,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["event_type"]
           uniform_notes?: string | null
           updated_at?: string | null
+          venue_id?: string | null
           visibility?: Database["public"]["Enums"]["event_visibility"] | null
           weather_dependent?: boolean | null
         }
@@ -2440,6 +2446,13 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
             referencedColumns: ["id"]
           },
         ]
@@ -2752,6 +2765,73 @@ export type Database = {
           },
         ]
       }
+      feature_dependencies: {
+        Row: {
+          created_at: string | null
+          dependency_type: string
+          depends_on_key: string
+          feature_key: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dependency_type?: string
+          depends_on_key: string
+          feature_key: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          dependency_type?: string
+          depends_on_key?: string
+          feature_key?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_dependencies_depends_on_key_fkey"
+            columns: ["depends_on_key"]
+            isOneToOne: false
+            referencedRelation: "admin_entitlement_overrides_list"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "feature_dependencies_depends_on_key_fkey"
+            columns: ["depends_on_key"]
+            isOneToOne: false
+            referencedRelation: "admin_feature_entitlements_list"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "feature_dependencies_depends_on_key_fkey"
+            columns: ["depends_on_key"]
+            isOneToOne: false
+            referencedRelation: "feature_entitlements"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "feature_dependencies_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "admin_entitlement_overrides_list"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "feature_dependencies_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "admin_feature_entitlements_list"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "feature_dependencies_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "feature_entitlements"
+            referencedColumns: ["feature_key"]
+          },
+        ]
+      }
       feature_dependency_cycles: {
         Row: {
           created_at: string | null
@@ -2877,9 +2957,11 @@ export type Database = {
           is_system_feature: boolean
           is_toggleable: boolean
           lock_reason: string | null
+          owner_team: string | null
+          parent_feature_key: string | null
           platform_admin_only: boolean
           rollout_status: string | null
-          unavailable_gate_action: string | null
+          unavailable_gate_action: string
           updated_at: string | null
         }
         Insert: {
@@ -2895,9 +2977,11 @@ export type Database = {
           is_system_feature?: boolean
           is_toggleable?: boolean
           lock_reason?: string | null
+          owner_team?: string | null
+          parent_feature_key?: string | null
           platform_admin_only?: boolean
           rollout_status?: string | null
-          unavailable_gate_action?: string | null
+          unavailable_gate_action?: string
           updated_at?: string | null
         }
         Update: {
@@ -2913,12 +2997,36 @@ export type Database = {
           is_system_feature?: boolean
           is_toggleable?: boolean
           lock_reason?: string | null
+          owner_team?: string | null
+          parent_feature_key?: string | null
           platform_admin_only?: boolean
           rollout_status?: string | null
-          unavailable_gate_action?: string | null
+          unavailable_gate_action?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "feature_entitlements_parent_feature_key_fkey"
+            columns: ["parent_feature_key"]
+            isOneToOne: false
+            referencedRelation: "admin_entitlement_overrides_list"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "feature_entitlements_parent_feature_key_fkey"
+            columns: ["parent_feature_key"]
+            isOneToOne: false
+            referencedRelation: "admin_feature_entitlements_list"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "feature_entitlements_parent_feature_key_fkey"
+            columns: ["parent_feature_key"]
+            isOneToOne: false
+            referencedRelation: "feature_entitlements"
+            referencedColumns: ["feature_key"]
+          },
+        ]
       }
       feature_flag_audit_log: {
         Row: {
@@ -2983,6 +3091,13 @@ export type Database = {
             foreignKeyName: "feature_flag_audit_log_feature_flag_id_fkey"
             columns: ["feature_flag_id"]
             isOneToOne: false
+            referencedRelation: "admin_feature_flags_list"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_flag_audit_log_feature_flag_id_fkey"
+            columns: ["feature_flag_id"]
+            isOneToOne: false
             referencedRelation: "feature_flags"
             referencedColumns: ["id"]
           },
@@ -3028,6 +3143,13 @@ export type Database = {
             columns: ["feature_flag_id"]
             isOneToOne: false
             referencedRelation: "admin_feature_flags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_flag_org_overrides_feature_flag_id_fkey"
+            columns: ["feature_flag_id"]
+            isOneToOne: false
+            referencedRelation: "admin_feature_flags_list"
             referencedColumns: ["id"]
           },
           {
@@ -3110,6 +3232,13 @@ export type Database = {
             foreignKeyName: "feature_flag_platform_defaults_feature_flag_id_fkey"
             columns: ["feature_flag_id"]
             isOneToOne: false
+            referencedRelation: "admin_feature_flags_list"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_flag_platform_defaults_feature_flag_id_fkey"
+            columns: ["feature_flag_id"]
+            isOneToOne: false
             referencedRelation: "feature_flags"
             referencedColumns: ["id"]
           },
@@ -3161,6 +3290,13 @@ export type Database = {
             foreignKeyName: "feature_flag_user_overrides_feature_flag_id_fkey"
             columns: ["feature_flag_id"]
             isOneToOne: false
+            referencedRelation: "admin_feature_flags_list"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_flag_user_overrides_feature_flag_id_fkey"
+            columns: ["feature_flag_id"]
+            isOneToOne: false
             referencedRelation: "feature_flags"
             referencedColumns: ["id"]
           },
@@ -3185,14 +3321,14 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           description: string | null
-          enabled: boolean
+          enabled: boolean | null
           environment:
             | Database["public"]["Enums"]["feature_flag_environment"]
             | null
-          feature_key: string
+          feature_key: string | null
           id: string
           key: string | null
-          org_id: string
+          org_id: string | null
           updated_at: string | null
           value_type:
             | Database["public"]["Enums"]["feature_flag_value_type"]
@@ -3203,14 +3339,14 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
-          enabled?: boolean
+          enabled?: boolean | null
           environment?:
             | Database["public"]["Enums"]["feature_flag_environment"]
             | null
-          feature_key: string
+          feature_key?: string | null
           id?: string
           key?: string | null
-          org_id: string
+          org_id?: string | null
           updated_at?: string | null
           value_type?:
             | Database["public"]["Enums"]["feature_flag_value_type"]
@@ -3221,14 +3357,14 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
-          enabled?: boolean
+          enabled?: boolean | null
           environment?:
             | Database["public"]["Enums"]["feature_flag_environment"]
             | null
-          feature_key?: string
+          feature_key?: string | null
           id?: string
           key?: string | null
-          org_id?: string
+          org_id?: string | null
           updated_at?: string | null
           value_type?:
             | Database["public"]["Enums"]["feature_flag_value_type"]
@@ -6567,6 +6703,7 @@ export type Database = {
           contact_email: string | null
           created_at: string | null
           currency: string | null
+          default_seat_map_id: string | null
           default_ticket_fees_cents: number | null
           description: string | null
           email: string | null
@@ -6623,6 +6760,7 @@ export type Database = {
           contact_email?: string | null
           created_at?: string | null
           currency?: string | null
+          default_seat_map_id?: string | null
           default_ticket_fees_cents?: number | null
           description?: string | null
           email?: string | null
@@ -6679,6 +6817,7 @@ export type Database = {
           contact_email?: string | null
           created_at?: string | null
           currency?: string | null
+          default_seat_map_id?: string | null
           default_ticket_fees_cents?: number | null
           description?: string | null
           email?: string | null
@@ -6727,7 +6866,15 @@ export type Database = {
           website?: string | null
           zip?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "organizations_default_seat_map_id_fkey"
+            columns: ["default_seat_map_id"]
+            isOneToOne: false
+            referencedRelation: "seat_maps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       parent_invites: {
         Row: {
@@ -7742,6 +7889,283 @@ export type Database = {
           },
         ]
       }
+      seat_assignments: {
+        Row: {
+          assigned_at: string
+          id: string
+          seat_map_section_id: string
+          ticket_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          id?: string
+          seat_map_section_id: string
+          ticket_id: string
+        }
+        Update: {
+          assigned_at?: string
+          id?: string
+          seat_map_section_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_assignments_seat_map_section_id_fkey"
+            columns: ["seat_map_section_id"]
+            isOneToOne: false
+            referencedRelation: "seat_map_sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_assignments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seat_holds: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          order_id: string
+          seat_map_section_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          order_id: string
+          seat_map_section_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          order_id?: string
+          seat_map_section_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_holds_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_holds_seat_map_section_id_fkey"
+            columns: ["seat_map_section_id"]
+            isOneToOne: false
+            referencedRelation: "seat_map_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seat_map_sections: {
+        Row: {
+          created_at: string
+          id: string
+          is_available: boolean
+          position_metadata: Json
+          row_identifier: string
+          seat_attributes: Json
+          seat_identifier: string
+          seat_map_id: string
+          section_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_available?: boolean
+          position_metadata?: Json
+          row_identifier: string
+          seat_attributes?: Json
+          seat_identifier: string
+          seat_map_id: string
+          section_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_available?: boolean
+          position_metadata?: Json
+          row_identifier?: string
+          seat_attributes?: Json
+          seat_identifier?: string
+          seat_map_id?: string
+          section_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_map_sections_seat_map_id_fkey"
+            columns: ["seat_map_id"]
+            isOneToOne: false
+            referencedRelation: "seat_maps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seat_map_snapshots: {
+        Row: {
+          chart_image_url: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          name: string
+          published_at: string
+          seat_map_id: string
+          section_count: number
+          sections_data: Json
+          version: number
+        }
+        Insert: {
+          chart_image_url?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name: string
+          published_at?: string
+          seat_map_id: string
+          section_count?: number
+          sections_data?: Json
+          version: number
+        }
+        Update: {
+          chart_image_url?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name?: string
+          published_at?: string
+          seat_map_id?: string
+          section_count?: number
+          sections_data?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_map_snapshots_seat_map_id_fkey"
+            columns: ["seat_map_id"]
+            isOneToOne: false
+            referencedRelation: "seat_maps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seat_maps: {
+        Row: {
+          chart_image_url: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          name: string
+          org_id: string
+          published_at: string | null
+          published_snapshot_id: string | null
+          status: string
+          team_id: string | null
+          ticketed_event_id: string | null
+          updated_at: string
+          venue_id: string | null
+          version: number
+        }
+        Insert: {
+          chart_image_url?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name: string
+          org_id: string
+          published_at?: string | null
+          published_snapshot_id?: string | null
+          status?: string
+          team_id?: string | null
+          ticketed_event_id?: string | null
+          updated_at?: string
+          venue_id?: string | null
+          version?: number
+        }
+        Update: {
+          chart_image_url?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name?: string
+          org_id?: string
+          published_at?: string | null
+          published_snapshot_id?: string | null
+          status?: string
+          team_id?: string | null
+          ticketed_event_id?: string | null
+          updated_at?: string
+          venue_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_maps_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "seat_maps_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_maps_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "seat_maps_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_maps_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "seat_maps_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_maps_ticketed_event_id_fkey"
+            columns: ["ticketed_event_id"]
+            isOneToOne: false
+            referencedRelation: "ticketed_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_maps_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sport_field_definitions: {
         Row: {
           created_at: string
@@ -8233,6 +8657,8 @@ export type Database = {
       teams: {
         Row: {
           created_at: string | null
+          default_seat_map_id: string | null
+          home_venue_id: string | null
           id: string
           invite_code: string
           is_active: boolean
@@ -8248,6 +8674,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          default_seat_map_id?: string | null
+          home_venue_id?: string | null
           id?: string
           invite_code: string
           is_active?: boolean
@@ -8263,6 +8691,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          default_seat_map_id?: string | null
+          home_venue_id?: string | null
           id?: string
           invite_code?: string
           is_active?: boolean
@@ -8277,6 +8707,20 @@ export type Database = {
           visible_to_fans?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "teams_default_seat_map_id_fkey"
+            columns: ["default_seat_map_id"]
+            isOneToOne: false
+            referencedRelation: "seat_maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_home_venue_id_fkey"
+            columns: ["home_venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "teams_level_id_fkey"
             columns: ["level_id"]
@@ -8839,6 +9283,8 @@ export type Database = {
           price_cents: number
           sales_end_at: string | null
           sales_start_at: string | null
+          seat_map_id: string | null
+          seating_mode: string
           sort_order: number | null
           ticketed_event_id: string
           updated_at: string | null
@@ -8856,6 +9302,8 @@ export type Database = {
           price_cents?: number
           sales_end_at?: string | null
           sales_start_at?: string | null
+          seat_map_id?: string | null
+          seating_mode?: string
           sort_order?: number | null
           ticketed_event_id: string
           updated_at?: string | null
@@ -8873,6 +9321,8 @@ export type Database = {
           price_cents?: number
           sales_end_at?: string | null
           sales_start_at?: string | null
+          seat_map_id?: string | null
+          seating_mode?: string
           sort_order?: number | null
           ticketed_event_id?: string
           updated_at?: string | null
@@ -8907,6 +9357,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ticket_types_seat_map_id_fkey"
+            columns: ["seat_map_id"]
+            isOneToOne: false
+            referencedRelation: "seat_maps"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ticket_types_ticketed_event_id_fkey"
             columns: ["ticketed_event_id"]
             isOneToOne: false
@@ -8935,6 +9392,8 @@ export type Database = {
           sales_start_at: string | null
           search_vector: unknown
           season_id: string | null
+          season_name_cached: string | null
+          seat_map_snapshot_id: string | null
           starts_at: string
           status: Database["public"]["Enums"]["ticketed_event_status"]
           team_id: string | null
@@ -8973,6 +9432,8 @@ export type Database = {
           sales_start_at?: string | null
           search_vector?: unknown
           season_id?: string | null
+          season_name_cached?: string | null
+          seat_map_snapshot_id?: string | null
           starts_at: string
           status?: Database["public"]["Enums"]["ticketed_event_status"]
           team_id?: string | null
@@ -9011,6 +9472,8 @@ export type Database = {
           sales_start_at?: string | null
           search_vector?: unknown
           season_id?: string | null
+          season_name_cached?: string | null
+          seat_map_snapshot_id?: string | null
           starts_at?: string
           status?: Database["public"]["Enums"]["ticketed_event_status"]
           team_id?: string | null
@@ -9095,6 +9558,13 @@ export type Database = {
             referencedColumns: ["season_id"]
           },
           {
+            foreignKeyName: "ticketed_events_seat_map_snapshot_id_fkey"
+            columns: ["seat_map_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "seat_map_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ticketed_events_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -9131,6 +9601,7 @@ export type Database = {
           qr_hmac_key: string | null
           qr_key_rotated_at: string | null
           qr_token_hash: string
+          seat_assignment_id: string | null
           status: Database["public"]["Enums"]["ticket_status"]
           ticket_type_id: string
           ticketed_event_id: string
@@ -9152,6 +9623,7 @@ export type Database = {
           qr_hmac_key?: string | null
           qr_key_rotated_at?: string | null
           qr_token_hash: string
+          seat_assignment_id?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           ticket_type_id: string
           ticketed_event_id: string
@@ -9173,6 +9645,7 @@ export type Database = {
           qr_hmac_key?: string | null
           qr_key_rotated_at?: string | null
           qr_token_hash?: string
+          seat_assignment_id?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           ticket_type_id?: string
           ticketed_event_id?: string
@@ -9236,6 +9709,13 @@ export type Database = {
             columns: ["purchase_id"]
             isOneToOne: false
             referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_seat_assignment_id_fkey"
+            columns: ["seat_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "seat_assignments"
             referencedColumns: ["id"]
           },
           {
@@ -10684,38 +11164,107 @@ export type Database = {
       venues: {
         Row: {
           address: string | null
+          address_line1: string | null
+          address_line2: string | null
           capacity: number | null
           city: string | null
+          country: string | null
           created_at: string | null
+          default_seat_map_id: string | null
+          google_place_id: string | null
           id: string
+          is_virtual: boolean
+          latitude: number | null
+          longitude: number | null
+          maps_url: string | null
           name: string
           org_id: string
+          postal_code: string | null
           state: string | null
           updated_at: string | null
+          virtual_link: string | null
         }
         Insert: {
           address?: string | null
+          address_line1?: string | null
+          address_line2?: string | null
           capacity?: number | null
           city?: string | null
+          country?: string | null
           created_at?: string | null
+          default_seat_map_id?: string | null
+          google_place_id?: string | null
           id?: string
+          is_virtual?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          maps_url?: string | null
           name: string
           org_id: string
+          postal_code?: string | null
           state?: string | null
           updated_at?: string | null
+          virtual_link?: string | null
         }
         Update: {
           address?: string | null
+          address_line1?: string | null
+          address_line2?: string | null
           capacity?: number | null
           city?: string | null
+          country?: string | null
           created_at?: string | null
+          default_seat_map_id?: string | null
+          google_place_id?: string | null
           id?: string
+          is_virtual?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          maps_url?: string | null
           name?: string
           org_id?: string
+          postal_code?: string | null
           state?: string | null
           updated_at?: string | null
+          virtual_link?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "venues_default_seat_map_id_fkey"
+            columns: ["default_seat_map_id"]
+            isOneToOne: false
+            referencedRelation: "seat_maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venues_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "venues_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venues_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "venues_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       video_athlete_links: {
         Row: {
@@ -11806,6 +12355,7 @@ export type Database = {
           is_system_feature: boolean | null
           is_toggleable: boolean | null
           lock_reason: string | null
+          parent_feature_key: string | null
           platform_admin_only: boolean | null
           rollout_status: string | null
           tier_assignments_count: number | null
@@ -11833,6 +12383,7 @@ export type Database = {
           is_system_feature?: boolean | null
           is_toggleable?: boolean | null
           lock_reason?: string | null
+          parent_feature_key?: string | null
           platform_admin_only?: boolean | null
           rollout_status?: string | null
           tier_assignments_count?: never
@@ -11860,6 +12411,7 @@ export type Database = {
           is_system_feature?: boolean | null
           is_toggleable?: boolean | null
           lock_reason?: string | null
+          parent_feature_key?: string | null
           platform_admin_only?: boolean | null
           rollout_status?: string | null
           tier_assignments_count?: never
@@ -11868,6 +12420,48 @@ export type Database = {
           visible_to_admin?: never
           visible_to_coach?: never
           visible_to_parent?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_entitlements_parent_feature_key_fkey"
+            columns: ["parent_feature_key"]
+            isOneToOne: false
+            referencedRelation: "admin_entitlement_overrides_list"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "feature_entitlements_parent_feature_key_fkey"
+            columns: ["parent_feature_key"]
+            isOneToOne: false
+            referencedRelation: "admin_feature_entitlements_list"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "feature_entitlements_parent_feature_key_fkey"
+            columns: ["parent_feature_key"]
+            isOneToOne: false
+            referencedRelation: "feature_entitlements"
+            referencedColumns: ["feature_key"]
+          },
+        ]
+      }
+      admin_feature_flag_overrides: {
+        Row: {
+          created_at: string | null
+          environment:
+            | Database["public"]["Enums"]["feature_flag_environment"]
+            | null
+          feature_flag_id: string | null
+          feature_key: string | null
+          id: string | null
+          override_type: string | null
+          scope_id: string | null
+          scope_name: string | null
+          updated_at: string | null
+          value_boolean: boolean | null
+          value_double: number | null
+          value_integer: number | null
+          version: number | null
         }
         Relationships: []
       }
@@ -11911,6 +12505,29 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      admin_feature_flags_list: {
+        Row: {
+          created_at: string | null
+          default_value_boolean: boolean | null
+          default_value_double: number | null
+          default_value_integer: number | null
+          deleted_at: string | null
+          description: string | null
+          environment:
+            | Database["public"]["Enums"]["feature_flag_environment"]
+            | null
+          id: string | null
+          key: string | null
+          org_override_count: number | null
+          updated_at: string | null
+          user_override_count: number | null
+          value_type:
+            | Database["public"]["Enums"]["feature_flag_value_type"]
+            | null
+          version: number | null
+        }
+        Relationships: []
       }
       admin_fees_status: {
         Row: {
@@ -12570,6 +13187,7 @@ export type Database = {
         Args: { check_athlete_id: string; check_user_id: string }
         Returns: boolean
       }
+      auth_debug_uid: { Args: never; Returns: Json }
       bookmark_event: { Args: { p_event_id: string }; Returns: boolean }
       bulk_apply_to_tiers: {
         Args: {
@@ -12658,12 +13276,26 @@ export type Database = {
         Returns: boolean
       }
       check_platform_admin: { Args: never; Returns: boolean }
+      check_video_notes_insert_policy: {
+        Args: { p_author_id: string; p_video_id: string }
+        Returns: Json
+      }
       cleanup_expired_fan_feed: { Args: never; Returns: undefined }
       cleanup_expired_reservations: { Args: never; Returns: number }
+      cleanup_expired_seat_holds: { Args: never; Returns: number }
       cleanup_expired_slug_redirects: { Args: never; Returns: number }
       clear_travel_override: {
         Args: { p_event_id: string }
         Returns: undefined
+      }
+      clone_seat_map: {
+        Args: {
+          p_new_name?: string
+          p_source_seat_map_id: string
+          p_target_team_id?: string
+          p_target_venue_id?: string
+        }
+        Returns: string
       }
       coach_has_medical_access: {
         Args: { athlete_id_param: string; user_id_param?: string }
@@ -12911,6 +13543,18 @@ export type Database = {
         }
         Returns: Json
       }
+      get_feature_ancestors: {
+        Args: { p_feature_key: string; p_max_depth?: number }
+        Returns: string[]
+      }
+      get_feature_children: {
+        Args: { p_feature_key: string; p_include_archived?: boolean }
+        Returns: {
+          depth: number
+          feature_key: string
+          feature_name: string
+        }[]
+      }
       get_feature_gate: {
         Args: { p_feature_key: string; p_org_id: string; p_user_id: string }
         Returns: Json
@@ -13147,6 +13791,7 @@ export type Database = {
         Args: { check_org_id: string; check_user_id: string }
         Returns: Database["public"]["Enums"]["org_member_role"][]
       }
+      get_video_notes_policies: { Args: never; Returns: Json }
       import_athletes_from_spreadsheet: {
         Args: {
           p_assign_teams_from_spreadsheet?: boolean
@@ -13204,6 +13849,10 @@ export type Database = {
         }
         Returns: Json
       }
+      lock_and_hold_reserved_seats: {
+        Args: { p_expires_at: string; p_order_id: string; p_seat_ids: string[] }
+        Returns: undefined
+      }
       lock_uniform_kit: { Args: { p_kit_id: string }; Returns: undefined }
       log_event: {
         Args: {
@@ -13242,6 +13891,7 @@ export type Database = {
         Args: { p_amount_cents: number; p_fee_assignment_id: string }
         Returns: undefined
       }
+      publish_seat_map: { Args: { p_seat_map_id: string }; Returns: string }
       redeem_child_claim_token: {
         Args: { p_token: string }
         Returns: {
@@ -13304,6 +13954,15 @@ export type Database = {
           status: Database["public"]["Enums"]["org_status"]
         }[]
       }
+      resolve_seat_map_for_event: {
+        Args: {
+          p_event_id: string
+          p_org_id?: string
+          p_team_id?: string
+          p_venue_id?: string
+        }
+        Returns: string
+      }
       resolve_travel_contacts_for_plan: {
         Args: { p_plan_id: string }
         Returns: Json
@@ -13356,6 +14015,7 @@ export type Database = {
         Returns: undefined
       }
       slugify: { Args: { input: string }; Returns: string }
+      soft_delete_video: { Args: { p_video_id: string }; Returns: undefined }
       staff_can_access_team: {
         Args: { check_team_id: string; check_user_id: string }
         Returns: boolean
@@ -13485,6 +14145,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_feature_dependencies: {
+        Args: { p_action: string; p_feature_key: string }
+        Returns: Json
+      }
       validate_video_share_token: {
         Args: { p_token: string }
         Returns: {
@@ -13493,6 +14157,10 @@ export type Database = {
           requires_password: boolean
           video_id: string
         }[]
+      }
+      verify_video_share_password: {
+        Args: { p_password: string; p_token: string }
+        Returns: boolean
       }
     }
     Enums: {

@@ -10,6 +10,7 @@ import { USE_FAKE_DATA } from '../config'
 import type {
   TicketedEvent,
   TicketType,
+  TicketSeatingMode,
   TicketOrder,
   TicketOrderItem,
   Ticket,
@@ -43,6 +44,20 @@ import {
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
 const FUNCTIONS_URL = `${SUPABASE_URL.replace('/rest/v1', '')}/functions/v1`
+const FAN_VISIBLE_EVENT_OR_FILTER = 'visibility.eq.public,visibility.is.null'
+
+function isFanVisibleEvent(
+  event:
+    | {
+      status?: string | null
+      visibility?: string | null
+    }
+    | null
+    | undefined,
+): boolean {
+  if (!event) return false
+  return event.status === 'published' && (event.visibility === 'public' || event.visibility == null)
+}
 
 // ============================================================================
 // Ticketed Events
@@ -52,6 +67,7 @@ export async function getTicketedEvents(filters?: {
   org_id?: string
   status?: 'published' | 'draft' | 'cancelled' | 'completed'
   upcoming_only?: boolean
+  fan_visible_only?: boolean
 }) {
   if (USE_FAKE_DATA) {
     return getFakeTicketedEvents(filters)
@@ -69,6 +85,10 @@ export async function getTicketedEvents(filters?: {
 
     if (filters?.status) {
       query = query.eq('status', filters.status)
+    }
+
+    if (filters?.fan_visible_only) {
+      query = query.eq('status', 'published').or(FAN_VISIBLE_EVENT_OR_FILTER)
     }
 
     if (filters?.upcoming_only) {
@@ -95,7 +115,9 @@ export async function getTicketedEventById(id: string, orgId: string) {
 
   if (USE_FAKE_DATA) {
     const event = getFakeTicketedEvent(id, orgId)
-    if (!event) throw new Error('Ticketed event not found')
+    if (!event || !isFanVisibleEvent(event as { status?: string | null; visibility?: string | null })) {
+      throw new Error('Ticketed event not found')
+    }
     return event
   }
 
@@ -105,6 +127,8 @@ export async function getTicketedEventById(id: string, orgId: string) {
       .select('*')
       .eq('id', id)
       .eq('org_id', orgId) // CRITICAL: Always filter by org_id for public routes
+      .eq('status', 'published')
+      .or(FAN_VISIBLE_EVENT_OR_FILTER)
       .single()
 
     if (error) throw error
@@ -122,7 +146,7 @@ export async function getTicketedEventById(id: string, orgId: string) {
 export async function getPublicTicketedEventById(id: string) {
   if (USE_FAKE_DATA) {
     const event = getFakeTicketedEvent(id, null)
-    if (!event || event.status !== 'published') {
+    if (!event || !isFanVisibleEvent(event as { status?: string | null; visibility?: string | null })) {
       throw new Error('Ticketed event not found')
     }
     return event
@@ -134,6 +158,7 @@ export async function getPublicTicketedEventById(id: string) {
       .select('*')
       .eq('id', id)
       .eq('status', 'published')
+      .or(FAN_VISIBLE_EVENT_OR_FILTER)
       .single()
 
     if (error) throw error
@@ -190,14 +215,14 @@ export async function getTicketTypesForEvent(ticketedEventId: string, orgId: str
     // First verify the event belongs to the org
     const { data: event, error: eventError } = await supabase
       .from('ticketed_events')
-      .select('id, org_id')
+      .select('id, org_id, status, visibility')
       .eq('id', ticketedEventId)
       .eq('org_id', orgId)
       .single()
 
     if (eventError) throw eventError
 
-    if (!event) {
+    if (!event || !isFanVisibleEvent(event)) {
       return normalizeSupabaseResponse<TicketType[]>([], true)
     }
 
@@ -228,13 +253,12 @@ export async function getPublicTicketTypesForEvent(ticketedEventId: string) {
   try {
     const { data: event, error: eventError } = await supabase
       .from('ticketed_events')
-      .select('id, status')
+      .select('id, status, visibility')
       .eq('id', ticketedEventId)
-      .eq('status', 'published')
       .single()
 
     if (eventError) throw eventError
-    if (!event) {
+    if (!isFanVisibleEvent(event)) {
       return normalizeSupabaseResponse<TicketType[]>([], true)
     }
 
@@ -274,6 +298,88 @@ export async function getTicketTypesForEventAdmin(ticketedEventId: string) {
     return normalizeSupabaseResponse<TicketType[]>(data as unknown as TicketType[], true)
   } catch (error) {
     throw classifySupabaseError(error, 'Ticket types')
+  }
+}
+
+/**
+ * Get all ticket types for an event (admin/internal use, including inactive)
+ */
+export async function getAllTicketTypesForEventAdmin(ticketedEventId: string): Promise<TicketType[]> {
+  if (!ticketedEventId) {
+    throw new ValidationError('Ticketed event is required')
+  }
+
+  if (USE_FAKE_DATA) {
+    return getFakeTicketTypes(ticketedEventId, null)
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    const { data, error } = await supabaseAny
+      .from('ticket_types')
+      .select('*')
+      .eq('ticketed_event_id', ticketedEventId)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+
+    if (error) throw error
+
+    return normalizeSupabaseResponse<TicketType[]>(data as unknown as TicketType[], true)
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticket types')
+  }
+}
+
+export interface TicketTypeSalesSnapshot {
+  ticketTypeId: string
+  soldCount: number
+  purchasedCount: number
+}
+
+export async function getTicketTypeSalesSnapshotForEventAdmin(
+  ticketedEventId: string,
+): Promise<Record<string, TicketTypeSalesSnapshot>> {
+  if (!ticketedEventId) {
+    throw new ValidationError('Ticketed event is required')
+  }
+
+  if (USE_FAKE_DATA) {
+    return {}
+  }
+
+  try {
+    const supabaseAny = supabase as any
+    const { data, error } = await supabaseAny
+      .from('tickets')
+      .select('ticket_type_id, status')
+      .eq('ticketed_event_id', ticketedEventId)
+
+    if (error) throw error
+
+    const rows = (data ?? []) as Array<{ ticket_type_id: string | null; status: string | null }>
+    const salesByType: Record<string, TicketTypeSalesSnapshot> = {}
+
+    for (const row of rows) {
+      const ticketTypeId = row.ticket_type_id
+      if (!ticketTypeId) continue
+
+      if (!salesByType[ticketTypeId]) {
+        salesByType[ticketTypeId] = {
+          ticketTypeId,
+          soldCount: 0,
+          purchasedCount: 0,
+        }
+      }
+
+      salesByType[ticketTypeId].soldCount += 1
+      if (row.status === 'active' || row.status === 'used') {
+        salesByType[ticketTypeId].purchasedCount += 1
+      }
+    }
+
+    return salesByType
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticket type sales snapshot')
   }
 }
 
@@ -429,6 +535,126 @@ export async function createTicketType(
   }
 }
 
+type TicketTypeUpdatePayload = Database['public']['Tables']['ticket_types']['Update'] & {
+  seating_mode?: TicketSeatingMode
+  seat_map_id?: string | null
+}
+
+export async function updateTicketType(
+  ticketTypeId: string,
+  updates: TicketTypeUpdatePayload,
+) {
+  try {
+    assertNotDemoMode('update ticket types')
+
+    if (!ticketTypeId) {
+      throw new ValidationError('Ticket type is required')
+    }
+
+    if (Object.keys(updates).length === 0) {
+      throw new ValidationError('No ticket type changes were provided')
+    }
+
+    const supabaseAny = supabase as any
+    const { data: existingType, error: existingTypeError } = await supabaseAny
+      .from('ticket_types')
+      .select('id, price_cents, seating_mode, sales_start_at, sales_end_at')
+      .eq('id', ticketTypeId)
+      .single()
+
+    if (existingTypeError) {
+      return createServiceResponse<TicketType>(null, existingTypeError)
+    }
+
+    const {
+      data: ticketRows,
+      error: ticketRowsError,
+    } = await supabaseAny
+      .from('tickets')
+      .select('status')
+      .eq('ticket_type_id', ticketTypeId)
+
+    if (ticketRowsError) {
+      return createServiceResponse<TicketType>(null, ticketRowsError)
+    }
+
+    const soldCount = (ticketRows ?? []).length
+    const purchasedCount = (ticketRows ?? []).filter(
+      (row: { status: string | null }) => row.status === 'active' || row.status === 'used',
+    ).length
+
+    const existingPrice = Number(existingType?.price_cents ?? 0)
+    const existingSeatingMode = (existingType?.seating_mode ?? 'general_admission') as TicketSeatingMode
+
+    if (soldCount > 0) {
+      const nextPrice = updates.price_cents
+      if (typeof nextPrice === 'number' && nextPrice !== existingPrice) {
+        return createServiceResponse<TicketType>(
+          null,
+          new ValidationError('Price cannot be changed once tickets have been sold. Create a new ticket type and make this one inactive.'),
+        )
+      }
+
+      const nextSeatingMode = updates.seating_mode
+      if (nextSeatingMode && nextSeatingMode !== existingSeatingMode) {
+        return createServiceResponse<TicketType>(
+          null,
+          new ValidationError('Seating mode cannot be changed once tickets have been sold. Create a new ticket type and make this one inactive.'),
+        )
+      }
+    }
+
+    if (typeof updates.capacity_total === 'number' && updates.capacity_total < purchasedCount) {
+      return createServiceResponse<TicketType>(
+        null,
+        new ValidationError(`Capacity cannot be lower than ${purchasedCount} purchased ticket(s).`),
+      )
+    }
+
+    const existingSalesStartAt = existingType?.sales_start_at as string | null | undefined
+    if (
+      existingSalesStartAt &&
+      new Date(existingSalesStartAt).getTime() < Date.now() &&
+      updates.sales_start_at !== undefined &&
+      updates.sales_start_at !== existingSalesStartAt
+    ) {
+      return createServiceResponse<TicketType>(
+        null,
+        new ValidationError('Sales start is already in the past and can no longer be edited.'),
+      )
+    }
+
+    const effectiveSalesStart = updates.sales_start_at !== undefined
+      ? updates.sales_start_at
+      : ((existingType?.sales_start_at as string | null | undefined) ?? null)
+    const effectiveSalesEnd = updates.sales_end_at !== undefined
+      ? updates.sales_end_at
+      : ((existingType?.sales_end_at as string | null | undefined) ?? null)
+
+    if (effectiveSalesStart && effectiveSalesEnd && new Date(effectiveSalesEnd) <= new Date(effectiveSalesStart)) {
+      return createServiceResponse<TicketType>(
+        null,
+        new ValidationError('Sales end must occur after the sales start.'),
+      )
+    }
+
+    const { data, error } = await supabaseAny
+      .from('ticket_types')
+      .update(updates)
+      .eq('id', ticketTypeId)
+      .select('*')
+      .single()
+
+    if (error) {
+      return createServiceResponse<TicketType>(null, error)
+    }
+
+    return createServiceResponse<TicketType>(data as TicketType, null)
+  } catch (error: unknown) {
+    return createServiceResponse<TicketType>(null, error as Error)
+  }
+}
+
 export async function getSeatMapsForEvent(ticketedEventId: string): Promise<SeatMap[]> {
   if (!ticketedEventId) {
     throw new ValidationError('Ticketed event is required')
@@ -436,15 +662,52 @@ export async function getSeatMapsForEvent(ticketedEventId: string): Promise<Seat
 
   try {
     const supabaseAny = supabase as any
+    const { data: eventData, error: eventError } = await supabaseAny
+      .from('ticketed_events')
+      .select('id, org_id, venue_id, team_id')
+      .eq('id', ticketedEventId)
+      .single()
+
+    if (eventError) throw eventError
+    if (!eventData?.org_id) {
+      return []
+    }
+
     const { data, error } = await supabaseAny
       .from('seat_maps')
       .select('*')
-      .eq('ticketed_event_id', ticketedEventId)
-      .order('created_at', { ascending: false })
+      .eq('org_id', eventData.org_id)
+      .order('updated_at', { ascending: false })
 
     if (error) throw error
 
-    return normalizeSupabaseResponse<SeatMap[]>(data as unknown as SeatMap[], true)
+    const seatMaps = normalizeSupabaseResponse<SeatMap[]>(data as unknown as SeatMap[], true)
+
+    // Relevance order for event setup UI:
+    // event-linked maps -> venue maps -> team maps -> org-level maps -> everything else in org
+    const relevanceRank = (seatMap: SeatMap): number => {
+      if (seatMap.ticketed_event_id === ticketedEventId) {
+        return 0
+      }
+      if (eventData.venue_id && seatMap.venue_id === eventData.venue_id) {
+        return 1
+      }
+      if (eventData.team_id && seatMap.team_id === eventData.team_id) {
+        return 2
+      }
+      if (!seatMap.venue_id && !seatMap.team_id && !seatMap.ticketed_event_id) {
+        return 3
+      }
+      return 4
+    }
+
+    return seatMaps.sort((a, b) => {
+      const rankDiff = relevanceRank(a) - relevanceRank(b)
+      if (rankDiff !== 0) {
+        return rankDiff
+      }
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    })
   } catch (error) {
     throw classifySupabaseError(error, 'Seat maps')
   }
@@ -1822,46 +2085,17 @@ export async function validateTicketScan(
       headers,
       body: JSON.stringify(request),
     })
-    const responseText = await response.text()
-    let responseBody: any = null
-    let responseParseError: string | null = null
-
-    try {
-      responseBody = responseText ? JSON.parse(responseText) : null
-    } catch (parseError: any) {
-      responseParseError = parseError?.message || 'Failed to parse JSON response'
-    }
-
-    const debugClient = {
-      endpoint: url,
-      request: {
-        ticketed_event_id: request.ticketed_event_id,
-        entry_code: request.entry_code || null,
-        qr_token_raw_preview: request.qr_token_raw ? `${request.qr_token_raw.slice(0, 4)}...${request.qr_token_raw.slice(-4)}` : null,
-        client_device_id: request.client_device_id || null,
-        has_staff_link_token: Boolean(staffLinkToken),
-      },
-      response: {
-        status: response.status,
-        ok: response.ok,
-        content_type: response.headers.get('content-type'),
-        parse_error: responseParseError,
-        raw_text: responseText,
-      },
-    }
+    const responseBody = await response.json().catch(() => null)
 
     if (!response.ok) {
       const errorMessage = responseBody?.error || 'Validation failed'
       return createServiceResponse<ValidateScanResponse>(
         null,
-        new Error(`${errorMessage} | debug=${JSON.stringify(debugClient)}`),
+        new Error(errorMessage),
       )
     }
 
-    const data = {
-      ...(responseBody || {}),
-      debug_client: debugClient,
-    } as ValidateScanResponse
+    const data = (responseBody || {}) as ValidateScanResponse
     return createServiceResponse<ValidateScanResponse>(data, null)
   } catch (error: any) {
     return createServiceResponse<ValidateScanResponse>(null, error)

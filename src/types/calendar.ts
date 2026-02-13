@@ -117,6 +117,7 @@ export interface TicketedEventSummary {
     sales_start_at: string | null
     sales_end_at: string | null
     status: 'draft' | 'published' | 'archived' | string
+    visibility?: 'visible' | 'hidden' | null
     event_description: string | null
     ticket_banner_url: string | null
     ticket_types?: TicketTypeSummary[]

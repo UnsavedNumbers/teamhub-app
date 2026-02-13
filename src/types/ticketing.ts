@@ -6,6 +6,7 @@
 
 export type TicketedEventType = 'game' | 'tournament' | 'concert' | 'fundraiser' | 'travel' | 'social_event' | 'other'
 export type TicketedEventStatus = 'draft' | 'published' | 'cancelled' | 'completed'
+export type TicketedEventVisibility = 'visible' | 'hidden'
 export type TicketOrderStatus = 'pending_payment' | 'paid' | 'refunded' | 'cancelled'
 export type TicketStatus = 'active' | 'used' | 'refunded' | 'voided'
 export type TicketScanResult = 'valid' | 'already_used' | 'invalid' | 'wrong_event' | 'refunded' | 'voided' | 'not_found'
@@ -200,6 +201,7 @@ export interface TicketedEvent {
 
   // Status
   status: TicketedEventStatus
+  visibility?: TicketedEventVisibility | null
   sale_status?: TicketSaleStatus
 
   created_at: string
@@ -362,6 +364,8 @@ export interface ValidateScanRequest {
   qr_token_raw?: string
   entry_code?: string
   client_device_id?: string
+  force_validate?: boolean
+  cross_event_admission?: boolean
 }
 
 export interface OrderContext {

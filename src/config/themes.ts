@@ -367,8 +367,8 @@ export const THEMES: Theme[] = [
     status: 'active'
   },
   {
-    id: 'navy_gold_classic',
-    name: 'Navy Gold Classic',
+    id: 'midnight_gold',
+    name: 'Midnight Gold',
     colors: {
       primary: '#0B1C2D',
       secondary: '#D4AF37',
@@ -433,8 +433,8 @@ export const THEMES: Theme[] = [
     status: 'active'
   },
   {
-    id: 'midnight_gold',
-    name: 'Midnight Gold',
+    id: 'navy_gold_classic',
+    name: 'Navy Gold Classic',
     colors: {
       primary: '#0A2342',
       secondary: '#F2C94C',

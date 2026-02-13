@@ -109,7 +109,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
   const hasEventId = id.length > 0
   const hasValidEventId = isUuid(id)
   const navigate = useNavigate()
-  const scannerPath = useRouteLink('admin.ticketingScanner')
+  const scannerPath = useRouteLink('admin.ticketingScannerEvent', { eventId: id || '' })
   const addTicketTypePath = useRouteLink('admin.ticketingEvents.ticketTypes.create', { id: id || '' })
   const eventsPath = useRouteLink('admin.ticketingEvents.list')
 
@@ -411,7 +411,8 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
   const internalDescription = event.description?.trim() || t('ticketing.detail.values.notProvided')
   const publicDescription = event.event_description?.trim() || t('ticketing.detail.values.notProvided')
   const bannerUrl = event.ticket_banner_url || event.cover_image_path || null
-  const editEventPath = event.event_id ? getLink('admin.events.edit', { id: event.event_id }) : null
+  const editTicketTypePath = getLink('admin.ticketingEvents.ticketTypes.edit', { id })
+  const eventVisibility = event.status === 'draft' ? 'hidden' : (event.visibility ?? 'visible')
 
   const hasOfflineReadOnlyNotice = !isOnline
   const hasDemoReadOnlyNotice = USE_FAKE_DATA
@@ -419,6 +420,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
   const hasOnlyInactiveTicketTypes = displayedTotalTicketTypeCount > 0 && ticketTypesList.length === 0
   const hasDeletedAllVisibleTicketTypes = hadTicketTypesRef.current && ticketTypesList.length === 0 && displayedTotalTicketTypeCount === 0
   const activeTicketTypesCount = ticketTypesList.filter((type) => type.is_active).length
+  const fanVisible = event.status === 'published' && eventVisibility === 'visible'
   const hasFiniteCapacity = ticketTypesList.some((type) => type.capacity_total !== null)
   const totalCapacity = hasFiniteCapacity
     ? ticketTypesList.reduce((sum, type) => sum + (type.capacity_total ?? 0), 0)
@@ -428,6 +430,8 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
     : null
 
   const salesStatusLabel = (() => {
+    if (event.status === 'published' && eventVisibility === 'hidden') return 'Hidden'
+    if (event.status === 'published' && activeTicketTypesCount === 0) return 'Visible - No tickets'
     if (event.status === 'published') return t('ticketing.detail.values.salesStatus.live')
     if (event.status === 'draft') return t('ticketing.detail.values.salesStatus.preparing')
     if (event.status === 'completed') return t('ticketing.detail.values.salesStatus.closed')
@@ -445,6 +449,22 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
           {hasDemoReadOnlyNotice && (
             <p className="oa-text-muted">{t('ticketing.detail.notices.demoModeReadOnly')}</p>
           )}
+        </div>
+      )}
+
+      {fanVisible && activeTicketTypesCount === 0 && (
+        <div className="oa-card oa-p-4 oa-ticketing-notice-card" role="alert">
+          <p className="oa-text-muted">This event is visible to fans but has no tickets available for purchase.</p>
+          <div className="oa-flex oa-gap-2 oa-mt-3">
+            <OrgAdminButton
+              size="compact"
+              icon={hasOnlyInactiveTicketTypes ? 'toggle_on' : 'add'}
+              onClick={() => navigate(hasOnlyInactiveTicketTypes ? editTicketTypePath : addTicketTypePath)}
+              disabled={!isOnline || USE_FAKE_DATA}
+            >
+              {hasOnlyInactiveTicketTypes ? 'Activate Ticket Type' : t('ticketing.detail.actions.addTicketType')}
+            </OrgAdminButton>
+          </div>
         </div>
       )}
 
@@ -516,6 +536,10 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
             <p className="oa-ticketing-meta-item__value">{salesWindow}</p>
           </div>
           <div className="oa-ticketing-meta-item">
+            <span className="oa-ticketing-meta-item__label">Visibility</span>
+            <p className="oa-ticketing-meta-item__value">{eventVisibility === 'visible' ? 'Visible to fans' : 'Hidden from fans'}</p>
+          </div>
+          <div className="oa-ticketing-meta-item">
             <span className="oa-ticketing-meta-item__label">{t('ticketing.detail.labels.teamScope')}</span>
             <p className="oa-ticketing-meta-item__value">
               {event.team_id ? t('ticketing.detail.values.teamScoped') : t('ticketing.detail.values.orgWide')}
@@ -566,11 +590,57 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
             {t('ticketing.detail.actions.openScanner')}
           </OrgAdminButton>
 
-          {editEventPath && (
-            <OrgAdminButton as={Link} to={editEventPath} icon="edit_note">
-              {t('ticketing.detail.actions.editTicketingDetails')}
-            </OrgAdminButton>
-          )}
+          <OrgAdminButton as={Link} to={editTicketTypePath} icon="edit_note">
+            {t('ticketing.detail.actions.editTicketingDetails')}
+          </OrgAdminButton>
+
+          <OrgAdminButton
+            variant="secondary"
+            icon={eventVisibility === 'visible' ? 'visibility_off' : 'visibility'}
+            onClick={async () => {
+              if (event.status !== 'published') {
+                showError('Publish this event before changing visibility.')
+                return
+              }
+              if (!isOnline) {
+                showError(t('ticketing.detail.staffLink.offlineBlocked'))
+                return
+              }
+              if (USE_FAKE_DATA) {
+                showError(t('ticketing.detail.notices.demoModeReadOnly'))
+                return
+              }
+
+              const nextVisibility = eventVisibility === 'visible' ? 'hidden' : 'visible'
+              if (nextVisibility === 'hidden') {
+                const confirmed = window.confirm('Fans will no longer see this event. Existing ticket holders will still have valid tickets.')
+                if (!confirmed) return
+              }
+              if (nextVisibility === 'visible' && activeTicketTypesCount === 0) {
+                const confirmed = window.confirm('This event has no active ticket types. Fans will see the event but cannot purchase tickets.')
+                if (!confirmed) return
+              }
+
+              const supabaseAny = supabase as any
+              const { error } = await supabaseAny
+                .from('ticketed_events')
+                .update({ visibility: nextVisibility })
+                .eq('id', id)
+
+              if (error) {
+                showError(classifySupabaseError(error).message || 'Failed to update event visibility.')
+                return
+              }
+
+              showSuccess(nextVisibility === 'visible' ? 'Event is now visible to fans.' : 'Event is now hidden from fans.')
+              await queryClient.invalidateQueries({ queryKey: ['ticketed-event', id] })
+              await queryClient.invalidateQueries({ queryKey: ['ticketed-events'] })
+            }}
+            disabled={event.status !== 'published' || !isOnline || USE_FAKE_DATA}
+            title={event.status !== 'published' ? 'Publish event to enable visibility' : undefined}
+          >
+            {eventVisibility === 'visible' ? 'Hide from Fans' : 'Make Visible'}
+          </OrgAdminButton>
 
           <OrgAdminButton
             size="compact"
@@ -584,7 +654,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
         </div>
       </section>
 
-      {event.status === 'published' ? (
+      {fanVisible ? (
         <PublicUrlShare
           orgId={event.org_id}
           path={getLink(RouteKeys.PORTAL_TICKET_EVENT_DETAIL, { eventId: event.id })}

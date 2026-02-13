@@ -869,6 +869,13 @@ const admin = {
                 icon: 'confirmation_number',
                 requiresOrg: true,
             },
+            edit: {
+                path: '/admin/ticketing/events/:id/ticket-types/edit',
+                params: ['id'] as const,
+                label: 'Edit Ticket Type',
+                icon: 'edit',
+                requiresOrg: true,
+            },
         },
         seatMaps: {
             list: {
@@ -895,6 +902,13 @@ const admin = {
     ticketingScanner: {
         path: '/admin/ticketing/scanner',
         label: 'Ticket Scanner',
+        icon: 'qr_code_scanner',
+        requiresOrg: true,
+    },
+    ticketingScannerEvent: {
+        path: '/admin/ticketing/scanner/:eventId',
+        params: ['eventId'] as const,
+        label: 'Ticket Scanner (Event)',
         icon: 'qr_code_scanner',
         requiresOrg: true,
     },

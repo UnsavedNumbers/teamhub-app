@@ -102,6 +102,7 @@ function mapSupabaseEventToCalendarEvent(event: any): CalendarEvent {
                     sales_start_at: ticketedData.sales_start_at,
                     sales_end_at: ticketedData.sales_end_at,
                     status: ticketedData.status,
+                    visibility: ticketedData.visibility ?? null,
                     ticket_banner_url: ticketedData.ticket_banner_url || null,
                     ticket_types: Array.isArray(ticketedData.ticket_types)
                         ? ticketedData.ticket_types.map((tt: any) => ({

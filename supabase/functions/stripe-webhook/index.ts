@@ -353,7 +353,6 @@ serve(async (req) => {
 
           // Order status guard: skip if already processed
           if (order.status !== "pending_payment") {
-            console.log(`Order ${orderId} already processed (status: ${order.status})`)
             await supabase.from("stripe_webhook_receipts").insert({
               stripe_event_id: event.id,
               outcome: "skipped",
@@ -607,9 +606,7 @@ serve(async (req) => {
 
               if (transactionError) {
                 // Check for unique violation (23505)
-                if (transactionError.code === "23505") {
-                  console.log(`Transaction already recorded for order ${orderId}`)
-                } else {
+                if (transactionError.code !== "23505") {
                   console.error("Failed to insert Connect transaction:", transactionError)
                   // Log but don't fail webhook - order is already marked paid
                 }
@@ -628,13 +625,20 @@ serve(async (req) => {
           // Pass raw tokens for QR code generation and access links
           const baseUrl = Deno.env.get("SUPABASE_URL")?.replace("/rest/v1", "") || ""
           try {
-            // Map tickets to include raw tokens for email
-            const ticketsForEmail = ticketsWithRawTokens.map(({ ticket, qr_token_raw }) => ({
-              id: ticket.id || null, // Will be set after insert
-              qr_token_raw,
-              entry_code: ticket.entry_code,
-              ticket_type_id: ticket.ticket_type_id,
-            }))
+            // Map inserted tickets with their raw tokens for email payload
+            const ticketsForEmail = insertedTickets.map((insertedTicket) => {
+              const match = ticketsWithRawTokens.find(
+                ({ ticket }) =>
+                  ticket.entry_code === insertedTicket.entry_code &&
+                  ticket.ticket_type_id === insertedTicket.ticket_type_id,
+              )
+              return {
+                id: insertedTicket.id,
+                qr_token_raw: match?.qr_token_raw || "",
+                entry_code: insertedTicket.entry_code,
+                ticket_type_id: insertedTicket.ticket_type_id,
+              }
+            })
             
             await fetch(`${baseUrl}/functions/v1/tickets-send-receipt`, {
               method: "POST",
@@ -1055,8 +1059,6 @@ serve(async (req) => {
         const session = sessions.data[0] ?? null
         if (!session) break
 
-        console.log(session);
-
         const checkoutSessionId = session.metadata?.checkout_session_id as string | null
 
         const paymentIntentId = pi.id
@@ -1155,7 +1157,7 @@ serve(async (req) => {
 
         if (error) throw error
 
-        // Log state changes for debugging/audit
+        // Record state changes for audit
         if (existingOrg) {
           const prevDueRaw: any = existingOrg.stripe_requirements_due
           const prevCurrentlyDue = Array.isArray(prevDueRaw?.currently_due)
@@ -1259,15 +1261,12 @@ serve(async (req) => {
           webhookResult.message = `Ticket sale refunded: ${ticketCount} ticket(s) for order ${order.id.slice(-8).toUpperCase()}`
         } else {
           // Not a ticket order refund - log for observability but don't process
-          console.log(`charge.refunded event ${event.id} has no matching ticket order`)
           webhookResult.message = `Refund received but no matching ticket order found`
         }
 
         break
       }
       default:
-        // Log unhandled event types for visibility
-        console.log(`Unhandled event type: ${event.type}`)
         webhookResult.message = `Unhandled event type: ${event.type}`
         break
     }

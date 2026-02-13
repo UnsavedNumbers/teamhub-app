@@ -15,6 +15,7 @@ vi.mock('@/data/services', () => ({
   getPublicTicketedEventById: (...args: unknown[]) => mockGetPublicTicketedEventById(...args),
   getPublicTicketTypesForEvent: (...args: unknown[]) => mockGetPublicTicketTypesForEvent(...args),
   createCheckoutSession: (...args: unknown[]) => mockCreateCheckoutSession(...args),
+  getTicketBannerPublicUrl: (value: string | null | undefined) => value ?? null,
 }))
 
 vi.mock('@/hooks/useOffline', () => ({
@@ -123,7 +124,7 @@ describe('TicketEventDetail', () => {
     renderPage()
 
     await screen.findByText('Sold out')
-    expect(screen.getByText('Tickets are sold out for this event.')).toBeInTheDocument()
+    expect(screen.getByText('This event is sold out.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'add' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Checkout Now' })).toBeDisabled()
   })
