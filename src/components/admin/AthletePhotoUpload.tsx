@@ -104,7 +104,7 @@ export function AthletePhotoUpload({
 
     return (
         <div className="pa-form-group">
-            <label className="pa-label">{label}</label>
+            <label className="oa-label">{label}</label>
             
             <div className="flex flex-col gap-4">
                 {/* Photo Preview/Display */}
@@ -153,3 +153,4 @@ export function AthletePhotoUpload({
         </div>
     )
 }
+

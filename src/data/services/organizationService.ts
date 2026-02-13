@@ -474,15 +474,33 @@ export async function uploadTicketBanner(
 
         const fileExt = file.name.split('.').pop() || 'png'
         const fileName = `banner-${Date.now()}.${fileExt}`
-        const filePath = `event-banners/${orgId}/ticket-banners/${eventId}/${fileName}`
+        const preferredPath = `event-banners/${orgId}/ticket-banners/${eventId}/${fileName}`
+        const fallbackPath = `orgs/${orgId}/ticket-banners/${eventId}/${fileName}`
+        const bucket = import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET
 
-        const { error: uploadError } = await supabase.storage
-            .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
-            .upload(filePath, file, { upsert: true })
+        let uploadedPath = preferredPath
+        let { error: uploadError } = await supabase.storage
+            .from(bucket)
+            .upload(preferredPath, file, { upsert: true })
+
+        if (uploadError) {
+            const shouldFallbackToOrgPath = String((uploadError as { message?: string } | null)?.message || '')
+                .toLowerCase()
+                .includes('row-level security')
+            if (shouldFallbackToOrgPath) {
+                const retry = await supabase.storage
+                    .from(bucket)
+                    .upload(fallbackPath, file, { upsert: true })
+                uploadError = retry.error
+                if (!uploadError) {
+                    uploadedPath = fallbackPath
+                }
+            }
+        }
 
         if (uploadError) throw uploadError
 
-        const { data } = supabase.storage.from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET).getPublicUrl(filePath)
+        const { data } = supabase.storage.from(bucket).getPublicUrl(uploadedPath)
 
         const actor = await getCurrentActorContext(orgId)
         const logResult = await logEvent({
@@ -494,7 +512,7 @@ export async function uploadTicketBanner(
             targetEntityType: 'event',
             targetEntityId: eventId,
             metadata: {
-                storage_path: filePath,
+                storage_path: uploadedPath,
                 file_name: file.name,
                 file_size: file.size,
                 file_type: file.type,
@@ -509,5 +527,74 @@ export async function uploadTicketBanner(
     } catch (err) {
         console.error('[organizationService] Error uploading ticket banner:', err)
         return { path: null, error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
+function normalizeStoragePath(value: string, bucket: string): string {
+    const trimmed = value.trim().replace(/^\/+/, '')
+    if (trimmed.startsWith(`${bucket}/`)) {
+        return trimmed.slice(bucket.length + 1)
+    }
+    return trimmed
+}
+
+function extractStoragePathFromPublicUrl(url: string, bucket: string): string | null {
+    try {
+        const parsed = new URL(url)
+        const marker = `/storage/v1/object/public/${bucket}/`
+        const markerIndex = parsed.pathname.indexOf(marker)
+        if (markerIndex >= 0) {
+            const rawPath = parsed.pathname.slice(markerIndex + marker.length)
+            return decodeURIComponent(rawPath).replace(/^\/+/, '')
+        }
+    } catch {
+        return null
+    }
+    return null
+}
+
+export function getTicketBannerPublicUrl(pathOrUrl: string | null | undefined): string | null {
+    const rawValue = pathOrUrl?.trim()
+    if (!rawValue) return null
+
+    if (/^(https?:\/\/|data:)/i.test(rawValue)) {
+        return rawValue
+    }
+
+    const bucket = import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET
+    const storagePath = normalizeStoragePath(rawValue, bucket)
+    if (!storagePath) return null
+
+    const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath)
+    return data.publicUrl
+}
+
+export async function deleteTicketBanner(pathOrUrl: string | null | undefined): Promise<{ error: Error | null }> {
+    try {
+        if (USE_FAKE_DATA) {
+            return { error: null }
+        }
+
+        const rawValue = pathOrUrl?.trim()
+        if (!rawValue) return { error: null }
+
+        const bucket = import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET
+        const isUrlValue = /^(https?:\/\/|data:)/i.test(rawValue)
+        const storagePath = isUrlValue
+            ? extractStoragePathFromPublicUrl(rawValue, bucket)
+            : normalizeStoragePath(rawValue, bucket)
+
+        // External URLs are not managed by this storage bucket.
+        if (!storagePath) return { error: null }
+
+        const { error } = await supabase.storage
+            .from(bucket)
+            .remove([storagePath])
+
+        if (error) throw error
+        return { error: null }
+    } catch (err) {
+        console.error('[organizationService] Error deleting ticket banner:', err)
+        return { error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }

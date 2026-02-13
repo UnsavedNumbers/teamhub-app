@@ -633,7 +633,7 @@ export function LocationAutocomplete({
   return (
     <div ref={containerRef} className="pa-form-group" style={{ position: 'relative' }}>
       {label && (
-        <label className={`pa-label ${required ? 'pa-label--required' : ''}`}>{label}</label>
+        <label className={`oa-label ${required ? 'oa-label--required' : ''}`}>{label}</label>
       )}
 
       <div style={{ position: 'relative' }}>
@@ -812,3 +812,4 @@ export function LocationAutocomplete({
     </div>
   )
 }
+

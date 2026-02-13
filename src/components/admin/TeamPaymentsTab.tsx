@@ -269,7 +269,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
             <span 
-              className="pa-label dark:text-slate-400" 
+              className="oa-label dark:text-slate-400" 
               style={{ 
                 color: overallStatus === 'error'
                   ? 'rgb(239, 68, 68)'
@@ -302,7 +302,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
         {/* Total Due Card */}
         <div className="pa-card" style={{ padding: 'var(--pa-space-5)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
-            <span className="pa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
+            <span className="oa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
               Total Due
             </span>
           </div>
@@ -314,7 +314,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
         {/* Total Paid Card */}
         <div className="pa-card" style={{ padding: 'var(--pa-space-5)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
-            <span className="pa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
+            <span className="oa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
               Total Paid
             </span>
           </div>
@@ -326,7 +326,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
         {/* Outstanding Balance Card */}
         <div className="pa-card" style={{ padding: 'var(--pa-space-5)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
-            <span className="pa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
+            <span className="oa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
               Outstanding
             </span>
           </div>
@@ -352,7 +352,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
-            <span className="pa-label dark:text-slate-400" style={{ color: 'rgb(16, 185, 129)', margin: 0, fontWeight: 700 }}>
+            <span className="oa-label dark:text-slate-400" style={{ color: 'rgb(16, 185, 129)', margin: 0, fontWeight: 700 }}>
               Paid
             </span>
           </div>
@@ -372,7 +372,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
-              <span className="pa-label dark:text-slate-400" style={{ color: 'rgb(251, 191, 36)', margin: 0, fontWeight: 700 }}>
+              <span className="oa-label dark:text-slate-400" style={{ color: 'rgb(251, 191, 36)', margin: 0, fontWeight: 700 }}>
                 Partial
               </span>
             </div>
@@ -393,7 +393,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
-              <span className="pa-label dark:text-slate-400" style={{ color: 'rgb(239, 68, 68)', margin: 0, fontWeight: 700 }}>
+              <span className="oa-label dark:text-slate-400" style={{ color: 'rgb(239, 68, 68)', margin: 0, fontWeight: 700 }}>
                 Overdue
               </span>
             </div>
@@ -566,3 +566,4 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
     </div>
   )
 }
+

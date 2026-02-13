@@ -263,7 +263,7 @@ export function EmptyRosterState({
         >
           <label
             htmlFor="athlete-select"
-            className="pa-label dark:text-slate-300"
+            className="oa-label dark:text-slate-300"
             style={{
               textAlign: 'left',
               color: 'var(--pa-n700)',
@@ -335,3 +335,4 @@ export function EmptyRosterState({
     </div>
   )
 }
+

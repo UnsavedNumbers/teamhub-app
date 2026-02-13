@@ -650,7 +650,7 @@ export default function EditTicketType() {
         <form onSubmit={handleSubmit} className="oa-ticketing-form-stack">
           <Card title="Select Ticket Type">
             <div className="oa-ticketing-field-stack">
-              <label className="pa-label oa-label">Ticket type</label>
+              <label className="oa-label oa-label">Ticket type</label>
               <select
                 className="oa-input"
                 value={selectedTicketTypeId}
@@ -684,7 +684,7 @@ export default function EditTicketType() {
               />
 
               <div className="oa-form-group">
-                <label className="pa-label oa-label">Description (optional)</label>
+                <label className="oa-label oa-label">Description (optional)</label>
                 <textarea
                   className="oa-input oa-textarea"
                   rows={3}
@@ -735,7 +735,7 @@ export default function EditTicketType() {
           <Card title={t('ticketing.reservedSeating.admin.seatingMode')}>
             <div className="oa-ticketing-field-stack">
               <div className="oa-form-group">
-                <label className="pa-label oa-label">Select seating mode</label>
+                <label className="oa-label oa-label">Select seating mode</label>
                 <div className="oa-toggle-group" role="group" aria-label="Seating mode">
                   <button
                     type="button"
@@ -773,7 +773,7 @@ export default function EditTicketType() {
 
               {seatingMode === 'reserved_seating' && hasSeatMaps && (
                 <div className="oa-ticketing-field-stack">
-                  <label className="pa-label oa-label">{t('ticketing.reservedSeating.admin.seatMap')}</label>
+                  <label className="oa-label oa-label">{t('ticketing.reservedSeating.admin.seatMap')}</label>
                   <select
                     className="oa-input"
                     value={seatMapId}
@@ -821,7 +821,7 @@ export default function EditTicketType() {
           <Card title="Sales Window">
             <div className="oa-form-grid oa-form-grid-2 oa-gap-4">
               <div className="oa-ticketing-field-stack">
-                <span className="pa-label oa-label">Sales start</span>
+                <span className="oa-label oa-label">Sales start</span>
                 {salesStartLocked && (
                   <InlineNotice
                     tone="info"
@@ -847,7 +847,7 @@ export default function EditTicketType() {
                 </div>
               </div>
               <div className="oa-ticketing-field-stack">
-                <span className="pa-label oa-label">Sales end</span>
+                <span className="oa-label oa-label">Sales end</span>
                 <div className="oa-form-grid oa-form-grid-2 oa-gap-3">
                   <DatePicker
                     label="Date"
@@ -900,3 +900,4 @@ export default function EditTicketType() {
     </div>
   )
 }
+
