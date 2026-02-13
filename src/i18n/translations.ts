@@ -1234,10 +1234,10 @@ export const en = {
             viewAll: 'View All',
             viewAllActivity: 'View All Activity',
             // Quick action labels
-            actionNewEvent: 'New Event',
-            actionAddUser: 'Add User',
+            actionNewEvent: 'Scan Tickets',
+            actionAddUser: 'Video Library',
             actionAssignFee: 'Assign Fee',
-            actionManageTeams: 'Manage Teams',
+            actionManageTeams: 'New Event',
             actionPhotos: 'Photos',
             actionAnnouncement: 'Announcement',
             // Content
@@ -5597,10 +5597,10 @@ export const es = {
             viewAll: 'Ver Todo',
             viewAllActivity: 'Ver Toda la Actividad',
             // Quick action labels
-            actionNewEvent: 'Nuevo Evento',
-            actionAddUser: 'Agregar Usuario',
+            actionNewEvent: 'Escanear boletos',
+            actionAddUser: 'Biblioteca de videos',
             actionAssignFee: 'Asignar Cuota',
-            actionManageTeams: 'Gestionar Equipos',
+            actionManageTeams: 'Nuevo Evento',
             actionPhotos: 'Fotos',
             actionAnnouncement: 'Anuncio',
             // Content
