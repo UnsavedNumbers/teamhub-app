@@ -377,15 +377,6 @@ export default function EditTicketType() {
       return
     }
 
-    if (salesStartLocked && selectedTicketType.sales_start_at) {
-      const currentStart = new Date(selectedTicketType.sales_start_at).getTime()
-      const nextStart = salesStartIso ? new Date(salesStartIso).getTime() : NaN
-      if (currentStart !== nextStart) {
-        setFormError('Sales start is already in the past and can no longer be edited.')
-        return
-      }
-    }
-
     let capacityTotal: number | null = null
     let capacityRemaining: number | null = null
 
@@ -429,7 +420,7 @@ export default function EditTicketType() {
 
     setFormError(null)
 
-    mutation.mutate({
+    const updates: TicketTypeUpdate = {
       name: trimmedName,
       description: description.trim() || null,
       price_cents: priceLocked ? selectedTicketType.price_cents : priceCents,
@@ -438,10 +429,16 @@ export default function EditTicketType() {
       capacity_remaining: capacityRemaining,
       seating_mode: seatingMode,
       seat_map_id: seatingMode === 'reserved_seating' ? seatMapId : null,
-      sales_start_at: salesStartIso,
       sales_end_at: salesEndIso,
       is_active: isActive,
-    })
+    }
+
+    // Past sales starts are immutable; avoid sending a normalized value that can differ in precision.
+    if (!salesStartLocked) {
+      updates.sales_start_at = salesStartIso
+    }
+
+    mutation.mutate(updates)
   }
 
   if (!hasEventParam) {
@@ -822,12 +819,6 @@ export default function EditTicketType() {
             <div className="oa-form-grid oa-form-grid-2 oa-gap-4">
               <div className="oa-ticketing-field-stack">
                 <span className="oa-label oa-label">Sales start</span>
-                {salesStartLocked && (
-                  <InlineNotice
-                    tone="info"
-                    message="Sales start is already in the past and can no longer be edited."
-                  />
-                )}
                 <div className="oa-form-grid oa-form-grid-2 oa-gap-3">
                   <DatePicker
                     label="Date"
@@ -845,6 +836,12 @@ export default function EditTicketType() {
                     isDisabled={salesStartLocked}
                   />
                 </div>
+                {salesStartLocked && (
+                  <InlineNotice
+                    tone="info"
+                    message="Sales start is already in the past and can no longer be edited."
+                  />
+                )}
               </div>
               <div className="oa-ticketing-field-stack">
                 <span className="oa-label oa-label">Sales end</span>

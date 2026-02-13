@@ -884,6 +884,13 @@ const admin = {
                 icon: 'event_seat',
                 requiresOrg: true,
             },
+            edit: {
+                path: '/admin/ticketing/seat-maps/:seatMapId/edit',
+                params: ['seatMapId'] as const,
+                label: 'Seat Map Builder',
+                icon: 'event_seat',
+                requiresOrg: true,
+            },
             builder: {
                 path: '/admin/ticketing/events/:eventId/seat-maps/:seatMapId',
                 params: ['eventId', 'seatMapId'] as const,

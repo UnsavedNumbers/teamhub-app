@@ -570,6 +570,7 @@ function AppWithTheme() {
               <Route path="ticketing/scanner" element={<FeatureGateRoute routeKey="admin.ticketingScanner"><TicketScanner /></FeatureGateRoute>} />
               <Route path="ticketing/events" element={<FeatureGateRoute routeKey="admin.ticketingEvents.list"><Suspense fallback={<AdminLoadingSpinner />}><TicketingEvents /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/seat-maps" element={<FeatureGateRoute routeKey="admin.ticketingEvents.seatMaps.list"><Suspense fallback={<AdminLoadingSpinner />}><TicketingSeatMaps /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/seat-maps/:seatMapId/edit" element={<FeatureGateRoute routeKey="admin.ticketingEvents.seatMaps.edit"><Suspense fallback={<AdminLoadingSpinner />}><SeatMapBuilder /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/new" element={<FeatureGateRoute routeKey="admin.ticketingEvents.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateTicketedEvent /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/:id/ticket-types/new" element={<FeatureGateRoute routeKey="admin.ticketingEvents.ticketTypes.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateTicketType /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/:id/ticket-types/edit" element={<FeatureGateRoute routeKey="admin.ticketingEvents.ticketTypes.edit"><Suspense fallback={<AdminLoadingSpinner />}><EditTicketType /></Suspense></FeatureGateRoute>} />

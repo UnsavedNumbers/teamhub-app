@@ -71,6 +71,10 @@ export default function EventsFilters({
         onFiltersChange({ ...filters, status: next })
     }
 
+    const handleVisibleToFansToggle = () => {
+        onFiltersChange({ ...filters, visibleToFans: !filters.visibleToFans })
+    }
+
     const activeFilterCount =
         filters.search.length +
         filters.eventTypes.length +
@@ -78,6 +82,7 @@ export default function EventsFilters({
         filters.sportIds.length +
         filters.seasonIds.length +
         filters.status.length +
+        (filters.visibleToFans ? 1 : 0) +
         (filters.dateFrom ? 1 : 0) +
         (filters.dateTo ? 1 : 0)
 
@@ -110,6 +115,9 @@ export default function EventsFilters({
     filters.status.forEach((status) => {
         activeFilterChips.push({ key: `status-${status}`, label: status.charAt(0).toUpperCase() + status.slice(1) })
     })
+    if (filters.visibleToFans) {
+        activeFilterChips.push({ key: 'visibleToFans', label: 'Visible to Fans' })
+    }
 
     const handleRemoveChip = (key: string) => {
         if (key === 'search') {
@@ -133,6 +141,8 @@ export default function EventsFilters({
         } else if (key.startsWith('status-')) {
             const status = key.replace('status-', '') as 'scheduled' | 'cancelled' | 'completed' | 'postponed'
             handleStatusToggle(status)
+        } else if (key === 'visibleToFans') {
+            onFiltersChange({ ...filters, visibleToFans: false })
         }
     }
 
@@ -246,6 +256,16 @@ export default function EventsFilters({
                                         {status.charAt(0).toUpperCase() + status.slice(1)}
                                     </button>
                                 ))}
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                                <button
+                                    onClick={handleVisibleToFansToggle}
+                                    className={filterChipBase}
+                                    style={filters.visibleToFans ? chipSelectedStyle : chipDefaultStyle}
+                                    type="button"
+                                >
+                                    Visible to Fans
+                                </button>
                             </div>
                         </div>
                     </div>
