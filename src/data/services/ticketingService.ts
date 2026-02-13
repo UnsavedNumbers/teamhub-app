@@ -783,68 +783,140 @@ export async function getSeatMapsForOrgAdmin(orgId: string): Promise<AdminSeatMa
 
   try {
     const supabaseAny = supabase as any
-    const { data, error } = await supabaseAny
+    type RawSeatMapRecord = {
+      id: string
+      name: string | null
+      org_id?: string | null
+      venue_id?: string | null
+      team_id?: string | null
+      ticketed_event_id?: string | null
+      status?: string | null
+      version?: number | null
+      chart_image_url?: string | null
+      created_at?: string | null
+      updated_at?: string | null
+      published_at?: string | null
+    }
+
+    const seatMapById = new Map<string, RawSeatMapRecord>()
+    const mergeRows = (rows: unknown[] | null | undefined) => {
+      for (const row of rows ?? []) {
+        const typed = row as RawSeatMapRecord
+        if (typed?.id) {
+          seatMapById.set(typed.id, typed)
+        }
+      }
+    }
+
+    const { data: primaryRows, error: primaryError } = await supabaseAny
       .from('seat_maps')
-      .select(`
-        id,
-        name,
-        org_id,
-        venue_id,
-        team_id,
-        ticketed_event_id,
-        status,
-        version,
-        chart_image_url,
-        created_at,
-        updated_at,
-        published_at,
-        venues(id, name),
-        teams(id, name),
-        ticketed_events(
-          id,
-          title,
-          status,
-          starts_at,
-          org_id
-        )
-      `)
+      .select('*')
       .eq('org_id', orgId)
       .order('updated_at', { ascending: false })
 
-    if (error) throw error
+    if (!primaryError) {
+      mergeRows(primaryRows as unknown[])
+    }
 
-    const seatMaps = (data ?? []) as Array<{
+    // Legacy fallback: older schemas/policies may still scope seat_maps via ticketed_events.org_id.
+    if (seatMapById.size === 0) {
+      const { data: legacyRows, error: legacyError } = await supabaseAny
+        .from('seat_maps')
+        .select('*, ticketed_events!inner(id, org_id)')
+        .eq('ticketed_events.org_id', orgId)
+        .order('updated_at', { ascending: false })
+
+      if (legacyError && primaryError) throw primaryError
+      if (legacyError) throw legacyError
+      mergeRows(legacyRows as unknown[])
+    } else if (primaryError) {
+      throw primaryError
+    }
+
+    const seatMaps = Array.from(seatMapById.values()).sort((a, b) => {
+      const aTime = new Date(a.updated_at ?? a.created_at ?? '').getTime()
+      const bTime = new Date(b.updated_at ?? b.created_at ?? '').getTime()
+      if (Number.isNaN(aTime) || Number.isNaN(bTime)) return 0
+      return bTime - aTime
+    })
+
+    const venueIds = Array.from(
+      new Set(
+        seatMaps
+          .map((item) => item.venue_id)
+          .filter((value): value is string => Boolean(value)),
+      ),
+    )
+    let venueNameById = new Map<string, string>()
+
+    if (venueIds.length > 0) {
+      const { data: venueRows, error: venueRowsError } = await supabaseAny
+        .from('venues')
+        .select('id, name')
+        .in('id', venueIds)
+
+      if (!venueRowsError && venueRows) {
+        venueNameById = new Map(
+          (venueRows as Array<{ id: string; name: string }>).map((venue) => [venue.id, venue.name]),
+        )
+      }
+    }
+
+    const teamIds = Array.from(
+      new Set(
+        seatMaps
+          .map((item) => item.team_id)
+          .filter((value): value is string => Boolean(value)),
+      ),
+    )
+    let teamNameById = new Map<string, string>()
+
+    if (teamIds.length > 0) {
+      const { data: teamRows, error: teamRowsError } = await supabaseAny
+        .from('teams')
+        .select('id, name')
+        .in('id', teamIds)
+
+      if (!teamRowsError && teamRows) {
+        teamNameById = new Map(
+          (teamRows as Array<{ id: string; name: string }>).map((team) => [team.id, team.name]),
+        )
+      }
+    }
+
+    const ticketedEventIds = Array.from(
+      new Set(
+        seatMaps
+          .map((item) => item.ticketed_event_id)
+          .filter((value): value is string => Boolean(value)),
+      ),
+    )
+    let eventById = new Map<string, {
       id: string
-      name: string
+      title: string
+      status: TicketedEvent['status']
+      starts_at: string
       org_id: string
-      venue_id: string | null
-      team_id: string | null
-      ticketed_event_id: string | null
-      status: string
-      version: number
-      chart_image_url: string | null
-      created_at: string
-      updated_at: string
-      published_at: string | null
-      venues: { id: string; name: string } | null
-      teams: { id: string; name: string } | null
-      ticketed_events:
-        | {
+    }>()
+
+    if (ticketedEventIds.length > 0) {
+      const { data: eventRows, error: eventRowsError } = await supabaseAny
+        .from('ticketed_events')
+        .select('id, title, status, starts_at, org_id')
+        .in('id', ticketedEventIds)
+
+      if (!eventRowsError && eventRows) {
+        eventById = new Map(
+          (eventRows as Array<{
             id: string
             title: string
             status: TicketedEvent['status']
             starts_at: string
             org_id: string
-          }
-        | Array<{
-            id: string
-            title: string
-            status: TicketedEvent['status']
-            starts_at: string
-            org_id: string
-          }>
-        | null
-    }>
+          }>).map((event) => [event.id, event]),
+        )
+      }
+    }
 
     const seatMapIds = seatMaps.map((item) => item.id)
     let seatCountByMap = new Map<string, number>()
@@ -855,13 +927,13 @@ export async function getSeatMapsForOrgAdmin(orgId: string): Promise<AdminSeatMa
         .select('seat_map_id')
         .in('seat_map_id', seatMapIds)
 
-      if (seatRowsError) throw seatRowsError
-
-      seatCountByMap = (seatRows as Array<{ seat_map_id: string }>).reduce((acc, row) => {
-        const current = acc.get(row.seat_map_id) ?? 0
-        acc.set(row.seat_map_id, current + 1)
-        return acc
-      }, new Map<string, number>())
+      if (!seatRowsError && seatRows) {
+        seatCountByMap = (seatRows as Array<{ seat_map_id: string }>).reduce((acc, row) => {
+          const current = acc.get(row.seat_map_id) ?? 0
+          acc.set(row.seat_map_id, current + 1)
+          return acc
+        }, new Map<string, number>())
+      }
     }
 
     // Count events referencing each seat map
@@ -870,6 +942,7 @@ export async function getSeatMapsForOrgAdmin(orgId: string): Promise<AdminSeatMa
       const { data: usageRows, error: usageError } = await supabaseAny
         .from('events')
         .select('seat_map_id')
+        .eq('org_id', orgId)
         .in('seat_map_id', seatMapIds)
 
       if (!usageError && usageRows) {
@@ -884,28 +957,26 @@ export async function getSeatMapsForOrgAdmin(orgId: string): Promise<AdminSeatMa
     }
 
     return seatMaps.map((item) => {
-      const event = Array.isArray(item.ticketed_events)
-        ? item.ticketed_events[0]
-        : item.ticketed_events
+      const event = item.ticketed_event_id ? eventById.get(item.ticketed_event_id) : null
 
       return {
         id: item.id,
-        name: item.name,
-        org_id: item.org_id,
-        venue_id: item.venue_id,
-        team_id: item.team_id,
-        ticketed_event_id: item.ticketed_event_id,
+        name: item.name?.trim() || 'Untitled seat map',
+        org_id: item.org_id ?? orgId,
+        venue_id: item.venue_id ?? null,
+        team_id: item.team_id ?? null,
+        ticketed_event_id: item.ticketed_event_id ?? null,
         status: (item.status ?? 'draft') as 'draft' | 'published',
         version: item.version ?? 1,
-        chart_image_url: item.chart_image_url,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
+        chart_image_url: item.chart_image_url ?? null,
+        created_at: item.created_at ?? item.updated_at ?? new Date().toISOString(),
+        updated_at: item.updated_at ?? item.created_at ?? new Date().toISOString(),
         published_at: item.published_at ?? null,
-        venue_name: item.venues?.name ?? null,
-        team_name: item.teams?.name ?? null,
+        venue_name: item.venue_id ? venueNameById.get(item.venue_id) ?? null : null,
+        team_name: item.team_id ? teamNameById.get(item.team_id) ?? null : null,
         event_title: event?.title ?? 'Untitled event',
         event_status: event?.status ?? 'draft',
-        event_starts_at: event?.starts_at ?? item.created_at,
+        event_starts_at: event?.starts_at ?? item.created_at ?? item.updated_at ?? new Date().toISOString(),
         seat_count: seatCountByMap.get(item.id) ?? 0,
         usage_count: usageCountByMap.get(item.id) ?? 0,
       }
