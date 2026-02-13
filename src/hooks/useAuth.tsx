@@ -115,6 +115,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Simplified error handling (Bug Prevention #4 & #9)
         if (userError || !userData) {
+          const userErrorMessage = (userError?.message || '').toLowerCase()
+          const isNetworkError =
+            userErrorMessage.includes('networkerror') ||
+            userErrorMessage.includes('failed to fetch') ||
+            userErrorMessage.includes('network request failed')
+
+          if (isNetworkError) {
+            console.warn('Profile fetch network error:', userError)
+            const { data: sessionData } = await supabase.auth.getSession()
+            const sessionUser = sessionData.session?.user
+
+            if (mountedRef.current && sessionUser?.id === userId) {
+              const metadata = sessionUser.user_metadata ?? {}
+              const fallbackProfile: UserProfile = {
+                id: sessionUser.id,
+                email: sessionUser.email ?? null,
+                phone: typeof metadata.phone === 'string' ? metadata.phone : '',
+                first_name: '',
+                last_name: '',
+                display_name:
+                  typeof metadata.display_name === 'string' ? metadata.display_name : null,
+                home_location: null,
+                home_zipcode:
+                  typeof metadata.home_zipcode === 'string' ? metadata.home_zipcode : undefined,
+                role: undefined,
+                family_id: null,
+                org_id: null,
+                organizations: [],
+                isPlatformAdmin: false,
+                platformAdminRole: null,
+                requiresOrgSetup: Boolean(metadata.requires_org_setup),
+              }
+              setProfile((prev) => prev ?? fallbackProfile)
+              setOrganizations([])
+            }
+            return
+          }
+
           console.error('Profile fetch error:', userError)
           await supabase.auth.signOut()
           setProfile(null)
@@ -256,6 +294,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(profileData)
         setOrganizations(orgs)
       } catch (err) {
+        const message = err instanceof Error ? err.message.toLowerCase() : ''
+        const isNetworkError =
+          message.includes('networkerror') ||
+          message.includes('failed to fetch') ||
+          message.includes('network request failed')
+
+        if (isNetworkError) {
+          console.warn('Error in fetchProfile (network):', err)
+          return
+        }
+
         console.error('Error in fetchProfile:', err)
         if (mountedRef.current) {
           setProfile(null)

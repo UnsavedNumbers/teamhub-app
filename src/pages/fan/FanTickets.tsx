@@ -49,15 +49,7 @@ interface FanTicket {
 // QR code refresh interval (30 seconds)
 const QR_REFRESH_INTERVAL = 30000
 
-// HMAC key for QR code generation (in production, this would come from server)
-const generateQRPayload = (ticketId: string, timestamp: number): string => {
-  // In production: ticket_id + timestamp + HMAC signature from server
-  return JSON.stringify({
-    ticket_id: ticketId,
-    timestamp,
-    version: 1,
-  })
-}
+const generateQRPayload = (qrCodeData: string, _timestamp: number): string => qrCodeData
 
 export default function FanTickets() {
   const t = useT()
@@ -365,7 +357,7 @@ function TicketCard({ ticket, onClick }: TicketCardProps) {
     }
   }, [showQR, ticket.status])
 
-  const qrPayload = generateQRPayload(ticket.ticket_id, qrTimestamp)
+  const qrPayload = generateQRPayload(ticket.qr_code_data, qrTimestamp)
 
   return (
     <div className="fan-ticket-card-horizontal">
@@ -591,7 +583,7 @@ export function FanTicketDetail() {
     )
   }
 
-  const qrPayload = generateQRPayload(ticket.ticket_id, qrTimestamp)
+  const qrPayload = generateQRPayload(ticket.qr_code_data, qrTimestamp)
 
   return (
     <>
