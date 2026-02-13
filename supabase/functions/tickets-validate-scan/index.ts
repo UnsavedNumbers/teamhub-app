@@ -86,9 +86,13 @@ serve(async (req) => {
     return json(req, { error: "Server misconfigured" }, 500)
   }
 
+  // Client with user auth - used only for auth.getUser() to verify scanner identity
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
     global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
   })
+  // Admin client - bypasses RLS for ticket lookups. Scanner auth is enforced above;
+  // ticket lookup must see all tickets (scanner may be coach/org_admin, not platform admin).
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
 
   // Parse payload
   let payload: any
@@ -137,7 +141,7 @@ serve(async (req) => {
     }
 
     // Get user data
-    const { data: userData } = await supabase
+    const { data: userData } = await supabaseAdmin
       .from("users")
       .select("id, org_id, role")
       .eq("id", user.id)
@@ -148,7 +152,7 @@ serve(async (req) => {
     }
 
     // Get the event to find its org_id
-    const { data: eventData } = await supabase
+    const { data: eventData } = await supabaseAdmin
       .from("ticketed_events")
       .select("org_id")
       .eq("id", ticketedEventId)
@@ -166,7 +170,7 @@ serve(async (req) => {
 
     // If no access via users.role, check organization_members table for the EVENT's org
     if (!hasAccess) {
-      const { data: orgMember } = await supabase
+      const { data: orgMember } = await supabaseAdmin
         .from("organization_members")
         .select("role")
         .eq("user_id", user.id)
@@ -187,7 +191,7 @@ serve(async (req) => {
     // Staff link token
     const tokenHash = await hashToken(staffLinkToken)
 
-    const { data: staffLink } = await supabase
+    const { data: staffLink } = await supabaseAdmin
       .from("ticket_staff_links")
       .select("org_id, ticketed_event_id, expires_at, max_uses, use_count")
       .eq("token_hash", tokenHash)
@@ -214,7 +218,7 @@ serve(async (req) => {
     authorizedEventId = staffLink.ticketed_event_id
 
     // Increment use count
-    await supabase
+    await supabaseAdmin
       .from("ticket_staff_links")
       .update({ use_count: staffLink.use_count + 1 })
       .eq("token_hash", tokenHash)
@@ -223,7 +227,7 @@ serve(async (req) => {
   }
 
   // Load event to verify org
-  const { data: event } = await supabase
+  const { data: event } = await supabaseAdmin
     .from("ticketed_events")
     .select("id, org_id")
     .eq("id", ticketedEventId)
@@ -243,7 +247,7 @@ serve(async (req) => {
   if (entryCode) {
     const normalized = normalizeEntryCode(entryCode)
     const entryCandidates = buildEntryCodeCandidates(entryCode)
-    const query = supabase
+    const query = supabaseAdmin
       .from("tickets")
       .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
       .in("entry_code", entryCandidates)
@@ -264,7 +268,7 @@ serve(async (req) => {
   } else if (qrTokenRaw) {
     // First try to find by qr_token_hash
     qrTokenHash = await hashToken(qrTokenRaw)
-    const { data: tokenMatch, error: qrHashError } = await supabase
+    const { data: tokenMatch, error: qrHashError } = await supabaseAdmin
       .from("tickets")
       .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
       .eq("qr_token_hash", qrTokenHash)
@@ -285,7 +289,7 @@ serve(async (req) => {
       // Normalize and try entry_code lookup
       const normalizedFromQr = normalizeEntryCode(qrTokenRaw)
       const entryCandidates = buildEntryCodeCandidates(qrTokenRaw)
-      const query = supabase
+      const query = supabaseAdmin
         .from("tickets")
         .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
         .in("entry_code", entryCandidates)
@@ -332,18 +336,18 @@ serve(async (req) => {
       const normalizedCandidate = normalizedEntryFromPayload || normalizedFromQrPayload
       const entryCandidates = buildEntryCodeCandidates(normalizedCandidate as string)
 
-      const { count: codeAnyCount, error: codeAnyError } = await supabase
+      const { count: codeAnyCount, error: codeAnyError } = await supabaseAdmin
         .from("tickets")
         .select("id", { count: "exact", head: true })
         .in("entry_code", entryCandidates)
 
-      const { count: codeInOrgCount, error: codeInOrgError } = await supabase
+      const { count: codeInOrgCount, error: codeInOrgError } = await supabaseAdmin
         .from("tickets")
         .select("id", { count: "exact", head: true })
         .in("entry_code", entryCandidates)
         .eq("org_id", orgId as string)
 
-      const { count: codeInEventCount, error: codeInEventError } = await supabase
+      const { count: codeInEventCount, error: codeInEventError } = await supabaseAdmin
         .from("tickets")
         .select("id", { count: "exact", head: true })
         .in("entry_code", entryCandidates)
@@ -364,18 +368,18 @@ serve(async (req) => {
     }
 
     if (qrTokenHash) {
-      const { count: hashAnyCount, error: hashAnyError } = await supabase
+      const { count: hashAnyCount, error: hashAnyError } = await supabaseAdmin
         .from("tickets")
         .select("id", { count: "exact", head: true })
         .eq("qr_token_hash", qrTokenHash)
 
-      const { count: hashInOrgCount, error: hashInOrgError } = await supabase
+      const { count: hashInOrgCount, error: hashInOrgError } = await supabaseAdmin
         .from("tickets")
         .select("id", { count: "exact", head: true })
         .eq("qr_token_hash", qrTokenHash)
         .eq("org_id", orgId as string)
 
-      const { count: hashInEventCount, error: hashInEventError } = await supabase
+      const { count: hashInEventCount, error: hashInEventError } = await supabaseAdmin
         .from("tickets")
         .select("id", { count: "exact", head: true })
         .eq("qr_token_hash", qrTokenHash)
@@ -395,7 +399,7 @@ serve(async (req) => {
     }
 
     // Record scan attempt
-    await supabase.from("ticket_scans").insert({
+    await supabaseAdmin.from("ticket_scans").insert({
       org_id: orgId!,
       ticketed_event_id: ticketedEventId,
       scanner_user_id: scannerUserId,
@@ -416,26 +420,26 @@ serve(async (req) => {
   // Validate event match (unless force_validate)
   if (!forceValidate && ticket.ticketed_event_id !== ticketedEventId) {
     // Load event names for mismatch message
-    const { data: ticketEvent } = await supabase
+    const { data: ticketEvent } = await supabaseAdmin
       .from("ticketed_events")
       .select("id, title")
       .eq("id", ticket.ticketed_event_id)
       .single()
     
-    const { data: selectedEvent } = await supabase
+    const { data: selectedEvent } = await supabaseAdmin
       .from("ticketed_events")
       .select("id, title")
       .eq("id", ticketedEventId)
       .single()
 
     // Load ticket type for context
-    const { data: ticketType } = await supabase
+    const { data: ticketType } = await supabaseAdmin
       .from("ticket_types")
       .select("name")
       .eq("id", ticket.ticket_type_id)
       .single()
 
-    await supabase.from("ticket_scans").insert({
+    await supabaseAdmin.from("ticket_scans").insert({
       org_id: orgId!,
       ticketed_event_id: ticketedEventId,
       ticket_id: ticket.id,
@@ -462,7 +466,7 @@ serve(async (req) => {
 
   // Check status
   if (ticket.status === "refunded") {
-    await supabase.from("ticket_scans").insert({
+    await supabaseAdmin.from("ticket_scans").insert({
       org_id: orgId!,
       ticketed_event_id: ticketedEventId,
       ticket_id: ticket.id,
@@ -481,7 +485,7 @@ serve(async (req) => {
   }
 
   if (ticket.status === "voided") {
-    await supabase.from("ticket_scans").insert({
+    await supabaseAdmin.from("ticket_scans").insert({
       org_id: orgId!,
       ticketed_event_id: ticketedEventId,
       ticket_id: ticket.id,
@@ -501,7 +505,7 @@ serve(async (req) => {
 
   if (ticket.status === "used") {
     // Load original scan info
-    const { data: originalScan } = await supabase
+    const { data: originalScan } = await supabaseAdmin
       .from("ticket_scans")
       .select("scanned_at, client_device_id")
       .eq("ticket_id", ticket.id)
@@ -510,7 +514,7 @@ serve(async (req) => {
       .limit(1)
       .single()
 
-    await supabase.from("ticket_scans").insert({
+    await supabaseAdmin.from("ticket_scans").insert({
       org_id: orgId!,
       ticketed_event_id: ticketedEventId,
       ticket_id: ticket.id,
@@ -540,7 +544,7 @@ serve(async (req) => {
 
   // Atomic update: set ticket used and insert scan
   const now = new Date().toISOString()
-  const { error: updateError } = await supabase
+  const { error: updateError } = await supabaseAdmin
     .from("tickets")
     .update({
       status: "used",
@@ -552,13 +556,13 @@ serve(async (req) => {
 
   if (updateError) {
     // Race condition - ticket was used between check and update
-    const { data: updatedTicket } = await supabase
+    const { data: updatedTicket } = await supabaseAdmin
       .from("tickets")
       .select("used_at")
       .eq("id", ticket.id)
       .single()
 
-    await supabase.from("ticket_scans").insert({
+    await supabaseAdmin.from("ticket_scans").insert({
       org_id: orgId!,
       ticketed_event_id: ticketedEventId,
       ticket_id: ticket.id,
@@ -577,7 +581,7 @@ serve(async (req) => {
 
   // Log cross-event admission if applicable
   if (crossEventAdmission && ticket.ticketed_event_id !== ticketedEventId) {
-    await supabase.from("cross_event_admissions").insert({
+    await supabaseAdmin.from("cross_event_admissions").insert({
       ticket_id: ticket.id,
       ticket_event_id: ticket.ticketed_event_id,
       admitted_at_event_id: ticketedEventId,
@@ -589,7 +593,7 @@ serve(async (req) => {
   }
 
   // Insert scan record
-  await supabase.from("ticket_scans").insert({
+  await supabaseAdmin.from("ticket_scans").insert({
     org_id: orgId!,
     ticketed_event_id: ticketedEventId,
     ticket_id: ticket.id,
@@ -601,7 +605,7 @@ serve(async (req) => {
   })
 
   // Update first_scan_at on event if this is first scan
-  await supabase
+  await supabaseAdmin
     .from("ticketed_events")
     .update({ first_scan_at: now })
     .eq("id", ticketedEventId)
@@ -615,21 +619,21 @@ serve(async (req) => {
     .single()
 
   // Get counts (validated this session, remaining capacity)
-  const { count: validatedCount } = await supabase
+  const { count: validatedCount } = await supabaseAdmin
     .from("ticket_scans")
     .select("*", { count: "exact", head: true })
     .eq("ticketed_event_id", ticketedEventId)
     .eq("scan_result", "valid")
     .gte("scanned_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24h
 
-  const { data: ticketTypeData } = await supabase
+  const { data: ticketTypeData } = await supabaseAdmin
     .from("ticket_types")
     .select("capacity_total, capacity_remaining")
     .eq("id", ticket.ticket_type_id)
     .single()
 
   // Get order context for multi-ticket orders
-  const { data: orderTickets } = await supabase
+  const { data: orderTickets } = await supabaseAdmin
     .from("tickets")
     .select(`
       id,
@@ -680,13 +684,13 @@ serve(async (req) => {
   }
 
   // Load purchaser name for response
-  const { data: order } = await supabase
+  const { data: order } = await supabaseAdmin
     .from("ticket_orders")
     .select("purchaser_name")
     .eq("id", ticket.order_id)
     .single()
 
-  const { data: seatAssignment } = await supabase
+  const { data: seatAssignment } = await supabaseAdmin
     .from("seat_assignments")
     .select(`
       seat_map_sections (
