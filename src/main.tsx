@@ -8,6 +8,11 @@ import './index.css'
 import './styles/toast.css'
 import App from './App.tsx'
 
+// Initialize debug logging system (localhost only)
+if (import.meta.env.DEV) {
+  import('./lib/debug')
+}
+
 // Create React Query client
 const queryClient = new QueryClient({
   defaultOptions: {

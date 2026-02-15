@@ -30,6 +30,7 @@ import { buildEventQuery, buildCalendarEventQuery } from './queryHelpers'
 import { normalizeSupabaseResponse, createServiceResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
 import { validateDeleteEvent, EVENT_ERRORS } from '../../utils/eventValidation'
+import { debug } from '../../lib/debug'
 
 // ============================================================================
 // Helper Functions
@@ -320,8 +321,12 @@ export async function getEvents(
     context: UserContext,
     params: EventsQueryParams = {}
 ): Promise<{ data: CalendarEvent[]; error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        try {
+    console.groupCollapsed(`%cgetEvents: ${JSON.stringify(params)}`, 'color: #666; font-weight: bold;');
+    debug.data('EventsService.getEvents', 'Request', { context: { userId: context.userId, orgId: context.orgId }, params })
+    debug.perf.start('eventsService.getEvents')
+
+    try {
+        if (USE_FAKE_DATA) {
             await simulateDelay()
 
             const permissions = buildPermissions(context)
@@ -348,32 +353,8 @@ export async function getEvents(
                 events = events.filter((e) => ((e as { visibility?: string | null }).visibility ?? null) === 'public')
             }
 
-            // Debug logging in development
-            if (import.meta.env?.DEV) {
-                console.log('[eventsService] Before role filtering:', {
-                    totalEvents: events.length,
-                    permissions: {
-                        canViewAllOrgData: permissions.canViewAllOrgData,
-                        canViewAssignedTeams: permissions.canViewAssignedTeams,
-                        canViewOwnChildrenData: permissions.canViewOwnChildrenData,
-                        assignedTeamIds: permissions.assignedTeamIds,
-                        ownedChildIds: permissions.ownedChildIds,
-                    },
-                    childTeamMemberships: childTeamMemberships.length,
-                    orgId: context.orgId,
-                })
-            }
-
             // Filter by role-based permissions
             events = filterEventsByRole(events, permissions, childTeamMemberships, context.orgId)
-
-            // Debug logging in development
-            if (import.meta.env?.DEV) {
-                console.log('[eventsService] After role filtering:', {
-                    filteredEvents: events.length,
-                    eventIds: events.map((e) => e.id),
-                })
-            }
 
             // Sort by start time
             events.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
@@ -384,14 +365,9 @@ export async function getEvents(
             }
 
             return { data: events, error: null }
-        } catch (err) {
-            console.error('getEvents error:', err)
-            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
         }
-    }
 
-    // Real Supabase implementation - NO FALLBACK
-    try {
+        // Real Supabase implementation - NO FALLBACK
         let query = buildEventQuery(supabase)
 
         // Apply time context
@@ -480,12 +456,17 @@ export async function getEvents(
             ? normalizedData.map(mapSupabaseEventToCalendarEvent)
             : []
 
-        return { data: mappedEvents, error: null }
-    } catch (err) {
-        console.error('getEvents error:', err)
-        const classifiedError = classifySupabaseError(err)
-        return { data: [], error: classifiedError }
-    }
+            debug.perf.end('eventsService.getEvents')
+            debug.data('EventsService.getEvents', 'Response', { eventCount: mappedEvents.length })
+            console.groupEnd()
+            return { data: mappedEvents, error: null }
+        } catch (err) {
+            debug.perf.end('eventsService.getEvents')
+            debug.error('EventsService.getEvents', 'Error', { error: err, params, context: { userId: context.userId, orgId: context.orgId } })
+            const classifiedError = classifySupabaseError(err)
+            console.groupEnd()
+            return { data: [], error: classifiedError }
+        }
 }
 
 /**
@@ -942,7 +923,13 @@ export async function createEvent(
     context: UserContext,
     formData: EventFormData
 ): Promise<{ data: CalendarEvent | null; error: Error | null }> {
+    console.groupCollapsed(`%ccreateEvent: ${formData.title}`, 'color: #666; font-weight: bold;');
+    debug.flow('EventsService.createEvent', 'Started', { eventTitle: formData.title, context: { userId: context.userId, orgId: context.orgId } })
+    debug.perf.start('eventsService.createEvent')
+
     if (USE_FAKE_DATA) {
+        debug.flow('EventsService.createEvent', 'Skipped - demo mode')
+        console.groupEnd()
         return { data: null, error: new Error('Cannot create events in demo mode') }
     }
 
@@ -1089,14 +1076,19 @@ export async function createEvent(
             }
         }
 
-        // Return the full event
-        return getEventDetails(context, eventData.id)
+            // Return the full event
+            debug.perf.end('eventsService.createEvent')
+            debug.flow('EventsService.createEvent', 'Created successfully', { eventId: eventData.id })
+            console.groupEnd()
+            return getEventDetails(context, eventData.id)
 
-    } catch (err) {
-        console.error('createEvent error:', err)
-        const classifiedError = classifySupabaseError(err)
-        return { data: null, error: classifiedError }
-    }
+        } catch (err) {
+            debug.perf.end('eventsService.createEvent')
+            debug.error('EventsService.createEvent', 'Creation failed', { error: err, formData: { title: formData.title, type: formData.type }, context: { userId: context.userId, orgId: context.orgId } })
+            const classifiedError = classifySupabaseError(err)
+            console.groupEnd()
+            return { data: null, error: classifiedError }
+        }
 }
 
 /**
@@ -1107,7 +1099,13 @@ export async function updateEvent(
     eventId: string,
     formData: EventFormData
 ): Promise<{ data: CalendarEvent | null; error: Error | null }> {
+    console.groupCollapsed(`%cupdateEvent: ${eventId} - ${formData.title}`, 'color: #666; font-weight: bold;');
+    debug.flow('EventsService.updateEvent', 'Started', { eventId, eventTitle: formData.title, context: { userId: context.userId, orgId: context.orgId } })
+    debug.perf.start('eventsService.updateEvent')
+
     if (USE_FAKE_DATA) {
+        debug.flow('EventsService.updateEvent', 'Skipped - demo mode')
+        console.groupEnd()
         return { data: null, error: new Error('Cannot update events in demo mode') }
     }
 
@@ -1218,13 +1216,18 @@ export async function updateEvent(
             }
         }
 
-        return getEventDetails(context, eventId)
+            debug.perf.end('eventsService.updateEvent')
+            debug.flow('EventsService.updateEvent', 'Updated successfully', { eventId })
+            console.groupEnd()
+            return getEventDetails(context, eventId)
 
-    } catch (err) {
-        console.error('updateEvent error:', err)
-        const classifiedError = classifySupabaseError(err)
-        return { data: null, error: classifiedError }
-    }
+        } catch (err) {
+            debug.perf.end('eventsService.updateEvent')
+            debug.error('EventsService.updateEvent', 'Update failed', { error: err, eventId, formData: { title: formData.title }, context: { userId: context.userId, orgId: context.orgId } })
+            const classifiedError = classifySupabaseError(err)
+            console.groupEnd()
+            return { data: null, error: classifiedError }
+        }
 }
 
 /**
@@ -1235,7 +1238,13 @@ export async function deleteEvent(
     eventId: string,
     organization: { id: string; roles: string[] } | null
 ): Promise<{ error: Error | null }> {
+    console.groupCollapsed(`%cdeleteEvent: ${eventId}`, 'color: #666; font-weight: bold;');
+    debug.flow('EventsService.deleteEvent', 'Started', { eventId, context: { userId: context.userId, orgId: context.orgId } })
+    debug.perf.start('eventsService.deleteEvent')
+
     if (USE_FAKE_DATA) {
+        debug.flow('EventsService.deleteEvent', 'Skipped - demo mode')
+        console.groupEnd()
         return { error: new Error('Cannot delete events in demo mode') }
     }
 
@@ -1260,13 +1269,19 @@ export async function deleteEvent(
             .delete()
             .eq('id', eventId)
 
-        if (error) throw error
-        return { error: null }
-    } catch (err) {
-        console.error('deleteEvent error:', err)
-        const classifiedError = classifySupabaseError(err)
-        return { error: classifiedError }
-    }
+            if (error) throw error
+
+            debug.perf.end('eventsService.deleteEvent')
+            debug.flow('EventsService.deleteEvent', 'Deleted successfully', { eventId })
+            console.groupEnd()
+            return { error: null }
+        } catch (err) {
+            debug.perf.end('eventsService.deleteEvent')
+            debug.error('EventsService.deleteEvent', 'Deletion failed', { error: err, eventId, context: { userId: context.userId, orgId: context.orgId } })
+            const classifiedError = classifySupabaseError(err)
+            console.groupEnd()
+            return { error: classifiedError }
+        }
 }
 
 // ----------------------------------------------------------------------------

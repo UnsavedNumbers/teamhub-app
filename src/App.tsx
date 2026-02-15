@@ -13,6 +13,7 @@ import { getHostAppContext } from './utils/host'
 import { useOrganizationTheme } from './hooks/useOrganizationTheme'
 import { getLink, getPath, RouteKeys } from './utils/routes'
 import { Toaster } from './components/Toaster'
+import { ConditionalRouteLogger } from './lib/debug/integrations/RouteLogger'
 
 // Marketing Page
 import Marketing from './pages/Marketing'
@@ -327,6 +328,7 @@ function AppWithTheme() {
     <>
       <Toaster />
       <FullScreenLoader />
+      <ConditionalRouteLogger />
       <Routes>
           {/* Marketing Landing Page - Public */}
           <Route path="/" element={<HostHomeRoute />} />

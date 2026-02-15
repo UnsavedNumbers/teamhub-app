@@ -3,6 +3,11 @@ import type { SupabaseExtended } from './supabase.extended.types'
 import { STORAGE_KEYS } from '../constants/storage'
 import { ENV_VAR_NAMES } from '../constants/api'
 
+// Conditionally import debug fetch wrapper for API logging
+const debugFetch = import.meta.env.DEV
+  ? (await import('./debug/integrations/createDebugFetch')).createDebugFetch()
+  : undefined
+
 // Get environment variables directly from import.meta.env (Vite's standard way)
 const supabaseUrl = import.meta.env[ENV_VAR_NAMES.SUPABASE_URL]
 const supabaseAnonKey = import.meta.env[ENV_VAR_NAMES.SUPABASE_ANON_KEY]
@@ -31,7 +36,8 @@ export const supabase: SupabaseClient<SupabaseExtended> = createClient<SupabaseE
         global: {
             headers: {
                 'X-Client-Info': 'youthsports-web'
-            }
+            },
+            fetch: debugFetch
         }
     }
 )

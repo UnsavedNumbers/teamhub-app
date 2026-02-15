@@ -10,6 +10,7 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_TRANSACTION_DELAY_MS } from '../config'
 import type { UserContext, PermissionSet } from '../fake/userContext'
+import { debug } from '../../lib/debug'
 import { calculatePermissions } from '../fake/userContext'
 import {
     fakeFeeAssignments,
@@ -1085,7 +1086,11 @@ export async function markFeeAssignmentAsPaidOffline(
     context: UserContext,
     assignmentId: string
 ): Promise<{ data: { id: string; status: string } | null; error: Error | null }> {
-    if (USE_FAKE_DATA) {
+    return debug.group(`markFeeAssignmentAsPaidOffline: ${assignmentId}`, async () => {
+        debug.flow('PaymentsService.markFeeAssignmentAsPaidOffline', 'Started', { assignmentId, context: { userId: context.userId, orgId: context.orgId } })
+        debug.perf.start('paymentsService.markFeeAssignmentAsPaidOffline')
+
+        if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
             const permissions = buildPermissions(context)
@@ -1142,11 +1147,16 @@ export async function markFeeAssignmentAsPaidOffline(
 
         if (error) throw error
 
-        return { data: { id: data.id, status: data.status }, error: null }
-    } catch (err) {
-        const classified = classifySupabaseError(err)
-        return { data: null, error: classified }
-    }
+            debug.perf.end('paymentsService.markFeeAssignmentAsPaidOffline')
+            debug.flow('PaymentsService.markFeeAssignmentAsPaidOffline', 'Marked as paid', { assignmentId, status: data.status })
+            return { data: { id: data.id, status: data.status }, error: null }
+        } catch (err) {
+            debug.perf.end('paymentsService.markFeeAssignmentAsPaidOffline')
+            debug.error('PaymentsService.markFeeAssignmentAsPaidOffline', 'Failed to mark as paid', { error: err, assignmentId, context: { userId: context.userId, orgId: context.orgId } })
+            const classified = classifySupabaseError(err)
+            return { data: null, error: classified }
+        }
+    })
 }
 
 /**

@@ -17,6 +17,8 @@ import type { OrgMemberRole } from '../contexts/OrganizationContext'
 import { USE_FAKE_DATA } from '../data/config'
 import { getDemoUserContext } from '../data/fake/userContext'
 import { getOrganizationById } from '../data/fake/fakeOrganizations'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+import { debug } from '../lib/debug'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -32,6 +34,9 @@ export default function Login() {
   const navigate = useNavigate()
   const { t } = useI18n()
   const [logoVersion, setLogoVersion] = useState(0)
+
+  // Add lifecycle logging
+  useDebugLifecycle('Login')
 
   // Clean up stale localStorage flags on mount
   useEffect(() => {
@@ -56,13 +61,18 @@ export default function Login() {
     setError(null)
     setLoading(true)
 
+    debug.flow('Login', 'Form submission started', { email, rememberMe })
+    debug.perf.start('login.formSubmission')
+
     const { error } = await signInWithEmail(email, password)
     
     if (error) {
+      debug.perf.end('login.formSubmission')
+      debug.error('Login', 'Authentication failed', { email, error: error.message, errorCode: error.status })
       const errorMessage = mapAuthError(error, t)
-      
+
       // Check if it's an email confirmation issue
-      if (error.message?.toLowerCase().includes('email') && 
+      if (error.message?.toLowerCase().includes('email') &&
           (error.message?.toLowerCase().includes('confirm') || error.message?.toLowerCase().includes('verif'))) {
         setError(`${errorMessage} Please check your email inbox for the confirmation link.`)
       } else if (error.message === 'Invalid login credentials') {
@@ -88,6 +98,8 @@ export default function Login() {
             },
           ]
           const redirectTo = getLoginRedirect(false, organizations, false)
+          debug.perf.end('login.formSubmission')
+          debug.flow('Login', 'Login successful (demo)', { email, redirectTo, roles: demoContext.roles })
           navigate(redirectTo)
           return
         }
@@ -105,6 +117,8 @@ export default function Login() {
           .maybeSingle()
         
         if (adminData) {
+          debug.perf.end('login.formSubmission')
+          debug.flow('Login', 'Login successful (platform admin)', { email, redirectTo: '/platform-admin' })
           navigate('/platform-admin')
           return
         }
@@ -116,7 +130,8 @@ export default function Login() {
           } as any)
 
           if (orgError) {
-            console.error('Error fetching user organizations:', orgError)
+            debug.perf.end('login.formSubmission')
+            debug.error('Login', 'Organization fetch failed, using fallback redirect', { email, error: orgError })
             // Fallback to default redirect if org fetch fails
             const appContext = getHostAppContext()
             navigate(appContext === 'platform-admin' ? '/platform-admin' : '/portal/dashboard')
@@ -166,14 +181,19 @@ export default function Login() {
 
           // Determine redirect based on roles and fan status
           const redirectTo = getLoginRedirect(false, organizations, isFan)
+          debug.perf.end('login.formSubmission')
+          debug.flow('Login', 'Login successful', { email, redirectTo, orgCount: organizations.length, isFan })
           navigate(redirectTo)
         } catch (err) {
+          debug.perf.end('login.formSubmission')
+          debug.error('Login', 'Exception during organization fetch', { email, error: err })
           // Fallback to default redirect if org fetch fails
-          console.error('Exception fetching organizations:', err)
           const appContext = getHostAppContext()
           navigate(appContext === 'platform-admin' ? '/platform-admin' : '/portal/dashboard')
         }
       } else {
+        debug.perf.end('login.formSubmission')
+        debug.error('Login', 'No user after successful auth, using fallback', { email })
         // No user, should not happen but fallback
         navigate('/portal/dashboard')
       }
