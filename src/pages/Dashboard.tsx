@@ -553,13 +553,29 @@ export default function Dashboard() {
                           </p>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                          <Link to={`/portal/calendar/events/${event.id}`} className="w-full sm:w-auto bg-[var(--org-btn-primary-bg)] hover:bg-[var(--org-btn-primary-bg)]/90 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2">
+                          <span className="w-full sm:w-auto bg-[var(--org-btn-primary-bg)] hover:bg-[var(--org-btn-primary-bg)]/90 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2">
                             VIEW <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                          </Link>
+                          </span>
                           {event.event_location?.maps_url && (
-                            <a href={event.event_location.maps_url} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 px-6 sm:px-8 py-2.5 sm:py-3 rounded font-bold text-sm tracking-wide transition-all text-slate-900 dark:text-white flex items-center justify-center gap-2">
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                window.open(event.event_location!.maps_url!, '_blank', 'noopener,noreferrer')
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  window.open(event.event_location!.maps_url!, '_blank', 'noopener,noreferrer')
+                                }
+                              }}
+                              className="w-full sm:w-auto border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 px-6 sm:px-8 py-2.5 sm:py-3 rounded font-bold text-sm tracking-wide transition-all text-slate-900 dark:text-white flex items-center justify-center gap-2 cursor-pointer"
+                            >
                               LOCATION <span className="material-symbols-outlined text-sm">location_on</span>
-                            </a>
+                            </span>
                           )}
                         </div>
                       </div>
