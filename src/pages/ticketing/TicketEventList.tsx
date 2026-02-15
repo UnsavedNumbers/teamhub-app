@@ -116,19 +116,21 @@ function EventCard({ event }: { event: TicketedEvent }) {
           : 'bg-white dark:bg-[#1c2630] hover:shadow-md'
       }`}
     >
-      {/* Image */}
-      <div className="w-full aspect-[16/10] bg-center bg-no-repeat bg-cover relative">
-        {event.cover_image_path ? (
-          <img
-            src={event.cover_image_path}
-            alt={event.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-[#137fec] to-blue-600" />
-        )}
+      {/* Image — 4:3 ratio enforced via padding-bottom */}
+      <div className="relative w-full flex-shrink-0" style={{ paddingBottom: '75%' }}>
+        <div className="absolute inset-0 bg-center bg-no-repeat bg-cover">
+          {event.cover_image_path ? (
+            <img
+              src={event.cover_image_path}
+              alt={event.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[#137fec] to-blue-600" />
+          )}
+        </div>
         {event.event_type && (
-          <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase text-[#137fec]">
+          <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase text-[#137fec] z-10">
             {event.event_type}
           </div>
         )}

@@ -11,6 +11,7 @@ import type { LocationAutocompleteProps as BaseProps, StructuredAddress } from '
 import { parsePlace, validateStructuredAddress, isPlaceResult, hasAddressComponents } from '../../types/location'
 import { loadGoogleMapsScript, isGoogleMapsLoaded } from '../../utils/googleMapsLoader'
 import { Input } from '../platformAdmin/Input'
+import { USE_FAKE_DATA } from '../../data/config'
 
 // Extend the props to include the callback with place result
 interface LocationAutocompleteProps extends Omit<BaseProps, 'onChange'> {
@@ -90,6 +91,116 @@ interface AutocompleteSuggestion {
     secondary_text: string
   }
   placePrediction?: google.maps.places.PlacePrediction
+  mockAddress?: StructuredAddress
+}
+
+const MOCK_VENUES: Array<{
+  place_id: string
+  name: string
+  address_line1: string
+  city: string
+  state: string
+  postal_code: string
+  country: string
+  latitude: number
+  longitude: number
+  distance: string
+}> = [
+  {
+    place_id: 'riv-001',
+    name: 'Riverside Sports Complex',
+    address_line1: '1234 Athletic Way',
+    city: 'Sacramento',
+    state: 'CA',
+    postal_code: '95814',
+    country: 'US',
+    latitude: 38.58157,
+    longitude: -121.4944,
+    distance: '2.3 miles away',
+  },
+  {
+    place_id: 'lin-001',
+    name: 'Lincoln High School Stadium',
+    address_line1: '5678 Education Blvd',
+    city: 'Sacramento',
+    state: 'CA',
+    postal_code: '95822',
+    country: 'US',
+    latitude: 38.51896,
+    longitude: -121.49324,
+    distance: '4.1 miles away',
+  },
+  {
+    place_id: 'gsa-001',
+    name: 'Golden State Arena',
+    address_line1: '9012 Championship Dr',
+    city: 'Oakland',
+    state: 'CA',
+    postal_code: '94612',
+    country: 'US',
+    latitude: 37.80436,
+    longitude: -122.27111,
+    distance: '45 miles away',
+  },
+  {
+    place_id: 'aur-001',
+    name: 'Aurora Community Sports Park',
+    address_line1: '2100 Elm St',
+    city: 'Denver',
+    state: 'CO',
+    postal_code: '80202',
+    country: 'US',
+    latitude: 39.73924,
+    longitude: -104.99025,
+    distance: '5.8 miles away',
+  },
+  {
+    place_id: 'har-001',
+    name: 'Harborview Athletic Center',
+    address_line1: '88 Bayfront Ave',
+    city: 'San Diego',
+    state: 'CA',
+    postal_code: '92101',
+    country: 'US',
+    latitude: 32.71574,
+    longitude: -117.16109,
+    distance: '8.4 miles away',
+  },
+]
+
+function buildMockAddressSuggestion(venue: typeof MOCK_VENUES[number]): AutocompleteSuggestion {
+  const formatted_address = `${venue.address_line1}, ${venue.city}, ${venue.state} ${venue.postal_code}`
+  return {
+    place_id: venue.place_id,
+    description: `${venue.name}, ${formatted_address}`,
+    structured_formatting: {
+      main_text: venue.name,
+      secondary_text: `${formatted_address} • ${venue.distance}`,
+    },
+    mockAddress: {
+      place_id: venue.place_id,
+      formatted_address,
+      address_line1: venue.address_line1,
+      city: venue.city,
+      state: venue.state,
+      postal_code: venue.postal_code,
+      country: venue.country,
+      latitude: venue.latitude,
+      longitude: venue.longitude,
+    },
+  }
+}
+
+function getMockSuggestions(query: string): AutocompleteSuggestion[] {
+  const normalizedQuery = query.trim().toLowerCase()
+  if (normalizedQuery.length < 3) return []
+  return MOCK_VENUES
+    .filter((venue) => {
+      const haystack = `${venue.name} ${venue.address_line1} ${venue.city} ${venue.state} ${venue.postal_code}`.toLowerCase()
+      return haystack.includes(normalizedQuery)
+    })
+    .slice(0, 5)
+    .map(buildMockAddressSuggestion)
 }
 
 export function LocationAutocomplete({
@@ -189,6 +300,12 @@ export function LocationAutocomplete({
     // Get API key
     const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY
     if (!apiKey || apiKey.length < 20) {
+      if (USE_FAKE_DATA) {
+        setIsLoaded(true)
+        setFallbackMode(false)
+        setApiError(null)
+        return
+      }
       setFallbackMode(true)
       setApiError('Google Places API key not configured')
       return
@@ -258,6 +375,12 @@ export function LocationAutocomplete({
       })
       .catch((err) => {
         if (mountedRef.current) {
+          if (USE_FAKE_DATA) {
+            setIsLoaded(true)
+            setFallbackMode(false)
+            setApiError(null)
+            return
+          }
           setFallbackMode(true)
           setApiError(err instanceof Error ? err.message : 'Failed to load Google Maps API')
         }
@@ -291,6 +414,15 @@ export function LocationAutocomplete({
       setSuggestions([])
       setShowSuggestions(false)
       setIsLoading(false)
+      return
+    }
+
+    if (USE_FAKE_DATA && !placesLibraryRef.current) {
+      const mockResults = getMockSuggestions(newValue)
+      setSuggestions(mockResults)
+      setShowSuggestions(true)
+      setIsLoading(false)
+      updatePosition()
       return
     }
 
@@ -382,6 +514,56 @@ export function LocationAutocomplete({
   // Handle place selection
   const handlePlaceSelect = useCallback(
     async (suggestion: AutocompleteSuggestion) => {
+      if (suggestion.mockAddress) {
+        const placeResult: google.maps.places.PlaceResult = {
+          place_id: suggestion.mockAddress.place_id,
+          name: suggestion.structured_formatting?.main_text || suggestion.description,
+          formatted_address: suggestion.mockAddress.formatted_address,
+          address_components: [
+            {
+              long_name: suggestion.mockAddress.address_line1,
+              short_name: suggestion.mockAddress.address_line1,
+              types: ['route'],
+            } as google.maps.GeocoderAddressComponent,
+            {
+              long_name: suggestion.mockAddress.city,
+              short_name: suggestion.mockAddress.city,
+              types: ['locality'],
+            } as google.maps.GeocoderAddressComponent,
+            {
+              long_name: suggestion.mockAddress.state,
+              short_name: suggestion.mockAddress.state,
+              types: ['administrative_area_level_1'],
+            } as google.maps.GeocoderAddressComponent,
+            {
+              long_name: suggestion.mockAddress.postal_code,
+              short_name: suggestion.mockAddress.postal_code,
+              types: ['postal_code'],
+            } as google.maps.GeocoderAddressComponent,
+            {
+              long_name: suggestion.mockAddress.country,
+              short_name: suggestion.mockAddress.country,
+              types: ['country'],
+            } as google.maps.GeocoderAddressComponent,
+          ],
+          geometry: {
+            location: {
+              lat: () => suggestion.mockAddress!.latitude,
+              lng: () => suggestion.mockAddress!.longitude,
+            } as unknown as google.maps.LatLng,
+          },
+        }
+
+        setSelectedPlace(suggestion.mockAddress)
+        setShowSuggestions(false)
+        setSelectedIndex(-1)
+        setIsLoading(false)
+        setApiError(null)
+        onChange(suggestion.mockAddress, placeResult)
+        previousValueRef.current = ''
+        return
+      }
+
       if (!placesLibraryRef.current || !mountedRef.current || !suggestion.placePrediction) return
 
       try {
@@ -772,7 +954,7 @@ export function LocationAutocomplete({
                   fontSize: '14px',
                 }}
               >
-                No results found
+                {USE_FAKE_DATA ? 'No venues found. Enter address manually.' : 'No results found'}
               </li>
             )}
             {suggestions.map((suggestion, index) => (

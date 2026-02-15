@@ -15,7 +15,7 @@ vi.mock('@/components/ticketing/TicketCard', () => ({
   default: ({ ticket }: { ticket: { id: string } }) => <div data-testid="access-ticket">{ticket.id}</div>,
 }))
 
-function renderPage(route = '/tickets/access/token-1') {
+function renderPage(route = '/portal/tickets/access/token-1') {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -26,7 +26,7 @@ function renderPage(route = '/tickets/access/token-1') {
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[route]}>
         <Routes>
-          <Route path="/tickets/access/:token" element={<TicketAccess />} />
+          <Route path="/portal/tickets/access/:token" element={<TicketAccess />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -55,7 +55,7 @@ describe('TicketAccess', () => {
   test('[TE-E2E-015] shows invalid access message for expired or bad links', async () => {
     mockGetTicketsByAccessToken.mockRejectedValue(new Error('Invalid access token'))
 
-    renderPage('/tickets/access/expired-token')
+    renderPage('/portal/tickets/access/expired-token')
 
     expect(await screen.findByText('Invalid or expired access link')).toBeInTheDocument()
     expect(screen.getByText('Please check your email for a valid ticket link.')).toBeInTheDocument()

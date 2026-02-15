@@ -8,6 +8,10 @@
 import { DEMO_USER_IDS, DEMO_ORG_A_ID, DEMO_ORG_B_ID } from '../config'
 import type { OrgMemberRole } from '../../contexts/OrganizationContext'
 import { getOrganizationById } from './fakeOrganizations'
+import {
+    FIRST_NAMES_FEMALE, FIRST_NAMES_MALE, LAST_NAMES,
+    pick, generatePhone, generateEmail, generatePastDate, generateBirthdate,
+} from './generators'
 
 // Dynamic year helpers
 const getCurrentYear = () => new Date().getFullYear()
@@ -120,6 +124,7 @@ export const USER_SARAH_JOHNSON_ID = 'user-sarah-johnson-001'
 export const USER_MIKE_SMITH_ID = 'user-mike-smith-002'
 export const USER_COACH_MARTINEZ_ID = 'user-coach-martinez-003'
 export const USER_COACH_THOMPSON_ID = 'user-coach-thompson-004'
+export const USER_PRIYA_PATEL_ID = 'user-other-parent-001'
 
 // ============================================================================
 // Fake Users Data
@@ -170,7 +175,7 @@ export const fakeUsers: FakeUser[] = [
     // Additional users in system
     {
         id: USER_SARAH_JOHNSON_ID,
-        email: 'sarah.johnson@email.com',
+        email: 'sarah.johnson@example.com',
         phone: '+1 (555) 111-2222',
         display_name: 'Sarah Johnson',
         created_at: getDateInCurrentYear(1, 15, 10, 30),
@@ -178,7 +183,7 @@ export const fakeUsers: FakeUser[] = [
     },
     {
         id: USER_MIKE_SMITH_ID,
-        email: 'mike.smith@email.com',
+        email: 'mike.smith@example.com',
         phone: '+1 (555) 333-4444',
         display_name: 'Mike Smith',
         created_at: '2024-02-10T14:00:00Z',
@@ -186,7 +191,7 @@ export const fakeUsers: FakeUser[] = [
     },
     {
         id: USER_COACH_MARTINEZ_ID,
-        email: 'coach.martinez@email.com',
+        email: 'coach.martinez@example.com',
         phone: '+1 (555) 555-6666',
         display_name: 'Coach Alex Martinez',
         created_at: getDateInPreviousYear(9, 1, 9),
@@ -194,11 +199,19 @@ export const fakeUsers: FakeUser[] = [
     },
     {
         id: USER_COACH_THOMPSON_ID,
-        email: 'coach.thompson@email.com',
+        email: 'coach.thompson@example.com',
         phone: '+1 (555) 777-8888',
         display_name: 'Coach Emily Thompson',
         created_at: '2023-10-15T10:00:00Z',
         updated_at: '2023-10-15T10:00:00Z',
+    },
+    {
+        id: USER_PRIYA_PATEL_ID,
+        email: 'priya.patel@example.com',
+        phone: '+1 (555) 999-0000',
+        display_name: 'Priya Patel',
+        created_at: '2024-03-01T09:00:00Z',
+        updated_at: '2024-03-01T09:00:00Z',
     },
 ]
 
@@ -250,7 +263,7 @@ export const fakeFamilies: FakeFamily[] = [
     {
         id: FAMILY_PATEL_ID,
         name: 'Patel Family',
-        created_by_user_id: 'user-other-parent-001', // Another parent in system
+        created_by_user_id: USER_PRIYA_PATEL_ID, // Another parent in system
         org_id: DEMO_ORG_A_ID,
         created_at: '2024-03-01T09:00:00Z',
         updated_at: '2024-03-01T09:00:00Z',
@@ -482,7 +495,7 @@ export const fakeFamilyMembers: FakeFamilyMember[] = [
     {
         id: 'fm-patel-001',
         family_id: FAMILY_PATEL_ID,
-        user_id: 'user-other-parent-001',
+        user_id: USER_PRIYA_PATEL_ID,
         role: 'owner',
         permissions: ['rsvp', 'payments', 'edit_children'],
         created_at: '2024-03-01T09:00:00Z',
@@ -568,6 +581,15 @@ export const fakeOrganizationMembers: FakeOrganizationMember[] = [
         created_at: '2023-10-15T10:00:00Z',
         updated_at: '2023-10-15T10:00:00Z',
     },
+    {
+        id: 'om-010',
+        org_id: DEMO_ORG_A_ID,
+        user_id: USER_PRIYA_PATEL_ID,
+        roles: ['parent'],
+        status: 'active',
+        created_at: '2024-03-01T09:00:00Z',
+        updated_at: '2024-03-01T09:00:00Z',
+    },
     // Organization B - Multi-org parent
     {
         id: 'om-009',
@@ -579,6 +601,188 @@ export const fakeOrganizationMembers: FakeOrganizationMember[] = [
         updated_at: '2024-03-01T09:00:00Z',
     },
 ]
+
+// ============================================================================
+// Programmatic Generation: 200+ Users at Scale
+// ============================================================================
+
+const GEN_ORG_IDS = [
+    DEMO_ORG_A_ID, DEMO_ORG_A_ID, DEMO_ORG_A_ID, // 60% Org A
+    DEMO_ORG_B_ID, // 20% Org B
+    'org-community-001', 'org-tournament-001', 'org-club-002', 'org-academy-002', // 20% others
+]
+
+// --- Generate 100 Fan accounts ---
+for (let i = 0; i < 100; i++) {
+    const isFemale = i % 2 === 0
+    const firstName = isFemale ? pick(FIRST_NAMES_FEMALE, i) : pick(FIRST_NAMES_MALE, i)
+    const lastName = pick(LAST_NAMES, i + 50)
+    const createdAt = generatePastDate(i, 180) // within last 6 months
+
+    const userId = `user-fan-${String(i + 1).padStart(3, '0')}`
+    fakeUsers.push({
+        id: userId,
+        email: generateEmail(firstName, lastName, i),
+        phone: generatePhone(1000 + i),
+        display_name: `${firstName} ${lastName}`,
+        created_at: createdAt,
+        updated_at: createdAt,
+    })
+
+    // Mix: 30 new users (no purchases), 50 active, 20 lapsed - memberships added for all
+    const orgId = pick(GEN_ORG_IDS, i)
+    fakeOrganizationMembers.push({
+        id: `om-fan-${String(i + 1).padStart(3, '0')}`,
+        org_id: orgId,
+        user_id: userId,
+        roles: ['parent'] as OrgMemberRole[],
+        status: i % 20 === 0 ? 'invited' : 'active',
+        created_at: createdAt,
+        updated_at: createdAt,
+    })
+}
+
+// --- Generate 50 Guardian accounts with families and 150 children ---
+for (let i = 0; i < 50; i++) {
+    const isFemale = i % 3 !== 0
+    const firstName = isFemale ? pick(FIRST_NAMES_FEMALE, i + 200) : pick(FIRST_NAMES_MALE, i + 200)
+    const lastName = pick(LAST_NAMES, i + 10)
+    const createdAt = generatePastDate(i + 300, 365) // within last year
+
+    const userId = `user-guardian-${String(i + 1).padStart(3, '0')}`
+    const familyId = `family-gen-${String(i + 1).padStart(3, '0')}`
+    const orgId = pick(GEN_ORG_IDS, i + 5)
+
+    fakeUsers.push({
+        id: userId,
+        email: generateEmail(firstName, lastName, i + 200),
+        phone: generatePhone(2000 + i),
+        display_name: `${firstName} ${lastName}`,
+        created_at: createdAt,
+        updated_at: createdAt,
+    })
+
+    fakeOrganizationMembers.push({
+        id: `om-guardian-${String(i + 1).padStart(3, '0')}`,
+        org_id: orgId,
+        user_id: userId,
+        roles: ['parent'] as OrgMemberRole[],
+        status: 'active',
+        created_at: createdAt,
+        updated_at: createdAt,
+    })
+
+    fakeFamilies.push({
+        id: familyId,
+        name: `${lastName} Family`,
+        created_by_user_id: userId,
+        org_id: orgId,
+        created_at: createdAt,
+        updated_at: createdAt,
+    })
+
+    fakeFamilyMembers.push({
+        id: `fm-gen-${String(i + 1).padStart(3, '0')}`,
+        family_id: familyId,
+        user_id: userId,
+        role: 'owner',
+        permissions: ['rsvp', 'payments', 'edit_children'],
+        created_at: createdAt,
+    })
+
+    // Each guardian has 1-4 children
+    const childCount = 1 + (i % 4)
+    for (let c = 0; c < childCount; c++) {
+        const childIsFemale = c % 2 === 0
+        const childFirstName = childIsFemale
+            ? pick(FIRST_NAMES_FEMALE, i * 4 + c + 500)
+            : pick(FIRST_NAMES_MALE, i * 4 + c + 500)
+        const childIdx = i * 4 + c
+        const jersey = String(1 + (childIdx % 30))
+
+        fakeChildren.push({
+            id: `child-gen-${String(childIdx + 1).padStart(4, '0')}`,
+            family_id: familyId,
+            first_name: childFirstName,
+            last_name: lastName,
+            date_of_birth: generateBirthdate(childIdx, 6, 17),
+            gender: childIsFemale ? 'female' : 'male',
+            jersey_number: jersey,
+            medical_notes: childIdx % 8 === 0 ? 'Asthma - carries inhaler' : null,
+            allergies: childIdx % 12 === 0 ? pick(['Peanuts', 'Tree nuts', 'Dairy', 'Shellfish', 'Gluten'], childIdx) : null,
+            emergency_contact_name: `${firstName} ${lastName}`,
+            emergency_contact_phone: generatePhone(2000 + i),
+            created_at: createdAt,
+            updated_at: createdAt,
+        })
+    }
+
+    // 40% of guardians have a second guardian (partner) linked
+    if (i % 5 < 2) {
+        const partnerIsFemale = !isFemale
+        const partnerFirstName = partnerIsFemale
+            ? pick(FIRST_NAMES_FEMALE, i + 400)
+            : pick(FIRST_NAMES_MALE, i + 400)
+        const partnerUserId = `user-guardian-partner-${String(i + 1).padStart(3, '0')}`
+
+        fakeUsers.push({
+            id: partnerUserId,
+            email: generateEmail(partnerFirstName, lastName, i + 500),
+            phone: generatePhone(5000 + i),
+            display_name: `${partnerFirstName} ${lastName}`,
+            created_at: createdAt,
+            updated_at: createdAt,
+        })
+
+        fakeFamilyMembers.push({
+            id: `fm-partner-${String(i + 1).padStart(3, '0')}`,
+            family_id: familyId,
+            user_id: partnerUserId,
+            role: i % 10 === 0 ? 'view_only' : 'guardian',
+            permissions: i % 10 === 0 ? ['rsvp'] : ['rsvp', 'payments'],
+            created_at: createdAt,
+        })
+    }
+}
+
+// --- Generate 20 Admin accounts ---
+const adminRolePatterns: Array<{ roles: OrgMemberRole[]; label: string }> = [
+    { roles: ['org_admin'], label: 'Super Admin' },
+    { roles: ['org_admin'], label: 'Event Manager' },
+    { roles: ['org_admin'], label: 'Finance Admin' },
+    { roles: ['org_admin', 'coach'], label: 'Admin Coach' },
+    { roles: ['org_admin'], label: 'Support Admin' },
+]
+
+for (let i = 0; i < 20; i++) {
+    const isFemale = i % 2 === 0
+    const firstName = isFemale ? pick(FIRST_NAMES_FEMALE, i + 700) : pick(FIRST_NAMES_MALE, i + 700)
+    const lastName = pick(LAST_NAMES, i + 80)
+    const createdAt = generatePastDate(i + 800, 400)
+    const pattern = adminRolePatterns[i % adminRolePatterns.length]
+
+    const userId = `user-admin-${String(i + 1).padStart(3, '0')}`
+    const orgId = pick(GEN_ORG_IDS, i + 2)
+
+    fakeUsers.push({
+        id: userId,
+        email: generateEmail(firstName, lastName, i + 700),
+        phone: generatePhone(3000 + i),
+        display_name: `${firstName} ${lastName}`,
+        created_at: createdAt,
+        updated_at: createdAt,
+    })
+
+    fakeOrganizationMembers.push({
+        id: `om-admin-${String(i + 1).padStart(3, '0')}`,
+        org_id: orgId,
+        user_id: userId,
+        roles: pattern.roles,
+        status: 'active',
+        created_at: createdAt,
+        updated_at: createdAt,
+    })
+}
 
 // ============================================================================
 // Helper Functions
@@ -646,17 +850,17 @@ export function getUserOrganizations(userId: string): Array<{
     roles: OrgMemberRole[]
 }> {
     const memberships = fakeOrganizationMembers.filter((om) => om.user_id === userId)
-    
+
     // Group by org_id and aggregate roles
     const orgMap = new Map<string, OrgMemberRole[]>()
-    
+
     for (const membership of memberships) {
         const existing = orgMap.get(membership.org_id) || []
         // Merge roles, avoiding duplicates
         const combined = [...new Set([...existing, ...membership.roles])]
         orgMap.set(membership.org_id, combined)
     }
-    
+
     // Get organization names from fakeOrganizations
     return Array.from(orgMap.entries())
         .map(([orgId, roles]) => {

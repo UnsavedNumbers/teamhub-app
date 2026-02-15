@@ -51,7 +51,7 @@ vi.mock('@/components/ticketing/OrderContextPanel', () => ({
   OrderContextPanel: () => <div data-testid="order-context-panel" />,
 }))
 
-function renderPage(route = '/tickets/validate/staff-token') {
+function renderPage(route = '/portal/tickets/validate/staff-token') {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -64,7 +64,7 @@ function renderPage(route = '/tickets/validate/staff-token') {
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={[route]}>
           <Routes>
-            <Route path="/tickets/validate/:token" element={<TicketScanner />} />
+            <Route path="/portal/tickets/validate/:token" element={<TicketScanner />} />
             <Route path="/" element={<div>home</div>} />
           </Routes>
         </MemoryRouter>

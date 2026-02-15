@@ -22,6 +22,7 @@ import BookmarkButton from '../components/fan/BookmarkButton'
 import { useQuery } from '@tanstack/react-query'
 import { getBookmarkedEvents } from '../data/services/fanService'
 import type { FanEventBookmark } from '../types/staffAndFan'
+import { USE_FAKE_DATA } from '../data/config'
 
 interface Event {
   id: string
@@ -360,33 +361,57 @@ export default function EventDetail() {
         setWeatherData(null)
         return
       }
-      
+
       setLoadingWeather(true)
       setWeatherData(null)
-      
+
       try {
+        if (USE_FAKE_DATA) {
+          const dayOfYear = new Date(event.start_time).getDate()
+          const conditionIndex = dayOfYear % 5
+          const popularConditions = [
+            { condition: 'sunny', description: 'Mostly Sunny', temp: 72, feelsLike: 70, humidity: 45, wind: 8, precip: 10 },
+            { condition: 'partly_cloudy', description: 'Partly Cloudy', temp: 68, feelsLike: 66, humidity: 55, wind: 10, precip: 20 },
+            { condition: 'cloudy', description: 'Chance of Rain', temp: 62, feelsLike: 60, humidity: 70, wind: 12, precip: 45 },
+            { condition: 'rainy', description: 'Rain Expected', temp: 58, feelsLike: 56, humidity: 85, wind: 15, precip: 80 },
+            { condition: 'sunny', description: 'Clear', temp: 75, feelsLike: 73, humidity: 40, wind: 6, precip: 5 },
+          ]
+          const c = popularConditions[conditionIndex]
+          setWeatherData({
+            temperature: c.temp,
+            feelsLike: c.feelsLike,
+            condition: c.condition,
+            description: c.description,
+            humidity: c.humidity,
+            windSpeed: c.wind,
+            precipitation: c.precip,
+          })
+          setLoadingWeather(false)
+          return
+        }
+
         const location = encodeURIComponent(event.location)
         const date = encodeURIComponent(event.start_time)
-        
+
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/weather?location=${location}&date=${date}`
         const { data } = await supabase.auth.getSession()
-        
+
         const response = await fetch(url, {
           headers: {
             'Authorization': `Bearer ${data.session?.access_token}`,
           },
         })
-        
+
         if (!response.ok) {
           const errorText = await response.text()
           console.error('Weather API error:', response.status, response.statusText, errorText)
           setLoadingWeather(false)
           return
         }
-        
+
         const result = await response.json()
         console.log('Weather response:', result)
-        
+
         if (result.temperature !== undefined) {
           setWeatherData({
             temperature: result.temperature,
@@ -406,7 +431,7 @@ export default function EventDetail() {
         setLoadingWeather(false)
       }
     }
-    
+
     fetchWeather()
   }, [event?.location, event?.start_time])
 

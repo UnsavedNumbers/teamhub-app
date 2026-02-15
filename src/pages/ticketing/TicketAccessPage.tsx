@@ -2,7 +2,7 @@
  * Ticket Access Page (QR Token Link)
  * 
  * Displays a single ticket with QR code from an encrypted access link.
- * Route: /tickets/access?t={encrypted_payload}
+ * Route: /portal/tickets/access?t={encrypted_payload}
  */
 
 import { useState, useEffect } from 'react'

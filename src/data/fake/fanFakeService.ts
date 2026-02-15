@@ -10,109 +10,244 @@ import {
     GetCalendarRequest,
     GetCalendarResponse,
 } from '../../types/staffAndFan'
+import type { EntityProfile } from '../services/fanService'
 import { fakeEvents } from './fakeEvents'
+import { supabase } from '../../lib/supabase'
+import { resolveDemoUserId } from './userContext'
+import { getFakeTicketOrdersWithRelations, getFakeTicketsForOrder } from './ticketingFakeService'
+import { getFakeTicketedEventById, getFakeTicketingEvents } from './fakeTicketingEvents'
+import { getOrganizationById, getOrganizationBySlug } from './fakeOrganizations'
+import { getTeamWithDetails } from './fakeTeams'
+import { getChildById } from './fakeUsers'
+import { loadBookmarks, saveBookmarks, loadFollows, saveFollows } from './demoStorage'
+import { DEMO_ORG_A_ID, DEMO_TRANSACTION_DELAY_MS } from '../config'
 
 // ============================================
-// IN-MEMORY STATE
+// HELPERS
 // ============================================
 
-let fakeBookmarks: FanEventBookmark[] = fakeEvents.slice(0, 3).map((event, index) => ({
-    id: `bookmark-${index}`,
-    user_id: 'user-001',
-    event_id: event.id,
-    created_at: new Date().toISOString(),
-    event: {
-        id: event.id,
-        title: event.title,
-        start_time: event.start_time,
-        end_time: event.end_time,
-        location: event.location,
-        timezone: event.timezone,
-    },
-}))
+async function getCurrentUserId(): Promise<string | null> {
+    const { data: { session } } = await supabase.auth.getSession()
+    const authUserId = session?.user?.id ?? null
+    const demoUserId = resolveDemoUserId(session?.user?.email ?? null)
+    return authUserId ?? demoUserId
+}
 
-const fakeFollows: FanOrgFollow[] = []
+function getDefaultBookmarks(userId: string): FanEventBookmark[] {
+    return fakeEvents.slice(0, 3).map((event, index) => ({
+        id: `bookmark-${index}`,
+        user_id: userId,
+        event_id: event.id,
+        created_at: new Date().toISOString(),
+        event: {
+            id: event.id,
+            title: event.title,
+            start_time: event.start_time,
+            end_time: event.end_time,
+            location: event.location,
+            timezone: event.timezone,
+        },
+    }))
+}
 
 // ============================================
-// FAN FOLLOWS
+// FAN FOLLOWS (persisted)
 // ============================================
 
 export async function followOrg(
     orgId: string,
     source: 'manual' | 'post_purchase' | 'import' = 'manual'
 ): Promise<{ data: boolean; error: Error | null }> {
-    const exists = fakeFollows.find((f) => f.org_id === orgId)
-    if (!exists) {
-        fakeFollows.push({
+    try {
+        const userId = await getCurrentUserId()
+        if (!userId) return { data: false, error: new Error('Not authenticated') }
+
+        const follows = loadFollows(userId)
+        const exists = follows.find((f) => f.org_id === orgId)
+        if (exists) return { data: true, error: null }
+
+        const org = getOrganizationById(orgId)
+        follows.push({
             id: `follow-${Date.now()}`,
-            user_id: 'user-001',
+            user_id: userId,
             org_id: orgId,
             source,
             created_at: new Date().toISOString(),
             org: {
                 id: orgId,
-                name: 'Demo Organization',
-                slug: 'demo-org',
+                name: org?.name ?? 'Demo Organization',
+                slug: org?.slug ?? 'demo-org',
             },
         })
+        saveFollows(userId, follows)
+        return { data: true, error: null }
+    } catch (err) {
+        return {
+            data: false,
+            error: err instanceof Error ? err : new Error('Follow failed'),
+        }
     }
-    return { data: true, error: null }
 }
 
 export async function unfollowOrg(orgId: string): Promise<{ data: boolean; error: Error | null }> {
-    const index = fakeFollows.findIndex((f) => f.org_id === orgId)
-    if (index !== -1) {
-        fakeFollows.splice(index, 1)
+    try {
+        const userId = await getCurrentUserId()
+        if (!userId) return { data: false, error: new Error('Not authenticated') }
+
+        const follows = loadFollows(userId).filter((f) => f.org_id !== orgId)
+        saveFollows(userId, follows)
+        return { data: true, error: null }
+    } catch (err) {
+        return {
+            data: false,
+            error: err instanceof Error ? err : new Error('Unfollow failed'),
+        }
     }
-    return { data: true, error: null }
 }
 
 export async function getFollowedOrgs(): Promise<{ data: FanOrgFollow[]; error: Error | null }> {
-    return { data: [...fakeFollows], error: null }
+    try {
+        const userId = await getCurrentUserId()
+        if (!userId) return { data: [], error: null }
+
+        const follows = loadFollows(userId)
+        const enriched: FanOrgFollow[] = follows.map((f) => {
+            const org = getOrganizationById(f.org_id)
+            return {
+                ...f,
+                org: {
+                    id: f.org_id,
+                    name: org?.name ?? f.org?.name ?? 'Unknown',
+                    slug: org?.slug ?? f.org?.slug ?? null,
+                },
+            }
+        })
+        return { data: enriched, error: null }
+    } catch (err) {
+        return {
+            data: [],
+            error: err instanceof Error ? err : new Error('Failed to get follows'),
+        }
+    }
 }
 
 // ============================================
-// FAN BOOKMARKS
+// FAN BOOKMARKS (persisted)
 // ============================================
 
 export async function bookmarkEvent(eventId: string): Promise<{ data: boolean; error: Error | null }> {
-    const exists = fakeBookmarks.find((b) => b.event_id === eventId)
-    if (!exists) {
+    try {
+        const userId = await getCurrentUserId()
+        if (!userId) return { data: false, error: new Error('Not authenticated') }
+
+        let bookmarks = loadBookmarks(userId)
+        if (bookmarks.length === 0) {
+            bookmarks = getDefaultBookmarks(userId)
+            saveBookmarks(userId, bookmarks)
+        }
+
+        const exists = bookmarks.find((b) => b.event_id === eventId)
+        if (exists) return { data: true, error: null }
+
+        const ticketedResult = getFakeTicketingEvents(DEMO_ORG_A_ID, {
+            page: 1,
+            perPage: 200,
+            fanVisibleOnly: true,
+        })
+        const ticketedMatch = ticketedResult.data.find((te) => te.id === eventId)
         const event = fakeEvents.find((e) => e.id === eventId)
-        if (event) {
-            fakeBookmarks.push({
-                id: `bookmark-${Date.now()}`,
-                user_id: 'user-001',
-                event_id: eventId,
-                created_at: new Date().toISOString(),
-                event: {
+        if (!event && !ticketedMatch) return { data: false, error: new Error('Event not found') }
+
+        const eventInfo = ticketedMatch
+            ? {
+                id: ticketedMatch.id,
+                title: ticketedMatch.title,
+                start_time: ticketedMatch.starts_at,
+                end_time: ticketedMatch.ends_at,
+                location: ticketedMatch.venue_name ?? null,
+                timezone: ticketedMatch.timezone,
+            }
+            : event
+                ? {
                     id: event.id,
                     title: event.title,
                     start_time: event.start_time,
                     end_time: event.end_time,
                     location: event.location,
-                },
-            })
+                    timezone: event.timezone,
+                }
+                : { id: eventId, title: 'Event', start_time: '', end_time: '', location: null, timezone: '' }
+
+        bookmarks.push({
+            id: `bookmark-${Date.now()}`,
+            user_id: userId,
+            event_id: eventId,
+            created_at: new Date().toISOString(),
+            event: eventInfo,
+        })
+        saveBookmarks(userId, bookmarks)
+        return { data: true, error: null }
+    } catch (err) {
+        return {
+            data: false,
+            error: err instanceof Error ? err : new Error('Bookmark failed'),
         }
     }
-    return { data: true, error: null }
 }
 
 export async function removeBookmark(eventId: string): Promise<{ data: boolean; error: Error | null }> {
-    const initialLength = fakeBookmarks.length
-    fakeBookmarks = fakeBookmarks.filter((b) => b.event_id !== eventId)
+    try {
+        const userId = await getCurrentUserId()
+        if (!userId) return { data: false, error: new Error('Not authenticated') }
 
-    if (fakeBookmarks.length === initialLength) {
-        // It might be that we passed a bookmarkId instead of eventId? 
-        // The service signature says eventId.
-        // In the UI check: handleRemoveBookmark(bookmark.event_id)
-        // So passing eventId is correct.
+        const bookmarks = loadBookmarks(userId).filter((b) => b.event_id !== eventId)
+        saveBookmarks(userId, bookmarks)
+        return { data: true, error: null }
+    } catch (err) {
+        return {
+            data: false,
+            error: err instanceof Error ? err : new Error('Remove bookmark failed'),
+        }
     }
-    return { data: true, error: null }
 }
 
 export async function getBookmarkedEvents(): Promise<{ data: FanEventBookmark[]; error: Error | null }> {
-    return { data: [...fakeBookmarks], error: null }
+    try {
+        const userId = await getCurrentUserId()
+        if (!userId) return { data: [], error: null }
+
+        let bookmarks = loadBookmarks(userId)
+        if (bookmarks.length === 0) {
+            bookmarks = getDefaultBookmarks(userId)
+            saveBookmarks(userId, bookmarks)
+        }
+
+        const enriched: FanEventBookmark[] = bookmarks.map((b) => {
+            const fe = fakeEvents.find((e) => e.id === b.event_id)
+            const ticketedEvents = getFakeTicketingEvents(DEMO_ORG_A_ID, { page: 1, perPage: 200, fanVisibleOnly: true })
+            const te = ticketedEvents.data.find((e) => e.id === b.event_id)
+            const event = fe ?? te
+            return {
+                ...b,
+                event: b.event ?? (event
+                    ? {
+                        id: event.id,
+                        title: event.title,
+                        start_time: 'start_time' in event ? event.start_time : (event as any).starts_at,
+                        end_time: 'end_time' in event ? event.end_time : (event as any).ends_at,
+                        location: 'location' in event ? event.location : (event as any).venue_name ?? null,
+                        timezone: event.timezone,
+                    }
+                    : undefined),
+            }
+        })
+        return { data: enriched, error: null }
+    } catch (err) {
+        return {
+            data: [],
+            error: err instanceof Error ? err : new Error('Failed to get bookmarks'),
+        }
+    }
 }
 
 // ============================================
@@ -122,14 +257,40 @@ export async function getBookmarkedEvents(): Promise<{ data: FanEventBookmark[];
 export async function getFanCalendar(
     _request: GetCalendarRequest = {}
 ): Promise<{ data: GetCalendarResponse | null; error: Error | null }> {
-    // Return some fake events mixed from fakeEvents
-    return {
-        data: {
-            events: fakeEvents.slice(0, 5) as unknown as CalendarEvent[], // Type assertion needed if types strictly mismatch, but they should be close
-            generated_at: new Date().toISOString(),
-            from_cache: false,
-        },
-        error: null,
+    try {
+        const userId = await getCurrentUserId()
+        const calendarEvents: CalendarEvent[] = [...(fakeEvents.slice(0, 5) as unknown as CalendarEvent[])]
+
+        if (userId) {
+            const purchases = await getUserPurchases()
+            const purchaseEvents = (purchases.data ?? []).filter((p) => p.event && p.status === 'completed')
+            for (const p of purchaseEvents) {
+                if (p.event && !calendarEvents.some((e) => e.id === p.event!.id)) {
+                    calendarEvents.push({
+                        id: p.event.id,
+                        title: p.event.title,
+                        start_time: p.event.starts_at,
+                        end_time: p.event.starts_at,
+                        location: null,
+                        timezone: 'America/Chicago',
+                    } as CalendarEvent)
+                }
+            }
+        }
+
+        return {
+            data: {
+                events: calendarEvents,
+                generated_at: new Date().toISOString(),
+                from_cache: false,
+            },
+            error: null,
+        }
+    } catch (err) {
+        return {
+            data: null,
+            error: err instanceof Error ? err : new Error('Failed to get calendar'),
+        }
     }
 }
 
@@ -140,6 +301,7 @@ export async function getFanCalendar(
 export async function transferTicket(
     request: TicketTransferRequest
 ): Promise<{ data: TransferableTicket | null; error: Error | null }> {
+    await new Promise((r) => setTimeout(r, DEMO_TRANSACTION_DELAY_MS))
     return {
         data: {
             id: request.ticket_id,
@@ -181,87 +343,164 @@ export async function reserveTickets(
     }
 }
 
+// ============================================
+// USER PURCHASES
+// ============================================
+
 export async function getUserPurchases(): Promise<{ data: Purchase[]; error: Error | null }> {
-    return {
-        data: [],
-        error: null,
+    try {
+        const userId = await getCurrentUserId()
+        if (!userId) return { data: [], error: null }
+
+        const allOrders = getFakeTicketOrdersWithRelations()
+        const userOrders = allOrders.filter((o) => o.purchaser_user_id === userId)
+
+        const purchases: Purchase[] = await Promise.all(
+            userOrders.map(async (order) => {
+                const event = getFakeTicketedEventById(order.ticketed_event_id, order.org_id)
+                const tickets = getFakeTicketsForOrder(order.id)
+                const statusMap = {
+                    paid: 'completed' as const,
+                    refunded: 'refunded' as const,
+                    pending_payment: 'pending' as const,
+                    cancelled: 'cancelled' as const,
+                }
+                return {
+                    id: order.id,
+                    user_id: userId,
+                    org_id: order.org_id,
+                    event_id: order.ticketed_event_id,
+                    total_amount: order.total_cents / 100,
+                    currency: 'USD',
+                    payment_method: 'Visa ****4242',
+                    payment_intent_id: order.stripe_payment_intent_id,
+                    status: statusMap[order.status] ?? 'pending',
+                    refund_eligible: order.status === 'paid',
+                    created_at: order.created_at ?? new Date().toISOString(),
+                    event: event
+                        ? { id: event.id, title: event.title, starts_at: event.starts_at }
+                        : undefined,
+                    tickets: tickets as Purchase['tickets'],
+                }
+            }),
+        )
+
+        purchases.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+        return { data: purchases, error: null }
+    } catch (err) {
+        console.error('[fanFakeService] getUserPurchases error:', err)
+        return {
+            data: [],
+            error: err instanceof Error ? err : new Error('Failed to get purchases'),
+        }
     }
 }
 
 // ============================================
-// ENTITY PROFILES (FAKE)
+// ENTITY PROFILES (real fake data)
 // ============================================
 
-export async function getOrgProfile(orgId: string): Promise<{ data: any | null; error: Error | null }> {
-    return {
-        data: {
-            id: orgId,
-            name: 'Demo Organization',
-            slug: 'demo-org',
-            description: 'A demo youth sports organization',
-            location_city: 'Springfield',
-            location_state: 'IL',
+export async function getOrgProfile(orgIdOrSlug: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
+    try {
+        const userId = await getCurrentUserId()
+        const follows = userId ? loadFollows(userId) : []
+
+        let org = getOrganizationById(orgIdOrSlug)
+        if (!org) org = getOrganizationBySlug(orgIdOrSlug)
+        if (!org) return { data: null, error: null }
+
+        const isFollowing = follows.some((f) => f.org_id === org!.id)
+        const followerCount = 42
+
+        const profile: EntityProfile = {
+            id: org.id,
+            name: org.name,
+            description: `${org.name} - ${org.org_type} youth sports organization`,
+            privacy_level: 'public',
+            is_following: isFollowing,
+            created_at: org.created_at,
+            logo_url: org.logo_url ?? undefined,
+            cover_url: undefined,
+            follower_count: followerCount,
+            email: org.email ?? undefined,
+            phone: org.phone ?? undefined,
+            slug: org.slug,
+            location_city: org.city ?? undefined,
+            location_state: org.state ?? undefined,
             location_visible: true,
-            website: 'https://example.com',
-            email: 'contact@example.com',
-            phone: '(555) 123-4567',
-            logo_url: null,
-            cover_url: null,
-            privacy_level: 'public',
-            is_following: false,
-            follower_count: 42,
-            created_at: new Date().toISOString(),
-        },
-        error: null,
+            website: org.website ?? undefined,
+        }
+        return { data: profile, error: null }
+    } catch (err) {
+        return {
+            data: null,
+            error: err instanceof Error ? err : new Error('Failed to get org profile'),
+        }
     }
 }
 
-export async function getTeamProfile(teamId: string): Promise<{ data: any | null; error: Error | null }> {
-    return {
-        data: {
-            id: teamId,
-            name: 'Demo Team',
-            description: 'A demo team',
-            sport: 'Basketball',
-            season: '2024-2025',
-            gender: 'coed',
-            age_group: 'U12',
-            logo_url: null,
-            cover_url: null,
-            parent_org_id: 'org-fake',
-            parent_org_name: 'Demo Organization',
-            parent_org_slug: 'demo-org',
-            visible_to_fans: true,
-            is_following: false,
+export async function getOrgProfileBySlug(slug: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
+    return getOrgProfile(slug)
+}
+
+export async function getTeamProfile(teamId: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
+    try {
+        const userId = await getCurrentUserId()
+        const follows = userId ? loadFollows(userId) : []
+
+        const teamWithDetails = getTeamWithDetails(teamId)
+        if (!teamWithDetails) return { data: null, error: null }
+
+        const org = getOrganizationById(teamWithDetails.org_id)
+        const isFollowing = follows.some((f) => f.org_id === teamWithDetails.org_id)
+        const profile: EntityProfile = {
+            id: teamWithDetails.id,
+            name: teamWithDetails.name,
+            description: teamWithDetails.sport?.name ? `${teamWithDetails.name} – ${teamWithDetails.sport.name}` : undefined,
+            privacy_level: 'public',
+            is_following: isFollowing,
+            created_at: teamWithDetails.created_at,
+            logo_url: undefined,
+            cover_url: undefined,
             follower_count: 42,
-            created_at: new Date().toISOString(),
-        },
-        error: null,
+            sport: teamWithDetails.sport?.name,
+            season: teamWithDetails.activeSeason?.name,
+            parent_org_name: org?.name,
+        }
+        return { data: profile, error: null }
+    } catch (err) {
+        return {
+            data: null,
+            error: err instanceof Error ? err : new Error('Failed to get team profile'),
+        }
     }
 }
 
-export async function getAthleteProfile(athleteId: string): Promise<{ data: any | null; error: Error | null }> {
-    return {
-        data: {
-            id: athleteId,
-            first_name: 'John',
-            last_name: 'Doe',
-            full_name: 'John Doe',
-            jersey_number: '23',
-            position: 'Guard',
-            height: '5\'10"',
-            weight: '150',
-            graduation_year: 2026,
-            bio: 'A dedicated athlete',
-            profile_photo_url: null,
-            cover_url: null,
-            org_id: 'org-fake',
-            org_name: 'Demo Organization',
-            org_slug: 'demo-org',
+export async function getAthleteProfile(athleteId: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
+    try {
+        const child = getChildById(athleteId)
+        if (!child) return { data: null, error: null }
+
+        const fullName = `${child.first_name} ${child.last_name}`
+        const profile: EntityProfile = {
+            id: child.id,
+            name: fullName,
+            description: `${fullName} - youth athlete`,
             privacy_level: 'public',
-            current_teams: ['Demo Team'],
-            created_at: new Date().toISOString(),
-        },
-        error: null,
+            is_following: false,
+            created_at: child.created_at,
+            logo_url: undefined,
+            cover_url: undefined,
+            follower_count: 0,
+            jersey_number: child.jersey_number ?? undefined,
+            current_teams: [],
+        }
+        return { data: profile, error: null }
+    } catch (err) {
+        return {
+            data: null,
+            error: err instanceof Error ? err : new Error('Failed to get athlete profile'),
+        }
     }
 }

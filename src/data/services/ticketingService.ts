@@ -6,7 +6,7 @@
 
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
-import { USE_FAKE_DATA } from '../config'
+import { USE_FAKE_DATA, DEMO_TRANSACTION_DELAY_MS } from '../config'
 import type {
   TicketedEvent,
   TicketType,
@@ -41,8 +41,11 @@ import {
   getFakeTicketedEvent,
   getFakeTicketedEvents,
   getFakeTicketOrderById,
+  manuallyCompleteFakeTicketOrder,
+  processFakeTicketOrderRefund,
   getFakeTicketTypes,
   getFakeTicketsForOrder,
+  validateFakeTicketScan,
 } from '../fake/ticketingFakeService'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
@@ -60,7 +63,8 @@ function isFanVisibleEvent(
     | undefined,
 ): boolean {
   if (!event) return false
-  return event.status === 'published' && (event.visibility === 'public' || event.visibility == null)
+  // 'public' = DB enum; 'visible' = app/fake convention for "show to fans"
+  return event.status === 'published' && (event.visibility === 'public' || event.visibility === 'visible' || event.visibility == null)
 }
 
 function isMissingColumnError(error: unknown): boolean {
@@ -2088,6 +2092,43 @@ export interface PublicOrderResponse {
  * Expires day after the event
  */
 export async function getPublicOrderWithTickets(orderId: string, orgId?: string): Promise<PublicOrderResponse> {
+  if (USE_FAKE_DATA) {
+    const orderData = getFakeTicketOrderById(orderId, orgId ?? null)
+    if (!orderData) throw new Error('Order not found')
+    const ticketsData = getFakeTicketsForOrder(orderId)
+    const ev = orderData.ticketed_events as { id: string; title: string; starts_at: string; ends_at: string; venue_name: string | null; venue_city: string | null; venue_state: string | null } | null
+    return {
+      order: {
+        id: orderData.id,
+        status: orderData.status,
+        total_cents: orderData.total_cents,
+        purchaser_name: orderData.purchaser_name ?? '',
+        purchaser_email: orderData.purchaser_email ?? '',
+        created_at: orderData.created_at,
+        items: (orderData.ticket_order_items ?? []).map((item: any) => ({
+          id: item.id,
+          quantity: item.quantity,
+          unit_price_cents: item.unit_price_cents,
+          subtotal_cents: item.line_total_cents,
+          ticket_types: { id: item.ticket_type_id, name: item.ticket_types?.name ?? '', description: item.ticket_types?.description ?? null },
+        })),
+        event: ev
+          ? { id: ev.id, title: ev.title, starts_at: ev.starts_at, ends_at: ev.ends_at, venue_name: ev.venue_name, venue_city: ev.venue_city, venue_state: ev.venue_state }
+          : { id: '', title: '', starts_at: '', ends_at: '', venue_name: null, venue_city: null, venue_state: null },
+      },
+      tickets: ticketsData.map((t: any) => ({
+        id: t.id,
+        entry_code: t.entry_code,
+        status: t.status,
+        used_at: t.used_at,
+        ticket_type: { id: t.ticket_type_id, name: t.ticket_types?.name ?? '', description: t.ticket_types?.description ?? null },
+        event: t.ticketed_events
+          ? { id: t.ticketed_events.id, title: t.ticketed_events.title, starts_at: t.ticketed_events.starts_at, ends_at: t.ticketed_events.ends_at, venue_name: t.ticketed_events.venue_name ?? null, venue_city: t.ticketed_events.venue_city ?? null, venue_state: t.ticketed_events.venue_state ?? null }
+          : { id: '', title: '', starts_at: '', ends_at: '', venue_name: null, venue_city: null, venue_state: null },
+      })),
+    }
+  }
+
   try {
     const response = await fetch(`${FUNCTIONS_URL}/tickets-get-order-public`, {
       method: 'POST',
@@ -2457,6 +2498,15 @@ export async function validateTicketScan(
   request: ValidateScanRequest,
   staffLinkToken?: string,
 ): Promise<{ data: ValidateScanResponse | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    try {
+      const result = validateFakeTicketScan(request)
+      return createServiceResponse<ValidateScanResponse>(result, null)
+    } catch (error: any) {
+      return createServiceResponse<ValidateScanResponse>(null, error)
+    }
+  }
+
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -2644,6 +2694,16 @@ export async function processTicketOrderRefund(
   orderId: string,
   amountCents?: number,
 ): Promise<{ data: { refund_id: string; amount: number; status: string; message: string } | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    try {
+      await new Promise((r) => setTimeout(r, DEMO_TRANSACTION_DELAY_MS))
+      const data = processFakeTicketOrderRefund(orderId, amountCents)
+      return createServiceResponse<{ refund_id: string; amount: number; status: string; message: string }>(data, null)
+    } catch (error: any) {
+      return createServiceResponse<{ refund_id: string; amount: number; status: string; message: string }>(null, error)
+    }
+  }
+
   try {
     const session = await supabase.auth.getSession()
     const response = await fetch(`${FUNCTIONS_URL}/tickets-process-refund`, {
@@ -2680,6 +2740,16 @@ export async function processTicketOrderRefund(
 export async function manuallyCompleteTicketOrder(
   orderId: string,
 ): Promise<{ data: { success: boolean; message: string; tickets_created: number } | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    try {
+      await new Promise((r) => setTimeout(r, DEMO_TRANSACTION_DELAY_MS))
+      const data = manuallyCompleteFakeTicketOrder(orderId)
+      return createServiceResponse<{ success: boolean; message: string; tickets_created: number }>(data, null)
+    } catch (error: any) {
+      return createServiceResponse<{ success: boolean; message: string; tickets_created: number }>(null, error)
+    }
+  }
+
   try {
     const session = await supabase.auth.getSession()
     const response = await fetch(`${FUNCTIONS_URL}/tickets-manual-complete`, {

@@ -339,14 +339,14 @@ function AppWithTheme() {
           <Route path="/o/:orgSlug/tickets/access" element={<TicketAccessPage />} />
           <Route path="/o/:orgSlug/tickets/access/:token" element={<OrgScopedTicketAccess />} />
           
-          {/* Legacy Public Ticketing Routes (deprecated - will be removed) */}
-          <Route path="/tickets" element={<TicketEventList />} />
-          <Route path="/tickets/events/:eventId" element={<TicketEventDetail />} />
-          <Route path="/tickets/order/:orderId" element={<TicketOrderSuccess />} />
-          <Route path="/tickets/access" element={<TicketAccessPage />} />
-          <Route path="/tickets/access/:token" element={<TicketAccess />} />
-          <Route path="/tickets/resend" element={<ResendTicketsPage />} />
-          <Route path="/tickets/validate/:token" element={<TicketScanner />} />
+          {/* Public Ticketing Routes */}
+          <Route path="/portal/tickets" element={<TicketEventList />} />
+          <Route path="/portal/tickets/events/:eventId" element={<TicketEventDetail />} />
+          <Route path="/portal/tickets/order/:orderId" element={<TicketOrderSuccess />} />
+          <Route path="/portal/tickets/access" element={<TicketAccessPage />} />
+          <Route path="/portal/tickets/access/:token" element={<TicketAccess />} />
+          <Route path="/portal/tickets/resend" element={<ResendTicketsPage />} />
+          <Route path="/portal/tickets/validate/:token" element={<TicketScanner />} />
           
           {/* Public Shared Video Routes */}
           <Route path="/share/video/:token" element={

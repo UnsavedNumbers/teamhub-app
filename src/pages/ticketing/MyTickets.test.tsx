@@ -29,7 +29,7 @@ vi.mock('@/components/common/FullScreenLoader', () => ({
 }))
 
 vi.mock('@/utils/routes', () => ({
-  useRouteLink: () => '/tickets',
+  useRouteLink: () => '/portal/tickets',
 }))
 
 function renderPage() {
@@ -139,6 +139,6 @@ describe('MyTickets', () => {
     renderPage()
 
     expect(await screen.findByText('No tickets found')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Browse Events/i })).toHaveAttribute('href', '/tickets')
+    expect(screen.getByRole('link', { name: /Browse Events/i })).toHaveAttribute('href', '/portal/tickets')
   })
 })

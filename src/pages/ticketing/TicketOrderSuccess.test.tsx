@@ -17,7 +17,7 @@ vi.mock('@/components/ticketing/TicketCard', () => ({
   default: ({ ticket }: { ticket: { id: string } }) => <div data-testid="ticket-card">{ticket.id}</div>,
 }))
 
-function renderPage(route = '/tickets/order/order-abc123') {
+function renderPage(route = '/portal/tickets/order/order-abc123') {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -29,7 +29,7 @@ function renderPage(route = '/tickets/order/order-abc123') {
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[route]}>
         <Routes>
-          <Route path="/tickets/order/:orderId" element={<TicketOrderSuccess />} />
+          <Route path="/portal/tickets/order/:orderId" element={<TicketOrderSuccess />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,

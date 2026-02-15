@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { LicensePlan } from '../utils/licenseUtils'
 import { t } from '../i18n'
+import { USE_FAKE_DATA, DEMO_TRANSACTION_DELAY_MS } from '../data/config'
 
 interface CheckoutSessionParams {
   organizationId: string
@@ -62,6 +63,11 @@ export async function createCheckoutSession(params: CheckoutSessionParams) {
     throw new Error(t('errors.missingOrganization'))
   }
 
+  if (USE_FAKE_DATA) {
+    await new Promise((r) => setTimeout(r, DEMO_TRANSACTION_DELAY_MS))
+    return { checkout_session_url: successUrl, session_id: `demo_${organizationId}_${Date.now()}` }
+  }
+
   const { data, error } = await supabase.functions.invoke('billing-create-checkout-session', {
     body: {
       organization_id: organizationId,
@@ -84,6 +90,11 @@ export async function createCustomerPortalSession(params: PortalSessionParams) {
   const { organizationId, returnUrl } = params
   if (!organizationId || !returnUrl) {
     throw new Error(t('errors.missingOrganization'))
+  }
+
+  if (USE_FAKE_DATA) {
+    await new Promise((r) => setTimeout(r, DEMO_TRANSACTION_DELAY_MS))
+    return { portal_url: returnUrl }
   }
 
   const { data, error } = await supabase.functions.invoke('billing-customer-portal', {

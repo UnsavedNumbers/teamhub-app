@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { USE_FAKE_DATA } from '../config'
 
 /**
  * Individual amenity item returned from the API
@@ -42,6 +43,28 @@ export interface FetchNearbyAmenitiesParams {
     eventType: string
     eventStartTime: string
     refresh?: boolean
+}
+
+function buildMockAmenities(eventType: string): AmenityItem[] {
+    const cafe: AmenityItem[] = [
+        { place_id: 'amenity-cafe-001', name: 'Parkside Coffee House', walking_minutes: 6, category: 'cafe', description: 'Quick espresso drinks, breakfast wraps, and indoor seating for pregame meetups.' },
+        { place_id: 'amenity-food-001', name: 'Champions Grill', walking_minutes: 9, category: 'food', description: 'Family-style menu with sandwiches, salads, and kid-friendly combo meals.' },
+        { place_id: 'amenity-pharmacy-001', name: 'Riverside Pharmacy', walking_minutes: 11, category: 'pharmacy', description: 'Convenient pickup for first aid supplies and hydration products.' },
+        { place_id: 'amenity-hotel-001', name: 'Gateway Suites', walking_minutes: 14, category: 'lodging', description: 'Tournament-rate hotel with early breakfast and team block options.' },
+        { place_id: 'amenity-grocery-001', name: 'City Market Fresh', walking_minutes: 12, category: 'grocery', description: 'Healthy snacks, drinks, and grab-and-go meal kits for game days.' },
+    ]
+
+    const nightlife: AmenityItem[] = [
+        { place_id: 'amenity-food-002', name: 'Victory Pizza Co.', walking_minutes: 8, category: 'food', description: 'Large-group seating and quick dinner service after evening sessions.' },
+        { place_id: 'amenity-dessert-001', name: 'Summit Creamery', walking_minutes: 10, category: 'dessert', description: 'Local ice cream and non-dairy options popular with family groups.' },
+        { place_id: 'amenity-park-001', name: 'Riverfront Walk', walking_minutes: 7, category: 'outdoors', description: 'Scenic walking path for cooldown and recovery between games.' },
+        { place_id: 'amenity-gas-001', name: 'Metro Fuel Stop', walking_minutes: 13, category: 'gas', description: 'Fuel, convenience goods, and late-night service for travel teams.' },
+    ]
+
+    if (eventType === 'fundraiser' || eventType === 'social_event') {
+        return nightlife
+    }
+    return cafe
 }
 
 /**
@@ -81,6 +104,22 @@ export async function fetchNearbyAmenities(
 
     if (!hasCoordinates && !hasPlaceId) {
         return { data: null, error: new Error('Either coordinates or place_id is required') }
+    }
+
+    if (USE_FAKE_DATA) {
+        const venueKey = buildVenueKey(params.placeId, params.latitude, params.longitude) || 'place_id:demo'
+        return {
+            data: {
+                amenities: buildMockAmenities(params.eventType),
+                cached: true,
+                venue_key: venueKey,
+                event_type: params.eventType,
+                time_window: params.eventStartTime,
+                fallback: false,
+                fetch_in_progress: false,
+            },
+            error: null,
+        }
     }
 
     try {

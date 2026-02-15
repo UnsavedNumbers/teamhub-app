@@ -574,7 +574,7 @@ export async function getOrgProfile(orgId: string): Promise<{ data: EntityProfil
  * Get organization profile by slug (lookup id then call getOrgProfile)
  */
 export async function getOrgProfileBySlug(slug: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.getOrgProfile(slug)
+  if (USE_FAKE_DATA) return fakeService.getOrgProfileBySlug(slug)
 
   try {
     const { data: orgRow, error: orgError } = await supabaseAny

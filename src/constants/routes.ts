@@ -218,12 +218,12 @@ export const ROUTES = {
   PUBLIC_ORG_TICKET_ORDER: (slug: string, orderId: string) => `/o/${slug}/tickets/order/${orderId}`,
   PUBLIC_ORG_TICKET_ACCESS: (slug: string, token: string) => `/o/${slug}/tickets/access/${token}`,
   
-  // Legacy public ticketing routes (deprecated)
-  PUBLIC_TICKETS: '/tickets',
-  PUBLIC_TICKET_EVENT: (eventId: string) => `/tickets/events/${eventId}`,
-  PUBLIC_TICKET_ORDER: (orderId: string) => `/tickets/order/${orderId}`,
-  PUBLIC_TICKET_ACCESS: (token: string) => `/tickets/access/${token}`,
-  PUBLIC_TICKET_VALIDATE: (token: string) => `/tickets/validate/${token}`,
+  // Public ticketing routes
+  PUBLIC_TICKETS: '/portal/tickets',
+  PUBLIC_TICKET_EVENT: (eventId: string) => `/portal/tickets/events/${eventId}`,
+  PUBLIC_TICKET_ORDER: (orderId: string) => `/portal/tickets/order/${orderId}`,
+  PUBLIC_TICKET_ACCESS: (token: string) => `/portal/tickets/access/${token}`,
+  PUBLIC_TICKET_VALIDATE: (token: string) => `/portal/tickets/validate/${token}`,
 } as const
 
 // Public URL helpers

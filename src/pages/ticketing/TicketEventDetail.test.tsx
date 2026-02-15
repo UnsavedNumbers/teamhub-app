@@ -30,7 +30,7 @@ vi.mock('@/components/ticketing/SeatSelector', () => ({
   default: () => <div data-testid="seat-selector" />,
 }))
 
-function renderPage(route = '/tickets/events/event-1') {
+function renderPage(route = '/portal/tickets/events/event-1') {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -43,7 +43,7 @@ function renderPage(route = '/tickets/events/event-1') {
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={[route]}>
           <Routes>
-            <Route path="/tickets/events/:eventId" element={<TicketEventDetail />} />
+            <Route path="/portal/tickets/events/:eventId" element={<TicketEventDetail />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>

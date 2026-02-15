@@ -6,6 +6,7 @@ import { getEventDetails } from '@/data/services/eventsService'
 import { supabase } from '@/lib/supabase'
 import { showError, showSuccess } from '@/utils/toast'
 import { getLink } from '@/utils/routes'
+import { USE_FAKE_DATA } from '@/data/config'
 import { getReasonIcon, getReasonMessage, shouldShowUpgradePrompt, useFeatureGate } from '@/lib/featureGate'
 import type { ReasonCode } from '@/lib/featureGate/types'
 import type { CalendarEvent, EventLocation } from '@/types/calendar'
@@ -299,6 +300,21 @@ export default function AdminEventDetail() {
       setWeatherData(null)
 
       try {
+        if (USE_FAKE_DATA) {
+          const dayOfYear = new Date(event.start_time).getDate()
+          const conditions: WeatherSummary[] = [
+            { temperature: 72, feelsLike: 70, condition: 'sunny', description: 'Mostly Sunny', humidity: 45, windSpeed: 8, precipitation: 10 },
+            { temperature: 68, feelsLike: 66, condition: 'partly_cloudy', description: 'Partly Cloudy', humidity: 55, windSpeed: 10, precipitation: 20 },
+            { temperature: 62, feelsLike: 60, condition: 'cloudy', description: 'Chance of Rain', humidity: 70, windSpeed: 12, precipitation: 45 },
+            { temperature: 58, feelsLike: 56, condition: 'rainy', description: 'Rain Expected', humidity: 85, windSpeed: 15, precipitation: 80 },
+            { temperature: 75, feelsLike: 73, condition: 'sunny', description: 'Clear', humidity: 40, windSpeed: 6, precipitation: 5 },
+          ]
+          const c = conditions[dayOfYear % conditions.length]
+          setWeatherData(c)
+          setLoadingWeather(false)
+          return
+        }
+
         const location = encodeURIComponent(venueAddress)
         const date = encodeURIComponent(event.start_time)
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/weather?location=${location}&date=${date}`

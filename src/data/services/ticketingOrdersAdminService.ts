@@ -1,4 +1,10 @@
 import { supabase } from '@/lib/supabase'
+import { USE_FAKE_DATA } from '../config'
+import {
+  deleteFakeTicketOrder,
+  getFakeTicketedEvents,
+  getFakeTicketOrdersWithRelations,
+} from '../fake/ticketingFakeService'
 
 export interface TicketOrderItem {
   id: string
@@ -65,15 +71,98 @@ export interface TicketingOrdersResponse {
   meta: TicketingOrdersMeta
 }
 
+function getDatePresetStart(datePreset: string | null | undefined): Date | null {
+  if (!datePreset) return null
+
+  const now = new Date()
+  switch (datePreset) {
+    case 'today': {
+      const value = new Date(now)
+      value.setHours(0, 0, 0, 0)
+      return value
+    }
+    case 'this_week': {
+      const value = new Date(now)
+      value.setDate(now.getDate() - now.getDay())
+      value.setHours(0, 0, 0, 0)
+      return value
+    }
+    case 'this_month':
+      return new Date(now.getFullYear(), now.getMonth(), 1)
+    case 'last_30_days': {
+      const value = new Date(now)
+      value.setDate(now.getDate() - 30)
+      return value
+    }
+    default:
+      return null
+  }
+}
+
+function applyDateFilters(
+  orders: TicketOrderWithRelations[],
+  datePreset?: string | null,
+  dateFrom?: string | null,
+  dateTo?: string | null,
+): TicketOrderWithRelations[] {
+  const presetStart = getDatePresetStart(datePreset)
+
+  return orders.filter((order) => {
+    if (!order.created_at) return false
+    const createdAt = new Date(order.created_at)
+
+    if (presetStart && createdAt < presetStart) return false
+    if (!presetStart && dateFrom && createdAt < new Date(dateFrom)) return false
+    if (!presetStart && dateTo && createdAt > new Date(dateTo)) return false
+
+    return true
+  })
+}
+
+function sortOrders(orders: TicketOrderWithRelations[], sortBy: string): TicketOrderWithRelations[] {
+  const copy = [...orders]
+
+  if (sortBy === 'amount') {
+    copy.sort((a, b) => (b.total_cents || 0) - (a.total_cents || 0))
+    return copy
+  }
+
+  copy.sort((a, b) => {
+    const aValue = a[sortBy as keyof TicketOrderWithRelations]
+    const bValue = b[sortBy as keyof TicketOrderWithRelations]
+
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return bValue.localeCompare(aValue)
+    }
+
+    const aTime = a.created_at ? new Date(a.created_at).getTime() : 0
+    const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
+    return bTime - aTime
+  })
+
+  return copy
+}
+
+function getEventFilterIds(query: TicketingOrdersQuery): string[] {
+  const ids = new Set<string>()
+  if (query.eventId) ids.add(query.eventId)
+
+  const eventIds = (query as TicketingOrdersQuery & { eventIds?: string[] }).eventIds
+  if (Array.isArray(eventIds)) {
+    eventIds.forEach((id) => {
+      if (id) ids.add(id)
+    })
+  }
+
+  return Array.from(ids)
+}
+
 export async function fetchTicketingOrders(
   orgId: string,
-  query: TicketingOrdersQuery = {}
+  query: TicketingOrdersQuery = {},
 ): Promise<TicketingOrdersResponse> {
-  console.log('[fetchTicketingOrders] START orgId:', orgId, 'query:', query)
-
   const {
     search = '',
-    eventId,
     status,
     dateFrom,
     dateTo,
@@ -83,9 +172,59 @@ export async function fetchTicketingOrders(
     perPage = 20,
   } = query
 
+  const eventFilterIds = getEventFilterIds(query)
+
+  if (USE_FAKE_DATA) {
+    const baseOrders = getFakeTicketOrdersWithRelations(orgId).map((order) => ({
+      ...order,
+      payment_processor: 'demo-card',
+      payment_id: order.stripe_payment_intent_id,
+    })) as TicketOrderWithRelations[]
+
+    let filtered = baseOrders
+
+    if (search) {
+      const queryText = search.toLowerCase()
+      filtered = filtered.filter((order) =>
+        [order.purchaser_email, order.purchaser_name, order.id]
+          .filter(Boolean)
+          .some((field) => String(field).toLowerCase().includes(queryText)),
+      )
+    }
+
+    if (eventFilterIds.length > 0) {
+      filtered = filtered.filter((order) => eventFilterIds.includes(order.ticketed_event_id))
+    }
+
+    if (status) {
+      filtered = filtered.filter((order) => order.status === status)
+    }
+
+    filtered = applyDateFilters(filtered, datePreset, dateFrom, dateTo)
+    filtered = sortOrders(filtered, sortBy)
+
+    const total = filtered.length
+    const totalPages = Math.max(1, Math.ceil(total / perPage))
+    const from = (page - 1) * perPage
+    const paged = filtered.slice(from, from + perPage)
+
+    return {
+      data: paged,
+      meta: {
+        page,
+        per_page: perPage,
+        total,
+        total_pages: totalPages,
+        total_revenue_cents: filtered.reduce((sum, order) => sum + (order.total_cents || 0), 0),
+        total_orders: total,
+      },
+    }
+  }
+
   let baseQuery = supabase
     .from('ticket_orders')
-    .select(`
+    .select(
+      `
       *,
       event:ticketed_events!ticket_orders_ticketed_event_id_fkey (
         id,
@@ -106,46 +245,30 @@ export async function fetchTicketingOrders(
           price_cents
         )
       )
-    `, { count: 'exact' })
+    `,
+      { count: 'exact' },
+    )
     .eq('org_id', orgId)
 
-  // Apply filters
   if (search) {
     baseQuery = baseQuery.or(`purchaser_email.ilike.%${search}%,purchaser_name.ilike.%${search}%,id.ilike.%${search}%`)
   }
 
-  if (eventId) {
-    baseQuery = baseQuery.eq('ticketed_event_id', eventId)
+  if (eventFilterIds.length > 0) {
+    if (eventFilterIds.length === 1) {
+      baseQuery = baseQuery.eq('ticketed_event_id', eventFilterIds[0])
+    } else {
+      baseQuery = baseQuery.in('ticketed_event_id', eventFilterIds)
+    }
   }
 
   if (status) {
     baseQuery = baseQuery.eq('status', status)
   }
 
-  // Date filtering
-  if (datePreset) {
-    const now = new Date()
-    let fromDate: Date | null = null
-    
-    switch (datePreset) {
-      case 'today':
-        fromDate = new Date(now.setHours(0, 0, 0, 0))
-        break
-      case 'this_week':
-        fromDate = new Date(now.setDate(now.getDate() - now.getDay()))
-        fromDate.setHours(0, 0, 0, 0)
-        break
-      case 'this_month':
-        fromDate = new Date(now.getFullYear(), now.getMonth(), 1)
-        break
-      case 'last_30_days':
-        fromDate = new Date(now.setDate(now.getDate() - 30))
-        break
-    }
-
-    if (fromDate) {
-      baseQuery = baseQuery.gte('created_at', fromDate.toISOString())
-    }
+  const presetStart = getDatePresetStart(datePreset)
+  if (presetStart) {
+    baseQuery = baseQuery.gte('created_at', presetStart.toISOString())
   } else {
     if (dateFrom) {
       baseQuery = baseQuery.gte('created_at', dateFrom)
@@ -155,35 +278,22 @@ export async function fetchTicketingOrders(
     }
   }
 
-  // Sorting
   const sortColumn = sortBy === 'amount' ? 'total_cents' : sortBy
   baseQuery = baseQuery.order(sortColumn, { ascending: false })
 
-  // Pagination
   const from = (page - 1) * perPage
   const to = from + perPage - 1
   baseQuery = baseQuery.range(from, to)
 
-  console.log('[fetchTicketingOrders] About to execute query, range:', from, to)
-
   const { data, error, count } = await baseQuery
-
-  console.log('[fetchTicketingOrders] result count:', count, 'data length:', data?.length, 'error:', error)
-  console.log('[fetchTicketingOrders] data:', data)
-
   if (error) throw error
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orders = (data || []) as any as TicketOrderWithRelations[]
-
-  // Calculate ticket count for each order
-  const ordersWithCount = orders.map(order => ({
+  const ordersWithCount = orders.map((order) => ({
     ...order,
-    ticket_count: order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0
+    ticket_count: order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
   }))
-
-  // Calculate aggregates
-  const totalRevenue = orders.reduce((sum, order) => sum + (order.total_cents || 0), 0)
 
   return {
     data: ordersWithCount,
@@ -191,14 +301,26 @@ export async function fetchTicketingOrders(
       page,
       per_page: perPage,
       total: count || 0,
-      total_pages: Math.ceil((count || 0) / perPage),
-      total_revenue_cents: totalRevenue,
+      total_pages: Math.max(1, Math.ceil((count || 0) / perPage)),
+      total_revenue_cents: orders.reduce((sum, order) => sum + (order.total_cents || 0), 0),
       total_orders: count || 0,
     },
   }
 }
 
 export async function fetchTicketingEvents(orgId: string) {
+  if (USE_FAKE_DATA) {
+    return getFakeTicketedEvents({ org_id: orgId })
+      .map((event) => ({
+        id: event.id,
+        title: event.title,
+        starts_at: event.starts_at,
+        status: event.status,
+      }))
+      .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime())
+      .slice(0, 100)
+  }
+
   const { data, error } = await supabase
     .from('ticketed_events')
     .select('id, title, starts_at, status')
@@ -211,7 +333,11 @@ export async function fetchTicketingEvents(orgId: string) {
 }
 
 export async function deleteTicketOrder(orgId: string, orderId: string) {
-  // First check if order belongs to org
+  if (USE_FAKE_DATA) {
+    deleteFakeTicketOrder(orgId, orderId)
+    return
+  }
+
   const { data: order } = await supabase
     .from('ticket_orders')
     .select('id, status')

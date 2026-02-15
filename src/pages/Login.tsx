@@ -14,6 +14,9 @@ import { getLoginRedirect } from '../utils/loginRedirect'
 import { AUTH_HERO_IMAGES } from '../utils/authImages'
 import { mapAuthError } from '../utils/authErrorMapper'
 import type { OrgMemberRole } from '../contexts/OrganizationContext'
+import { USE_FAKE_DATA } from '../data/config'
+import { getDemoUserContext } from '../data/fake/userContext'
+import { getOrganizationById } from '../data/fake/fakeOrganizations'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -69,6 +72,27 @@ export default function Login() {
       }
       setLoading(false)
     } else {
+      if (USE_FAKE_DATA) {
+        const demoContext = getDemoUserContext(email)
+        if (demoContext) {
+          const roles: OrgMemberRole[] = demoContext.roles
+          const orgName = getOrganizationById(demoContext.orgId)?.name ?? 'Demo Organization'
+          const organizations = [
+            {
+              id: demoContext.orgId,
+              name: orgName,
+              roles,
+              get role(): OrgMemberRole {
+                return roles[0] ?? 'parent'
+              },
+            },
+          ]
+          const redirectTo = getLoginRedirect(false, organizations, false)
+          navigate(redirectTo)
+          return
+        }
+      }
+
       // Wait for profile to load to get organizations
       // We need to check roles to determine redirect
       const { data: { user } } = await supabase.auth.getUser()
@@ -219,6 +243,12 @@ export default function Login() {
       {/* Right side - Login Form */}
       <div className="flex-1 flex flex-col px-6 py-8 lg:px-20 xl:px-24 bg-white dark:bg-slate-900/50 overflow-y-auto">
         <div className="mx-auto w-full max-w-sm lg:w-96 flex flex-col">
+          {USE_FAKE_DATA && (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+              {t('errors.auth.demoBanner')}
+            </div>
+          )}
+
           {/* Logo */}
           <div className="mb-8 pt-4">
             <img 

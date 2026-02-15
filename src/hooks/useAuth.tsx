@@ -13,6 +13,9 @@ import { useOrganization, Organization } from '../contexts/OrganizationContext'
 import type { PlatformAdminRole } from '../types/platformAdmin.types'
 import type { HomeLocation } from '../types/location'
 import { geocodeZipToHomeLocation } from '../utils/homeLocation'
+import { USE_FAKE_DATA } from '../data/config'
+import { getDemoUserContext } from '../data/fake/userContext'
+import { getOrganizationById } from '../data/fake/fakeOrganizations'
 
 // Role types - now per organization
 type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff'
@@ -324,6 +327,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     mountedRef.current = true
 
+    if (USE_FAKE_DATA) {
+      setLoading(false)
+      return () => {
+        mountedRef.current = false
+      }
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       if (!mountedRef.current) return
 
@@ -433,6 +443,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /* ===================== AUTH ACTIONS ===================== */
 
   async function signInWithEmail(email: string, password: string) {
+    if (USE_FAKE_DATA) {
+      const demoContext = getDemoUserContext(email)
+      if (!demoContext) {
+        return { error: { message: 'Invalid login credentials' } as AuthError }
+      }
+
+      const roles: OrgMemberRole[] = demoContext.roles
+      const organizationName = getOrganizationById(demoContext.orgId)?.name ?? 'Demo Organization'
+      const organizations: Organization[] = [
+        {
+          id: demoContext.orgId,
+          name: organizationName,
+          roles,
+          get role(): OrgMemberRole {
+            return roles[0] ?? 'parent'
+          },
+        },
+      ]
+
+      const legacyRole: LegacyUserRole | undefined = roles.includes('org_admin')
+        ? 'admin'
+        : roles.includes('coach')
+          ? 'coach'
+          : roles.includes('parent')
+            ? 'parent'
+            : undefined
+
+      const demoUser = {
+        id: demoContext.userId,
+        email: demoContext.email,
+        user_metadata: { signup_mode: 'parent' },
+      } as unknown as User
+
+      const demoProfile: UserProfile = {
+        id: demoContext.userId,
+        email: demoContext.email,
+        phone: '',
+        first_name: '',
+        last_name: '',
+        display_name: demoContext.email?.split('@')[0] ?? null,
+        home_location: null,
+        home_zipcode: undefined,
+        role: legacyRole,
+        family_id: null,
+        org_id: demoContext.orgId,
+        organizations,
+        isPlatformAdmin: demoContext.isPlatformAdmin,
+        platformAdminRole: null,
+        requiresOrgSetup: false,
+      }
+
+      setUser(demoUser)
+      setSession(null)
+      setProfile(demoProfile)
+      setOrganizations(organizations)
+      setLoading(false)
+      return { error: null }
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error }
   }
@@ -499,6 +568,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    if (USE_FAKE_DATA) {
+      setUser(null)
+      setProfile(null)
+      setSession(null)
+      setOrganizations([])
+      setLoading(false)
+      return
+    }
+
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
@@ -525,6 +603,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function refreshProfile() {
+    if (USE_FAKE_DATA) {
+      return
+    }
+
     if (user?.id) {
       await fetchProfile(user.id)
     }

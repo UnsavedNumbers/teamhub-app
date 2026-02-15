@@ -98,31 +98,31 @@ const portal = {
 
     // Tickets
     tickets: {
-        path: '/tickets',
+        path: '/portal/tickets',
         label: 'Tickets',
         icon: 'confirmation_number',
         description: 'Buy event tickets',
     },
     ticketEventDetail: {
-        path: '/tickets/events/:eventId',
+        path: '/portal/tickets/events/:eventId',
         params: ['eventId'] as const,
         label: 'Event Tickets',
         icon: 'confirmation_number',
     },
     ticketOrderSuccess: {
-        path: '/tickets/order/:orderId',
+        path: '/portal/tickets/order/:orderId',
         params: ['orderId'] as const,
         label: 'Order Confirmation',
         icon: 'check_circle',
     },
     ticketAccess: {
-        path: '/tickets/access/:token',
+        path: '/portal/tickets/access/:token',
         params: ['token'] as const,
         label: 'My Tickets',
         icon: 'confirmation_number',
     },
     ticketValidate: {
-        path: '/tickets/validate/:token',
+        path: '/portal/tickets/validate/:token',
         params: ['token'] as const,
         label: 'Validate Tickets',
         icon: 'qr_code_scanner',

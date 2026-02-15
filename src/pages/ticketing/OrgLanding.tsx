@@ -112,7 +112,12 @@ function OrgLandingContent({ org }: { org: OrgContext }) {
                     className="flex flex-col bg-white dark:bg-[#1c2630] rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group"
                   >
                   {event.cover_image_path && (
-                    <div className="w-full aspect-video bg-cover bg-center" style={{ backgroundImage: `url(${event.cover_image_path})` }} />
+                    <div className="relative w-full flex-shrink-0" style={{ paddingBottom: '75%' }}>
+                      <div
+                        className="absolute inset-0 bg-cover bg-center"
+                        style={{ backgroundImage: `url(${event.cover_image_path})` }}
+                      />
+                    </div>
                   )}
                   <div className="p-5">
                     <h3 className="text-lg font-bold mb-2 group-hover:text-[#137fec] transition-colors">

@@ -8,7 +8,7 @@
  * Each method includes a TODO comment showing the equivalent Supabase query pattern.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_TRANSACTION_DELAY_MS } from '../config'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { calculatePermissions } from '../fake/userContext'
 import {
@@ -1161,7 +1161,7 @@ export async function issueRefundForFeeAssignment(
 ): Promise<{ data: { id: string; refundId: string } | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
         try {
-            await simulateDelay()
+            await new Promise((r) => setTimeout(r, DEMO_TRANSACTION_DELAY_MS))
             const permissions = buildPermissions(context)
             if (!permissions.canViewAllOrgData) {
                 return { data: null, error: new Error('Access denied: Admin only') }

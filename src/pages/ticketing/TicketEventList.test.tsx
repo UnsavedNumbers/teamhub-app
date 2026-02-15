@@ -67,8 +67,8 @@ describe('TicketEventList', () => {
 
     const eventALink = screen.getByRole('link', { name: /Event A/i })
     const eventBLink = screen.getByRole('link', { name: /Event B/i })
-    expect(eventALink).toHaveAttribute('href', '/tickets/events/event-a')
-    expect(eventBLink).toHaveAttribute('href', '/tickets/events/event-b')
+    expect(eventALink).toHaveAttribute('href', '/portal/tickets/events/event-a')
+    expect(eventBLink).toHaveAttribute('href', '/portal/tickets/events/event-b')
   })
 
   test('[TE-E2E-002] shows empty discovery state when no published events match', async () => {

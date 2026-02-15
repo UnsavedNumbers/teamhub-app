@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { USE_FAKE_DATA } from '../config'
 import type { VenueInsights, PlaceDetailsResponse } from '../../types/venueInsights'
 import { mapVenueInsightsRow } from '../../types/venueInsights'
 
@@ -21,6 +22,95 @@ export interface VenueInsightsResponse {
   cached?: boolean
 }
 
+function buildMockVenueInsights(placeId: string): VenueInsightsResponse {
+  const catalog: Array<{
+    placeId: string
+    name: string
+    address: string
+    cityState: string
+    lat: number
+    lng: number
+    summary: string
+    expect: string
+  }> = [
+      {
+        placeId: 'riv-001',
+        name: 'Riverside Sports Complex',
+        address: '1234 Athletic Way',
+        cityState: 'Sacramento, CA 95814',
+        lat: 38.58157,
+        lng: -121.4944,
+        summary: 'Riverside Sports Complex is a high-traffic youth tournament venue with full concessions, covered family seating, and nearby parking garages within a short walk.',
+        expect: 'Expect active check-in lines 45 minutes before game time, strong weekend foot traffic, and quick access to restaurants and coffee options around the venue core.',
+      },
+      {
+        placeId: 'lin-001',
+        name: 'Lincoln High School Stadium',
+        address: '5678 Education Blvd',
+        cityState: 'Sacramento, CA 95822',
+        lat: 38.51896,
+        lng: -121.49324,
+        summary: 'Lincoln High School Stadium provides a neighborhood-focused game-day setup with easy drop-off lanes, structured bleacher seating, and family-friendly concessions.',
+        expect: 'Expect moderate arrival flow, limited premium parking, and a quieter post-game environment suited for youth events and school-hosted showcases.',
+      },
+    ]
+
+  const fallback = catalog[Math.abs(placeId.length) % catalog.length]
+  const selected = catalog.find((entry) => entry.placeId === placeId) || fallback
+
+  return {
+    place_details: {
+      place_id: placeId,
+      name: selected.name,
+      formatted_address: `${selected.address}, ${selected.cityState}`,
+      photos: [
+        {
+          photo_reference: `${placeId}-photo-1`,
+          width: 1200,
+          height: 800,
+          html_attributions: ['YouthSports Demo'],
+        },
+      ],
+      rating: 4.6,
+      user_ratings_total: 482,
+      types: ['stadium', 'point_of_interest'],
+      opening_hours: {
+        open_now: true,
+        weekday_text: [
+          'Mon-Fri: 8:00 AM - 9:00 PM',
+          'Sat-Sun: 7:00 AM - 10:00 PM',
+        ],
+      },
+      editorial_summary: {
+        overview: selected.summary,
+      },
+      area_summary: {
+        content_blocks: [
+          { topic: 'overview', content: selected.summary },
+          { topic: 'what_to_expect', content: selected.expect },
+        ],
+      },
+      geometry: {
+        location: {
+          lat: selected.lat,
+          lng: selected.lng,
+        },
+      },
+    } as PlaceDetailsResponse,
+    photos: [
+      'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?auto=format&fit=crop&w=1200&q=80',
+    ],
+    ai_summary: selected.summary,
+    ai_what_to_expect: selected.expect,
+    errors: {
+      place_details: null,
+      gemini: null,
+    },
+    cached: true,
+  }
+}
+
 /**
  * Fetch venue insights for a given place_id
  * 
@@ -34,6 +124,10 @@ export async function fetchVenueInsights(
 ): Promise<{ data: VenueInsightsResponse | null; error: Error | null }> {
   if (!placeId) {
     return { data: null, error: new Error('place_id is required') }
+  }
+
+  if (USE_FAKE_DATA) {
+    return { data: buildMockVenueInsights(placeId), error: null }
   }
 
   try {
@@ -70,6 +164,31 @@ export async function getCachedVenueInsights(
 ): Promise<{ data: VenueInsights | null; error: Error | null }> {
   if (!placeId) {
     return { data: null, error: new Error('place_id is required') }
+  }
+
+  if (USE_FAKE_DATA) {
+    const mock = buildMockVenueInsights(placeId)
+    const timestamp = new Date().toISOString()
+    return {
+      data: {
+        id: `venue-insights-${placeId}`,
+        place_id: placeId,
+        place_details: mock.place_details,
+        photos: [],
+        ai_summary: mock.ai_summary,
+        ai_what_to_expect: mock.ai_what_to_expect,
+        ai_generated_at: timestamp,
+        ai_validation_status: 'valid',
+        place_details_fetched_at: timestamp,
+        last_place_details_call_at: timestamp,
+        last_gemini_call_at: timestamp,
+        fetch_in_progress: false,
+        place_id_valid: true,
+        created_at: timestamp,
+        updated_at: timestamp,
+      },
+      error: null,
+    }
   }
 
   try {
@@ -138,6 +257,29 @@ export async function fetchNeighborhoodSummaryDirect(
 ): Promise<{ data: NeighborhoodSummaryResponse | null; error: Error | null }> {
   if (!placeId) {
     return { data: null, error: new Error('place_id is required') }
+  }
+
+  if (USE_FAKE_DATA) {
+    const mock = buildMockVenueInsights(placeId)
+    return {
+      data: {
+        name: mock.place_details?.name || 'Demo Venue',
+        area_summary: {
+          content_blocks: [
+            {
+              topic: 'overview',
+              content: mock.ai_summary || 'Popular youth sports destination with family-oriented amenities.',
+            },
+            {
+              topic: 'description',
+              content: mock.ai_what_to_expect || 'Plan for early arrival and event-day pedestrian traffic around entry gates.',
+            },
+          ],
+        },
+        error: null,
+      },
+      error: null,
+    }
   }
 
   const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY

@@ -471,7 +471,7 @@ export default function FanEventDetail() {
   // Handle get tickets
   const handleGetTickets = () => {
     if (event?.ticket_event_id) {
-      navigate(`/tickets/events/${event.ticket_event_id}`)
+      navigate(`/portal/tickets/events/${event.ticket_event_id}`)
     }
   }
 
