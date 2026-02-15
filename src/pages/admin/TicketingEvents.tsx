@@ -880,7 +880,10 @@ function PaginationControls({
   )
 }
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketingEvents() {
+  useDebugLifecycle('TicketingEvents')
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
   const navigate = useNavigate()

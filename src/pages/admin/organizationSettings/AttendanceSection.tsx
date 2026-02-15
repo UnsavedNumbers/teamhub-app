@@ -38,6 +38,8 @@ interface AttendanceSectionProps {
   onDirtyChange: (dirty: boolean) => void
 }
 
+import { useDebugLifecycle } from '../../../lib/debug/integrations/useDebugLifecycle'
+
 export default function AttendanceSection({
   settings,
   isSaving,
@@ -46,6 +48,8 @@ export default function AttendanceSection({
   onSettingsUpdated,
   onDirtyChange,
 }: AttendanceSectionProps) {
+  useDebugLifecycle('AttendanceSection')
+  
   const { context } = useUserContext()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)

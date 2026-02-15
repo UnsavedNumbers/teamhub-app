@@ -23,7 +23,11 @@ const getSportCoverUrl = (sportSlug: string | null | undefined): string => {
   return '/images/sports/default/covers/sport-cover.png'
 }
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function SportDetail() {
+  useDebugLifecycle('SportDetail')
+  
   const { sport_slug } = useParams<{ sport_slug: string }>()
   const sportSlugParam = sport_slug?.trim() || ''
 

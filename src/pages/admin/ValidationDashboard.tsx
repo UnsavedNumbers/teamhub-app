@@ -38,7 +38,11 @@ interface RecentScan {
   ticket_orders: { purchaser_name: string | null } | null
 }
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function ValidationDashboard() {
+  useDebugLifecycle('ValidationDashboard')
+  
   const t = useT()
   const { id: eventId } = useParams<{ id: string }>()
   const { currentOrganization } = useOrganization()

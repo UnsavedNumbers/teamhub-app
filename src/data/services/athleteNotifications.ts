@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
 import type { NotificationAction } from '../../types/notifications'
 
@@ -14,7 +15,13 @@ interface AthleteTeamNotificationInput {
 }
 
 export async function distributeAthleteAddedNotifications(input: AthleteTeamNotificationInput): Promise<void> {
-    if (USE_FAKE_DATA) return
+    debug.flow('AthleteNotifications.distributeAthleteAddedNotifications', 'Distributing notifications', { athleteId: input.athlete_id, teamId: input.team_id, orgId: input.org_id })
+    debug.perf.start('athleteNotifications.distributeAthleteAddedNotifications')
+
+    if (USE_FAKE_DATA) {
+        debug.perf.end('athleteNotifications.distributeAthleteAddedNotifications')
+        return
+    }
 
     try {
         const recipients = new Set<string>()
@@ -160,9 +167,13 @@ export async function distributeAthleteRemovedNotifications(input: AthleteTeamNo
 
         if (insertError) throw insertError
 
+        debug.perf.end('athleteNotifications.distributeAthleteRemovedNotifications')
+        debug.flow('AthleteNotifications.distributeAthleteRemovedNotifications', 'Notifications distributed', { athleteId: input.athlete_id, teamId: input.team_id, count: notificationsToInsert.length })
         console.log(`[NotificationService] Distributed ${notificationsToInsert.length} athlete-removed notifications`)
 
     } catch (err) {
+        debug.perf.end('athleteNotifications.distributeAthleteRemovedNotifications')
+        debug.error('AthleteNotifications.distributeAthleteRemovedNotifications', 'Failed to distribute notifications', { error: err, athleteId: input.athlete_id, teamId: input.team_id })
         console.error('[NotificationService] Error distributing athlete-removed notifications:', err)
     }
 }

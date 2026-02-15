@@ -24,7 +24,11 @@ function formatStorage(bytes: number): string {
   return gb.toFixed(2)
 }
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export function PhotosDashboardView() {
+  useDebugLifecycle('PhotosDashboardView')
+  
   const { context } = useUserContext()
   const navigate = useNavigate()
   const { t } = useI18n()

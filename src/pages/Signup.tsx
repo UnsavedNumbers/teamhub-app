@@ -10,6 +10,8 @@ import {
 import { AUTH_HERO_IMAGES } from '../utils/authImages'
 import { mapAuthError } from '../utils/authErrorMapper'
 import { supabase } from '../lib/supabase'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+import { debug } from '../lib/debug'
 
 export default function Signup() {
   const [email, setEmail] = useState('')
@@ -33,6 +35,9 @@ export default function Signup() {
   const location = useLocation()
   const { t } = useI18n()
   const [logoVersion, setLogoVersion] = useState(0)
+
+  // Add lifecycle logging
+  useDebugLifecycle('Signup')
 
   // Check for setupOrganization flag from both location state and localStorage
   const locationState = location.state as {
@@ -152,22 +157,35 @@ export default function Signup() {
     e.preventDefault()
     setError(null)
 
+    debug.flow('Signup', 'Form submission started', {
+      email,
+      signupMode,
+      hasFirstName: !!firstName.trim(),
+      hasLastName: !!lastName.trim(),
+      hasPhone: !!phone.trim(),
+      hasZipcode: !!homeZipcode.trim()
+    })
+    debug.perf.start('signup.formSubmission')
+
     // Validation - Bug 3 prevention: trim and check length
     const trimmedFirstName = firstName.trim()
     const trimmedLastName = lastName.trim()
     const trimmedPhone = phone.trim()
 
     if (trimmedFirstName.length === 0) {
+      debug.error('Signup', 'Validation failed', { field: 'firstName', error: 'required' })
       setError('First name is required')
       return
     }
 
     if (trimmedLastName.length === 0) {
+      debug.error('Signup', 'Validation failed', { field: 'lastName', error: 'required' })
       setError('Last name is required')
       return
     }
 
     if (trimmedPhone.length === 0) {
+      debug.error('Signup', 'Validation failed', { field: 'phone', error: 'required' })
       setError('Phone number is required')
       return
     }
@@ -179,11 +197,13 @@ export default function Signup() {
     const trimmedZipcode = homeZipcode.trim()
 
     if (password !== confirmPassword) {
+      debug.error('Signup', 'Validation failed', { field: 'password', error: 'mismatch' })
       setError('Passwords do not match')
       return
     }
 
     if (password.length < 8) {
+      debug.error('Signup', 'Validation failed', { field: 'password', error: 'too_short' })
       setError('Password must be at least 8 characters')
       return
     }
@@ -191,19 +211,24 @@ export default function Signup() {
     setLoading(true)
 
     const { error } = await signUp(
-      email, 
-      password, 
-      trimmedFirstName, 
-      trimmedLastName, 
-      trimmedPhone, 
+      email,
+      password,
+      trimmedFirstName,
+      trimmedLastName,
+      trimmedPhone,
       trimmedZipcode,
       isOrgSetupFlow
     )
-    
+
     if (error) {
+      debug.perf.end('signup.formSubmission')
+      debug.error('Signup', 'Signup failed', { email, error: error.message })
       setError(mapAuthError(error, t))
       setLoading(false)
     } else {
+      debug.perf.end('signup.formSubmission')
+      debug.flow('Signup', 'Signup successful', { email, signupMode, isOrgSetupFlow })
+      setLoading(false)
       // Get athlete_id from sessionStorage if available (from invite flow)
       const athleteId = sessionStorage.getItem('pending_invite_athlete_id')
       

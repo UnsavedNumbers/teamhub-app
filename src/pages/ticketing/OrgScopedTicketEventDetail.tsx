@@ -33,7 +33,11 @@ interface CartItem {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 function TicketEventDetailContent({ org }: { org: OrgContext }) {
+  useDebugLifecycle('TicketEventDetailContent')
+  
   const t = useT()
   const { eventId, orgSlug } = useParams<{ eventId: string; orgSlug: string }>()
   const { isOffline } = useOffline()

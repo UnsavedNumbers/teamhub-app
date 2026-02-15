@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { t } from '../../i18n'
@@ -56,17 +57,30 @@ function isRlsError(error: Error): boolean {
 export async function getOrganizationTravelContacts(
   context: UserContext
 ): Promise<{ data: Record<TravelContactCategoryOrg, OrganizationTravelContactRow | null>; error: Error | null }> {
-  if (USE_FAKE_DATA) {
-    await simulateDelay()
-    if (!context?.orgId) {
-      return { data: {} as any, error: new Error(t('common.error.notFound' as any)) }
-    }
-    const result = ensureFakeContacts(context.orgId)
-    return { data: result, error: null }
-  }
+  console.groupCollapsed(`%cgetOrganizationTravelContacts: ${context?.orgId}`, 'color: #666; font-weight: bold;');
+  debug.data('OrganizationTravelContactsService.getOrganizationTravelContacts', 'Request', { orgId: context?.orgId })
+  debug.perf.start('organizationTravelContactsService.getOrganizationTravelContacts')
 
   try {
+    if (USE_FAKE_DATA) {
+      await simulateDelay()
+      if (!context?.orgId) {
+        debug.perf.end('organizationTravelContactsService.getOrganizationTravelContacts')
+        debug.error('OrganizationTravelContactsService.getOrganizationTravelContacts', 'orgId is required', { orgId: context?.orgId })
+        console.groupEnd()
+        return { data: {} as any, error: new Error(t('common.error.notFound' as any)) }
+      }
+      const result = ensureFakeContacts(context.orgId)
+      debug.perf.end('organizationTravelContactsService.getOrganizationTravelContacts')
+      debug.data('OrganizationTravelContactsService.getOrganizationTravelContacts', 'Response (fake)', { orgId: context.orgId })
+      console.groupEnd()
+      return { data: result, error: null }
+    }
+
     if (!context?.orgId) {
+      debug.perf.end('organizationTravelContactsService.getOrganizationTravelContacts')
+      debug.error('OrganizationTravelContactsService.getOrganizationTravelContacts', 'orgId is required', { orgId: context?.orgId })
+      console.groupEnd()
       return { data: {} as any, error: new Error(t('common.error.notFound' as any)) }
     }
 
@@ -90,8 +104,14 @@ export async function getOrganizationTravelContacts(
       }
     })
 
+    debug.perf.end('organizationTravelContactsService.getOrganizationTravelContacts')
+    debug.data('OrganizationTravelContactsService.getOrganizationTravelContacts', 'Response', { orgId: context.orgId })
+    console.groupEnd()
     return { data: result, error: null }
   } catch (err) {
+    debug.perf.end('organizationTravelContactsService.getOrganizationTravelContacts')
+    debug.error('OrganizationTravelContactsService.getOrganizationTravelContacts', 'Failed to get organization travel contacts', { error: err, orgId: context?.orgId })
+    console.groupEnd()
     console.error('getOrganizationTravelContacts error:', err)
     if (err instanceof Error && isRlsError(err)) {
       return { data: {} as any, error: new Error(t('common.error.permissionDenied' as any)) }
@@ -148,8 +168,14 @@ export async function upsertOrganizationTravelContact(
 
     if (error) throw error
 
+    debug.perf.end('organizationTravelContactsService.upsertOrganizationTravelContact')
+    debug.flow('OrganizationTravelContactsService.upsertOrganizationTravelContact', 'Travel contact upserted successfully', { orgId: context.orgId, category })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('organizationTravelContactsService.upsertOrganizationTravelContact')
+    debug.error('OrganizationTravelContactsService.upsertOrganizationTravelContact', 'Failed to upsert travel contact', { error: err, orgId: context?.orgId, category })
+    console.groupEnd()
     console.error('upsertOrganizationTravelContact error:', err)
     if (err instanceof Error && isRlsError(err)) {
       return { error: new Error(t('common.error.permissionDenied' as any)) }

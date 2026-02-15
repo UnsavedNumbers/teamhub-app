@@ -52,7 +52,11 @@ interface FanVideoGroup {
 
 const PAGE_SIZE = 24
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FanVideos() {
+  useDebugLifecycle('FanVideos')
+  
   const navigate = useNavigate()
   const { t } = useI18n()
   const tAny = t as unknown as (key: string, params?: any) => string

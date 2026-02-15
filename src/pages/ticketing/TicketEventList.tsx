@@ -12,7 +12,10 @@ import { useRouteLink } from '@/utils/routes'
 import type { TicketedEvent, TicketType } from '@/types/ticketing'
 import { formatCurrency } from '@/types/ticketing'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketEventList() {
+  useDebugLifecycle('TicketEventList')
   const { data: eventsResponse } = useQuery({
     queryKey: ['ticketed-events', 'published', 'fan-visible', 'upcoming'],
     queryFn: () => getTicketedEvents({ status: 'published', upcoming_only: true, fan_visible_only: true }),

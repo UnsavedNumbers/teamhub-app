@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { useAuth } from '../hooks/useAuth'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { supabase } from '../lib/supabase'
 import { getEventDetails, updateRSVP, getAthletes, deleteEvent } from '../data/services'
 import { useOrganization } from '../contexts/OrganizationContext'
@@ -235,6 +236,9 @@ export default function EventDetail() {
   const t = useT()
   const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
+
+  // Add lifecycle logging
+  useDebugLifecycle('EventDetail', { eventId })
   const [event, setEvent] = useState<Event | null>(null)
   const [children, setChildren] = useState<Child[]>([])
   const [attendance, setAttendance] = useState<Record<string, Attendance>>({})

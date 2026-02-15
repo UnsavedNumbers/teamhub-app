@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { useI18n } from '../i18n/useI18n'
 import { useLoadingState } from '../contexts/LoadingStateContext'
 import FullScreenLoader from '../components/common/FullScreenLoader'
@@ -16,6 +17,7 @@ import type { SupabaseExtended as Database } from '../lib/supabase.extended.type
 import type { OrgMemberRole } from '../contexts/OrganizationContext'
 
 export default function AuthCallback() {
+  useDebugLifecycle('AuthCallback')
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { t } = useI18n()

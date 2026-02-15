@@ -8,7 +8,11 @@ import { createEvent } from '../../data/services/eventsService'
 import { useUserContext } from '../../hooks/useUserContext'
 import { EventFormData } from '../../types/calendar'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function PortalCreateEvent() {
+  useDebugLifecycle('PortalCreateEvent')
+  
   const navigate = useNavigate()
   const { context } = useUserContext()
   const [loading, setLoading] = useState(false)

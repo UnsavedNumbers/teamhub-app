@@ -8,6 +8,8 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import Lightbox from 'yet-another-react-lightbox'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+import { debug } from '../lib/debug'
 import 'yet-another-react-lightbox/styles.css'
 import { useUserContext } from '../hooks/useUserContext'
 import {
@@ -52,6 +54,9 @@ const getGridPageSize = () =>
 export default function PhotosGallery() {
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
+
+  // Add lifecycle logging
+  useDebugLifecycle('PhotosGallery', { galleryId: id })
   const isManageMode = location.pathname.includes('/manage')
   const { context, isReady } = useUserContext()
   const { t } = useI18n()
@@ -182,6 +187,10 @@ export default function PhotosGallery() {
 
   const loadGallery = useCallback(async () => {
     if (!isReady || !id || !context) return
+
+    debug.flow('PhotosGallery', 'Loading gallery', { galleryId: id })
+    debug.perf.start('photosGallery.loadGallery')
+
     setError(null)
     const galleryResult = await getGalleryById(context, id)
 
@@ -210,15 +219,23 @@ export default function PhotosGallery() {
     const { data, error: albumsError } = await getAlbumsForGallery(context, id)
     if (!mountedRef.current) return
     if (albumsError) {
+      debug.perf.end('photosGallery.loadGallery')
+      debug.error('PhotosGallery', 'Failed to load albums', { galleryId: id, error: albumsError })
       showError(albumsError.message)
       return
     }
+
+    debug.perf.end('photosGallery.loadGallery')
+    debug.flow('PhotosGallery', 'Gallery loaded successfully', { galleryId: id, galleryName: gallery?.name, albumCount: data?.length })
     setAlbums(data)
   }, [context, isReady, id])
 
   const loadPhotos = useCallback(async (reset: boolean): Promise<GalleryPhoto[] | null> => {
     if (!isReady || !id || !context) return null
     if (loadingMoreRef.current && !reset) return null
+
+    debug.data('PhotosGallery', 'Loading photos', { galleryId: id, reset, filters })
+    debug.perf.start(`photosGallery.loadPhotos-${reset ? 'reset' : 'more'}`)
 
     if (reset) {
       setLoading(true)
@@ -278,6 +295,9 @@ export default function PhotosGallery() {
     } else if (reset) {
       setBookmarkedIds(new Set())
     }
+
+    debug.perf.end(`photosGallery.loadPhotos-${reset ? 'reset' : 'more'}`)
+    debug.data('PhotosGallery', 'Photos loaded', { galleryId: id, photoCount: data?.length || 0, reset, hasMore })
 
     setLoading(false)
     loadingMoreRef.current = false

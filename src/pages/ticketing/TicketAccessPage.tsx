@@ -14,7 +14,10 @@ import { formatEntryCode } from '@/types/ticketing'
 import { useT } from '@/i18n/useI18n'
 import { Sun, AlertCircle, Loader2 } from 'lucide-react'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketAccessPage() {
+  useDebugLifecycle('TicketAccessPage')
   const [searchParams] = useSearchParams()
   const t = useT()
   const encryptedPayload = searchParams.get('t')

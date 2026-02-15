@@ -38,7 +38,11 @@ type FanPhoto = GalleryPhoto & {
 
 const getPageSize = () => (typeof window !== 'undefined' && window.innerWidth < 768 ? 30 : 48)
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FanPhotos() {
+  useDebugLifecycle('FanPhotos')
+  
   const navigate = useNavigate()
   const { t } = useI18n()
   const tAny = t as unknown as (key: string, params?: any) => string

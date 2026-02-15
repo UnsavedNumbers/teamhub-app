@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabase'
 const supabaseAny = supabase as any
 import { USE_FAKE_DATA } from '../config'
+import { debug } from '../../lib/debug'
 import type { NotificationAction } from '../../types/notifications'
 
 interface EventNotificationInput {
@@ -13,7 +14,16 @@ interface EventNotificationInput {
 }
 
 export async function distributeEventNotifications(event: EventNotificationInput): Promise<void> {
-    if (USE_FAKE_DATA) return
+    console.groupCollapsed(`%cdistributeEventNotifications: ${event.id}`, 'color: #666; font-weight: bold;');
+    debug.flow('NotificationDistributionService.distributeEventNotifications', 'Distributing notifications', { eventId: event.id, teamId: event.team_id, orgId: event.org_id })
+    debug.perf.start('notificationDistributionService.distributeEventNotifications')
+
+    if (USE_FAKE_DATA) {
+        debug.perf.end('notificationDistributionService.distributeEventNotifications')
+        debug.data('NotificationDistributionService.distributeEventNotifications', 'Skipped (fake data)', { eventId: event.id })
+        console.groupEnd()
+        return
+    }
 
     try {
         const recipients = new Set<string>()
@@ -92,15 +102,30 @@ export async function distributeEventNotifications(event: EventNotificationInput
 
         if (insertError) throw insertError
 
+        debug.perf.end('notificationDistributionService.distributeEventNotifications')
+        debug.flow('NotificationDistributionService.distributeEventNotifications', 'Notifications distributed successfully', { eventId: event.id, recipientCount: notificationsToInsert.length })
+        console.groupEnd()
         console.log(`[NotificationService] Distributed ${notificationsToInsert.length} notifications for event ${event.id}`)
 
     } catch (err) {
+        debug.perf.end('notificationDistributionService.distributeEventNotifications')
+        debug.error('NotificationDistributionService.distributeEventNotifications', 'Failed to distribute notifications', { error: err, eventId: event.id })
+        console.groupEnd()
         console.error('[NotificationService] Error distributing event notifications:', err)
     }
 }
 
 export async function distributeEventUpdateNotifications(event: EventNotificationInput): Promise<void> {
-    if (USE_FAKE_DATA) return
+    console.groupCollapsed(`%cdistributeEventUpdateNotifications: ${event.id}`, 'color: #666; font-weight: bold;');
+    debug.flow('NotificationDistributionService.distributeEventUpdateNotifications', 'Distributing update notifications', { eventId: event.id, teamId: event.team_id, orgId: event.org_id })
+    debug.perf.start('notificationDistributionService.distributeEventUpdateNotifications')
+
+    if (USE_FAKE_DATA) {
+        debug.perf.end('notificationDistributionService.distributeEventUpdateNotifications')
+        debug.data('NotificationDistributionService.distributeEventUpdateNotifications', 'Skipped (fake data)', { eventId: event.id })
+        console.groupEnd()
+        return
+    }
 
     try {
         const recipients = new Set<string>()
@@ -177,15 +202,30 @@ export async function distributeEventUpdateNotifications(event: EventNotificatio
 
         if (insertError) throw insertError
 
+        debug.perf.end('notificationDistributionService.distributeEventUpdateNotifications')
+        debug.flow('NotificationDistributionService.distributeEventUpdateNotifications', 'Update notifications distributed successfully', { eventId: event.id, recipientCount: notificationsToInsert.length })
+        console.groupEnd()
         console.log(`[NotificationService] Distributed ${notificationsToInsert.length} update notifications for event ${event.id}`)
 
     } catch (err) {
+        debug.perf.end('notificationDistributionService.distributeEventUpdateNotifications')
+        debug.error('NotificationDistributionService.distributeEventUpdateNotifications', 'Failed to distribute update notifications', { error: err, eventId: event.id })
+        console.groupEnd()
         console.error('[NotificationService] Error distributing event update notifications:', err)
     }
 }
 
 export async function distributeEventCancelNotifications(event: EventNotificationInput): Promise<void> {
-    if (USE_FAKE_DATA) return
+    console.groupCollapsed(`%cdistributeEventCancelNotifications: ${event.id}`, 'color: #666; font-weight: bold;');
+    debug.flow('NotificationDistributionService.distributeEventCancelNotifications', 'Distributing cancel notifications', { eventId: event.id, teamId: event.team_id, orgId: event.org_id })
+    debug.perf.start('notificationDistributionService.distributeEventCancelNotifications')
+
+    if (USE_FAKE_DATA) {
+        debug.perf.end('notificationDistributionService.distributeEventCancelNotifications')
+        debug.data('NotificationDistributionService.distributeEventCancelNotifications', 'Skipped (fake data)', { eventId: event.id })
+        console.groupEnd()
+        return
+    }
 
     try {
         const recipients = new Set<string>()
@@ -262,9 +302,15 @@ export async function distributeEventCancelNotifications(event: EventNotificatio
 
         if (insertError) throw insertError
 
+        debug.perf.end('notificationDistributionService.distributeEventCancelNotifications')
+        debug.flow('NotificationDistributionService.distributeEventCancelNotifications', 'Cancel notifications distributed successfully', { eventId: event.id, recipientCount: notificationsToInsert.length })
+        console.groupEnd()
         console.log(`[NotificationService] Distributed ${notificationsToInsert.length} cancel notifications for event ${event.id}`)
 
     } catch (err) {
+        debug.perf.end('notificationDistributionService.distributeEventCancelNotifications')
+        debug.error('NotificationDistributionService.distributeEventCancelNotifications', 'Failed to distribute cancel notifications', { error: err, eventId: event.id })
+        console.groupEnd()
         console.error('[NotificationService] Error distributing event cancel notifications:', err)
     }
 }

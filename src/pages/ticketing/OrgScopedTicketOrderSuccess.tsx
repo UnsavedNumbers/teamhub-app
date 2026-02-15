@@ -28,7 +28,11 @@ type TicketWithRelations = Ticket & {
   ticket_orders?: { purchaser_email: string }
 }
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
+  useDebugLifecycle('TicketOrderSuccessContent')
+  
   const { orderId, orgSlug } = useParams<{ orderId: string; orgSlug: string }>()
   const scrollToTicket = useCallback((ticketId: string) => {
     const target = document.getElementById(`ticket-${ticketId}`)

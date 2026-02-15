@@ -12,7 +12,11 @@ import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+
 export default function Tryouts() {
+  useDebugLifecycle('Tryouts')
+  
   const [tryouts, setTryouts] = useState<Tryout[]>([])
   const [registrations, setRegistrations] = useState<TryoutRegistration[]>([])
   const [children, setChildren] = useState<{ id: string; first_name: string; last_name: string }[]>([])

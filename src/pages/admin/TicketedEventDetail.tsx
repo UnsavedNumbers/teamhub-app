@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin Ticketed Event Detail Page
  *
  * View event details, manage ticket types, generate staff links
@@ -102,7 +102,10 @@ function shouldRetryQuery(attempt: number, error: unknown): boolean {
   return classified.retryable && attempt < 1
 }
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketedEventDetail({ ticketedEventId, embedded = false }: TicketedEventDetailProps) {
+  useDebugLifecycle('TicketedEventDetail')
   const t = useT()
   const queryClient = useQueryClient()
   const { id: routeId } = useParams<{ id: string }>()

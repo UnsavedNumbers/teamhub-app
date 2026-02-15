@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
 import type { UserContext } from '../fake/userContext'
 import type { SupabaseExtended } from '../../lib/supabase.extended.types'
@@ -93,8 +94,16 @@ function sanitizeVisibilitySettingsPayload(
 export async function getOrganizationSettings(
   context: OrgSettingsContext
 ): Promise<{ data: OrganizationSettings | null; error: Error | null }> {
+  console.groupCollapsed(`%cgetOrganizationSettings: ${context.orgId}`, 'color: #666; font-weight: bold;');
+  debug.data('OrganizationSettingsService.getOrganizationSettings', 'Request', { orgId: context.orgId })
+  debug.perf.start('organizationSettingsService.getOrganizationSettings')
+
   if (USE_FAKE_DATA) {
-    return getFakeOrganizationSettings(context)
+    const result = await getFakeOrganizationSettings(context)
+    debug.perf.end('organizationSettingsService.getOrganizationSettings')
+    debug.data('OrganizationSettingsService.getOrganizationSettings', 'Response (fake)', { orgId: context.orgId, hasData: !!result.data })
+    console.groupEnd()
+    return result
   }
   try {
     // Fetch all settings tables in parallel
@@ -157,6 +166,10 @@ export interface OrganizationThemeSettings {
 export async function getOrganizationThemeSettings(
   context: OrgSettingsContext
 ): Promise<{ data: OrganizationThemeSettings | null; error: Error | null }> {
+  console.groupCollapsed(`%cgetOrganizationThemeSettings: ${context.orgId}`, 'color: #666; font-weight: bold;');
+  debug.data('OrganizationSettingsService.getOrganizationThemeSettings', 'Request', { orgId: context.orgId })
+  debug.perf.start('organizationSettingsService.getOrganizationThemeSettings')
+
   try {
     const { data, error } = await fromTable('organization_settings')
       .select('org_id, theme_id, updated_at')
@@ -166,6 +179,9 @@ export async function getOrganizationThemeSettings(
     if (error) throw error
 
     if (!data) {
+      debug.perf.end('organizationSettingsService.getOrganizationThemeSettings')
+      debug.data('OrganizationSettingsService.getOrganizationThemeSettings', 'Response (not found, using defaults)', { orgId: context.orgId })
+      console.groupEnd()
       return {
         data: {
           org_id: context.orgId,
@@ -176,6 +192,9 @@ export async function getOrganizationThemeSettings(
       }
     }
 
+    debug.perf.end('organizationSettingsService.getOrganizationThemeSettings')
+    debug.data('OrganizationSettingsService.getOrganizationThemeSettings', 'Response', { orgId: context.orgId, themeId: data.theme_id })
+    console.groupEnd()
     return {
       data: {
         org_id: data.org_id,
@@ -185,6 +204,9 @@ export async function getOrganizationThemeSettings(
       error: null,
     }
   } catch (err) {
+    debug.perf.end('organizationSettingsService.getOrganizationThemeSettings')
+    debug.error('OrganizationSettingsService.getOrganizationThemeSettings', 'Failed to get theme settings', { error: err, orgId: context.orgId })
+    console.groupEnd()
     console.error('[organizationSettingsService] Error getting theme settings:', err)
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
   }
@@ -195,9 +217,16 @@ export async function updateOrganizationThemeSettings(
   themeId: string | null,
   currentUpdatedAt?: string | null
 ): Promise<{ error: Error | null }> {
+  console.groupCollapsed(`%cupdateOrganizationThemeSettings: ${context.orgId}`, 'color: #666; font-weight: bold;');
+  debug.flow('OrganizationSettingsService.updateOrganizationThemeSettings', 'Updating theme settings', { orgId: context.orgId, themeId })
+  debug.perf.start('organizationSettingsService.updateOrganizationThemeSettings')
+
   // In fake data mode, just return success (theme is applied via CSS variables in memory)
   if (USE_FAKE_DATA) {
     console.log('[organizationSettingsService] Fake data mode - theme update simulated:', themeId)
+    debug.perf.end('organizationSettingsService.updateOrganizationThemeSettings')
+    debug.flow('OrganizationSettingsService.updateOrganizationThemeSettings', 'Theme updated (fake)', { orgId: context.orgId, themeId })
+    console.groupEnd()
     return { error: null }
   }
 
@@ -572,7 +601,17 @@ export async function updateGeneralSettings(
   settings: Partial<GeneralSettings>,
   currentUpdatedAt: string
 ): Promise<{ error: Error | null }> {
-  if (USE_FAKE_DATA) return updateFakeGeneralSettings(context, settings, currentUpdatedAt)
+  console.groupCollapsed(`%cupdateGeneralSettings: ${context.orgId}`, 'color: #666; font-weight: bold;');
+  debug.flow('OrganizationSettingsService.updateGeneralSettings', 'Updating general settings', { orgId: context.orgId, updates: Object.keys(settings) })
+  debug.perf.start('organizationSettingsService.updateGeneralSettings')
+
+  if (USE_FAKE_DATA) {
+    const result = updateFakeGeneralSettings(context, settings, currentUpdatedAt)
+    debug.perf.end('organizationSettingsService.updateGeneralSettings')
+    debug.flow('OrganizationSettingsService.updateGeneralSettings', 'General settings updated (fake)', { orgId: context.orgId })
+    console.groupEnd()
+    return result
+  }
 
   try {
     const validated = generalSettingsSchema.partial().parse(settings)
@@ -587,13 +626,22 @@ export async function updateGeneralSettings(
 
     if (error) {
       if (error.message.includes('updated_at')) {
+        debug.perf.end('organizationSettingsService.updateGeneralSettings')
+        debug.error('OrganizationSettingsService.updateGeneralSettings', 'Optimistic locking failure', { error, orgId: context.orgId })
+        console.groupEnd()
         throw new Error('Settings were modified by another user. Please refresh and try again.')
       }
       throw error
     }
 
+    debug.perf.end('organizationSettingsService.updateGeneralSettings')
+    debug.flow('OrganizationSettingsService.updateGeneralSettings', 'General settings updated successfully', { orgId: context.orgId })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('organizationSettingsService.updateGeneralSettings')
+    debug.error('OrganizationSettingsService.updateGeneralSettings', 'Failed to update general settings', { error: err, orgId: context.orgId })
+    console.groupEnd()
     console.error('[organizationSettingsService] Error updating general settings:', err)
     return { error: err instanceof Error ? err : new Error('Unknown error') }
   }
@@ -604,8 +652,16 @@ export async function updateDefaultsSettings(
   settings: Partial<DefaultsSettings>,
   currentUpdatedAt: string
 ): Promise<{ error: Error | null }> {
+  console.groupCollapsed(`%cupdateDefaultsSettings: ${context.orgId}`, 'color: #666; font-weight: bold;');
+  debug.flow('OrganizationSettingsService.updateDefaultsSettings', 'Updating defaults settings', { orgId: context.orgId, updates: Object.keys(settings) })
+  debug.perf.start('organizationSettingsService.updateDefaultsSettings')
+
   if (USE_FAKE_DATA) {
-    return updateFakeDefaultsSettings(context, settings, currentUpdatedAt)
+    const result = updateFakeDefaultsSettings(context, settings, currentUpdatedAt)
+    debug.perf.end('organizationSettingsService.updateDefaultsSettings')
+    debug.flow('OrganizationSettingsService.updateDefaultsSettings', 'Defaults settings updated (fake)', { orgId: context.orgId })
+    console.groupEnd()
+    return result
   }
   try {
     const validated = defaultsSettingsSchema.partial().parse(settings)
@@ -626,13 +682,22 @@ export async function updateDefaultsSettings(
 
     if (error) {
       if (error.message.includes('updated_at')) {
+        debug.perf.end('organizationSettingsService.updateDefaultsSettings')
+        debug.error('OrganizationSettingsService.updateDefaultsSettings', 'Optimistic locking failure', { error, orgId: context.orgId })
+        console.groupEnd()
         throw new Error('Settings were modified by another user. Please refresh and try again.')
       }
       throw error
     }
 
+    debug.perf.end('organizationSettingsService.updateDefaultsSettings')
+    debug.flow('OrganizationSettingsService.updateDefaultsSettings', 'Defaults settings updated successfully', { orgId: context.orgId })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('organizationSettingsService.updateDefaultsSettings')
+    debug.error('OrganizationSettingsService.updateDefaultsSettings', 'Failed to update defaults settings', { error: err, orgId: context.orgId })
+    console.groupEnd()
     console.error('[organizationSettingsService] Error updating defaults settings:', err)
     return { error: err instanceof Error ? err : new Error('Unknown error') }
   }
@@ -643,8 +708,16 @@ export async function updateAttendanceSettings(
   settings: Partial<AttendanceSettings>,
   currentUpdatedAt: string
 ): Promise<{ error: Error | null }> {
+  console.groupCollapsed(`%cupdateAttendanceSettings: ${context.orgId}`, 'color: #666; font-weight: bold;');
+  debug.flow('OrganizationSettingsService.updateAttendanceSettings', 'Updating attendance settings', { orgId: context.orgId, updates: Object.keys(settings) })
+  debug.perf.start('organizationSettingsService.updateAttendanceSettings')
+
   if (USE_FAKE_DATA) {
-    return updateFakeAttendanceSettings(context, settings, currentUpdatedAt)
+    const result = updateFakeAttendanceSettings(context, settings, currentUpdatedAt)
+    debug.perf.end('organizationSettingsService.updateAttendanceSettings')
+    debug.flow('OrganizationSettingsService.updateAttendanceSettings', 'Attendance settings updated (fake)', { orgId: context.orgId })
+    console.groupEnd()
+    return result
   }
   try {
     const validated = attendanceSettingsSchema.partial().parse(settings)
@@ -704,13 +777,22 @@ export async function updateRegistrationSettings(
 
     if (error) {
       if (error.message.includes('updated_at')) {
+        debug.perf.end('organizationSettingsService.updateRegistrationSettings')
+        debug.error('OrganizationSettingsService.updateRegistrationSettings', 'Optimistic locking failure', { error, orgId: context.orgId })
+        console.groupEnd()
         throw new Error('Settings were modified by another user. Please refresh and try again.')
       }
       throw error
     }
 
+    debug.perf.end('organizationSettingsService.updateRegistrationSettings')
+    debug.flow('OrganizationSettingsService.updateRegistrationSettings', 'Registration settings updated successfully', { orgId: context.orgId })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('organizationSettingsService.updateRegistrationSettings')
+    debug.error('OrganizationSettingsService.updateRegistrationSettings', 'Failed to update registration settings', { error: err, orgId: context.orgId })
+    console.groupEnd()
     console.error('[organizationSettingsService] Error updating registration settings:', err)
     return { error: err instanceof Error ? err : new Error('Unknown error') }
   }
@@ -721,8 +803,16 @@ export async function updateVisibilitySettings(
   settings: Partial<VisibilitySettings>,
   currentUpdatedAt: string
 ): Promise<{ error: Error | null }> {
+  console.groupCollapsed(`%cupdateVisibilitySettings: ${context.orgId}`, 'color: #666; font-weight: bold;');
+  debug.flow('OrganizationSettingsService.updateVisibilitySettings', 'Updating visibility settings', { orgId: context.orgId, updates: Object.keys(settings) })
+  debug.perf.start('organizationSettingsService.updateVisibilitySettings')
+
   if (USE_FAKE_DATA) {
-    return updateFakeVisibilitySettings(context, settings, currentUpdatedAt)
+    const result = updateFakeVisibilitySettings(context, settings, currentUpdatedAt)
+    debug.perf.end('organizationSettingsService.updateVisibilitySettings')
+    debug.flow('OrganizationSettingsService.updateVisibilitySettings', 'Visibility settings updated (fake)', { orgId: context.orgId })
+    console.groupEnd()
+    return result
   }
   try {
     const sanitizedSettings = sanitizeVisibilitySettingsPayload(settings)
@@ -744,13 +834,22 @@ export async function updateVisibilitySettings(
 
     if (error) {
       if (error.message.includes('updated_at')) {
+        debug.perf.end('organizationSettingsService.updateVisibilitySettings')
+        debug.error('OrganizationSettingsService.updateVisibilitySettings', 'Optimistic locking failure', { error, orgId: context.orgId })
+        console.groupEnd()
         throw new Error('Settings were modified by another user. Please refresh and try again.')
       }
       throw error
     }
 
+    debug.perf.end('organizationSettingsService.updateVisibilitySettings')
+    debug.flow('OrganizationSettingsService.updateVisibilitySettings', 'Visibility settings updated successfully', { orgId: context.orgId })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('organizationSettingsService.updateVisibilitySettings')
+    debug.error('OrganizationSettingsService.updateVisibilitySettings', 'Failed to update visibility settings', { error: err, orgId: context.orgId })
+    console.groupEnd()
     console.error('[organizationSettingsService] Error updating visibility settings:', err)
     return { error: err instanceof Error ? err : new Error('Unknown error') }
   }
@@ -761,8 +860,16 @@ export async function updateNotificationSettings(
   settings: Partial<NotificationSettings>,
   currentUpdatedAt: string
 ): Promise<{ error: Error | null }> {
+  console.groupCollapsed(`%cupdateNotificationSettings: ${context.orgId}`, 'color: #666; font-weight: bold;');
+  debug.flow('OrganizationSettingsService.updateNotificationSettings', 'Updating notification settings', { orgId: context.orgId, updates: Object.keys(settings) })
+  debug.perf.start('organizationSettingsService.updateNotificationSettings')
+
   if (USE_FAKE_DATA) {
-    return updateFakeNotificationSettings(context, settings, currentUpdatedAt)
+    const result = updateFakeNotificationSettings(context, settings, currentUpdatedAt)
+    debug.perf.end('organizationSettingsService.updateNotificationSettings')
+    debug.flow('OrganizationSettingsService.updateNotificationSettings', 'Notification settings updated (fake)', { orgId: context.orgId })
+    console.groupEnd()
+    return result
   }
   try {
     const validated = notificationSettingsSchema.partial().parse(settings)
@@ -822,13 +929,22 @@ export async function updateAdvancedSettings(
 
     if (error) {
       if (error.message.includes('updated_at')) {
+        debug.perf.end('organizationSettingsService.updateAdvancedSettings')
+        debug.error('OrganizationSettingsService.updateAdvancedSettings', 'Optimistic locking failure', { error, orgId: context.orgId })
+        console.groupEnd()
         throw new Error('Settings were modified by another user. Please refresh and try again.')
       }
       throw error
     }
 
+    debug.perf.end('organizationSettingsService.updateAdvancedSettings')
+    debug.flow('OrganizationSettingsService.updateAdvancedSettings', 'Advanced settings updated successfully', { orgId: context.orgId })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('organizationSettingsService.updateAdvancedSettings')
+    debug.error('OrganizationSettingsService.updateAdvancedSettings', 'Failed to update advanced settings', { error: err, orgId: context.orgId })
+    console.groupEnd()
     console.error('[organizationSettingsService] Error updating advanced settings:', err)
     return { error: err instanceof Error ? err : new Error('Unknown error') }
   }
@@ -846,8 +962,16 @@ export async function checkImpactedRecords(
   settingType: 'registration' | 'attendance' | 'general',
   field: string
 ): Promise<{ count: number; error: Error | null }> {
+  console.groupCollapsed(`%ccheckImpactedRecords: ${settingType}.${field}`, 'color: #666; font-weight: bold;');
+  debug.data('OrganizationSettingsService.checkImpactedRecords', 'Request', { orgId: context.orgId, settingType, field })
+  debug.perf.start('organizationSettingsService.checkImpactedRecords')
+
   if (USE_FAKE_DATA) {
-    return checkFakeImpactedRecords(context, settingType, field)
+    const result = await checkFakeImpactedRecords(context, settingType, field)
+    debug.perf.end('organizationSettingsService.checkImpactedRecords')
+    debug.data('OrganizationSettingsService.checkImpactedRecords', 'Response (fake)', { count: result.count, settingType, field })
+    console.groupEnd()
+    return result
   }
   try {
     let count = 0
@@ -878,8 +1002,14 @@ export async function checkImpactedRecords(
       count = teamCount || 0
     }
 
+    debug.perf.end('organizationSettingsService.checkImpactedRecords')
+    debug.data('OrganizationSettingsService.checkImpactedRecords', 'Response', { count, settingType, field })
+    console.groupEnd()
     return { count, error: null }
   } catch (err) {
+    debug.perf.end('organizationSettingsService.checkImpactedRecords')
+    debug.error('OrganizationSettingsService.checkImpactedRecords', 'Failed to check impacted records', { error: err, settingType, field })
+    console.groupEnd()
     console.error('[organizationSettingsService] Error checking impacted records:', err)
     return { count: 0, error: err instanceof Error ? err : new Error('Unknown error') }
   }
@@ -890,6 +1020,10 @@ export async function checkImpactedRecords(
  * Uses secure RPC function to bypass RLS for public pages
  */
 export async function getOrganizationThemeSettingsByOrgId(orgId: string): Promise<{ theme_id: string | null; error: Error | null }> {
+  console.groupCollapsed(`%cgetOrganizationThemeSettingsByOrgId: ${orgId}`, 'color: #666; font-weight: bold;');
+  debug.data('OrganizationSettingsService.getOrganizationThemeSettingsByOrgId', 'Request', { orgId })
+  debug.perf.start('organizationSettingsService.getOrganizationThemeSettingsByOrgId')
+
   try {
     // Try to use the secure function we created in migration
     const { data, error } = await supabase.rpc('get_public_org_theme' as any, { org_id_input: orgId })
@@ -904,11 +1038,20 @@ export async function getOrganizationThemeSettingsByOrgId(orgId: string): Promis
         .maybeSingle()
 
       if (selectError) throw selectError
+      debug.perf.end('organizationSettingsService.getOrganizationThemeSettingsByOrgId')
+      debug.data('OrganizationSettingsService.getOrganizationThemeSettingsByOrgId', 'Response (fallback)', { orgId, themeId: settingsData?.theme_id ?? null })
+      console.groupEnd()
       return { theme_id: settingsData?.theme_id ?? null, error: null }
     }
 
+    debug.perf.end('organizationSettingsService.getOrganizationThemeSettingsByOrgId')
+    debug.data('OrganizationSettingsService.getOrganizationThemeSettingsByOrgId', 'Response', { orgId, themeId: data as string | null })
+    console.groupEnd()
     return { theme_id: data as string | null, error: null }
   } catch (err) {
+    debug.perf.end('organizationSettingsService.getOrganizationThemeSettingsByOrgId')
+    debug.error('OrganizationSettingsService.getOrganizationThemeSettingsByOrgId', 'Failed to fetch public theme', { error: err, orgId })
+    console.groupEnd()
     console.error('[organizationSettingsService] Error fetching public theme:', err)
     return { theme_id: null, error: err instanceof Error ? err : new Error('Unknown error') }
   }

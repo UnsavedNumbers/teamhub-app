@@ -8,6 +8,7 @@
 import { supabase } from '../../lib/supabase'
 import { t } from '../../i18n'
 import type { UserContext } from '../fake/userContext'
+import { debug } from '../../lib/debug'
 import type { 
   EventRSVPConfig, 
   GeneralRSVP, 
@@ -41,8 +42,15 @@ export async function getEventRSVPConfig(
   _context: UserContext,
   eventId: string
 ): Promise<{ data: EventRSVPConfig | null; error: Error | null }> {
+  console.groupCollapsed(`%cgetEventRSVPConfig: ${eventId}`, 'color: #666; font-weight: bold;');
+  debug.data('RSVPService.getEventRSVPConfig', 'Request', { eventId })
+  debug.perf.start('rsvpService.getEventRSVPConfig')
+
   try {
     if (!eventId) {
+      debug.perf.end('rsvpService.getEventRSVPConfig')
+      debug.error('RSVPService.getEventRSVPConfig', 'eventId is required', { eventId })
+      console.groupEnd()
       return {
         data: { enabled: false, type: null },
         error: new Error('Event ID is required')
@@ -84,6 +92,10 @@ export async function getGeneralRSVP(
   eventId: string,
   userId: string
 ): Promise<{ data: GeneralRSVP | null; error: Error | null }> {
+  console.groupCollapsed(`%cgetGeneralRSVP: ${eventId} - user: ${userId}`, 'color: #666; font-weight: bold;');
+  debug.data('RSVPService.getGeneralRSVP', 'Request', { eventId, userId })
+  debug.perf.start('rsvpService.getGeneralRSVP')
+
   try {
     // Validate RSVP type first
     const { data: event, error: eventError } = await supabase
@@ -117,11 +129,17 @@ export async function getGeneralRSVP(
 
     if (error && error.code !== 'PGRST116') throw error // PGRST116 = not found
 
+    debug.perf.end('rsvpService.getGeneralRSVP')
+    debug.data('RSVPService.getGeneralRSVP', 'Response', { eventId, userId, hasRSVP: !!data })
+    console.groupEnd()
     return {
       data: data as GeneralRSVP | null,
       error: null
     }
   } catch (err) {
+    debug.perf.end('rsvpService.getGeneralRSVP')
+    debug.error('RSVPService.getGeneralRSVP', 'Failed to get general RSVP', { error: err, eventId, userId })
+    console.groupEnd()
     return {
       data: null,
       error: err instanceof Error ? err : new Error(String(err))
@@ -137,6 +155,10 @@ export async function setGeneralRSVP(
   status: GeneralRSVPStatus,
   note?: string | null
 ): Promise<{ data: GeneralRSVP | null; error: Error | null }> {
+  console.groupCollapsed(`%csetGeneralRSVP: ${eventId} - user: ${userId} - ${status}`, 'color: #666; font-weight: bold;');
+  debug.flow('RSVPService.setGeneralRSVP', 'Setting RSVP', { eventId, userId, status, note })
+  debug.perf.start('rsvpService.setGeneralRSVP')
+
   try {
     if (!eventId || !userId) {
       return {
@@ -178,11 +200,17 @@ export async function setGeneralRSVP(
 
     if (error) throw error
 
+    debug.perf.end('rsvpService.setGeneralRSVP')
+    debug.flow('RSVPService.setGeneralRSVP', 'RSVP set successfully', { eventId, userId, status })
+    console.groupEnd()
     return {
       data: data as GeneralRSVP,
       error: null
     }
   } catch (err) {
+    debug.perf.end('rsvpService.setGeneralRSVP')
+    debug.error('RSVPService.setGeneralRSVP', 'Failed to set RSVP', { error: err, eventId, userId, status })
+    console.groupEnd()
     return {
       data: null,
       error: err instanceof Error ? err : new Error(String(err))
@@ -195,6 +223,10 @@ export async function getAthleteRSVPs(
   _context: UserContext,
   eventId: string
 ): Promise<{ data: EventRSVP[]; error: Error | null }> {
+  console.groupCollapsed(`%cgetAthleteRSVPs: ${eventId}`, 'color: #666; font-weight: bold;');
+  debug.data('RSVPService.getAthleteRSVPs', 'Request', { eventId })
+  debug.perf.start('rsvpService.getAthleteRSVPs')
+
   try {
     // Validate RSVP type first
     const { data: event, error: eventError } = await supabase
@@ -243,8 +275,15 @@ export async function setAthleteRSVP(
   status: RSVPStatus,
   note?: string | null
 ): Promise<{ data: EventRSVP | null; error: Error | null }> {
+  console.groupCollapsed(`%csetAthleteRSVP: ${eventId} - ${childId} - ${status}`, 'color: #666; font-weight: bold;');
+  debug.flow('RSVPService.setAthleteRSVP', 'Setting athlete RSVP', { eventId, childId, status, note })
+  debug.perf.start('rsvpService.setAthleteRSVP')
+
   try {
     if (!eventId || !childId) {
+      debug.perf.end('rsvpService.setAthleteRSVP')
+      debug.error('RSVPService.setAthleteRSVP', 'eventId and childId are required', { eventId, childId })
+      console.groupEnd()
       return {
         data: null,
         error: new Error(t('errors.eventIdAndChildIdRequired'))
@@ -299,11 +338,17 @@ export async function setAthleteRSVP(
 
     if (error) throw error
 
+    debug.perf.end('rsvpService.setAthleteRSVP')
+    debug.flow('RSVPService.setAthleteRSVP', 'Athlete RSVP set successfully', { eventId, childId, status })
+    console.groupEnd()
     return {
       data: data as EventRSVP,
       error: null
     }
   } catch (err) {
+    debug.perf.end('rsvpService.setAthleteRSVP')
+    debug.error('RSVPService.setAthleteRSVP', 'Failed to set athlete RSVP', { error: err, eventId, childId, status })
+    console.groupEnd()
     return {
       data: null,
       error: err instanceof Error ? err : new Error(String(err))
@@ -326,11 +371,18 @@ export async function validateAthleteEventEligibility(
 
     if (error) throw error
 
+    const isEligible = data === true
+    debug.perf.end('rsvpService.validateAthleteEventEligibility')
+    debug.data('RSVPService.validateAthleteEventEligibility', 'Response', { childId, eventId, isEligible })
+    console.groupEnd()
     return {
-      data: data === true,
+      data: isEligible,
       error: null
     }
   } catch (err) {
+    debug.perf.end('rsvpService.validateAthleteEventEligibility')
+    debug.error('RSVPService.validateAthleteEventEligibility', 'Failed to validate eligibility', { error: err, childId, eventId })
+    console.groupEnd()
     return {
       data: false,
       error: err instanceof Error ? err : new Error(String(err))
@@ -343,8 +395,15 @@ export async function getRSVPSummary(
   _context: UserContext,
   eventId: string
 ): Promise<{ data: RSVPSummary | null; error: Error | null }> {
+  console.groupCollapsed(`%cgetRSVPSummary: ${eventId}`, 'color: #666; font-weight: bold;');
+  debug.data('RSVPService.getRSVPSummary', 'Request', { eventId })
+  debug.perf.start('rsvpService.getRSVPSummary')
+
   try {
     if (!eventId) {
+      debug.perf.end('rsvpService.getRSVPSummary')
+      debug.error('RSVPService.getRSVPSummary', 'eventId is required', { eventId })
+      console.groupEnd()
       return {
         data: null,
         error: new Error('Event ID is required')
@@ -410,7 +469,7 @@ export async function getRSVPSummary(
         totalEligible = count ?? 0
       }
 
-      return {
+      const result = {
         data: {
           general: {
             going_count,
@@ -422,6 +481,10 @@ export async function getRSVPSummary(
         },
         error: null
       }
+      debug.perf.end('rsvpService.getRSVPSummary')
+      debug.data('RSVPService.getRSVPSummary', 'Response (general)', { eventId, goingCount: going_count, notGoingCount: not_going_count, maybeCount: maybe_count })
+      console.groupEnd()
+      return result
     } else if (eventData5.rsvp_type === 'athlete') {
       // Get athlete RSVP summary using existing function
       type SummaryData = {
@@ -449,7 +512,7 @@ export async function getRSVPSummary(
       if (summaryError) throw summaryError
 
       const summaryData = (summary as SummaryData) || {}
-      return {
+      const result = {
         data: {
           athlete: {
             going_count: summaryData.going_count ?? 0,
@@ -462,6 +525,10 @@ export async function getRSVPSummary(
         },
         error: null
       }
+      debug.perf.end('rsvpService.getRSVPSummary')
+      debug.data('RSVPService.getRSVPSummary', 'Response (athlete)', { eventId, goingCount: result.data.athlete.going_count, totalChildren: result.data.athlete.total_children })
+      console.groupEnd()
+      return result
     }
 
     return {
@@ -481,8 +548,15 @@ export async function sendRSVPReminder(
   _context: UserContext,
   eventId: string
 ): Promise<{ data: boolean; error: Error | null }> {
+  console.groupCollapsed(`%csendRSVPReminder: ${eventId}`, 'color: #666; font-weight: bold;');
+  debug.flow('RSVPService.sendRSVPReminder', 'Sending RSVP reminder', { eventId })
+  debug.perf.start('rsvpService.sendRSVPReminder')
+
   try {
     if (!eventId) {
+      debug.perf.end('rsvpService.sendRSVPReminder')
+      debug.error('RSVPService.sendRSVPReminder', 'eventId is required', { eventId })
+      console.groupEnd()
       return {
         data: false,
         error: new Error('Event ID is required')
@@ -507,11 +581,17 @@ export async function sendRSVPReminder(
 
     // Insert into notification outbox (if it exists)
     // For now, just return success - notification system will be implemented separately
+    debug.perf.end('rsvpService.sendRSVPReminder')
+    debug.flow('RSVPService.sendRSVPReminder', 'RSVP reminder sent successfully', { eventId })
+    console.groupEnd()
     return {
       data: true,
       error: null
     }
   } catch (err) {
+    debug.perf.end('rsvpService.sendRSVPReminder')
+    debug.error('RSVPService.sendRSVPReminder', 'Failed to send RSVP reminder', { error: err, eventId })
+    console.groupEnd()
     return {
       data: false,
       error: err instanceof Error ? err : new Error(String(err))

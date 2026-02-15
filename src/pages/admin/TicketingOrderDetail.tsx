@@ -18,7 +18,11 @@ import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
 import { t } from '@/i18n'
 import '../../styles/orgAdmin.css'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketingOrderDetail() {
+  useDebugLifecycle('TicketingOrderDetail')
+  
   const navigate = useNavigate()
   const { orderId } = useParams<{ orderId: string }>()
   const { currentOrganization } = useOrganization()

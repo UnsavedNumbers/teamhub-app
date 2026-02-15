@@ -7,7 +7,11 @@ import { useUserContext } from '../../../hooks/useUserContext'
 import { getAttendancePeople } from '../../../data/services/attendanceService'
 import type { AttendancePersonSummary } from '../../../types/attendance'
 
+import { useDebugLifecycle } from '../../../lib/debug/integrations/useDebugLifecycle'
+
 export default function AttendancePeople() {
+  useDebugLifecycle('AttendancePeople')
+  
   const [data, setData] = useState<AttendancePersonSummary[]>([])
   const [loading, setLoading] = useState(true)
   const { context, isReady } = useUserContext()

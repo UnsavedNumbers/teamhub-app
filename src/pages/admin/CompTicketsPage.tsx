@@ -16,7 +16,11 @@ import { Button } from '@/components/platformAdmin'
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import type { TicketedEvent, TicketType } from '@/types/ticketing'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function CompTicketsPage() {
+  useDebugLifecycle('CompTicketsPage')
+  
   const t = useT()
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id

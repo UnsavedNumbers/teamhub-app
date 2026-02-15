@@ -10,7 +10,11 @@ import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function SportUpdate() {
+  useDebugLifecycle('SportUpdate')
+  
   const { sport_id } = useParams<{ sport_id: string }>()
   const [searchParams] = useSearchParams()
   const returnUrl = searchParams.get('returnUrl')

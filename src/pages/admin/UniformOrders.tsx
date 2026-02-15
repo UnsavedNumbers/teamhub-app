@@ -18,7 +18,11 @@ import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function UniformOrders() {
+  useDebugLifecycle('UniformOrders')
+  
   const [submissions, setSubmissions] = useState<UniformSubmission[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)

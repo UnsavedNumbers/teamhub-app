@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { useI18n } from '../i18n/useI18n'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { AUTH_HERO_IMAGES } from '../utils/authImages'
 import { mapAuthError } from '../utils/authErrorMapper'
 
 export default function ForgotPassword() {
+  useDebugLifecycle('ForgotPassword')
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)

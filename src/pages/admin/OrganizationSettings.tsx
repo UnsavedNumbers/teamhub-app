@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { startTransition } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
@@ -85,6 +86,7 @@ const PERMISSION_EVENT_TYPES = [
 ] as const
 
 export default function OrganizationSettings() {
+  useDebugLifecycle('OrganizationSettings')
   const { t } = useI18n()
   const { currentOrganization } = useOrganization()
   const { context, isReady } = useUserContext()

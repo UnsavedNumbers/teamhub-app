@@ -7,6 +7,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { USE_FAKE_DATA } from '../config'
 import { logAuditEvent } from '../../utils/licenseEntitlementsHelpers'
@@ -141,60 +142,147 @@ export interface AssignmentInput {
 // ---------------------------------------------------------------------------
 
 export async function getTierById(id: string): Promise<LicenseTier | null> {
-  if (USE_FAKE_DATA) return getTierByIdFake(id)
+  console.groupCollapsed(`%cgetTierById: ${id}`, 'color: #666; font-weight: bold;');
+  debug.data('LicenseTiersService.getTierById', 'Request', { id })
+  debug.perf.start('licenseTiersService.getTierById')
 
-  if (!id) return null
-
-  const { data, error } = await supabase
-    .from('license_tiers')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (error) {
-    if (error.code === 'PGRST116') return null
-    throw error
+  if (USE_FAKE_DATA) {
+    const result = getTierByIdFake(id)
+    debug.perf.end('licenseTiersService.getTierById')
+    debug.data('LicenseTiersService.getTierById', 'Response (fake)', { id, hasData: !!result })
+    console.groupEnd()
+    return result
   }
-  return data ? mapTierRow(data as LicenseTierRow) : null
+
+  if (!id) {
+    debug.perf.end('licenseTiersService.getTierById')
+    debug.data('LicenseTiersService.getTierById', 'Response (no id)', { id })
+    console.groupEnd()
+    return null
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('license_tiers')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        debug.perf.end('licenseTiersService.getTierById')
+        debug.data('LicenseTiersService.getTierById', 'Response (not found)', { id })
+        console.groupEnd()
+        return null
+      }
+      throw error
+    }
+    const result = data ? mapTierRow(data as LicenseTierRow) : null
+    debug.perf.end('licenseTiersService.getTierById')
+    debug.data('LicenseTiersService.getTierById', 'Response', { id, hasData: !!result })
+    console.groupEnd()
+    return result
+  } catch (err) {
+    debug.perf.end('licenseTiersService.getTierById')
+    debug.error('LicenseTiersService.getTierById', 'Failed to get tier', { error: err, id })
+    console.groupEnd()
+    throw err
+  }
 }
 
 export async function getFeatures(): Promise<FeatureEntitlement[]> {
-  if (USE_FAKE_DATA) return getFeaturesFake()
+  console.groupCollapsed(`%cgetFeatures`, 'color: #666; font-weight: bold;');
+  debug.data('LicenseTiersService.getFeatures', 'Request')
+  debug.perf.start('licenseTiersService.getFeatures')
 
-  const { data, error } = await supabase
-    .from('feature_entitlements')
-    .select('*')
-    .is('archived_at', null)
-    .eq('platform_admin_only', false)
-    .order('category', { ascending: true })
-    .order('display_name', { ascending: true })
+  if (USE_FAKE_DATA) {
+    const result = await getFeaturesFake()
+    debug.perf.end('licenseTiersService.getFeatures')
+    debug.data('LicenseTiersService.getFeatures', 'Response (fake)', { featureCount: result.length })
+    console.groupEnd()
+    return result
+  }
 
-  if (error) throw error
-  return (data ?? []).map((row) => mapFeatureRow(row as FeatureEntitlementRow))
+  try {
+    const { data, error } = await supabase
+      .from('feature_entitlements')
+      .select('*')
+      .is('archived_at', null)
+      .eq('platform_admin_only', false)
+      .order('category', { ascending: true })
+      .order('display_name', { ascending: true })
+
+    if (error) throw error
+    const result = (data ?? []).map((row) => mapFeatureRow(row as FeatureEntitlementRow))
+    debug.perf.end('licenseTiersService.getFeatures')
+    debug.data('LicenseTiersService.getFeatures', 'Response', { featureCount: result.length })
+    console.groupEnd()
+    return result
+  } catch (err) {
+    debug.perf.end('licenseTiersService.getFeatures')
+    debug.error('LicenseTiersService.getFeatures', 'Failed to get features', { error: err })
+    console.groupEnd()
+    throw err
+  }
 }
 
 export async function getAssignments(tierId: string): Promise<Record<string, TierFeatureAssignment>> {
-  if (USE_FAKE_DATA) return getAssignmentsFake(tierId)
+  console.groupCollapsed(`%cgetAssignments: ${tierId}`, 'color: #666; font-weight: bold;');
+  debug.data('LicenseTiersService.getAssignments', 'Request', { tierId })
+  debug.perf.start('licenseTiersService.getAssignments')
 
-  if (!tierId) return {}
-
-  const { data, error } = await supabase
-    .from('tier_feature_assignments')
-    .select('*')
-    .eq('license_tier_id', tierId)
-
-  if (error) throw error
-
-  const out: Record<string, TierFeatureAssignment> = {}
-  for (const row of data ?? []) {
-    const mapped = mapAssignmentRow(row as TierFeatureAssignmentRow)
-    out[mapped.feature_entitlement_id] = mapped
+  if (USE_FAKE_DATA) {
+    const result = getAssignmentsFake(tierId)
+    debug.perf.end('licenseTiersService.getAssignments')
+    debug.data('LicenseTiersService.getAssignments', 'Response (fake)', { tierId, assignmentCount: Object.keys(result).length })
+    console.groupEnd()
+    return result
   }
-  return out
+
+  if (!tierId) {
+    debug.perf.end('licenseTiersService.getAssignments')
+    debug.data('LicenseTiersService.getAssignments', 'Response (no tierId)', { tierId })
+    console.groupEnd()
+    return {}
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('tier_feature_assignments')
+      .select('*')
+      .eq('license_tier_id', tierId)
+
+    if (error) throw error
+
+    const out: Record<string, TierFeatureAssignment> = {}
+    for (const row of data ?? []) {
+      const mapped = mapAssignmentRow(row as TierFeatureAssignmentRow)
+      out[mapped.feature_entitlement_id] = mapped
+    }
+    debug.perf.end('licenseTiersService.getAssignments')
+    debug.data('LicenseTiersService.getAssignments', 'Response', { tierId, assignmentCount: Object.keys(out).length })
+    console.groupEnd()
+    return out
+  } catch (err) {
+    debug.perf.end('licenseTiersService.getAssignments')
+    debug.error('LicenseTiersService.getAssignments', 'Failed to get assignments', { error: err, tierId })
+    console.groupEnd()
+    throw err
+  }
 }
 
 export async function getOrganizationsUsingTier(tierKey: string): Promise<OrgUsingTier[]> {
-  if (USE_FAKE_DATA) return getOrganizationsUsingTierFake(tierKey)
+  console.groupCollapsed(`%cgetOrganizationsUsingTier: ${tierKey}`, 'color: #666; font-weight: bold;');
+  debug.data('LicenseTiersService.getOrganizationsUsingTier', 'Request', { tierKey })
+  debug.perf.start('licenseTiersService.getOrganizationsUsingTier')
+
+  if (USE_FAKE_DATA) {
+    const result = await getOrganizationsUsingTierFake(tierKey)
+    debug.perf.end('licenseTiersService.getOrganizationsUsingTier')
+    debug.data('LicenseTiersService.getOrganizationsUsingTier', 'Response (fake)', { tierKey, orgCount: result.length })
+    console.groupEnd()
+    return result
+  }
 
   // license_plan enum values are: 'starter', 'standard', 'pro'
   // tier_key 'basic' maps to license_plan 'starter'
@@ -203,38 +291,90 @@ export async function getOrganizationsUsingTier(tierKey: string): Promise<OrgUsi
   const plans: LicensePlan[] =
     tierKey === 'basic' ? ['starter'] : tierKey === 'power' ? ['standard', 'pro'] : []
 
-  if (plans.length === 0) return []
+  if (plans.length === 0) {
+    debug.perf.end('licenseTiersService.getOrganizationsUsingTier')
+    debug.data('LicenseTiersService.getOrganizationsUsingTier', 'Response (no plans)', { tierKey })
+    console.groupEnd()
+    return []
+  }
 
-  const { data, error } = await supabase
-    .from('organizations')
-    .select('id, name, license_plan')
-    .in('license_plan', plans)
-    .order('name', { ascending: true })
+  try {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('id, name, license_plan')
+      .in('license_plan', plans)
+      .order('name', { ascending: true })
 
-  if (error) throw error
-  return (data ?? []) as OrgUsingTier[]
+    if (error) throw error
+    const result = (data ?? []) as OrgUsingTier[]
+    debug.perf.end('licenseTiersService.getOrganizationsUsingTier')
+    debug.data('LicenseTiersService.getOrganizationsUsingTier', 'Response', { tierKey, orgCount: result.length })
+    console.groupEnd()
+    return result
+  } catch (err) {
+    debug.perf.end('licenseTiersService.getOrganizationsUsingTier')
+    debug.error('LicenseTiersService.getOrganizationsUsingTier', 'Failed to get organizations', { error: err, tierKey })
+    console.groupEnd()
+    throw err
+  }
 }
 
 export async function getArchivedFeaturesCount(tierId: string): Promise<number> {
-  if (USE_FAKE_DATA) return getArchivedFeaturesCountFake(tierId)
+  console.groupCollapsed(`%cgetArchivedFeaturesCount: ${tierId}`, 'color: #666; font-weight: bold;');
+  debug.data('LicenseTiersService.getArchivedFeaturesCount', 'Request', { tierId })
+  debug.perf.start('licenseTiersService.getArchivedFeaturesCount')
 
-  const { data: assignments, error: assignmentsError } = await supabase
-    .from('tier_feature_assignments')
-    .select('feature_entitlement_id')
-    .eq('license_tier_id', tierId)
-    .eq('included', true)
+  if (USE_FAKE_DATA) {
+    const result = getArchivedFeaturesCountFake(tierId)
+    debug.perf.end('licenseTiersService.getArchivedFeaturesCount')
+    debug.data('LicenseTiersService.getArchivedFeaturesCount', 'Response (fake)', { tierId, count: result })
+    console.groupEnd()
+    return result
+  }
 
-  if (assignmentsError) return 0
-  if (!assignments?.length) return 0
+  try {
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from('tier_feature_assignments')
+      .select('feature_entitlement_id')
+      .eq('license_tier_id', tierId)
+      .eq('included', true)
 
-  const { data: activeFeatures, error: featuresError } = await supabase
-    .from('feature_entitlements')
-    .select('id')
-    .is('archived_at', null)
+    if (assignmentsError) {
+      debug.perf.end('licenseTiersService.getArchivedFeaturesCount')
+      debug.error('LicenseTiersService.getArchivedFeaturesCount', 'Failed to get assignments', { error: assignmentsError, tierId })
+      console.groupEnd()
+      return 0
+    }
+    if (!assignments?.length) {
+      debug.perf.end('licenseTiersService.getArchivedFeaturesCount')
+      debug.data('LicenseTiersService.getArchivedFeaturesCount', 'Response (no assignments)', { tierId, count: 0 })
+      console.groupEnd()
+      return 0
+    }
 
-  if (featuresError) return 0
-  const activeIds = new Set((activeFeatures ?? []).map((f) => f.id))
-  return (assignments ?? []).filter((a) => !activeIds.has(a.feature_entitlement_id)).length
+    const { data: activeFeatures, error: featuresError } = await supabase
+      .from('feature_entitlements')
+      .select('id')
+      .is('archived_at', null)
+
+    if (featuresError) {
+      debug.perf.end('licenseTiersService.getArchivedFeaturesCount')
+      debug.error('LicenseTiersService.getArchivedFeaturesCount', 'Failed to get active features', { error: featuresError, tierId })
+      console.groupEnd()
+      return 0
+    }
+    const activeIds = new Set((activeFeatures ?? []).map((f) => f.id))
+    const count = (assignments ?? []).filter((a) => !activeIds.has(a.feature_entitlement_id)).length
+    debug.perf.end('licenseTiersService.getArchivedFeaturesCount')
+    debug.data('LicenseTiersService.getArchivedFeaturesCount', 'Response', { tierId, count })
+    console.groupEnd()
+    return count
+  } catch (err) {
+    debug.perf.end('licenseTiersService.getArchivedFeaturesCount')
+    debug.error('LicenseTiersService.getArchivedFeaturesCount', 'Exception getting archived features count', { error: err, tierId })
+    console.groupEnd()
+    throw err
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -269,50 +409,77 @@ export async function updateTier(
   input: UpdateTierInput,
   expectedVersion: number
 ): Promise<{ tier: LicenseTier; conflict?: boolean }> {
-  if (USE_FAKE_DATA) return updateTierFake(id, input, expectedVersion)
+  console.groupCollapsed(`%cupdateTier: ${id}`, 'color: #666; font-weight: bold;');
+  debug.flow('LicenseTiersService.updateTier', 'Updating tier', { id, expectedVersion, updates: Object.keys(input) })
+  debug.perf.start('licenseTiersService.updateTier')
 
-  const { data: current, error: fetchError } = await supabase
-    .from('license_tiers')
-    .select('version')
-    .eq('id', id)
-    .single()
-
-  if (fetchError) throw fetchError
-  if ((current as { version: number })?.version !== expectedVersion) {
-    const existing = await getTierById(id)
-    return { tier: existing!, conflict: true }
+  if (USE_FAKE_DATA) {
+    const result = await updateTierFake(id, input, expectedVersion)
+    debug.perf.end('licenseTiersService.updateTier')
+    debug.flow('LicenseTiersService.updateTier', 'Tier updated (fake)', { id, hasConflict: !!result.conflict })
+    console.groupEnd()
+    return result
   }
 
-  type Update = Database['public']['Tables']['license_tiers']['Update']
-  const updateData: Update = {
-    tier_name: input.tier_name,
-    description: input.description ?? null,
-    stripe_price_id: input.stripe_price_id,
-    stripe_product_name: input.stripe_product_name ?? null,
-    stripe_amount_cents: input.stripe_amount_cents ?? null,
-    stripe_interval: input.stripe_interval ?? null,
-    stripe_currency: input.stripe_currency ?? null,
-    stripe_active: input.stripe_active ?? null,
-    stripe_verified_at: input.stripe_verified_at ?? null,
-    status: input.status,
-  }
+  try {
+    const { data: current, error: fetchError } = await supabase
+      .from('license_tiers')
+      .select('version')
+      .eq('id', id)
+      .single()
 
-  const { data: updated, error: updateError } = await supabase
-    .from('license_tiers')
-    .update(updateData)
-    .eq('id', id)
-    .eq('version', expectedVersion)
-    .select()
-    .single()
-
-  if (updateError) {
-    if (updateError.code === 'PGRST116' || updateError.message?.includes('0 rows')) {
+    if (fetchError) throw fetchError
+    if ((current as { version: number })?.version !== expectedVersion) {
       const existing = await getTierById(id)
+      debug.perf.end('licenseTiersService.updateTier')
+      debug.error('LicenseTiersService.updateTier', 'Version conflict', { id, expectedVersion, currentVersion: (current as { version: number })?.version })
+      console.groupEnd()
       return { tier: existing!, conflict: true }
     }
-    throw updateError
+
+    type Update = Database['public']['Tables']['license_tiers']['Update']
+    const updateData: Update = {
+      tier_name: input.tier_name,
+      description: input.description ?? null,
+      stripe_price_id: input.stripe_price_id,
+      stripe_product_name: input.stripe_product_name ?? null,
+      stripe_amount_cents: input.stripe_amount_cents ?? null,
+      stripe_interval: input.stripe_interval ?? null,
+      stripe_currency: input.stripe_currency ?? null,
+      stripe_active: input.stripe_active ?? null,
+      stripe_verified_at: input.stripe_verified_at ?? null,
+      status: input.status,
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from('license_tiers')
+      .update(updateData)
+      .eq('id', id)
+      .eq('version', expectedVersion)
+      .select()
+      .single()
+
+    if (updateError) {
+      if (updateError.code === 'PGRST116' || updateError.message?.includes('0 rows')) {
+        const existing = await getTierById(id)
+        debug.perf.end('licenseTiersService.updateTier')
+        debug.error('LicenseTiersService.updateTier', 'Update conflict (no rows)', { id, expectedVersion })
+        console.groupEnd()
+        return { tier: existing!, conflict: true }
+      }
+      throw updateError
+    }
+    const result = { tier: mapTierRow(updated as LicenseTierRow) }
+    debug.perf.end('licenseTiersService.updateTier')
+    debug.flow('LicenseTiersService.updateTier', 'Tier updated successfully', { id })
+    console.groupEnd()
+    return result
+  } catch (err) {
+    debug.perf.end('licenseTiersService.updateTier')
+    debug.error('LicenseTiersService.updateTier', 'Failed to update tier', { error: err, id })
+    console.groupEnd()
+    throw err
   }
-  return { tier: mapTierRow(updated as LicenseTierRow) }
 }
 
 export async function archiveOrActivateTier(
@@ -361,9 +528,20 @@ export async function duplicateTier(
   tier: LicenseTier,
   assignments: Record<string, TierFeatureAssignment>
 ): Promise<LicenseTier> {
-  if (USE_FAKE_DATA) return duplicateTierFake(id, tier, assignments)
+  console.groupCollapsed(`%cduplicateTier: ${id}`, 'color: #666; font-weight: bold;');
+  debug.flow('LicenseTiersService.duplicateTier', 'Duplicating tier', { id, tierName: tier.tier_name, assignmentCount: Object.keys(assignments).length })
+  debug.perf.start('licenseTiersService.duplicateTier')
 
-  const newTier = await createTier({
+  if (USE_FAKE_DATA) {
+    const result = await duplicateTierFake(id, tier, assignments)
+    debug.perf.end('licenseTiersService.duplicateTier')
+    debug.flow('LicenseTiersService.duplicateTier', 'Tier duplicated (fake)', { id, newTierId: result.id })
+    console.groupEnd()
+    return result
+  }
+
+  try {
+    const newTier = await createTier({
     tier_key: tier.tier_key,
     tier_name: `${tier.tier_name} (Copy)`,
     description: tier.description ?? null,
@@ -393,16 +571,25 @@ export async function duplicateTier(
     })
   }
 
-  await logAuditEvent({
-    action: 'tier_duplicated',
-    targetType: 'tier',
-    targetId: newTier.id,
-    beforeState: null,
-    afterState: newTier as unknown as Record<string, unknown>,
-    reason: `Duplicated from tier ${id}`,
-  })
+    await logAuditEvent({
+      action: 'tier_duplicated',
+      targetType: 'tier',
+      targetId: newTier.id,
+      beforeState: null,
+      afterState: newTier as unknown as Record<string, unknown>,
+      reason: `Duplicated from tier ${id}`,
+    })
 
-  return newTier
+    debug.perf.end('licenseTiersService.duplicateTier')
+    debug.flow('LicenseTiersService.duplicateTier', 'Tier duplicated successfully', { id, newTierId: newTier.id })
+    console.groupEnd()
+    return newTier
+  } catch (err) {
+    debug.perf.end('licenseTiersService.duplicateTier')
+    debug.error('LicenseTiersService.duplicateTier', 'Failed to duplicate tier', { error: err, id })
+    console.groupEnd()
+    throw err
+  }
 }
 
 /**
@@ -414,25 +601,45 @@ export async function saveAssignments(
   featureIds: string[],
   assignmentsMap: Record<string, TierFeatureAssignment>
 ): Promise<void> {
-  if (USE_FAKE_DATA) return saveAssignmentsFake(tierId, featureIds, assignmentsMap)
+  console.groupCollapsed(`%csaveAssignments: ${tierId}`, 'color: #666; font-weight: bold;');
+  debug.flow('LicenseTiersService.saveAssignments', 'Saving assignments', { tierId, featureCount: featureIds.length })
+  debug.perf.start('licenseTiersService.saveAssignments')
 
-  type Insert = Database['public']['Tables']['tier_feature_assignments']['Insert']
-  for (const featureId of featureIds) {
-    const a = assignmentsMap[featureId]
-    const included = a?.included ?? false
-    const insertData: Insert = {
-      license_tier_id: tierId,
-      feature_entitlement_id: featureId,
-      included,
-      limit_value: a?.limit_value ?? null,
-      role_admin: a?.role_admin ?? true,
-      role_coach: a?.role_coach ?? true,
-      role_parent: a?.role_parent ?? false,
+  if (USE_FAKE_DATA) {
+    await saveAssignmentsFake(tierId, featureIds, assignmentsMap)
+    debug.perf.end('licenseTiersService.saveAssignments')
+    debug.flow('LicenseTiersService.saveAssignments', 'Assignments saved (fake)', { tierId })
+    console.groupEnd()
+    return
+  }
+
+  try {
+    type Insert = Database['public']['Tables']['tier_feature_assignments']['Insert']
+    for (const featureId of featureIds) {
+      const a = assignmentsMap[featureId]
+      const included = a?.included ?? false
+      const insertData: Insert = {
+        license_tier_id: tierId,
+        feature_entitlement_id: featureId,
+        included,
+        limit_value: a?.limit_value ?? null,
+        role_admin: a?.role_admin ?? true,
+        role_coach: a?.role_coach ?? true,
+        role_parent: a?.role_parent ?? false,
+      }
+      const { error } = await supabase.from('tier_feature_assignments').upsert(insertData, {
+        onConflict: 'license_tier_id,feature_entitlement_id',
+      })
+      if (error) throw error
     }
-    const { error } = await supabase.from('tier_feature_assignments').upsert(insertData, {
-      onConflict: 'license_tier_id,feature_entitlement_id',
-    })
-    if (error) throw error
+    debug.perf.end('licenseTiersService.saveAssignments')
+    debug.flow('LicenseTiersService.saveAssignments', 'Assignments saved successfully', { tierId, featureCount: featureIds.length })
+    console.groupEnd()
+  } catch (err) {
+    debug.perf.end('licenseTiersService.saveAssignments')
+    debug.error('LicenseTiersService.saveAssignments', 'Failed to save assignments', { error: err, tierId })
+    console.groupEnd()
+    throw err
   }
 }
 
@@ -444,16 +651,45 @@ export async function verifyStripePrice(
   priceId: string,
   forceRefresh = false
 ): Promise<StripePriceVerification> {
-  if (USE_FAKE_DATA) return verifyStripePriceFake(priceId, forceRefresh)
+  console.groupCollapsed(`%cverifyStripePrice: ${priceId}`, 'color: #666; font-weight: bold;');
+  debug.data('LicenseTiersService.verifyStripePrice', 'Request', { priceId, forceRefresh })
+  debug.perf.start('licenseTiersService.verifyStripePrice')
 
-  if (!priceId || !priceId.startsWith('price_')) {
-    return { valid: false, error: 'Invalid Price ID format' }
+  if (USE_FAKE_DATA) {
+    const result = await verifyStripePriceFake(priceId, forceRefresh)
+    debug.perf.end('licenseTiersService.verifyStripePrice')
+    debug.data('LicenseTiersService.verifyStripePrice', 'Response (fake)', { priceId, valid: result.valid })
+    console.groupEnd()
+    return result
   }
 
-  const { data, error } = await supabase.functions.invoke('stripe-verify-price', {
-    body: { price_id: priceId },
-  })
+  try {
+    if (!priceId || !priceId.startsWith('price_')) {
+      debug.perf.end('licenseTiersService.verifyStripePrice')
+      debug.error('LicenseTiersService.verifyStripePrice', 'Invalid Price ID format', { priceId })
+      console.groupEnd()
+      return { valid: false, error: 'Invalid Price ID format' }
+    }
 
-  if (error) return { valid: false, error: error.message ?? 'Verification failed' }
-  return data as StripePriceVerification
+    const { data, error } = await supabase.functions.invoke('stripe-verify-price', {
+      body: { price_id: priceId },
+    })
+
+    if (error) {
+      debug.perf.end('licenseTiersService.verifyStripePrice')
+      debug.error('LicenseTiersService.verifyStripePrice', 'Verification failed', { error, priceId })
+      console.groupEnd()
+      return { valid: false, error: error.message ?? 'Verification failed' }
+    }
+    const result = data as StripePriceVerification
+    debug.perf.end('licenseTiersService.verifyStripePrice')
+    debug.data('LicenseTiersService.verifyStripePrice', 'Response', { priceId, valid: result.valid })
+    console.groupEnd()
+    return result
+  } catch (err) {
+    debug.perf.end('licenseTiersService.verifyStripePrice')
+    debug.error('LicenseTiersService.verifyStripePrice', 'Exception verifying Stripe price', { error: err, priceId })
+    console.groupEnd()
+    throw err
+  }
 }

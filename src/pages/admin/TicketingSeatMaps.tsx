@@ -74,7 +74,10 @@ function getSeatMapEditPath(row: AdminSeatMapListItem): string {
   return getLink('admin.ticketingEvents.seatMaps.edit', { seatMapId: row.id })
 }
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketingSeatMaps() {
+  useDebugLifecycle('TicketingSeatMaps')
   const t = useT()
   const queryClient = useQueryClient()
   const navigate = useNavigate()

@@ -41,7 +41,11 @@ const statusLabels: Record<FeeAssignmentStatus, string> = {
   overdue: 'Overdue',
 }
 
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+
 export default function MyPayments() {
+  useDebugLifecycle('MyPayments')
+  
   const t = useT()
   const [assignments, setAssignments] = useState<FeeAssignment[]>([])
   const [loading, setLoading] = useState(true)

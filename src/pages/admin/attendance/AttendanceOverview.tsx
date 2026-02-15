@@ -15,7 +15,11 @@ interface OverviewStats {
   }>
 }
 
+import { useDebugLifecycle } from '../../../lib/debug/integrations/useDebugLifecycle'
+
 export default function AttendanceOverview() {
+  useDebugLifecycle('AttendanceOverview')
+  
   const { context, isReady } = useUserContext()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<OverviewStats>({

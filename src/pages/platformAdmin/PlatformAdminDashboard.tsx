@@ -24,7 +24,11 @@ function StatsSkeleton() {
   )
 }
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function PlatformAdminDashboard() {
+  useDebugLifecycle('PlatformAdminDashboard')
+  
   const [health, setHealth] = useState<AdminPlatformHealth | null>(null)
   const [recentActivity, setRecentActivity] = useState<AdminAuditLog[]>([])
   const [loading, setLoading] = useState(true)

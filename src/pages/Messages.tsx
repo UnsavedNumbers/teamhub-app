@@ -21,6 +21,7 @@ import Icon from '../components/portal/Icon'
 import CreateAnnouncementModal from '../components/portal/CreateAnnouncementModal'
 import { showError, showSuccess } from '../utils/toast'
 import { getAnnouncementEmoji } from '../utils/announcementTypes'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 
 interface Team {
   id: string
@@ -30,6 +31,8 @@ interface Team {
 type Tab = 'announcements' | 'chat'
 
 export default function Messages() {
+  useDebugLifecycle('Messages')
+  
   const [teams, setTeams] = useState<Team[]>([])
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('announcements')

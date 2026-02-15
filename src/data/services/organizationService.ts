@@ -13,6 +13,7 @@ import {
 } from '../fake/organizationFakeService'
 import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
 import type { EventActorRole } from '../../types/eventLog.types'
+import { debug } from '../../lib/debug'
 
 
 export interface OrganizationUpdateDTO {
@@ -89,8 +90,13 @@ async function getCurrentActorContext(orgId: string): Promise<{ userId: string |
 }
 
 export async function getOrganizationDetails(orgId: string): Promise<{ data: Organization | null; error: Error | null }> {
+    console.groupCollapsed(`%cgetOrganizationDetails: ${orgId}`, 'color: #666; font-weight: bold;');
+    debug.data('OrganizationService.getOrganizationDetails', 'Request', { orgId })
+    debug.perf.start('organizationService.getOrganizationDetails')
+
     try {
         if (USE_FAKE_DATA) {
+            debug.flow('OrganizationService.getOrganizationDetails', 'Using fake data')
             return getFakeOrganizationDetails(orgId)
         }
 
@@ -156,8 +162,14 @@ export async function getOrganizationDetails(orgId: string): Promise<{ data: Org
             profile_visible_to_fans: data.profile_visible_to_fans ?? undefined,
         }
 
+        debug.perf.end('organizationService.getOrganizationDetails')
+        debug.data('OrganizationService.getOrganizationDetails', 'Response', { orgId, orgName: org.name })
+        console.groupEnd()
         return { data: org, error: null }
     } catch (err) {
+        debug.perf.end('organizationService.getOrganizationDetails')
+        debug.error('OrganizationService.getOrganizationDetails', 'Failed to fetch organization', { error: err, orgId })
+        console.groupEnd()
         console.error('[organizationService] Error fetching organization:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -335,8 +347,13 @@ export async function updateOrganizationDetails(
     orgId: string,
     updates: OrganizationUpdateDTO
 ): Promise<{ data: Organization | null; error: Error | null }> {
+    console.groupCollapsed(`%cupdateOrganizationDetails: ${orgId}`, 'color: #666; font-weight: bold;');
+    debug.flow('OrganizationService.updateOrganizationDetails', 'Started', { orgId, fieldCount: Object.keys(updates).length })
+    debug.perf.start('organizationService.updateOrganizationDetails')
+
     try {
         if (USE_FAKE_DATA) {
+            debug.flow('OrganizationService.updateOrganizationDetails', 'Using fake data')
             return updateFakeOrganizationDetails(orgId, updates)
         }
 
@@ -399,8 +416,14 @@ export async function updateOrganizationDetails(
             profile_visible_to_fans: data.profile_visible_to_fans ?? undefined,
         }
 
+        debug.perf.end('organizationService.updateOrganizationDetails')
+        debug.flow('OrganizationService.updateOrganizationDetails', 'Updated successfully', { orgId, fieldCount: Object.keys(updates).length })
+        console.groupEnd()
         return { data: org, error: null }
     } catch (err) {
+        debug.perf.end('organizationService.updateOrganizationDetails')
+        debug.error('OrganizationService.updateOrganizationDetails', 'Failed to update organization', { error: err, orgId, updates: Object.keys(updates) })
+        console.groupEnd()
         console.error('[organizationService] Error updating organization:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }

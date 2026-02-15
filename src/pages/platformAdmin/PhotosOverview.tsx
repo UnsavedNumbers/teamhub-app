@@ -4,7 +4,11 @@
  * Cross-org statistics on storage usage, upload volumes, and active galleries.
  */
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function PhotosOverview() {
+  useDebugLifecycle('PhotosOverview')
+  
   return (
     <div className="pa-root">
       <div className="pa-container">

@@ -30,6 +30,7 @@ import { normalizeSupabaseResponse, createServiceResponse } from './responseHelp
 import { assertNotDemoMode } from '@/utils/demoMode'
 import { classifySupabaseError, ValidationError } from '@/utils/supabaseErrorHandler'
 import { getLink, RouteKeys } from '@/utils/routes'
+import { debug } from '../../lib/debug'
 import {
   createFakeCheckoutSession,
   getFakeSeatMapWithSeats,
@@ -2443,6 +2444,14 @@ export async function decryptTicketAccessLink(
 export async function createCheckoutSession(
   request: CreateCheckoutRequest,
 ): Promise<{ data: CreateCheckoutResponse | null; error: Error | null }> {
+  console.groupCollapsed(`%ccreateCheckoutSession: ${request.ticketed_event_id}`, 'color: #666; font-weight: bold;');
+  debug.flow('TicketingService.createCheckoutSession', 'Started', {
+    eventId: request.ticketed_event_id,
+    email: request.purchaser_email,
+    itemCount: request.items?.length
+  })
+  debug.perf.start('ticketingService.createCheckoutSession')
+
   try {
     if (!request.ticketed_event_id) {
       return createServiceResponse<CreateCheckoutResponse>(null, new ValidationError('Event is required'))
@@ -2484,8 +2493,21 @@ export async function createCheckoutSession(
     }
 
     const data = await response.json()
+    debug.perf.end('ticketingService.createCheckoutSession')
+    debug.flow('TicketingService.createCheckoutSession', 'Checkout created successfully', {
+      eventId: request.ticketed_event_id,
+      sessionUrl: data.checkout_url
+    })
+    console.groupEnd()
     return createServiceResponse<CreateCheckoutResponse>(data, null)
   } catch (error: any) {
+    debug.perf.end('ticketingService.createCheckoutSession')
+    debug.error('TicketingService.createCheckoutSession', 'Failed to create checkout', {
+      error,
+      eventId: request.ticketed_event_id,
+      email: request.purchaser_email
+    })
+    console.groupEnd()
     return createServiceResponse<CreateCheckoutResponse>(null, error)
   }
 }
@@ -2498,16 +2520,18 @@ export async function validateTicketScan(
   request: ValidateScanRequest,
   staffLinkToken?: string,
 ): Promise<{ data: ValidateScanResponse | null; error: Error | null }> {
-  if (USE_FAKE_DATA) {
-    try {
-      const result = validateFakeTicketScan(request)
-      return createServiceResponse<ValidateScanResponse>(result, null)
-    } catch (error: any) {
-      return createServiceResponse<ValidateScanResponse>(null, error)
-    }
-  }
+  console.groupCollapsed(`%cvalidateTicketScan: ${request.entry_code ?? request.ticketed_event_id}`, 'color: #666; font-weight: bold;');
+  debug.flow('TicketingService.validateTicketScan', 'Started', {
+    ticketId: request.entry_code ?? request.ticketed_event_id,
+    hasStaffLink: !!staffLinkToken
+  })
+  debug.perf.start('ticketingService.validateTicketScan')
 
   try {
+    if (USE_FAKE_DATA) {
+      const result = validateFakeTicketScan(request)
+      return createServiceResponse<ValidateScanResponse>(result, null)
+    }
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     }
@@ -2538,8 +2562,20 @@ export async function validateTicketScan(
     }
 
     const data = (responseBody || {}) as ValidateScanResponse
+    debug.perf.end('ticketingService.validateTicketScan')
+    debug.flow('TicketingService.validateTicketScan', 'Validation completed', {
+      ticketId: request.entry_code ?? request.ticketed_event_id,
+      result: data.result,
+    })
+    console.groupEnd()
     return createServiceResponse<ValidateScanResponse>(data, null)
   } catch (error: any) {
+    debug.perf.end('ticketingService.validateTicketScan')
+    debug.error('TicketingService.validateTicketScan', 'Validation failed', {
+      error,
+      ticketId: request.entry_code ?? request.ticketed_event_id
+    })
+    console.groupEnd()
     return createServiceResponse<ValidateScanResponse>(null, error)
   }
 }

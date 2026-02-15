@@ -17,7 +17,11 @@ import type {
   OrganizationStatus,
 } from '../../types/platformAdmin.types'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function OrganizationDetail() {
+  useDebugLifecycle('OrganizationDetail')
+  
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { profile } = useAuth()

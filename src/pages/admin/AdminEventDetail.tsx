@@ -146,7 +146,10 @@ function hasRecurringSchedule(recurringPattern: CalendarEvent['recurring_pattern
   return hasFrequency || hasDays || hasInterval
 }
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function AdminEventDetail() {
+  useDebugLifecycle('AdminEventDetail')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()

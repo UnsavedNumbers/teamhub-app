@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { getTeamByInviteCode, getTeamDetails, createTeamMembership } from '../data/services/teamsService'
 import { getAthletes } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -27,6 +28,7 @@ interface Season {
 }
 
 export default function JoinTeam() {
+  useDebugLifecycle('JoinTeam')
   const t = useT()
   const [searchParams] = useSearchParams()
   const [inviteCode, setInviteCode] = useState(searchParams.get('code') || '')

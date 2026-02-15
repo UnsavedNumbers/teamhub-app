@@ -19,7 +19,11 @@ import { showSuccess } from '../../utils/toast'
 
 type TabType = 'flags' | 'overrides' | 'audit'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FeatureFlags() {
+  useDebugLifecycle('FeatureFlags')
+  
   const db = supabase as any
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabType>('flags')

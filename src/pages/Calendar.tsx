@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { 
   getCalendarEvents,
   updateRSVP, 
@@ -51,6 +52,9 @@ const defaultFilters: CalendarFilters = {
 const EVENTS_PER_PAGE = 9
 
 export default function Calendar() {
+  // Add lifecycle logging
+  useDebugLifecycle('Calendar')
+
   // I18n hook - will throw if I18nProvider is missing (correct behavior)
   const { t } = useI18n()
   

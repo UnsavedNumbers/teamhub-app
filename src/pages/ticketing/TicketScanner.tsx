@@ -37,7 +37,11 @@ type ScannerEventSummary = {
   event_id?: string | null
 }
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketScanner() {
+  useDebugLifecycle('TicketScanner')
+  
   const { token, eventId } = useParams<{ token?: string; eventId?: string }>()
   const directEventId = eventId?.trim() || null
   const navigate = useNavigate()

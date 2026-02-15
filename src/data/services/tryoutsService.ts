@@ -1,6 +1,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 
 export interface Tryout {
     id: string
@@ -203,12 +204,24 @@ export async function getTryouts(
     _context: UserContext,
     _orgId?: string
 ): Promise<{ data: Tryout[]; error: Error | null }> {
-    await simulateDelay()
-    if (USE_FAKE_DATA) return { data: MOCK_TRYOUTS, error: null }
+    console.groupCollapsed(`%cgetTryouts: ${_orgId || _context.orgId}`, 'color: #666; font-weight: bold;');
+    debug.data('TryoutsService.getTryouts', 'Request', { orgId: _orgId || _context.orgId })
+    debug.perf.start('tryoutsService.getTryouts')
 
+    await simulateDelay()
     try {
+        if (USE_FAKE_DATA) {
+            debug.perf.end('tryoutsService.getTryouts')
+            debug.data('TryoutsService.getTryouts', 'Response (fake)', { tryoutCount: MOCK_TRYOUTS.length })
+            console.groupEnd()
+            return { data: MOCK_TRYOUTS, error: null }
+        }
+
         const orgId = _orgId ?? _context.orgId
         if (!orgId) {
+            debug.perf.end('tryoutsService.getTryouts')
+            debug.error('TryoutsService.getTryouts', 'Missing orgId', { orgId })
+            console.groupEnd()
             return { data: [], error: new Error('Organization ID is required') }
         }
 
@@ -222,8 +235,14 @@ export async function getTryouts(
         if (error) throw error
 
         const mapped = (data || []).map(mapDbTryoutToService)
+        debug.perf.end('tryoutsService.getTryouts')
+        debug.data('TryoutsService.getTryouts', 'Response', { orgId, tryoutCount: mapped.length })
+        console.groupEnd()
         return { data: mapped, error: null }
     } catch (err) {
+        debug.perf.end('tryoutsService.getTryouts')
+        debug.error('TryoutsService.getTryouts', 'Failed to get tryouts', { error: err, orgId: _orgId || _context.orgId })
+        console.groupEnd()
         console.error('getTryouts error:', err)
         return { data: [], error: toServiceError(err) }
     }
@@ -233,13 +252,19 @@ export async function getTryoutById(
     _context: UserContext,
     tryoutId: string
 ): Promise<{ data: Tryout | null; error: Error | null }> {
-    await simulateDelay()
-    if (USE_FAKE_DATA) {
-        const found = MOCK_TRYOUTS.find(t => t.id === tryoutId)
-        return { data: found || null, error: null }
-    }
+    console.groupCollapsed(`%cgetTryoutById: ${tryoutId}`, 'color: #666; font-weight: bold;');
+    debug.data('TryoutsService.getTryoutById', 'Request', { tryoutId })
+    debug.perf.start('tryoutsService.getTryoutById')
 
+    await simulateDelay()
     try {
+        if (USE_FAKE_DATA) {
+            const found = MOCK_TRYOUTS.find(t => t.id === tryoutId)
+            debug.perf.end('tryoutsService.getTryoutById')
+            debug.data('TryoutsService.getTryoutById', 'Response (fake)', { tryoutId, found: !!found })
+            console.groupEnd()
+            return { data: found || null, error: null }
+        }
         const { data, error } = await supabase
             .from('tryouts')
             .select('*')
@@ -247,11 +272,22 @@ export async function getTryoutById(
             .single()
 
         if (error) throw error
-        if (!data) return { data: null, error: null }
+        if (!data) {
+            debug.perf.end('tryoutsService.getTryoutById')
+            debug.data('TryoutsService.getTryoutById', 'Response (not found)', { tryoutId })
+            console.groupEnd()
+            return { data: null, error: null }
+        }
 
         const mapped = mapDbTryoutToService(data)
+        debug.perf.end('tryoutsService.getTryoutById')
+        debug.data('TryoutsService.getTryoutById', 'Response', { tryoutId, tryoutTitle: mapped.title })
+        console.groupEnd()
         return { data: mapped, error: null }
     } catch (err) {
+        debug.perf.end('tryoutsService.getTryoutById')
+        debug.error('TryoutsService.getTryoutById', 'Failed to get tryout', { error: err, tryoutId })
+        console.groupEnd()
         console.error('getTryoutById error:', err)
         return { data: null, error: toServiceError(err) }
     }
@@ -260,10 +296,18 @@ export async function getTryoutById(
 export async function getTryoutRegistrations(
     _context: UserContext
 ): Promise<{ data: TryoutRegistration[]; error: Error | null }> {
-    await simulateDelay()
-    if (USE_FAKE_DATA) return { data: [], error: null }
+    console.groupCollapsed(`%cgetTryoutRegistrations`, 'color: #666; font-weight: bold;');
+    debug.data('TryoutsService.getTryoutRegistrations', 'Request', { userId: _context.userId })
+    debug.perf.start('tryoutsService.getTryoutRegistrations')
 
+    await simulateDelay()
     try {
+        if (USE_FAKE_DATA) {
+            debug.perf.end('tryoutsService.getTryoutRegistrations')
+            debug.data('TryoutsService.getTryoutRegistrations', 'Response (fake)', { registrationCount: 0 })
+            console.groupEnd()
+            return { data: [], error: null }
+        }
         const { data, error } = await supabase
             .from('tryout_registrations')
             .select('*, athlete:athletes(first_name, last_name)')
@@ -271,8 +315,14 @@ export async function getTryoutRegistrations(
         if (error) throw error
 
         const mapped = (data || []).map(mapDbRegistrationToService)
+        debug.perf.end('tryoutsService.getTryoutRegistrations')
+        debug.data('TryoutsService.getTryoutRegistrations', 'Response', { registrationCount: mapped.length })
+        console.groupEnd()
         return { data: mapped, error: null }
     } catch (err) {
+        debug.perf.end('tryoutsService.getTryoutRegistrations')
+        debug.error('TryoutsService.getTryoutRegistrations', 'Failed to get registrations', { error: err })
+        console.groupEnd()
         console.error('getTryoutRegistrations error:', err)
         return { data: [], error: toServiceError(err) }
     }
@@ -283,10 +333,18 @@ export async function registerAthleteForTryout(
     _tryoutId: string,
     _childId: string
 ): Promise<{ error: Error | null }> {
-    await simulateDelay()
-    if (USE_FAKE_DATA) return { error: null }
+    console.groupCollapsed(`%cregisterAthleteForTryout: ${_tryoutId} - ${_childId}`, 'color: #666; font-weight: bold;');
+    debug.flow('TryoutsService.registerAthleteForTryout', 'Registering athlete', { tryoutId: _tryoutId, childId: _childId })
+    debug.perf.start('tryoutsService.registerAthleteForTryout')
 
+    await simulateDelay()
     try {
+        if (USE_FAKE_DATA) {
+            debug.perf.end('tryoutsService.registerAthleteForTryout')
+            debug.flow('TryoutsService.registerAthleteForTryout', 'Athlete registered (fake)', { tryoutId: _tryoutId, childId: _childId })
+            console.groupEnd()
+            return { error: null }
+        }
         // Use RPC for atomic registration with capacity/deadline checks
         const { error } = await supabase.rpc('register_child_for_tryout', {
             p_tryout_id: _tryoutId,
@@ -294,8 +352,14 @@ export async function registerAthleteForTryout(
         })
 
         if (error) throw error
+        debug.perf.end('tryoutsService.registerAthleteForTryout')
+        debug.flow('TryoutsService.registerAthleteForTryout', 'Athlete registered successfully', { tryoutId: _tryoutId, childId: _childId })
+        console.groupEnd()
         return { error: null }
     } catch (err) {
+        debug.perf.end('tryoutsService.registerAthleteForTryout')
+        debug.error('TryoutsService.registerAthleteForTryout', 'Failed to register athlete', { error: err, tryoutId: _tryoutId, childId: _childId })
+        console.groupEnd()
         console.error('registerChildForTryout error:', err)
         return { error: toServiceError(err) }
     }
@@ -305,12 +369,23 @@ export async function createTryout(
     _context: UserContext,
     tryout: Partial<Tryout>
 ): Promise<{ data: Tryout | null; error: Error | null }> {
-    await simulateDelay()
-    if (USE_FAKE_DATA) return { data: { ...MOCK_TRYOUTS[0], ...tryout }, error: null }
+    console.groupCollapsed(`%ccreateTryout: ${tryout.title}`, 'color: #666; font-weight: bold;');
+    debug.flow('TryoutsService.createTryout', 'Creating tryout', { tryoutTitle: tryout.title, orgId: tryout.org_id || _context.orgId })
+    debug.perf.start('tryoutsService.createTryout')
 
+    await simulateDelay()
     try {
+        if (USE_FAKE_DATA) {
+            debug.perf.end('tryoutsService.createTryout')
+            debug.flow('TryoutsService.createTryout', 'Tryout created (fake)', { tryoutTitle: tryout.title })
+            console.groupEnd()
+            return { data: { ...MOCK_TRYOUTS[0], ...tryout }, error: null }
+        }
         const orgId = tryout.org_id ?? _context.orgId
         if (!orgId) {
+            debug.perf.end('tryoutsService.createTryout')
+            debug.error('TryoutsService.createTryout', 'Missing orgId', { orgId })
+            console.groupEnd()
             return { data: null, error: new Error('Organization ID is required') }
         }
 
@@ -345,8 +420,14 @@ export async function createTryout(
         if (!data) return { data: null, error: new Error('Failed to create tryout') }
 
         const mapped = mapDbTryoutToService(data)
+        debug.perf.end('tryoutsService.createTryout')
+        debug.flow('TryoutsService.createTryout', 'Tryout created successfully', { tryoutId: mapped.id, tryoutTitle: mapped.title })
+        console.groupEnd()
         return { data: mapped, error: null }
     } catch (err) {
+        debug.perf.end('tryoutsService.createTryout')
+        debug.error('TryoutsService.createTryout', 'Failed to create tryout', { error: err, tryoutTitle: tryout.title })
+        console.groupEnd()
         console.error('createTryout error:', err)
         return { data: null, error: toServiceError(err) }
     }
@@ -356,10 +437,18 @@ export async function getAdminTryoutRegistrations(
     _context: UserContext,
     _tryoutId: string
 ): Promise<{ data: TryoutRegistration[]; error: Error | null }> {
-    await simulateDelay()
-    if (USE_FAKE_DATA) return { data: [], error: null }
+    console.groupCollapsed(`%cgetAdminTryoutRegistrations: ${_tryoutId}`, 'color: #666; font-weight: bold;');
+    debug.data('TryoutsService.getAdminTryoutRegistrations', 'Request', { tryoutId: _tryoutId })
+    debug.perf.start('tryoutsService.getAdminTryoutRegistrations')
 
+    await simulateDelay()
     try {
+        if (USE_FAKE_DATA) {
+            debug.perf.end('tryoutsService.getAdminTryoutRegistrations')
+            debug.data('TryoutsService.getAdminTryoutRegistrations', 'Response (fake)', { tryoutId: _tryoutId, registrationCount: 0 })
+            console.groupEnd()
+            return { data: [], error: null }
+        }
         const { data, error } = await supabase
             .from('tryout_registrations')
             .select('*, athlete:athletes(first_name, last_name)')
@@ -369,8 +458,14 @@ export async function getAdminTryoutRegistrations(
         if (error) throw error
 
         const mapped = (data || []).map(mapDbRegistrationToService)
+        debug.perf.end('tryoutsService.getAdminTryoutRegistrations')
+        debug.data('TryoutsService.getAdminTryoutRegistrations', 'Response', { tryoutId: _tryoutId, registrationCount: mapped.length })
+        console.groupEnd()
         return { data: mapped, error: null }
     } catch (err) {
+        debug.perf.end('tryoutsService.getAdminTryoutRegistrations')
+        debug.error('TryoutsService.getAdminTryoutRegistrations', 'Failed to get registrations', { error: err, tryoutId: _tryoutId })
+        console.groupEnd()
         console.error('getAdminTryoutRegistrations error:', err)
         return { data: [], error: toServiceError(err) }
     }

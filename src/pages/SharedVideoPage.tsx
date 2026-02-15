@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
 import Icon from '@/components/portal/Icon'
 import Button from '@/components/portal/Button'
 import { cn } from '@/utils/cn'
@@ -63,6 +64,7 @@ function loadMuxPlayerScript(): Promise<void> {
 
 export default function SharedVideoPage() {
   const { token } = useParams<{ token: string }>()
+  useDebugLifecycle('SharedVideoPage', { token })
   
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

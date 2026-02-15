@@ -30,7 +30,10 @@ const DEFAULT_FILTERS: TravelFiltersType = {
     status: [],
 }
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function TravelPlans() {
+  useDebugLifecycle('TravelPlans')
     const [searchParams, setSearchParams] = useSearchParams()
 
     const [timeContext, setTimeContext] = useState<TravelTimeContext>('upcoming')

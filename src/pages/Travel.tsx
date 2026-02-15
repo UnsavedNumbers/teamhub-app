@@ -49,7 +49,10 @@ function getGroupLabel(plan: FakeTravelPlan): string {
 // Components
 // ----------------------------------------------------------------------------
 
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+
 export default function Travel() {
+  useDebugLifecycle('Travel')
     const t = useT()
     const navigate = useNavigate()
     const { context, isReady } = useUserContext()

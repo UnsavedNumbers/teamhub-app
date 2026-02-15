@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '@/data/config'
 import { classifySupabaseError, ValidationError } from '@/utils/supabaseErrorHandler'
 import type { Venue } from '@/types/ticketing'
@@ -15,11 +16,25 @@ import { getFakeVenuesForOrg } from '@/data/fake/ticketingFakeService'
 // ============================================================================
 
 export async function getVenuesForOrg(orgId: string): Promise<Venue[]> {
-  if (!orgId) throw new ValidationError('Organization is required')
-
-  if (USE_FAKE_DATA) return getFakeVenuesForOrg(orgId)
+  console.groupCollapsed(`%cgetVenuesForOrg: ${orgId}`, 'color: #666; font-weight: bold;');
+  debug.data('VenueService.getVenuesForOrg', 'Request', { orgId })
+  debug.perf.start('venueService.getVenuesForOrg')
 
   try {
+    if (!orgId) {
+      debug.perf.end('venueService.getVenuesForOrg')
+      debug.error('VenueService.getVenuesForOrg', 'Missing orgId', { orgId })
+      console.groupEnd()
+      throw new ValidationError('Organization is required')
+    }
+
+    if (USE_FAKE_DATA) {
+      const venues = getFakeVenuesForOrg(orgId)
+      debug.perf.end('venueService.getVenuesForOrg')
+      debug.data('VenueService.getVenuesForOrg', 'Response (fake)', { orgId, venueCount: venues.length })
+      console.groupEnd()
+      return venues
+    }
     const { data, error } = await (supabase as any)
       .from('venues')
       .select('*')
@@ -27,16 +42,30 @@ export async function getVenuesForOrg(orgId: string): Promise<Venue[]> {
       .order('name', { ascending: true })
 
     if (error) throw error
+    debug.perf.end('venueService.getVenuesForOrg')
+    debug.data('VenueService.getVenuesForOrg', 'Response', { orgId, venueCount: data?.length || 0 })
+    console.groupEnd()
     return (data ?? []) as Venue[]
   } catch (error) {
+    debug.perf.end('venueService.getVenuesForOrg')
+    debug.error('VenueService.getVenuesForOrg', 'Failed to get venues', { error, orgId })
+    console.groupEnd()
     throw classifySupabaseError(error, 'Venues')
   }
 }
 
 export async function getVenueById(venueId: string): Promise<Venue> {
-  if (!venueId) throw new ValidationError('Venue ID is required')
+  console.groupCollapsed(`%cgetVenueById: ${venueId}`, 'color: #666; font-weight: bold;');
+  debug.data('VenueService.getVenueById', 'Request', { venueId })
+  debug.perf.start('venueService.getVenueById')
 
   try {
+    if (!venueId) {
+      debug.perf.end('venueService.getVenueById')
+      debug.error('VenueService.getVenueById', 'Missing venueId', { venueId })
+      console.groupEnd()
+      throw new ValidationError('Venue ID is required')
+    }
     const { data, error } = await (supabase as any)
       .from('venues')
       .select('*')
@@ -74,10 +103,25 @@ export interface CreateVenueInput {
  * If google_place_id is provided and a matching venue exists, returns that.
  */
 export async function upsertVenue(input: CreateVenueInput): Promise<Venue> {
-  if (!input.org_id) throw new ValidationError('Organization is required')
-  if (!input.name?.trim()) throw new ValidationError('Venue name is required')
+  console.groupCollapsed(`%cupsertVenue: ${input.name}`, 'color: #666; font-weight: bold;');
+  debug.flow('VenueService.upsertVenue', 'Upserting venue', { venueName: input.name, orgId: input.org_id })
+  debug.perf.start('venueService.upsertVenue')
 
-  if (USE_FAKE_DATA) {
+  try {
+    if (!input.org_id) {
+      debug.perf.end('venueService.upsertVenue')
+      debug.error('VenueService.upsertVenue', 'Missing org_id', { input })
+      console.groupEnd()
+      throw new ValidationError('Organization is required')
+    }
+    if (!input.name?.trim()) {
+      debug.perf.end('venueService.upsertVenue')
+      debug.error('VenueService.upsertVenue', 'Missing venue name', { input })
+      console.groupEnd()
+      throw new ValidationError('Venue name is required')
+    }
+
+    if (USE_FAKE_DATA) {
     return {
       id: crypto.randomUUID(),
       org_id: input.org_id,
@@ -99,10 +143,33 @@ export async function upsertVenue(input: CreateVenueInput): Promise<Venue> {
       default_seat_map_id: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      }
+      debug.perf.end('venueService.upsertVenue')
+      debug.flow('VenueService.upsertVenue', 'Venue upserted (fake)', { venueName: input.name })
+      console.groupEnd()
+      return {
+        id: crypto.randomUUID(),
+        org_id: input.org_id,
+        name: input.name,
+        google_place_id: input.google_place_id ?? null,
+        address: input.address ?? null,
+        address_line1: input.address_line1 ?? null,
+        address_line2: input.address_line2 ?? null,
+        city: input.city ?? null,
+        state: input.state ?? null,
+        postal_code: input.postal_code ?? null,
+        country: input.country ?? 'US',
+        latitude: input.latitude ?? null,
+        longitude: input.longitude ?? null,
+        maps_url: input.maps_url ?? null,
+        is_virtual: input.is_virtual ?? false,
+        virtual_link: input.virtual_link ?? null,
+        capacity: input.capacity ?? null,
+        default_seat_map_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
     }
-  }
-
-  try {
     // If place_id provided, try to find existing
     if (input.google_place_id) {
       const { data: existing } = await (supabase as any)
@@ -162,8 +229,14 @@ export async function upsertVenue(input: CreateVenueInput): Promise<Venue> {
       .single()
 
     if (error) throw error
+    debug.perf.end('venueService.upsertVenue')
+    debug.flow('VenueService.upsertVenue', 'Venue upserted successfully', { venueId: data.id, venueName: data.name })
+    console.groupEnd()
     return data as Venue
   } catch (error) {
+    debug.perf.end('venueService.upsertVenue')
+    debug.error('VenueService.upsertVenue', 'Failed to upsert venue', { error, venueName: input.name })
+    console.groupEnd()
     throw classifySupabaseError(error, 'Venue')
   }
 }
@@ -172,9 +245,17 @@ export async function updateVenue(
   venueId: string,
   updates: Partial<Omit<Venue, 'id' | 'org_id' | 'created_at'>>,
 ): Promise<Venue> {
-  if (!venueId) throw new ValidationError('Venue ID is required')
+  console.groupCollapsed(`%cupdateVenue: ${venueId}`, 'color: #666; font-weight: bold;');
+  debug.flow('VenueService.updateVenue', 'Updating venue', { venueId })
+  debug.perf.start('venueService.updateVenue')
 
   try {
+    if (!venueId) {
+      debug.perf.end('venueService.updateVenue')
+      debug.error('VenueService.updateVenue', 'Missing venueId', { venueId })
+      console.groupEnd()
+      throw new ValidationError('Venue ID is required')
+    }
     const { data, error } = await (supabase as any)
       .from('venues')
       .update({ ...updates, updated_at: new Date().toISOString() })
@@ -183,23 +264,43 @@ export async function updateVenue(
       .single()
 
     if (error) throw error
+    debug.perf.end('venueService.updateVenue')
+    debug.flow('VenueService.updateVenue', 'Venue updated successfully', { venueId, venueName: data.name })
+    console.groupEnd()
     return data as Venue
   } catch (error) {
+    debug.perf.end('venueService.updateVenue')
+    debug.error('VenueService.updateVenue', 'Failed to update venue', { error, venueId })
+    console.groupEnd()
     throw classifySupabaseError(error, 'Venue')
   }
 }
 
 export async function deleteVenue(venueId: string): Promise<void> {
-  if (!venueId) throw new ValidationError('Venue ID is required')
+  console.groupCollapsed(`%cdeleteVenue: ${venueId}`, 'color: #666; font-weight: bold;');
+  debug.flow('VenueService.deleteVenue', 'Deleting venue', { venueId })
+  debug.perf.start('venueService.deleteVenue')
 
   try {
+    if (!venueId) {
+      debug.perf.end('venueService.deleteVenue')
+      debug.error('VenueService.deleteVenue', 'Missing venueId', { venueId })
+      console.groupEnd()
+      throw new ValidationError('Venue ID is required')
+    }
     const { error } = await (supabase as any)
       .from('venues')
       .delete()
       .eq('id', venueId)
 
     if (error) throw error
+    debug.perf.end('venueService.deleteVenue')
+    debug.flow('VenueService.deleteVenue', 'Venue deleted successfully', { venueId })
+    console.groupEnd()
   } catch (error) {
+    debug.perf.end('venueService.deleteVenue')
+    debug.error('VenueService.deleteVenue', 'Failed to delete venue', { error, venueId })
+    console.groupEnd()
     throw classifySupabaseError(error, 'Venue')
   }
 }
@@ -209,9 +310,15 @@ export async function deleteVenue(venueId: string): Promise<void> {
 // ============================================================================
 
 export async function setVenueDefaultSeatMap(venueId: string, seatMapId: string | null): Promise<void> {
-  if (!venueId) throw new ValidationError('Venue ID is required')
+  debug.flow('VenueService.setVenueDefaultSeatMap', 'Setting venue default seat map', { venueId, seatMapId })
+  debug.perf.start('venueService.setVenueDefaultSeatMap')
 
   try {
+    if (!venueId) {
+      debug.perf.end('venueService.setVenueDefaultSeatMap')
+      debug.error('VenueService.setVenueDefaultSeatMap', 'Missing venueId', { venueId })
+      throw new ValidationError('Venue ID is required')
+    }
     const { error } = await (supabase as any)
       .from('venues')
       .update({ default_seat_map_id: seatMapId, updated_at: new Date().toISOString() })
@@ -233,15 +340,25 @@ export async function setTeamDefaultSeatMap(teamId: string, seatMapId: string | 
       .eq('id', teamId)
 
     if (error) throw error
+    debug.perf.end('venueService.setTeamDefaultSeatMap')
+    debug.flow('VenueService.setTeamDefaultSeatMap', 'Team default seat map set successfully', { teamId, seatMapId })
   } catch (error) {
+    debug.perf.end('venueService.setTeamDefaultSeatMap')
+    debug.error('VenueService.setTeamDefaultSeatMap', 'Failed to set seat map', { error, teamId, seatMapId })
     throw classifySupabaseError(error, 'Team default seat map')
   }
 }
 
 export async function setTeamHomeVenue(teamId: string, venueId: string | null): Promise<void> {
-  if (!teamId) throw new ValidationError('Team ID is required')
+  debug.flow('VenueService.setTeamHomeVenue', 'Setting team home venue', { teamId, venueId })
+  debug.perf.start('venueService.setTeamHomeVenue')
 
   try {
+    if (!teamId) {
+      debug.perf.end('venueService.setTeamHomeVenue')
+      debug.error('VenueService.setTeamHomeVenue', 'Missing teamId', { teamId })
+      throw new ValidationError('Team ID is required')
+    }
     const { error } = await (supabase as any)
       .from('teams')
       .update({ home_venue_id: venueId })
@@ -263,7 +380,11 @@ export async function setOrgDefaultSeatMap(orgId: string, seatMapId: string | nu
       .eq('id', orgId)
 
     if (error) throw error
+    debug.perf.end('venueService.setOrgDefaultSeatMap')
+    debug.flow('VenueService.setOrgDefaultSeatMap', 'Org default seat map set successfully', { orgId, seatMapId })
   } catch (error) {
+    debug.perf.end('venueService.setOrgDefaultSeatMap')
+    debug.error('VenueService.setOrgDefaultSeatMap', 'Failed to set seat map', { error, orgId, seatMapId })
     throw classifySupabaseError(error, 'Organization default seat map')
   }
 }
@@ -285,9 +406,15 @@ export async function resolveSeatMapForEvent(params: {
   venueId?: string | null
   orgId?: string | null
 }): Promise<string | null> {
-  if (USE_FAKE_DATA) return null
+  debug.data('VenueService.resolveSeatMapForEvent', 'Request', { params })
+  debug.perf.start('venueService.resolveSeatMapForEvent')
 
   try {
+    if (USE_FAKE_DATA) {
+      debug.perf.end('venueService.resolveSeatMapForEvent')
+      debug.data('VenueService.resolveSeatMapForEvent', 'Response (fake)', { params, seatMapId: null })
+      return null
+    }
     const { data, error } = await (supabase as any).rpc('resolve_seat_map_for_event', {
       p_event_id: params.eventId ?? null,
       p_team_id: params.teamId ?? null,
@@ -296,8 +423,12 @@ export async function resolveSeatMapForEvent(params: {
     })
 
     if (error) throw error
+    debug.perf.end('venueService.resolveSeatMapForEvent')
+    debug.data('VenueService.resolveSeatMapForEvent', 'Response', { params, seatMapId: data })
     return data as string | null
   } catch (error) {
+    debug.perf.end('venueService.resolveSeatMapForEvent')
+    debug.error('VenueService.resolveSeatMapForEvent', 'Failed to resolve seat map', { error, params })
     throw classifySupabaseError(error, 'Seat map resolution')
   }
 }
@@ -307,16 +438,30 @@ export async function resolveSeatMapForEvent(params: {
 // ============================================================================
 
 export async function publishSeatMap(seatMapId: string): Promise<string> {
-  if (!seatMapId) throw new ValidationError('Seat map ID is required')
+  console.groupCollapsed(`%cpublishSeatMap: ${seatMapId}`, 'color: #666; font-weight: bold;');
+  debug.flow('VenueService.publishSeatMap', 'Publishing seat map', { seatMapId })
+  debug.perf.start('venueService.publishSeatMap')
 
   try {
+    if (!seatMapId) {
+      debug.perf.end('venueService.publishSeatMap')
+      debug.error('VenueService.publishSeatMap', 'Missing seatMapId', { seatMapId })
+      console.groupEnd()
+      throw new ValidationError('Seat map ID is required')
+    }
     const { data, error } = await (supabase as any).rpc('publish_seat_map', {
       p_seat_map_id: seatMapId,
     })
 
     if (error) throw error
+    debug.perf.end('venueService.publishSeatMap')
+    debug.flow('VenueService.publishSeatMap', 'Seat map published successfully', { seatMapId, snapshotId: data })
+    console.groupEnd()
     return data as string // returns snapshot ID
   } catch (error) {
+    debug.perf.end('venueService.publishSeatMap')
+    debug.error('VenueService.publishSeatMap', 'Failed to publish seat map', { error, seatMapId })
+    console.groupEnd()
     throw classifySupabaseError(error, 'Publish seat map')
   }
 }
@@ -327,9 +472,17 @@ export async function cloneSeatMap(params: {
   targetVenueId?: string | null
   targetTeamId?: string | null
 }): Promise<string> {
-  if (!params.sourceSeatMapId) throw new ValidationError('Source seat map ID is required')
+  console.groupCollapsed(`%ccloneSeatMap: ${params.sourceSeatMapId}`, 'color: #666; font-weight: bold;');
+  debug.flow('VenueService.cloneSeatMap', 'Cloning seat map', { sourceSeatMapId: params.sourceSeatMapId, newName: params.newName })
+  debug.perf.start('venueService.cloneSeatMap')
 
   try {
+    if (!params.sourceSeatMapId) {
+      debug.perf.end('venueService.cloneSeatMap')
+      debug.error('VenueService.cloneSeatMap', 'Missing sourceSeatMapId', { params })
+      console.groupEnd()
+      throw new ValidationError('Source seat map ID is required')
+    }
     const { data, error } = await (supabase as any).rpc('clone_seat_map', {
       p_source_seat_map_id: params.sourceSeatMapId,
       p_new_name: params.newName ?? null,
@@ -338,8 +491,14 @@ export async function cloneSeatMap(params: {
     })
 
     if (error) throw error
+    debug.perf.end('venueService.cloneSeatMap')
+    debug.flow('VenueService.cloneSeatMap', 'Seat map cloned successfully', { sourceSeatMapId: params.sourceSeatMapId, newSeatMapId: data })
+    console.groupEnd()
     return data as string // returns new seat map ID
   } catch (error) {
+    debug.perf.end('venueService.cloneSeatMap')
+    debug.error('VenueService.cloneSeatMap', 'Failed to clone seat map', { error, params })
+    console.groupEnd()
     throw classifySupabaseError(error, 'Clone seat map')
   }
 }
@@ -357,9 +516,17 @@ export async function applySeatMapToUpcomingEvents(params: {
   venueId?: string | null
   teamId?: string | null
 }): Promise<number> {
-  if (!params.seatMapId || !params.orgId) throw new ValidationError('Seat map and org are required')
+  console.groupCollapsed(`%capplySeatMapToUpcomingEvents: ${params.seatMapId}`, 'color: #666; font-weight: bold;');
+  debug.flow('VenueService.applySeatMapToUpcomingEvents', 'Applying seat map to events', { seatMapId: params.seatMapId, orgId: params.orgId, venueId: params.venueId, teamId: params.teamId })
+  debug.perf.start('venueService.applySeatMapToUpcomingEvents')
 
   try {
+    if (!params.seatMapId || !params.orgId) {
+      debug.perf.end('venueService.applySeatMapToUpcomingEvents')
+      debug.error('VenueService.applySeatMapToUpcomingEvents', 'Missing required params', { params })
+      console.groupEnd()
+      throw new ValidationError('Seat map and org are required')
+    }
     let query = (supabase as any)
       .from('events')
       .update({ seat_map_id: params.seatMapId })
@@ -372,8 +539,15 @@ export async function applySeatMapToUpcomingEvents(params: {
     const { data, error } = await query.select('id')
 
     if (error) throw error
-    return (data ?? []).length
+    const count = (data ?? []).length
+    debug.perf.end('venueService.applySeatMapToUpcomingEvents')
+    debug.flow('VenueService.applySeatMapToUpcomingEvents', 'Seat map applied successfully', { seatMapId: params.seatMapId, eventCount: count })
+    console.groupEnd()
+    return count
   } catch (error) {
+    debug.perf.end('venueService.applySeatMapToUpcomingEvents')
+    debug.error('VenueService.applySeatMapToUpcomingEvents', 'Failed to apply seat map', { error, params })
+    console.groupEnd()
     throw classifySupabaseError(error, 'Apply seat map to events')
   }
 }

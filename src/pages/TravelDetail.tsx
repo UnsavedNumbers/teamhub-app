@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { getTravelPlanById, formatDateRange, resolveAllTravelContactsForPlan, getTravelPlanContacts } from '../data/services/travelService'
 import { getOrganizationTravelContacts } from '../data/services/organizationTravelContactsService'
 import { getOrganizationDetails } from '../data/services/organizationService'
@@ -163,6 +164,9 @@ async function copyToClipboard(text: string): Promise<{ success: boolean; error?
 export default function TravelDetail() {
   const t = useT()
   const { id } = useParams<{ id: string }>()
+
+  // Add lifecycle logging
+  useDebugLifecycle('TravelDetail', { travelPlanId: id })
   const navigate = useNavigate()
   const location = useLocation()
   const { context, isReady } = useUserContext()

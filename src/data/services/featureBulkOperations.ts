@@ -9,6 +9,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import type { FeatureCategory } from '../../types/licenseTiers.types'
 
 // Type definitions
@@ -65,7 +66,14 @@ export async function bulkUpdateStatus(
   status: UIFeatureStatus,
   onProgress?: (processed: number, total: number) => void
 ): Promise<BulkOperationResult> {
+  console.groupCollapsed(`%cbulkUpdateStatus: ${featureIds.length} features - ${status}`, 'color: #666; font-weight: bold;');
+  debug.flow('FeatureBulkOperationsService.bulkUpdateStatus', 'Bulk updating status', { featureCount: featureIds.length, status })
+  debug.perf.start('featureBulkOperationsService.bulkUpdateStatus')
+
   if (featureIds.length === 0) {
+    debug.perf.end('featureBulkOperationsService.bulkUpdateStatus')
+    debug.error('FeatureBulkOperationsService.bulkUpdateStatus', 'No features selected', { status })
+    console.groupEnd()
     return { success: false, error: 'No features selected' }
   }
 
@@ -124,7 +132,14 @@ export async function bulkUpdateCategory(
   category: FeatureCategory,
   onProgress?: (processed: number, total: number) => void
 ): Promise<BulkOperationResult> {
+  console.groupCollapsed(`%cbulkUpdateCategory: ${featureIds.length} features - ${category}`, 'color: #666; font-weight: bold;');
+  debug.flow('FeatureBulkOperationsService.bulkUpdateCategory', 'Bulk updating category', { featureCount: featureIds.length, category })
+  debug.perf.start('featureBulkOperationsService.bulkUpdateCategory')
+
   if (featureIds.length === 0) {
+    debug.perf.end('featureBulkOperationsService.bulkUpdateCategory')
+    debug.error('FeatureBulkOperationsService.bulkUpdateCategory', 'No features selected', { category })
+    console.groupEnd()
     return { success: false, error: 'No features selected' }
   }
 
@@ -197,11 +212,21 @@ export async function bulkApplyToTiers(
   roleVisibility: { admin: boolean; coach: boolean; parent: boolean },
   _onProgress?: (processed: number, total: number) => void
 ): Promise<BulkOperationResult> {
+  console.groupCollapsed(`%cbulkApplyToTiers: ${featureIds.length} features - ${tierIds.length} tiers - ${action}`, 'color: #666; font-weight: bold;');
+  debug.flow('FeatureBulkOperationsService.bulkApplyToTiers', 'Bulk applying to tiers', { featureCount: featureIds.length, tierCount: tierIds.length, action, roleVisibility })
+  debug.perf.start('featureBulkOperationsService.bulkApplyToTiers')
+
   if (featureIds.length === 0) {
+    debug.perf.end('featureBulkOperationsService.bulkApplyToTiers')
+    debug.error('FeatureBulkOperationsService.bulkApplyToTiers', 'No features selected', { tierCount: tierIds.length, action })
+    console.groupEnd()
     return { success: false, error: 'No features selected' }
   }
 
   if (tierIds.length === 0) {
+    debug.perf.end('featureBulkOperationsService.bulkApplyToTiers')
+    debug.error('FeatureBulkOperationsService.bulkApplyToTiers', 'No tiers selected', { featureCount: featureIds.length, action })
+    console.groupEnd()
     return { success: false, error: 'No tiers selected' }
   }
 
@@ -266,7 +291,14 @@ export async function bulkSetSystemFeature(
   featureIds: string[],
   _onProgress?: (processed: number, total: number) => void
 ): Promise<BulkOperationResult> {
+  console.groupCollapsed(`%cbulkSetSystemFeature: ${featureIds.length} features`, 'color: #666; font-weight: bold;');
+  debug.flow('FeatureBulkOperationsService.bulkSetSystemFeature', 'Bulk setting system feature', { featureCount: featureIds.length })
+  debug.perf.start('featureBulkOperationsService.bulkSetSystemFeature')
+
   if (featureIds.length === 0) {
+    debug.perf.end('featureBulkOperationsService.bulkSetSystemFeature')
+    debug.error('FeatureBulkOperationsService.bulkSetSystemFeature', 'No features selected')
+    console.groupEnd()
     return { success: false, error: 'No features selected' }
   }
 
@@ -311,7 +343,14 @@ export async function bulkSetPlatformOnly(
   featureIds: string[],
   _onProgress?: (processed: number, total: number) => void
 ): Promise<BulkOperationResult> {
+  console.groupCollapsed(`%cbulkSetPlatformOnly: ${featureIds.length} features`, 'color: #666; font-weight: bold;');
+  debug.flow('FeatureBulkOperationsService.bulkSetPlatformOnly', 'Bulk setting platform only', { featureCount: featureIds.length })
+  debug.perf.start('featureBulkOperationsService.bulkSetPlatformOnly')
+
   if (featureIds.length === 0) {
+    debug.perf.end('featureBulkOperationsService.bulkSetPlatformOnly')
+    debug.error('FeatureBulkOperationsService.bulkSetPlatformOnly', 'No features selected')
+    console.groupEnd()
     return { success: false, error: 'No features selected' }
   }
 
@@ -355,7 +394,14 @@ export async function bulkUpdateRoleVisibility(
   visible: boolean,
   onProgress?: (processed: number, total: number) => void
 ): Promise<BulkOperationResult> {
+  console.groupCollapsed(`%cbulkUpdateRoleVisibility: ${featureIds.length} features - ${roleType} - ${visible}`, 'color: #666; font-weight: bold;');
+  debug.flow('FeatureBulkOperationsService.bulkUpdateRoleVisibility', 'Bulk updating role visibility', { featureCount: featureIds.length, roleType, visible })
+  debug.perf.start('featureBulkOperationsService.bulkUpdateRoleVisibility')
+
   if (featureIds.length === 0) {
+    debug.perf.end('featureBulkOperationsService.bulkUpdateRoleVisibility')
+    debug.error('FeatureBulkOperationsService.bulkUpdateRoleVisibility', 'No features selected', { roleType, visible })
+    console.groupEnd()
     return { success: false, error: 'No features selected' }
   }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, Link } from 'react-router-dom'
 import { useTheme } from '../hooks/useTheme'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { getSetupOrganizationFlag } from '../utils/setupOrganization'
 import { AUTH_HERO_IMAGES } from '../utils/authImages'
 
@@ -11,6 +12,7 @@ interface ConfirmEmailState {
 }
 
 export default function ConfirmEmail() {
+  useDebugLifecycle('ConfirmEmail')
   const location = useLocation()
   const state = location.state as ConfirmEmailState | null
   const { resolvedTheme } = useTheme()

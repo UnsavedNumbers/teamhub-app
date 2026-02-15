@@ -8,6 +8,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+import { debug } from '../lib/debug'
 import { getAthleteById } from '../data/services/familyService'
 import { getAthleteTeamHistory } from '../data/services/teamsService'
 import { getAthletePhotoUrl } from '../data/services/athletePhotoService'
@@ -28,7 +30,11 @@ import { SPORT_CODES, SPORT_NAMES, type SportCode } from '../types/sports'
 import { getSystemSports } from '../data/services/sportsService'
 
 export default function AthleteProfilePage() {
-  const { id: athleteId } = useParams<{ id: string }>()
+  const { athleteId } = useParams<{ athleteId: string }>()
+
+  // Add lifecycle logging
+  useDebugLifecycle('AthleteProfilePage', { athleteId })
+
   const navigate = useNavigate()
   const { context, isReady } = useUserContext()
   const isMountedRef = useRef(true)
@@ -45,9 +51,16 @@ export default function AthleteProfilePage() {
 
   const refreshAthlete = async () => {
     if (!athleteId || !isReady) return
+
+    debug.flow('AthleteProfile', 'Refreshing athlete data', { athleteId })
+    debug.perf.start('athleteProfile.refreshAthlete')
+
     try {
       const { data, error } = await getAthleteById(context, athleteId)
+      debug.perf.end('athleteProfile.refreshAthlete')
+
       if (data && !error) {
+        debug.data('AthleteProfile', 'Athlete data loaded', { athleteId, athleteName: `${data.first_name} ${data.last_name}` })
         setAthlete(data)
         // Also update photo if needed, but photoUrl is separate state?
         // Actually photoUrl state update logic is inside the initial fetch.
@@ -57,9 +70,14 @@ export default function AthleteProfilePage() {
             const url = getAthletePhotoUrl(data.org_id, data.id, '512')
             if (url) setPhotoUrl(url)
          }
+      } else if (error) {
+        debug.error('AthleteProfile', 'Failed to load athlete data', { athleteId, error: error.message })
+        setError(error)
       }
     } catch (err) {
+      debug.error('AthleteProfile', 'Exception loading athlete data', { athleteId, error: err })
       console.error('Error refreshing athlete:', err)
+      setError(err instanceof Error ? err : new Error('Unknown error'))
     }
   }
 

@@ -14,7 +14,11 @@ import type { OrgContext } from '@/utils/orgResolution'
 import { OrgScopedRoute } from '@/components/OrgScopedRoute'
 import { getLink, RouteKeys } from '@/utils/routes'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 function TicketEventListContent({ org }: { org: OrgContext }) {
+  useDebugLifecycle('TicketEventListContent')
+  
   const orgSlug = org.slug
 
   const { data: eventsResponse } = useQuery({

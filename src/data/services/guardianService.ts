@@ -10,6 +10,7 @@
 
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import type {
     Guardian,
     GuardianMatch,
@@ -90,8 +91,15 @@ export async function findGuardianByEmail(
     email: string,
     orgId: string
 ): Promise<{ data: GuardianMatch | null; error: Error | null }> {
+    console.groupCollapsed(`%cfindGuardianByEmail: ${email}`, 'color: #666; font-weight: bold;');
+    debug.data('GuardianService.findGuardianByEmail', 'Request', { email, orgId })
+    debug.perf.start('guardianService.findGuardianByEmail')
+
     try {
         if (!email || !validateGuardianEmail(email)) {
+            debug.perf.end('guardianService.findGuardianByEmail')
+            debug.error('GuardianService.findGuardianByEmail', 'Invalid email format', { email })
+            console.groupEnd()
             return {
                 data: null,
                 error: new Error('Invalid email format')
@@ -112,6 +120,9 @@ export async function findGuardianByEmail(
 
         // If no rows returned, user doesn't exist
         if (!data || !Array.isArray(data) || data.length === 0) {
+            debug.perf.end('guardianService.findGuardianByEmail')
+            debug.data('GuardianService.findGuardianByEmail', 'Response (not found)', { email, exists: false })
+            console.groupEnd()
             return {
                 data: {
                     exists: false,
@@ -133,6 +144,9 @@ export async function findGuardianByEmail(
             ? row.linked_athletes as LinkedAthlete[]
             : []
 
+        debug.perf.end('guardianService.findGuardianByEmail')
+        debug.data('GuardianService.findGuardianByEmail', 'Response', { email, exists: true, linkedAthleteCount: linkedAthletes.length })
+        console.groupEnd()
         return {
             data: {
                 exists: true,
@@ -148,6 +162,9 @@ export async function findGuardianByEmail(
             error: null
         }
     } catch (err) {
+        debug.perf.end('guardianService.findGuardianByEmail')
+        debug.error('GuardianService.findGuardianByEmail', 'Failed to find guardian', { error: err, email, orgId })
+        console.groupEnd()
         console.error('Error finding guardian by email:', err)
         return {
             data: null,
@@ -164,18 +181,27 @@ export async function isGuardianLinkedToAthlete(
     email: string,
     orgId: string
 ): Promise<{ isLinked: boolean; error: Error | null }> {
+    debug.data('GuardianService.isGuardianLinkedToAthlete', 'Request', { athleteId, email, orgId })
+    debug.perf.start('guardianService.isGuardianLinkedToAthlete')
+
     try {
         const { data: match, error } = await findGuardianByEmail(email, orgId)
 
         if (error || !match || !match.exists) {
+            debug.perf.end('guardianService.isGuardianLinkedToAthlete')
+            debug.data('GuardianService.isGuardianLinkedToAthlete', 'Response', { athleteId, email, isLinked: false })
             return { isLinked: false, error }
         }
 
         // Check if this athlete is in the linked athletes list
         const isLinked = match.linkedAthletes.some(a => a.id === athleteId)
 
+        debug.perf.end('guardianService.isGuardianLinkedToAthlete')
+        debug.data('GuardianService.isGuardianLinkedToAthlete', 'Response', { athleteId, email, isLinked })
         return { isLinked, error: null }
     } catch (err) {
+        debug.perf.end('guardianService.isGuardianLinkedToAthlete')
+        debug.error('GuardianService.isGuardianLinkedToAthlete', 'Failed to check link', { error: err, athleteId, email, orgId })
         return {
             isLinked: false,
             error: err instanceof Error ? err : new Error('Unknown error')
@@ -197,8 +223,15 @@ export async function linkGuardianToAthlete(
     orgId: string,
     relationshipType: RelationshipType = 'parent'
 ): Promise<{ data: AthleteGuardian | ParentInvite | null; error: Error | null }> {
+    console.groupCollapsed(`%clinkGuardianToAthlete: ${athleteId} - ${email}`, 'color: #666; font-weight: bold;');
+    debug.flow('GuardianService.linkGuardianToAthlete', 'Linking guardian', { athleteId, email, orgId, relationshipType })
+    debug.perf.start('guardianService.linkGuardianToAthlete')
+
     try {
         if (!email || !validateGuardianEmail(email)) {
+            debug.perf.end('guardianService.linkGuardianToAthlete')
+            debug.error('GuardianService.linkGuardianToAthlete', 'Invalid email format', { email })
+            console.groupEnd()
             return {
                 data: null,
                 error: new Error('Invalid email format')
@@ -219,8 +252,14 @@ export async function linkGuardianToAthlete(
         // This runs in the background and doesn't block the response
         triggerNotificationWorker()
 
+        debug.perf.end('guardianService.linkGuardianToAthlete')
+        debug.flow('GuardianService.linkGuardianToAthlete', 'Guardian linked successfully', { athleteId, email, relationshipType })
+        console.groupEnd()
         return { data: data as AthleteGuardian | ParentInvite | null, error: null }
     } catch (err) {
+        debug.perf.end('guardianService.linkGuardianToAthlete')
+        debug.error('GuardianService.linkGuardianToAthlete', 'Failed to link guardian', { error: err, athleteId, email, orgId, relationshipType })
+        console.groupEnd()
         console.error('Error linking guardian to athlete:', err)
         return {
             data: null,
@@ -237,6 +276,10 @@ export async function removeGuardianFromAthlete(
     userId: string,
     orgId: string
 ): Promise<{ success: boolean; error: Error | null }> {
+    console.groupCollapsed(`%cremoveGuardianFromAthlete: ${athleteId} - ${userId}`, 'color: #666; font-weight: bold;');
+    debug.flow('GuardianService.removeGuardianFromAthlete', 'Removing guardian', { athleteId, userId, orgId })
+    debug.perf.start('guardianService.removeGuardianFromAthlete')
+
     try {
         const { data, error } = await supabase
             .rpc('remove_guardian_from_athlete', {
@@ -249,8 +292,14 @@ export async function removeGuardianFromAthlete(
 
         const success = typeof data === 'object' && data !== null && !Array.isArray(data) && 'success' in data && typeof (data as any).success === 'boolean' ? (data as any).success : false
 
+        debug.perf.end('guardianService.removeGuardianFromAthlete')
+        debug.flow('GuardianService.removeGuardianFromAthlete', 'Guardian removed successfully', { athleteId, userId, success })
+        console.groupEnd()
         return { success: success || false, error: null }
     } catch (err) {
+        debug.perf.end('guardianService.removeGuardianFromAthlete')
+        debug.error('GuardianService.removeGuardianFromAthlete', 'Failed to remove guardian', { error: err, athleteId, userId, orgId })
+        console.groupEnd()
         console.error('Error removing guardian from athlete:', err)
         return {
             success: false,
@@ -270,6 +319,10 @@ export async function getAthleteGuardians(
     athleteId: string,
     orgId: string
 ): Promise<{ data: Guardian[]; error: Error | null }> {
+    console.groupCollapsed(`%cgetAthleteGuardians: ${athleteId}`, 'color: #666; font-weight: bold;');
+    debug.data('GuardianService.getAthleteGuardians', 'Request', { athleteId, orgId })
+    debug.perf.start('guardianService.getAthleteGuardians')
+
     try {
         const { data, error } = await supabase
             .rpc('get_athlete_guardians', {
@@ -289,8 +342,14 @@ export async function getAthleteGuardians(
             status: g.status
         }))
 
+        debug.perf.end('guardianService.getAthleteGuardians')
+        debug.data('GuardianService.getAthleteGuardians', 'Response', { athleteId, guardianCount: guardians.length })
+        console.groupEnd()
         return { data: guardians, error: null }
     } catch (err) {
+        debug.perf.end('guardianService.getAthleteGuardians')
+        debug.error('GuardianService.getAthleteGuardians', 'Failed to get guardians', { error: err, athleteId, orgId })
+        console.groupEnd()
         console.error('Error getting athlete guardians:', err)
         return {
             data: [],
@@ -306,6 +365,10 @@ export async function getGuardianAthletes(
     userId: string,
     orgId: string
 ): Promise<{ data: Athlete[]; error: Error | null }> {
+    console.groupCollapsed(`%cgetGuardianAthletes: ${userId}`, 'color: #666; font-weight: bold;');
+    debug.data('GuardianService.getGuardianAthletes', 'Request', { userId, orgId })
+    debug.perf.start('guardianService.getGuardianAthletes')
+
     try {
         const { data, error } = await supabase
             .rpc('get_guardian_athletes', {
@@ -338,8 +401,14 @@ export async function getGuardianAthletes(
             deleted_at: null
         }) as unknown as Athlete)
 
+        debug.perf.end('guardianService.getGuardianAthletes')
+        debug.data('GuardianService.getGuardianAthletes', 'Response', { userId, athleteCount: athletes.length })
+        console.groupEnd()
         return { data: athletes, error: null }
     } catch (err) {
+        debug.perf.end('guardianService.getGuardianAthletes')
+        debug.error('GuardianService.getGuardianAthletes', 'Failed to get athletes', { error: err, userId, orgId })
+        console.groupEnd()
         console.error('Error getting guardian athletes:', err)
         return {
             data: [],
@@ -355,6 +424,10 @@ export async function getAthleteInvites(
     athleteId: string,
     orgId: string
 ): Promise<{ data: ParentInvite[]; error: Error | null }> {
+    console.groupCollapsed(`%cgetAthleteInvites: ${athleteId}`, 'color: #666; font-weight: bold;');
+    debug.data('GuardianService.getAthleteInvites', 'Request', { athleteId, orgId })
+    debug.perf.start('guardianService.getAthleteInvites')
+
     try {
         const { data, error } = await supabase
             .from('parent_invites')
@@ -366,8 +439,14 @@ export async function getAthleteInvites(
 
         if (error) throw error
 
+        debug.perf.end('guardianService.getAthleteInvites')
+        debug.data('GuardianService.getAthleteInvites', 'Response', { athleteId, inviteCount: data?.length || 0 })
+        console.groupEnd()
         return { data: data ?? [], error: null }
     } catch (err) {
+        debug.perf.end('guardianService.getAthleteInvites')
+        debug.error('GuardianService.getAthleteInvites', 'Failed to get invites', { error: err, athleteId, orgId })
+        console.groupEnd()
         console.error('Error getting athlete invites:', err)
         return {
             data: [],
@@ -382,6 +461,10 @@ export async function getAthleteInvites(
 export async function cancelInvite(
     inviteId: string
 ): Promise<{ success: boolean; error: Error | null }> {
+    console.groupCollapsed(`%ccancelInvite: ${inviteId}`, 'color: #666; font-weight: bold;');
+    debug.flow('GuardianService.cancelInvite', 'Cancelling invite', { inviteId })
+    debug.perf.start('guardianService.cancelInvite')
+
     try {
         const { error } = await supabase
             .from('parent_invites')
@@ -424,8 +507,14 @@ export async function resendInvite(
         // This runs in the background and doesn't block the response
         triggerNotificationWorker()
 
+        debug.perf.end('guardianService.resendInvite')
+        debug.flow('GuardianService.resendInvite', 'Invite resent successfully', { inviteId })
+        console.groupEnd()
         return { success: true, error: null }
     } catch (err) {
+        debug.perf.end('guardianService.resendInvite')
+        debug.error('GuardianService.resendInvite', 'Failed to resend invite', { error: err, inviteId })
+        console.groupEnd()
         console.error('Error resending invite:', err)
         return {
             success: false,
@@ -474,9 +563,14 @@ export async function searchAthletesForAttachment(
     orgId: string,
     searchText: string
 ): Promise<{ data: AthleteSearchResult[]; error: Error | null }> {
+    debug.data('GuardianService.searchAthletesForAttachment', 'Request', { orgId, searchText })
+    debug.perf.start('guardianService.searchAthletesForAttachment')
+
     try {
         // Validate inputs
         if (!orgId) {
+            debug.perf.end('guardianService.searchAthletesForAttachment')
+            debug.error('GuardianService.searchAthletesForAttachment', 'Missing orgId', { orgId })
             return {
                 data: [],
                 error: new Error('Organization ID is required')
@@ -484,6 +578,8 @@ export async function searchAthletesForAttachment(
         }
 
         if (!searchText || searchText.trim().length < 2) {
+            debug.perf.end('guardianService.searchAthletesForAttachment')
+            debug.data('GuardianService.searchAthletesForAttachment', 'Response (search too short)', { orgId, searchText })
             return {
                 data: [],
                 error: null  // Not an error, just no search yet
@@ -528,6 +624,9 @@ export async function submitGuardianAttachmentRequest(
     try {
         // Validate inputs
         if (!athleteId || !orgId) {
+            debug.perf.end('guardianService.submitGuardianAttachmentRequest')
+            debug.error('GuardianService.submitGuardianAttachmentRequest', 'Missing required fields', { athleteId, orgId })
+            console.groupEnd()
             return {
                 data: null,
                 error: new Error('Athlete ID and Organization ID are required')
@@ -570,8 +669,14 @@ export async function submitGuardianAttachmentRequest(
         // Trigger notification worker
         triggerNotificationWorker()
 
+        debug.perf.end('guardianService.submitGuardianAttachmentRequest')
+        debug.flow('GuardianService.submitGuardianAttachmentRequest', 'Request submitted successfully', { athleteId, orgId, requestId: request.id })
+        console.groupEnd()
         return { data: request, error: null }
     } catch (err) {
+        debug.perf.end('guardianService.submitGuardianAttachmentRequest')
+        debug.error('GuardianService.submitGuardianAttachmentRequest', 'Failed to submit request', { error: err, athleteId, orgId })
+        console.groupEnd()
         console.error('Error submitting guardian attachment request:', err)
         return {
             data: null,
@@ -586,6 +691,10 @@ export async function submitGuardianAttachmentRequest(
 export async function getGuardianAttachmentRequests(
     orgId: string
 ): Promise<{ data: GuardianAttachmentRequest[]; error: Error | null }> {
+    console.groupCollapsed(`%cgetGuardianAttachmentRequests: ${orgId}`, 'color: #666; font-weight: bold;');
+    debug.data('GuardianService.getGuardianAttachmentRequests', 'Request', { orgId })
+    debug.perf.start('guardianService.getGuardianAttachmentRequests')
+
     try {
         if (!orgId) {
             return {
@@ -616,8 +725,14 @@ export async function getGuardianAttachmentRequests(
             updated_at: row.updated_at
         }))
 
+        debug.perf.end('guardianService.getGuardianAttachmentRequests')
+        debug.data('GuardianService.getGuardianAttachmentRequests', 'Response', { orgId, requestCount: requests.length })
+        console.groupEnd()
         return { data: requests, error: null }
     } catch (err) {
+        debug.perf.end('guardianService.getGuardianAttachmentRequests')
+        debug.error('GuardianService.getGuardianAttachmentRequests', 'Failed to get requests', { error: err, orgId })
+        console.groupEnd()
         console.error('Error getting guardian attachment requests:', err)
         return {
             data: [],
@@ -636,6 +751,10 @@ export async function getGuardianAttachmentRequests(
 export async function getPendingGuardianAttachmentRequests(
     orgId: string
 ): Promise<{ data: GuardianAttachmentRequest[]; error: Error | null }> {
+    console.groupCollapsed(`%cgetPendingGuardianAttachmentRequests: ${orgId}`, 'color: #666; font-weight: bold;');
+    debug.data('GuardianService.getPendingGuardianAttachmentRequests', 'Request', { orgId })
+    debug.perf.start('guardianService.getPendingGuardianAttachmentRequests')
+
     try {
         if (!orgId) {
             return {
@@ -701,6 +820,9 @@ export async function getGuardianAttachmentRequestsForOrg(
 ): Promise<{ data: GuardianAttachmentRequestEnriched[]; error: Error | null }> {
     try {
         if (!orgId) {
+            debug.perf.end('guardianService.getGuardianAttachmentRequestsForOrg')
+            debug.error('GuardianService.getGuardianAttachmentRequestsForOrg', 'Missing orgId', { orgId })
+            console.groupEnd()
             return {
                 data: [],
                 error: new Error('Organization ID is required')
@@ -737,8 +859,14 @@ export async function getGuardianAttachmentRequestsForOrg(
             reviewer_display_name: row.reviewer_display_name ?? null
         }))
 
+        debug.perf.end('guardianService.getGuardianAttachmentRequestsForOrg')
+        debug.data('GuardianService.getGuardianAttachmentRequestsForOrg', 'Response', { orgId, status, requestCount: requests.length })
+        console.groupEnd()
         return { data: requests, error: null }
     } catch (err) {
+        debug.perf.end('guardianService.getGuardianAttachmentRequestsForOrg')
+        debug.error('GuardianService.getGuardianAttachmentRequestsForOrg', 'Failed to get requests', { error: err, orgId, status })
+        console.groupEnd()
         console.error('Error getting guardian attachment requests for org:', err)
         return {
             data: [],
@@ -753,6 +881,9 @@ export async function getGuardianAttachmentRequestsForOrg(
 export async function getPendingGuardianAttachmentCount(
     orgId: string
 ): Promise<{ data: number; error: Error | null }> {
+    debug.data('GuardianService.getPendingGuardianAttachmentCount', 'Request', { orgId })
+    debug.perf.start('guardianService.getPendingGuardianAttachmentCount')
+
     try {
         if (!orgId) {
             return {
@@ -790,6 +921,9 @@ export async function reviewGuardianAttachmentRequest(
 ): Promise<{ data: GuardianAttachmentRequest | null; error: Error | null }> {
     try {
         if (!requestId) {
+            debug.perf.end('guardianService.reviewGuardianAttachmentRequest')
+            debug.error('GuardianService.reviewGuardianAttachmentRequest', 'Missing requestId', { requestId })
+            console.groupEnd()
             return {
                 data: null,
                 error: new Error('Request ID is required')
@@ -798,6 +932,9 @@ export async function reviewGuardianAttachmentRequest(
 
         // Require reason for denials
         if (!approve && (!reason || reason.trim().length === 0)) {
+            debug.perf.end('guardianService.reviewGuardianAttachmentRequest')
+            debug.error('GuardianService.reviewGuardianAttachmentRequest', 'Missing reason for denial', { requestId, approve })
+            console.groupEnd()
             return {
                 data: null,
                 error: new Error('Decision reason is required when denying a request')
@@ -849,8 +986,14 @@ export async function reviewGuardianAttachmentRequest(
         // Trigger notification worker
         triggerNotificationWorker()
 
+        debug.perf.end('guardianService.reviewGuardianAttachmentRequest')
+        debug.flow('GuardianService.reviewGuardianAttachmentRequest', 'Request reviewed successfully', { requestId, approve, status: request.status })
+        console.groupEnd()
         return { data: request, error: null }
     } catch (err) {
+        debug.perf.end('guardianService.reviewGuardianAttachmentRequest')
+        debug.error('GuardianService.reviewGuardianAttachmentRequest', 'Failed to review request', { error: err, requestId, approve })
+        console.groupEnd()
         console.error('Error reviewing guardian attachment request:', err)
         return {
             data: null,

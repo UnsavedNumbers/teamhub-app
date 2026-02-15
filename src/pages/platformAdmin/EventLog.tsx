@@ -41,7 +41,10 @@ const categoryOptions = [
   { value: 'SPORT', label: 'Sport' },
 ]
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function EventLog() {
+  useDebugLifecycle('EventLog')
   const [logs, setLogs] = useState<AdminEventLog[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)

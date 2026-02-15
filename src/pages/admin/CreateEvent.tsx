@@ -1,4 +1,4 @@
-﻿
+
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
@@ -39,6 +39,8 @@ import { getDefaultEventVisibility } from '../../utils/fanVisibilityHelpers'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { logEvent } from '../../utils/eventLogger'
 import { uploadTicketBanner } from '../../data/services/organizationService'
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+import { debug } from '../../lib/debug'
 import '../../styles/orgAdmin.css'
 
 const STORAGE_KEY = STORAGE_KEYS.FORM_AUTOSAVE
@@ -132,6 +134,9 @@ export default function CreateEvent() {
   const [teams, setTeams] = useState<Team[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Add lifecycle logging
+  useDebugLifecycle('CreateEvent')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errorDetail, setErrorDetail] = useState<string | null>(null)
@@ -661,10 +666,13 @@ export default function CreateEvent() {
   }, [watchSportId, hasStructure, watchEventType, setValue])
 
   const onSubmit = async (data: EventFormData) => {
+    debug.flow('CreateEvent', 'Form submission started', { eventTitle: data.title, eventType: data.type })
+    debug.perf.start('createEvent.formSubmission')
+
     setSaving(true)
     setError(null)
     setErrorDetail(null)
-    
+
     try {
       // Normalize times and satisfy DB constraint (end_time > start_time)
       const start = new Date(data.start_time)
@@ -857,6 +865,14 @@ export default function CreateEvent() {
         }
       }
 
+      debug.perf.end('createEvent.formSubmission')
+      debug.flow('CreateEvent', 'Event created successfully', {
+        eventId: eventDataAny.id,
+        eventTitle: data.title,
+        eventType: data.type,
+        isTicketed: data.ticketing?.is_ticketed
+      })
+
       if (data.ticketing?.is_ticketed) {
         showSuccess('Event and ticketing details created. Continue setup on the Ticketing tab.')
         navigate(`${getLink('admin.events.detail', { id: eventDataAny.id })}?view=ticketing`)
@@ -911,11 +927,18 @@ export default function CreateEvent() {
         console.error('[CreateEvent] Failed to log create failure:', logResult.error)
       }
       
+      debug.perf.end('createEvent.formSubmission')
+      debug.error('CreateEvent', 'Event creation failed', {
+        eventTitle: data.title,
+        eventType: data.type,
+        error: rawError || displayMessage
+      })
+
       setError(friendlyError)
       setErrorDetail(detail)
       trigger()
-    } finally { 
-      setSaving(false) 
+    } finally {
+      setSaving(false)
     }
   }
 

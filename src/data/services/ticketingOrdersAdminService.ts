@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { USE_FAKE_DATA } from '../config'
+import { debug } from '../../lib/debug'
 import {
   deleteFakeTicketOrder,
   getFakeTicketedEvents,
@@ -161,20 +162,25 @@ export async function fetchTicketingOrders(
   orgId: string,
   query: TicketingOrdersQuery = {},
 ): Promise<TicketingOrdersResponse> {
-  const {
-    search = '',
-    status,
-    dateFrom,
-    dateTo,
-    datePreset,
-    sortBy = 'created_at',
-    page = 1,
-    perPage = 20,
-  } = query
+  console.groupCollapsed(`%cfetchTicketingOrders: ${orgId}`, 'color: #666; font-weight: bold;');
+  debug.data('TicketingOrdersAdminService.fetchTicketingOrders', 'Request', { orgId, search: query.search, status: query.status, page: query.page, perPage: query.perPage })
+  debug.perf.start('ticketingOrdersAdminService.fetchTicketingOrders')
 
-  const eventFilterIds = getEventFilterIds(query)
+  try {
+    const {
+      search = '',
+      status,
+      dateFrom,
+      dateTo,
+      datePreset,
+      sortBy = 'created_at',
+      page = 1,
+      perPage = 20,
+    } = query
 
-  if (USE_FAKE_DATA) {
+    const eventFilterIds = getEventFilterIds(query)
+
+    if (USE_FAKE_DATA) {
     const baseOrders = getFakeTicketOrdersWithRelations(orgId).map((order) => ({
       ...order,
       payment_processor: 'demo-card',
@@ -208,20 +214,24 @@ export async function fetchTicketingOrders(
     const from = (page - 1) * perPage
     const paged = filtered.slice(from, from + perPage)
 
-    return {
-      data: paged,
-      meta: {
-        page,
-        per_page: perPage,
-        total,
-        total_pages: totalPages,
-        total_revenue_cents: filtered.reduce((sum, order) => sum + (order.total_cents || 0), 0),
-        total_orders: total,
-      },
+      const result = {
+        data: paged,
+        meta: {
+          page,
+          per_page: perPage,
+          total,
+          total_pages: totalPages,
+          total_revenue_cents: filtered.reduce((sum, order) => sum + (order.total_cents || 0), 0),
+          total_orders: total,
+        },
+      }
+      debug.perf.end('ticketingOrdersAdminService.fetchTicketingOrders')
+      debug.data('TicketingOrdersAdminService.fetchTicketingOrders', 'Response (fake)', { orgId, orderCount: result.data.length, total: result.meta.total })
+      console.groupEnd()
+      return result
     }
-  }
 
-  let baseQuery = supabase
+    let baseQuery = supabase
     .from('ticket_orders')
     .select(
       `
@@ -306,58 +316,116 @@ export async function fetchTicketingOrders(
       total_orders: count || 0,
     },
   }
+  } catch (err) {
+    debug.perf.end('ticketingOrdersAdminService.fetchTicketingOrders')
+    debug.error('TicketingOrdersAdminService.fetchTicketingOrders', 'Failed to fetch orders', { error: err, orgId })
+    console.groupEnd()
+    return {
+      data: [],
+      meta: {
+        page: 1,
+        per_page: query.perPage ?? 20,
+        total: 0,
+        total_pages: 0,
+        total_revenue_cents: 0,
+        total_orders: 0,
+      },
+    }
+  }
 }
 
 export async function fetchTicketingEvents(orgId: string) {
-  if (USE_FAKE_DATA) {
-    return getFakeTicketedEvents({ org_id: orgId })
-      .map((event) => ({
-        id: event.id,
-        title: event.title,
-        starts_at: event.starts_at,
-        status: event.status,
+  console.groupCollapsed(`%cfetchTicketingEvents: ${orgId}`, 'color: #666; font-weight: bold;');
+  debug.data('TicketingOrdersAdminService.fetchTicketingEvents', 'Request', { orgId })
+  debug.perf.start('ticketingOrdersAdminService.fetchTicketingEvents')
+
+  try {
+    if (USE_FAKE_DATA) {
+      const result = getFakeTicketedEvents({ org_id: orgId })
+        .map((event) => ({
+          id: event.id,
+          title: event.title,
+          starts_at: event.starts_at,
+          status: event.status,
       }))
       .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime())
       .slice(0, 100)
+      debug.perf.end('ticketingOrdersAdminService.fetchTicketingEvents')
+      debug.data('TicketingOrdersAdminService.fetchTicketingEvents', 'Response (fake)', { orgId, eventCount: result.length })
+      console.groupEnd()
+      return result
+    }
+
+    const { data, error } = await supabase
+      .from('ticketed_events')
+      .select('id, title, starts_at, status')
+      .eq('org_id', orgId)
+      .order('starts_at', { ascending: false })
+      .limit(100)
+
+    if (error) throw error
+    debug.perf.end('ticketingOrdersAdminService.fetchTicketingEvents')
+    debug.data('TicketingOrdersAdminService.fetchTicketingEvents', 'Response', { orgId, eventCount: data?.length || 0 })
+    console.groupEnd()
+    return data || []
+  } catch (err) {
+    debug.perf.end('ticketingOrdersAdminService.fetchTicketingEvents')
+    debug.error('TicketingOrdersAdminService.fetchTicketingEvents', 'Failed to fetch events', { error: err, orgId })
+    console.groupEnd()
+    throw err
   }
-
-  const { data, error } = await supabase
-    .from('ticketed_events')
-    .select('id, title, starts_at, status')
-    .eq('org_id', orgId)
-    .order('starts_at', { ascending: false })
-    .limit(100)
-
-  if (error) throw error
-  return data || []
 }
 
 export async function deleteTicketOrder(orgId: string, orderId: string) {
-  if (USE_FAKE_DATA) {
-    deleteFakeTicketOrder(orgId, orderId)
-    return
-  }
+  console.groupCollapsed(`%cdeleteTicketOrder: ${orgId} - ${orderId}`, 'color: #666; font-weight: bold;');
+  debug.flow('TicketingOrdersAdminService.deleteTicketOrder', 'Deleting order', { orgId, orderId })
+  debug.perf.start('ticketingOrdersAdminService.deleteTicketOrder')
 
-  const { data: order } = await supabase
+  try {
+    if (USE_FAKE_DATA) {
+      deleteFakeTicketOrder(orgId, orderId)
+      debug.perf.end('ticketingOrdersAdminService.deleteTicketOrder')
+      debug.flow('TicketingOrdersAdminService.deleteTicketOrder', 'Order deleted (fake)', { orgId, orderId })
+      console.groupEnd()
+      return
+    }
+
+    const { data: order } = await supabase
     .from('ticket_orders')
     .select('id, status')
     .eq('id', orderId)
     .eq('org_id', orgId)
     .single()
 
-  if (!order) {
-    throw new Error('Order not found or unauthorized')
+    if (!order) {
+      debug.perf.end('ticketingOrdersAdminService.deleteTicketOrder')
+      debug.error('TicketingOrdersAdminService.deleteTicketOrder', 'Order not found or unauthorized', { orgId, orderId })
+      console.groupEnd()
+      throw new Error('Order not found or unauthorized')
+    }
+
+    if (order.status === 'paid') {
+      debug.perf.end('ticketingOrdersAdminService.deleteTicketOrder')
+      debug.error('TicketingOrdersAdminService.deleteTicketOrder', 'Cannot delete paid orders', { orgId, orderId, status: order.status })
+      console.groupEnd()
+      throw new Error('Cannot delete paid orders. Please refund first.')
+    }
+
+    const { error } = await supabase
+      .from('ticket_orders')
+      .delete()
+      .eq('id', orderId)
+      .eq('org_id', orgId)
+
+    if (error) throw error
+
+    debug.perf.end('ticketingOrdersAdminService.deleteTicketOrder')
+    debug.flow('TicketingOrdersAdminService.deleteTicketOrder', 'Order deleted successfully', { orgId, orderId })
+    console.groupEnd()
+  } catch (err) {
+    debug.perf.end('ticketingOrdersAdminService.deleteTicketOrder')
+    debug.error('TicketingOrdersAdminService.deleteTicketOrder', 'Failed to delete order', { error: err, orgId, orderId })
+    console.groupEnd()
+    throw err
   }
-
-  if (order.status === 'paid') {
-    throw new Error('Cannot delete paid orders. Please refund first.')
-  }
-
-  const { error } = await supabase
-    .from('ticket_orders')
-    .delete()
-    .eq('id', orderId)
-    .eq('org_id', orgId)
-
-  if (error) throw error
 }

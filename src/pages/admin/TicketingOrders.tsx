@@ -416,7 +416,10 @@ function TableView({
   )
 }
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketingOrders() {
+  useDebugLifecycle('TicketingOrders')
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { currentOrganization } = useOrganization()

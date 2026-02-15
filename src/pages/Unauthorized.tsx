@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 
 export default function Unauthorized() {
+  useDebugLifecycle('Unauthorized')
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4">
       <div className="text-center">

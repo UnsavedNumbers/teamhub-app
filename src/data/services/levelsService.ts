@@ -7,6 +7,7 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext } from '../fake/userContext'
 import type { Level, CreateLevelDTO, UpdateLevelDTO } from '../types/organization'
@@ -33,19 +34,25 @@ export async function getLevels(
     context: UserContext,
     programId?: string
 ): Promise<{ data: Level[]; error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        // If programId provided, filter by it
-        // If not, return all for org
-        // In fake data, all levels are for Demo Org, but we should be clean
-        let levels = fakeLevels.filter(l => l.org_id === context.orgId)
-        if (programId) {
-            levels = levels.filter(l => l.program_id === programId)
-        }
-        return { data: levels, error: null }
-    }
+    console.groupCollapsed(`%cgetLevels: ${context.orgId}${programId ? ` - program: ${programId}` : ''}`, 'color: #666; font-weight: bold;');
+    debug.data('LevelsService.getLevels', 'Request', { context: { userId: context.userId, orgId: context.orgId }, programId })
+    debug.perf.start('levelsService.getLevels')
 
     try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            // If programId provided, filter by it
+            // If not, return all for org
+            // In fake data, all levels are for Demo Org, but we should be clean
+            let levels = fakeLevels.filter(l => l.org_id === context.orgId)
+            if (programId) {
+                levels = levels.filter(l => l.program_id === programId)
+            }
+            debug.perf.end('levelsService.getLevels')
+            debug.data('LevelsService.getLevels', 'Response (fake)', { levelCount: levels.length })
+            console.groupEnd()
+            return { data: levels, error: null }
+        }
         let query = supabase
             .from('levels')
             .select('*')
@@ -60,8 +67,15 @@ export async function getLevels(
         const { data, error } = await query
 
         if (error) throw error
+
+        debug.perf.end('levelsService.getLevels')
+        debug.data('LevelsService.getLevels', 'Response', { levelCount: data?.length || 0 })
+        console.groupEnd()
         return { data: data as Level[], error: null }
     } catch (err) {
+        debug.perf.end('levelsService.getLevels')
+        debug.error('LevelsService.getLevels', 'Failed to fetch levels', { error: err, context: { userId: context.userId, orgId: context.orgId }, programId })
+        console.groupEnd()
         console.error('[levelsService] Error getting levels:', err)
         return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -74,9 +88,16 @@ export async function getLevel(
     context: UserContext,
     levelId: string
 ): Promise<{ data: Level | null; error: Error | null }> {
+    console.groupCollapsed(`%cgetLevel: ${levelId}`, 'color: #666; font-weight: bold;');
+    debug.data('LevelsService.getLevel', 'Request', { levelId, context: { userId: context.userId, orgId: context.orgId } })
+    debug.perf.start('levelsService.getLevel')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
         const level = getLevelById(levelId)
+        debug.perf.end('levelsService.getLevel')
+        debug.data('LevelsService.getLevel', 'Response (fake)', { levelId, found: !!level })
+        console.groupEnd()
         return { data: level || null, error: null }
     }
 
@@ -90,8 +111,15 @@ export async function getLevel(
             .single()
 
         if (error) throw error
+
+        debug.perf.end('levelsService.getLevel')
+        debug.data('LevelsService.getLevel', 'Response', { levelId, levelName: data?.name })
+        console.groupEnd()
         return { data: data as Level, error: null }
     } catch (err) {
+        debug.perf.end('levelsService.getLevel')
+        debug.error('LevelsService.getLevel', 'Failed to fetch level', { error: err, levelId, context: { userId: context.userId, orgId: context.orgId } })
+        console.groupEnd()
         console.error('[levelsService] Error getting level:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }

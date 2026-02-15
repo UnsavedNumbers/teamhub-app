@@ -9,6 +9,7 @@
 import { supabase } from '../../lib/supabase'
 import type { Athlete } from '../../types/family'
 import type { EmergencyContact } from '../../types/athleteSportProfiles'
+import { debug } from '../../lib/debug'
 
 /**
  * Service response wrapper
@@ -39,6 +40,10 @@ export interface UpdateAthleteUniversalFieldsDTO {
 export async function getAthleteById(
     athleteId: string
 ): Promise<ServiceResponse<Athlete>> {
+    console.groupCollapsed(`%cgetAthleteById: ${athleteId}`, 'color: #666; font-weight: bold;');
+    debug.data('AthletesService.getAthleteById', 'Request', { athleteId })
+    debug.perf.start('athletesService.getAthleteById')
+
     try {
         // Validate input
         if (!athleteId) {
@@ -59,8 +64,14 @@ export async function getAthleteById(
             throw error
         }
 
+        debug.perf.end('athletesService.getAthleteById')
+        debug.data('AthletesService.getAthleteById', 'Response', { athleteId, athleteName: data?.first_name && data?.last_name ? `${data.first_name} ${data.last_name}` : undefined })
+        console.groupEnd()
         return { data: data as unknown as Athlete, error: null }
     } catch (err) {
+        debug.perf.end('athletesService.getAthleteById')
+        debug.error('AthletesService.getAthleteById', 'Failed to get athlete', { error: err, athleteId })
+        console.groupEnd()
         console.error('[AthletesService] Error getting athlete:', err)
         return { data: null, error: err as Error }
     }
@@ -74,6 +85,10 @@ export async function updateAthleteUniversalFields(
     athleteId: string,
     fields: UpdateAthleteUniversalFieldsDTO
 ): Promise<ServiceResponse<Athlete>> {
+    console.groupCollapsed(`%cupdateAthleteUniversalFields: ${athleteId}`, 'color: #666; font-weight: bold;');
+    debug.flow('AthletesService.updateAthleteUniversalFields', 'Started', { athleteId, fieldCount: Object.keys(fields).length })
+    debug.perf.start('athletesService.updateAthleteUniversalFields')
+
     try {
         // Validate inputs
         if (!athleteId) {
@@ -139,10 +154,17 @@ export async function updateAthleteUniversalFields(
 
         if (error) throw error
 
+        debug.perf.end('athletesService.updateAthleteUniversalFields')
+        debug.flow('AthletesService.updateAthleteUniversalFields', 'Updated successfully', { athleteId, fieldCount: Object.keys(fields).length })
+        console.groupEnd()
+
         console.log(`[AthletesService] Updated universal fields for athlete ${athleteId}`)
 
         return { data: data as unknown as Athlete, error: null }
     } catch (err) {
+        debug.perf.end('athletesService.updateAthleteUniversalFields')
+        debug.error('AthletesService.updateAthleteUniversalFields', 'Failed to update athlete', { error: err, athleteId, fields: Object.keys(fields) })
+        console.groupEnd()
         console.error('[AthletesService] Error updating athlete universal fields:', err)
         return { data: null, error: err as Error }
     }

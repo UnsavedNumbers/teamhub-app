@@ -4,7 +4,11 @@
  * Platform-level moderation and flagged content review.
  */
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function PhotosContentReview() {
+  useDebugLifecycle('PhotosContentReview')
+  
   return (
     <div className="pa-root">
       <div className="pa-container">

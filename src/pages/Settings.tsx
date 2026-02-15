@@ -50,7 +50,10 @@ interface ChildWithGuardians extends Child {
   pendingInvites: PendingGuardianInvite[]
 }
 
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+
 export default function Settings() {
+  useDebugLifecycle('Settings')
   const { profile, signOut, updatePassword, user, refreshProfile } = useAuth()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()

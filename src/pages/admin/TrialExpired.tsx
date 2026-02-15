@@ -62,7 +62,10 @@ const planCards: PlanCard[] = [
   },
 ]
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function TrialExpired() {
+  useDebugLifecycle('TrialExpired')
   const { currentOrganization } = useOrganization()
   const { profile, signOut } = useAuth()
   const { setLoading } = useLoadingState()

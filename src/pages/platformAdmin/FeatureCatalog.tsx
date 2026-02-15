@@ -65,7 +65,10 @@ function normalizeArrayField(value: unknown): string[] | null {
   return null
 }
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FeatureCatalog() {
+  useDebugLifecycle('FeatureCatalog')
   const navigate = useNavigate()
   const { t } = useI18n()
   

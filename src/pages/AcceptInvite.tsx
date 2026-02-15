@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -35,6 +36,9 @@ function MinimalLayout({ children }: { children: React.ReactNode }) {
 }
 
 export default function AcceptInvite() {
+  // Add lifecycle logging
+  useDebugLifecycle('AcceptInvite')
+
   const [searchParams] = useSearchParams()
   const hash = window.location.hash
   const hashParams = new URLSearchParams(

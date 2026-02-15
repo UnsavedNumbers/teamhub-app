@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 
 export default function Marketing() {
+  useDebugLifecycle('Marketing')
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}

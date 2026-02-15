@@ -18,7 +18,11 @@ import { getLink } from '../../utils/routes'
 import { useI18n } from '../../i18n/useI18n'
 import type { FanOrgFollow } from '../../types/staffAndFan'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FollowedOrgs() {
+  useDebugLifecycle('FollowedOrgs')
+  
   const { t } = useI18n()
   const tAny = t as any
   const navigate = useNavigate()

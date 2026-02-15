@@ -50,7 +50,11 @@ function clearCachedGalleries() {
   }
 }
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function AdminPhotos() {
+  useDebugLifecycle('AdminPhotos')
+  
   const { context } = useUserContext()
   const navigate = useNavigate()
   const { t } = useI18n()

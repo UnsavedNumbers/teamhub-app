@@ -36,7 +36,11 @@ interface ChildSelections {
   }
 }
 
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+
 export default function UniformKitOrder() {
+  useDebugLifecycle('UniformKitOrder')
+  
   const t = useT()
   const { kitId } = useParams<{ kitId: string }>()
   const navigate = useNavigate()

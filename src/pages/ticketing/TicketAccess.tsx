@@ -9,7 +9,11 @@ import { useQuery } from '@tanstack/react-query'
 import { getTicketsByAccessToken } from '@/data/services'
 import TicketCard from '@/components/ticketing/TicketCard'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketAccess() {
+  useDebugLifecycle('TicketAccess')
+  
   const { token } = useParams<{ token: string }>()
 
   const { data: ticketsResponse, error } = useQuery({

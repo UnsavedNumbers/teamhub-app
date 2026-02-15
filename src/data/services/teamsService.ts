@@ -37,6 +37,7 @@ import { buildTeamQuery, buildTeamMembershipQuery, buildCoachAssignmentQuery } f
 import { normalizeSupabaseResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
 import { logEvent } from '../../utils/eventLogger'
+import { debug } from '../../lib/debug'
 
 // ============================================================================
 // Helper Functions
@@ -276,6 +277,10 @@ export async function getTeams(
     context: UserContext,
     params: TeamsQueryParams = {}
 ): Promise<{ data: Team[]; error: Error | null }> {
+    console.groupCollapsed(`%cgetTeams: ${JSON.stringify(params)}`, 'color: #666; font-weight: bold;');
+    debug.data('TeamsService.getTeams', 'Request', { context: { userId: context.userId, orgId: context.orgId }, params })
+    debug.perf.start('teamsService.getTeams')
+
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
@@ -342,6 +347,9 @@ export async function getTeams(
             ? normalizedData.map(mapSupabaseTeamToDomain)
             : []
 
+        debug.perf.end('teamsService.getTeams')
+        debug.data('TeamsService.getTeams', 'Response', { teamCount: mappedTeams.length })
+        console.groupEnd()
         return { data: mappedTeams, error: null }
     } catch (err) {
         const classifiedError = classifySupabaseError(err)
@@ -356,6 +364,9 @@ export async function getTeams(
             }
         })
 
+        debug.perf.end('teamsService.getTeams')
+        debug.error('TeamsService.getTeams', 'Failed to fetch teams', { error: err, params, context: { userId: context.userId, orgId: context.orgId } })
+        console.groupEnd()
         return { data: [], error: classifiedError }
     }
 }
@@ -364,26 +375,29 @@ export async function createTeam(
     _context: UserContext,
     dto: CreateTeamDTO
 ): Promise<{ data: Team | null; error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        const now = new Date().toISOString()
-        const created: Team = {
-            id: `demo-team-${Date.now()}`,
-            org_id: dto.org_id,
-            name: dto.name,
-            level_id: dto.level_id ?? null,
-            sport_id: dto.sport_id ?? null,
-            program_id: dto.program_id ?? null,
-            max_roster_size: dto.max_roster_size ?? null,
-            is_active: dto.is_active ?? true,
-            created_at: now,
-            updated_at: now,
-            deleted_at: null,
-        }
-        return { data: created, error: null }
-    }
+    console.groupCollapsed(`%ccreateTeam: ${dto.name}`, 'color: #666; font-weight: bold;');
+    debug.flow('TeamsService.createTeam', 'Started', { teamName: dto.name, orgId: dto.org_id })
+    debug.perf.start('teamsService.createTeam')
 
     try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const now = new Date().toISOString()
+            const created: Team = {
+                id: `demo-team-${Date.now()}`,
+                org_id: dto.org_id,
+                name: dto.name,
+                level_id: dto.level_id ?? null,
+                sport_id: dto.sport_id ?? null,
+                program_id: dto.program_id ?? null,
+                max_roster_size: dto.max_roster_size ?? null,
+                is_active: dto.is_active ?? true,
+                created_at: now,
+                updated_at: now,
+                deleted_at: null,
+            }
+            return { data: created, error: null }
+        }
         type TeamInsert = Database['public']['Tables']['teams']['Insert']
         // Generate a temporary invite code - the database trigger will generate the actual one
         // This is just to satisfy TypeScript's type requirement
@@ -432,8 +446,14 @@ export async function createTeam(
         }
 
         const mappedTeam = mapSupabaseTeamToDomain(data)
+        debug.perf.end('teamsService.createTeam')
+        debug.flow('TeamsService.createTeam', 'Team created successfully', { teamId: data.id, teamName: dto.name })
+        console.groupEnd()
         return { data: mappedTeam, error: null }
     } catch (err) {
+        debug.perf.end('teamsService.createTeam')
+        debug.error('TeamsService.createTeam', 'Failed to create team', { error: err, teamName: dto.name, orgId: dto.org_id })
+        console.groupEnd()
         console.error('[teamsService] Error creating team:', err)
         // Preserve the actual error message if available
         if (err instanceof Error) {

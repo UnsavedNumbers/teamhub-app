@@ -40,7 +40,10 @@ interface GalleryContributor {
   avatar_url?: string | null
 }
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export function PhotosBrowseView() {
+  useDebugLifecycle('PhotosBrowseView')
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const { t } = useI18n()

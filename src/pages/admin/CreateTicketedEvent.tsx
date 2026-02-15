@@ -15,7 +15,11 @@ import type { TicketedEventType, TicketedEventStatus } from '@/types/ticketing'
 import { uploadTicketBanner } from '@/data/services/organizationService'
 import '../../styles/orgAdmin.css'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function CreateTicketedEvent() {
+  useDebugLifecycle('CreateTicketedEvent')
+  
   const navigate = useNavigate()
   
   const [formData, setFormData] = useState({

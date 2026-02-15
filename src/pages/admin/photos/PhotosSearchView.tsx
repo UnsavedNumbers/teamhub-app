@@ -29,7 +29,11 @@ import { showError, showSuccess } from '@/utils/toast'
 import { GalleryEditModal } from '@/components/admin/galleries/GalleryEditModal'
 import './PhotosSearchView.css'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export function PhotosSearchView() {
+  useDebugLifecycle('PhotosSearchView')
+  
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const { t } = useI18n()

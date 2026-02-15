@@ -24,7 +24,11 @@ interface OrganizationFormData {
   office_location?: string
 }
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function OrganizationOnboarding() {
+  useDebugLifecycle('OrganizationOnboarding')
+  
   const queryClient = useQueryClient()
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(true)

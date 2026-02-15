@@ -46,7 +46,11 @@ interface PaymentOverview {
   amount?: string
 }
 
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+
 export default function Dashboard() {
+  useDebugLifecycle('Dashboard')
+  
   const { user, profile } = useAuth()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()

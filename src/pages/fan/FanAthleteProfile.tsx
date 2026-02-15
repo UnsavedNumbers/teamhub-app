@@ -39,7 +39,11 @@ interface AthleteProfile {
   follower_count: number
 }
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FanAthleteProfile() {
+  useDebugLifecycle('FanAthleteProfile')
+  
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   

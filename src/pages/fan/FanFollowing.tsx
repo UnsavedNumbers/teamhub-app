@@ -28,7 +28,11 @@ import '../../styles/fan-layouts.css'
 type TabType = 'following' | 'discover'
 type EntityType = 'org' | 'team' | 'athlete'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FanFollowing() {
+  useDebugLifecycle('FanFollowing')
+  
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState<TabType>(
     (searchParams.get('tab') as TabType) || 'following'

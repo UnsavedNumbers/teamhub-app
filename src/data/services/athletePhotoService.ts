@@ -13,6 +13,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
 
 const supabaseAny = supabase as any
@@ -259,17 +260,30 @@ export async function uploadAthletePhoto(
     athleteId: string,
     file: File
 ): Promise<{ error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        return { error: null }
-    }
+    console.groupCollapsed(`%cuploadAthletePhoto: ${athleteId}`, 'color: #666; font-weight: bold;');
+    debug.flow('AthletePhotoService.uploadAthletePhoto', 'Uploading photo', { athleteId, orgId: context.orgId, fileName: file.name, fileSize: file.size, fileType: file.type })
+    debug.perf.start('athletePhotoService.uploadAthletePhoto')
 
     try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            debug.perf.end('athletePhotoService.uploadAthletePhoto')
+            debug.flow('AthletePhotoService.uploadAthletePhoto', 'Photo uploaded (fake)', { athleteId })
+            console.groupEnd()
+            return { error: null }
+        }
+
         // Validate inputs
         if (!context.orgId || !isValidUUID(context.orgId)) {
+            debug.perf.end('athletePhotoService.uploadAthletePhoto')
+            debug.error('AthletePhotoService.uploadAthletePhoto', 'Invalid organization ID', { orgId: context.orgId })
+            console.groupEnd()
             return { error: new Error('Invalid organization ID') }
         }
         if (!athleteId || !isValidUUID(athleteId)) {
+            debug.perf.end('athletePhotoService.uploadAthletePhoto')
+            debug.error('AthletePhotoService.uploadAthletePhoto', 'Invalid athlete ID', { athleteId })
+            console.groupEnd()
             return { error: new Error('Invalid athlete ID') }
         }
 
@@ -441,8 +455,14 @@ export async function uploadAthletePhoto(
             console.error('[athletePhotoService] Failed to log ATHLETE_PHOTO_UPLOADED event:', logResult.error)
         }
 
+        debug.perf.end('athletePhotoService.uploadAthletePhoto')
+        debug.flow('AthletePhotoService.uploadAthletePhoto', 'Photo uploaded successfully', { athleteId, orgId: context.orgId })
+        console.groupEnd()
         return { error: null }
     } catch (err) {
+        debug.perf.end('athletePhotoService.uploadAthletePhoto')
+        debug.error('AthletePhotoService.uploadAthletePhoto', 'Failed to upload photo', { error: err, athleteId, orgId: context.orgId, fileName: file.name })
+        console.groupEnd()
         console.error('[athletePhotoService] Error uploading photo:', err)
         return { 
             error: err instanceof Error ? err : new Error('Unknown error uploading photo') 
@@ -462,23 +482,39 @@ export async function deleteAthletePhoto(
     context: UserContext,
     athleteId: string
 ): Promise<{ error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        return { error: null }
-    }
+    console.groupCollapsed(`%cdeleteAthletePhoto: ${athleteId}`, 'color: #666; font-weight: bold;');
+    debug.flow('AthletePhotoService.deleteAthletePhoto', 'Deleting photo', { athleteId, orgId: context.orgId })
+    debug.perf.start('athletePhotoService.deleteAthletePhoto')
 
     try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            debug.perf.end('athletePhotoService.deleteAthletePhoto')
+            debug.flow('AthletePhotoService.deleteAthletePhoto', 'Photo deleted (fake)', { athleteId })
+            console.groupEnd()
+            return { error: null }
+        }
+
         // Validate inputs
         if (!context.orgId || !isValidUUID(context.orgId)) {
+            debug.perf.end('athletePhotoService.deleteAthletePhoto')
+            debug.error('AthletePhotoService.deleteAthletePhoto', 'Invalid organization ID', { orgId: context.orgId })
+            console.groupEnd()
             return { error: new Error('Invalid organization ID') }
         }
         if (!athleteId || !isValidUUID(athleteId)) {
+            debug.perf.end('athletePhotoService.deleteAthletePhoto')
+            debug.error('AthletePhotoService.deleteAthletePhoto', 'Invalid athlete ID', { athleteId })
+            console.groupEnd()
             return { error: new Error('Invalid athlete ID') }
         }
 
         // Check permissions before delete (same as upload)
         const { allowed, error: permissionError } = await checkPhotoUploadPermission(context, athleteId)
         if (!allowed) {
+            debug.perf.end('athletePhotoService.deleteAthletePhoto')
+            debug.error('AthletePhotoService.deleteAthletePhoto', 'Permission denied', { athleteId, orgId: context.orgId, error: permissionError })
+            console.groupEnd()
             return { error: permissionError || new Error('Permission denied') }
         }
 
@@ -526,8 +562,17 @@ export async function deleteAthletePhoto(
             console.error('[athletePhotoService] Error updating database:', updateError)
         }
 
+        debug.perf.end('athletePhotoService.deleteAthletePhoto')
+        debug.flow('AthletePhotoService.deleteAthletePhoto', 'Photo deleted successfully', { athleteId, orgId: context.orgId })
+        console.groupEnd()
         return { error: null }
     } catch (err) {
+        debug.perf.end('athletePhotoService.deleteAthletePhoto')
+        debug.error('AthletePhotoService.deleteAthletePhoto', 'Failed to delete photo', { error: err, athleteId, orgId: context.orgId })
+        console.groupEnd()
+        debug.perf.end('athletePhotoService.deleteAthletePhoto')
+        debug.error('AthletePhotoService.deleteAthletePhoto', 'Failed to delete photo', { error: err, athleteId, orgId: context.orgId })
+        console.groupEnd()
         console.error('[athletePhotoService] Error deleting photo:', err)
         return { 
             error: err instanceof Error ? err : new Error('Unknown error deleting photo') 

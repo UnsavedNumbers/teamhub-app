@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import type {
     AthleteSportProfile,
 } from '../../types/athleteSportProfiles'
@@ -36,12 +37,22 @@ export async function getAthleteSportProfile(
     athleteId: string,
     sportCode: SportCode
 ): Promise<ServiceResponse<AthleteSportProfile>> {
+    console.groupCollapsed(`%cgetAthleteSportProfile: ${athleteId} - ${sportCode}`, 'color: #666; font-weight: bold;');
+    debug.data('AthleteSportProfilesService.getAthleteSportProfile', 'Request', { athleteId, sportCode })
+    debug.perf.start('athleteSportProfilesService.getAthleteSportProfile')
+
     try {
         // Validate inputs
         if (!athleteId) {
+            debug.perf.end('athleteSportProfilesService.getAthleteSportProfile')
+            debug.error('AthleteSportProfilesService.getAthleteSportProfile', 'athleteId is required', { athleteId, sportCode })
+            console.groupEnd()
             throw new Error('athleteId is required')
         }
         if (!sportCode) {
+            debug.perf.end('athleteSportProfilesService.getAthleteSportProfile')
+            debug.error('AthleteSportProfilesService.getAthleteSportProfile', 'sportCode is required', { athleteId, sportCode })
+            console.groupEnd()
             throw new Error('sportCode is required')
         }
 
@@ -55,16 +66,28 @@ export async function getAthleteSportProfile(
         if (error) {
             // Not found is not an error - return null data
             if (error.code === 'PGRST116') {
+                debug.perf.end('athleteSportProfilesService.getAthleteSportProfile')
+                debug.data('AthleteSportProfilesService.getAthleteSportProfile', 'Response (not found)', { athleteId, sportCode })
+                console.groupEnd()
                 return { data: null, error: null }
             }
             if (isMissingTableError(error)) {
+                debug.perf.end('athleteSportProfilesService.getAthleteSportProfile')
+                debug.error('AthleteSportProfilesService.getAthleteSportProfile', 'Table missing', { athleteId, sportCode })
+                console.groupEnd()
                 return { data: null, error: missingTableError() }
             }
             throw error
         }
 
+        debug.perf.end('athleteSportProfilesService.getAthleteSportProfile')
+        debug.data('AthleteSportProfilesService.getAthleteSportProfile', 'Response', { athleteId, sportCode, hasData: !!data })
+        console.groupEnd()
         return { data: (data ?? null) as unknown as AthleteSportProfile | null, error: null }
     } catch (err) {
+        debug.perf.end('athleteSportProfilesService.getAthleteSportProfile')
+        debug.error('AthleteSportProfilesService.getAthleteSportProfile', 'Failed to get sport profile', { error: err, athleteId, sportCode })
+        console.groupEnd()
         console.error('[AthleteSportProfilesService] Error getting sport profile:', err)
         return { data: null, error: err as Error }
     }
@@ -90,13 +113,22 @@ export async function getAthleteSportProfiles(
 
         if (error) {
             if (isMissingTableError(error)) {
+                debug.perf.end('athleteSportProfilesService.getAthleteSportProfiles')
+                debug.error('AthleteSportProfilesService.getAthleteSportProfiles', 'Table missing', { athleteId })
+                console.groupEnd()
                 return { data: [], error: missingTableError() }
             }
             throw error
         }
 
+        debug.perf.end('athleteSportProfilesService.getAthleteSportProfiles')
+        debug.data('AthleteSportProfilesService.getAthleteSportProfiles', 'Response', { athleteId, profileCount: data?.length || 0 })
+        console.groupEnd()
         return { data: (data || []) as unknown as AthleteSportProfile[], error: null }
     } catch (err) {
+        debug.perf.end('athleteSportProfilesService.getAthleteSportProfiles')
+        debug.error('AthleteSportProfilesService.getAthleteSportProfiles', 'Failed to get sport profiles', { error: err, athleteId })
+        console.groupEnd()
         console.error('[AthleteSportProfilesService] Error getting sport profiles:', err)
         return { data: null, error: err as Error }
     }
@@ -112,12 +144,22 @@ export async function upsertAthleteSportProfile(
     profileData: Record<string, unknown>,
     equipmentData: Record<string, unknown>
 ): Promise<ServiceResponse<AthleteSportProfile>> {
+    console.groupCollapsed(`%cupsertAthleteSportProfile: ${athleteId} - ${sportCode}`, 'color: #666; font-weight: bold;');
+    debug.flow('AthleteSportProfilesService.upsertAthleteSportProfile', 'Upserting profile', { athleteId, sportCode, profileDataKeys: Object.keys(profileData).length, equipmentDataKeys: Object.keys(equipmentData).length })
+    debug.perf.start('athleteSportProfilesService.upsertAthleteSportProfile')
+
     try {
         // Validate inputs
         if (!athleteId) {
+            debug.perf.end('athleteSportProfilesService.upsertAthleteSportProfile')
+            debug.error('AthleteSportProfilesService.upsertAthleteSportProfile', 'athleteId is required', { athleteId, sportCode })
+            console.groupEnd()
             throw new Error('athleteId is required')
         }
         if (!sportCode) {
+            debug.perf.end('athleteSportProfilesService.upsertAthleteSportProfile')
+            debug.error('AthleteSportProfilesService.upsertAthleteSportProfile', 'sportCode is required', { athleteId, sportCode })
+            console.groupEnd()
             throw new Error('sportCode is required')
         }
 
@@ -166,15 +208,24 @@ export async function upsertAthleteSportProfile(
 
         if (error) {
             if (isMissingTableError(error)) {
+                debug.perf.end('athleteSportProfilesService.upsertAthleteSportProfile')
+                debug.error('AthleteSportProfilesService.upsertAthleteSportProfile', 'Table missing', { athleteId, sportCode })
+                console.groupEnd()
                 throw missingTableError()
             }
             throw error
         }
 
+        debug.perf.end('athleteSportProfilesService.upsertAthleteSportProfile')
+        debug.flow('AthleteSportProfilesService.upsertAthleteSportProfile', 'Profile upserted successfully', { athleteId, sportCode })
+        console.groupEnd()
         console.log(`[AthleteSportProfilesService] Upserted sport profile for athlete ${athleteId}, sport ${sportCode}`)
 
         return { data: (data ?? null) as unknown as AthleteSportProfile | null, error: null }
     } catch (err) {
+        debug.perf.end('athleteSportProfilesService.upsertAthleteSportProfile')
+        debug.error('AthleteSportProfilesService.upsertAthleteSportProfile', 'Failed to upsert profile', { error: err, athleteId, sportCode })
+        console.groupEnd()
         console.error('[AthleteSportProfilesService] Error upserting sport profile:', err)
         return { data: null, error: err as Error }
     }
@@ -207,8 +258,19 @@ export async function updateAthleteSportProfileData(
 
         const equipmentData = currentProfile?.equipment_data || {}
 
-        return await upsertAthleteSportProfile(athleteId, sportCode, mergedProfileData, equipmentData)
+        const result = await upsertAthleteSportProfile(athleteId, sportCode, mergedProfileData, equipmentData)
+        debug.perf.end('athleteSportProfilesService.updateAthleteSportProfileData')
+        if (result.error) {
+            debug.error('AthleteSportProfilesService.updateAthleteSportProfileData', 'Failed to update profile data', { error: result.error, athleteId, sportCode })
+        } else {
+            debug.flow('AthleteSportProfilesService.updateAthleteSportProfileData', 'Profile data updated successfully', { athleteId, sportCode })
+        }
+        console.groupEnd()
+        return result
     } catch (err) {
+        debug.perf.end('athleteSportProfilesService.updateAthleteSportProfileData')
+        debug.error('AthleteSportProfilesService.updateAthleteSportProfileData', 'Exception updating profile data', { error: err, athleteId, sportCode })
+        console.groupEnd()
         console.error('[AthleteSportProfilesService] Error updating profile data:', err)
         return { data: null, error: err as Error }
     }
@@ -240,8 +302,19 @@ export async function updateAthleteSportEquipmentData(
             ...equipmentData,
         }
 
-        return await upsertAthleteSportProfile(athleteId, sportCode, profileData, mergedEquipmentData)
+        const result = await upsertAthleteSportProfile(athleteId, sportCode, profileData, mergedEquipmentData)
+        debug.perf.end('athleteSportProfilesService.updateAthleteSportEquipmentData')
+        if (result.error) {
+            debug.error('AthleteSportProfilesService.updateAthleteSportEquipmentData', 'Failed to update equipment data', { error: result.error, athleteId, sportCode })
+        } else {
+            debug.flow('AthleteSportProfilesService.updateAthleteSportEquipmentData', 'Equipment data updated successfully', { athleteId, sportCode })
+        }
+        console.groupEnd()
+        return result
     } catch (err) {
+        debug.perf.end('athleteSportProfilesService.updateAthleteSportEquipmentData')
+        debug.error('AthleteSportProfilesService.updateAthleteSportEquipmentData', 'Exception updating equipment data', { error: err, athleteId, sportCode })
+        console.groupEnd()
         console.error('[AthleteSportProfilesService] Error updating equipment data:', err)
         return { data: null, error: err as Error }
     }
@@ -254,12 +327,22 @@ export async function markSportProfileAsVerified(
     athleteId: string,
     sportCode: SportCode
 ): Promise<ServiceResponse<AthleteSportProfile>> {
+    console.groupCollapsed(`%cmarkSportProfileAsVerified: ${athleteId} - ${sportCode}`, 'color: #666; font-weight: bold;');
+    debug.flow('AthleteSportProfilesService.markSportProfileAsVerified', 'Marking profile as verified', { athleteId, sportCode })
+    debug.perf.start('athleteSportProfilesService.markSportProfileAsVerified')
+
     try {
         // Validate inputs
         if (!athleteId) {
+            debug.perf.end('athleteSportProfilesService.markSportProfileAsVerified')
+            debug.error('AthleteSportProfilesService.markSportProfileAsVerified', 'athleteId is required', { athleteId, sportCode })
+            console.groupEnd()
             throw new Error('athleteId is required')
         }
         if (!sportCode) {
+            debug.perf.end('athleteSportProfilesService.markSportProfileAsVerified')
+            debug.error('AthleteSportProfilesService.markSportProfileAsVerified', 'sportCode is required', { athleteId, sportCode })
+            console.groupEnd()
             throw new Error('sportCode is required')
         }
 
@@ -280,15 +363,24 @@ export async function markSportProfileAsVerified(
 
         if (error) {
             if (isMissingTableError(error)) {
+                debug.perf.end('athleteSportProfilesService.markSportProfileAsVerified')
+                debug.error('AthleteSportProfilesService.markSportProfileAsVerified', 'Table missing', { athleteId, sportCode })
+                console.groupEnd()
                 throw missingTableError()
             }
             throw error
         }
 
+        debug.perf.end('athleteSportProfilesService.markSportProfileAsVerified')
+        debug.flow('AthleteSportProfilesService.markSportProfileAsVerified', 'Profile marked as verified successfully', { athleteId, sportCode })
+        console.groupEnd()
         console.log(`[AthleteSportProfilesService] Marked sport profile as verified for athlete ${athleteId}, sport ${sportCode}`)
 
         return { data: (data ?? null) as unknown as AthleteSportProfile | null, error: null }
     } catch (err) {
+        debug.perf.end('athleteSportProfilesService.markSportProfileAsVerified')
+        debug.error('AthleteSportProfilesService.markSportProfileAsVerified', 'Failed to mark profile as verified', { error: err, athleteId, sportCode })
+        console.groupEnd()
         console.error('[AthleteSportProfilesService] Error marking profile as verified:', err)
         return { data: null, error: err as Error }
     }
@@ -319,15 +411,24 @@ export async function deleteAthleteSportProfile(
 
         if (error) {
             if (isMissingTableError(error)) {
+                debug.perf.end('athleteSportProfilesService.deleteAthleteSportProfile')
+                debug.error('AthleteSportProfilesService.deleteAthleteSportProfile', 'Table missing', { athleteId, sportCode })
+                console.groupEnd()
                 throw missingTableError()
             }
             throw error
         }
 
+        debug.perf.end('athleteSportProfilesService.deleteAthleteSportProfile')
+        debug.flow('AthleteSportProfilesService.deleteAthleteSportProfile', 'Profile deleted successfully', { athleteId, sportCode })
+        console.groupEnd()
         console.log(`[AthleteSportProfilesService] Deleted sport profile for athlete ${athleteId}, sport ${sportCode}`)
 
         return { data: null, error: null }
     } catch (err) {
+        debug.perf.end('athleteSportProfilesService.deleteAthleteSportProfile')
+        debug.error('AthleteSportProfilesService.deleteAthleteSportProfile', 'Failed to delete profile', { error: err, athleteId, sportCode })
+        console.groupEnd()
         console.error('[AthleteSportProfilesService] Error deleting sport profile:', err)
         return { data: null, error: err as Error }
     }

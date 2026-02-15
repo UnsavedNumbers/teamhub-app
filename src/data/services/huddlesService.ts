@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import type { UserContext } from '../fake/userContext'
 
 const supabaseAny = supabase as any
@@ -73,6 +74,9 @@ export interface MessageReport {
  * Get Stream Chat token for current user
  */
 export async function getStreamToken(): Promise<{ token: string; user: any } | { error: Error }> {
+  debug.flow('HuddlesService.getStreamToken', 'Getting Stream token')
+  debug.perf.start('huddlesService.getStreamToken')
+
   try {
     const { data: { session } } = await supabase.auth.getSession()
     
@@ -96,8 +100,12 @@ export async function getStreamToken(): Promise<{ token: string; user: any } | {
     }
 
     const data = await response.json()
+    debug.perf.end('huddlesService.getStreamToken')
+    debug.flow('HuddlesService.getStreamToken', 'Stream token retrieved successfully')
     return { token: data.token, user: data.user }
   } catch (error) {
+    debug.perf.end('huddlesService.getStreamToken')
+    debug.error('HuddlesService.getStreamToken', 'Failed to get Stream token', { error })
     console.error('Error getting Stream token:', error)
     return { error: error as Error }
   }
@@ -107,8 +115,15 @@ export async function getStreamToken(): Promise<{ token: string; user: any } | {
  * Get all channels for current user's context
  */
 export async function getUserChannels(context: UserContext): Promise<{ data: StreamChannelRecord[] } | { error: Error }> {
+  console.groupCollapsed(`%cgetUserChannels: ${context.userId}`, 'color: #666; font-weight: bold;');
+  debug.data('HuddlesService.getUserChannels', 'Request', { userId: context.userId, orgId: context.orgId })
+  debug.perf.start('huddlesService.getUserChannels')
+
   try {
     if (!context.userId || !context.orgId) {
+      debug.perf.end('huddlesService.getUserChannels')
+      debug.error('HuddlesService.getUserChannels', 'User context not ready', { userId: context.userId, orgId: context.orgId })
+      console.groupEnd()
       return { error: new Error('User context not ready') }
     }
 
@@ -130,12 +145,21 @@ export async function getUserChannels(context: UserContext): Promise<{ data: Str
       .order('updated_at', { ascending: false })
 
     if (error) {
+      debug.perf.end('huddlesService.getUserChannels')
+      debug.error('HuddlesService.getUserChannels', 'Failed to fetch channels', { error, userId: context.userId })
+      console.groupEnd()
       console.error('Error fetching user channels:', error)
       return { error }
     }
 
+    debug.perf.end('huddlesService.getUserChannels')
+    debug.data('HuddlesService.getUserChannels', 'Response', { userId: context.userId, channelCount: data?.length || 0 })
+    console.groupEnd()
     return { data: data || [] }
   } catch (error) {
+    debug.perf.end('huddlesService.getUserChannels')
+    debug.error('HuddlesService.getUserChannels', 'Exception fetching channels', { error, userId: context.userId })
+    console.groupEnd()
     console.error('Error in getUserChannels:', error)
     return { error: error as Error }
   }
@@ -145,7 +169,14 @@ export async function getUserChannels(context: UserContext): Promise<{ data: Str
  * Get team channels for user
  */
 export async function getTeamChannels(teamIds: string[]): Promise<{ data: StreamChannelRecord[] } | { error: Error }> {
+  console.groupCollapsed(`%cgetTeamChannels: ${teamIds.length} teams`, 'color: #666; font-weight: bold;');
+  debug.data('HuddlesService.getTeamChannels', 'Request', { teamIds })
+  debug.perf.start('huddlesService.getTeamChannels')
+
   if (teamIds.length === 0) {
+    debug.perf.end('huddlesService.getTeamChannels')
+    debug.data('HuddlesService.getTeamChannels', 'Response (empty)', { teamIds: [] })
+    console.groupEnd()
     return { data: [] }
   }
 
@@ -161,12 +192,21 @@ export async function getTeamChannels(teamIds: string[]): Promise<{ data: Stream
       .order('updated_at', { ascending: false })
 
     if (error) {
+      debug.perf.end('huddlesService.getTeamChannels')
+      debug.error('HuddlesService.getTeamChannels', 'Failed to fetch team channels', { error, teamIds })
+      console.groupEnd()
       console.error('Error fetching team channels:', error)
       return { error }
     }
 
+    debug.perf.end('huddlesService.getTeamChannels')
+    debug.data('HuddlesService.getTeamChannels', 'Response', { teamIds, channelCount: data?.length || 0 })
+    console.groupEnd()
     return { data: data || [] }
   } catch (error) {
+    debug.perf.end('huddlesService.getTeamChannels')
+    debug.error('HuddlesService.getTeamChannels', 'Exception fetching team channels', { error, teamIds })
+    console.groupEnd()
     console.error('Error in getTeamChannels:', error)
     return { error: error as Error }
   }
@@ -176,11 +216,17 @@ export async function getTeamChannels(teamIds: string[]): Promise<{ data: Stream
  * Get org channels for user
  */
 export async function getOrgChannels(orgIds: string[]): Promise<{ data: StreamChannelRecord[] } | { error: Error }> {
-  if (orgIds.length === 0) {
-    return { data: [] }
-  }
+  console.groupCollapsed(`%cgetOrgChannels: ${orgIds.length} orgs`, 'color: #666; font-weight: bold;');
+  debug.data('HuddlesService.getOrgChannels', 'Request', { orgIds })
+  debug.perf.start('huddlesService.getOrgChannels')
 
   try {
+    if (orgIds.length === 0) {
+      debug.perf.end('huddlesService.getOrgChannels')
+      debug.data('HuddlesService.getOrgChannels', 'Response (empty)', { orgIds: [] })
+      console.groupEnd()
+      return { data: [] }
+    }
     const { data, error } = await supabaseAny
       .from('stream_channels')
       .select(`
@@ -192,12 +238,21 @@ export async function getOrgChannels(orgIds: string[]): Promise<{ data: StreamCh
       .order('updated_at', { ascending: false })
 
     if (error) {
+      debug.perf.end('huddlesService.getOrgChannels')
+      debug.error('HuddlesService.getOrgChannels', 'Failed to fetch org channels', { error, orgIds })
+      console.groupEnd()
       console.error('Error fetching org channels:', error)
       return { error }
     }
 
+    debug.perf.end('huddlesService.getOrgChannels')
+    debug.data('HuddlesService.getOrgChannels', 'Response', { orgIds, channelCount: data?.length || 0 })
+    console.groupEnd()
     return { data: data || [] }
   } catch (error) {
+    debug.perf.end('huddlesService.getOrgChannels')
+    debug.error('HuddlesService.getOrgChannels', 'Exception fetching org channels', { error, orgIds })
+    console.groupEnd()
     console.error('Error in getOrgChannels:', error)
     return { error: error as Error }
   }
@@ -211,6 +266,10 @@ export async function getOrCreateDMChannel(
   userId2: string,
   orgId: string
 ): Promise<{ data: StreamChannelRecord } | { error: Error }> {
+  console.groupCollapsed(`%cgetOrCreateDMChannel: ${userId1} - ${userId2}`, 'color: #666; font-weight: bold;');
+  debug.flow('HuddlesService.getOrCreateDMChannel', 'Getting or creating DM channel', { userId1, userId2, orgId })
+  debug.perf.start('huddlesService.getOrCreateDMChannel')
+
   try {
     // Sort user IDs
     const [user1, user2] = [userId1, userId2].sort()
@@ -227,11 +286,16 @@ export async function getOrCreateDMChannel(
       .single()
 
     if (fetchError && fetchError.code !== 'PGRST116') {
-      // Error other than "not found"
+      debug.perf.end('huddlesService.getOrCreateDMChannel')
+      debug.error('HuddlesService.getOrCreateDMChannel', 'Failed to fetch existing channel', { error: fetchError, userId1, userId2 })
+      console.groupEnd()
       return { error: fetchError }
     }
 
     if (existing) {
+      debug.perf.end('huddlesService.getOrCreateDMChannel')
+      debug.flow('HuddlesService.getOrCreateDMChannel', 'Existing DM channel found', { userId1, userId2, channelId })
+      console.groupEnd()
       return { data: existing }
     }
 
@@ -252,6 +316,9 @@ export async function getOrCreateDMChannel(
       .single()
 
     if (insertError) {
+      debug.perf.end('huddlesService.getOrCreateDMChannel')
+      debug.error('HuddlesService.getOrCreateDMChannel', 'Failed to create DM channel', { error: insertError, userId1, userId2 })
+      console.groupEnd()
       console.error('Error creating DM channel:', insertError)
       return { error: insertError }
     }
@@ -264,8 +331,14 @@ export async function getOrCreateDMChannel(
         name: 'Direct Message',
       })
 
+    debug.perf.end('huddlesService.getOrCreateDMChannel')
+    debug.flow('HuddlesService.getOrCreateDMChannel', 'DM channel created successfully', { userId1, userId2, channelId })
+    console.groupEnd()
     return { data: newChannel }
   } catch (error) {
+    debug.perf.end('huddlesService.getOrCreateDMChannel')
+    debug.error('HuddlesService.getOrCreateDMChannel', 'Exception creating DM channel', { error, userId1, userId2 })
+    console.groupEnd()
     console.error('Error in getOrCreateDMChannel:', error)
     return { error: error as Error }
   }
@@ -278,6 +351,10 @@ export async function getNotificationPreferences(
   userId: string,
   channelId: string
 ): Promise<{ data: NotificationPreferences | null } | { error: Error }> {
+  console.groupCollapsed(`%cgetNotificationPreferences: ${channelId}`, 'color: #666; font-weight: bold;');
+  debug.data('HuddlesService.getNotificationPreferences', 'Request', { userId, channelId })
+  debug.perf.start('huddlesService.getNotificationPreferences')
+
   try {
     const { data, error } = await supabaseAny
       .from('huddle_notification_preferences')
@@ -287,11 +364,20 @@ export async function getNotificationPreferences(
       .single()
 
     if (error && error.code !== 'PGRST116') {
+      debug.perf.end('huddlesService.getNotificationPreferences')
+      debug.error('HuddlesService.getNotificationPreferences', 'Failed to get preferences', { error, userId, channelId })
+      console.groupEnd()
       return { error }
     }
 
+    debug.perf.end('huddlesService.getNotificationPreferences')
+    debug.data('HuddlesService.getNotificationPreferences', 'Response', { userId, channelId, found: !!data })
+    console.groupEnd()
     return { data: data || null }
   } catch (error) {
+    debug.perf.end('huddlesService.getNotificationPreferences')
+    debug.error('HuddlesService.getNotificationPreferences', 'Exception fetching preferences', { error, userId, channelId })
+    console.groupEnd()
     console.error('Error fetching notification preferences:', error)
     return { error: error as Error }
   }
@@ -305,6 +391,10 @@ export async function updateNotificationPreferences(
   channelId: string,
   preferences: Partial<Omit<NotificationPreferences, 'id' | 'user_id' | 'channel_id'>>
 ): Promise<{ data: NotificationPreferences } | { error: Error }> {
+  console.groupCollapsed(`%cupdateNotificationPreferences: ${channelId}`, 'color: #666; font-weight: bold;');
+  debug.flow('HuddlesService.updateNotificationPreferences', 'Updating preferences', { userId, channelId })
+  debug.perf.start('huddlesService.updateNotificationPreferences')
+
   try {
     const { data, error } = await supabaseAny
       .from('huddle_notification_preferences')
@@ -317,12 +407,21 @@ export async function updateNotificationPreferences(
       .single()
 
     if (error) {
+      debug.perf.end('huddlesService.updateNotificationPreferences')
+      debug.error('HuddlesService.updateNotificationPreferences', 'Failed to update preferences', { error, userId, channelId })
+      console.groupEnd()
       console.error('Error updating notification preferences:', error)
       return { error }
     }
 
+    debug.perf.end('huddlesService.updateNotificationPreferences')
+    debug.flow('HuddlesService.updateNotificationPreferences', 'Preferences updated successfully', { userId, channelId })
+    console.groupEnd()
     return { data }
   } catch (error) {
+    debug.perf.end('huddlesService.updateNotificationPreferences')
+    debug.error('HuddlesService.updateNotificationPreferences', 'Exception updating preferences', { error, userId, channelId })
+    console.groupEnd()
     console.error('Error in updateNotificationPreferences:', error)
     return { error: error as Error }
   }
@@ -337,6 +436,10 @@ export async function reportMessage(
   channelId: string,
   reason: string
 ): Promise<{ data: MessageReport } | { error: Error }> {
+  console.groupCollapsed(`%creportMessage: ${messageId}`, 'color: #666; font-weight: bold;');
+  debug.flow('HuddlesService.reportMessage', 'Reporting message', { userId, messageId, channelId, reason })
+  debug.perf.start('huddlesService.reportMessage')
+
   try {
     const { data, error } = await supabaseAny
       .from('huddle_reports')
@@ -351,12 +454,21 @@ export async function reportMessage(
       .single()
 
     if (error) {
+      debug.perf.end('huddlesService.reportMessage')
+      debug.error('HuddlesService.reportMessage', 'Failed to report message', { error, userId, messageId, channelId })
+      console.groupEnd()
       console.error('Error reporting message:', error)
       return { error }
     }
 
+    debug.perf.end('huddlesService.reportMessage')
+    debug.flow('HuddlesService.reportMessage', 'Message reported successfully', { userId, messageId, channelId })
+    console.groupEnd()
     return { data }
   } catch (error) {
+    debug.perf.end('huddlesService.reportMessage')
+    debug.error('HuddlesService.reportMessage', 'Exception reporting message', { error, userId, messageId, channelId })
+    console.groupEnd()
     console.error('Error in reportMessage:', error)
     return { error: error as Error }
   }
@@ -369,6 +481,9 @@ export async function getReportsForOrg(
   orgId: string,
   status?: 'pending' | 'reviewed' | 'dismissed'
 ): Promise<{ data: MessageReport[] } | { error: Error }> {
+  console.groupCollapsed(`%cgetReportsForOrg: ${orgId}`, 'color: #666; font-weight: bold;');
+  debug.data('HuddlesService.getReportsForOrg', 'Request', { orgId, status })
+  debug.perf.start('huddlesService.getReportsForOrg')
   try {
     let query = supabaseAny
       .from('huddle_reports')
@@ -391,12 +506,21 @@ export async function getReportsForOrg(
     const { data, error } = await query
 
     if (error) {
+      debug.perf.end('huddlesService.getReportsForOrg')
+      debug.error('HuddlesService.getReportsForOrg', 'Failed to fetch reports', { error, orgId, status })
+      console.groupEnd()
       console.error('Error fetching reports:', error)
       return { error }
     }
 
+    debug.perf.end('huddlesService.getReportsForOrg')
+    debug.data('HuddlesService.getReportsForOrg', 'Response', { orgId, status, reportCount: data?.length || 0 })
+    console.groupEnd()
     return { data: data || [] }
   } catch (error) {
+    debug.perf.end('huddlesService.getReportsForOrg')
+    debug.error('HuddlesService.getReportsForOrg', 'Exception fetching reports', { error, orgId, status })
+    console.groupEnd()
     console.error('Error in getReportsForOrg:', error)
     return { error: error as Error }
   }
@@ -411,6 +535,10 @@ export async function updateReportStatus(
   reviewerId: string,
   adminNotes?: string
 ): Promise<{ data: MessageReport } | { error: Error }> {
+  console.groupCollapsed(`%cupdateReportStatus: ${reportId}`, 'color: #666; font-weight: bold;');
+  debug.flow('HuddlesService.updateReportStatus', 'Updating report status', { reportId, status, reviewerId })
+  debug.perf.start('huddlesService.updateReportStatus')
+
   try {
     const { data, error } = await supabaseAny
       .from('huddle_reports')
@@ -445,6 +573,8 @@ export async function logAuditEntry(
   channelId?: string,
   metadata?: Record<string, any>
 ): Promise<void> {
+  debug.flow('HuddlesService.logAuditEntry', 'Logging audit entry', { action, userId })
+  debug.perf.start('huddlesService.logAuditEntry')
   try {
     await supabaseAny
       .from('huddle_audit_log')
@@ -455,7 +585,11 @@ export async function logAuditEntry(
         stream_channel_id: channelId,
         metadata,
       })
+    debug.perf.end('huddlesService.logAuditEntry')
+    debug.flow('HuddlesService.logAuditEntry', 'Audit entry logged successfully', { action, userId })
   } catch (error) {
+    debug.perf.end('huddlesService.logAuditEntry')
+    debug.error('HuddlesService.logAuditEntry', 'Failed to log audit entry', { error, action, userId })
     console.error('Error logging audit entry:', error)
     // Don't throw - audit logging failures shouldn't break functionality
   }
@@ -465,6 +599,9 @@ export async function logAuditEntry(
  * Check if guardian-to-guardian DMs are allowed in org
  */
 export async function areGuardianDMsAllowed(orgId: string): Promise<boolean> {
+  debug.data('HuddlesService.areGuardianDMsAllowed', 'Request', { orgId })
+  debug.perf.start('huddlesService.areGuardianDMsAllowed')
+
   try {
     const { data, error } = await supabaseAny
       .from('organizations')
@@ -473,12 +610,21 @@ export async function areGuardianDMsAllowed(orgId: string): Promise<boolean> {
       .single()
 
     if (error || !data) {
-      // Default to disallowing guardian DMs for safety
+      debug.perf.end('huddlesService.areGuardianDMsAllowed')
+      debug.data('HuddlesService.areGuardianDMsAllowed', 'Response (default false)', { orgId })
+      console.groupEnd()
       return false
     }
 
-    return data.settings?.allow_guardian_dms === true
+    const allowed = data.settings?.allow_guardian_dms === true
+    debug.perf.end('huddlesService.areGuardianDMsAllowed')
+    debug.data('HuddlesService.areGuardianDMsAllowed', 'Response', { orgId, allowed })
+    console.groupEnd()
+    return allowed
   } catch (error) {
+    debug.perf.end('huddlesService.areGuardianDMsAllowed')
+    debug.error('HuddlesService.areGuardianDMsAllowed', 'Exception checking settings', { error, orgId })
+    console.groupEnd()
     console.error('Error checking guardian DM settings:', error)
     return false
   }
@@ -497,6 +643,10 @@ export async function updateChannelMetadata(
     event_id?: string | null
   }
 ): Promise<{ error?: Error }> {
+  console.groupCollapsed(`%cupdateChannelMetadata: ${channelId}`, 'color: #666; font-weight: bold;');
+  debug.flow('HuddlesService.updateChannelMetadata', 'Updating channel metadata', { channelId, updates })
+  debug.perf.start('huddlesService.updateChannelMetadata')
+
   try {
     const { error } = await supabaseAny
       .from('stream_channel_metadata')
@@ -506,12 +656,21 @@ export async function updateChannelMetadata(
       })
 
     if (error) {
+      debug.perf.end('huddlesService.updateChannelMetadata')
+      debug.error('HuddlesService.updateChannelMetadata', 'Failed to update channel metadata', { error, channelId })
+      console.groupEnd()
       console.error('Error updating channel metadata:', error)
       return { error }
     }
 
+    debug.perf.end('huddlesService.updateChannelMetadata')
+    debug.flow('HuddlesService.updateChannelMetadata', 'Channel metadata updated successfully', { channelId })
+    console.groupEnd()
     return {}
   } catch (error) {
+    debug.perf.end('huddlesService.updateChannelMetadata')
+    debug.error('HuddlesService.updateChannelMetadata', 'Exception updating channel metadata', { error, channelId })
+    console.groupEnd()
     console.error('Error in updateChannelMetadata:', error)
     return { error: error as Error }
   }
@@ -531,12 +690,21 @@ export async function getEventChannels(eventId: string): Promise<{ data: StreamC
       .eq('metadata.event_id', eventId)
 
     if (error) {
+      debug.perf.end('huddlesService.getEventChannels')
+      debug.error('HuddlesService.getEventChannels', 'Failed to fetch event channels', { error, eventId })
+      console.groupEnd()
       console.error('Error fetching event channels:', error)
       return { error }
     }
 
+    debug.perf.end('huddlesService.getEventChannels')
+    debug.data('HuddlesService.getEventChannels', 'Response', { eventId, channelCount: data?.length || 0 })
+    console.groupEnd()
     return { data: data || [] }
   } catch (error) {
+    debug.perf.end('huddlesService.getEventChannels')
+    debug.error('HuddlesService.getEventChannels', 'Exception fetching event channels', { error, eventId })
+    console.groupEnd()
     console.error('Error in getEventChannels:', error)
     return { error: error as Error }
   }

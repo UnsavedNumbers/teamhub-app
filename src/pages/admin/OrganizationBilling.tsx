@@ -23,7 +23,11 @@ import {
 } from '../../components/admin'
 import '../../styles/orgAdmin.css'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function OrganizationBilling() {
+  useDebugLifecycle('OrganizationBilling')
+  
   const navigate = useNavigate()
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id

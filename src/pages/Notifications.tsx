@@ -100,7 +100,10 @@ const FilterSection = ({ title, items, selectedIds, onToggle, onSelectAll }: Fil
   )
 }
 
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+
 export default function Notifications() {
+  useDebugLifecycle('Notifications')
   const { context, isReady } = useUserContext()
   
   // State

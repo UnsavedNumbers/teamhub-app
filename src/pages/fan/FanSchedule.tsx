@@ -26,7 +26,11 @@ type EventTypeFilter = 'all' | 'game' | 'practice' | 'event' | 'meeting'
 // Persist view preference
 const VIEW_STORAGE_KEY = 'fan_schedule_view'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FanSchedule() {
+  useDebugLifecycle('FanSchedule')
+  
   const navigate = useNavigate()
   const { t } = useI18n()
   

@@ -361,7 +361,10 @@ function EventTicketCarousel({ group }: { group: EventTicketGroup }) {
   )
 }
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function MyTickets() {
+  useDebugLifecycle('MyTickets')
   const ticketsLink = useRouteLink('portal.tickets')
 
   const {

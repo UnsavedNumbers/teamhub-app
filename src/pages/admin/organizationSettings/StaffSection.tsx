@@ -33,7 +33,10 @@ interface StaffSectionProps {
   organizationId: string
 }
 
+import { useDebugLifecycle } from '../../../lib/debug/integrations/useDebugLifecycle'
+
 export default function StaffSection({ organizationId }: StaffSectionProps) {
+  useDebugLifecycle('StaffSection')
   const { t } = useI18n() as any
   const { context, isReady } = useUserContext()
   const [staff, setStaff] = useState<StaffMember[]>([])

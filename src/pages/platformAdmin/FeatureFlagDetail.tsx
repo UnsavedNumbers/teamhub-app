@@ -22,7 +22,11 @@ function getValueDisplay(flag: FeatureFlag): string {
   return 'N/A'
 }
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FeatureFlagDetail() {
+  useDebugLifecycle('FeatureFlagDetail')
+  
   const db = supabase as any
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()

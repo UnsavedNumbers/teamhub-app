@@ -19,7 +19,11 @@ function StatsSkeleton() {
   )
 }
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function LicensesOverview() {
+  useDebugLifecycle('LicensesOverview')
+  
   const [metrics, setMetrics] = useState<LicenseMetrics | null>(null)
   const [alerts, setAlerts] = useState<LicenseAlert[]>([])
   const [loading, setLoading] = useState(true)

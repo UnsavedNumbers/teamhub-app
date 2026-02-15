@@ -48,7 +48,10 @@ const CATEGORY_DESCRIPTIONS: Record<TravelContactCategoryOrg, string> = {
   default: 'Used when a specific category has no contact.',
 }
 
+import { useDebugLifecycle } from '../../../lib/debug/integrations/useDebugLifecycle'
+
 export default function TravelContactSection() {
+  useDebugLifecycle('TravelContactSection')
   const { context } = useUserContext()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

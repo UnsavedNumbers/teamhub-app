@@ -29,7 +29,11 @@ import '../../styles/fan-layouts.css'
 type TabType = 'overview' | 'schedule' | 'roster' | 'media' | 'shop'
 type FeedFilter = 'highlights' | 'press'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FanOrgProfile() {
+  useDebugLifecycle('FanOrgProfile')
+  
   const t = useT()
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()

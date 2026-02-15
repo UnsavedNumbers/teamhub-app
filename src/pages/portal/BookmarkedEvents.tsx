@@ -18,7 +18,11 @@ import { useI18n } from '../../i18n/useI18n'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { FanEventBookmark } from '../../types/staffAndFan'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function BookmarkedEvents() {
+  useDebugLifecycle('BookmarkedEvents')
+  
   const { t } = useI18n()
   const tAny = t as any
   const navigate = useNavigate()

@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
 import type { NotificationAction } from '../../types/notifications'
 
@@ -14,9 +15,17 @@ interface TravelNotificationInput {
 }
 
 export async function distributeTravelCreatedNotifications(input: TravelNotificationInput): Promise<void> {
-    if (USE_FAKE_DATA) return
+    console.groupCollapsed(`%cdistributeTravelCreatedNotifications: ${input.travel_id}`, 'color: #666; font-weight: bold;');
+    debug.flow('TravelNotificationsService.distributeTravelCreatedNotifications', 'Distributing notifications', { travelId: input.travel_id, teamId: input.team_id, orgId: input.org_id })
+    debug.perf.start('travelNotificationsService.distributeTravelCreatedNotifications')
 
     try {
+        if (USE_FAKE_DATA) {
+            debug.perf.end('travelNotificationsService.distributeTravelCreatedNotifications')
+            debug.flow('TravelNotificationsService.distributeTravelCreatedNotifications', 'Notifications distributed (fake)', { travelId: input.travel_id })
+            console.groupEnd()
+            return
+        }
         const recipients = new Set<string>()
 
         const { data: members, error: memberError } = await supabase
@@ -93,17 +102,31 @@ export async function distributeTravelCreatedNotifications(input: TravelNotifica
 
         if (insertError) throw insertError
 
+        debug.perf.end('travelNotificationsService.distributeTravelCreatedNotifications')
+        debug.flow('TravelNotificationsService.distributeTravelCreatedNotifications', 'Notifications distributed successfully', { travelId: input.travel_id, recipientCount: notificationsToInsert.length })
+        console.groupEnd()
         console.log(`[NotificationService] Distributed ${notificationsToInsert.length} travel-created notifications`)
 
     } catch (err) {
+        debug.perf.end('travelNotificationsService.distributeTravelCreatedNotifications')
+        debug.error('TravelNotificationsService.distributeTravelCreatedNotifications', 'Failed to distribute notifications', { error: err, input })
+        console.groupEnd()
         console.error('[NotificationService] Error distributing travel-created notifications:', err)
     }
 }
 
 export async function distributeTravelCanceledNotifications(input: TravelNotificationInput): Promise<void> {
-    if (USE_FAKE_DATA) return
+    console.groupCollapsed(`%cdistributeTravelCanceledNotifications: ${input.travel_id}`, 'color: #666; font-weight: bold;');
+    debug.flow('TravelNotificationsService.distributeTravelCanceledNotifications', 'Distributing cancellation notifications', { travelId: input.travel_id, teamId: input.team_id, orgId: input.org_id })
+    debug.perf.start('travelNotificationsService.distributeTravelCanceledNotifications')
 
     try {
+        if (USE_FAKE_DATA) {
+            debug.perf.end('travelNotificationsService.distributeTravelCanceledNotifications')
+            debug.flow('TravelNotificationsService.distributeTravelCanceledNotifications', 'Notifications distributed (fake)', { travelId: input.travel_id })
+            console.groupEnd()
+            return
+        }
         const recipients = new Set<string>()
 
         const { data: members, error: memberError } = await supabase
@@ -180,9 +203,15 @@ export async function distributeTravelCanceledNotifications(input: TravelNotific
 
         if (insertError) throw insertError
 
+        debug.perf.end('travelNotificationsService.distributeTravelCanceledNotifications')
+        debug.flow('TravelNotificationsService.distributeTravelCanceledNotifications', 'Notifications distributed successfully', { travelId: input.travel_id, recipientCount: notificationsToInsert.length })
+        console.groupEnd()
         console.log(`[NotificationService] Distributed ${notificationsToInsert.length} travel-canceled notifications`)
 
     } catch (err) {
+        debug.perf.end('travelNotificationsService.distributeTravelCanceledNotifications')
+        debug.error('TravelNotificationsService.distributeTravelCanceledNotifications', 'Failed to distribute notifications', { error: err, input })
+        console.groupEnd()
         console.error('[NotificationService] Error distributing travel-canceled notifications:', err)
     }
 }

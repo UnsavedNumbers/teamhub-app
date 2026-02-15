@@ -36,7 +36,11 @@ interface TeamProfile {
   athlete_count: number
 }
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FanTeamProfile() {
+  useDebugLifecycle('FanTeamProfile')
+  
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   

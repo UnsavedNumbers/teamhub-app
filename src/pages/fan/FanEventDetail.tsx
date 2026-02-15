@@ -114,7 +114,11 @@ const formatTimezoneDisplay = (timeZone: string | null | undefined, referenceDat
   }
 }
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FanEventDetail() {
+  useDebugLifecycle('FanEventDetail')
+  
   const { eventId } = useParams<{ eventId: string }>()
   const navigate = useNavigate()
 

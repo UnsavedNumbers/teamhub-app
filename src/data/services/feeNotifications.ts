@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
 import type { NotificationAction } from '../../types/notifications'
 
@@ -16,9 +17,17 @@ interface FeeNotificationInput {
 }
 
 export async function distributeFeeAssignedNotifications(input: FeeNotificationInput): Promise<void> {
-    if (USE_FAKE_DATA) return
+    console.groupCollapsed(`%cdistributeFeeAssignedNotifications: ${input.fee_id}`, 'color: #666; font-weight: bold;');
+    debug.flow('FeeNotificationsService.distributeFeeAssignedNotifications', 'Distributing fee assigned notifications', { feeId: input.fee_id, athleteId: input.athlete_id, amount: input.amount })
+    debug.perf.start('feeNotificationsService.distributeFeeAssignedNotifications')
 
     try {
+        if (USE_FAKE_DATA) {
+            debug.perf.end('feeNotificationsService.distributeFeeAssignedNotifications')
+            debug.flow('FeeNotificationsService.distributeFeeAssignedNotifications', 'Notifications distributed (fake)', { feeId: input.fee_id })
+            console.groupEnd()
+            return
+        }
         const recipients = new Set<string>()
 
         const { data: athlete, error: athleteError } = await supabase
@@ -76,17 +85,31 @@ export async function distributeFeeAssignedNotifications(input: FeeNotificationI
 
         if (insertError) throw insertError
 
+        debug.perf.end('feeNotificationsService.distributeFeeAssignedNotifications')
+        debug.flow('FeeNotificationsService.distributeFeeAssignedNotifications', 'Notifications distributed successfully', { feeId: input.fee_id, recipientCount: notificationsToInsert.length })
+        console.groupEnd()
         console.log(`[NotificationService] Distributed ${notificationsToInsert.length} fee-assigned notifications`)
 
     } catch (err) {
+        debug.perf.end('feeNotificationsService.distributeFeeAssignedNotifications')
+        debug.error('FeeNotificationsService.distributeFeeAssignedNotifications', 'Failed to distribute notifications', { error: err, input })
+        console.groupEnd()
         console.error('[NotificationService] Error distributing fee-assigned notifications:', err)
     }
 }
 
 export async function distributeFeeOverdueNotifications(input: FeeNotificationInput): Promise<void> {
-    if (USE_FAKE_DATA) return
+    console.groupCollapsed(`%cdistributeFeeOverdueNotifications: ${input.fee_id}`, 'color: #666; font-weight: bold;');
+    debug.flow('FeeNotificationsService.distributeFeeOverdueNotifications', 'Distributing fee overdue notifications', { feeId: input.fee_id, athleteId: input.athlete_id, amount: input.amount })
+    debug.perf.start('feeNotificationsService.distributeFeeOverdueNotifications')
 
     try {
+        if (USE_FAKE_DATA) {
+            debug.perf.end('feeNotificationsService.distributeFeeOverdueNotifications')
+            debug.flow('FeeNotificationsService.distributeFeeOverdueNotifications', 'Notifications distributed (fake)', { feeId: input.fee_id })
+            console.groupEnd()
+            return
+        }
         const recipients = new Set<string>()
 
         const { data: athlete, error: athleteError } = await supabase
@@ -142,9 +165,15 @@ export async function distributeFeeOverdueNotifications(input: FeeNotificationIn
 
         if (insertError) throw insertError
 
+        debug.perf.end('feeNotificationsService.distributeFeeOverdueNotifications')
+        debug.flow('FeeNotificationsService.distributeFeeOverdueNotifications', 'Notifications distributed successfully', { feeId: input.fee_id, recipientCount: notificationsToInsert.length })
+        console.groupEnd()
         console.log(`[NotificationService] Distributed ${notificationsToInsert.length} fee-overdue notifications`)
 
     } catch (err) {
+        debug.perf.end('feeNotificationsService.distributeFeeOverdueNotifications')
+        debug.error('FeeNotificationsService.distributeFeeOverdueNotifications', 'Failed to distribute notifications', { error: err, input })
+        console.groupEnd()
         console.error('[NotificationService] Error distributing fee-overdue notifications:', err)
     }
 }

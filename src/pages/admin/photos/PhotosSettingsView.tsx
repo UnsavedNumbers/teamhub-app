@@ -13,7 +13,11 @@ import { showSuccess } from '@/utils/toast'
 
 const STORAGE_KEY_PREFIX = 'admin_photos_settings_'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export function PhotosSettingsView() {
+  useDebugLifecycle('PhotosSettingsView')
+  
   const { context } = useUserContext()
   const { t } = useI18n()
   const { hideEmpty, setHideEmpty } = useHideEmptyGalleries()

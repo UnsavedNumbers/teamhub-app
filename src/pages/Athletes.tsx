@@ -13,7 +13,11 @@ import type { Athlete } from '../types/family'
 import { getDisplayName, calculateAge, getGenderLabel, formatSports } from '../utils/athleteHelpers'
 import { showError } from '../utils/toast'
 
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+
 export default function Athletes() {
+  useDebugLifecycle('Athletes')
+  
   const t = useT()
   const navigate = useNavigate()
   const [athletes, setAthletes] = useState<Athlete[]>([])

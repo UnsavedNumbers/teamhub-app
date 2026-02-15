@@ -21,7 +21,11 @@ import { showError, showSuccess } from '../../utils/toast'
 import { supabase } from '../../lib/supabase'
 import '../../styles/fan.css'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FanProfile() {
+  useDebugLifecycle('FanProfile')
+  
   const navigate = useNavigate()
   
   const [loading, setLoading] = useState(true)

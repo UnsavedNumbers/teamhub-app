@@ -51,7 +51,11 @@ const QR_REFRESH_INTERVAL = 30000
 
 const generateQRPayload = (qrCodeData: string, _timestamp: number): string => qrCodeData
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FanTickets() {
+  useDebugLifecycle('FanTickets')
+  
   const t = useT()
   const navigate = useNavigate()
   

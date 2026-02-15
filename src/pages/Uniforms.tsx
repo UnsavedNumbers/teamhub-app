@@ -18,7 +18,11 @@ interface Child {
   last_name: string
 }
 
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+
 export default function Uniforms() {
+  useDebugLifecycle('Uniforms')
+  
   const t = useT()
   const navigate = useNavigate()
   const [children, setChildren] = useState<Child[]>([])

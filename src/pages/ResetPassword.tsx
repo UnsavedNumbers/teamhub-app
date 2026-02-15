@@ -2,9 +2,11 @@ import { useState, useEffect, FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../i18n/useI18n'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { mapAuthError } from '../utils/authErrorMapper'
 
 export default function ResetPassword() {
+  useDebugLifecycle('ResetPassword')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)

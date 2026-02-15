@@ -12,7 +12,11 @@ import type { OrgContext } from '@/utils/orgResolution'
 import { OrgScopedRoute } from '@/components/OrgScopedRoute'
 import { getLink, RouteKeys } from '@/utils/routes'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 function OrgLandingContent({ org }: { org: OrgContext }) {
+  useDebugLifecycle('OrgLandingContent')
+  
   const orgSlug = org.slug
 
   // Check if ticketing is enabled and has events
