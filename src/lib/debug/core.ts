@@ -25,9 +25,10 @@ const ALLOWED_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
 const history: LogEntry[] = [];
 
 /**
- * Performance timing map (label -> start timestamp)
+ * Performance timing map (label -> stack of start timestamps).
+ * A stack allows concurrent operations with the same label to each have their own timer.
  */
-const perfTimers = new Map<string, number>();
+const perfTimers = new Map<string, number[]>();
 
 /**
  * Check if the current environment allows debug logging
@@ -115,19 +116,23 @@ function logMessage(
 }
 
 /**
- * Start timing a performance operation
- * @param label - Unique label for the timing operation
+ * Start timing a performance operation.
+ * Uses a stack per label so concurrent operations with the same label are tracked separately.
+ * @param label - Label for the timing operation (same label can be used by concurrent calls)
  */
 function startPerfTimer(label: string): void {
   if (!isLocalhost()) {
     return;
   }
 
-  perfTimers.set(label, performance.now());
+  const stack = perfTimers.get(label) ?? [];
+  stack.push(performance.now());
+  perfTimers.set(label, stack);
 }
 
 /**
- * End timing and log elapsed time for a performance operation
+ * End timing and log elapsed time for a performance operation.
+ * Pops the most recent start time for this label (LIFO for concurrent calls).
  * @param label - Label for the timing operation
  */
 function endPerfTimer(label: string): void {
@@ -135,16 +140,20 @@ function endPerfTimer(label: string): void {
     return;
   }
 
-  const startTime = perfTimers.get(label);
+  const stack = perfTimers.get(label);
+  const startTime = stack?.pop();
   if (startTime === undefined) {
     logMessage('ERROR', 'Debug.perf', `Timer '${label}' was never started`);
     return;
   }
 
+  if (stack?.length === 0) {
+    perfTimers.delete(label);
+  }
+
   const elapsed = performance.now() - startTime;
   const elapsedMs = Math.round(elapsed * 100) / 100; // Round to 2 decimal places
 
-  perfTimers.delete(label);
   logMessage('PERF', 'Debug.perf', `Timer '${label}' completed`, {
     elapsedMs,
     elapsedFormatted: `${elapsedMs}ms`,

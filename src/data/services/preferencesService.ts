@@ -106,6 +106,7 @@ export async function updateUserPreference(
     return { data: null, error: null }
   }
 
+  debug.perf.start('preferencesService.updateUserPreference')
   try {
     // First, get current preferences
     const { data: currentData, error: fetchError } = await getUserPreferences(userId)
