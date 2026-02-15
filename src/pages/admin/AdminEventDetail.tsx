@@ -234,8 +234,9 @@ export default function AdminEventDetail() {
 
         setTicketingSoldCount(count ?? 0)
       } finally {
-        if (!active) return
-        setTicketingSoldCountLoading(false)
+        if (active) {
+          setTicketingSoldCountLoading(false)
+        }
       }
     })()
 
@@ -533,6 +534,34 @@ export default function AdminEventDetail() {
     setConfirmTicketingStatusOpen(true)
   }
 
+  const handleToggleEventVisibility = async (nextVisibility: 'public' | 'private') => {
+    if (!event) return
+
+    try {
+      setActionLoading(true)
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({ visibility: nextVisibility })
+        .eq('id', event.id)
+
+      if (updateError) throw updateError
+
+      setEvent((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          visibility: nextVisibility,
+        } as CalendarEvent
+      })
+
+      showSuccess(nextVisibility === 'public' ? 'Event is now visible to fans.' : 'Event is now hidden from fans.')
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to update visibility')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   const handleConfirmTicketingStatusChange = async () => {
     if (!pendingTicketingStatus) return
     setConfirmTicketingStatusOpen(false)
@@ -637,11 +666,14 @@ export default function AdminEventDetail() {
   /*  Derived values                                                     */
   /* ------------------------------------------------------------------ */
   const eventMeta = event as CalendarEvent & {
-    visibility?: 'public' | 'private'
+    visibility?: 'public' | 'private' | 'visible' | 'hidden'
     rsvp_enabled?: boolean
     rsvp_type?: string | null
   }
-  const visibilityValue = eventMeta.visibility || t('common.public')
+  const rawVisibility = eventMeta.visibility ?? 'public'
+  const isVisibleToFans = rawVisibility === 'public' || rawVisibility === 'visible'
+  const visibilityValue = isVisibleToFans ? 'Visible' : 'Hidden'
+  const visibilityToggleLabel = isVisibleToFans ? 'Hide from fans' : 'Make Visible'
   const rsvpEnabledValue = Boolean(eventMeta.rsvp_enabled ?? event.rsvp_config?.enabled)
   const rsvpTypeValue = eventMeta.rsvp_type || event.rsvp_config?.type || null
   const routeToAttendance = rsvpEnabledValue
@@ -1180,9 +1212,19 @@ export default function AdminEventDetail() {
               <div className="space-y-3">
                 <div className="oa-stat-item">
                   <span className="material-symbols-outlined">visibility</span>
-                  <div>
-                    <div className="oa-stat-item__label">{t('admin.events.detailPage.visibilityLabel')}</div>
-                    <div className="oa-stat-item__value">{visibilityValue}</div>
+                  <div className="oa-stat-item__content oa-stat-item__content--between">
+                    <div>
+                      <div className="oa-stat-item__label">{t('admin.events.detailPage.visibilityLabel')}</div>
+                      <div className="oa-stat-item__value">{visibilityValue}</div>
+                    </div>
+                    <button
+                      type="button"
+                      className="oa-visibility-toggle-link"
+                      onClick={() => { void handleToggleEventVisibility(isVisibleToFans ? 'private' : 'public') }}
+                      disabled={actionLoading}
+                    >
+                      {visibilityToggleLabel}
+                    </button>
                   </div>
                 </div>
                 <div className="oa-stat-item">

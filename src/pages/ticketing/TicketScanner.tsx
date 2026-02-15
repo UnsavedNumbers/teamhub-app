@@ -31,6 +31,12 @@ interface ValidationResult {
 
 type ScannerMode = 'physical' | 'camera'
 
+type ScannerEventSummary = {
+  id: string
+  title?: string | null
+  event_id?: string | null
+}
+
 export default function TicketScanner() {
   const { token, eventId } = useParams<{ token?: string; eventId?: string }>()
   const directEventId = eventId?.trim() || null
@@ -432,13 +438,20 @@ export default function TicketScanner() {
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [handleManualSubmit])
 
-  const currentEvent = token
+  const currentEvent: ScannerEventSummary | null = token
     ? staffLinkSession
-      ? { id: staffLinkSession.ticketed_event_id, title: staffLinkSession.event_title }
+      ? {
+        id: staffLinkSession.ticketed_event_id,
+        title: staffLinkSession.event_title,
+        event_id: staffLinkSession.event_id ?? null,
+      }
       : null
     : selectedEventId
-      ? eventList.find((event: any) => event.id === selectedEventId) || null
+      ? (eventList.find((event: ScannerEventSummary) => event.id === selectedEventId) as ScannerEventSummary | undefined) || null
       : null
+  const currentEventAdminDetailPath = currentEvent?.event_id
+    ? `${getLink('admin.events.detail', { id: currentEvent.event_id })}?view=ticketing`
+    : null
 
   const scannerColorRoles = {
     '--scanner-color-primary': 'var(--org-color-primary, var(--org-btn-primary-bg))',
@@ -474,7 +487,17 @@ export default function TicketScanner() {
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-2 rounded-full bg-[var(--org-surface-card-header,#f3f4f6)] border border-[var(--org-border-default,#dce7f6)] px-3 py-1.5 text-sm">
                 <span className="font-medium text-[var(--scanner-color-secondary)]">{t('ticketing.scanner.validatingFor')}</span>
-                <span className="font-semibold text-[var(--org-text-primary,#111418)]">{currentEvent.title}</span>
+                {currentEventAdminDetailPath ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate(currentEventAdminDetailPath)}
+                    className="font-semibold text-[var(--org-text-primary,#111418)] underline underline-offset-2 hover:text-[var(--scanner-color-secondary-hover)]"
+                  >
+                    {currentEvent.title}
+                  </button>
+                ) : (
+                  <span className="font-semibold text-[var(--org-text-primary,#111418)]">{currentEvent.title}</span>
+                )}
               </div>
               {!token && (
                 <button

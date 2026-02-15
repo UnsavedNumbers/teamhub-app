@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUserContext } from '@/hooks/useUserContext'
@@ -330,13 +330,15 @@ export default function TicketingSeatMaps() {
           >
             {t('ticketing.seatMaps.actions.clone')}
           </button>
-          <Link
+          <OrgAdminButton
+            as={Link}
             to={`${getSeatMapEditPath(row)}?returnTo=${encodeURIComponent(returnTo)}`}
-            className="oa-link"
-            onClick={(event) => event.stopPropagation()}
+            variant="secondary"
+            size="dense"
+            onClick={(event: MouseEvent<HTMLElement>) => event.stopPropagation()}
           >
             {t('ticketing.seatMaps.actions.edit')}
-          </Link>
+          </OrgAdminButton>
           <button
             type="button"
             className="oa-btn oa-btn--danger oa-btn--dense"

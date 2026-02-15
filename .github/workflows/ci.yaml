@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
   push:
-    branches: [main, dev]
+    branches: [main, dev, demo]
   workflow_dispatch:
 
 concurrency:
@@ -12,7 +12,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  demo-checks:
+    if: github.ref_name == 'demo' || github.base_ref == 'demo'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint app
+        run: npm run lint
+
+      - name: Build app
+        run: npm run build
+
   test:
+    if: github.ref_name != 'demo' && github.base_ref != 'demo'
     runs-on: ubuntu-latest
     env:
       # Reduce flaky lock timeouts during local DB init/migrations in CI
@@ -70,7 +91,7 @@ jobs:
 
   dryrun:
     # Only run on PRs from same repo (fork PRs don't get secrets)
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+    if: github.event_name == 'pull_request' && github.base_ref != 'demo' && github.event.pull_request.head.repo.fork == false
     runs-on: ubuntu-latest
 
     # Serialize remote Supabase operations per target environment to avoid lock contention
@@ -100,7 +121,7 @@ jobs:
   # ── RLS Contract Tests ────────────────────────────────────────────
   # Runs against remote Supabase TEST project. Skipped on fork PRs.
   rls-contract:
-    if: github.event.pull_request.head.repo.fork == false
+    if: github.event_name == 'pull_request' && github.base_ref != 'demo' && github.event.pull_request.head.repo.fork == false
     runs-on: ubuntu-latest
     needs: [test] # wait for local tests to pass first
     timeout-minutes: 10

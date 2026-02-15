@@ -59,6 +59,14 @@ export default function SeatMapBuilder() {
   const csvInputRef = useRef<HTMLInputElement | null>(null)
   const isWriteBlocked = isOffline || USE_FAKE_DATA
 
+  const invalidateSeatMapCaches = async (seatMapKey?: string | null) => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin-seat-maps'] }),
+      queryClient.invalidateQueries({ queryKey: ['seat-maps'] }),
+      ...(seatMapKey ? [queryClient.invalidateQueries({ queryKey: ['seat-map-builder', seatMapKey] })] : []),
+    ])
+  }
+
   const eventQuery = useQuery({
     queryKey: ['ticketed-event', eventId],
     queryFn: () => getTicketedEventByIdAdmin(eventId!),
@@ -79,14 +87,17 @@ export default function SeatMapBuilder() {
   })
 
   useEffect(() => {
-    if (isDraftSeatMap && !seatMapName) {
-      setSeatMapName(t('ticketing.reservedSeating.builder.defaultMapName', { date: new Date().toLocaleDateString() }))
+    if (isDraftSeatMap) {
+      setSeatMapName((current) => (
+        current || t('ticketing.reservedSeating.builder.defaultMapName', { date: new Date().toLocaleDateString() })
+      ))
       return
     }
+
     if (seatMapQuery.data?.name) {
       setSeatMapName(seatMapQuery.data.name)
     }
-  }, [isDraftSeatMap, seatMapName, seatMapQuery.data?.name])
+  }, [isDraftSeatMap, seatMapQuery.data?.name, t])
 
   const createSeatMapMutation = useMutation({
     mutationFn: async () => {
@@ -112,7 +123,7 @@ export default function SeatMapBuilder() {
     },
     onSuccess: async (created) => {
       showSuccess(t('ticketing.reservedSeating.builder.seatMapSaved'))
-      await queryClient.invalidateQueries({ queryKey: ['seat-maps', eventId] })
+      await invalidateSeatMapCaches(created.id)
 
       const nextReturnTo = returnTo.includes('seatMapId=')
         ? returnTo
@@ -143,7 +154,7 @@ export default function SeatMapBuilder() {
     },
     onSuccess: async () => {
       showSuccess(t('ticketing.reservedSeating.builder.nameSaved'))
-      await queryClient.invalidateQueries({ queryKey: ['seat-map-builder', persistedSeatMapId] })
+      await invalidateSeatMapCaches(persistedSeatMapId)
     },
     onError: (error: any) => showError(error.message || t('ticketing.reservedSeating.builder.errors.saveFailed')),
   })
@@ -164,7 +175,7 @@ export default function SeatMapBuilder() {
     },
     onSuccess: async () => {
       showSuccess(t('ticketing.reservedSeating.builder.chartUploaded'))
-      await queryClient.invalidateQueries({ queryKey: ['seat-map-builder', persistedSeatMapId] })
+      await invalidateSeatMapCaches(persistedSeatMapId)
     },
     onError: (error: any) => showError(error.message || t('ticketing.reservedSeating.builder.errors.chartUploadFailed')),
   })
@@ -185,7 +196,7 @@ export default function SeatMapBuilder() {
     },
     onSuccess: async () => {
       showSuccess(t('ticketing.reservedSeating.builder.chartRemoved'))
-      await queryClient.invalidateQueries({ queryKey: ['seat-map-builder', persistedSeatMapId] })
+      await invalidateSeatMapCaches(persistedSeatMapId)
     },
     onError: (error: any) => showError(error.message || t('ticketing.reservedSeating.builder.errors.chartRemoveFailed')),
   })
@@ -206,7 +217,7 @@ export default function SeatMapBuilder() {
     },
     onSuccess: async (count) => {
       showSuccess(t('ticketing.reservedSeating.builder.bulkSuccess', { count }))
-      await queryClient.invalidateQueries({ queryKey: ['seat-map-builder', persistedSeatMapId] })
+      await invalidateSeatMapCaches(persistedSeatMapId)
     },
     onError: (error: any) => showError(error.message || t('ticketing.reservedSeating.builder.errors.bulkFailed')),
   })
@@ -263,7 +274,7 @@ export default function SeatMapBuilder() {
     onSuccess: async (count) => {
       setCsvFile(null)
       showSuccess(t('ticketing.reservedSeating.builder.csvSuccess', { count }))
-      await queryClient.invalidateQueries({ queryKey: ['seat-map-builder', persistedSeatMapId] })
+      await invalidateSeatMapCaches(persistedSeatMapId)
     },
     onError: (error: any) => showError(error.message || t('ticketing.reservedSeating.builder.errors.csvFailed')),
   })
@@ -295,7 +306,7 @@ export default function SeatMapBuilder() {
       })
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['seat-map-builder', persistedSeatMapId] })
+      await invalidateSeatMapCaches(persistedSeatMapId)
     },
     onError: (error: any) => showError(error.message || t('ticketing.reservedSeating.builder.errors.seatUpdateFailed')),
   })
@@ -319,7 +330,7 @@ export default function SeatMapBuilder() {
         setHasDeletedAllSeats(true)
       }
       showSuccess(t('ticketing.reservedSeating.builder.seatDeleted'))
-      await queryClient.invalidateQueries({ queryKey: ['seat-map-builder', persistedSeatMapId] })
+      await invalidateSeatMapCaches(persistedSeatMapId)
     },
     onError: (error: any) => showError(error.message || t('ticketing.reservedSeating.builder.errors.seatDeleteFailed')),
   })

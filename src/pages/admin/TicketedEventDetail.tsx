@@ -4,7 +4,7 @@
  * View event details, manage ticket types, generate staff links
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getLink, RouteKeys, useRouteLink } from '@/utils/routes'
@@ -12,15 +12,17 @@ import { supabase } from '@/lib/supabase'
 import { USE_FAKE_DATA } from '@/data/config'
 import {
   createStaffValidationLinkForEventAdmin,
+  getAllTicketTypesForEventAdmin,
   getTicketedEventByIdAdmin,
-  getTicketTypesForEventAdmin,
   getTicketTypesTotalCountForEventAdmin,
+  updateTicketType,
 } from '@/data/services'
 import { formatCurrency, type TicketedEvent, type TicketType } from '@/types/ticketing'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { showError, showSuccess } from '@/utils/toast'
 import { classifySupabaseError, NetworkError, NotFoundError, RLSError, ValidationError } from '@/utils/supabaseErrorHandler'
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
 import EmptyState from '@/components/platformAdmin/EmptyState'
 import PublicUrlShare from '@/components/ticketing/PublicUrlShare'
@@ -112,6 +114,9 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
   const scannerPath = useRouteLink('admin.ticketingScannerEvent', { eventId: id || '' })
   const addTicketTypePath = useRouteLink('admin.ticketingEvents.ticketTypes.create', { id: id || '' })
   const eventsPath = useRouteLink('admin.ticketingEvents.list')
+  const [statusChangeTarget, setStatusChangeTarget] = useState<TicketType | null>(null)
+  const [pendingVisibilityChange, setPendingVisibilityChange] = useState<'visible' | 'hidden' | null>(null)
+  const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false)
 
   const {
     data: event,
@@ -134,8 +139,8 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
     error: ticketTypesError,
     refetch: refetchTicketTypes,
   } = useQuery<TicketType[]>({
-    queryKey: ['ticket-types', id],
-    queryFn: () => getTicketTypesForEventAdmin(id),
+    queryKey: ['ticket-types', id, 'all'],
+    queryFn: () => getAllTicketTypesForEventAdmin(id),
     enabled: hasValidEventId && !!event,
     refetchOnReconnect: true,
     refetchOnWindowFocus: true,
@@ -190,6 +195,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
         },
         () => {
           void queryClient.invalidateQueries({ queryKey: ['ticket-types', id] })
+          void queryClient.invalidateQueries({ queryKey: ['ticket-types', id, 'all'] })
           void queryClient.invalidateQueries({ queryKey: ['ticket-types-total-count', id] })
         },
       )
@@ -202,6 +208,35 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
 
   const eventLoadError = eventError ? classifySupabaseError(eventError, 'Ticketed event') : null
   const ticketTypesLoadError = ticketTypesError ? classifySupabaseError(ticketTypesError, 'Ticket types') : null
+
+  const toggleTicketTypeStatusMutation = useMutation<TicketType, Error, { ticketType: TicketType; nextActive: boolean }>({
+    mutationFn: async ({ ticketType, nextActive }) => {
+      const result = await updateTicketType(ticketType.id, { is_active: nextActive })
+      if (result.error) {
+        throw classifySupabaseError(result.error, 'Ticket type')
+      }
+      if (!result.data) {
+        throw new Error('Failed to update ticket type status.')
+      }
+      return result.data
+    },
+    onSuccess: async (_updatedType, variables) => {
+      showSuccess(
+        variables.nextActive
+          ? `"${variables.ticketType.name}" is now active.`
+          : `"${variables.ticketType.name}" is now inactive.`,
+      )
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['ticket-types', id] }),
+        queryClient.invalidateQueries({ queryKey: ['ticket-types', id, 'all'] }),
+        queryClient.invalidateQueries({ queryKey: ['ticket-types-total-count', id] }),
+      ])
+      setStatusChangeTarget(null)
+    },
+    onError: (error) => {
+      showError(classifySupabaseError(error, 'Ticket type').message || 'Failed to update ticket type status.')
+    },
+  })
 
   const retryAll = () => {
     void refetchEvent()
@@ -417,10 +452,23 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
   const hasOfflineReadOnlyNotice = !isOnline
   const hasDemoReadOnlyNotice = USE_FAKE_DATA
   const displayedTotalTicketTypeCount = Math.max(totalTicketTypeCount, ticketTypesList.length)
-  const hasOnlyInactiveTicketTypes = displayedTotalTicketTypeCount > 0 && ticketTypesList.length === 0
-  const hasDeletedAllVisibleTicketTypes = hadTicketTypesRef.current && ticketTypesList.length === 0 && displayedTotalTicketTypeCount === 0
   const activeTicketTypesCount = ticketTypesList.filter((type) => type.is_active).length
+  const hasOnlyInactiveTicketTypes = displayedTotalTicketTypeCount > 0 && activeTicketTypesCount === 0
+  const hasDeletedAllVisibleTicketTypes = hadTicketTypesRef.current && ticketTypesList.length === 0 && displayedTotalTicketTypeCount === 0
   const fanVisible = event.status === 'published' && eventVisibility === 'visible'
+  const statusChangeNextActive = statusChangeTarget ? !(statusChangeTarget.is_active === true) : false
+  const isLastActiveTicketType =
+    !!statusChangeTarget && statusChangeTarget.is_active === true && activeTicketTypesCount === 1
+  const statusChangeDescription = (() => {
+    if (!statusChangeTarget) return ''
+    if (statusChangeNextActive) {
+      return `Activate "${statusChangeTarget.name}" so fans can purchase this ticket type when the event is visible.`
+    }
+    if (fanVisible && isLastActiveTicketType) {
+      return `Deactivate "${statusChangeTarget.name}"? This is the last active ticket type. Fans will still see the event but will not be able to buy tickets.`
+    }
+    return `Deactivate "${statusChangeTarget.name}"? Fans will no longer be able to purchase this ticket type. Existing ticket holders are not affected.`
+  })()
   const hasFiniteCapacity = ticketTypesList.some((type) => type.capacity_total !== null)
   const totalCapacity = hasFiniteCapacity
     ? ticketTypesList.reduce((sum, type) => sum + (type.capacity_total ?? 0), 0)
@@ -438,6 +486,64 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
     if (event.status === 'cancelled') return t('ticketing.detail.values.salesStatus.closed')
     return t('ticketing.detail.values.unavailable')
   })()
+  const salesStatusIsAlert = salesStatusLabel === 'Visible - No tickets'
+  const visibilityToggleLinkLabel = eventVisibility === 'visible' ? 'Hide from fans' : 'Make Visible'
+  const visibilityToggleDisabled = event.status !== 'published' || !isOnline || USE_FAKE_DATA || isUpdatingVisibility
+  const visibilityConfirmTitle = pendingVisibilityChange === 'hidden' ? 'Hide Event from Fans' : 'Make Event Visible'
+  const visibilityConfirmDescription = pendingVisibilityChange === 'hidden'
+    ? 'Fans will no longer see this event. Existing ticket holders will still have valid tickets.'
+    : 'This event has no active ticket types. Fans will see the event but cannot purchase tickets.'
+  const visibilityConfirmLabel = pendingVisibilityChange === 'hidden' ? 'Hide from Fans' : 'Make Visible'
+
+  const applyVisibilityChange = async (nextVisibility: 'visible' | 'hidden') => {
+    setIsUpdatingVisibility(true)
+    try {
+      const supabaseAny = supabase as any
+      const { error } = await supabaseAny
+        .from('ticketed_events')
+        .update({ visibility: nextVisibility })
+        .eq('id', id)
+
+      if (error) {
+        showError(classifySupabaseError(error).message || 'Failed to update event visibility.')
+        return false
+      }
+
+      showSuccess(nextVisibility === 'visible' ? 'Event is now visible to fans.' : 'Event is now hidden from fans.')
+      await queryClient.invalidateQueries({ queryKey: ['ticketed-event', id] })
+      await queryClient.invalidateQueries({ queryKey: ['ticketed-events'] })
+      return true
+    } finally {
+      setIsUpdatingVisibility(false)
+    }
+  }
+
+  const handleToggleVisibility = async () => {
+    if (event.status !== 'published') {
+      showError('Publish this event before changing visibility.')
+      return
+    }
+    if (!isOnline) {
+      showError(t('ticketing.detail.staffLink.offlineBlocked'))
+      return
+    }
+    if (USE_FAKE_DATA) {
+      showError(t('ticketing.detail.notices.demoModeReadOnly'))
+      return
+    }
+
+    const nextVisibility = eventVisibility === 'visible' ? 'hidden' : 'visible'
+    if (nextVisibility === 'hidden') {
+      setPendingVisibilityChange(nextVisibility)
+      return
+    }
+    if (nextVisibility === 'visible' && activeTicketTypesCount === 0) {
+      setPendingVisibilityChange(nextVisibility)
+      return
+    }
+
+    await applyVisibilityChange(nextVisibility)
+  }
 
   const ticketingContent = (
     <div className="oa-ticketing-detail oa-space-y-6">
@@ -500,7 +606,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
               </p>
             </div>
           </div>
-          <div className="oa-ticketing-kpi">
+          <div className={`oa-ticketing-kpi ${salesStatusIsAlert ? 'oa-ticketing-kpi--alert' : ''}`}>
             <span className="material-symbols-outlined">storefront</span>
             <div>
               <p className="oa-ticketing-kpi__label">{t('ticketing.detail.labels.salesStatus')}</p>
@@ -537,7 +643,18 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
           </div>
           <div className="oa-ticketing-meta-item">
             <span className="oa-ticketing-meta-item__label">Visibility</span>
-            <p className="oa-ticketing-meta-item__value">{eventVisibility === 'visible' ? 'Visible to fans' : 'Hidden from fans'}</p>
+            <div className="oa-ticketing-meta-item__value-row">
+              <p className="oa-ticketing-meta-item__value">{eventVisibility === 'visible' ? 'Visible to fans' : 'Hidden from fans'}</p>
+              <button
+                type="button"
+                className="oa-visibility-toggle-link"
+                onClick={() => { void handleToggleVisibility() }}
+                disabled={visibilityToggleDisabled}
+                title={event.status !== 'published' ? 'Publish event to enable visibility' : undefined}
+              >
+                {visibilityToggleLinkLabel}
+              </button>
+            </div>
           </div>
           <div className="oa-ticketing-meta-item">
             <span className="oa-ticketing-meta-item__label">{t('ticketing.detail.labels.teamScope')}</span>
@@ -597,46 +714,8 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
           <OrgAdminButton
             variant="secondary"
             icon={eventVisibility === 'visible' ? 'visibility_off' : 'visibility'}
-            onClick={async () => {
-              if (event.status !== 'published') {
-                showError('Publish this event before changing visibility.')
-                return
-              }
-              if (!isOnline) {
-                showError(t('ticketing.detail.staffLink.offlineBlocked'))
-                return
-              }
-              if (USE_FAKE_DATA) {
-                showError(t('ticketing.detail.notices.demoModeReadOnly'))
-                return
-              }
-
-              const nextVisibility = eventVisibility === 'visible' ? 'hidden' : 'visible'
-              if (nextVisibility === 'hidden') {
-                const confirmed = window.confirm('Fans will no longer see this event. Existing ticket holders will still have valid tickets.')
-                if (!confirmed) return
-              }
-              if (nextVisibility === 'visible' && activeTicketTypesCount === 0) {
-                const confirmed = window.confirm('This event has no active ticket types. Fans will see the event but cannot purchase tickets.')
-                if (!confirmed) return
-              }
-
-              const supabaseAny = supabase as any
-              const { error } = await supabaseAny
-                .from('ticketed_events')
-                .update({ visibility: nextVisibility })
-                .eq('id', id)
-
-              if (error) {
-                showError(classifySupabaseError(error).message || 'Failed to update event visibility.')
-                return
-              }
-
-              showSuccess(nextVisibility === 'visible' ? 'Event is now visible to fans.' : 'Event is now hidden from fans.')
-              await queryClient.invalidateQueries({ queryKey: ['ticketed-event', id] })
-              await queryClient.invalidateQueries({ queryKey: ['ticketed-events'] })
-            }}
-            disabled={event.status !== 'published' || !isOnline || USE_FAKE_DATA}
+            onClick={() => { void handleToggleVisibility() }}
+            disabled={visibilityToggleDisabled}
             title={event.status !== 'published' ? 'Publish event to enable visibility' : undefined}
           >
             {eventVisibility === 'visible' ? 'Hide from Fans' : 'Make Visible'}
@@ -751,7 +830,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
           </div>
         ) : (
           <div className="oa-table-container oa-ticketing-types-table-wrap">
-            <table className="oa-table">
+            <table className="oa-table oa-ticketing-types-table">
               <thead>
                 <tr>
                   <th>{t('ticketing.detail.labels.name')}</th>
@@ -765,16 +844,18 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
               <tbody>
                 {ticketTypesList.map((type) => (
                   <tr key={type.id}>
-                    <td>
+                    <td className="oa-ticketing-types-table__name-cell">
                       <Link
                         to={`${editTicketTypePath}?ticketTypeId=${encodeURIComponent(type.id)}`}
-                        className="oa-link"
+                        className={`oa-link oa-ticketing-types-table__name-link ${
+                          type.is_active ? 'oa-ticketing-types-table__name-link--active' : 'oa-ticketing-types-table__name-link--inactive'
+                        }`}
                       >
                         {type.name}
                       </Link>
                     </td>
                     <td>
-                      <span className={`oa-badge oa-badge-${type.seating_mode === 'reserved_seating' ? 'info' : 'default'}`}>
+                      <span className={`oa-badge oa-ticketing-types-table__pill oa-badge--${type.seating_mode === 'reserved_seating' ? 'info' : 'neutral'}`}>
                         {type.seating_mode === 'reserved_seating'
                           ? t('ticketing.reservedSeating.mode.reservedSeating')
                           : t('ticketing.reservedSeating.mode.generalAdmission')}
@@ -793,26 +874,35 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
                         : t('ticketing.detail.values.unlimited')}
                     </td>
                     <td>
-                      <span className={`oa-badge oa-badge-${type.is_active ? 'success' : 'default'}`}>
+                      <span
+                        className={`oa-badge oa-ticketing-types-table__pill oa-ticketing-types-table__status-pill ${
+                          type.is_active
+                            ? 'oa-ticketing-types-table__status-pill--active'
+                            : 'oa-ticketing-types-table__status-pill--inactive'
+                        }`}
+                      >
                         {type.is_active
                           ? t('ticketing.detail.values.status.active')
                           : t('ticketing.detail.values.status.inactive')}
                       </span>
                     </td>
                     <td>
-                      {type.seating_mode === 'reserved_seating' && type.seat_map_id ? (
+                      <div className="oa-ticketing-types-table__actions">
                         <Link
-                          to={getLink('admin.ticketingEvents.seatMaps.builder', {
-                            eventId: id,
-                            seatMapId: type.seat_map_id,
-                          })}
-                          className="oa-link oa-ticketing-seat-link"
+                          to={`${editTicketTypePath}?ticketTypeId=${encodeURIComponent(type.id)}`}
+                          className="oa-btn oa-btn--ghost oa-btn--dense oa-ticketing-types-table__action-btn"
                         >
-                          {t('ticketing.reservedSeating.admin.manageSeats')}
+                          Edit
                         </Link>
-                      ) : (
-                        t('ticketing.detail.values.unavailable')
-                      )}
+                        <button
+                          type="button"
+                          className={`oa-btn ${type.is_active ? 'oa-btn--secondary' : 'oa-btn--primary'} oa-btn--dense oa-ticketing-types-table__action-btn`}
+                          onClick={() => setStatusChangeTarget(type)}
+                          disabled={!isOnline || USE_FAKE_DATA || toggleTicketTypeStatusMutation.isPending}
+                        >
+                          {type.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -821,6 +911,50 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!statusChangeTarget}
+        title={statusChangeNextActive ? 'Activate Ticket Type' : 'Deactivate Ticket Type'}
+        description={statusChangeDescription}
+        confirmLabel={
+          toggleTicketTypeStatusMutation.isPending
+            ? (statusChangeNextActive ? 'Activating...' : 'Deactivating...')
+            : (statusChangeNextActive ? 'Activate' : 'Deactivate')
+        }
+        variant={statusChangeNextActive ? 'primary' : 'danger'}
+        onCancel={() => {
+          if (toggleTicketTypeStatusMutation.isPending) return
+          setStatusChangeTarget(null)
+        }}
+        onConfirm={() => {
+          if (!statusChangeTarget || toggleTicketTypeStatusMutation.isPending) return
+          toggleTicketTypeStatusMutation.mutate({
+            ticketType: statusChangeTarget,
+            nextActive: statusChangeNextActive,
+          })
+        }}
+      />
+
+      <ConfirmDialog
+        open={pendingVisibilityChange !== null}
+        title={visibilityConfirmTitle}
+        description={visibilityConfirmDescription}
+        confirmLabel={isUpdatingVisibility ? 'Updating...' : visibilityConfirmLabel}
+        variant={pendingVisibilityChange === 'hidden' ? 'danger' : 'primary'}
+        onCancel={() => {
+          if (isUpdatingVisibility) return
+          setPendingVisibilityChange(null)
+        }}
+        onConfirm={() => {
+          if (!pendingVisibilityChange || isUpdatingVisibility) return
+          void (async () => {
+            const success = await applyVisibilityChange(pendingVisibilityChange)
+            if (success) {
+              setPendingVisibilityChange(null)
+            }
+          })()
+        }}
+      />
     </div>
   )
 

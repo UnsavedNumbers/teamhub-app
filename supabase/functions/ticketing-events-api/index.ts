@@ -157,7 +157,6 @@ async function handleEventsList(orgId: string, url: URL, client: any) {
   if (seasonIds.length > 0) query = query.in("season_id", seasonIds)
   if (venueIds.length > 0) query = query.in("venue_id", venueIds)
   if (status) query = query.eq("status", status)
-  if (search) query = query.textSearch("search_vector", search, { type: "websearch", config: "english" })
   if (dateFrom) query = query.gte("starts_at", dateFrom.toISOString())
   if (dateTo) query = query.lte("starts_at", dateTo.toISOString())
 
@@ -214,10 +213,39 @@ async function handleEventsList(orgId: string, url: URL, client: any) {
     }
   })
 
+  const searchTerms = search
+    ? search
+      .toLowerCase()
+      .split(/\s+/)
+      .map((term) => term.trim())
+      .filter(Boolean)
+    : []
+
+  const searchFiltered =
+    searchTerms.length === 0
+      ? hydrated
+      : hydrated.filter((e) => {
+        const searchableBlob = [
+          e.title,
+          e.description,
+          e.opponent,
+          e.venue_name,
+          e.venue_city,
+          e.venue_state,
+          e.programs?.name ?? e.program_name_cached,
+          e.seasons?.name ?? e.season_name_cached,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+
+        return searchTerms.every((term) => searchableBlob.includes(term))
+      })
+
   // Apply sale_status filter after computation
   const filtered = saleStatusFilter
-    ? hydrated.filter((e) => e.sale_status === saleStatusFilter)
-    : hydrated
+    ? searchFiltered.filter((e) => e.sale_status === saleStatusFilter)
+    : searchFiltered
 
   // Aggregations
   const countsByStatus: Record<string, number> = {}

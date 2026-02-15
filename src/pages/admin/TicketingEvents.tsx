@@ -1,9 +1,10 @@
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
+import { ConfirmDialog } from '@/components/admin'
 import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
 import { QUERY_KEY_ORG_SLUG } from '@/components/admin/PublicUrlBanner'
 import EmptyState from '@/components/platformAdmin/EmptyState'
@@ -75,7 +76,7 @@ const formatDateTimeRange = (start: string, end: string, timezone?: string | nul
   const dateFormatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', timeZone: timezone || undefined })
   const timeFormatter = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZone: timezone || undefined })
   if (sameDay) {
-    return `${dateFormatter.format(startDate)} ? ${timeFormatter.format(startDate)} - ${timeFormatter.format(endDate)}`
+    return `${dateFormatter.format(startDate)}, ${timeFormatter.format(startDate)} - ${timeFormatter.format(endDate)}`
   }
   return `${dateFormatter.format(startDate)} ${timeFormatter.format(startDate)} - ${dateFormatter.format(endDate)} ${timeFormatter.format(endDate)}`
 }
@@ -176,7 +177,7 @@ function ActiveFilterChips({
   if (filters.status) chips.push({ label: `Status: ${filters.status}`, key: 'status' })
   if (filters.saleStatus) chips.push({ label: `Sale: ${filters.saleStatus}`, key: 'saleStatus' })
   if (filters.datePreset) chips.push({ label: `Date: ${filters.datePreset.replace('_', ' ')}`, key: 'datePreset' })
-  if (filters.dateFrom || filters.dateTo) chips.push({ label: `Date: ${filters.dateFrom || '8'} ? ${filters.dateTo || '8'}`, key: 'dateRange' })
+  if (filters.dateFrom || filters.dateTo) chips.push({ label: `Date: ${filters.dateFrom || 'Any'} to ${filters.dateTo || 'Any'}`, key: 'dateRange' })
   filters.programIds?.forEach((id) => {
     const program = programs.find((p) => p.id === id)
     chips.push({ label: `Program: ${program?.name || id}`, key: 'programIds', value: id })
@@ -204,8 +205,9 @@ function ActiveFilterChips({
             className="oa-filter-chip__remove"
             onClick={() => onRemove(chip.key, chip.value)}
             aria-label="Remove filter"
+            type="button"
           >
-            ?
+            x
           </button>
         </span>
       ))}
@@ -223,14 +225,16 @@ function StatsBar({ total, ticketsSold, revenue }: { total?: number; ticketsSold
     { key: 'revenue', label: 'Revenue', value: revenue !== undefined ? formatCurrency(revenue || 0) : '$0.00' },
   ]
   return (
-    <div className="oa-ticketing-metrics">
-      {stats.map((stat) => (
-        <div key={stat.key} className={cn('oa-ticketing-metric', `oa-ticketing-metric--${stat.key}`)}>
-          <p className="oa-ticketing-metric__label">{stat.label}</p>
-          <p className="oa-ticketing-metric__value">{stat.value}</p>
-        </div>
-      ))}
-    </div>
+    <section className="org-stats-section oa-ticketing-stats-section">
+      <div className="oa-ticketing-org-stats-grid">
+        {stats.map((stat) => (
+          <div key={stat.key} className="org-stat-box">
+            <span className="org-stat-label">{stat.label}</span>
+            <span className="org-stat-value">{stat.value}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -331,18 +335,54 @@ function FilterDrawer({
   onApply: (next: Partial<Filters>) => void
 }) {
   const [draft, setDraft] = useState<Filters>(filters)
+  const [venueSearch, setVenueSearch] = useState('')
+  const [isVenueMenuOpen, setIsVenueMenuOpen] = useState(false)
+  const venuePickerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     setDraft(filters)
+    setVenueSearch('')
+    setIsVenueMenuOpen(false)
   }, [filters, open])
+
+  useEffect(() => {
+    if (!isVenueMenuOpen) return
+
+    const onDocumentMouseDown = (event: MouseEvent) => {
+      if (!venuePickerRef.current) return
+      if (venuePickerRef.current.contains(event.target as Node)) return
+      setIsVenueMenuOpen(false)
+    }
+
+    document.addEventListener('mousedown', onDocumentMouseDown)
+    return () => document.removeEventListener('mousedown', onDocumentMouseDown)
+  }, [isVenueMenuOpen])
 
   const toggleSet = (key: 'programIds' | 'seasonIds' | 'venueIds', id: string) => {
     setDraft((prev) => {
       const current = new Set(prev[key])
-      current.has(id) ? current.delete(id) : current.add(id)
+      if (current.has(id)) current.delete(id)
+      else current.add(id)
       return { ...prev, [key]: Array.from(current) }
     })
   }
+
+  const selectedVenueSet = useMemo(() => new Set(draft.venueIds), [draft.venueIds])
+  const filteredVenues = useMemo(() => {
+    const query = venueSearch.trim().toLowerCase()
+    if (!query) return venues
+    return venues.filter((venue) => {
+      const searchable = [venue.name, venue.city, venue.state, venue.address]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return searchable.includes(query)
+    })
+  }, [venues, venueSearch])
+  const selectedVenues = useMemo(
+    () => venues.filter((venue) => selectedVenueSet.has(venue.id)),
+    [venues, selectedVenueSet]
+  )
 
   const apply = () => {
     onApply({ ...draft, page: 1 })
@@ -372,8 +412,8 @@ function FilterDrawer({
           <Button variant="ghost" icon="close" onClick={onClose} />
         </div>
 
-        <div className="oa-space-y-4">
-          <div>
+        <div className="oa-ticketing-filter-form">
+          <div className="oa-ticketing-filter-block">
             <label className="oa-label">Date preset</label>
             <select
               className="oa-input"
@@ -386,7 +426,7 @@ function FilterDrawer({
               ))}
             </select>
           </div>
-          <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-2 oa-gap-3">
+          <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-2 oa-gap-4">
             <div>
               <DatePicker
                 label="Start date"
@@ -404,7 +444,7 @@ function FilterDrawer({
             </div>
           </div>
 
-          <div>
+          <div className="oa-ticketing-filter-block">
             <label className="oa-label">Programs</label>
             <div className="oa-flex oa-flex-wrap oa-gap-2">
               {programs.map((p) => (
@@ -421,7 +461,7 @@ function FilterDrawer({
             </div>
           </div>
 
-          <div>
+          <div className="oa-ticketing-filter-block">
             <label className="oa-label">Seasons</label>
             <div className="oa-flex oa-flex-wrap oa-gap-2">
               {seasons.map((s) => (
@@ -438,25 +478,78 @@ function FilterDrawer({
             </div>
           </div>
 
-          <div>
+          <div className="oa-ticketing-filter-block">
             <label className="oa-label">Venues</label>
-            <div className="oa-flex oa-flex-wrap oa-gap-2">
-              {venues.map((v) => (
-                <Button
-                  key={v.id}
-                  variant={draft.venueIds.includes(v.id) ? 'primary' : 'secondary'}
-                  size="dense"
-                  onClick={() => toggleSet('venueIds', v.id)}
-                >
-                  {v.name}
-                </Button>
-              ))}
-              {venues.length === 0 && <div className="oa-text-sm oa-text-muted">No venues</div>}
+            <div className="oa-ticketing-venue-filter" ref={venuePickerRef}>
+              <div className="oa-ticketing-venue-filter__search-wrap">
+                <span className="material-symbols-outlined oa-ticketing-venue-filter__search-icon">search</span>
+                <input
+                  className="oa-input oa-ticketing-venue-filter__search"
+                  type="text"
+                  placeholder="Search venues"
+                  value={venueSearch}
+                  onFocus={() => setIsVenueMenuOpen(true)}
+                  onChange={(e) => {
+                    setVenueSearch(e.target.value)
+                    if (!isVenueMenuOpen) setIsVenueMenuOpen(true)
+                  }}
+                />
+              </div>
+
+              {isVenueMenuOpen && (
+                <div className="oa-ticketing-venue-filter__menu" role="listbox" aria-label="Venue options">
+                  {venues.length === 0 && <div className="oa-ticketing-venue-filter__empty">No venues</div>}
+                  {venues.length > 0 && filteredVenues.length === 0 && (
+                    <div className="oa-ticketing-venue-filter__empty">No venues match your search</div>
+                  )}
+                  {filteredVenues.map((venue) => {
+                    const isSelected = selectedVenueSet.has(venue.id)
+                    return (
+                      <button
+                        key={venue.id}
+                        type="button"
+                        className={cn('oa-ticketing-venue-filter__option', isSelected && 'is-selected')}
+                        onClick={() => toggleSet('venueIds', venue.id)}
+                        role="option"
+                        aria-selected={isSelected}
+                      >
+                        <span className="oa-ticketing-venue-filter__option-text">
+                          <span className="oa-ticketing-venue-filter__option-name">{venue.name}</span>
+                          {(venue.city || venue.state) && (
+                            <span className="oa-ticketing-venue-filter__option-meta">
+                              {[venue.city, venue.state].filter(Boolean).join(', ')}
+                            </span>
+                          )}
+                        </span>
+                        {isSelected && <span className="material-symbols-outlined oa-ticketing-venue-filter__option-check">check</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {selectedVenues.length > 0 && (
+                <div className="oa-filter-chips oa-ticketing-venue-filter__chips">
+                  {selectedVenues.map((venue) => (
+                    <span key={venue.id} className="oa-filter-chip">
+                      <span className="oa-filter-chip__label">{venue.name}</span>
+                      <button
+                        className="oa-filter-chip__remove"
+                        onClick={() => toggleSet('venueIds', venue.id)}
+                        aria-label={`Remove ${venue.name}`}
+                        type="button"
+                      >
+                        <span className="material-symbols-outlined">close</span>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="oa-grid oa-grid-cols-2 oa-gap-3">
-            <div>
+          <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-2 oa-gap-4">
+            <div className="oa-ticketing-filter-block">
               <label className="oa-label">Event status</label>
               <select
                 className="oa-input"
@@ -469,7 +562,7 @@ function FilterDrawer({
                 ))}
               </select>
             </div>
-            <div>
+            <div className="oa-ticketing-filter-block">
               <label className="oa-label">Sale status</label>
               <select
                 className="oa-input"
@@ -519,7 +612,15 @@ function GridView({
         const hasCapacity = event.capacity_total !== null && event.capacity_total !== undefined
         const progressValue = typeof event.ticket_progress_pct === 'number' ? event.ticket_progress_pct : 0
         return (
-          <article key={event.id} className="oa-ticket-card">
+          <article key={event.id} className="oa-ticket-card oa-ticket-card--with-delete">
+            <button
+              type="button"
+              className="oa-ticket-card__delete-icon"
+              aria-label={`Delete ${event.title}`}
+              onClick={() => onDelete(event.id)}
+            >
+              <span className="material-symbols-outlined">delete</span>
+            </button>
             <div className="oa-ticket-card__body">
               <div className="oa-ticket-card__content">
                 <div className="oa-ticket-card__chips">
@@ -564,9 +665,6 @@ function GridView({
               <Button variant="secondary" size="dense" icon="content_copy" onClick={() => onDuplicate(event.id)} className="oa-ticket-card__action">
                 Duplicate
               </Button>
-              <Button variant="danger" size="dense" icon="delete" onClick={() => onDelete(event.id)} className="oa-ticket-card__action">
-                Delete
-              </Button>
               <Button variant="secondary" size="dense" icon="open_in_new" onClick={() => onView(event.id, event.event_id)} className="oa-ticket-card__action">
                 Open
               </Button>
@@ -604,10 +702,10 @@ function ListView({
               <div className="oa-ticket-list__title">{event.title}</div>
               <div className="oa-ticket-list__meta">
                 {formatDateTimeRange(event.starts_at, event.ends_at, event.timezone)}
-                {event.venue?.name ? ` ? ${event.venue.name}` : ''}
+                {event.venue?.name ? ` | ${event.venue.name}` : ''}
               </div>
               <div className="oa-ticket-list__meta oa-ticket-list__meta--sub">
-                {event.program?.name ? `${event.program.name}` : ''}{event.opponent ? ` ? ${event.is_home ? 'Home' : 'Away'} vs ${event.opponent}` : ''}
+                {event.program?.name ? `${event.program.name}` : ''}{event.opponent ? ` | ${event.is_home ? 'Home' : 'Away'} vs ${event.opponent}` : ''}
               </div>
             </div>
           </div>
@@ -763,7 +861,7 @@ function PaginationControls({
   return (
     <div className="oa-flex oa-justify-between oa-items-center oa-mt-4 oa-flex-wrap oa-gap-2">
       <div className="oa-text-sm oa-text-muted">
-        Page {page} of {totalPages} ? {total} results
+        Page {page} of {totalPages} - {total} results
       </div>
       <div className="oa-flex oa-gap-2 oa-items-center">
         <select className="oa-input" value={perPage} onChange={(e) => onPerPageChange(Number(e.target.value))}>
@@ -791,6 +889,7 @@ export default function TicketingEvents() {
   const [searchInput, setSearchInput] = useState(filters.search || '')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [calendarMonth, setCalendarMonth] = useState(new Date())
+  const [deleteDialog, setDeleteDialog] = useState<{ mode: 'single' | 'bulk'; ids: string[] } | null>(null)
   const isMobile = useIsMobile()
   const queryClient = useQueryClient()
 
@@ -879,15 +978,11 @@ export default function TicketingEvents() {
   const handleSearchChange = (value: string) => {
     setSearchInput(value)
   }
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchInput !== filters.search) {
-        updateFilters({ search: searchInput, page: 1 })
-      }
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [searchInput, filters.search])
+  const applySearch = () => {
+    const nextSearch = searchInput.trim()
+    if (nextSearch === (filters.search || '')) return
+    updateFilters({ search: nextSearch, page: 1 })
+  }
 
   const onView = (ticketedEventId: string, eventId?: string | null) => {
     if (!ticketedEventId || !eventId) {
@@ -899,14 +994,28 @@ export default function TicketingEvents() {
   }
 
   const handleDelete = (id: string) => {
-    if (!window.confirm('Delete this event?')) return
-    deleteMutation.mutate(id)
+    setDeleteDialog({ mode: 'single', ids: [id] })
   }
 
   const handleBulkDelete = () => {
     if (!selectedIds.size) return
-    if (!window.confirm(`Delete ${selectedIds.size} events?`)) return
-    bulkMutation.mutate({ event_ids: Array.from(selectedIds), action: 'delete' })
+    setDeleteDialog({ mode: 'bulk', ids: Array.from(selectedIds) })
+  }
+
+  const handleConfirmDelete = () => {
+    if (!deleteDialog) return
+    if (deleteDialog.mode === 'single') {
+      const id = deleteDialog.ids[0]
+      if (!id) return
+      deleteMutation.mutate(id, {
+        onSuccess: () => setDeleteDialog(null),
+      })
+      return
+    }
+    bulkMutation.mutate(
+      { event_ids: deleteDialog.ids, action: 'delete' },
+      { onSuccess: () => setDeleteDialog(null) }
+    )
   }
 
   const handleBulkStatus = (status: TicketedEvent['status']) => {
@@ -995,6 +1104,13 @@ export default function TicketingEvents() {
               placeholder="Search events, opponents, venues..."
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
+              onBlur={applySearch}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  applySearch()
+                }
+              }}
             />
           </div>
           <Button variant="secondary" icon="tune" onClick={() => setFiltersOpen(true)} className="oa-filter-btn">
@@ -1140,6 +1256,32 @@ export default function TicketingEvents() {
           onPerPageChange={(size) => updateFilters({ perPage: size, page: 1 })}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deleteDialog}
+        title={deleteDialog?.mode === 'bulk' ? 'Delete events' : 'Delete event'}
+        description={
+          deleteDialog?.mode === 'bulk'
+            ? `Delete ${deleteDialog.ids.length} events? This action cannot be undone.`
+            : 'Delete this event? This action cannot be undone.'
+        }
+        confirmLabel={
+          deleteDialog?.mode === 'bulk'
+            ? bulkMutation.isPending
+              ? 'Deleting...'
+              : 'Delete events'
+            : deleteMutation.isPending
+              ? 'Deleting...'
+              : 'Delete event'
+        }
+        variant="danger"
+        onCancel={() => {
+          const isBusy = deleteDialog?.mode === 'bulk' ? bulkMutation.isPending : deleteMutation.isPending
+          if (isBusy) return
+          setDeleteDialog(null)
+        }}
+        onConfirm={handleConfirmDelete}
+      />
 
       {isMobile && (
         <button
