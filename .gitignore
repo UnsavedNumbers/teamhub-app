@@ -129,6 +129,7 @@ Desktop.ini
 supabase/tmp
 supabase/.temp
 .supabase.co
+supabase/migrations/
 
 # Docs
 designs/
