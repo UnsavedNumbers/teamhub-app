@@ -1034,6 +1034,80 @@ serve(async (req) => {
         webhookResult.amount_cents = amountReceived
         webhookResult.message = `Guardian fee payment succeeded: $${(amountReceived / 100).toFixed(2)} (${paymentType}) for checkout ${checkout.id.slice(-8).toUpperCase()}`
 
+        // Send payment completion notification
+        if (checkout.parent_id) {
+          try {
+            // Get fee assignment details from checkout items
+            const { data: items } = await supabase
+              .from("checkout_session_items")
+              .select("fee_assignment_id, fee_assignment:fee_assignments(fee:fees(id, description))")
+              .eq("checkout_session_id", checkout.id)
+              .limit(1)
+
+            const feeAssignmentId = items?.[0]?.fee_assignment_id as string | undefined
+            const fee = (items?.[0]?.fee_assignment as any)?.fee as { id?: string; description?: string } | undefined
+            const feeDescription = fee?.description || "Fee"
+            const amountDollars = (amountReceived / 100).toFixed(2)
+
+            // Create in-app notification
+            await supabase.from("user_notifications").insert({
+              user_id: checkout.parent_id,
+              org_id: checkout.org_id,
+              team_id: null,
+              action: "fee_payment_completed",
+              role_context: "guardian",
+              presentation_type: "info",
+              entity_type: "fee",
+              entity_id: fee?.id || feeAssignmentId || null,
+              title: "Payment Completed",
+              body: `Your payment of $${amountDollars} for ${feeDescription} has been successfully processed.`,
+              link_url: "/portal/payments",
+              dedupe_key: `fee_payment_completed:${checkout.parent_id}:${payment.id}`,
+              type: "fee_payment_completed",
+              metadata: {
+                payment_id: payment.id,
+                fee_assignment_id: feeAssignmentId,
+                amount_cents: amountReceived,
+                currency: currency,
+              },
+            })
+
+            // Enqueue email notification
+            const { data: user } = await supabase
+              .from("users")
+              .select("email")
+              .eq("id", checkout.parent_id)
+              .single()
+
+            if (user?.email) {
+              await supabase.from("notification_jobs").insert({
+                org_id: checkout.org_id,
+                user_id: checkout.parent_id,
+                email: user.email,
+                type: "payment_receipt",
+                payload: {
+                  action: "fee_payment_completed",
+                  title: "Payment Completed",
+                  body: `Your payment of $${amountDollars} for ${feeDescription} has been successfully processed.`,
+                  link_url: "/portal/payments",
+                  entity_type: "fee",
+                  entity_id: fee?.id || feeAssignmentId || null,
+                  payment_id: payment.id,
+                  fee_assignment_id: feeAssignmentId,
+                  amount_cents: amountReceived,
+                  currency: currency,
+                },
+                status: "queued",
+                retry_count: 0,
+                next_retry_at: null,
+              })
+            }
+          } catch (notifErr) {
+            // Don't fail the webhook if notification fails
+            console.error("Failed to send payment completion notification:", notifErr)
+          }
+        }
+
         break
       }
 
@@ -1083,6 +1157,83 @@ serve(async (req) => {
           .update({ status: "failed", stripe_payment_intent_id: paymentIntentId })
           .eq("id", checkout.id)
         if (updCheckoutErr) throw updCheckoutErr
+
+        // Send payment failure notification
+        if (checkout.parent_id) {
+          try {
+            // Get fee assignment details from checkout items
+            const { data: items } = await supabase
+              .from("checkout_session_items")
+              .select("fee_assignment_id, fee_assignment:fee_assignments(fee:fees(id, description))")
+              .eq("checkout_session_id", checkout.id)
+              .limit(1)
+
+            const feeAssignmentId = items?.[0]?.fee_assignment_id as string | undefined
+            const fee = (items?.[0]?.fee_assignment as any)?.fee as { id?: string; description?: string } | undefined
+            const feeDescription = fee?.description || "Fee"
+            const amountDollars = ((pi.amount ?? 0) / 100).toFixed(2)
+            const errorMessage = pi.last_payment_error?.message || "Payment could not be processed"
+
+            // Create in-app notification
+            await supabase.from("user_notifications").insert({
+              user_id: checkout.parent_id,
+              org_id: checkout.org_id,
+              team_id: null,
+              action: "fee_payment_failed",
+              role_context: "guardian",
+              presentation_type: "warning",
+              entity_type: "fee",
+              entity_id: fee?.id || feeAssignmentId || null,
+              title: "Payment Failed",
+              body: `Your payment of $${amountDollars} for ${feeDescription} could not be processed. ${errorMessage}. Please try again or contact support.`,
+              link_url: "/portal/payments",
+              dedupe_key: `fee_payment_failed:${checkout.parent_id}:${paymentIntentId}`,
+              type: "fee_payment_failed",
+              metadata: {
+                payment_intent_id: paymentIntentId,
+                fee_assignment_id: feeAssignmentId,
+                amount_cents: pi.amount ?? 0,
+                currency: currency,
+                error_message: errorMessage,
+              },
+            })
+
+            // Enqueue email notification
+            const { data: user } = await supabase
+              .from("users")
+              .select("email")
+              .eq("id", checkout.parent_id)
+              .single()
+
+            if (user?.email) {
+              await supabase.from("notification_jobs").insert({
+                org_id: checkout.org_id,
+                user_id: checkout.parent_id,
+                email: user.email,
+                type: "event_reminder", // Use event_reminder for payment failures
+                payload: {
+                  action: "fee_payment_failed",
+                  title: "Payment Failed",
+                  body: `Your payment of $${amountDollars} for ${feeDescription} could not be processed. ${errorMessage}. Please try again or contact support.`,
+                  link_url: "/portal/payments",
+                  entity_type: "fee",
+                  entity_id: fee?.id || feeAssignmentId || null,
+                  payment_intent_id: paymentIntentId,
+                  fee_assignment_id: feeAssignmentId,
+                  amount_cents: pi.amount ?? 0,
+                  currency: currency,
+                  error_message: errorMessage,
+                },
+                status: "queued",
+                retry_count: 0,
+                next_retry_at: null,
+              })
+            }
+          } catch (notifErr) {
+            // Don't fail the webhook if notification fails
+            console.error("Failed to send payment failure notification:", notifErr)
+          }
+        }
 
         break
       }
@@ -1146,7 +1297,7 @@ serve(async (req) => {
 
         if (error) throw error
 
-        // Record state changes for audit
+        // Record state changes for audit and send notifications
         if (existingOrg) {
           const prevDueRaw: any = existingOrg.stripe_requirements_due
           const prevCurrentlyDue = Array.isArray(prevDueRaw?.currently_due)
@@ -1174,6 +1325,68 @@ serve(async (req) => {
                 deadline,
               },
             })
+
+            // Send notification based on status change
+            if (!existingOrg.stripe_payouts_enabled && payoutsEnabled) {
+              // Payout account connected/enabled - notify all org admins
+              const { data: orgAdmins } = await supabase
+                .from("organization_members")
+                .select("user_id")
+                .eq("org_id", existingOrg.id)
+                .eq("role", "org_admin")
+
+              if (orgAdmins && orgAdmins.length > 0) {
+                const notifications = orgAdmins
+                  .filter(m => m.user_id)
+                  .map(m => ({
+                    user_id: m.user_id!,
+                    org_id: existingOrg.id,
+                    action: "payout_account_connected" as const,
+                    role_context: "org_admin" as const,
+                    presentation_type: "info" as const,
+                    title: "Payout Account Connected",
+                    body: "Your Stripe payout account has been successfully connected and enabled.",
+                    link_url: "/admin/settings/payments",
+                    dedupe_key: `payout_account_connected:${existingOrg.id}:${m.user_id}:${acct.id}`,
+                    type: "payout_account_connected" as const,
+                  }))
+
+                await supabase.from("user_notifications").insert(notifications)
+                  .catch((err) => console.error("Failed to create payout connected notifications:", err))
+              }
+            } else if (existingOrg.stripe_payouts_enabled && !payoutsEnabled) {
+              // Payout account issue/disabled - notify all org admins
+              const { data: orgAdmins } = await supabase
+                .from("organization_members")
+                .select("user_id")
+                .eq("org_id", existingOrg.id)
+                .eq("role", "org_admin")
+
+              if (orgAdmins && orgAdmins.length > 0) {
+                const notifications = orgAdmins
+                  .filter(m => m.user_id)
+                  .map(m => ({
+                    user_id: m.user_id!,
+                    org_id: existingOrg.id,
+                    action: "payout_account_issue" as const,
+                    role_context: "org_admin" as const,
+                    presentation_type: "warning" as const,
+                    title: "Payout Account Issue",
+                    body: `Your payout account has been disabled: ${disabledReason || "Unknown reason"}. Please check your Stripe account settings.`,
+                    link_url: "/admin/settings/payments",
+                    dedupe_key: `payout_account_issue:${existingOrg.id}:${m.user_id}:${acct.id}`,
+                    type: "payout_account_issue" as const,
+                    metadata: {
+                      disabled_reason: disabledReason,
+                      currently_due: currentlyDue,
+                      past_due: pastDue,
+                    },
+                  }))
+
+                await supabase.from("user_notifications").insert(notifications)
+                  .catch((err) => console.error("Failed to create payout issue notifications:", err))
+              }
+            }
           }
 
           if (prevCurrentlyDue === 0 && currentlyDue.length > 0) {

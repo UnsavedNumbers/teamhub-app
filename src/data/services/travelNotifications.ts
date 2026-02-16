@@ -2,6 +2,7 @@ import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
 import type { NotificationAction } from '../../types/notifications'
+import { notifyUsers } from './notificationServiceCore'
 
 const supabaseAny = supabase as any
 
@@ -26,7 +27,9 @@ export async function distributeTravelCreatedNotifications(input: TravelNotifica
             console.groupEnd()
             return
         }
-        const recipients = new Set<string>()
+
+        const guardianUserIds: string[] = []
+        const coachUserIds: string[] = []
 
         const { data: members, error: memberError } = await supabase
             .from('team_memberships')
@@ -45,17 +48,13 @@ export async function distributeTravelCreatedNotifications(input: TravelNotifica
             if (familyIds.length > 0) {
                 const { data: users, error: userError } = await supabase
                     .from('users')
-                    .select('id, preferences')
+                    .select('id')
                     .in('family_id', familyIds)
 
                 if (!userError && users) {
                     users.forEach(u => {
-                        const prefs = u.preferences as any
-                        const notifications = prefs?.notifications
-                        const isEnabled = notifications?.schedule_changes !== false
-
-                        if (isEnabled) {
-                            recipients.add(u.id)
+                        if (u.id !== input.created_by_user_id) {
+                            guardianUserIds.push(u.id)
                         }
                     })
                 }
@@ -69,43 +68,63 @@ export async function distributeTravelCreatedNotifications(input: TravelNotifica
 
         if (!coachError && coaches) {
             (coaches as { user_id?: string }[]).forEach(c => {
-                if (c.user_id) recipients.add(c.user_id)
+                if (c.user_id && c.user_id !== input.created_by_user_id) {
+                    coachUserIds.push(c.user_id)
+                }
             })
         }
 
-        recipients.delete(input.created_by_user_id)
-
-        if (recipients.size === 0) return
-
         const action: NotificationAction = 'travel_created'
+        let totalInAppCount = 0
 
-        const notificationsToInsert = Array.from(recipients).map(userId => ({
-            user_id: userId,
-            org_id: input.org_id,
-            team_id: input.team_id,
-            action: action,
-            title: `New Travel Plan: ${input.title}`,
-            body: `Travel scheduled for ${new Date(input.start_date).toLocaleDateString()}`,
-            link_url: `/travel/${input.travel_id}`,
-            role_context: 'guardian',
-            entity_type: 'travel',
-            entity_id: input.travel_id,
-            created_at: new Date().toISOString(),
-            metadata: {
-                start_date: input.start_date
+        // Notify guardians
+        if (guardianUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: guardianUserIds,
+                orgId: input.org_id,
+                teamId: input.team_id,
+                action,
+                roleContext: 'guardian',
+                title: `New Travel Plan: ${input.title}`,
+                body: `Travel scheduled for ${new Date(input.start_date).toLocaleDateString()}`,
+                linkUrl: `/portal/travel/${input.travel_id}`,
+                entityType: 'travel',
+                entityId: input.travel_id,
+                metadata: {
+                    start_date: input.start_date
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
             }
-        }))
+        }
 
-        const { error: insertError } = await supabaseAny
-            .from('user_notifications')
-            .insert(notificationsToInsert as any)
-
-        if (insertError) throw insertError
+        // Notify coaches
+        if (coachUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: coachUserIds,
+                orgId: input.org_id,
+                teamId: input.team_id,
+                action,
+                roleContext: 'coach',
+                title: `New Travel Plan: ${input.title}`,
+                body: `Travel scheduled for ${new Date(input.start_date).toLocaleDateString()}`,
+                linkUrl: `/portal/travel/${input.travel_id}`,
+                entityType: 'travel',
+                entityId: input.travel_id,
+                metadata: {
+                    start_date: input.start_date
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
 
         debug.perf.end('travelNotificationsService.distributeTravelCreatedNotifications')
-        debug.flow('TravelNotificationsService.distributeTravelCreatedNotifications', 'Notifications distributed successfully', { travelId: input.travel_id, recipientCount: notificationsToInsert.length })
+        debug.flow('TravelNotificationsService.distributeTravelCreatedNotifications', 'Notifications distributed successfully', { travelId: input.travel_id, recipientCount: totalInAppCount })
         console.groupEnd()
-        console.log(`[NotificationService] Distributed ${notificationsToInsert.length} travel-created notifications`)
+        console.log(`[NotificationService] Distributed ${totalInAppCount} travel-created notifications`)
 
     } catch (err) {
         debug.perf.end('travelNotificationsService.distributeTravelCreatedNotifications')
@@ -127,7 +146,9 @@ export async function distributeTravelCanceledNotifications(input: TravelNotific
             console.groupEnd()
             return
         }
-        const recipients = new Set<string>()
+
+        const guardianUserIds: string[] = []
+        const coachUserIds: string[] = []
 
         const { data: members, error: memberError } = await supabase
             .from('team_memberships')
@@ -146,17 +167,13 @@ export async function distributeTravelCanceledNotifications(input: TravelNotific
             if (familyIds.length > 0) {
                 const { data: users, error: userError } = await supabase
                     .from('users')
-                    .select('id, preferences')
+                    .select('id')
                     .in('family_id', familyIds)
 
                 if (!userError && users) {
                     users.forEach(u => {
-                        const prefs = u.preferences as any
-                        const notifications = prefs?.notifications
-                        const isEnabled = notifications?.schedule_changes !== false
-
-                        if (isEnabled) {
-                            recipients.add(u.id)
+                        if (u.id !== input.created_by_user_id) {
+                            guardianUserIds.push(u.id)
                         }
                     })
                 }
@@ -170,43 +187,65 @@ export async function distributeTravelCanceledNotifications(input: TravelNotific
 
         if (!coachError && coaches) {
             (coaches as { user_id?: string }[]).forEach(c => {
-                if (c.user_id) recipients.add(c.user_id)
+                if (c.user_id && c.user_id !== input.created_by_user_id) {
+                    coachUserIds.push(c.user_id)
+                }
             })
         }
 
-        recipients.delete(input.created_by_user_id)
-
-        if (recipients.size === 0) return
-
         const action: NotificationAction = 'travel_canceled'
+        let totalInAppCount = 0
 
-        const notificationsToInsert = Array.from(recipients).map(userId => ({
-            user_id: userId,
-            org_id: input.org_id,
-            team_id: input.team_id,
-            action: action,
-            title: `Travel Canceled: ${input.title}`,
-            body: `This travel plan has been canceled`,
-            link_url: `/travel/${input.travel_id}`,
-            role_context: 'guardian',
-            entity_type: 'travel',
-            entity_id: input.travel_id,
-            created_at: new Date().toISOString(),
-            metadata: {
-                start_date: input.start_date
+        // Notify guardians
+        if (guardianUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: guardianUserIds,
+                orgId: input.org_id,
+                teamId: input.team_id,
+                action,
+                roleContext: 'guardian',
+                title: `Travel Canceled: ${input.title}`,
+                body: `This travel plan has been canceled`,
+                linkUrl: `/portal/travel/${input.travel_id}`,
+                entityType: 'travel',
+                entityId: input.travel_id,
+                presentation: 'warning',
+                metadata: {
+                    start_date: input.start_date
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
             }
-        }))
+        }
 
-        const { error: insertError } = await supabaseAny
-            .from('user_notifications')
-            .insert(notificationsToInsert as any)
-
-        if (insertError) throw insertError
+        // Notify coaches
+        if (coachUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: coachUserIds,
+                orgId: input.org_id,
+                teamId: input.team_id,
+                action,
+                roleContext: 'coach',
+                title: `Travel Canceled: ${input.title}`,
+                body: `This travel plan has been canceled`,
+                linkUrl: `/portal/travel/${input.travel_id}`,
+                entityType: 'travel',
+                entityId: input.travel_id,
+                presentation: 'warning',
+                metadata: {
+                    start_date: input.start_date
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
 
         debug.perf.end('travelNotificationsService.distributeTravelCanceledNotifications')
-        debug.flow('TravelNotificationsService.distributeTravelCanceledNotifications', 'Notifications distributed successfully', { travelId: input.travel_id, recipientCount: notificationsToInsert.length })
+        debug.flow('TravelNotificationsService.distributeTravelCanceledNotifications', 'Notifications distributed successfully', { travelId: input.travel_id, recipientCount: totalInAppCount })
         console.groupEnd()
-        console.log(`[NotificationService] Distributed ${notificationsToInsert.length} travel-canceled notifications`)
+        console.log(`[NotificationService] Distributed ${totalInAppCount} travel-canceled notifications`)
 
     } catch (err) {
         debug.perf.end('travelNotificationsService.distributeTravelCanceledNotifications')

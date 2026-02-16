@@ -200,6 +200,67 @@ export async function setGeneralRSVP(
 
     if (error) throw error
 
+    // Notify coaches/admins about RSVP update
+    try {
+      const { notifyUsers } = await import('./notificationServiceCore')
+      
+      // Get event and team info
+      const { data: eventData } = await supabase
+        .from('events')
+        .select('id, title, team_id, org_id')
+        .eq('id', eventId)
+        .single()
+
+      if (eventData && eventData.org_id) {
+        // Get coaches and org admins for the team
+        const { data: orgMembers } = await supabase
+          .from('organization_members')
+          .select('user_id, role')
+          .eq('org_id', eventData.org_id)
+          .in('role', ['coach', 'org_admin'])
+
+        if (orgMembers) {
+          const coachUserIds = orgMembers
+            .filter(m => m.role === 'coach' || m.role === 'org_admin')
+            .map(m => m.user_id)
+            .filter((id): id is string => id !== null && id !== userId) // Don't notify the person who RSVP'd
+
+          if (coachUserIds.length > 0) {
+            // Get user name for notification
+            const { data: user } = await supabase
+              .from('users')
+              .select('display_name, first_name, last_name')
+              .eq('id', userId)
+              .single()
+
+            const userName = user?.display_name || 
+              (user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}`.trim() : 'User')
+
+            await notifyUsers({
+              userIds: coachUserIds,
+              orgId: eventData.org_id,
+              teamId: eventData.team_id || null,
+              action: 'event_rsvp_updated',
+              roleContext: 'coach',
+              title: 'RSVP Updated',
+              body: `${userName} RSVP'd ${status} for ${eventData.title || 'event'}`,
+              linkUrl: `/portal/calendar/events/${eventId}`,
+              entityType: 'event',
+              entityId: eventId,
+              metadata: {
+                user_id: userId,
+                status,
+                note,
+              },
+            }).catch(err => console.error('Failed to notify about RSVP update:', err))
+          }
+        }
+      }
+    } catch (notifErr) {
+      // Don't fail RSVP update if notification fails
+      console.error('Error sending RSVP notification:', notifErr)
+    }
+
     debug.perf.end('rsvpService.setGeneralRSVP')
     debug.flow('RSVPService.setGeneralRSVP', 'RSVP set successfully', { eventId, userId, status })
     console.groupEnd()
@@ -337,6 +398,68 @@ export async function setAthleteRSVP(
       .single()
 
     if (error) throw error
+
+    // Notify coaches/admins about RSVP update
+    try {
+      const { notifyUsers } = await import('./notificationServiceCore')
+      
+      // Get event and team info
+      const { data: eventData } = await supabase
+        .from('events')
+        .select('id, title, team_id, org_id')
+        .eq('id', eventId)
+        .single()
+
+      if (eventData && eventData.org_id) {
+        // Get coaches and org admins for the team
+        const { data: orgMembers } = await supabase
+          .from('organization_members')
+          .select('user_id, role')
+          .eq('org_id', eventData.org_id)
+          .in('role', ['coach', 'org_admin'])
+
+        if (orgMembers) {
+          const coachUserIds = orgMembers
+            .filter(m => m.role === 'coach' || m.role === 'org_admin')
+            .map(m => m.user_id)
+            .filter((id): id is string => id !== null && id !== context.userId) // Don't notify the person who RSVP'd
+
+          if (coachUserIds.length > 0) {
+            // Get athlete name for notification
+            const { data: athlete } = await supabase
+              .from('athletes')
+              .select('first_name, last_name')
+              .eq('id', childId)
+              .single()
+
+            const athleteName = athlete 
+              ? `${athlete.first_name} ${athlete.last_name}`.trim()
+              : 'Athlete'
+
+            await notifyUsers({
+              userIds: coachUserIds,
+              orgId: eventData.org_id,
+              teamId: eventData.team_id || null,
+              action: 'event_rsvp_updated',
+              roleContext: 'coach',
+              title: 'RSVP Updated',
+              body: `${athleteName} RSVP'd ${status} for ${eventData.title || 'event'}`,
+              linkUrl: `/portal/calendar/events/${eventId}`,
+              entityType: 'event',
+              entityId: eventId,
+              metadata: {
+                child_id: childId,
+                status,
+                note,
+              },
+            }).catch(err => console.error('Failed to notify about RSVP update:', err))
+          }
+        }
+      }
+    } catch (notifErr) {
+      // Don't fail RSVP update if notification fails
+      console.error('Error sending RSVP notification:', notifErr)
+    }
 
     debug.perf.end('rsvpService.setAthleteRSVP')
     debug.flow('RSVPService.setAthleteRSVP', 'Athlete RSVP set successfully', { eventId, childId, status })

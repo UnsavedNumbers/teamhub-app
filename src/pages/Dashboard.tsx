@@ -8,12 +8,10 @@ import {
   clearSetupOrganizationFlag,
 } from '../utils/setupOrganization'
 import {
-  getNotifications,
-  markNotificationRead,
-  markAllNotificationsRead,
   getAnnouncements,
   type Announcement,
 } from '../data/services/messagesService'
+import { notificationService } from '../data/services/notificationService'
 import {
   getUpcomingEventsForUser,
 } from '../data/services/eventsService'
@@ -83,7 +81,7 @@ export default function Dashboard() {
     if (!isReady) return
 
     const loadNotifications = async () => {
-      const { data, error } = await getNotifications(context, 3)
+      const { data, error } = await notificationService.getNotifications(context, 3)
       if (error) {
         console.error('Error loading notifications:', error)
         return
@@ -354,7 +352,8 @@ export default function Dashboard() {
     const previousUnread = [...unread]
     setUnread((prev) => prev.filter((n) => n.id !== notificationId))
 
-    const { success, error } = await markNotificationRead(context, notificationId)
+    const { data, error } = await notificationService.markAsRead(context, notificationId)
+    const success = !error && data
     
     // If update fails, restore and show error
     if (!success || error) {
@@ -373,7 +372,8 @@ export default function Dashboard() {
     const previousUnread = [...unread]
     setUnread([])
 
-    const { success, error } = await markAllNotificationsRead(context)
+    const { data, error } = await notificationService.markAllAsRead(context)
+    const success = !error && data
 
     if (!success || error) {
       setUnread(previousUnread)

@@ -434,6 +434,65 @@ export default function AdminSettings() {
     },
     [persistNotificationGroups]
   )
+
+  const handleUpdateDigestWindow = useCallback(
+    (groupId: NotificationGroup['id'], window: 'daily' | 'weekly') => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) =>
+          group.id === groupId ? { ...group, digestWindow: window } : group
+        )
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
+
+  const handleToggleQuietHours = useCallback(
+    (groupId: NotificationGroup['id'], enabled: boolean) => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) =>
+          group.id === groupId
+            ? {
+                ...group,
+                quietHoursEnabled: enabled,
+                quietHoursStart: enabled ? group.quietHoursStart || '22:00' : undefined,
+                quietHoursEnd: enabled ? group.quietHoursEnd || '08:00' : undefined,
+              }
+            : group
+        )
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
+
+  const handleUpdateQuietHours = useCallback(
+    (groupId: NotificationGroup['id'], start: string, end: string) => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) =>
+          group.id === groupId ? { ...group, quietHoursStart: start, quietHoursEnd: end } : group
+        )
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
+
+  const handleUpdateTimezone = useCallback(
+    (groupId: NotificationGroup['id'], timezone: string) => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) =>
+          group.id === groupId ? { ...group, timezone } : group
+        )
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
   
   // Handle workflow save with debouncing
   const debouncedSaveWorkflow = useDebounce(async () => {
@@ -650,6 +709,10 @@ export default function AdminSettings() {
               onToggleGroupDigest={handleToggleGroupDigest}
               onToggleAction={handleToggleAction}
               onToggleChannel={handleToggleChannel}
+              onUpdateDigestWindow={handleUpdateDigestWindow}
+              onToggleQuietHours={handleToggleQuietHours}
+              onUpdateQuietHours={handleUpdateQuietHours}
+              onUpdateTimezone={handleUpdateTimezone}
               saving={savingNotifications}
             />
           </Card>

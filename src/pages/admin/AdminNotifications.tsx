@@ -302,6 +302,11 @@ export default function AdminNotifications() {
         subtitle="Stay informed about important updates and activities across your organization"
         actions={
           <div className="oa-flex oa-gap-3">
+            <Link to="/admin/notifications/analytics">
+              <Button variant="ghost" icon="analytics">
+                Analytics
+              </Button>
+            </Link>
             <Link to="/admin/settings">
                  <Button variant="ghost" icon="settings">
                     Settings

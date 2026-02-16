@@ -879,17 +879,40 @@ export default function EditEvent() {
       }
 
       // Distribute notifications
-      const { distributeEventUpdateNotifications } = await import('../../data/services/notificationDistribution')
+      const { distributeEventUpdateNotifications, distributeEventRescheduledNotifications } = await import('../../data/services/notificationDistribution')
       const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', data.team_id!).single()
       if (teamData?.org_id) {
-          distributeEventUpdateNotifications({
-              id: eventId,
-              team_id: data.team_id!,
-              org_id: teamData.org_id,
-              title: data.title,
-              start_time: new Date(data.start_time).toISOString(),
-              created_by_user_id: context.userId
-          }).catch(err => console.error('Failed to distribute event update notifications:', err))
+          // Check if start_time changed (reschedule)
+          const { data: currentEvent } = await supabase
+              .from('events')
+              .select('start_time')
+              .eq('id', eventId)
+              .single()
+          
+          const newStartTime = new Date(data.start_time).toISOString()
+          const oldStartTime = currentEvent?.start_time
+          
+          if (oldStartTime && oldStartTime !== newStartTime) {
+              // Time changed - send rescheduled notification
+              distributeEventRescheduledNotifications({
+                  id: eventId,
+                  team_id: data.team_id!,
+                  org_id: teamData.org_id,
+                  title: data.title,
+                  start_time: newStartTime,
+                  created_by_user_id: context.userId
+              }, oldStartTime).catch(err => console.error('Failed to distribute event reschedule notifications:', err))
+          } else {
+              // Regular update
+              distributeEventUpdateNotifications({
+                  id: eventId,
+                  team_id: data.team_id!,
+                  org_id: teamData.org_id,
+                  title: data.title,
+                  start_time: newStartTime,
+                  created_by_user_id: context.userId
+              }).catch(err => console.error('Failed to distribute event update notifications:', err))
+          }
       }
 
       showSuccess('Event updated successfully!')

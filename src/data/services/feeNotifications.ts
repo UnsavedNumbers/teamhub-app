@@ -2,8 +2,7 @@ import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
 import type { NotificationAction } from '../../types/notifications'
-
-const supabaseAny = supabase as any
+import { notifyUsers } from './notificationServiceCore'
 
 interface FeeNotificationInput {
     fee_id: string
@@ -28,7 +27,8 @@ export async function distributeFeeAssignedNotifications(input: FeeNotificationI
             console.groupEnd()
             return
         }
-        const recipients = new Set<string>()
+
+        const guardianUserIds: string[] = []
 
         const { data: athlete, error: athleteError } = await supabase
             .from('athletes')
@@ -39,56 +39,51 @@ export async function distributeFeeAssignedNotifications(input: FeeNotificationI
         if (!athleteError && athlete?.family_id) {
             const { data: users, error: userError } = await supabase
                 .from('users')
-                .select('id, preferences')
+                .select('id')
                 .eq('family_id', athlete.family_id)
 
             if (!userError && users) {
                 users.forEach(u => {
-                    const prefs = u.preferences as any
-                    const notifications = prefs?.notifications
-                    const isEnabled = notifications?.payment_issues !== false
-
-                    if (isEnabled) {
-                        recipients.add(u.id)
+                    if (u.id !== input.created_by_user_id) {
+                        guardianUserIds.push(u.id)
                     }
                 })
             }
         }
 
-        recipients.delete(input.created_by_user_id)
-
-        if (recipients.size === 0) return
+        if (guardianUserIds.length === 0) {
+            debug.perf.end('feeNotificationsService.distributeFeeAssignedNotifications')
+            console.groupEnd()
+            return
+        }
 
         const action: NotificationAction = 'fee_assigned'
 
-        const notificationsToInsert = Array.from(recipients).map(userId => ({
-            user_id: userId,
-            org_id: input.org_id,
-            team_id: input.team_id || null,
-            action: action,
+        const result = await notifyUsers({
+            userIds: guardianUserIds,
+            orgId: input.org_id,
+            teamId: input.team_id || null,
+            action,
+            roleContext: 'guardian',
             title: `New Fee Assigned`,
             body: `${input.description} - $${input.amount.toFixed(2)}${input.due_date ? ` due ${new Date(input.due_date).toLocaleDateString()}` : ''}`,
-            link_url: `/payments/${input.fee_id}`,
-            role_context: 'guardian',
-            entity_type: 'fee',
-            entity_id: input.fee_id,
-            created_at: new Date().toISOString(),
+            linkUrl: `/portal/payments`,
+            entityType: 'fee',
+            entityId: input.fee_id,
             metadata: {
                 amount: input.amount,
                 due_date: input.due_date
             }
-        }))
-
-        const { error: insertError } = await supabaseAny
-            .from('user_notifications')
-            .insert(notificationsToInsert as any)
-
-        if (insertError) throw insertError
+        })
 
         debug.perf.end('feeNotificationsService.distributeFeeAssignedNotifications')
-        debug.flow('FeeNotificationsService.distributeFeeAssignedNotifications', 'Notifications distributed successfully', { feeId: input.fee_id, recipientCount: notificationsToInsert.length })
+        if (result.success) {
+            debug.flow('FeeNotificationsService.distributeFeeAssignedNotifications', 'Notifications distributed successfully', { feeId: input.fee_id, recipientCount: result.inAppCount })
+            console.log(`[NotificationService] Distributed ${result.inAppCount} fee-assigned notifications`)
+        } else {
+            debug.error('FeeNotificationsService.distributeFeeAssignedNotifications', 'Failed to distribute notifications', { error: result.error, feeId: input.fee_id })
+        }
         console.groupEnd()
-        console.log(`[NotificationService] Distributed ${notificationsToInsert.length} fee-assigned notifications`)
 
     } catch (err) {
         debug.perf.end('feeNotificationsService.distributeFeeAssignedNotifications')
@@ -110,7 +105,8 @@ export async function distributeFeeOverdueNotifications(input: FeeNotificationIn
             console.groupEnd()
             return
         }
-        const recipients = new Set<string>()
+
+        const guardianUserIds: string[] = []
 
         const { data: athlete, error: athleteError } = await supabase
             .from('athletes')
@@ -121,54 +117,50 @@ export async function distributeFeeOverdueNotifications(input: FeeNotificationIn
         if (!athleteError && athlete?.family_id) {
             const { data: users, error: userError } = await supabase
                 .from('users')
-                .select('id, preferences')
+                .select('id')
                 .eq('family_id', athlete.family_id)
 
             if (!userError && users) {
                 users.forEach(u => {
-                    const prefs = u.preferences as any
-                    const notifications = prefs?.notifications
-                    const isEnabled = notifications?.payment_issues !== false
-
-                    if (isEnabled) {
-                        recipients.add(u.id)
-                    }
+                    guardianUserIds.push(u.id)
                 })
             }
         }
 
-        if (recipients.size === 0) return
+        if (guardianUserIds.length === 0) {
+            debug.perf.end('feeNotificationsService.distributeFeeOverdueNotifications')
+            console.groupEnd()
+            return
+        }
 
         const action: NotificationAction = 'fee_overdue'
 
-        const notificationsToInsert = Array.from(recipients).map(userId => ({
-            user_id: userId,
-            org_id: input.org_id,
-            team_id: input.team_id || null,
-            action: action,
+        const result = await notifyUsers({
+            userIds: guardianUserIds,
+            orgId: input.org_id,
+            teamId: input.team_id || null,
+            action,
+            roleContext: 'guardian',
             title: `Payment Overdue`,
             body: `${input.description} - $${input.amount.toFixed(2)} is now overdue`,
-            link_url: `/payments/${input.fee_id}`,
-            role_context: 'guardian',
-            entity_type: 'fee',
-            entity_id: input.fee_id,
-            created_at: new Date().toISOString(),
+            linkUrl: `/portal/payments`,
+            entityType: 'fee',
+            entityId: input.fee_id,
+            presentation: 'warning',
             metadata: {
                 amount: input.amount,
                 due_date: input.due_date
             }
-        }))
-
-        const { error: insertError } = await supabaseAny
-            .from('user_notifications')
-            .insert(notificationsToInsert as any)
-
-        if (insertError) throw insertError
+        })
 
         debug.perf.end('feeNotificationsService.distributeFeeOverdueNotifications')
-        debug.flow('FeeNotificationsService.distributeFeeOverdueNotifications', 'Notifications distributed successfully', { feeId: input.fee_id, recipientCount: notificationsToInsert.length })
+        if (result.success) {
+            debug.flow('FeeNotificationsService.distributeFeeOverdueNotifications', 'Notifications distributed successfully', { feeId: input.fee_id, recipientCount: result.inAppCount })
+            console.log(`[NotificationService] Distributed ${result.inAppCount} fee-overdue notifications`)
+        } else {
+            debug.error('FeeNotificationsService.distributeFeeOverdueNotifications', 'Failed to distribute notifications', { error: result.error, feeId: input.fee_id })
+        }
         console.groupEnd()
-        console.log(`[NotificationService] Distributed ${notificationsToInsert.length} fee-overdue notifications`)
 
     } catch (err) {
         debug.perf.end('feeNotificationsService.distributeFeeOverdueNotifications')

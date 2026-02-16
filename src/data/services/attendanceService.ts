@@ -216,6 +216,68 @@ export async function updateAttendance(
             console.groupEnd()
             return { error: error ? new Error(error.message) : null }
         } else {
+            // Notify coaches/admins about attendance update
+            try {
+                const { notifyUsers } = await import('./notificationServiceCore')
+                
+                // Get event and team info
+                const { data: eventData } = await supabase
+                    .from('events')
+                    .select('id, title, team_id, org_id')
+                    .eq('id', eventId)
+                    .single()
+
+                if (eventData && eventData.org_id) {
+                    // Get coaches and org admins for the team
+                    const { data: orgMembers } = await supabase
+                        .from('organization_members')
+                        .select('user_id, role')
+                        .eq('org_id', eventData.org_id)
+                        .in('role', ['coach', 'org_admin'])
+
+                    if (orgMembers) {
+                        const coachUserIds = orgMembers
+                            .filter(m => m.role === 'coach' || m.role === 'org_admin')
+                            .map(m => m.user_id)
+                            .filter((id): id is string => id !== null && id !== context.userId) // Don't notify the person who updated
+
+                        if (coachUserIds.length > 0) {
+                            // Get athlete name for notification
+                            const { data: athlete } = await supabase
+                                .from('athletes')
+                                .select('first_name, last_name')
+                                .eq('id', childId)
+                                .single()
+
+                            const athleteName = athlete 
+                                ? `${athlete.first_name} ${athlete.last_name}`.trim()
+                                : 'Athlete'
+
+                            await notifyUsers({
+                                userIds: coachUserIds,
+                                orgId: eventData.org_id,
+                                teamId: eventData.team_id || null,
+                                action: 'event_attendance_updated',
+                                roleContext: 'coach',
+                                title: 'Attendance Updated',
+                                body: `${athleteName} attendance marked as ${status} for ${eventData.title || 'event'}`,
+                                linkUrl: `/portal/calendar/events/${eventId}`,
+                                entityType: 'event',
+                                entityId: eventId,
+                                metadata: {
+                                    child_id: childId,
+                                    status,
+                                    notes,
+                                },
+                            }).catch(err => console.error('Failed to notify about attendance update:', err))
+                        }
+                    }
+                }
+            } catch (notifErr) {
+                // Don't fail attendance update if notification fails
+                console.error('Error sending attendance notification:', notifErr)
+            }
+
             debug.flow('AttendanceService.updateAttendance', 'Attendance updated successfully', { eventId, childId, status })
             console.groupEnd()
             return { error: null }

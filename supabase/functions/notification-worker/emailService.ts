@@ -1,6 +1,8 @@
 // Email service for Supabase Edge Functions
 // Note: This is a Deno environment, so we use Deno APIs instead of Node.js
 
+import { getOrganizationBranding, injectBrandingVariables, type OrganizationBranding } from './brandingService.ts'
+
 export interface NotificationJob {
   id: string;
   org_id: string;
@@ -67,11 +69,31 @@ const EMAIL_CONFIG = {
 /**
  * Send a notification email using the compiled MJML template
  */
-export async function sendNotificationEmail(job: NotificationJob): Promise<EmailResult> {
+export async function sendNotificationEmail(
+  job: NotificationJob,
+  supabase?: any
+): Promise<EmailResult> {
   try {
     // Load compiled HTML template from Supabase storage or external URL
     // For now, we'll use a simple approach - templates should be hosted or embedded
-    const htmlContent = await loadTemplate(job.type, job.payload);
+    let htmlContent = await loadTemplate(job.type, job.payload);
+
+    // Inject organization branding if available
+    if (supabase && job.org_id) {
+      const branding = await getOrganizationBranding(job.org_id, supabase);
+      htmlContent = injectBrandingVariables(htmlContent, branding);
+      
+      // Also inject branding into payload for template variable replacement
+      job.payload = {
+        ...job.payload,
+        organization_logo_url: branding.logo_url || '',
+        organization_name: branding.organization_name,
+        organization_primary_color: branding.primary_color,
+        organization_secondary_color: branding.secondary_color,
+        email_footer_text: branding.email_footer_text || `© ${new Date().getFullYear()} ${branding.organization_name}. All rights reserved.`,
+        email_from_name: branding.email_from_name,
+      };
+    }
 
     // Get subject and preview
     const config = EMAIL_CONFIG[job.type];
@@ -98,7 +120,9 @@ export async function sendNotificationEmail(job: NotificationJob): Promise<Email
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'notifications@youthsports.team',
+        from: job.payload.email_from_name 
+          ? `${job.payload.email_from_name} <notifications@youthsports.team>`
+          : 'notifications@youthsports.team',
         to: job.email,
         subject,
         html: htmlContent,
@@ -154,9 +178,12 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
             </div>
             <p>{{#if is_required}}This is a required event. Please make sure to attend.{{else}}This is an optional event.{{/if}}</p>
             <div style="text-align: center; margin: 30px 0;">
-              <a href="{{url}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Event</a>
+              <a href="{{url}}" style="background-color: {{organization_primary_color}}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Event</a>
             </div>
             <p>Questions? Contact your coach or team administrator.</p>
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
+              {{email_footer_text}}
+            </div>
           </div>
         </body>
       </html>
@@ -170,8 +197,14 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
         </head>
         <body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px;">
-            <h1 style="color: #1e293b; margin-bottom: 20px;">YouthSports Team Hub</h1>
-            <h2 style="color: #1e293b;">New Message from {{sender_name}}</h2>
+            {{#if organization_logo_url}}
+            <div style="text-align: center; margin-bottom: 20px;">
+              <img src="{{organization_logo_url}}" alt="{{organization_name}}" style="max-height: 60px; max-width: 200px;" />
+            </div>
+            {{else}}
+            <h1 style="color: {{organization_secondary_color}}; margin-bottom: 20px;">{{organization_name}}</h1>
+            {{/if}}
+            <h2 style="color: {{organization_secondary_color}};">New Message from {{sender_name}}</h2>
             <p>Hi {{recipient_name}},</p>
             <p>You have a new message{{#if team_name}} for {{team_name}}{{/if}}:</p>
             <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -180,9 +213,12 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
               {{#if message_subject}}<p><strong>Subject: {{message_subject}}</strong></p>{{/if}}
             </div>
             <div style="text-align: center; margin: 30px 0;">
-              <a href="{{url}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Message</a>
+              <a href="{{url}}" style="background-color: {{organization_primary_color}}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Message</a>
             </div>
             <p>You can reply to this message through the Team Hub app.</p>
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
+              {{email_footer_text}}
+            </div>
           </div>
         </body>
       </html>
@@ -196,8 +232,14 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
         </head>
         <body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px;">
-            <h1 style="color: #1e293b; margin-bottom: 20px;">YouthSports Team Hub</h1>
-            <h2 style="color: #1e293b;">Payment Receipt</h2>
+            {{#if organization_logo_url}}
+            <div style="text-align: center; margin-bottom: 20px;">
+              <img src="{{organization_logo_url}}" alt="{{organization_name}}" style="max-height: 60px; max-width: 200px;" />
+            </div>
+            {{else}}
+            <h1 style="color: {{organization_secondary_color}}; margin-bottom: 20px;">{{organization_name}}</h1>
+            {{/if}}
+            <h2 style="color: {{organization_secondary_color}};">Payment Receipt</h2>
             <p>Hi {{recipient_name}},</p>
             <p>Thank you for your payment. Here are the details:</p>
             <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -214,9 +256,12 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
             </div>
             {{/if}}
             <div style="text-align: center; margin: 30px 0;">
-              <a href="{{url}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Receipt</a>
+              <a href="{{url}}" style="background-color: {{organization_primary_color}}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Receipt</a>
             </div>
             <p>If you have any questions about this payment, please contact your organization administrator.</p>
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
+              {{email_footer_text}}
+            </div>
           </div>
         </body>
       </html>
@@ -416,6 +461,10 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
                     <tr>
                       <td align="left" style="font-size:0px;padding:10px 25px;word-break:break-word;">
                         <div style="font-family:Arial, sans-serif;font-size:14px;line-height:1.5;text-align:left;color:#333333;">Best,<br> The {{organization_name}} Team</div>
+                    </tr>
+                    <tr>
+                      <td align="left" style="font-size:0px;padding:10px 25px;word-break:break-word;">
+                        <div style="font-family:Arial, sans-serif;font-size:12px;line-height:1.5;text-align:center;color:#94a3b8;">{{email_footer_text}}</div>
                       </td>
                     </tr>
                   </tbody>

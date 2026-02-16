@@ -159,6 +159,7 @@ const Sports = lazy(() => import('./pages/admin/Sports'))
 const SportDetail = lazy(() => import('./pages/admin/SportDetail'))
 const SportUpdate = lazy(() => import('./pages/admin/SportUpdate'))
 const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'))
+const AdminNotificationAnalytics = lazy(() => import('./pages/admin/AdminNotificationAnalytics'))
 const Programs = lazy(() => import('./pages/admin/Programs'))
 const ProgramDetail = lazy(() => import('./pages/admin/ProgramDetail'))
 const ProgramUpdate = lazy(() => import('./pages/admin/ProgramUpdate'))
@@ -618,6 +619,7 @@ function AppWithTheme() {
               <Route path="users/new" element={<CreateUser />} />
               <Route path="users/:id" element={<EditUser />} />
               <Route path="notifications" element={<AdminNotifications />} />
+              <Route path="notifications/analytics" element={<AdminNotificationAnalytics />} />
             
               {/* Organization */}
               <Route path="organization" element={<OrganizationSettings />} />

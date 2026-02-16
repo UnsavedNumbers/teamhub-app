@@ -1,11 +1,9 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import { useUserContext } from '../hooks/useUserContext'
-import { 
-  getNotifications, 
-  markNotificationRead, 
-  markAllNotificationsRead 
-} from '../data/services/messagesService'
+import { Link, Navigate } from 'react-router-dom'
+import { getLink, RouteKeys } from '../utils/routes'
+import { useOptionalAuth } from '../hooks/useAuth'
+import { useOrganization } from '../contexts/OrganizationContext'
+import { notificationService } from '../data/services/notificationService'
 import { getAthletes } from '../data/services/familyService'
 import { getTeamsForParent } from '../data/services/teamsService'
 import { NotificationRecord } from '../types/notifications'
@@ -104,26 +102,34 @@ import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 
 export default function Notifications() {
   useDebugLifecycle('Notifications')
-  const { context, isReady } = useUserContext()
-  
-  // State
+  const auth = useOptionalAuth()
+  const { currentOrganization, isLoading: orgLoading } = useOrganization()
+  const context = useMemo(
+    () => ({
+      userId: auth?.user?.id ?? '',
+      email: auth?.user?.email ?? null,
+      orgId: currentOrganization?.id ?? '',
+      organizationName: currentOrganization?.name ?? null,
+      roles: currentOrganization?.roles ?? [],
+      isPlatformAdmin: auth?.profile?.isPlatformAdmin ?? false,
+    }),
+    [auth?.user?.id, auth?.user?.email, currentOrganization?.id, currentOrganization?.name, currentOrganization?.roles, auth?.profile?.isPlatformAdmin]
+  )
+  const isReady = !auth?.loading && !orgLoading && !!auth?.user && !!currentOrganization
+
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [athletes, setAthletes] = useState<any[]>([])
   const [teams, setTeams] = useState<any[]>([])
   const programs = MOCK_PROGRAMS
   const sports = MOCK_SPORTS
-  
-  // Filters
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'archived'>('all')
   const [filterByType, setFilterByType] = useState<'all' | 'athlete' | 'team' | 'program' | 'sport'>('all')
-  
   const [selectedAthleteIds, setSelectedAthleteIds] = useState<Set<string>>(new Set())
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set())
   const [selectedProgramIds, setSelectedProgramIds] = useState<Set<string>>(new Set())
   const [selectedSportIds, setSelectedSportIds] = useState<Set<string>>(new Set())
-  
-  // Data Fetching
+
   useEffect(() => {
     if (!isReady) return
 
@@ -131,7 +137,7 @@ export default function Notifications() {
       setLoading(true)
       try {
         // Fetch Notifications
-        const { data: notifs, error: notifError } = await getNotifications(context, 50) // Fetch reasonable limit
+        const { data: notifs, error: notifError } = await notificationService.getNotifications(context, 50) // Fetch reasonable limit
         if (notifError) throw notifError
         setNotifications(notifs || [])
 
@@ -211,16 +217,16 @@ export default function Notifications() {
 
   // Actions
   const handleMarkAllRead = async () => {
-    const { success } = await markAllNotificationsRead(context)
-    if (success) {
+    const { data, error } = await notificationService.markAllAsRead(context)
+    if (!error && data) {
       setNotifications(prev => prev.map(n => ({ ...n, read_at: new Date().toISOString() })))
       showSuccess('All notifications marked as read')
     }
   }
 
   const handleMarkRead = async (id: string) => {
-    const { success } = await markNotificationRead(context, id)
-    if (success) {
+    const { data, error } = await notificationService.markAsRead(context, id)
+    if (!error && data) {
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n))
     }
   }
@@ -259,11 +265,15 @@ export default function Notifications() {
   }
 
   const getColorClass = (action: string) => {
-    // Return text class
     if (action.includes('urgent')) return 'text-red-500'
     if (action.includes('payment')) return 'text-emerald-600'
     return 'text-[var(--org-btn-primary-bg)]'
   }
+
+  if (!auth) return null
+  if (auth.loading && !auth.user) return null
+  if (!auth.user) return <Navigate to={getLink(RouteKeys.AUTH_LOGIN)} replace />
+  if (!currentOrganization && !orgLoading) return null
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-900 font-sans text-slate-900 dark:text-white">

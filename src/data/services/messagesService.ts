@@ -520,7 +520,6 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
     if (USE_FAKE_DATA) return
 
     try {
-        const recipients = new Set<string>()
         const orgId = announcement.org_id
 
         if (!orgId) {
@@ -528,9 +527,18 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
             return
         }
 
+        const action: NotificationAction = announcement.priority === 'urgent'
+            ? 'announcement_urgent'
+            : 'announcement_created'
+
+        const { notifyUsers } = await import('./notificationServiceCore')
+
         // 1. AUDIENCE RESOLUTION
         if (announcement.team_id) {
-            // TEAM ANNOUNCEMENT: Parents of athletes on this team
+            // TEAM ANNOUNCEMENT: Parents of athletes on this team + coaches
+            const guardianUserIds: string[] = []
+            const coachUserIds: string[] = []
+
             const { data: members, error: memberError } = await supabase
                 .from('team_memberships')
                 .select(`
@@ -548,19 +556,13 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
                 if (familyIds.length > 0) {
                     const { data: users, error: userError } = await supabase
                         .from('users')
-                        .select('id, preferences')
+                        .select('id')
                         .in('family_id', familyIds)
 
                     if (!userError && users) {
                         users.forEach(u => {
-                            // Check Preferences
-                            const prefs = u.preferences as any
-                            const notifications = prefs?.notifications
-                            // Default to TRUE if not set
-                            const isEnabled = notifications?.system_announcements !== false
-
-                            if (isEnabled) {
-                                recipients.add(u.id)
+                            if (u.id !== announcement.author_id && u.id !== context.userId) {
+                                guardianUserIds.push(u.id)
                             }
                         })
                     }
@@ -574,82 +576,123 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
                 .eq('team_id', announcement.team_id)
 
             if (!coachError && coaches) {
-                coaches.forEach((c: any) => recipients.add(c.user_id))
+                coaches.forEach((c: any) => {
+                    if (c.user_id && c.user_id !== announcement.author_id && c.user_id !== context.userId) {
+                        coachUserIds.push(c.user_id)
+                    }
+                })
             }
+
+            let totalInAppCount = 0
+
+            // Notify guardians
+            if (guardianUserIds.length > 0) {
+                const result = await notifyUsers({
+                    userIds: guardianUserIds,
+                    orgId,
+                    teamId: announcement.team_id,
+                    action,
+                    roleContext: 'guardian',
+                    title: announcement.title,
+                    body: announcement.content,
+                    linkUrl: `/portal/messages`,
+                    entityType: 'announcement',
+                    entityId: announcement.id,
+                    presentation: announcement.priority === 'urgent' ? 'urgent' : 'info',
+                    metadata: {
+                        priority: announcement.priority,
+                        type: announcement.type
+                    }
+                })
+                if (result.success) {
+                    totalInAppCount += result.inAppCount
+                }
+            }
+
+            // Notify coaches
+            if (coachUserIds.length > 0) {
+                const result = await notifyUsers({
+                    userIds: coachUserIds,
+                    orgId,
+                    teamId: announcement.team_id,
+                    action,
+                    roleContext: 'coach',
+                    title: announcement.title,
+                    body: announcement.content,
+                    linkUrl: `/portal/messages`,
+                    entityType: 'announcement',
+                    entityId: announcement.id,
+                    presentation: announcement.priority === 'urgent' ? 'urgent' : 'info',
+                    metadata: {
+                        priority: announcement.priority,
+                        type: announcement.type
+                    }
+                })
+                if (result.success) {
+                    totalInAppCount += result.inAppCount
+                }
+            }
+
+            console.log(`[NotificationService] Distributed ${totalInAppCount} notifications for announcement ${announcement.id}`)
         } else {
-            // ORG-WIDE ANNOUNCEMENT
+            // ORG-WIDE ANNOUNCEMENT: All org members by role
             const recipientRoles = ['guardian', 'parent', 'coach', 'org_admin']
             const { data: members, error: memberError } = await supabase
                 .from('organization_members')
-                .select('user_id')
+                .select('user_id, role')
                 .eq('org_id', orgId)
                 .in('role', recipientRoles as any)
 
             if (!memberError && members) {
-                const userIds = members.map(m => m.user_id)
-                if (userIds.length > 0) {
-                    // Fetch users to check preferences
-                    const { data: users, error: userError } = await supabase
-                        .from('users')
-                        .select('id, preferences')
-                        .in('id', userIds)
+                // Group by role
+                const usersByRole: Record<string, string[]> = {
+                    guardian: [],
+                    coach: [],
+                    org_admin: [],
+                }
 
-                    if (!userError && users) {
-                        users.forEach(u => {
-                            // Check Preferences
-                            const prefs = u.preferences as any
-                            const notifications = prefs?.notifications
-                            // Default to TRUE if not set
-                            const isEnabled = notifications?.system_announcements !== false
+                members.forEach(m => {
+                    const userId = m.user_id
+                    if (userId === announcement.author_id || userId === context.userId) return
 
-                            if (isEnabled) {
-                                recipients.add(u.id)
-                            }
-                        })
+                    const role = m.role === 'parent' ? 'guardian' : m.role
+                    if (role === 'guardian' || role === 'coach' || role === 'org_admin') {
+                        if (!usersByRole[role]) usersByRole[role] = []
+                        usersByRole[role].push(userId)
+                    }
+                })
+
+                let totalInAppCount = 0
+
+                // Notify each role group
+                for (const [role, userIds] of Object.entries(usersByRole)) {
+                    if (userIds.length === 0) continue
+
+                    const result = await notifyUsers({
+                        userIds,
+                        orgId,
+                        teamId: null,
+                        action,
+                        roleContext: role as 'guardian' | 'coach' | 'org_admin',
+                        title: announcement.title,
+                        body: announcement.content,
+                        linkUrl: `/portal/messages`,
+                        entityType: 'announcement',
+                        entityId: announcement.id,
+                        presentation: announcement.priority === 'urgent' ? 'urgent' : 'info',
+                        metadata: {
+                            priority: announcement.priority,
+                            type: announcement.type
+                        }
+                    })
+                    if (result.success) {
+                        totalInAppCount += result.inAppCount
                     }
                 }
+
+                console.log(`[NotificationService] Distributed ${totalInAppCount} notifications for org-wide announcement ${announcement.id}`)
             }
         }
-
-        // Remove the author from receiving their own notification
-        recipients.delete(announcement.author_id)
-        recipients.delete(context.userId)
-
-        if (recipients.size === 0) return
-
-        // 2. ACTION & CONTENT MAPPING
-        const action: NotificationAction = announcement.priority === 'urgent'
-            ? 'announcement_urgent'
-            : 'announcement_created'
-
-        // 3. PERSIST NOTIFICATIONS
-        const notificationsToInsert = Array.from(recipients).map(userId => ({
-            user_id: userId,
-            org_id: orgId,
-            team_id: announcement.team_id,
-            action: action,
-            title: announcement.title,
-            body: announcement.content, // Could truncate if too long
-            link_url: `/announcements/${announcement.id}`, // Deep link
-            role_context: 'guardian', // Target audience role
-            entity_type: 'announcement',
-            entity_id: announcement.id,
-            created_at: new Date().toISOString(),
-            // Metadata for smarter rendering later
-            metadata: {
-                priority: announcement.priority,
-                type: announcement.type
-            }
-        }))
-
-        // Batch insert
-        const { error: insertError } = await supabaseAny
-            .from('user_notifications')
-            .insert(notificationsToInsert as any)
-
-        if (insertError) throw insertError
-
-        console.log(`[NotificationService] Distributed ${notificationsToInsert.length} notifications for announcement ${announcement.id}`)
 
     } catch (err) {
         console.error('[NotificationService] Error distributing notifications:', err)
@@ -928,8 +971,190 @@ export async function createMessage(
             result.author = { ...result.author, role }
         }
 
+        // Send notifications to team members (except the author)
+        const messageId = (result as any).id
+        try {
+          const { notifyUsers } = await import('./notificationServiceCore')
+          
+          // Get team members (guardians and coaches)
+          const { data: teamData } = await supabase
+            .from('teams')
+            .select('org_id')
+            .eq('id', teamId)
+            .single()
+
+          if (teamData?.org_id) {
+            const guardianUserIds: string[] = []
+            const coachUserIds: string[] = []
+
+            // Get guardians via team memberships
+            const { data: members } = await supabase
+              .from('team_memberships')
+              .select(`
+                athlete_id,
+                athlete:athletes!athlete_id(family_id)
+              `)
+              .eq('team_id', teamId)
+              .eq('status', 'active')
+
+            if (members) {
+              const familyIds = members
+                .map(m => (m.athlete as any)?.family_id)
+                .filter(Boolean) as string[]
+
+              if (familyIds.length > 0) {
+                const { data: users } = await supabase
+                  .from('users')
+                  .select('id')
+                  .in('family_id', familyIds)
+
+                if (users) {
+                  users.forEach(u => {
+                    if (u.id !== authorId) {
+                      guardianUserIds.push(u.id)
+                    }
+                  })
+                }
+              }
+            }
+
+            // Get coaches
+            const { data: coaches } = await supabaseAny
+              .from('coach_assignments')
+              .select('user_id')
+              .eq('team_id', teamId)
+
+            if (coaches) {
+              coaches.forEach((c: any) => {
+                if (c.user_id && c.user_id !== authorId) {
+                  coachUserIds.push(c.user_id)
+                }
+              })
+            }
+
+            // Notify guardians
+            if (guardianUserIds.length > 0) {
+              await notifyUsers({
+                userIds: guardianUserIds,
+                orgId: teamData.org_id,
+                teamId,
+                action: 'message_sent',
+                roleContext: 'guardian',
+                title: 'New Message',
+                body: content.trim().substring(0, 100) + (content.length > 100 ? '...' : ''),
+                linkUrl: `/portal/messages?team=${teamId}`,
+                entityType: 'message',
+                entityId: messageId,
+              }).catch(err => console.error('Failed to notify guardians about message:', err))
+            }
+
+            // Notify coaches
+            if (coachUserIds.length > 0) {
+              await notifyUsers({
+                userIds: coachUserIds,
+                orgId: teamData.org_id,
+                teamId,
+                action: 'message_sent',
+                roleContext: 'coach',
+                title: 'New Message',
+                body: content.trim().substring(0, 100) + (content.length > 100 ? '...' : ''),
+                linkUrl: `/portal/messages?team=${teamId}`,
+                entityType: 'message',
+                entityId: messageId,
+              }).catch(err => console.error('Failed to notify coaches about message:', err))
+            }
+
+            // Check for user mentions (@username pattern)
+            const mentionRegex = /@(\w+)/g
+            const mentionTexts: string[] = []
+            let match
+            while ((match = mentionRegex.exec(content)) !== null) {
+              mentionTexts.push(match[1].toLowerCase())
+            }
+
+            // Notify mentioned users
+            if (mentionTexts.length > 0) {
+              // Find users by display_name (case-insensitive) who are team members
+              const allTeamUserIds = [...guardianUserIds, ...coachUserIds]
+              
+              if (allTeamUserIds.length > 0) {
+                const { data: teamUsers } = await supabase
+                  .from('users')
+                  .select('id, display_name, email')
+                  .in('id', allTeamUserIds)
+
+                if (teamUsers) {
+                  // Match mentions to users by display_name (case-insensitive)
+                  const mentionedUserIds: string[] = []
+                  for (const user of teamUsers) {
+                    if (user.id === authorId) continue
+                    const displayNameLower = (user.display_name || '').toLowerCase()
+                    if (mentionTexts.some(mention => displayNameLower.includes(mention))) {
+                      mentionedUserIds.push(user.id)
+                    }
+                  }
+
+                  if (mentionedUserIds.length > 0) {
+                    // Determine role for each mentioned user
+                    const { data: orgMembers } = await supabase
+                      .from('organization_members')
+                      .select('user_id, role')
+                      .eq('org_id', teamData.org_id)
+                      .in('user_id', mentionedUserIds)
+
+                    const mentionedByRole: Record<string, string[]> = { guardian: [], coach: [] }
+                    for (const member of orgMembers || []) {
+                      const role = member.role === 'parent' ? 'guardian' : member.role
+                      if (role === 'guardian' || role === 'coach') {
+                        mentionedByRole[role].push(member.user_id)
+                      }
+                    }
+
+                    // Notify mentioned guardians
+                    if (mentionedByRole.guardian.length > 0) {
+                      await notifyUsers({
+                        userIds: mentionedByRole.guardian,
+                        orgId: teamData.org_id,
+                        teamId,
+                        action: 'user_mentioned',
+                        roleContext: 'guardian',
+                        title: 'You were mentioned',
+                        body: `You were mentioned in a message: ${content.trim().substring(0, 100)}${content.length > 100 ? '...' : ''}`,
+                        linkUrl: `/portal/messages?team=${teamId}`,
+                        entityType: 'message',
+                        entityId: messageId,
+                        presentation: 'info',
+                      }).catch(err => console.error('Failed to notify mentioned guardians:', err))
+                    }
+
+                    // Notify mentioned coaches
+                    if (mentionedByRole.coach.length > 0) {
+                      await notifyUsers({
+                        userIds: mentionedByRole.coach,
+                        orgId: teamData.org_id,
+                        teamId,
+                        action: 'user_mentioned',
+                        roleContext: 'coach',
+                        title: 'You were mentioned',
+                        body: `You were mentioned in a message: ${content.trim().substring(0, 100)}${content.length > 100 ? '...' : ''}`,
+                        linkUrl: `/portal/messages?team=${teamId}`,
+                        entityType: 'message',
+                        entityId: messageId,
+                        presentation: 'info',
+                      }).catch(err => console.error('Failed to notify mentioned coaches:', err))
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } catch (notifErr) {
+          // Don't fail message creation if notification fails
+          console.error('Error sending message notifications:', notifErr)
+        }
+
         debug.perf.end('messagesService.createMessage')
-        debug.flow('MessagesService.createMessage', 'Message created successfully', { teamId, messageId: (result as any).id })
+        debug.flow('MessagesService.createMessage', 'Message created successfully', { teamId, messageId })
         console.groupEnd()
         return { data: result as unknown as Message, error: null }
     } catch (err) {
@@ -1120,8 +1345,23 @@ export async function markNotificationRead(
             .eq('user_id', context.userId)
 
         if (error) throw error
+        
+        // Log read event metrics
+        const { data: notification } = await supabase
+          .from('user_notifications')
+          .select('action, entity_type, entity_id, created_at')
+          .eq('id', notificationId)
+          .single()
+        
         debug.perf.end('messagesService.markNotificationRead')
-        debug.flow('MessagesService.markNotificationRead', 'Notification marked as read successfully', { notificationId })
+        debug.flow('MessagesService.markNotificationRead', 'Notification marked as read successfully', {
+          notificationId,
+          action: notification?.action,
+          entityType: notification?.entity_type,
+          timeToRead: notification?.created_at
+            ? Math.round((Date.now() - new Date(notification.created_at).getTime()) / 1000)
+            : null,
+        })
         return { success: true, error: null }
     } catch (err) {
         debug.perf.end('messagesService.markNotificationRead')
@@ -1153,8 +1393,19 @@ export async function markAllNotificationsRead(
             .is('read_at', null)
 
         if (error) throw error
+        
+        // Log read event metrics
+        const { count } = await supabase
+          .from('user_notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', context.userId)
+          .not('read_at', 'is', null)
+        
         debug.perf.end('messagesService.markAllNotificationsRead')
-        debug.flow('MessagesService.markAllNotificationsRead', 'All notifications marked as read successfully', { userId: context.userId })
+        debug.flow('MessagesService.markAllNotificationsRead', 'All notifications marked as read successfully', {
+          userId: context.userId,
+          totalReadCount: count || 0,
+        })
         console.groupEnd()
         return { success: true, error: null }
     } catch (err) {

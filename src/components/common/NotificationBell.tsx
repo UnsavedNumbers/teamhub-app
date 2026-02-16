@@ -3,10 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { cn } from '../../utils/cn'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
-import {
-  getNotifications,
-  markNotificationRead,
-} from '../../data/services/messagesService'
+import { notificationService } from '../../data/services/notificationService'
 import type { NotificationRecord, NotificationPresentation } from '../../types/notifications'
 import { showError } from '../../utils/toast'
 
@@ -39,7 +36,7 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
     if (!context || !isReady) return
     setLoading(true)
     setError(null)
-    const { data, error: fetchError } = await getNotifications(context, 10)
+    const { data, error: fetchError } = await notificationService.getNotifications(context, 10)
     if (fetchError) {
       const message = fetchError.message || t('common.error.label')
       setError(message)
@@ -47,7 +44,7 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
       setLoading(false)
       return
     }
-    setNotifications(data)
+    setNotifications(data || [])
     setLoading(false)
   }
 
@@ -107,10 +104,12 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
       navigate(notification.link_url)
     }
     if (!notification.read_at && context) {
-      await markNotificationRead(context, notification.id)
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, read_at: new Date().toISOString() } : n))
-      )
+      const { error } = await notificationService.markAsRead(context, notification.id)
+      if (!error) {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notification.id ? { ...n, read_at: new Date().toISOString() } : n))
+        )
+      }
     }
     setOpen(false)
   }

@@ -736,3 +736,8 @@ export function useAuth() {
   }
   return context
 }
+
+/** Returns auth context or undefined when outside AuthProvider. Use when component may render outside provider. */
+export function useOptionalAuth() {
+  return useContext(AuthContext)
+}
