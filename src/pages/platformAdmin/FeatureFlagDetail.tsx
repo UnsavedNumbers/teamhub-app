@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, Card, Button, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState, Tabs, TabsTrigger, TabsContent, Modal, Input, Switch } from '../../components/platformAdmin'
+import { PageHeader, Badge, Card, Button, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState, Tabs, TabsTrigger, TabsContent, Modal, Input, Switch, Select, ConfirmDialog } from '../../components/platformAdmin'
+import { EntitySelect } from '../../components/common/EntitySelect'
+import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import { isValidUUID } from '../../utils/uuid'
 import { isNotFoundError } from '../../utils/errorUtils'
 import { mapFeatureFlag, mapFeatureFlagOverride, mapFeatureFlagAuditLog } from '../../utils/domainMappers'
@@ -42,6 +44,39 @@ export default function FeatureFlagDetail() {
   const [editingDescription, setEditingDescription] = useState(false)
   const [descriptionEditValue, setDescriptionEditValue] = useState('')
   const [descriptionSaving, setDescriptionSaving] = useState(false)
+
+  // Add org override modal
+  const [addOrgOverrideOpen, setAddOrgOverrideOpen] = useState(false)
+  const [addOrgOverrideEnv, setAddOrgOverrideEnv] = useState<'dev' | 'staging' | 'prod' | null>(null)
+  const [addOrgOverrideOrgId, setAddOrgOverrideOrgId] = useState<string | null>(null)
+  const [addOrgOverrideValue, setAddOrgOverrideValue] = useState<{ boolean?: boolean; integer?: number; double?: number }>({})
+  const [addOrgOverrideReason, setAddOrgOverrideReason] = useState('')
+  const [addOrgOverrideLoading, setAddOrgOverrideLoading] = useState(false)
+  const [addOrgOverrideError, setAddOrgOverrideError] = useState<string | null>(null)
+
+  // Add user override modal
+  const [addUserOverrideOpen, setAddUserOverrideOpen] = useState(false)
+  const [addUserOverrideEnv, setAddUserOverrideEnv] = useState<'dev' | 'staging' | 'prod' | null>(null)
+  const [addUserOverrideUserId, setAddUserOverrideUserId] = useState<string | null>(null)
+  const [addUserOverrideValue, setAddUserOverrideValue] = useState<{ boolean?: boolean; integer?: number; double?: number }>({})
+  const [addUserOverrideReason, setAddUserOverrideReason] = useState('')
+  const [addUserOverrideLoading, setAddUserOverrideLoading] = useState(false)
+  const [addUserOverrideError, setAddUserOverrideError] = useState<string | null>(null)
+
+  // Edit override modal
+  const [overrideToEdit, setOverrideToEdit] = useState<FeatureFlagOverride | null>(null)
+  const [editOverrideValue, setEditOverrideValue] = useState<{ boolean?: boolean; integer?: number; double?: number }>({})
+  const [editOverrideReason, setEditOverrideReason] = useState('')
+  const [editOverrideLoading, setEditOverrideLoading] = useState(false)
+  const [editOverrideError, setEditOverrideError] = useState<string | null>(null)
+
+  // Remove override confirmation
+  const [overrideToRemove, setOverrideToRemove] = useState<FeatureFlagOverride | null>(null)
+  const [removeOverrideLoading, setRemoveOverrideLoading] = useState(false)
+  const [removeOverrideError, setRemoveOverrideError] = useState<string | null>(null)
+
+  // Org logos for overrides table and edit modal (org id -> logo_url)
+  const [orgLogoUrls, setOrgLogoUrls] = useState<Record<string, string>>({})
   
   // Validate route parameter
   const isValidId = useMemo(() => {
@@ -374,6 +409,275 @@ export default function FeatureFlagDetail() {
     }
   }, [flag, descriptionEditValue])
 
+  // Available environments (with a flag) and default for add-override modals
+  const overrideEnvOptions = useMemo(() => {
+    const envs: Array<'dev' | 'staging' | 'prod'> = []
+    if (flagsByEnv.dev) envs.push('dev')
+    if (flagsByEnv.staging) envs.push('staging')
+    if (flagsByEnv.prod) envs.push('prod')
+    return envs
+  }, [flagsByEnv])
+  const defaultOverrideEnv = overrideEnvOptions[0] ?? null
+
+  const openAddOrgOverride = useCallback(() => {
+    setAddOrgOverrideEnv(defaultOverrideEnv)
+    setAddOrgOverrideOrgId(null)
+    setAddOrgOverrideValue({})
+    setAddOrgOverrideReason('')
+    setAddOrgOverrideError(null)
+    setAddOrgOverrideOpen(true)
+  }, [defaultOverrideEnv])
+
+  const closeAddOrgOverride = useCallback(() => {
+    setAddOrgOverrideOpen(false)
+    setAddOrgOverrideError(null)
+  }, [])
+
+  const openAddUserOverride = useCallback(() => {
+    setAddUserOverrideEnv(defaultOverrideEnv)
+    setAddUserOverrideUserId(null)
+    setAddUserOverrideValue({})
+    setAddUserOverrideReason('')
+    setAddUserOverrideError(null)
+    setAddUserOverrideOpen(true)
+  }, [defaultOverrideEnv])
+
+  const closeAddUserOverride = useCallback(() => {
+    setAddUserOverrideOpen(false)
+    setAddUserOverrideError(null)
+  }, [])
+
+  const handleSetOrgOverride = useCallback(async () => {
+    if (!flag || !addOrgOverrideEnv || !addOrgOverrideOrgId) return
+    const envFlag = flagsByEnv[addOrgOverrideEnv]
+    if (!envFlag) {
+      setAddOrgOverrideError(t('platformAdmin.featureFlags.detail.noFlagForEnvironment'))
+      return
+    }
+    const valueCount = (addOrgOverrideValue.boolean !== undefined ? 1 : 0) +
+      (addOrgOverrideValue.integer !== undefined ? 1 : 0) +
+      (addOrgOverrideValue.double !== undefined ? 1 : 0)
+    if (valueCount !== 1) {
+      setAddOrgOverrideError(t('platformAdmin.featureFlags.detail.exactlyOneValueRequired'))
+      return
+    }
+    if (!addOrgOverrideReason.trim()) {
+      setAddOrgOverrideError(t('platformAdmin.featureFlags.detail.reasonRequired'))
+      return
+    }
+    setAddOrgOverrideLoading(true)
+    setAddOrgOverrideError(null)
+    try {
+      const existing = overrides.find(
+        o => o.featureFlagId === envFlag.id && o.scopeId === addOrgOverrideOrgId && o.overrideType === 'org'
+      )
+      const { data, error } = await supabase.rpc('admin_set_org_override', {
+        p_feature_flag_id: envFlag.id,
+        p_org_id: addOrgOverrideOrgId,
+        p_value_boolean: addOrgOverrideValue.boolean ?? null,
+        p_value_integer: addOrgOverrideValue.integer ?? null,
+        p_value_double: addOrgOverrideValue.double ?? null,
+        p_environment: addOrgOverrideEnv,
+        p_reason: addOrgOverrideReason.trim(),
+        p_expected_version: existing?.version ?? null,
+      } as any)
+      if (error) {
+        setAddOrgOverrideError(error.message)
+        return
+      }
+      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+        setAddOrgOverrideError((data as RpcResponse)?.error ?? t('errors.unknownError'))
+        return
+      }
+      closeAddOrgOverride()
+      showSuccess(t('platformAdmin.featureFlags.detail.orgOverrideSetSuccess'))
+      fetchOverrides()
+      fetchAuditLog()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setAddOrgOverrideError(msg)
+      showError(msg)
+    } finally {
+      setAddOrgOverrideLoading(false)
+    }
+  }, [flag, addOrgOverrideEnv, addOrgOverrideOrgId, addOrgOverrideValue, addOrgOverrideReason, flagsByEnv, overrides, closeAddOrgOverride, fetchOverrides, fetchAuditLog])
+
+  const handleSetUserOverride = useCallback(async () => {
+    if (!flag || !addUserOverrideEnv || !addUserOverrideUserId) return
+    const envFlag = flagsByEnv[addUserOverrideEnv]
+    if (!envFlag) {
+      setAddUserOverrideError(t('platformAdmin.featureFlags.detail.noFlagForEnvironment'))
+      return
+    }
+    const valueCount = (addUserOverrideValue.boolean !== undefined ? 1 : 0) +
+      (addUserOverrideValue.integer !== undefined ? 1 : 0) +
+      (addUserOverrideValue.double !== undefined ? 1 : 0)
+    if (valueCount !== 1) {
+      setAddUserOverrideError(t('platformAdmin.featureFlags.detail.exactlyOneValueRequired'))
+      return
+    }
+    if (!addUserOverrideReason.trim()) {
+      setAddUserOverrideError(t('platformAdmin.featureFlags.detail.reasonRequired'))
+      return
+    }
+    setAddUserOverrideLoading(true)
+    setAddUserOverrideError(null)
+    try {
+      const existing = overrides.find(
+        o => o.featureFlagId === envFlag.id && o.scopeId === addUserOverrideUserId && o.overrideType === 'user'
+      )
+      const { data, error } = await supabase.rpc('admin_set_user_override', {
+        p_feature_flag_id: envFlag.id,
+        p_user_id: addUserOverrideUserId,
+        p_value_boolean: addUserOverrideValue.boolean ?? null,
+        p_value_integer: addUserOverrideValue.integer ?? null,
+        p_value_double: addUserOverrideValue.double ?? null,
+        p_environment: addUserOverrideEnv,
+        p_reason: addUserOverrideReason.trim(),
+        p_expected_version: existing?.version ?? null,
+      } as any)
+      if (error) {
+        setAddUserOverrideError(error.message)
+        return
+      }
+      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+        setAddUserOverrideError((data as RpcResponse)?.error ?? t('errors.unknownError'))
+        return
+      }
+      closeAddUserOverride()
+      showSuccess(t('platformAdmin.featureFlags.detail.userOverrideSetSuccess'))
+      fetchOverrides()
+      fetchAuditLog()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setAddUserOverrideError(msg)
+      showError(msg)
+    } finally {
+      setAddUserOverrideLoading(false)
+    }
+  }, [flag, addUserOverrideEnv, addUserOverrideUserId, addUserOverrideValue, addUserOverrideReason, flagsByEnv, overrides, closeAddUserOverride, fetchOverrides, fetchAuditLog])
+
+  const openEditOverride = useCallback((override: FeatureFlagOverride) => {
+    setOverrideToEdit(override)
+    setEditOverrideValue({
+      boolean: override.valueBoolean !== null ? override.valueBoolean : undefined,
+      integer: override.valueInteger !== null ? override.valueInteger : undefined,
+      double: override.valueDouble !== null ? override.valueDouble : undefined,
+    })
+    setEditOverrideReason('')
+    setEditOverrideError(null)
+  }, [])
+
+  const closeEditOverride = useCallback(() => {
+    setOverrideToEdit(null)
+    setEditOverrideError(null)
+  }, [])
+
+  const handleSaveEditOverride = useCallback(async () => {
+    if (!overrideToEdit || !flag) return
+    const valueCount = (editOverrideValue.boolean !== undefined ? 1 : 0) +
+      (editOverrideValue.integer !== undefined ? 1 : 0) +
+      (editOverrideValue.double !== undefined ? 1 : 0)
+    if (valueCount !== 1) {
+      setEditOverrideError(t('platformAdmin.featureFlags.detail.exactlyOneValueRequired'))
+      return
+    }
+    if (!editOverrideReason.trim()) {
+      setEditOverrideError(t('platformAdmin.featureFlags.detail.reasonRequired'))
+      return
+    }
+    setEditOverrideLoading(true)
+    setEditOverrideError(null)
+    try {
+      const isOrg = overrideToEdit.overrideType === 'org'
+      const rpcName = isOrg ? 'admin_set_org_override' : 'admin_set_user_override'
+      const params = isOrg
+        ? {
+            p_feature_flag_id: overrideToEdit.featureFlagId,
+            p_org_id: overrideToEdit.scopeId,
+            p_value_boolean: editOverrideValue.boolean ?? null,
+            p_value_integer: editOverrideValue.integer ?? null,
+            p_value_double: editOverrideValue.double ?? null,
+            p_environment: overrideToEdit.environment,
+            p_reason: editOverrideReason.trim(),
+            p_expected_version: overrideToEdit.version,
+          }
+        : {
+            p_feature_flag_id: overrideToEdit.featureFlagId,
+            p_user_id: overrideToEdit.scopeId,
+            p_value_boolean: editOverrideValue.boolean ?? null,
+            p_value_integer: editOverrideValue.integer ?? null,
+            p_value_double: editOverrideValue.double ?? null,
+            p_environment: overrideToEdit.environment,
+            p_reason: editOverrideReason.trim(),
+            p_expected_version: overrideToEdit.version,
+          }
+      const { data, error } = await supabase.rpc(rpcName, params as any)
+      if (error) {
+        setEditOverrideError(error.message)
+        return
+      }
+      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+        setEditOverrideError((data as RpcResponse)?.error ?? t('errors.unknownError'))
+        return
+      }
+      closeEditOverride()
+      showSuccess(isOrg ? t('platformAdmin.featureFlags.detail.orgOverrideSetSuccess') : t('platformAdmin.featureFlags.detail.userOverrideSetSuccess'))
+      fetchOverrides()
+      fetchAuditLog()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setEditOverrideError(msg)
+      showError(msg)
+    } finally {
+      setEditOverrideLoading(false)
+    }
+  }, [overrideToEdit, flag, editOverrideValue, editOverrideReason, closeEditOverride, fetchOverrides, fetchAuditLog])
+
+  const handleRemoveOverride = useCallback(async (reason: string) => {
+    if (!overrideToRemove) return
+    setRemoveOverrideLoading(true)
+    setRemoveOverrideError(null)
+    try {
+      const isOrg = overrideToRemove.overrideType === 'org'
+      const rpcName = isOrg ? 'admin_remove_org_override' : 'admin_remove_user_override'
+      const params = isOrg
+        ? {
+            p_feature_flag_id: overrideToRemove.featureFlagId,
+            p_org_id: overrideToRemove.scopeId,
+            p_environment: overrideToRemove.environment,
+            p_reason: reason.trim(),
+            p_expected_version: overrideToRemove.version,
+          }
+        : {
+            p_feature_flag_id: overrideToRemove.featureFlagId,
+            p_user_id: overrideToRemove.scopeId,
+            p_environment: overrideToRemove.environment,
+            p_reason: reason.trim(),
+            p_expected_version: overrideToRemove.version,
+          }
+      const { data, error } = await supabase.rpc(rpcName, params as any)
+      if (error) {
+        setRemoveOverrideError(error.message)
+        return
+      }
+      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+        setRemoveOverrideError((data as RpcResponse)?.error ?? t('errors.unknownError'))
+        return
+      }
+      setOverrideToRemove(null)
+      showSuccess(t('platformAdmin.featureFlags.detail.overrideRemovedSuccess'))
+      fetchOverrides()
+      fetchAuditLog()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setRemoveOverrideError(msg)
+      showError(msg)
+    } finally {
+      setRemoveOverrideLoading(false)
+    }
+  }, [overrideToRemove, fetchOverrides, fetchAuditLog])
+
   useEffect(() => {
     fetchFlag()
   }, [fetchFlag])
@@ -385,6 +689,29 @@ export default function FeatureFlagDetail() {
       fetchAuditLog()
     }
   }, [activeTab, fetchOverrides, fetchAuditLog])
+
+  // Fetch org logo_url for org overrides (table + edit modal)
+  useEffect(() => {
+    const orgIds = [...new Set(overrides.filter(o => o.overrideType === 'org').map(o => o.scopeId))]
+    if (orgIds.length === 0) {
+      setOrgLogoUrls({})
+      return
+    }
+    let cancelled = false
+    supabase
+      .from('organizations')
+      .select('id, logo_url')
+      .in('id', orgIds)
+      .then(({ data, error }) => {
+        if (cancelled || error) return
+        const map: Record<string, string> = {}
+        ;(data ?? []).forEach((row: { id: string; logo_url: string | null }) => {
+          if (row.logo_url) map[row.id] = row.logo_url
+        })
+        if (!cancelled) setOrgLogoUrls(map)
+      })
+    return () => { cancelled = true }
+  }, [overrides])
   
   const overrideColumns: ColumnConfig<FeatureFlagOverride & { id: string }>[] = [
     {
@@ -400,8 +727,16 @@ export default function FeatureFlagDetail() {
       id: 'scope_name',
       label: t('platformAdmin.featureFlags.detail.scope'),
       render: (row: FeatureFlagOverride & { id: string }) => (
-        <div className="pa-body-m pa-ff-detail-cell-value">
-          {row.scopeName}
+        <div className="pa-body-m pa-ff-detail-cell-value pa-flex pa-items-center pa-gap-2">
+          {row.overrideType === 'org' && orgLogoUrls[row.scopeId] && (
+            <img
+              src={orgLogoUrls[row.scopeId]}
+              alt=""
+              role="presentation"
+              style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'contain', flexShrink: 0 }}
+            />
+          )}
+          <span>{row.scopeName}</span>
         </div>
       ),
     },
@@ -422,6 +757,21 @@ export default function FeatureFlagDetail() {
       render: (row: FeatureFlagOverride & { id: string }) => (
         <div className="pa-body-s pa-ff-detail-cell-meta">
           {new Date(row.createdAt).toLocaleString()}
+        </div>
+      ),
+    },
+    {
+      id: 'actions',
+      label: '',
+      align: 'right',
+      render: (row: FeatureFlagOverride & { id: string }) => (
+        <div className="pa-flex pa-gap-2" style={{ justifyContent: 'flex-end' }}>
+          <Button variant="ghost" size="small" onClick={() => openEditOverride(row)}>
+            {t('platformAdmin.featureFlags.detail.editOverride')}
+          </Button>
+          <Button variant="ghost" size="small" onClick={() => setOverrideToRemove(row)}>
+            {t('platformAdmin.featureFlags.detail.removeOverride')}
+          </Button>
         </div>
       ),
     },
@@ -700,6 +1050,14 @@ export default function FeatureFlagDetail() {
         
         {/* Overrides Tab */}
         <TabsContent value="overrides">
+          <div className="pa-flex pa-gap-2 pa-mb-4">
+            <Button variant="primary" size="small" onClick={openAddOrgOverride} disabled={overrideEnvOptions.length === 0}>
+              {t('platformAdmin.featureFlags.detail.addOrgOverride')}
+            </Button>
+            <Button variant="secondary" size="small" onClick={openAddUserOverride} disabled={overrideEnvOptions.length === 0}>
+              {t('platformAdmin.featureFlags.detail.addUserOverride')}
+            </Button>
+          </div>
           <Card>
             <PlatformDataTable
               columns={overrideColumns as ColumnConfig<{ id: string }>[]}
@@ -821,6 +1179,437 @@ export default function FeatureFlagDetail() {
           </div>
         </div>
       </Modal>
+
+      {/* Add org override modal */}
+      <Modal
+        open={addOrgOverrideOpen}
+        onClose={closeAddOrgOverride}
+        title={t('platformAdmin.featureFlags.detail.addOrgOverrideTitle')}
+        size="small"
+      >
+        <div className="pa-form-modal-body">
+          {addOrgOverrideError && (
+            <div className="pa-form-error" role="alert">
+              {addOrgOverrideError}
+            </div>
+          )}
+          <div className="pa-form-group">
+            <label className="pa-form-modal-label">{t('platformAdmin.featureFlags.detail.environmentLabel')} *</label>
+            <Select
+              value={addOrgOverrideEnv ?? ''}
+              onChange={(e) => setAddOrgOverrideEnv((e.target.value || null) as 'dev' | 'staging' | 'prod' | null)}
+              options={[
+                { value: '', label: t('common.select') || 'Select...' },
+                ...overrideEnvOptions.map((env) => ({ value: env, label: env })),
+              ]}
+              disabled={addOrgOverrideLoading}
+            />
+          </div>
+          <EntitySelect<{ logo_url?: string | null; city?: string | null; state?: string | null; zip?: string | null }>
+            label={t('platformAdmin.featureFlags.detail.organization')}
+            value={addOrgOverrideOrgId}
+            onChange={(id) => setAddOrgOverrideOrgId(id)}
+            fetchOptions={async (query) => {
+              const { data, error } = await supabase
+                .from('organizations')
+                .select('id, name, logo_url, city, state, zip')
+                .ilike('name', `%${query}%`)
+                .limit(20)
+              if (error) throw error
+              return (data ?? []).map((org: { id: string; name: string; logo_url: string | null; city: string | null; state: string | null; zip: string | null }) => ({
+                id: org.id,
+                label: org.name,
+                data: { logo_url: org.logo_url, city: org.city, state: org.state, zip: org.zip },
+              }))
+            }}
+            getOptionById={async (id) => {
+              const { data, error } = await supabase.from('organizations').select('id, name, logo_url, city, state, zip').eq('id', id).single()
+              if (error || !data) return null
+              return { id: data.id, label: data.name, data: { logo_url: data.logo_url, city: data.city, state: data.state, zip: data.zip } }
+            }}
+            renderOption={(option, isHighlighted) => {
+              const locParts = [option.data?.city, option.data?.state].filter(Boolean) as string[]
+              const location = locParts.length ? (option.data?.zip ? `${locParts.join(', ')} ${option.data.zip}` : locParts.join(', ')) : null
+              return (
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    background: isHighlighted ? 'var(--pa-n50)' : 'transparent',
+                    borderBottom: '1px solid var(--pa-n100)',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                  }}
+                >
+                  {option.data?.logo_url && (
+                    <img
+                      src={option.data.logo_url}
+                      alt=""
+                      role="presentation"
+                      style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'contain', flexShrink: 0, marginTop: 2 }}
+                    />
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="pa-body-m">{option.label}</div>
+                    {location && (
+                      <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginTop: 2 }}>
+                        {location}
+                      </div>
+                    )}
+                    <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginTop: 2, fontFamily: 'monospace' }}>
+                      {option.id}
+                    </div>
+                  </div>
+                </div>
+              )
+            }}
+            placeholder={t('platformAdmin.featureFlags.detail.searchOrganizationsPlaceholder')}
+            disabled={addOrgOverrideLoading}
+            required
+          />
+          {flag && (
+            <div className="pa-form-group">
+              <label className="pa-form-modal-label">{t('platformAdmin.featureFlags.detail.valueLabel')} ({flag.valueType}) *</label>
+              {flag.valueType === 'boolean' && (
+                <Select
+                  value={addOrgOverrideValue.boolean !== undefined ? String(addOrgOverrideValue.boolean) : ''}
+                  onChange={(e) => setAddOrgOverrideValue({ boolean: e.target.value === 'true' })}
+                  options={[
+                    { value: '', label: t('common.select') || 'Select...' },
+                    { value: 'true', label: 'true' },
+                    { value: 'false', label: 'false' },
+                  ]}
+                  disabled={addOrgOverrideLoading}
+                />
+              )}
+              {flag.valueType === 'integer' && (
+                <Input
+                  type="number"
+                  value={addOrgOverrideValue.integer?.toString() ?? ''}
+                  onChange={(e) => setAddOrgOverrideValue({ integer: parseInt(e.target.value, 10) || 0 })}
+                  placeholder="0"
+                  className="pa-form-input-full"
+                  disabled={addOrgOverrideLoading}
+                />
+              )}
+              {flag.valueType === 'double' && (
+                <Input
+                  type="number"
+                  step="any"
+                  value={addOrgOverrideValue.double?.toString() ?? ''}
+                  onChange={(e) => setAddOrgOverrideValue({ double: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.0"
+                  className="pa-form-input-full"
+                  disabled={addOrgOverrideLoading}
+                />
+              )}
+            </div>
+          )}
+          <div className="pa-form-group">
+            <label className="pa-form-modal-label">{t('platformAdmin.featureFlags.detail.reasonLabel')} *</label>
+            <Input
+              value={addOrgOverrideReason}
+              onChange={(e) => setAddOrgOverrideReason(e.target.value)}
+              placeholder={t('platformAdmin.featureFlags.detail.reasonPlaceholder')}
+              className="pa-form-input-full"
+              disabled={addOrgOverrideLoading}
+            />
+          </div>
+          <div className="pa-form-modal-actions">
+            <Button variant="ghost" onClick={closeAddOrgOverride} disabled={addOrgOverrideLoading}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSetOrgOverride}
+              disabled={
+                addOrgOverrideLoading ||
+                !addOrgOverrideEnv ||
+                !addOrgOverrideOrgId ||
+                !addOrgOverrideReason.trim() ||
+                ((addOrgOverrideValue.boolean !== undefined ? 1 : 0) +
+                  (addOrgOverrideValue.integer !== undefined ? 1 : 0) +
+                  (addOrgOverrideValue.double !== undefined ? 1 : 0)) !== 1
+              }
+            >
+              {addOrgOverrideLoading ? t('common.saving') : t('platformAdmin.featureFlags.detail.setOverride')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Add user override modal */}
+      <Modal
+        open={addUserOverrideOpen}
+        onClose={closeAddUserOverride}
+        title={t('platformAdmin.featureFlags.detail.addUserOverrideTitle')}
+        size="small"
+      >
+        <div className="pa-form-modal-body">
+          {addUserOverrideError && (
+            <div className="pa-form-error" role="alert">
+              {addUserOverrideError}
+            </div>
+          )}
+          <div className="pa-form-group">
+            <label className="pa-form-modal-label">{t('platformAdmin.featureFlags.detail.environmentLabel')} *</label>
+            <Select
+              value={addUserOverrideEnv ?? ''}
+              onChange={(e) => setAddUserOverrideEnv((e.target.value || null) as 'dev' | 'staging' | 'prod' | null)}
+              options={[
+                { value: '', label: t('common.select') || 'Select...' },
+                ...overrideEnvOptions.map((env) => ({ value: env, label: env })),
+              ]}
+              disabled={addUserOverrideLoading}
+            />
+          </div>
+          <EntitySelect<{ email?: string; display_name?: string }>
+            label={t('platformAdmin.featureFlags.detail.user')}
+            value={addUserOverrideUserId}
+            onChange={(id) => setAddUserOverrideUserId(id)}
+            fetchOptions={async (query) => {
+              const { data, error } = await supabase
+                .from('users')
+                .select('id, email, display_name')
+                .or(`email.ilike.%${query}%,display_name.ilike.%${query}%`)
+                .limit(20)
+              if (error) throw error
+              return (data ?? []).map((u: { id: string; email: string | null; display_name: string | null }) => ({
+                id: u.id,
+                label: u.display_name || u.email || '',
+                data: u,
+              }))
+            }}
+            getOptionById={async (id) => {
+              const { data, error } = await supabase
+                .from('users')
+                .select('id, email, display_name')
+                .eq('id', id)
+                .single()
+              if (error || !data) return null
+              return { id: data.id, label: data.display_name || data.email || '' }
+            }}
+            renderOption={(option, isHighlighted) => (
+              <div
+                style={{
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  background: isHighlighted ? 'var(--pa-n50)' : 'transparent',
+                  borderBottom: '1px solid var(--pa-n100)',
+                }}
+              >
+                <div className="pa-body-m">{option.label}</div>
+                {option.data?.email && option.label !== option.data.email && (
+                  <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+                    {option.data.email}
+                  </div>
+                )}
+              </div>
+            )}
+            placeholder={t('platformAdmin.featureFlags.detail.searchUsersPlaceholder')}
+            disabled={addUserOverrideLoading}
+            required
+          />
+          {flag && (
+            <div className="pa-form-group">
+              <label className="pa-form-modal-label">{t('platformAdmin.featureFlags.detail.valueLabel')} ({flag.valueType}) *</label>
+              {flag.valueType === 'boolean' && (
+                <Select
+                  value={addUserOverrideValue.boolean !== undefined ? String(addUserOverrideValue.boolean) : ''}
+                  onChange={(e) => setAddUserOverrideValue({ boolean: e.target.value === 'true' })}
+                  options={[
+                    { value: '', label: t('common.select') || 'Select...' },
+                    { value: 'true', label: 'true' },
+                    { value: 'false', label: 'false' },
+                  ]}
+                  disabled={addUserOverrideLoading}
+                />
+              )}
+              {flag.valueType === 'integer' && (
+                <Input
+                  type="number"
+                  value={addUserOverrideValue.integer?.toString() ?? ''}
+                  onChange={(e) => setAddUserOverrideValue({ integer: parseInt(e.target.value, 10) || 0 })}
+                  placeholder="0"
+                  className="pa-form-input-full"
+                  disabled={addUserOverrideLoading}
+                />
+              )}
+              {flag.valueType === 'double' && (
+                <Input
+                  type="number"
+                  step="any"
+                  value={addUserOverrideValue.double?.toString() ?? ''}
+                  onChange={(e) => setAddUserOverrideValue({ double: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.0"
+                  className="pa-form-input-full"
+                  disabled={addUserOverrideLoading}
+                />
+              )}
+            </div>
+          )}
+          <div className="pa-form-group">
+            <label className="pa-form-modal-label">{t('platformAdmin.featureFlags.detail.reasonLabel')} *</label>
+            <Input
+              value={addUserOverrideReason}
+              onChange={(e) => setAddUserOverrideReason(e.target.value)}
+              placeholder={t('platformAdmin.featureFlags.detail.reasonPlaceholder')}
+              className="pa-form-input-full"
+              disabled={addUserOverrideLoading}
+            />
+          </div>
+          <div className="pa-form-modal-actions">
+            <Button variant="ghost" onClick={closeAddUserOverride} disabled={addUserOverrideLoading}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSetUserOverride}
+              disabled={
+                addUserOverrideLoading ||
+                !addUserOverrideEnv ||
+                !addUserOverrideUserId ||
+                !addUserOverrideReason.trim() ||
+                ((addUserOverrideValue.boolean !== undefined ? 1 : 0) +
+                  (addUserOverrideValue.integer !== undefined ? 1 : 0) +
+                  (addUserOverrideValue.double !== undefined ? 1 : 0)) !== 1
+              }
+            >
+              {addUserOverrideLoading ? t('common.saving') : t('platformAdmin.featureFlags.detail.setOverride')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit override modal */}
+      <Modal
+        open={overrideToEdit !== null}
+        onClose={closeEditOverride}
+        title={t('platformAdmin.featureFlags.detail.editOverrideTitle')}
+        size="small"
+      >
+        <div className="pa-form-modal-body">
+          {editOverrideError && (
+            <div className="pa-form-error" role="alert">
+              {editOverrideError}
+            </div>
+          )}
+          {overrideToEdit && (
+            <>
+              <div className="pa-form-group">
+                <label className="pa-form-modal-label">{overrideToEdit.overrideType === 'org' ? t('platformAdmin.featureFlags.detail.organization') : t('platformAdmin.featureFlags.detail.user')}</label>
+                <div className="pa-body-m pa-flex pa-items-center pa-gap-2">
+                  {overrideToEdit.overrideType === 'org' && orgLogoUrls[overrideToEdit.scopeId] && (
+                    <img
+                      src={orgLogoUrls[overrideToEdit.scopeId]}
+                      alt=""
+                      role="presentation"
+                      style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'contain', flexShrink: 0 }}
+                    />
+                  )}
+                  <span>{overrideToEdit.scopeName}</span>
+                </div>
+              </div>
+              <div className="pa-form-group">
+                <label className="pa-form-modal-label">{t('platformAdmin.featureFlags.detail.environmentLabel')}</label>
+                <div className="pa-body-m">{overrideToEdit.environment}</div>
+              </div>
+              {flag && (
+                <div className="pa-form-group">
+                  <label className="pa-form-modal-label">{t('platformAdmin.featureFlags.detail.valueLabel')} ({flag.valueType}) *</label>
+                  {flag.valueType === 'boolean' && (
+                    <Select
+                      value={editOverrideValue.boolean !== undefined ? String(editOverrideValue.boolean) : ''}
+                      onChange={(e) => setEditOverrideValue({ boolean: e.target.value === 'true' })}
+                      options={[
+                        { value: '', label: t('common.select') || 'Select...' },
+                        { value: 'true', label: 'true' },
+                        { value: 'false', label: 'false' },
+                      ]}
+                      disabled={editOverrideLoading}
+                    />
+                  )}
+                  {flag.valueType === 'integer' && (
+                    <Input
+                      type="number"
+                      value={editOverrideValue.integer?.toString() ?? ''}
+                      onChange={(e) => setEditOverrideValue({ integer: parseInt(e.target.value, 10) || 0 })}
+                      placeholder="0"
+                      className="pa-form-input-full"
+                      disabled={editOverrideLoading}
+                    />
+                  )}
+                  {flag.valueType === 'double' && (
+                    <Input
+                      type="number"
+                      step="any"
+                      value={editOverrideValue.double?.toString() ?? ''}
+                      onChange={(e) => setEditOverrideValue({ double: parseFloat(e.target.value) || 0 })}
+                      placeholder="0.0"
+                      className="pa-form-input-full"
+                      disabled={editOverrideLoading}
+                    />
+                  )}
+                </div>
+              )}
+              <div className="pa-form-group">
+                <label className="pa-form-modal-label">{t('platformAdmin.featureFlags.detail.reasonLabel')} *</label>
+                <Input
+                  value={editOverrideReason}
+                  onChange={(e) => setEditOverrideReason(e.target.value)}
+                  placeholder={t('platformAdmin.featureFlags.detail.reasonPlaceholder')}
+                  className="pa-form-input-full"
+                  disabled={editOverrideLoading}
+                />
+              </div>
+              <div className="pa-form-modal-actions">
+                <Button variant="ghost" onClick={closeEditOverride} disabled={editOverrideLoading}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleSaveEditOverride}
+                  disabled={
+                    editOverrideLoading ||
+                    !editOverrideReason.trim() ||
+                    ((editOverrideValue.boolean !== undefined ? 1 : 0) +
+                      (editOverrideValue.integer !== undefined ? 1 : 0) +
+                      (editOverrideValue.double !== undefined ? 1 : 0)) !== 1
+                  }
+                >
+                  {editOverrideLoading ? t('common.saving') : t('common.save')}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
+
+      {/* Remove override confirmation */}
+      <ConfirmDialog
+        open={overrideToRemove !== null}
+        title={t('platformAdmin.featureFlags.detail.removeOverrideTitle')}
+        description={
+          overrideToRemove
+            ? t('platformAdmin.featureFlags.detail.removeOverrideDescription', {
+                type: overrideToRemove.overrideType === 'org' ? t('platformAdmin.featureFlags.detail.organization') : t('platformAdmin.featureFlags.detail.user'),
+                scope: overrideToRemove.scopeName,
+              })
+            : ''
+        }
+        confirmLabel={t('platformAdmin.featureFlags.detail.removeOverride')}
+        cancelLabel={t('common.cancel')}
+        variant="warning"
+        requireReason
+        loading={removeOverrideLoading}
+        error={removeOverrideError}
+        onConfirm={handleRemoveOverride}
+        onCancel={() => {
+          setOverrideToRemove(null)
+          setRemoveOverrideError(null)
+        }}
+      />
     </div>
   )
 }
