@@ -2,6 +2,7 @@
 // Note: This is a Deno environment, so we use Deno APIs instead of Node.js
 
 import { getOrganizationBranding, injectBrandingVariables, type OrganizationBranding } from './brandingService.ts'
+import Handlebars from 'npm:handlebars@4.7.7'
 
 export interface NotificationJob {
   id: string;
@@ -119,7 +120,7 @@ export async function sendNotificationEmail(
       };
     }
 
-    let htmlContent = await loadTemplate(job.type, job.payload);
+    let htmlContent = await loadTemplate(job.type, job.payload, supabase);
 
     if (branding) {
       htmlContent = injectBrandingVariables(htmlContent, branding);
@@ -131,8 +132,8 @@ export async function sendNotificationEmail(
       throw new Error(`Unknown email type: ${job.type}`);
     }
 
-    let subject = injectVariables(config.subject, job.payload);
-    const preview = injectVariables(config.preview, job.payload);
+    let subject = injectVariables(config.subject, job.payload, { noEscape: true });
+    const preview = injectVariables(config.preview, job.payload, { noEscape: true });
 
     // Generate plain text fallback
     const textContent = generatePlainText(htmlContent);
@@ -150,7 +151,7 @@ export async function sendNotificationEmail(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: job.payload.email_from_name 
+        from: job.payload.email_from_name
           ? `${job.payload.email_from_name} <notifications@youthsports.team>`
           : 'notifications@youthsports.team',
         to: job.email,
@@ -182,10 +183,28 @@ export async function sendNotificationEmail(
 }
 
 /**
- * Load email template - in production this would load from storage or be embedded
+ * Load email template - fetches from DB or falls back to hardcoded
  */
-async function loadTemplate(type: string, payload: Record<string, any>): Promise<string> {
-  // For now, return a basic HTML template
+async function loadTemplate(type: string, payload: Record<string, any>, supabase?: any): Promise<string> {
+  // Try to load from Supabase if client is provided
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('email_templates')
+        .select('html_content')
+        .eq('type', type) // Use job type (which maps to db 'type' enum)
+        .eq('is_active', true)
+        .maybeSingle(); // Use maybeSingle to avoid error if not found
+
+      if (data && data.html_content) {
+        return injectVariables(data.html_content, payload, type);
+      }
+    } catch (e) {
+      console.warn(`Failed to fetch email template for ${type}:`, e);
+    }
+  }
+
+  // Fallback to basic HTML templates
   // In production, you'd load the compiled MJML from Supabase storage or embed it
   const templates: Record<string, string> = {
     new_event: `
@@ -326,7 +345,7 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
               </tr>
             </thead>
             <tbody>
-              {{items_html}}
+              {{{items_html}}}
             </tbody>
             <tfoot>
               <tr>
@@ -619,57 +638,21 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
 }
 
 /**
- * HTML escape function (T6)
+ * Inject variables into template content using Handlebars
  */
-function escapeHtml(text: string): string {
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+function injectVariables(template: string, variables: Record<string, any>, optionsOrType?: string | { noEscape?: boolean }): string {
+  const options = (typeof optionsOrType === 'object') ? optionsOrType : {};
+  const compileOptions = options.noEscape ? { noEscape: true } : {};
 
-/**
- * Inject variables into template content
- */
-function injectVariables(template: string, variables: Record<string, any>, type?: string): string {
-  let result = template;
-  
-  // For ticket_receipt, HTML-escape string values (T6)
-  const shouldEscape = type === 'ticket_receipt';
-
-  // Handle simple variable replacement
-  for (const [key, value] of Object.entries(variables)) {
-    const regex = new RegExp(`{{${key}}}`, 'g');
-    // Don't escape items_html (pre-rendered HTML) or qr_image_data_url (data URL)
-    if (shouldEscape && typeof value === 'string' && key !== 'items_html' && key !== 'qr_image_data_url' && key !== 'ticket_url') {
-      result = result.replace(regex, escapeHtml(value));
-    } else {
-      result = result.replace(regex, String(value));
-    }
+  try {
+    const compiled = Handlebars.compile(template, compileOptions);
+    return compiled(variables);
+  } catch (error) {
+    console.error('Handlebars compilation error:', error);
+    // Fallback to simpler replacement if Handlebars fails? 
+    // Or just re-throw. For now, let's return the template with error note or original
+    return template;
   }
-
-  // Handle conditional blocks (basic handlebars-style)
-  result = result.replace(/{{#if\s+(\w+)}}(.*?){{\/if}}/gs, (match, condition, content) => {
-    return variables[condition] ? content : '';
-  });
-
-  // Handle each loops (basic)
-  result = result.replace(/{{#each\s+(\w+)}}(.*?){{\/each}}/gs, (match, arrayName, content) => {
-    const array = variables[arrayName];
-    if (!Array.isArray(array)) return '';
-
-    return array.map(item => {
-      let itemContent = content;
-      for (const [key, value] of Object.entries(item)) {
-        itemContent = itemContent.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
-      }
-      return itemContent;
-    }).join('');
-  });
-
-  return result;
 }
 
 /**

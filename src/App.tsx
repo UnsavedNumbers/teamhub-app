@@ -142,6 +142,8 @@ const LicensesAudit = lazy(() => import('./pages/platformAdmin/LicensesAudit'))
 
 // Email Preview - Platform Admin Feature
 const EmailPreview = lazy(() => import('./pages/platformAdmin/EmailPreview'))
+const EmailTemplates = lazy(() => import('./pages/platformAdmin/EmailTemplates'))
+const EmailTemplateEditor = lazy(() => import('./pages/platformAdmin/EmailTemplateEditor'))
 // Photos - Platform Admin (overview, content review, storage, org galleries)
 const PlatformPhotosOverview = lazy(() => import('./pages/platformAdmin/PhotosOverview'))
 const PlatformPhotosContentReview = lazy(() => import('./pages/platformAdmin/PhotosContentReview'))
@@ -710,6 +712,9 @@ function AppWithTheme() {
 
               {/* Email Preview */}
               <Route path="email-preview" element={<EmailPreview />} />
+              <Route path="emails" element={<EmailTemplates />} />
+              <Route path="emails/new" element={<EmailTemplateEditor />} />
+              <Route path="emails/:slug/edit" element={<EmailTemplateEditor />} />
 
               {/* Photos */}
               <Route path="photos" element={<PlatformPhotosOverview />} />

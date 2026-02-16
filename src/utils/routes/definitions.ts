@@ -1236,6 +1236,27 @@ const platformAdmin = {
         description: 'Email template testing',
     },
 
+    // Email Templates
+    emails: {
+        list: {
+            path: '/platform-admin/emails',
+            label: 'Email Templates',
+            icon: 'email',
+            description: 'Manage email templates',
+        },
+        create: {
+            path: '/platform-admin/emails/new',
+            label: 'Create Template',
+            icon: 'add',
+        },
+        edit: {
+            path: '/platform-admin/emails/:slug/edit',
+            params: ['slug'] as const,
+            label: 'Edit Template',
+            icon: 'edit',
+        },
+    },
+
     // Photos (cross-org overview, content review, storage)
     photos: {
         overview: {

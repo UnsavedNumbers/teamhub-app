@@ -234,6 +234,9 @@ export const RouteKeys = {
     PLATFORM_PHOTOS_CONTENT_REVIEW: 'platformAdmin.photos.contentReview',
     PLATFORM_PHOTOS_STORAGE: 'platformAdmin.photos.storage',
     PLATFORM_ORG_PHOTOS: 'platformAdmin.photos.orgGalleries',
+    PLATFORM_EMAILS: 'platformAdmin.emails.list',
+    PLATFORM_EMAIL_CREATE: 'platformAdmin.emails.create',
+    PLATFORM_EMAIL_EDIT: 'platformAdmin.emails.edit',
 
     // Fan
     FAN_HOME: 'fan.home',
