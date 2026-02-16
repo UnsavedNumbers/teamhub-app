@@ -23,6 +23,7 @@ import type { VideoCategory, VideoStatus } from '@/types/video'
 import type { VideoFilters } from '@/components/video/VideoFilterPanel'
 import { supabase } from '@/lib/supabase'
 import { AdminPageHeader, Card } from '@/components/platformAdmin'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import Button from '@/components/portal/Button'
 import Icon from '@/components/portal/Icon'
 import { t } from '@/i18n'
@@ -656,44 +657,16 @@ export default function CoachVideoLibrary() {
         </div>
       )}
 
-      {/* Delete Video Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full shadow-xl">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-              <h3 className="text-xl font-bold">{t('videoLibrary.actions.delete')}</h3>
-              <button
-                onClick={handleCloseDeleteModal}
-                className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50"
-                disabled={isDeleting}
-                aria-label={t('common.close')}
-              >
-                <Icon name="close" size="text-xl" />
-              </button>
-            </div>
-            <div className="p-6">
-              <p className="text-gray-600 dark:text-gray-400">{t('videoLibrary.delete.message')}</p>
-            </div>
-            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-end gap-3">
-              <Button
-                variant="secondary"
-                onClick={handleCloseDeleteModal}
-                disabled={isDeleting}
-              >
-                {t('common.cancel')}
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-                className="bg-red-500 hover:bg-red-600 text-white border-red-500"
-              >
-                {isDeleting ? t('common.loading') : t('common.delete')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showDeleteModal}
+        title={t('videoLibrary.actions.delete')}
+        description={t('videoLibrary.delete.message')}
+        confirmLabel={isDeleting ? t('common.loading') : t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCloseDeleteModal}
+      />
       
       {/* Close dropdown when clicking outside */}
       {activeDropdown && (

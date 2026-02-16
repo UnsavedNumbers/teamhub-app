@@ -20,6 +20,7 @@
     "db:mark-baseline-applied": "node scripts/mark-baseline-applied.mjs",
     "db:verify-baseline": "node scripts/verify-baseline-fresh.mjs",
     "db:archive-legacy": "node scripts/archive-legacy-migrations.mjs",
+    "db:next-migration-version": "node scripts/next-migration-version.mjs",
     "db:prepare-baseline": "npm run db:copy-baseline && npm run db:organize-baseline",
     "generate:feature-keys": "npx tsx scripts/generate-feature-keys.ts",
     "emails:watch": "mjml -w emails/mjml -o emails/compiled",

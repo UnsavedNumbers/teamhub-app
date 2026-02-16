@@ -5,18 +5,27 @@
  * Supports nested replies, sorting, and soft-delete display.
  */
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import { useVideoComments } from '@/hooks/useVideos'
 import { useAuth } from '@/hooks/useAuth'
 import Icon from '@/components/portal/Icon'
 import Button from '@/components/portal/Button'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import { cn } from '@/utils/cn'
 import { t } from '@/i18n'
+import TimestampedText from './TimestampedText'
+import { formatTimestampShort } from '@/utils/timestamps'
 
 interface VideoCommentsPanelProps {
   videoId: string
   disabled?: boolean
   className?: string
+  /** When provided, use ConfirmDialog for delete confirmation (e.g. on admin pages) */
+  deleteConfirmDialog?: { title: string; description: string }
+  /** Callback when user clicks a timestamp in comment content */
+  onSeek?: (seconds: number) => void
+  /** Returns current video time for timestamp insertion */
+  onCaptureTime?: () => number
 }
 
 interface CommentWithReplies {
@@ -32,8 +41,9 @@ interface CommentWithReplies {
   updated_at: string
   author?: {
     id: string
-    full_name: string
-    avatar_url: string | null
+    display_name: string | null
+    first_name: string
+    last_name: string
   }
   replies?: CommentWithReplies[]
 }
@@ -43,9 +53,12 @@ type SortOption = 'newest' | 'oldest'
 export default function VideoCommentsPanel({ 
   videoId, 
   disabled = false,
-  className 
+  className,
+  deleteConfirmDialog,
+  onSeek,
+  onCaptureTime,
 }: VideoCommentsPanelProps) {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { comments, isLoading, createComment, deleteComment, refresh: _refresh } = useVideoComments({ 
     videoId, 
     enabled: true 
@@ -57,6 +70,42 @@ export default function VideoCommentsPanel({
   const [posting, setPosting] = useState(false)
   const [sortBy, setSortBy] = useState<SortOption>('newest')
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set())
+  const [commentToDeleteId, setCommentToDeleteId] = useState<string | null>(null)
+  const newCommentTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const replyTextareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const handleInsertTimestamp = useCallback((isReply: boolean) => {
+    if (!onCaptureTime) return
+    const time = onCaptureTime()
+    const timestampText = formatTimestampShort(time)
+    const textarea = isReply ? replyTextareaRef.current : newCommentTextareaRef.current
+    const currentContent = isReply ? replyContent : newComment
+    
+    if (textarea) {
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      const before = currentContent.substring(0, start)
+      const after = currentContent.substring(end)
+      const newContent = before + timestampText + ' ' + after
+      if (isReply) {
+        setReplyContent(newContent)
+      } else {
+        setNewComment(newContent)
+      }
+      // Restore cursor position after timestamp
+      setTimeout(() => {
+        textarea.focus()
+        textarea.setSelectionRange(start + timestampText.length + 1, start + timestampText.length + 1)
+      }, 0)
+    } else {
+      // Fallback: append to end
+      if (isReply) {
+        setReplyContent(prev => prev + (prev ? ' ' : '') + timestampText + ' ')
+      } else {
+        setNewComment(prev => prev + (prev ? ' ' : '') + timestampText + ' ')
+      }
+    }
+  }, [onCaptureTime, replyContent, newComment])
 
   // Build threaded comments structure
   const threadedComments = useMemo(() => {
@@ -65,7 +114,11 @@ export default function VideoCommentsPanel({
 
     // Build map of all comments
     comments.forEach(comment => {
-      commentMap.set(comment.id, { ...comment, replies: [] } as CommentWithReplies)
+      commentMap.set(comment.id, { 
+        ...comment, 
+        replies: [],
+        author: comment.author || undefined
+      } as CommentWithReplies)
     })
 
     // Build thread hierarchy
@@ -125,10 +178,20 @@ export default function VideoCommentsPanel({
     }
   }, [replyContent, createComment, disabled])
 
-  const handleDelete = useCallback(async (commentId: string) => {
-    if (!window.confirm(t('videoLibrary.comments.deleteConfirm'))) return
-    await deleteComment(commentId)
-  }, [deleteComment])
+  const handleDeleteClick = useCallback((commentId: string) => {
+    if (deleteConfirmDialog) {
+      setCommentToDeleteId(commentId)
+    } else if (window.confirm(t('videoLibrary.comments.deleteConfirm'))) {
+      deleteComment(commentId)
+    }
+  }, [deleteConfirmDialog, deleteComment])
+
+  const handleConfirmDeleteComment = useCallback(() => {
+    if (commentToDeleteId) {
+      deleteComment(commentToDeleteId)
+      setCommentToDeleteId(null)
+    }
+  }, [commentToDeleteId, deleteComment])
 
   const toggleReplies = useCallback((commentId: string) => {
     setExpandedReplies(prev => {
@@ -157,6 +220,15 @@ export default function VideoCommentsPanel({
     return date.toLocaleDateString()
   }
 
+  const getAuthorDisplayName = useCallback((comment: CommentWithReplies): string => {
+    if (user?.id === comment.author_id && profile) {
+      const fromProfile = profile.display_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+      if (fromProfile) return fromProfile
+    }
+    const fromAuthor = comment.author?.display_name || `${comment.author?.first_name || ''} ${comment.author?.last_name || ''}`.trim()
+    return fromAuthor || 'User'
+  }, [user?.id, profile])
+
   const renderComment = (comment: CommentWithReplies, isReply = false) => {
     const isDeleted = !!comment.deleted_at
     const isAuthor = user?.id === comment.author_id
@@ -171,22 +243,14 @@ export default function VideoCommentsPanel({
             "rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0",
             isReply ? "size-6" : "size-8"
           )}>
-            {comment.author?.avatar_url ? (
-              <img 
-                src={comment.author.avatar_url} 
-                alt="" 
-                className="size-full rounded-full object-cover"
-              />
-            ) : (
-              <Icon name="person" size={isReply ? "text-xs" : "text-sm"} />
-            )}
+            <Icon name="person" size={isReply ? "text-xs" : "text-sm"} />
           </div>
 
           <div className="flex-1 min-w-0">
             {/* Header */}
             <div className="flex items-center gap-2 mb-1">
               <span className={cn("font-bold", isReply ? "text-xs" : "text-sm")}>
-                {comment.author?.full_name || 'User'}
+                {getAuthorDisplayName(comment)}
               </span>
               <span className={cn("text-gray-400", isReply ? "text-[10px]" : "text-xs")}>
                 {formatRelativeTime(comment.created_at)}
@@ -206,7 +270,12 @@ export default function VideoCommentsPanel({
             )}>
               {isDeleted 
                 ? '[This comment has been removed]' 
-                : comment.content
+                : (
+                  <TimestampedText
+                    text={comment.content}
+                    onSeek={onSeek}
+                  />
+                )
               }
             </p>
 
@@ -227,7 +296,7 @@ export default function VideoCommentsPanel({
                 )}
                 {isAuthor && (
                   <button
-                    onClick={() => handleDelete(comment.id)}
+                    onClick={() => handleDeleteClick(comment.id)}
                     className="text-xs font-bold text-gray-500 hover:text-red-500"
                     disabled={disabled}
                   >
@@ -240,14 +309,28 @@ export default function VideoCommentsPanel({
             {/* Reply Form */}
             {replyingTo === comment.id && (
               <div className="mt-3 space-y-2">
-                <textarea
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                  placeholder={t('videoLibrary.comments.writeComment')}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent resize-none"
-                  rows={2}
-                  disabled={disabled}
-                />
+                <div className="relative">
+                  <textarea
+                    ref={replyTextareaRef}
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                    placeholder={t('videoLibrary.comments.writeComment')}
+                    className="w-full px-3 py-2 pr-10 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent resize-none"
+                    rows={2}
+                    disabled={disabled}
+                  />
+                  {onCaptureTime && (
+                    <button
+                      type="button"
+                      onClick={() => handleInsertTimestamp(true)}
+                      disabled={disabled}
+                      className="absolute right-2 top-2 px-1.5 py-1 text-xs font-bold text-[var(--org-btn-primary-bg)] hover:bg-[var(--org-btn-primary-bg)]/10 rounded transition-colors disabled:opacity-50"
+                      title="Insert current timestamp"
+                    >
+                      <Icon name="schedule" size="text-xs" />
+                    </button>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="primary"
@@ -324,14 +407,28 @@ export default function VideoCommentsPanel({
 
       {/* New Comment Form */}
       <div className="mb-6">
-        <textarea
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          placeholder={t('videoLibrary.comments.writeComment')}
-          className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent resize-none"
-          rows={3}
-          disabled={disabled}
-        />
+        <div className="relative">
+          <textarea
+            ref={newCommentTextareaRef}
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder={t('videoLibrary.comments.writeComment')}
+            className="w-full px-4 py-3 pr-12 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent resize-none"
+            rows={3}
+            disabled={disabled}
+          />
+          {onCaptureTime && (
+            <button
+              type="button"
+              onClick={() => handleInsertTimestamp(false)}
+              disabled={disabled}
+              className="absolute right-2 top-2 px-2 py-1 text-xs font-bold text-[var(--org-btn-primary-bg)] hover:bg-[var(--org-btn-primary-bg)]/10 rounded transition-colors disabled:opacity-50"
+              title="Insert current timestamp"
+            >
+              <Icon name="schedule" size="text-sm" />
+            </button>
+          )}
+        </div>
         <div className="mt-2 flex justify-end">
           <Button
             variant="primary"
@@ -368,6 +465,18 @@ export default function VideoCommentsPanel({
         <div className="space-y-6">
           {threadedComments.map(comment => renderComment(comment))}
         </div>
+      )}
+      {deleteConfirmDialog && (
+        <ConfirmDialog
+          open={commentToDeleteId !== null}
+          title={deleteConfirmDialog.title}
+          description={deleteConfirmDialog.description}
+          confirmLabel={t('common.delete')}
+          cancelLabel={t('common.cancel')}
+          variant="danger"
+          onConfirm={handleConfirmDeleteComment}
+          onCancel={() => setCommentToDeleteId(null)}
+        />
       )}
     </div>
   )

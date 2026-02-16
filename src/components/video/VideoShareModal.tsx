@@ -9,6 +9,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { useVideoShares, type ShareExpiration } from '@/hooks/useVideosExtended'
 import Icon from '@/components/portal/Icon'
 import Button from '@/components/portal/Button'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import { cn } from '@/utils/cn'
 import { showSuccess, showError } from '@/utils/toast'
 import { t } from '@/i18n'
@@ -45,6 +46,7 @@ export default function VideoShareModal({
   const [isCreating, setIsCreating] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create')
+  const [shareIdToRevoke, setShareIdToRevoke] = useState<string | null>(null)
 
   // Filter active (non-revoked, non-expired) shares
   const activeShares = useMemo(() => {
@@ -91,18 +93,20 @@ export default function VideoShareModal({
     setTimeout(() => setCopiedId(null), 2000)
   }, [])
 
-  const handleRevoke = useCallback(async (shareId: string) => {
-    if (!window.confirm('Are you sure you want to revoke this share link? Anyone with this link will no longer have access.')) {
-      return
-    }
+  const handleRevokeClick = useCallback((shareId: string) => {
+    setShareIdToRevoke(shareId)
+  }, [])
 
-    const success = await revokeShare(shareId)
+  const handleConfirmRevoke = useCallback(async () => {
+    if (!shareIdToRevoke) return
+    const success = await revokeShare(shareIdToRevoke)
     if (success) {
       showSuccess(t('videoLibrary.shareLink.revoked'))
     } else {
       showError('Failed to revoke share link')
     }
-  }, [revokeShare])
+    setShareIdToRevoke(null)
+  }, [shareIdToRevoke, revokeShare])
 
   const formatExpiration = (expiresAt: string | null): string => {
     if (!expiresAt) return 'Never'
@@ -121,6 +125,7 @@ export default function VideoShareModal({
   if (!isOpen) return null
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-auto">
         {/* Header */}
@@ -308,7 +313,7 @@ export default function VideoShareModal({
                           />
                         </button>
                         <button
-                          onClick={() => handleRevoke(share.id)}
+                          onClick={() => handleRevokeClick(share.id)}
                           className="p-2 text-gray-400 hover:text-red-500 transition-colors"
                           title={t('videoLibrary.shareLink.revokeLink')}
                         >
@@ -340,5 +345,16 @@ export default function VideoShareModal({
         </div>
       </div>
     </div>
+    <ConfirmDialog
+      open={shareIdToRevoke !== null}
+      title={t('videoLibrary.shareLink.revokeConfirmTitle')}
+      description={t('videoLibrary.shareLink.revokeConfirm')}
+      confirmLabel={t('videoLibrary.shareLink.revokeLink')}
+      cancelLabel={t('common.cancel')}
+      variant="danger"
+      onConfirm={handleConfirmRevoke}
+      onCancel={() => setShareIdToRevoke(null)}
+    />
+    </>
   )
 }

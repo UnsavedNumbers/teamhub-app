@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let { data: userData, error: userError } = await supabase
           .from('users')
           .select(
-            'id, email, phone, display_name, home_zipcode, home_location, role, family_id, org_id, requires_org_setup'
+            'id, email, phone, display_name, first_name, last_name, home_zipcode, home_location, role, family_id, org_id, requires_org_setup'
           )
           .eq('id', userId)
           .single()
@@ -116,8 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const retryResult = await supabase
             .from('users')
             .select(
-              'id, email, phone, display_name, role, family_id, org_id, requires_org_setup'
-            )
+            'id, email, phone, display_name, first_name, last_name, role, family_id, org_id, requires_org_setup'
+          )
             .eq('id', userId)
             .single()
           userData = retryResult.data as any
@@ -185,6 +185,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: string | null
           phone: string | null
           display_name: string | null
+          first_name?: string
+          last_name?: string
           home_location?: HomeLocation | null
           home_zipcode?: string | null
           role: string | null
@@ -278,8 +280,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: validUserData.id,
           email: validUserData.email,
           phone: validUserData.phone ?? '',
-          first_name: '', // first_name and last_name not in users table, derived from display_name if needed
-          last_name: '',
+          first_name: validUserData.first_name ?? '',
+          last_name: validUserData.last_name ?? '',
           display_name: validUserData.display_name,
           home_location: (validUserData.home_location as HomeLocation | null) ?? null,
           home_zipcode: validUserData.home_zipcode ?? undefined,

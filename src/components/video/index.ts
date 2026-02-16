@@ -6,7 +6,8 @@
 
 // Core Components
 export { default as VideoCard } from './VideoCard'
-export { default as VideoPlayer, formatTime } from './VideoPlayer'
+export { default as VideoPlayer, formatTime, type VideoPlayerRef } from './VideoPlayer'
+export { default as TimestampedText } from './TimestampedText'
 export { default as VideoUploader } from './VideoUploader'
 export { default as VideoNoteCard } from './VideoNoteCard'
 export { default as VideoNoteComposer } from './VideoNoteComposer'

@@ -19,7 +19,8 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { 
-  VideoPlayer, 
+  VideoPlayer,
+  type VideoPlayerRef,
   VideoCommentsPanel,
   VideoFavoriteButton,
   VideoShareModal,
@@ -46,6 +47,7 @@ import type {
   VideoComment,
 } from '@/types/video'
 import { AdminPageHeader, Card } from '@/components/platformAdmin'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import Button from '@/components/portal/Button'
 import Icon from '@/components/portal/Icon'
 import { t } from '@/i18n'
@@ -504,16 +506,19 @@ function BookmarksPanel({
   currentTime,
   onSeek,
   disabled = false,
+  activeBookmarkId,
 }: {
   videoId: string
   currentTime: number
   onSeek: (time: number) => void
   disabled?: boolean
+  activeBookmarkId?: string | null
 }) {
   const { bookmarks, isLoading, createBookmark, deleteBookmark } = useVideoBookmarks({ videoId, enabled: true })
   const [showAddForm, setShowAddForm] = useState(false)
   const [label, setLabel] = useState('')
   const [adding, setAdding] = useState(false)
+  const [bookmarkToDeleteId, setBookmarkToDeleteId] = useState<string | null>(null)
 
   const handleAdd = async () => {
     setAdding(true)
@@ -605,34 +610,56 @@ function BookmarksPanel({
         </div>
       ) : (
         <div className="space-y-2">
-          {bookmarks.map(bookmark => (
-            <div
-              key={bookmark.id}
-              className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-secondary-bg)] transition-colors group"
-            >
-              <button
-                onClick={() => onSeek(bookmark.timestamp_seconds)}
-                className="px-3 py-1 bg-[var(--org-btn-secondary-bg)] text-white rounded text-xs font-black hover:bg-opacity-90"
+          {bookmarks.map(bookmark => {
+            const isActive = activeBookmarkId === bookmark.id
+            return (
+              <div
+                key={bookmark.id}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border transition-colors group",
+                  isActive
+                    ? "border-[var(--org-btn-primary-bg)] bg-[var(--org-btn-primary-bg)]/5"
+                    : "border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-secondary-bg)]"
+                )}
               >
-                {formatTimestamp(bookmark.timestamp_seconds)}
-              </button>
-              <span className="flex-1 text-sm font-medium text-gray-900 dark:text-white">
-                {bookmark.label || t('videoLibrary.bookmarks.jumpTo')}
-              </span>
-              <button
-                onClick={() => {
-                  if (window.confirm('Delete bookmark?')) {
-                    deleteBookmark(bookmark.id)
-                  }
-                }}
-                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
-              >
-                <Icon name="delete" size="text-sm" />
-              </button>
-            </div>
-          ))}
+                <button
+                  onClick={() => onSeek(bookmark.timestamp_seconds)}
+                  className={cn(
+                    "px-3 py-1 text-white rounded text-xs font-black hover:bg-opacity-90 transition-colors",
+                    isActive
+                      ? "bg-[var(--org-btn-primary-bg)]"
+                      : "bg-[var(--org-btn-secondary-bg)]"
+                  )}
+                >
+                  {formatTimestamp(bookmark.timestamp_seconds)}
+                </button>
+                <span className="flex-1 text-sm font-medium text-gray-900 dark:text-white">
+                  {bookmark.label || t('videoLibrary.bookmarks.jumpTo')}
+                </span>
+                <button
+                  onClick={() => setBookmarkToDeleteId(bookmark.id)}
+                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+                >
+                  <Icon name="delete" size="text-sm" />
+                </button>
+              </div>
+            )
+          })}
         </div>
       )}
+      <ConfirmDialog
+        open={bookmarkToDeleteId !== null}
+        title={t('videoLibrary.bookmarks.deleteConfirmTitle')}
+        description={t('videoLibrary.bookmarks.deleteConfirm')}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={() => {
+          if (bookmarkToDeleteId) deleteBookmark(bookmarkToDeleteId)
+          setBookmarkToDeleteId(null)
+        }}
+        onCancel={() => setBookmarkToDeleteId(null)}
+      />
     </div>
   )
 }
@@ -674,13 +701,16 @@ export default function CoachVideoDetail() {
   const [currentTime, setCurrentTime] = useState(0)
   const [_isPlaying, setIsPlaying] = useState(false)
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
+  const [activeBookmarkId, setActiveBookmarkId] = useState<string | null>(null)
   const [notesPanelOpen, setNotesPanelOpen] = useState(false)
-  const videoPlayerRef = useRef<HTMLElement | null>(null)
-  
+  const videoPlayerRef = useRef<VideoPlayerRef>(null)
+  const videoCardRef = useRef<HTMLDivElement>(null)
+
   // Modals
   const [isEditingDetails, setIsEditingDetails] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [athleteToUnlinkId, setAthleteToUnlinkId] = useState<string | null>(null)
   const [showAthletesModal, setShowAthletesModal] = useState(false)
   const [showTagsModal, setShowTagsModal] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
@@ -722,6 +752,8 @@ export default function CoachVideoDetail() {
     videoId,
     enabled: !!videoId
   })
+  
+  const { bookmarks } = useVideoBookmarks({ videoId, enabled: !!videoId })
   
   const { deleteVideo, updateVideo, linkAthletes, unlinkAthlete, linkTags } = useVideoMutations()
   
@@ -766,25 +798,47 @@ export default function CoachVideoDetail() {
         color: 'var(--org-btn-secondary-bg)'
       }))
   }, [notes])
+
+  // Convert bookmarks to chapters for Mux Player
+  const chapters = useMemo(() => {
+    if (!bookmarks || bookmarks.length === 0) return []
+    
+    // Sort bookmarks by timestamp (already sorted by hook, but ensure)
+    const sortedBookmarks = [...bookmarks].sort((a, b) => a.timestamp_seconds - b.timestamp_seconds)
+    
+    // Convert to chapters format: { startTime, endTime?, value }
+    // Per Mux docs: if endTime is omitted, chapters automatically join end-to-end
+    return sortedBookmarks.map((bookmark, index) => ({
+      startTime: bookmark.timestamp_seconds,
+      // Don't set endTime - let Mux automatically join chapters; ensure label is never undefined
+      value: (bookmark.label?.trim() || `Chapter ${index + 1}`) as string
+    }))
+  }, [bookmarks])
   
-  // Handle seeking to timestamp
+  // Handle seeking to timestamp (from notes, comments, bookmarks, or timestamp links)
   const handleSeekToNote = useCallback((timestamp: number) => {
-    setCurrentTime(timestamp)
-    // Seek the video player
-    const player = videoPlayerRef.current as HTMLMediaElement | null
-    if (player) {
-      player.currentTime = timestamp
-    }
-    const note = notes.find(n => n.timestamp_start === timestamp)
+    // Start at t-1 to account for scroll time so the moment is visible when user arrives
+    const seekTime = Math.max(0, timestamp - 1)
+    setCurrentTime(seekTime)
+    videoPlayerRef.current?.seekTo(seekTime)
+    videoCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // Find and highlight matching note if any (match on original timestamp)
+    const note = notes.find(n => n.timestamp_start !== null && Math.abs((n.timestamp_start || 0) - timestamp) < 1)
     if (note) {
       setActiveNoteId(note.id)
     }
-  }, [notes])
+    // Find and highlight matching bookmark if any
+    const bookmark = bookmarks?.find(b => Math.abs(b.timestamp_seconds - timestamp) < 1)
+    if (bookmark) {
+      setActiveBookmarkId(bookmark.id)
+    } else {
+      setActiveBookmarkId(null)
+    }
+  }, [notes, bookmarks])
   
   // Capture current video playhead time (for NotesPanel)
   const handleCaptureTime = useCallback((): number => {
-    const player = videoPlayerRef.current as HTMLMediaElement | null
-    return player?.currentTime ?? currentTime
+    return videoPlayerRef.current?.getCurrentTime() ?? currentTime
   }, [currentTime])
   
   // Handle time update from player
@@ -928,13 +982,9 @@ export default function CoachVideoDetail() {
     refreshVideo()
   }, [videoId, linkAthletes, refreshVideo])
   
-  const handleUnlinkAthlete = useCallback(async (athleteId: string) => {
-    if (!videoId) return
-    if (window.confirm('Remove this athlete from the video?')) {
-      await unlinkAthlete(videoId, athleteId)
-      refreshVideo()
-    }
-  }, [videoId, unlinkAthlete, refreshVideo])
+  const handleUnlinkAthlete = useCallback((athleteId: string) => {
+    setAthleteToUnlinkId(athleteId)
+  }, [])
   
   // Handle tags
   const handleSaveTags = useCallback(async (tagIds: string[]) => {
@@ -1059,16 +1109,22 @@ export default function CoachVideoDetail() {
       />
       
       {/* Video Player + Notes Panel Layout */}
-      <div className={cn(
-        "relative mb-8 flex transition-all duration-300 ease-out gap-0",
-        notesPanelOpen ? "md:pr-[40vw] md:max-w-none" : ""
-      )}>
+      <div
+        ref={videoCardRef}
+        className={cn(
+          "relative mb-8 flex transition-all duration-300 ease-out gap-0",
+          notesPanelOpen ? "md:pr-[40vw] md:max-w-none" : ""
+        )}
+      >
         <Card className="flex-1 min-w-0 overflow-hidden">
           {video.status === 'ready' ? (
             <VideoPlayer
+              ref={videoPlayerRef}
               videoId={video.id}
               status={video.status}
               poster={video.thumbnail_url || undefined}
+              title={video.title}
+              chapters={chapters}
               onTimeUpdate={handleTimeUpdate}
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
@@ -1144,26 +1200,55 @@ export default function CoachVideoDetail() {
         disabled={USE_FAKE_DATA}
       />
 
-      {/* Accordion Sections (below video) */}
-      <div className="space-y-3">
-        {/* Video Details */}
-        <AccordionItem title="Video Details">
-          <div className="space-y-4">
+      {/* Description and Tags (directly under video) */}
+      <Card className="mb-8">
+        <div className="space-y-6">
+          {/* Description */}
+          {video.description && (
             <div>
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
                 {t('videoLibrary.details.description')}
               </label>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                {video.description || t('videoLibrary.details.noDescription')}
+                {video.description}
               </p>
             </div>
+          )}
+
+          {/* Tags */}
+          {video.tags && video.tags.length > 0 && (
+            <div>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                Tags
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {video.tags.map((tagLink, i) => (
+                  <div
+                    key={i}
+                    className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-500 flex items-center gap-1.5"
+                  >
+                    <Icon name="label" size="text-sm" />
+                    {tagLink.tag?.name?.toUpperCase() || 'TAG'}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Accordion Sections (below video) */}
+      <div className="space-y-3">
+        {/* Video Details */}
+        <AccordionItem title="Video Details">
+          <div className="space-y-4">
             <div className="pt-4 border-t border-gray-100 dark:border-gray-800 grid grid-cols-2 gap-4">
               <div>
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
                   {t('videoLibrary.details.uploadedBy')}
                 </label>
                 <span className="text-sm font-bold">
-                  {video.uploader?.full_name || 'Unknown'}
+                  {video.uploader?.display_name || `${video.uploader?.first_name || ''} ${video.uploader?.last_name || ''}`.trim() || 'Unknown'}
                 </span>
               </div>
               <div>
@@ -1273,55 +1358,18 @@ export default function CoachVideoDetail() {
           )}
         </AccordionItem>
 
-        {/* Tags */}
-        <AccordionItem
-          title="Tags"
-          badge={video.tags?.length || 0}
-          headerAction={
-            <button
-              onClick={() => setShowTagsModal(true)}
-              disabled={USE_FAKE_DATA}
-              className={cn(
-                "text-xs font-bold text-[var(--org-btn-secondary-bg)] hover:underline flex items-center gap-1",
-                USE_FAKE_DATA && "opacity-50 cursor-not-allowed"
-              )}
-              title={USE_FAKE_DATA ? t('videoLibrary.demoMode.message') : undefined}
-            >
-              <Icon name="add" size="text-sm" />
-              Add
-            </button>
-          }
-        >
-          {video.tags && video.tags.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {video.tags.map((tagLink, i) => (
-                <div
-                  key={i}
-                  className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-500 flex items-center gap-1.5"
-                >
-                  <Icon name="label" size="text-sm" />
-                  {tagLink.tag?.name?.toUpperCase() || 'TAG'}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6 text-gray-500 text-sm">
-              <Icon name="label" size="text-3xl" className="mx-auto mb-2" />
-              <p>{t('videoLibrary.tags.noTags')}</p>
-            </div>
-          )}
-        </AccordionItem>
 
         {/* Bookmarks */}
         <AccordionItem
           title="Bookmarks"
-          badge={undefined}
+          badge={bookmarks?.length ?? 0}
         >
           <BookmarksPanel
             videoId={videoId!}
             currentTime={currentTime}
             onSeek={handleSeekToNote}
             disabled={USE_FAKE_DATA}
+            activeBookmarkId={activeBookmarkId}
           />
         </AccordionItem>
 
@@ -1333,6 +1381,12 @@ export default function CoachVideoDetail() {
           <VideoCommentsPanel
             videoId={videoId!}
             disabled={USE_FAKE_DATA}
+            onSeek={handleSeekToNote}
+            onCaptureTime={handleCaptureTime}
+            deleteConfirmDialog={{
+              title: t('videoLibrary.comments.deleteConfirmTitle'),
+              description: t('videoLibrary.comments.deleteConfirm'),
+            }}
           />
         </AccordionItem>
       </div>
@@ -1599,44 +1653,32 @@ export default function CoachVideoDetail() {
         </div>
       )}
 
-      {/* Delete Video Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full shadow-xl">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-              <h3 className="text-xl font-bold">{t('videoLibrary.actions.delete')}</h3>
-              <button
-                onClick={() => !isDeleting && setShowDeleteModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50"
-                disabled={isDeleting}
-                aria-label={t('common.close')}
-              >
-                <Icon name="close" size="text-xl" />
-              </button>
-            </div>
-            <div className="p-6">
-              <p className="text-gray-600 dark:text-gray-400">{t('videoLibrary.delete.message')}</p>
-            </div>
-            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-end gap-3">
-              <Button
-                variant="secondary"
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-              >
-                {t('common.cancel')}
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-                className="bg-red-500 hover:bg-red-600 text-white border-red-500"
-              >
-                {isDeleting ? t('common.loading') : t('common.delete')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showDeleteModal}
+        title={t('videoLibrary.actions.delete')}
+        description={t('videoLibrary.delete.message')}
+        confirmLabel={isDeleting ? t('common.loading') : t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => !isDeleting && setShowDeleteModal(false)}
+      />
+      <ConfirmDialog
+        open={athleteToUnlinkId !== null}
+        title={t('videoLibrary.athletes.unlinkConfirmTitle')}
+        description={t('videoLibrary.athletes.unlinkConfirm')}
+        confirmLabel={t('common.remove')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={async () => {
+          if (athleteToUnlinkId && videoId) {
+            await unlinkAthlete(videoId, athleteToUnlinkId)
+            refreshVideo()
+          }
+          setAthleteToUnlinkId(null)
+        }}
+        onCancel={() => setAthleteToUnlinkId(null)}
+      />
       
       {/* Athlete Selector Modal */}
       <AthleteSelectorModal

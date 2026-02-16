@@ -420,6 +420,7 @@ export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideo
           *,
           team:teams!videos_team_id_fkey(id, name),
           event:events!videos_event_id_fkey(id, title, type),
+          uploader:users!videos_uploaded_by_fkey(id, display_name, first_name, last_name),
           video_athlete_links(
             id, athlete_id, link_type, start_time_seconds, end_time_seconds,
             athlete:athletes(id, first_name, last_name, jersey_number, has_profile_photo, profile_photo_updated_at)
@@ -847,6 +848,7 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
         .from('video_notes')
         .select(`
           *,
+          author:users!video_notes_author_id_fkey(id, display_name, first_name, last_name),
           video_note_targets(id, athlete_id, athlete:athletes(id, first_name, last_name))
         `)
         .eq('video_id', videoId)
@@ -1155,7 +1157,10 @@ export function useVideoComments({ videoId, enabled = true }: UseVideoCommentsOp
     try {
       const { data, error: fetchError } = await supabase
         .from('video_comments')
-        .select(`*`)
+        .select(`
+          *,
+          author:users!video_comments_author_id_fkey(id, display_name, first_name, last_name)
+        `)
         .eq('video_id', videoId)
         .order('created_at', { ascending: true })
       
@@ -1190,7 +1195,10 @@ export function useVideoComments({ videoId, enabled = true }: UseVideoCommentsOp
           timestamp_seconds: options?.timestamp,
           parent_comment_id: options?.parentId,
         })
-        .select(`*`)
+        .select(`
+          *,
+          author:users!video_comments_author_id_fkey(id, display_name, first_name, last_name)
+        `)
         .single()
       
       if (createError) throw createError

@@ -9,11 +9,12 @@
  *  – Sticky positioning within the panel
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import type { VideoNoteScope } from '@/types/video'
 import Icon from '@/components/portal/Icon'
 import Button from '@/components/portal/Button'
 import { cn } from '@/utils/cn'
+import { formatTimestampShort } from '@/utils/timestamps'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -87,6 +88,7 @@ export default function NoteComposer({
   const [showOptions, setShowOptions] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [tsError, setTsError] = useState<string | null>(null)
+  const contentTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   // ── Timestamp management ──
 
@@ -96,6 +98,28 @@ export default function NoteComposer({
     setTimestampInput(formatTs(time))
     setTsError(null)
   }, [onCaptureTime])
+
+  const handleInsertTimestamp = useCallback(() => {
+    const time = onCaptureTime()
+    const timestampText = formatTimestampShort(time)
+    const textarea = contentTextareaRef.current
+    if (textarea) {
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      const before = content.substring(0, start)
+      const after = content.substring(end)
+      const newContent = before + timestampText + ' ' + after
+      setContent(newContent)
+      // Restore cursor position after timestamp
+      setTimeout(() => {
+        textarea.focus()
+        textarea.setSelectionRange(start + timestampText.length + 1, start + timestampText.length + 1)
+      }, 0)
+    } else {
+      // Fallback: append to end
+      setContent(prev => prev + (prev ? ' ' : '') + timestampText + ' ')
+    }
+  }, [onCaptureTime, content])
 
   const handleTimestampChange = useCallback((value: string) => {
     setTimestampInput(value)
@@ -184,14 +208,26 @@ export default function NoteComposer({
         </div>
 
         {/* ── Content ── */}
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Type your coaching observation…"
-          rows={3}
-          disabled={disabled}
-          className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm resize-none focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent placeholder:text-gray-400"
-        />
+        <div className="relative">
+          <textarea
+            ref={contentTextareaRef}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Type your coaching observation…"
+            rows={3}
+            disabled={disabled}
+            className="w-full px-3 py-2 pr-20 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm resize-none focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent placeholder:text-gray-400"
+          />
+          <button
+            type="button"
+            onClick={handleInsertTimestamp}
+            disabled={disabled}
+            className="absolute right-2 top-2 px-2 py-1 text-xs font-bold text-[var(--org-btn-secondary-bg)] hover:bg-[var(--org-btn-secondary-bg)]/10 rounded transition-colors disabled:opacity-50"
+            title="Insert current timestamp"
+          >
+            <Icon name="schedule" size="text-sm" />
+          </button>
+        </div>
 
         {/* ── Collapsible Options (Athletes + Visibility) ── */}
         <button

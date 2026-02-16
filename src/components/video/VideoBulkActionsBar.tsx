@@ -10,6 +10,7 @@ import { useBulkVideoOperations } from '@/hooks/useVideosExtended'
 import { useVideoTags } from '@/hooks/useVideos'
 import Icon from '@/components/portal/Icon'
 import Button from '@/components/portal/Button'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import { cn } from '@/utils/cn'
 import { showSuccess, showError } from '@/utils/toast'
 
@@ -197,39 +198,16 @@ export default function VideoBulkActionsBar({
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {activeModal === 'delete' && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="size-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <Icon name="delete" size="text-2xl" className="text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold">Delete {count} Video{count !== 1 ? 's' : ''}</h3>
-                <p className="text-sm text-gray-500">This action cannot be undone.</p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3">
-              <Button
-                variant="secondary"
-                onClick={() => setActiveModal(null)}
-                disabled={isProcessing}
-              >
-                Cancel
-              </Button>
-              <button
-                onClick={handleDelete}
-                disabled={isProcessing}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-bold text-sm transition-colors disabled:opacity-50"
-              >
-                {isProcessing ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={activeModal === 'delete'}
+        title={`Delete ${count} Video${count !== 1 ? 's' : ''}`}
+        description="This action cannot be undone."
+        confirmLabel={isProcessing ? 'Deleting...' : 'Delete'}
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setActiveModal(null)}
+      />
 
       {/* Move Modal */}
       {activeModal === 'move' && (

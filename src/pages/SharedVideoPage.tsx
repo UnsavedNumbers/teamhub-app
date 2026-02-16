@@ -468,29 +468,3 @@ export default function SharedVideoPage() {
     </div>
   )
 }
-
-// Declare mux-player element for TypeScript
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace JSX {
-    interface IntrinsicElements {
-      'mux-player': React.DetailedHTMLProps<
-        React.HTMLAttributes<HTMLElement> & {
-          'playback-id'?: string
-          'playback-token'?: string
-          'thumbnail-token'?: string
-          'storyboard-token'?: string
-          'stream-type'?: 'on-demand' | 'live'
-          'start-time'?: number
-          autoplay?: boolean
-          muted?: boolean
-          loop?: boolean
-          poster?: string
-          'primary-color'?: string
-          'secondary-color'?: string
-        },
-        HTMLElement
-      >
-    }
-  }
-}
