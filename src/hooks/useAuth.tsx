@@ -568,7 +568,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error }
   }
 
-  async function signUp(email: string, password: string, firstName: string, lastName: string, phone: string, zipcode: string, requiresOrgSetup?: boolean, signupMode?: 'fan' | 'parent') {
+  async function signUp(email: string, password: string, firstName: string, lastName: string, phone: string, zipcode: string, requiresOrgSetup?: boolean, signupMode?: 'fan' | 'parent', tosAccepted?: boolean, privacyAccepted?: boolean) {
     return debug.group(`Auth.signUp: ${email}`, async () => {
         debug.flow('Auth', 'Signup attempt', { email, signupMode, requiresOrgSetup })
         debug.perf.start('auth.signUp')
@@ -600,17 +600,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     })
 
-        if (!error && data?.session?.user && trimmedZip) {
+        if (!error && data?.user) {
+          const userId = data.session?.user?.id || data.user.id
+          const now = new Date().toISOString()
+          const consentVersion = '1.0' // Update this when ToS/Privacy Policy versions change
+
           try {
-            const homeLocation = await geocodeZipToHomeLocation(trimmedZip)
-            if (homeLocation) {
+            // Update user with consent and home location
+            const updateData: any = {}
+            
+            if (tosAccepted) {
+              updateData.tos_accepted_at = now
+            }
+            if (privacyAccepted) {
+              updateData.privacy_policy_accepted_at = now
+            }
+            if (tosAccepted || privacyAccepted) {
+              updateData.consent_version = consentVersion
+            }
+            if (trimmedZip) {
+              updateData.home_zipcode = trimmedZip
+            }
+
+            if (Object.keys(updateData).length > 0) {
+              if (trimmedZip) {
+                try {
+                  const homeLocation = await geocodeZipToHomeLocation(trimmedZip)
+                  if (homeLocation) {
+                    updateData.home_location = homeLocation
+                  }
+                } catch (err) {
+                  debug.error('Auth', 'Failed to geocode zipcode', { email, error: err })
+                }
+              }
+
               await supabase
                 .from('users')
-                .update({ home_location: homeLocation as any, home_zipcode: trimmedZip })
-                .eq('id', data.session.user.id)
+                .update(updateData)
+                .eq('id', userId)
             }
           } catch (err) {
-            debug.error('Auth', 'Failed to save home location after signup', { email, error: err })
+            debug.error('Auth', 'Failed to save consent/home location after signup', { email, error: err })
           }
         }
 

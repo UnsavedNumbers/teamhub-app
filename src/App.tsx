@@ -24,8 +24,10 @@ import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import AcceptInvite from './pages/AcceptInvite'
+import JoinByLink from './pages/JoinByLink'
 import AuthCallback from './pages/AuthCallback'
 import ConfirmEmail from './pages/ConfirmEmail'
+import CompleteProfile from './pages/CompleteProfile'
 import Unauthorized from './pages/Unauthorized'
 
 // Main Pages (keep unchanged - Tailwind CSS)
@@ -238,6 +240,7 @@ const EditAthlete = lazy(() => import('./pages/admin/EditAthlete'))
 const AdminAthletes = lazy(() => import('./pages/admin/AdminAthletes'))
 const ImportAthletes = lazy(() => import('./pages/admin/ImportAthletes'))
 const GuardianAttachmentRequests = lazy(() => import('./pages/admin/GuardianAttachmentRequests').then(m => ({ default: m.default })))
+const Invitations = lazy(() => import('./pages/admin/Invitations'))
 const AdminSportSettings = lazy(() => import('./pages/admin/AdminSportSettings'))
 
 function HostHomeRoute() {
@@ -369,6 +372,7 @@ function AppWithTheme() {
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="reset-password" element={<ResetPassword />} />
             <Route path="accept-invite" element={<AcceptInvite />} />
+            <Route path="join/link" element={<JoinByLink />} />
             <Route path="auth/callback" element={<AuthCallback />} />
             <Route path="confirm-email" element={<ConfirmEmail />} />
             <Route path="unauthorized" element={<Unauthorized />} />
@@ -382,7 +386,9 @@ function AppWithTheme() {
             <Route path="athletes/:id/profile" element={<ProtectedRoute allowedRoles={['parent']}><AthleteProfile /></ProtectedRoute>} />
             <Route path="athletes/:id/edit" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><EditAthletePortal /></Suspense></ProtectedRoute>} />
             <Route path="athletes/request-attachment" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><RequestAthleteAttachment /></Suspense></ProtectedRoute>} />
-            <Route path="join" element={<ProtectedRoute allowedRoles={['parent']}><JoinTeam /></ProtectedRoute>} />
+            {/* Join route is public - handles auth internally */}
+            <Route path="join" element={<JoinTeam />} />
+            <Route path="complete-profile" element={<ProtectedRoute><CompleteProfile /></ProtectedRoute>} />
             <Route path="calendar/new" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><PortalCreateEvent /></Suspense></ProtectedRoute>} />
             <Route path="calendar/events/:eventId/edit" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><PortalEditEvent /></Suspense></ProtectedRoute>} />
             <Route path="calendar/events/:eventId" element={<ProtectedRoute allowedRoles={['parent']}><EventDetail /></ProtectedRoute>} />
@@ -526,6 +532,7 @@ function AppWithTheme() {
               <Route path="guardians/:id" element={<FeatureGateRoute routeKey="admin.guardians.detail"><FamilyDetail /></FeatureGateRoute>} />
               <Route path="guardians" element={<FeatureGateRoute routeKey="admin.guardians.list"><AdminFamilies /></FeatureGateRoute>} />
               <Route path="guardian-requests" element={<FeatureGateRoute routeKey="admin.guardianRequests"><GuardianAttachmentRequests /></FeatureGateRoute>} />
+              <Route path="invitations" element={<FeatureGateRoute routeKey="admin.invitations"><Invitations /></FeatureGateRoute>} />
 
               {/* Backward Compatibility Redirects */}
               <Route path="organization/sports/:id" element={<RedirectWithParams to="/admin/sports" />} />

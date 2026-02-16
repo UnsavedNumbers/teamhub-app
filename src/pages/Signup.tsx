@@ -28,6 +28,8 @@ export default function Signup() {
   const [heroImage, setHeroImage] = useState<string>('')
   const [inviteEmail, setInviteEmail] = useState<string | null>(null)
   const [isFromInvite, setIsFromInvite] = useState(false)
+  const [tosAccepted, setTosAccepted] = useState(false)
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
 
   const { signUp } = useAuth()
   const { resolvedTheme } = useTheme()
@@ -208,6 +210,12 @@ export default function Signup() {
       return
     }
 
+    if (!tosAccepted || !privacyAccepted) {
+      debug.error('Signup', 'Validation failed', { field: 'consent', error: 'not_accepted' })
+      setError('You must accept the Terms of Service and Privacy Policy to continue')
+      return
+    }
+
     setLoading(true)
 
     const { error } = await signUp(
@@ -217,7 +225,8 @@ export default function Signup() {
       trimmedLastName,
       trimmedPhone,
       trimmedZipcode,
-      isOrgSetupFlow
+      isOrgSetupFlow,
+      signupMode
     )
 
     if (error) {
@@ -609,19 +618,51 @@ export default function Signup() {
               )}
             </div>
 
-            {/* Terms */}
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              By creating an account, you agree to our{' '}
-              <a href="#" tabIndex={9} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Terms of Service</a>
-              {' '}and{' '}
-              <a href="#" tabIndex={10} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Privacy Policy</a>
-            </p>
+            {/* Terms and Privacy Consent */}
+            <div className="space-y-3">
+              <div className="flex items-start">
+                <input
+                  id="tos"
+                  name="tos"
+                  type="checkbox"
+                  required
+                  checked={tosAccepted}
+                  onChange={(e) => setTosAccepted(e.target.checked)}
+                  tabIndex={9}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-[var(--org-btn-primary-bg, #137fec)] focus:ring-[var(--org-btn-primary-bg, #137fec)]"
+                />
+                <label htmlFor="tos" className="ml-2 text-xs text-slate-600 dark:text-slate-400">
+                  I agree to the{' '}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors underline">
+                    Terms of Service
+                  </a>
+                </label>
+              </div>
+              <div className="flex items-start">
+                <input
+                  id="privacy"
+                  name="privacy"
+                  type="checkbox"
+                  required
+                  checked={privacyAccepted}
+                  onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                  tabIndex={10}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-[var(--org-btn-primary-bg, #137fec)] focus:ring-[var(--org-btn-primary-bg, #137fec)]"
+                />
+                <label htmlFor="privacy" className="ml-2 text-xs text-slate-600 dark:text-slate-400">
+                  I agree to the{' '}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors underline">
+                    Privacy Policy
+                  </a>
+                </label>
+              </div>
+            </div>
 
             {/* Submit */}
             <div>
               <button
                 type="submit"
-                disabled={loading || (password !== confirmPassword && confirmPassword.length > 0)}
+                disabled={loading || (password !== confirmPassword && confirmPassword.length > 0) || !tosAccepted || !privacyAccepted}
                 tabIndex={8}
                 className="bg-slate-900 dark:bg-white text-white dark:text-black px-8 py-3 font-black text-sm tracking-widest uppercase w-full hover:bg-[#5468FF] dark:hover:bg-[#5468FF] dark:hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
               >

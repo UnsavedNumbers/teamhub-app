@@ -192,6 +192,12 @@ export default function FanOrgProfile() {
     }
   }
 
+  const handleReportProfile = async () => {
+    setMoreMenuOpen(false)
+    // TODO: Implement report functionality
+    showInfo('Report functionality coming soon')
+  }
+
   if (loading) {
     return (
       <div className="fan-loading-page">

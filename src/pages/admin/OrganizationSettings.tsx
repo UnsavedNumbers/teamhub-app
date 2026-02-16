@@ -70,6 +70,7 @@ import type { StripeConnectStatus } from '../../types/stripeConnect.types'
 import { type OrganizationSettings as OrgSettingsType, type GeneralSettings } from '@/types/organizationSettings'
 import ContactSection from './organizationSettings/ContactSection'
 import StaffSection from './organizationSettings/StaffSection'
+import JoinLinksSection from './organizationSettings/JoinLinksSection'
 
 import type { Organization } from '../../types/domain/Organization'
 import '../../styles/orgAdmin.css'
@@ -111,7 +112,7 @@ export default function OrganizationSettings() {
 
   // Valid tab values for URL parameter
   const validTabs = useMemo(() => {
-    const baseTabs = ['overview', 'contact', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'staff', 'advanced']
+    const baseTabs = ['overview', 'contact', 'appearance', 'attendance', 'registration', 'joinLinks', 'notifications', 'permissions', 'staff', 'advanced']
     if (hasPaymentAccess) {
       baseTabs.push('payments')
     }
@@ -363,6 +364,7 @@ export default function OrganizationSettings() {
           <TabsTrigger value="appearance">{t('admin.organizationSettings.tabs.appearance')}</TabsTrigger>
           <TabsTrigger value="attendance">{t('admin.organizationSettings.tabs.attendance')}</TabsTrigger>
           <TabsTrigger value="registration">{t('admin.organizationSettings.tabs.registration')}</TabsTrigger>
+          <TabsTrigger value="joinLinks">{t('admin.organizationSettings.tabs.joinLinks')}</TabsTrigger>
           <TabsTrigger value="notifications">{t('admin.organizationSettings.tabs.notifications')}</TabsTrigger>
           <TabsTrigger value="permissions">{t('admin.organizationSettings.tabs.permissions')}</TabsTrigger>
           <TabsTrigger value="staff">{t('admin.organizationSettings.tabs.staff')}</TabsTrigger>
@@ -422,6 +424,10 @@ export default function OrganizationSettings() {
 
         <TabsContent value="registration">
            {settings && <RegistrationForm settings={settings.registration} onSave={(d) => handleSaveSettings('registration', d)} loading={saving} />}
+        </TabsContent>
+
+        <TabsContent value="joinLinks">
+          {currentOrganization && <JoinLinksSection orgId={currentOrganization.id} />}
         </TabsContent>
 
         <TabsContent value="notifications">
