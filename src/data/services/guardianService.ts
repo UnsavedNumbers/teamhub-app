@@ -29,20 +29,18 @@ type ParentInvite = Database['public']['Tables']['parent_invites']['Row']
  * Trigger the notification worker to process queued emails
  * This is called after creating or resending an invite
  * Passes the current app origin so email links use the correct base URL
+ * When jobIds is provided, the worker processes only those jobs (e.g. after resend).
  */
-async function triggerNotificationWorker(): Promise<void> {
+async function triggerNotificationWorker(jobIds?: string[]): Promise<void> {
     try {
-        // Pass the current origin so the worker can build correct invite links
         const appBaseUrl = window.location.origin
-        
-        const { error } = await supabase.functions.invoke('notification-worker', {
-            body: { appBaseUrl }
-        })
+        const body: { appBaseUrl: string; job_ids?: string[] } = { appBaseUrl }
+        if (jobIds?.length) body.job_ids = jobIds
+        const { error } = await supabase.functions.invoke('notification-worker', { body })
         if (error) {
             console.warn('Failed to trigger notification worker:', error)
         }
     } catch (err) {
-        // Don't fail the operation if notification trigger fails
         console.warn('Error triggering notification worker:', err)
     }
 }
@@ -497,15 +495,13 @@ export async function resendInvite(
 
         if (error) throw error
 
-        // Check the result from the RPC
-        const result = data as { success?: boolean; error?: string } | null
+        const result = data as { success?: boolean; error?: string; notification_job_id?: string } | null
         if (result && result.success === false) {
             throw new Error(result.error || 'Failed to resend invite')
         }
 
-        // Trigger notification worker to send the invite email
-        // This runs in the background and doesn't block the response
-        triggerNotificationWorker()
+        const jobIds = result?.notification_job_id ? [result.notification_job_id] : undefined
+        triggerNotificationWorker(jobIds)
 
         debug.perf.end('guardianService.resendInvite')
         debug.flow('GuardianService.resendInvite', 'Invite resent successfully', { inviteId })

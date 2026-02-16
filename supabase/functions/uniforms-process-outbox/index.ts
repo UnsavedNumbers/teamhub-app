@@ -5,36 +5,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 
-const resendApiKey = Deno.env.get("RESEND_API_KEY") || ""
-const fromEmail = Deno.env.get("NOTIFICATIONS_FROM_EMAIL") || ""
-
 if (!supabaseUrl || !supabaseServiceRoleKey) {
   throw new Error("Missing required environment configuration")
-}
-
-async function sendEmail(to: string, subject: string, html: string) {
-  if (!resendApiKey || !fromEmail) {
-    throw new Error("Email not configured (RESEND_API_KEY / NOTIFICATIONS_FROM_EMAIL)")
-  }
-
-  const resp = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: fromEmail,
-      to,
-      subject,
-      html,
-    }),
-  })
-
-  if (!resp.ok) {
-    const text = await resp.text()
-    throw new Error(`Resend error: ${resp.status} ${text}`)
-  }
 }
 
 function buildMessage(eventType: string, payload: any) {
@@ -144,11 +116,18 @@ serve(async (req) => {
         }).throwOnError()
 
         if (u.email) {
-          await sendEmail(
-            u.email,
-            msg.subject,
-            `<p>${msg.body}</p>`,
-          )
+          await supabase.from("notification_jobs").insert({
+            org_id: team.org_id,
+            user_id: u.id,
+            email: u.email,
+            type: "uniform_notification",
+            payload: {
+              subject: msg.subject,
+              title: msg.title,
+              body: msg.body,
+            },
+            status: "queued",
+          })
         }
       }
 

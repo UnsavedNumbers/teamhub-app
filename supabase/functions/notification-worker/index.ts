@@ -89,15 +89,14 @@ serve(async (req) => {
       jobs = data as NotificationJobRow[] | null
       fetchError = error
     } else {
-      // Fetch queued notification jobs that are ready to process
-      // Include jobs that are queued AND (next_retry_at is null OR next_retry_at <= now)
+      // Fetch queued notification jobs that are ready to process (newest first so client-triggered invites are processed)
       const now = new Date().toISOString()
       const { data, error } = await supabase
         .from('notification_jobs')
         .select('*')
         .eq('status', 'queued')
         .or(`next_retry_at.is.null,next_retry_at.lte.${now}`)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(10)
       
       jobs = data as NotificationJobRow[] | null

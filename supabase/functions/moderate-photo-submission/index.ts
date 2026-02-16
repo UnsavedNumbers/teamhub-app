@@ -4,40 +4,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-const resendApiKey = Deno.env.get("RESEND_API_KEY") || ""
-const fromEmail = Deno.env.get("NOTIFICATIONS_FROM_EMAIL") || "notifications@youthsports.team"
 
 if (!supabaseUrl || !supabaseServiceRoleKey) {
   throw new Error("Missing required environment configuration")
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
-
-async function sendEmail(to: string, subject: string, html: string) {
-  if (!resendApiKey || !fromEmail) {
-    console.warn("Email not configured (RESEND_API_KEY / NOTIFICATIONS_FROM_EMAIL) - skipping email")
-    return
-  }
-
-  const resp = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: fromEmail,
-      to,
-      subject,
-      html,
-    }),
-  })
-
-  if (!resp.ok) {
-    const text = await resp.text()
-    throw new Error(`Resend error: ${resp.status} ${text}`)
-  }
-}
 
 serve(async (req) => {
   try {
@@ -93,27 +65,36 @@ serve(async (req) => {
       const subject = action === 'approve'
         ? `Your photo was approved - ${galleryName}`
         : `Your photo was not approved - ${galleryName}`
+      const title = action === 'approve' ? 'Photo Approved' : 'Photo Not Approved'
+      const body = action === 'approve'
+        ? `Your photo has been approved and added to ${galleryName}.`
+        : `Your photo was not approved for ${galleryName}. Please review the team's media guidelines and try again.`
+      const galleryLink = action === 'approve'
+        ? `${supabaseUrl.replace('/rest/v1', '')}/portal/photos/gallery/${photo.gallery_id}`
+        : undefined
 
-      const html = action === 'approve'
-        ? `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Photo Approved</h2>
-            <p>Your photo has been approved and added to <strong>${galleryName}</strong>.</p>
-            <p><a href="${supabaseUrl.replace('/rest/v1', '')}/portal/photos/gallery/${photo.gallery_id}">View Gallery</a></p>
-          </div>
-        `
-        : `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Photo Not Approved</h2>
-            <p>Your photo was not approved for <strong>${galleryName}</strong>. Please review the team's media guidelines and try again.</p>
-          </div>
-        `
+      const { data: org } = await supabase
+        .from('galleries')
+        .select('org_id')
+        .eq('id', photo.gallery_id)
+        .single()
 
       try {
-        await sendEmail(uploaderEmail, subject, html)
+        await supabase.from("notification_jobs").insert({
+          org_id: org?.org_id,
+          user_id: photo.uploaded_by_user_id,
+          email: uploaderEmail,
+          type: "photo_moderation",
+          payload: {
+            subject,
+            title,
+            body,
+            gallery_link: galleryLink,
+          },
+          status: "queued",
+        })
       } catch (emailError) {
-        console.error(`Failed to send email to ${uploaderEmail}:`, emailError)
-        // Continue processing other photos even if one email fails
+        console.error(`Failed to queue email for ${uploaderEmail}:`, emailError)
       }
     }
 

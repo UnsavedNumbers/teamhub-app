@@ -4,8 +4,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-const resendApiKey = Deno.env.get("RESEND_API_KEY")
-const emailFrom = Deno.env.get("TRAVEL_EMAIL_FROM") // e.g. "Youth Sports <no-reply@yourdomain.com>"
 const notifySecret = Deno.env.get("TRAVEL_NOTIFY_SECRET")
 
 if (!supabaseUrl || !supabaseServiceRoleKey) {
@@ -68,30 +66,6 @@ function buildEmailHtml(row: OutboxRow) {
   `
 }
 
-async function sendResendEmail(to: string[], subject: string, html: string) {
-  if (!resendApiKey || !emailFrom) {
-    throw new Error("Email provider not configured (RESEND_API_KEY / TRAVEL_EMAIL_FROM)")
-  }
-
-  const resp = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: emailFrom,
-      to,
-      subject,
-      html,
-    }),
-  })
-
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => "")
-    throw new Error(`Resend error: ${resp.status} ${text}`)
-  }
-}
 
 async function getParentEmails(supabase: any, teamId: string) {
   const { data: rows, error: qErr } = await supabase.rpc("travel_recipient_emails", { team_id_in: teamId })
@@ -134,9 +108,28 @@ serve(async (req) => {
       }
 
       const subject = subjectFor(row.event_type, title)
-      const html = buildEmailHtml(row)
+      const location = row.payload?.location ?? ""
+      const start = row.payload?.start_date ?? ""
+      const end = row.payload?.end_date ?? ""
+      const status = row.payload?.status ?? ""
+      const { data: team } = await supabase.from("teams").select("org_id").eq("id", row.team_id).single()
 
-      await sendResendEmail(recipients, subject, html)
+      for (const email of recipients) {
+        await supabase.from("notification_jobs").insert({
+          org_id: team?.org_id,
+          email,
+          type: "travel_notification",
+          payload: {
+            subject,
+            title,
+            location,
+            date_range: `${start} → ${end}`,
+            status,
+            body: `Open the Youth Sports app to view full details, maps, and the itinerary.`,
+          },
+          status: "queued",
+        })
+      }
 
       await supabase.from("notification_outbox").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", row.id)
       results.push({ id: row.id, status: "sent", recipients: recipients.length })

@@ -661,27 +661,72 @@ export async function getAthletes(
 
     // Real Data
     try {
-        // Query athletes with guardian status using the batch RPC function
-        // This is more efficient than checking each athlete individually
-        console.log('[getAthletes] Fetching athletes with guardian status for org:', context.orgId)
+        // Check if user is org admin - if so, get all athletes in org; otherwise, get only guardian athletes
+        const isOrgAdmin = context.roles.includes('org_admin') || context.isPlatformAdmin
         
-        const { data, error } = await supabase
-            .rpc('get_athletes_with_guardian_status', {
-                p_org_id: context.orgId,
-                p_limit: 10000, // Large limit to get all athletes (pagination handled client-side)
-                p_offset: 0
-            })
-
-        console.log('[getAthletes] Query result:', { data, error, count: data?.length })
-
-        if (error) {
-            console.error('[getAthletes] Query error:', error)
-            throw error
+        let data: any[] = []
+        
+        if (isOrgAdmin) {
+            // Org admins see all athletes in the org
+            console.log('[getAthletes] Fetching all athletes with guardian status for org:', context.orgId)
+            const { data: allAthletes, error: allError } = await supabase
+                .rpc('get_athletes_with_guardian_status', {
+                    p_org_id: context.orgId,
+                    p_limit: 10000, // Large limit to get all athletes (pagination handled client-side)
+                    p_offset: 0
+                })
+            
+            if (allError) {
+                console.error('[getAthletes] Query error:', allError)
+                throw allError
+            }
+            data = allAthletes || []
+        } else {
+            // Regular users/guardians only see their own children
+            console.log('[getAthletes] Fetching guardian athletes for user:', context.userId)
+            const { data: guardianAthletes, error: guardianError } = await supabase
+                .rpc('get_guardian_athletes', {
+                    p_user_id: context.userId,
+                    p_org_id: context.orgId
+                })
+            
+            if (guardianError) {
+                console.error('[getAthletes] Query error:', guardianError)
+                throw guardianError
+            }
+            // Transform guardian_athletes format to match get_athletes_with_guardian_status format
+            data = (guardianAthletes || []).map((a: any) => ({
+                athlete_id: a.athlete_id,
+                first_name: a.first_name,
+                last_name: a.last_name,
+                birthdate: a.birthdate,
+                gender: a.gender,
+                preferred_name: null,
+                jersey_number: null,
+                medical_notes: null,
+                allergies: null,
+                emergency_contact_name: null,
+                emergency_contact_phone: null,
+                created_at: null,
+                updated_at: null,
+                deleted_at: null,
+                family_id: null,
+                has_active_guardian: a.status === 'active'
+            }))
         }
-        
+
+        console.log('[getAthletes] Query result:', { data, count: data?.length, isOrgAdmin })
+
+        // Never show RLS contract test data (prefix from tests/rls-contract/helpers/seed.ts)
+        const TEST_DATA_PREFIX = '__rls_test__'
+        const filtered = (data || []).filter(
+            (d: { first_name?: string | null }) =>
+                d.first_name == null || !d.first_name.startsWith(TEST_DATA_PREFIX)
+        )
+
         // Transform the data to match Athlete type with empty sports array
         // Sports can be fetched separately if needed
-        const transformed = (data || []).map((d: any) => ({
+        const transformed = filtered.map((d: any) => ({
             id: d.athlete_id,
             family_id: d.family_id,
             first_name: d.first_name,

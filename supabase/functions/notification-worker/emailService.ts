@@ -8,7 +8,7 @@ export interface NotificationJob {
   org_id: string;
   user_id?: string;
   email: string;
-  type: 'new_event' | 'new_message' | 'payment_receipt' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email' | 'guardian_invite' | 'ticket_receipt';
+  type: 'new_event' | 'new_message' | 'payment_receipt' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email' | 'guardian_invite' | 'ticket_receipt' | 'uniform_notification' | 'travel_notification' | 'photo_moderation' | 'rsvp_notification';
   payload: Record<string, any>;
   status: 'queued' | 'sent' | 'failed';
   error?: string;
@@ -63,27 +63,47 @@ const EMAIL_CONFIG = {
   ticket_receipt: {
     subject: 'Your Tickets: {{event_title}}',
     preview: 'Your tickets are ready'
+  },
+  uniform_notification: {
+    subject: '{{subject}}',
+    preview: '{{body}}'
+  },
+  travel_notification: {
+    subject: '{{subject}}',
+    preview: 'Travel plan update'
+  },
+  photo_moderation: {
+    subject: '{{subject}}',
+    preview: 'Photo moderation update'
+  },
+  rsvp_notification: {
+    subject: 'RSVP Required: {{event_title}}',
+    preview: 'Please RSVP for this event'
   }
 };
 
 /**
  * Send a notification email using the compiled MJML template
  */
+const PLACEHOLDER_IMAGE_URL = 'https://placehold.co/1x1/ffffff/ffffff.png';
+
 export async function sendNotificationEmail(
   job: NotificationJob,
   supabase?: any
 ): Promise<EmailResult> {
   try {
-    // Load compiled HTML template from Supabase storage or external URL
-    // For now, we'll use a simple approach - templates should be hosted or embedded
-    let htmlContent = await loadTemplate(job.type, job.payload);
+    // For guardian_invite, ensure template vars are set (skill: payload must have all required keys)
+    if (job.type === 'guardian_invite') {
+      const localPart = job.email?.split('@')[0]?.trim() || '';
+      job.payload = {
+        ...job.payload,
+        recipient_firstname: localPart || 'there',
+      };
+    }
 
-    // Inject organization branding if available
+    let branding: OrganizationBranding | null = null;
     if (supabase && job.org_id) {
-      const branding = await getOrganizationBranding(job.org_id, supabase);
-      htmlContent = injectBrandingVariables(htmlContent, branding);
-      
-      // Also inject branding into payload for template variable replacement
+      branding = await getOrganizationBranding(job.org_id, supabase);
       job.payload = {
         ...job.payload,
         organization_logo_url: branding.logo_url || '',
@@ -92,7 +112,17 @@ export async function sendNotificationEmail(
         organization_secondary_color: branding.secondary_color,
         email_footer_text: branding.email_footer_text || `© ${new Date().getFullYear()} ${branding.organization_name}. All rights reserved.`,
         email_from_name: branding.email_from_name,
+        ...(job.type === 'guardian_invite' && {
+          header_image_url: branding.logo_url || PLACEHOLDER_IMAGE_URL,
+          sender_image_url: branding.logo_url || PLACEHOLDER_IMAGE_URL,
+        }),
       };
+    }
+
+    let htmlContent = await loadTemplate(job.type, job.payload);
+
+    if (branding) {
+      htmlContent = injectBrandingVariables(htmlContent, branding);
     }
 
     // Get subject and preview
@@ -538,6 +568,44 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
     </div>
     <!--[if mso | IE]></td></tr></table><![endif]-->
   </div>
+</body>
+</html>`,
+    uniform_notification: `<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>{{subject}}</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2>{{title}}</h2>
+  <p>{{body}}</p>
+  <p style="color: #6b7280; font-size: 12px;">{{email_footer_text}}</p>
+</body>
+</html>`,
+    travel_notification: `<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>{{subject}}</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2>{{title}}</h2>
+  <p><strong>{{location}}</strong><br/>{{date_range}}<br/>Status: {{status}}</p>
+  <p>{{body}}</p>
+  <p style="color: #6b7280; font-size: 12px;">{{email_footer_text}}</p>
+</body>
+</html>`,
+    photo_moderation: `<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>{{subject}}</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2>{{title}}</h2>
+  <p>{{body}}</p>
+  {{#if gallery_link}}<p><a href="{{gallery_link}}">View Gallery</a></p>{{/if}}
+  <p style="color: #6b7280; font-size: 12px;">{{email_footer_text}}</p>
+</body>
+</html>`,
+    rsvp_notification: `<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>RSVP Required: {{event_title}}</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2>RSVP Required: {{event_title}}</h2>
+  <p>{{body}}</p>
+  <p style="color: #6b7280; font-size: 12px;">{{email_footer_text}}</p>
 </body>
 </html>`
   };
