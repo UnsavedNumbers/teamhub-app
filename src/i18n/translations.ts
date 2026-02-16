@@ -605,6 +605,17 @@ export const en = {
                     push: 'Push',
                     urgentNotice: 'Urgent alerts may bypass preferences.',
                 },
+                digest: {
+                    daily: 'Daily',
+                    weekly: 'Weekly',
+                },
+                quietHours: {
+                    title: 'Quiet Hours',
+                    description: 'Delay non-urgent notifications during these hours',
+                    start: 'Start',
+                    end: 'End',
+                    timezone: 'Timezone',
+                },
                 actions: {
                     event_created: 'Event created',
                     event_updated: 'Event updated',
@@ -642,7 +653,6 @@ export const en = {
                 paymentReminders: 'Payment reminders',
                 tryoutUpdates: 'Tryout updates',
                 emergencyAlerts: 'Emergency alerts',
-                quietHours: 'Quiet hours',
                 travel: 'Travel updates',
                 attendanceIssues: 'Attendance issues',
                 paymentIssues: 'Payment issues',
@@ -5228,6 +5238,17 @@ export const es = {
                     push: 'Push',
                     urgentNotice: 'Las alertas urgentes pueden omitir preferencias.',
                 },
+                digest: {
+                    daily: 'Diario',
+                    weekly: 'Semanal',
+                },
+                quietHours: {
+                    title: 'Horas tranquilas',
+                    description: 'Retrasar notificaciones no urgentes durante estas horas',
+                    start: 'Inicio',
+                    end: 'Fin',
+                    timezone: 'Zona horaria',
+                },
                 actions: {
                     event_created: 'Evento creado',
                     event_updated: 'Evento actualizado',
@@ -5265,7 +5286,6 @@ export const es = {
                 paymentReminders: 'Recordatorios de pago',
                 tryoutUpdates: 'Actualizaciones de pruebas',
                 emergencyAlerts: 'Alertas de emergencia',
-                quietHours: 'Horas tranquilas',
                 travel: 'Actualizaciones de viajes',
                 attendanceIssues: 'Problemas de asistencia',
                 paymentIssues: 'Problemas de pago',

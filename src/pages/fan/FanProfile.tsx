@@ -536,18 +536,6 @@ export function FanProfileNotifications() {
             </button>
           </div>
 
-          <div className="fan-toggle-row">
-            <div className="fan-toggle-info">
-              <span className="fan-toggle-title">Push Notifications</span>
-              <span className="fan-toggle-description">Receive push notifications on your device</span>
-            </div>
-            <button
-              className={`fan-toggle ${preferences.push_enabled ? 'active' : ''}`}
-              onClick={() => updatePref('push_enabled', !preferences.push_enabled)}
-            >
-              <span className="fan-toggle-track" />
-            </button>
-          </div>
         </div>
 
         {/* Notification Types */}
@@ -559,7 +547,7 @@ export function FanProfileNotifications() {
             description="When event times or locations change"
             value={preferences.schedule_changes_channel}
             onChange={(v) => updatePref('schedule_changes_channel', v)}
-            disabled={!preferences.email_enabled && !preferences.push_enabled}
+            disabled={!preferences.email_enabled}
           />
           
           <NotificationTypeRow
@@ -567,7 +555,7 @@ export function FanProfileNotifications() {
             description="Updates about your tickets and orders"
             value={preferences.ticket_updates_channel}
             onChange={(v) => updatePref('ticket_updates_channel', v)}
-            disabled={!preferences.email_enabled && !preferences.push_enabled}
+            disabled={!preferences.email_enabled}
           />
           
           <NotificationTypeRow
@@ -575,7 +563,7 @@ export function FanProfileNotifications() {
             description="Important announcements from teams you follow"
             value={preferences.announcements_channel}
             onChange={(v) => updatePref('announcements_channel', v)}
-            disabled={!preferences.email_enabled && !preferences.push_enabled}
+            disabled={!preferences.email_enabled}
           />
           
           <NotificationTypeRow
@@ -583,7 +571,7 @@ export function FanProfileNotifications() {
             description="When new media is added to galleries"
             value={preferences.photos_added_channel}
             onChange={(v) => updatePref('photos_added_channel', v)}
-            disabled={!preferences.email_enabled && !preferences.push_enabled}
+            disabled={!preferences.email_enabled}
           />
           
           <NotificationTypeRow
@@ -591,7 +579,7 @@ export function FanProfileNotifications() {
             description="Scores and results from games"
             value={preferences.game_results_channel}
             onChange={(v) => updatePref('game_results_channel', v)}
-            disabled={!preferences.email_enabled && !preferences.push_enabled}
+            disabled={!preferences.email_enabled}
           />
         </div>
 

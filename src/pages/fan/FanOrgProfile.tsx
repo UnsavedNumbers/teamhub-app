@@ -26,7 +26,7 @@ import { showError, showSuccess, showInfo } from '../../utils/toast'
 import '../../styles/fan.css'
 import '../../styles/fan-layouts.css'
 
-type TabType = 'overview' | 'schedule' | 'roster' | 'media' | 'shop'
+type TabType = 'overview' | 'schedule' | 'roster' | 'media'
 type FeedFilter = 'highlights' | 'press'
 
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
@@ -138,9 +138,6 @@ export default function FanOrgProfile() {
 
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab)
-    if (tab === 'shop') {
-      showInfo(t('portal.fan.orgProfile.shopComingSoon'))
-    }
     if (tab === 'schedule' && !eventsLoaded && profile?.id) {
       loadEvents(profile.id)
     }
@@ -193,11 +190,6 @@ export default function FanOrgProfile() {
     } catch (err) {
       console.error('Share failed', err)
     }
-  }
-
-  const handleReportProfile = () => {
-    setMoreMenuOpen(false)
-    showInfo(t('portal.fan.orgProfile.reportComingSoon'))
   }
 
   if (loading) {
@@ -352,12 +344,6 @@ export default function FanOrgProfile() {
             >
               {t('portal.fan.orgProfile.tabs.media')}
             </button>
-            <button 
-              className={`fan-org-profile-tab ${activeTab === 'shop' ? 'active' : ''}`}
-              onClick={() => handleTabChange('shop')}
-            >
-              {t('portal.fan.orgProfile.tabs.shop')}
-            </button>
           </nav>
         </div>
       </section>
@@ -459,16 +445,6 @@ export default function FanOrgProfile() {
             <div className="fan-empty-state">
               <span className="material-symbols-outlined">photo_library</span>
               <p>{t('portal.fan.orgProfile.noMedia')}</p>
-            </div>
-          )}
-
-          {activeTab === 'shop' && (
-            <div className="fan-empty-state">
-              <span className="material-symbols-outlined">shopping_bag</span>
-              <p>{t('portal.fan.orgProfile.shopComingSoon')}</p>
-              <p style={{ fontSize: '14px', marginTop: '8px', color: '#71717a' }}>
-                {t('portal.fan.orgProfile.shopDescription')}
-              </p>
             </div>
           )}
         </div>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { cn } from '../../utils/cn'
 import { useT } from '../../i18n/useI18n'
+import type { TranslationKey } from '../../i18n'
 import type { NotificationRole } from '../../types/notifications'
 import type { DeliveryChannel, NotificationGroup } from '../../types/notificationPreferences'
 
@@ -108,8 +109,8 @@ export function NotificationPreferences({
                       disabled={saving}
                       className="px-3 py-1.5 rounded-full text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
                     >
-                      <option value="daily">{t('portal.settings.notifications.digest.daily' as any, { defaultValue: 'Daily' })}</option>
-                      <option value="weekly">{t('portal.settings.notifications.digest.weekly' as any, { defaultValue: 'Weekly' })}</option>
+                      <option value="daily">{t('portal.settings.notifications.digest.daily')}</option>
+                      <option value="weekly">{t('portal.settings.notifications.digest.weekly')}</option>
                     </select>
                   )}
                 </div>
@@ -142,10 +143,10 @@ export function NotificationPreferences({
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 mb-1">
-                          {t('portal.settings.notifications.quietHours.title' as any, { defaultValue: 'Quiet Hours' })}
+                          {t('portal.settings.notifications.quietHours.title')}
                         </p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {t('portal.settings.notifications.quietHours.description' as any, { defaultValue: 'Delay non-urgent notifications during these hours' })}
+                          {t('portal.settings.notifications.quietHours.description')}
                         </p>
                       </div>
                       <button
@@ -169,7 +170,7 @@ export function NotificationPreferences({
                       <div className="grid grid-cols-2 gap-2 mt-2">
                         <div>
                           <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
-                            {t('portal.settings.notifications.quietHours.start' as any, { defaultValue: 'Start' })}
+                            {t('portal.settings.notifications.quietHours.start')}
                           </label>
                           <input
                             type="time"
@@ -185,7 +186,7 @@ export function NotificationPreferences({
                         </div>
                         <div>
                           <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
-                            {t('portal.settings.notifications.quietHours.end' as any, { defaultValue: 'End' })}
+                            {t('portal.settings.notifications.quietHours.end')}
                           </label>
                           <input
                             type="time"
@@ -204,7 +205,7 @@ export function NotificationPreferences({
                     {onUpdateTimezone && group.quietHoursEnabled && (
                       <div className="mt-2">
                         <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
-                          {t('portal.settings.notifications.quietHours.timezone' as any, { defaultValue: 'Timezone' })}
+                          {t('portal.settings.notifications.quietHours.timezone')}
                         </label>
                         <select
                           value={group.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone}
@@ -231,7 +232,7 @@ export function NotificationPreferences({
                     {group.actions.map((action) => (
                       <ToggleRow
                         key={action.id}
-                        label={t(`portal.settings.notifications.actions.${action.id}` as any, { defaultValue: action.id })}
+                        label={t(`portal.settings.notifications.actions.${action.id}` as TranslationKey)}
                         active={action.enabled}
                         onToggle={() => onToggleAction(group.id, action.id, !action.enabled)}
                         disabled={saving || group.allEnabled === false}

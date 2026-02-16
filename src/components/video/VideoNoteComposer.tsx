@@ -312,14 +312,6 @@ export default function VideoNoteComposer({
             <button
               type="button"
               className="size-10 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
-              title="Draw on video (coming soon)"
-              disabled
-            >
-              <Icon name="draw" />
-            </button>
-            <button
-              type="button"
-              className="size-10 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
               title="Add attachment (coming soon)"
               disabled
             >

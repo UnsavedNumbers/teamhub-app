@@ -193,20 +193,6 @@ export default function NotificationsSection({
           />
 
           <Controller
-            name="enable_push"
-            control={control}
-            render={({ field: { value, onChange, ...field } }) => (
-              <Checkbox
-                {...field}
-                checked={value}
-                onChange={(e) => onChange(e.target.checked)}
-                label="Push Notifications"
-                helperText="Send push notifications to mobile apps (coming soon)"
-              />
-            )}
-          />
-
-          <Controller
             name="enable_in_app"
             control={control}
             render={({ field: { value, onChange, ...field } }) => (

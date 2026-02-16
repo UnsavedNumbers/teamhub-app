@@ -607,7 +607,6 @@ export default function Events() {
             <BulkActionsBar
                 selectedCount={selectedIds.size}
                 onCancel={() => setBulkCancelDialog(true)}
-                onReschedule={() => showError('Reschedule feature coming soon')}
                 onDelete={() => setBulkDeleteDialog(true)}
                 onClearSelection={() => setSelectedIds(new Set())}
             />

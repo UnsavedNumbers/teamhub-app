@@ -4,7 +4,6 @@ import { OrgAdminButton } from './OrgAdminButton'
 interface BulkActionsBarProps {
     selectedCount: number
     onCancel?: () => void
-    onReschedule?: () => void
     onDelete: () => void
     onClearSelection: () => void
 }
@@ -12,14 +11,12 @@ interface BulkActionsBarProps {
 export default function BulkActionsBar({
     selectedCount,
     onCancel,
-    onReschedule,
     onDelete,
     onClearSelection,
 }: BulkActionsBarProps) {
     if (selectedCount === 0) return null
 
-    // Determine context by which handlers are provided
-    const isEventContext = !!onCancel || !!onReschedule
+    const isEventContext = !!onCancel
 
     return (
         <div
@@ -62,19 +59,6 @@ export default function BulkActionsBar({
                                 Cancel Events
                             </OrgAdminButton>
                         )}
-                        {isEventContext && onReschedule && (
-                            <OrgAdminButton
-                                onClick={onReschedule}
-                                variant="ghost"
-                                icon="schedule"
-                                className="hover:bg-white/10 whitespace-nowrap"
-                                style={{ color: 'inherit' }}
-                            >
-                                Reschedule
-                            </OrgAdminButton>
-                        )}
-                        
-                        {/* Delete - works for all contexts */}
                         <OrgAdminButton
                             onClick={onDelete}
                             variant="danger"
