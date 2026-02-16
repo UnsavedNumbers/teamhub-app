@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
-import { getLink, RouteKeys } from '@/utils/routes'
+import { getLink, RouteKeys, useCurrentRouteKey } from '@/utils/routes'
 import { formatRoleName, hasRole } from '@/utils/roleHelpers'
 import { USE_FAKE_DATA } from '@/data/config'
 import { useOffline } from '@/hooks/useOffline'
@@ -26,7 +26,6 @@ export default function UserContextDropdown() {
   
   const { isOffline } = useOffline()
   const navigate = useNavigate()
-  const location = useLocation()
   const t = useT()
   const [isOpen, setIsOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
@@ -36,9 +35,10 @@ export default function UserContextDropdown() {
   // Infer active role from current route
   // Admin routes (starting with /admin) indicate org_admin or coach role
   // Portal routes indicate parent role
+  const currentRouteKey = useCurrentRouteKey()
   const inferredActiveRole = useMemo((): OrgMemberRole | null => {
     if (!currentOrganization) return null
-    const isAdminRoute = location.pathname.startsWith('/admin')
+    const isAdminRoute = currentRouteKey != null && currentRouteKey.startsWith('admin.')
     if (isAdminRoute) {
       // Prefer org_admin if available, otherwise coach
       if (hasRole(currentOrganization, 'org_admin')) return 'org_admin'
@@ -49,7 +49,7 @@ export default function UserContextDropdown() {
     }
     // Fallback to first available role
     return currentOrganization.roles?.[0] || null
-  }, [location.pathname, currentOrganization])
+  }, [currentRouteKey, currentOrganization])
 
   // Close on outside click
   useEffect(() => {
@@ -154,6 +154,18 @@ export default function UserContextDropdown() {
 
   const hasAnyOrgs = organizations.length > 0
 
+  const isPlatformAdminContext =
+    currentRouteKey != null && currentRouteKey.startsWith('platformAdmin.')
+  const isOrgAdminContext =
+    (currentRouteKey != null && currentRouteKey.startsWith('admin.')) ||
+    inferredActiveRole === 'org_admin' ||
+    inferredActiveRole === 'coach'
+  const settingsPath = isPlatformAdminContext
+    ? getLink(RouteKeys.PLATFORM_SETTINGS)
+    : isOrgAdminContext
+      ? getLink(RouteKeys.ADMIN_SETTINGS)
+      : getLink(RouteKeys.PORTAL_SETTINGS)
+
   // Close handler
   const handleClose = useCallback(() => {
     setIsOpen(false)
@@ -216,7 +228,7 @@ export default function UserContextDropdown() {
       {/* 3. Personal Settings */}
       <div className="py-1 border-b border-slate-100 dark:border-slate-700">
         <Link 
-          to={getLink(RouteKeys.PORTAL_SETTINGS)}
+          to={settingsPath}
           onClick={handleClose}
           className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px] no-underline hover:no-underline"
         >
@@ -245,7 +257,7 @@ export default function UserContextDropdown() {
       {/* 5. Support */}
       <div className="py-1 border-b border-slate-100 dark:border-slate-700">
         <Link 
-          to={getLink(RouteKeys.PORTAL_SETTINGS)} 
+          to={settingsPath} 
           onClick={handleClose} 
           className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px] no-underline hover:no-underline"
         >

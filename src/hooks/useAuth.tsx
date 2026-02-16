@@ -53,6 +53,7 @@ interface AuthContextType {
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>
+  updateEmail: (newEmail: string, redirectTo?: string) => Promise<{ error: AuthError | null }>
   refreshProfile: () => Promise<void>
   // Role helpers (UX-only, not security - RLS handles authorization)
   hasRole: (orgId: string, role: OrgMemberRole) => boolean
@@ -703,6 +704,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error }
   }
 
+  async function updateEmail(newEmail: string, redirectTo?: string) {
+    // Import getBaseUrl to get current origin (supports localhost and production)
+    const { getBaseUrl } = await import('../utils/host')
+    const baseUrl = getBaseUrl()
+    
+    // Use provided redirectTo or default to current path (settings page)
+    const emailRedirectTo = redirectTo 
+      ? `${baseUrl}${redirectTo}` 
+      : `${baseUrl}${window.location.pathname}`
+    
+    const { error } = await supabase.auth.updateUser(
+      { email: newEmail },
+      { emailRedirectTo }
+    )
+    return { error }
+  }
+
   async function refreshProfile() {
     if (USE_FAKE_DATA) {
       return
@@ -748,6 +766,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
     resetPassword,
     updatePassword,
+    updateEmail,
     refreshProfile,
     hasRole,
     hasAnyRole,

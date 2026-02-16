@@ -130,6 +130,7 @@ const PlatformEventLog = lazy(() => import('./pages/platformAdmin/EventLog'))
 const PlatformFeatureFlags = lazy(() => import('./pages/platformAdmin/FeatureFlags'))
 const PlatformFeatureFlagDetail = lazy(() => import('./pages/platformAdmin/FeatureFlagDetail'))
 const PlatformAdmins = lazy(() => import('./pages/platformAdmin/PlatformAdmins'))
+const PlatformAdminSettings = lazy(() => import('./pages/platformAdmin/PlatformAdminSettings'))
 const LicensesOverview = lazy(() => import('./pages/platformAdmin/LicensesOverview'))
 const LicenseTiers = lazy(() => import('./pages/platformAdmin/LicenseTiers'))
 const LicenseTierDetail = lazy(() => import('./pages/platformAdmin/LicenseTierDetail'))
@@ -692,6 +693,7 @@ function AppWithTheme() {
               
               {/* Platform Admins */}
               <Route path="admins" element={<PlatformAdmins />} />
+              <Route path="settings" element={<PlatformAdminSettings />} />
               
               {/* Licenses & Entitlements */}
               <Route path="licenses" element={<LicensesOverview />} />

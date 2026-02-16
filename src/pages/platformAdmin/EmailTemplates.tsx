@@ -1,11 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { getLink } from '../../utils/routes';
 import { PageHeader, PlatformDataTable, Badge, Button, ColumnConfig } from '../../components/platformAdmin';
 import { emailTemplatesService } from '../../data/services/emailTemplatesService';
 import { EmailTemplate } from '../../types/emailTemplates.types';
-import { useT } from '../../i18n/useI18n';
 import { toast } from 'react-hot-toast';
 
 export default function EmailTemplates() {
@@ -94,14 +93,14 @@ export default function EmailTemplates() {
           <Button 
             variant="ghost" 
             size="small" 
-            onClick={(e) => { e.stopPropagation(); handleEdit(row.slug); }}
+            onClick={(e: MouseEvent) => { e.stopPropagation(); handleEdit(row.slug); }}
           >
             Edit
           </Button>
           <Button 
             variant="ghost" 
             size="small"
-            onClick={(e) => { e.stopPropagation(); handleDuplicate(row.id); }}
+            onClick={(e: MouseEvent) => { e.stopPropagation(); handleDuplicate(row.id); }}
           >
             Duplicate
           </Button>
@@ -111,7 +110,7 @@ export default function EmailTemplates() {
             size="small"
             disabled={row.is_active}
             title={row.is_active ? "Deactivate template to delete it" : "Delete template"}
-            onClick={(e) => { 
+            onClick={(e: MouseEvent) => { 
                 e.stopPropagation();
                 if(confirm('Are you sure you want to delete this template?')) {
                     // Call delete service

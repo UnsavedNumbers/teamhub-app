@@ -62,7 +62,7 @@ export const emailTemplatesService = {
         const allVars = [...new Set([...extractedVars, ...subjectVars])];
 
         // 2. Wrap HTML content
-        const wrappedHtml = wrapEmailContent(data.body_content, allVars);
+        const wrappedHtml = wrapEmailContent(data.body_content);
 
         // 3. Prepare update payload
         const payload: any = {
@@ -211,7 +211,7 @@ export const emailTemplatesService = {
         const allVars = [...new Set([...extractedVars, ...subjectVars])];
 
         // 2. Wrap HTML content
-        const wrappedHtml = wrapEmailContent(data.body_content, allVars);
+        const wrappedHtml = wrapEmailContent(data.body_content);
 
         // 3. Prepare insert payload
         const payload: any = {

@@ -12,7 +12,6 @@ import { EmailTemplate, EmailTemplateFormData, NotificationJobType } from '../..
 import { EmailTemplateVariables } from '../../components/platformAdmin/EmailTemplateVariables';
 import EmailEditorErrorBoundary from '../../components/platformAdmin/EmailEditorErrorBoundary';
 import { wrapEmailContent } from '../../utils/emailTemplateWrapper';
-import { useT } from '../../i18n/useI18n';
 
 // Memoize ReactQuill to prevent unnecessary re-renders
 const MemoizedReactQuill = React.memo(ReactQuill);

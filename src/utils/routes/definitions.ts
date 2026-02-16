@@ -1159,6 +1159,13 @@ const platformAdmin = {
         description: 'Admin management',
     },
 
+    settings: {
+        path: '/platform-admin/settings',
+        label: 'Personal Settings',
+        icon: 'settings',
+        description: 'Account and preferences',
+    },
+
     // Structure
     structure: {
         path: '/platform-admin/structure',

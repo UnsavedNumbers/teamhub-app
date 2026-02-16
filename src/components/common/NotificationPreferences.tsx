@@ -128,12 +128,6 @@ export function NotificationPreferences({
                     onClick={() => onToggleChannel(group.id, 'email', !group.channels.includes('email'))}
                     disabled={saving}
                   />
-                  <ChannelChip
-                    label={t('portal.settings.notifications.toggles.push')}
-                    active={group.channels.includes('push')}
-                    onClick={() => onToggleChannel(group.id, 'push', !group.channels.includes('push'))}
-                    disabled={saving}
-                  />
                   <span className="text-[11px] text-slate-400">{t('portal.settings.notifications.toggles.urgentNotice')}</span>
                 </div>
 

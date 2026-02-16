@@ -31,6 +31,7 @@ const navSections: NavSection[] = [
     label: 'Overview',
     items: [
       { text: 'Dashboard', icon: 'dashboard', path: getPath(RouteKeys.PLATFORM_DASHBOARD), requiredAction: 'view_dashboard' },
+      { text: 'Personal Settings', icon: 'settings', path: getPath(RouteKeys.PLATFORM_SETTINGS), requiredAction: 'view_dashboard' },
     ],
   },
   {

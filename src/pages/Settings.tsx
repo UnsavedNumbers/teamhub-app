@@ -54,7 +54,7 @@ import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 
 export default function Settings() {
   useDebugLifecycle('Settings')
-  const { profile, signOut, updatePassword, user, refreshProfile } = useAuth()
+  const { profile, signOut, updatePassword, updateEmail, user, refreshProfile } = useAuth()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const t = useT()
@@ -81,6 +81,13 @@ export default function Settings() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [changingPassword, setChangingPassword] = useState(false)
+
+  // Email change state
+  const [showEmailModal, setShowEmailModal] = useState(false)
+  const [newEmail, setNewEmail] = useState('')
+  const [confirmEmail, setConfirmEmail] = useState('')
+  const [changingEmail, setChangingEmail] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
 
   // Invite Guardian Modal State
   const [showInviteGuardianModal, setShowInviteGuardianModal] = useState(false)
@@ -590,6 +597,56 @@ export default function Settings() {
     }
   }, [selectedHomeLocation, refreshProfile, user])
 
+  async function handleChangeEmail() {
+    setEmailError(null)
+    
+    // Validation
+    if (!newEmail || !confirmEmail) {
+      setEmailError('Please enter both email addresses')
+      return
+    }
+    
+    if (newEmail !== confirmEmail) {
+      setEmailError('Email addresses do not match')
+      return
+    }
+    
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(newEmail)) {
+      setEmailError('Please enter a valid email address')
+      return
+    }
+    
+    // Check if same as current email
+    if (newEmail.toLowerCase() === profile?.email?.toLowerCase()) {
+      setEmailError('New email must be different from your current email')
+      return
+    }
+    
+    setChangingEmail(true)
+    
+    try {
+      const { error } = await updateEmail(newEmail, '/portal/settings')
+      if (error) throw error
+      
+      showSuccess('Confirmation links have been sent to your current and new email addresses. Click both links to complete the change.')
+      setShowEmailModal(false)
+      setNewEmail('')
+      setConfirmEmail('')
+    } catch (err) {
+      const rawMessage = err instanceof Error ? err.message : 'Failed to change email'
+      const isRateLimit = /rate limit|too many requests/i.test(rawMessage)
+      const errorMessage = isRateLimit
+        ? 'Too many email requests. Please wait about an hour before trying again.'
+        : rawMessage
+      setEmailError(errorMessage)
+      showError(errorMessage)
+    } finally {
+      setChangingEmail(false)
+    }
+  }
+
   async function handleChangePassword() {
     setPasswordError(null)
     
@@ -658,12 +715,15 @@ export default function Settings() {
           <section>
             <SectionHeader className="mb-4">{t('portal.settings.account.title')}</SectionHeader>
             <Card className="overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
-              <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+              <div 
+                className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                onClick={() => setShowEmailModal(true)}
+              >
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('portal.settings.account.email')}</p>
                   <p className="font-black text-slate-900 dark:text-white break-words">{profile?.email}</p>
                 </div>
-                <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-3 py-1 rounded-full font-bold uppercase tracking-widest self-start sm:self-auto">{t('portal.settings.account.emailLogin')}</span>
+                <span className="text-[var(--org-link-color)] text-sm font-bold self-start sm:self-auto">{t('common.change')}</span>
               </div>
               <div 
                 className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
@@ -970,6 +1030,107 @@ export default function Settings() {
             </Card>
           </section>
         </div>
+
+        {/* Email Change Modal */}
+        {showEmailModal && (
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => {
+              setShowEmailModal(false)
+              setEmailError(null)
+              setNewEmail('')
+              setConfirmEmail('')
+            }}
+          >
+            <Card 
+              className="w-full max-w-md m-4"
+              onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Change Email</h3>
+                <button
+                  onClick={() => {
+                    setShowEmailModal(false)
+                    setEmailError(null)
+                    setNewEmail('')
+                    setConfirmEmail('')
+                  }}
+                  className="text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                >
+                  <Icon name="close" />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                    Current email: <strong className="text-slate-900 dark:text-white">{profile?.email}</strong>
+                  </p>
+                </div>
+                <div>
+                  <label className="form-label">
+                    New Email
+                  </label>
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => {
+                      setNewEmail(e.target.value)
+                      setEmailError(null)
+                    }}
+                    className="form-input"
+                    placeholder="Enter new email address"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">
+                    Confirm New Email
+                  </label>
+                  <input
+                    type="email"
+                    value={confirmEmail}
+                    onChange={(e) => {
+                      setConfirmEmail(e.target.value)
+                      setEmailError(null)
+                    }}
+                    className="form-input"
+                    placeholder="Confirm new email address"
+                  />
+                  {confirmEmail && newEmail !== confirmEmail && (
+                    <p className="text-sm text-red-600 dark:text-red-400 mt-1">Email addresses do not match</p>
+                  )}
+                </div>
+                {emailError && (
+                  <p className="text-sm text-red-600 dark:text-red-400">{emailError}</p>
+                )}
+                <div className="pt-2">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Confirmation links will be sent to both your current and new email addresses. You must click both links to complete the change.
+                  </p>
+                </div>
+              </div>
+              <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setShowEmailModal(false)
+                    setEmailError(null)
+                    setNewEmail('')
+                    setConfirmEmail('')
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleChangeEmail}
+                  disabled={changingEmail || !newEmail || !confirmEmail || newEmail !== confirmEmail}
+                >
+                  {changingEmail ? 'Sending...' : 'Change Email'}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
 
         {showPasswordModal && (
           <div 

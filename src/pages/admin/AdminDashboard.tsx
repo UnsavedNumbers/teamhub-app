@@ -579,7 +579,7 @@ function AthleteDashboard({ stats, recentActivity, upcomingEvents, t, navigate, 
 // ═════════════════════════════════════════════════════════════════════════
 
 export default function AdminDashboard() {
-  const [layout, setLayout] = useState<DashboardLayout>(loadLayout)
+  const [layout, setLayout] = useState<DashboardLayout>(() => loadLayout())
   const [stats, setStats] = useState<DashboardStats>({
     totalTeams: 0, totalPlayers: 0, activeSeasons: 0,
     outstandingPayments: 0, upcomingEvents: 0, pendingUniformOrders: 0,

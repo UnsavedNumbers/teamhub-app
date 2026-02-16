@@ -225,6 +225,7 @@ export const RouteKeys = {
     PLATFORM_USERS: 'platformAdmin.users.list',
     PLATFORM_USER_DETAIL: 'platformAdmin.users.detail',
     PLATFORM_ADMINS: 'platformAdmin.admins',
+    PLATFORM_SETTINGS: 'platformAdmin.settings',
     PLATFORM_PAYMENTS: 'platformAdmin.payments',
     PLATFORM_FEES: 'platformAdmin.fees',
     PLATFORM_AUDIT: 'platformAdmin.audit',
