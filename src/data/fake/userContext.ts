@@ -318,7 +318,7 @@ const VALID_EVENT_TYPES = [
 
 const VALID_RSVP_STATUSES = ['going', 'late', 'not_going', 'unknown'] as const
 
-const VALID_ORG_MEMBER_ROLES = ['parent', 'coach', 'org_admin', 'staff'] as const
+const VALID_ORG_MEMBER_ROLES = ['parent', 'coach', 'org_admin', 'staff', 'athlete'] as const
 
 const VALID_ORG_TYPES = ['school', 'club', 'league', 'academy', 'aau'] as const
 
@@ -439,6 +439,8 @@ export function getDemoUserContext(email: string): UserContext | null {
             roles = ['parent', 'org_admin']
         } else if (normalizedEmail.includes('parent-coach')) {
             roles = ['parent', 'coach']
+        } else if (normalizedEmail.includes('athlete')) {
+            roles = ['athlete']
         }
 
         return {

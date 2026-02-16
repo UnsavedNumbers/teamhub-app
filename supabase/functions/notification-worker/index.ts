@@ -145,6 +145,13 @@ serve(async (req) => {
             payload.invite_url = `${platformBaseUrl}${guardianInvitePath}?token=${token}&type=guardian`
           }
         }
+        
+        if (job.type === 'athlete_invite') {
+          const token = payload.invite_token
+          if (token) {
+            payload.invite_url = `${platformBaseUrl}${guardianInvitePath}?token=${token}&type=athlete`
+          }
+        }
 
         const notificationJob: NotificationJob = {
           id: job.id,

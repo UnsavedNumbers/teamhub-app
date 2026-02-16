@@ -47,7 +47,7 @@ export function hasAllRoles(
 
 /**
  * Get the highest priority role from an organization
- * Priority: org_admin > coach > parent
+ * Priority: org_admin > coach > parent > athlete
  * @param org - Organization object (can be null)
  * @returns The highest priority role, or null if no roles
  */
@@ -59,6 +59,7 @@ export function getPrimaryRole(
   if (org.roles.includes('org_admin')) return 'org_admin'
   if (org.roles.includes('coach')) return 'coach'
   if (org.roles.includes('parent')) return 'parent'
+  if (org.roles.includes('athlete')) return 'athlete'
 
   return org.roles[0]
 }
@@ -93,6 +94,8 @@ export function formatRoleName(role: OrgMemberRole): string {
       return 'Coach'
     case 'staff':
       return 'Staff'
+    case 'athlete':
+      return 'Athlete'
     default:
       // TypeScript exhaustiveness check - this should never happen
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -148,6 +151,8 @@ export function mapDbRoleToFrontendRole(role: DbRole): FrontendRole {
       return 'parent'
     case 'staff':
       return 'admin'
+    case 'athlete':
+      return 'parent' // Athlete maps to parent for legacy frontend role
     default:
       // TypeScript exhaustiveness check
       const _exhaustive: never = role

@@ -1378,7 +1378,7 @@ export default function FeatureFlagDetail() {
               return (data ?? []).map((u: { id: string; email: string | null; display_name: string | null }) => ({
                 id: u.id,
                 label: u.display_name || u.email || '',
-                data: u,
+                data: { email: u.email ?? undefined, display_name: u.display_name ?? undefined },
               }))
             }}
             getOptionById={async (id) => {

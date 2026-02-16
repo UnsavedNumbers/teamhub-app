@@ -8,6 +8,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
+import { useOrganization } from '../contexts/OrganizationContext'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { debug } from '../lib/debug'
 import { getAthleteById } from '../data/services/familyService'
@@ -28,6 +29,9 @@ import { SportsInterestsForm } from '../components/athleteProfiles/SportsInteres
 import type { Athlete } from '../types/family'
 import { SPORT_CODES, SPORT_NAMES, type SportCode } from '../types/sports'
 import { getSystemSports } from '../data/services/sportsService'
+import { supabase } from '../lib/supabase'
+import { useT } from '../i18n/useI18n'
+import { showError } from '../utils/toast'
 
 export default function AthleteProfilePage() {
   const { athleteId } = useParams<{ athleteId: string }>()
@@ -37,7 +41,12 @@ export default function AthleteProfilePage() {
 
   const navigate = useNavigate()
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
+  const t = useT()
   const isMountedRef = useRef(true)
+  
+  // Check if user is an athlete
+  const isAthlete = currentOrganization?.roles?.includes('athlete') ?? false
 
   const [athlete, setAthlete] = useState<Athlete | null>(null)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
@@ -133,6 +142,30 @@ export default function AthleteProfilePage() {
         setLoading(true)
         setError(null)
 
+        // For athletes, verify they can only view their own profile
+        if (isAthlete) {
+          const { data: athleteCheck, error: checkError } = await supabase
+            .from('athletes')
+            .select('id')
+            .eq('user_id', context.userId)
+            .eq('id', athleteId!)
+            .eq('org_id', context.orgId)
+            .single()
+
+          if (checkError || !athleteCheck) {
+            if (!isMountedRef.current) return
+            const errorMsg = t('portal.athletes.errors.cannotViewOtherProfile')
+            setError(new Error(errorMsg))
+            showError(errorMsg)
+            setLoading(false)
+            // Redirect to athletes list (team roster)
+            setTimeout(() => {
+              navigate('/portal/athletes')
+            }, 2000)
+            return
+          }
+        }
+
         const { data, error: fetchError } = await getAthleteById(context, athleteId!)
 
         if (!isMountedRef.current) return
@@ -162,7 +195,7 @@ export default function AthleteProfilePage() {
     }
 
     fetchAthlete()
-  }, [athleteId, context, isReady])
+  }, [athleteId, context, isReady, isAthlete, navigate, t])
 
   // Load enrolled sports (team history)
   useEffect(() => {

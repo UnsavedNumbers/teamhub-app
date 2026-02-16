@@ -698,6 +698,16 @@ export const en = {
             addChildren: 'Add athletes to register them for teams.',
             add: 'Add',
         },
+        athletes: {
+            noTeamMembers: 'No team members',
+            noTeamMembersDescription: 'You are not currently on any teams.',
+            errors: {
+                cannotViewOtherProfile: 'You can only view your own profile. Redirecting...',
+                cannotEditOtherProfile: 'You can only edit your own profile.',
+                cannotAccessOtherAthlete: 'You do not have permission to access this athlete\'s information.',
+                teamRosterLoadFailed: 'Failed to load team roster. Please try again.',
+            },
+        },
         events: {
             noChildren: 'No athletes added.',
             add: 'Add',

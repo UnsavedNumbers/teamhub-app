@@ -58,6 +58,21 @@ describe('organizations', () => {
             expectSelectAllowed(result, [seeded.orgId]);
         });
 
+        it('athlete CAN read own organization', async () => {
+            const result = await clients.athlete
+                .from('organizations').select('*').eq('id', seeded.orgId);
+            expectSelectAllowed(result, [seeded.orgId]);
+        });
+
+        it('athlete CANNOT update organization', async () => {
+            const result = await clients.athlete
+                .from('organizations')
+                .update({ contact_email: `test-${Date.now()}@rls-test.com` })
+                .eq('id', seeded.orgId)
+                .select();
+            expectWriteDenied(result, 'either');
+        });
+
         it('fan CANNOT read private organization details', async () => {
             const result = await clients.fan
                 .from('organizations').select('*').eq('id', seeded.orgId);

@@ -190,7 +190,9 @@ export default function AuthCallback() {
             // Email not yet confirmed, redirect to accept-invite which will handle the flow
             const pendingAthleteId = sessionStorage.getItem('pending_invite_athlete_id')
             
-            let acceptInviteUrl = `/portal/accept-invite?token=${pendingInviteToken}`
+            // Check invite type from sessionStorage
+            const inviteType = sessionStorage.getItem('pending_invite_type') || 'guardian'
+            let acceptInviteUrl = `/portal/accept-invite?token=${pendingInviteToken}&type=${inviteType}`
             if (pendingAthleteId) {
               acceptInviteUrl += `&athlete_id=${pendingAthleteId}`
             }

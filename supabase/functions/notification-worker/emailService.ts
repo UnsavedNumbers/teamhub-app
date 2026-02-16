@@ -9,7 +9,7 @@ export interface NotificationJob {
   org_id: string;
   user_id?: string;
   email: string;
-  type: 'new_event' | 'new_message' | 'payment_receipt' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email' | 'guardian_invite' | 'ticket_receipt' | 'uniform_notification' | 'travel_notification' | 'photo_moderation' | 'rsvp_notification';
+  type: 'new_event' | 'new_message' | 'payment_receipt' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email' | 'guardian_invite' | 'athlete_invite' | 'athlete_account_created' | 'athlete_linked' | 'ticket_receipt' | 'uniform_notification' | 'travel_notification' | 'photo_moderation' | 'rsvp_notification';
   payload: Record<string, any>;
   status: 'queued' | 'sent' | 'failed';
   error?: string;
@@ -61,6 +61,18 @@ const EMAIL_CONFIG = {
     subject: 'You\'re invited to connect with {{athlete_name}}',
     preview: 'Accept your guardian invite on YouthSports Team Hub'
   },
+  athlete_invite: {
+    subject: 'You\'re invited to create your athlete account - {{organization_name}}',
+    preview: 'Accept your athlete invite on YouthSports Team Hub'
+  },
+  athlete_account_created: {
+    subject: 'Welcome to {{organization_name}}',
+    preview: 'Your athlete account has been created'
+  },
+  athlete_linked: {
+    subject: 'Account Linked - {{organization_name}}',
+    preview: 'Your account has been linked to your athlete profile'
+  },
   ticket_receipt: {
     subject: 'Your Tickets: {{event_title}}',
     preview: 'Your tickets are ready'
@@ -95,6 +107,15 @@ export async function sendNotificationEmail(
   try {
     // For guardian_invite, ensure template vars are set (skill: payload must have all required keys)
     if (job.type === 'guardian_invite') {
+      const localPart = job.email?.split('@')[0]?.trim() || '';
+      job.payload = {
+        ...job.payload,
+        recipient_firstname: localPart || 'there',
+      };
+    }
+    
+    // For athlete_invite, ensure template vars are set
+    if (job.type === 'athlete_invite') {
       const localPart = job.email?.split('@')[0]?.trim() || '';
       job.payload = {
         ...job.payload,

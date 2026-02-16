@@ -37,8 +37,18 @@ export async function teardownTestData(seeded: SeededData): Promise<void> {
         // Storage cleanup is best-effort
     }
 
-    // 2. Videos (created by spec-level beforeAll)
+    // 2. Video-related (guardian/athlete video library contract tests)
     try {
+        const videoIds: string[] = [
+            seeded.videoTeamId,
+            seeded.videoPrivateId,
+            seeded.videoGuardianAthleteId,
+            seeded.videoGuardianAthlete2Id,
+        ].filter((id): id is string => !!id);
+        if (videoIds.length > 0) {
+            await svc.from('video_favorites').delete().in('video_id', videoIds);
+            await svc.from('video_athlete_links').delete().in('video_id', videoIds);
+        }
         await svc.from('videos').delete().like('title', `${namePrefix}%`);
     } catch {
         // Best-effort
@@ -105,6 +115,16 @@ export async function teardownTestData(seeded: SeededData): Promise<void> {
     await svc.from('team_memberships').delete().eq('team_id', seeded.teamId);
 
     // 15. Athletes
+    // First unlink athlete user_id (set to NULL) before deleting
+    if (seeded.athleteUserId) {
+        await svc.from('athletes')
+            .update({ user_id: null })
+            .eq('user_id', seeded.athleteUserId);
+    }
+    // Delete athlete2 if it exists
+    if (seeded.athlete2Id) {
+        await svc.from('athletes').delete().eq('id', seeded.athlete2Id);
+    }
     await svc.from('athletes').delete().eq('id', seeded.athleteId);
 
     // 16. Teams (seeded + any created by tests)

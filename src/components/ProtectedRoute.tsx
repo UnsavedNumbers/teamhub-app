@@ -13,7 +13,7 @@ import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 interface ProtectedRouteProps {
   children: React.ReactNode
   // UX-only role checking - RLS handles actual authorization
-  allowedRoles?: ('parent' | 'coach' | 'admin' | 'org_admin')[]
+  allowedRoles?: ('parent' | 'coach' | 'admin' | 'org_admin' | 'athlete')[]
   // Optional: require specific organization (for org-scoped routes)
   requireOrganization?: boolean
 }

@@ -18,8 +18,8 @@ import { getDemoUserContext } from '../data/fake/userContext'
 import { getOrganizationById } from '../data/fake/fakeOrganizations'
 import { debug } from '../lib/debug'
 
-// Role types - now per organization
-type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff'
+// Role types - now per organization (must match OrganizationContext.OrgMemberRole)
+type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff' | 'athlete'
 type LegacyUserRole = 'parent' | 'coach' | 'admin'
 
 interface UserProfile {
@@ -224,7 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const roles = Array.isArray(o.roles)
                 ? o.roles.filter(
                   (r: unknown): r is OrgMemberRole =>
-                    r === 'parent' || r === 'coach' || r === 'org_admin' || r === 'staff'
+                    r === 'parent' || r === 'coach' || r === 'org_admin' || r === 'staff' || r === 'athlete'
                 )
                 : []
 

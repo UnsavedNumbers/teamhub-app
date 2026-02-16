@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 
-export type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff'
+export type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff' | 'athlete'
 
 export interface Organization {
   id: string

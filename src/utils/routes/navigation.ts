@@ -104,7 +104,97 @@ export const parentNavSections: NavigationSection[] = [
                 label: 'Media & Programs',
                 items: [
                     { routeKey: 'portal.photos', text: 'Photos & Videos', icon: 'photo_library', description: 'Team galleries' },
+                    { routeKey: 'portal.videos', text: 'Video Library', icon: 'smart_display', description: 'Watch team and athlete videos' },
                     { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
+                ],
+            },
+            {
+                label: 'Account',
+                items: [
+                    { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', description: 'Account preferences' },
+                    { routeKey: 'portal.help', text: 'Help & Support', icon: 'help', description: 'Get assistance' },
+                ],
+            },
+        ],
+    },
+]
+
+/**
+ * Athlete navigation sections for portal mega menu
+ * Athletes can see their own profile, team, schedule, announcements, and media
+ * They CANNOT see: org settings, team management, role management, financial reports, ticket admin, request athlete attachment
+ */
+export const athleteNavSections: NavigationSection[] = [
+    {
+        label: 'Dashboard',
+        route: '/portal/dashboard',
+        groups: [
+            {
+                label: '',
+                items: [
+                    { routeKey: 'portal.dashboard', text: 'Dashboard', icon: 'dashboard', description: 'Daily overview' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'My Schedule',
+        route: '/portal/calendar',
+        groups: [
+            {
+                label: 'My Schedule',
+                items: [
+                    { routeKey: 'portal.calendar', text: 'My Events', icon: 'calendar_month', description: 'View upcoming events' },
+                    { routeKey: 'portal.bookmarkedEvents', text: 'My Bookmarks', icon: 'bookmark', description: 'Saved events' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'My Team',
+        route: '/portal/athletes',
+        groups: [
+            {
+                label: 'My Team',
+                items: [
+                    { routeKey: 'portal.athletes', text: 'My Team', icon: 'groups', description: 'View my team information' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'Tickets & Payments',
+        route: '/portal/payments',
+        groups: [
+            {
+                label: 'Tickets & Payments',
+                items: [
+                    { routeKey: 'portal.myTickets', text: 'My Tickets', icon: 'confirmation_number', description: 'Event tickets' },
+                    { routeKey: 'portal.payments', text: 'Payment History', icon: 'receipt_long', description: 'Payment history' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'Announcements',
+        route: '/portal/messages',
+        groups: [
+            {
+                label: 'Announcements',
+                items: [
+                    { routeKey: 'portal.messages', text: 'Announcements', icon: 'forum', description: 'Team announcements' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'More',
+        groups: [
+            {
+                label: 'Media',
+                items: [
+                    { routeKey: 'portal.photos', text: 'Photos & Videos', icon: 'photo_library', description: 'Team galleries' },
+                    { routeKey: 'portal.videos', text: 'Video Library', icon: 'smart_display', description: 'Watch team and athlete videos' },
                 ],
             },
             {

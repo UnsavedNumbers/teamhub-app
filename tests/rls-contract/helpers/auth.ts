@@ -28,7 +28,7 @@ export interface TestUser {
     email: string;
     password: string;
     /** Expected role from organization_members (null = fan/anon) */
-    expectedRole: 'org_admin' | 'coach' | 'parent' | 'staff' | 'fan' | 'platform_admin';
+    expectedRole: 'org_admin' | 'coach' | 'parent' | 'staff' | 'fan' | 'platform_admin' | 'athlete';
 }
 
 export const TEST_USERS: Record<string, TestUser> = {
@@ -69,6 +69,16 @@ export const TEST_USERS: Record<string, TestUser> = {
         email: 'parent-org2@test.com',
         password: ENV.TEST_PASSWORD,
         expectedRole: 'fan',
+    },
+    /**
+     * Athlete user – uses athlete-org1@test.com which will be linked to
+     * an athlete record in the test org during seed.
+     */
+    athlete: {
+        label: 'Athlete 1',
+        email: 'athlete-org1@test.com',
+        password: ENV.TEST_PASSWORD,
+        expectedRole: 'athlete',
     },
     platformAdmin: {
         label: 'Platform Admin',

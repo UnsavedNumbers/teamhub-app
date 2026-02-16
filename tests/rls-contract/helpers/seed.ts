@@ -48,6 +48,14 @@ export interface SeededData {
     announcementId: string;
     galleryId: string;
     galleryPhotoId?: string;
+    /** Video (visibility=team) – parent and athlete can see */
+    videoTeamId?: string;
+    /** Video (visibility=private) – no guardian/athlete */
+    videoPrivateId?: string;
+    /** Video (visibility=guardians) linked to athlete – parent and athlete can see */
+    videoGuardianAthleteId?: string;
+    /** Video (visibility=guardians) linked to athlete2 – parent can see, athlete cannot */
+    videoGuardianAthlete2Id?: string;
     feeId?: string;
     feeAssignmentId?: string;
     ticketedEventId?: string;
@@ -59,7 +67,12 @@ export interface SeededData {
         coach: string;
         parent: string;
         staff: string;
+        athlete?: string;
     };
+    /** Second athlete (sibling) for athlete isolation tests */
+    athlete2Id?: string;
+    /** Athlete user ID (linked to athlete record) */
+    athleteUserId?: string;
 }
 
 // ── Main seed function ─────────────────────────────────────────────
@@ -219,6 +232,55 @@ export async function seedTestData(): Promise<SeededData> {
     if (guardErr) throw new Error(`Seed guardianship failed: ${guardErr.message}`);
     const guardianshipId = guardianship.id;
 
+    // 9b. Create second athlete (sibling) for athlete isolation tests
+    const athlete2Name = testName('athlete2');
+    const { data: athlete2, error: ath2Err } = await svc
+        .from('athletes')
+        .insert({
+            org_id: orgId,
+            first_name: athlete2Name,
+            last_name: 'Test',
+            birthdate: '2016-01-15',
+        })
+        .select('id')
+        .single();
+    if (ath2Err) throw new Error(`Seed athlete2 failed: ${ath2Err.message}`);
+    const athlete2Id = athlete2.id;
+
+    // 9c. Create team membership for athlete2
+    const { error: tm2Err } = await svc
+        .from('team_memberships')
+        .insert({
+            athlete_id: athlete2Id,
+            team_id: teamId,
+            season_id: seasonId,
+            status: 'active',
+        });
+    if (tm2Err) throw new Error(`Seed team_membership for athlete2 failed: ${tm2Err.message}`);
+
+    // 9d. Create athlete user and link to first athlete
+    const athleteUserId = await getUserId(TEST_USERS.athlete);
+    userIds.athlete = athleteUserId;
+    
+    // Link athlete user to athlete record
+    const { error: linkErr } = await svc
+        .from('athletes')
+        .update({ user_id: athleteUserId })
+        .eq('id', athleteId);
+    if (linkErr) throw new Error(`Link athlete user failed: ${linkErr.message}`);
+
+    // Add athlete role to organization_members
+    const { data: athleteMembership, error: athleteMemErr } = await svc
+        .from('organization_members')
+        .insert({
+            user_id: athleteUserId,
+            org_id: orgId,
+            role: 'athlete',
+        })
+        .select('id')
+        .single();
+    if (athleteMemErr) throw new Error(`Seed athlete membership failed: ${athleteMemErr.message}`);
+
     // 10. Create an announcement
     const { data: announcement, error: annErr } = await svc
         .from('announcements')
@@ -294,6 +356,87 @@ export async function seedTestData(): Promise<SeededData> {
         // Fees table might have additional constraints; ignore
     }
 
+    // 12b. Create videos for RLS contract tests (guardian/athlete video library)
+    let videoTeamId: string | undefined;
+    let videoPrivateId: string | undefined;
+    let videoGuardianAthleteId: string | undefined;
+    let videoGuardianAthlete2Id: string | undefined;
+    try {
+        const { data: vTeam, error: vTeamErr } = await svc
+            .from('videos')
+            .insert({
+                org_id: orgId,
+                team_id: teamId,
+                title: testName('video_team'),
+                uploaded_by: userIds.coach,
+                visibility: 'team',
+                status: 'ready',
+            })
+            .select('id')
+            .single();
+        if (!vTeamErr && vTeam) videoTeamId = vTeam.id;
+
+        const { data: vPrivate, error: vPrivateErr } = await svc
+            .from('videos')
+            .insert({
+                org_id: orgId,
+                team_id: teamId,
+                title: testName('video_private'),
+                uploaded_by: userIds.coach,
+                visibility: 'private',
+                status: 'ready',
+            })
+            .select('id')
+            .single();
+        if (!vPrivateErr && vPrivate) videoPrivateId = vPrivate.id;
+
+        const { data: vGuardAth, error: vGuardAthErr } = await svc
+            .from('videos')
+            .insert({
+                org_id: orgId,
+                team_id: teamId,
+                title: testName('video_guardians_athlete'),
+                uploaded_by: userIds.coach,
+                visibility: 'guardians',
+                status: 'ready',
+            })
+            .select('id')
+            .single();
+        if (!vGuardAthErr && vGuardAth) {
+            videoGuardianAthleteId = vGuardAth.id;
+            await svc.from('video_athlete_links').insert({
+                video_id: vGuardAth.id,
+                athlete_id: athleteId,
+                created_by: userIds.coach,
+                link_type: 'appears',
+            });
+        }
+
+        const { data: vGuardAth2, error: vGuardAth2Err } = await svc
+            .from('videos')
+            .insert({
+                org_id: orgId,
+                team_id: teamId,
+                title: testName('video_guardians_athlete2'),
+                uploaded_by: userIds.coach,
+                visibility: 'guardians',
+                status: 'ready',
+            })
+            .select('id')
+            .single();
+        if (!vGuardAth2Err && vGuardAth2) {
+            videoGuardianAthlete2Id = vGuardAth2.id;
+            await svc.from('video_athlete_links').insert({
+                video_id: vGuardAth2.id,
+                athlete_id: athlete2Id,
+                created_by: userIds.coach,
+                link_type: 'appears',
+            });
+        }
+    } catch {
+        // videos / video_athlete_links may have constraints; best-effort
+    }
+
     // 13. Create a ticketed event
     let ticketedEventId: string | undefined;
     try {
@@ -330,10 +473,19 @@ export async function seedTestData(): Promise<SeededData> {
         guardianshipId,
         announcementId,
         galleryId,
+        videoTeamId,
+        videoPrivateId,
+        videoGuardianAthleteId,
+        videoGuardianAthlete2Id,
         feeId,
         feeAssignmentId,
         ticketedEventId,
         userIds,
-        membershipIds,
+        membershipIds: {
+            ...membershipIds,
+            athlete: athleteMembership?.id,
+        },
+        athlete2Id,
+        athleteUserId,
     };
 }

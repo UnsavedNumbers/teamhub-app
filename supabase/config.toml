@@ -373,6 +373,9 @@ verify_jwt = false
 [functions.mux-webhook]
 verify_jwt = false
 
+[functions.mux-signed-playback]
+verify_jwt = false
+
 [functions.tickets-get-order-public]
 verify_jwt = false
 

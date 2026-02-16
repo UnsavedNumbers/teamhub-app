@@ -267,6 +267,126 @@ export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
 }
 
 // ============================================================================
+// Portal Video Library Hook (Guardian / Athlete)
+// ============================================================================
+// Same as useVideos but scoped to status = 'ready' only. RLS (can_view_video)
+// restricts rows to what the current user (guardian/athlete) can see.
+// Use for /portal/videos list and detail.
+
+interface UsePortalVideoLibraryOptions {
+  orgId?: string
+  filters?: VideoFilters
+  pagination?: VideoPagination
+  enabled?: boolean
+}
+
+interface UsePortalVideoLibraryReturn {
+  videos: Video[]
+  total: number
+  isLoading: boolean
+  error: Error | null
+  hasMore: boolean
+  refresh: () => Promise<void>
+  loadMore: () => Promise<void>
+}
+
+export function usePortalVideoLibrary(options: UsePortalVideoLibraryOptions = {}): UsePortalVideoLibraryReturn {
+  const { orgId, filters = {}, pagination = {}, enabled = true } = options
+  const [videos, setVideos] = useState<Video[]>([])
+  const [total, setTotal] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  const [page, setPage] = useState(pagination.page || 1)
+
+  const limit = pagination.limit || 20
+  const sortBy = pagination.sort_by || 'recorded_at'
+  const sortOrder = pagination.sort_order || 'desc'
+
+  const fetchVideos = useCallback(async (isLoadMore = false) => {
+    if (!orgId || !enabled) return
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      let query = supabase
+        .from('videos')
+        .select(
+          `
+          *,
+          team:teams!videos_team_id_fkey(id, name),
+          event:events!videos_event_id_fkey(id, title, type),
+          video_athlete_links(id, athlete_id, link_type),
+          video_tag_links(id, tag_id, tag:video_tags(id, name, tag_type, color))
+        `,
+          { count: 'exact' }
+        )
+        .eq('org_id', orgId)
+        .eq('status', 'ready')
+
+      if (filters.search) {
+        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+      }
+      if (filters.team_id) {
+        query = query.eq('team_id', filters.team_id)
+      }
+      if (filters.date_from) {
+        query = query.gte('recorded_at', filters.date_from)
+      }
+      if (filters.date_to) {
+        query = query.lte('recorded_at', filters.date_to)
+      }
+
+      query = query.order(sortBy, { ascending: sortOrder === 'asc' })
+      const currentPage = isLoadMore ? page + 1 : 1
+      const offset = (currentPage - 1) * limit
+      query = query.range(offset, offset + limit - 1)
+
+      const { data, error: fetchError, count } = await query
+
+      if (fetchError) throw fetchError
+
+      let fetchedVideos = (data || []) as unknown as Video[]
+      const accessToken = await getFreshAccessToken()
+      if (accessToken) {
+        const withSignedThumbnails = await Promise.all(
+          fetchedVideos.map(async (video): Promise<Video> => {
+            if (!video.mux_playback_id) return video
+            const signedUrl = await getSignedThumbnailUrl(accessToken, { video_id: video.id })
+            return signedUrl ? { ...video, thumbnail_url: signedUrl } : video
+          })
+        )
+        fetchedVideos = withSignedThumbnails
+      }
+
+      if (isLoadMore) {
+        setVideos((prev) => [...prev, ...fetchedVideos])
+        setPage(currentPage)
+      } else {
+        setVideos(fetchedVideos)
+        setPage(1)
+      }
+      setTotal(count || 0)
+    } catch (err) {
+      console.error('Error fetching portal videos:', err)
+      setError(err instanceof Error ? err : new Error('Failed to fetch videos'))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [orgId, JSON.stringify(filters), limit, sortBy, sortOrder, page, enabled])
+
+  useEffect(() => {
+    fetchVideos(false)
+  }, [fetchVideos])
+
+  const refresh = useCallback(() => fetchVideos(false), [fetchVideos])
+  const loadMore = useCallback(() => fetchVideos(true), [fetchVideos])
+  const hasMore = useMemo(() => videos.length < total, [videos.length, total])
+
+  return { videos, total, isLoading, error, hasMore, refresh, loadMore }
+}
+
+// ============================================================================
 // Single Video Hook
 // ============================================================================
 

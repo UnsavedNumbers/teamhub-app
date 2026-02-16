@@ -150,6 +150,38 @@ describe('cross-tenant protection', () => {
         });
     });
 
+    // ── Athlete cross-tenant ──────────────────────────────────────
+    describe('athlete cross-tenant', () => {
+        it('athlete CANNOT access cross-org athlete data', async () => {
+            // Athlete in org A cannot see athletes in org B
+            const result = await clients.athlete
+                .from('athletes')
+                .select('*')
+                .neq('org_id', seeded.orgId)
+                .limit(1);
+            // Should return empty or only own org's athletes
+            if (result.data && result.data.length > 0) {
+                // Verify none are from other orgs
+                const crossOrgAthletes = result.data.filter((a: any) => a.org_id !== seeded.orgId);
+                expect(crossOrgAthletes.length).toBe(0);
+            }
+        });
+
+        it('athlete CANNOT access cross-org events', async () => {
+            // Athlete in org A cannot see events from org B
+            const result = await clients.athlete
+                .from('events')
+                .select('*')
+                .neq('org_id', seeded.orgId)
+                .limit(1);
+            // Should return empty or only own org's events
+            if (result.data && result.data.length > 0) {
+                const crossOrgEvents = result.data.filter((e: any) => e.org_id !== seeded.orgId);
+                expect(crossOrgEvents.length).toBe(0);
+            }
+        });
+    });
+
     // ── Galleries ──────────────────────────────────────────────────
     describe('galleries', () => {
         it('orgAdmin2 CANNOT read test org galleries', async () => {

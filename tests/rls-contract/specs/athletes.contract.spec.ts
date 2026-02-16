@@ -48,6 +48,22 @@ describe('athletes', () => {
             expectSelectAllowed(result, [seeded.athleteId]);
         });
 
+        it('athlete CAN read own athlete record', async () => {
+            const result = await clients.athlete
+                .from('athletes').select('*').eq('id', seeded.athleteId);
+            expectSelectAllowed(result, [seeded.athleteId]);
+        });
+
+        it('athlete CANNOT read sibling athlete (other athlete in same org)', async () => {
+            if (!seeded.athlete2Id) {
+                console.warn('Skipping test: athlete2Id not seeded');
+                return;
+            }
+            const result = await clients.athlete
+                .from('athletes').select('*').eq('id', seeded.athlete2Id);
+            expectSelectDenied(result, [seeded.athlete2Id], 'either');
+        });
+
         it('fan CANNOT access athlete records', async () => {
             const result = await clients.fan
                 .from('athletes').select('*').eq('id', seeded.athleteId);
@@ -146,6 +162,33 @@ describe('athletes', () => {
             expectWriteDenied(result, 'either');
         });
 
+        it('athlete CAN update allowed self fields', async () => {
+            const result = await clients.athlete
+                .from('athletes')
+                .update({ preferred_name: 'UpdatedByAthlete' })
+                .eq('id', seeded.athleteId)
+                .select();
+            expectWriteAllowed(result);
+        });
+
+        it('athlete CANNOT update org_id or user_id', async () => {
+            // Try to update org_id (should fail)
+            const result1 = await clients.athlete
+                .from('athletes')
+                .update({ org_id: '00000000-0000-0000-0000-000000000000' })
+                .eq('id', seeded.athleteId)
+                .select();
+            expectWriteDenied(result1, 'either');
+
+            // Try to update user_id (should fail)
+            const result2 = await clients.athlete
+                .from('athletes')
+                .update({ user_id: '00000000-0000-0000-0000-000000000000' })
+                .eq('id', seeded.athleteId)
+                .select();
+            expectWriteDenied(result2, 'either');
+        });
+
         it('fan CANNOT update athletes', async () => {
             const result = await clients.fan
                 .from('athletes')
@@ -172,6 +215,12 @@ describe('athletes', () => {
 
         it('fan CANNOT delete athlete', async () => {
             const result = await clients.fan
+                .from('athletes').delete().eq('id', seeded.athleteId).select();
+            expectWriteDenied(result, 'either');
+        });
+
+        it('athlete CANNOT delete self', async () => {
+            const result = await clients.athlete
                 .from('athletes').delete().eq('id', seeded.athleteId).select();
             expectWriteDenied(result, 'either');
         });
@@ -220,6 +269,23 @@ describe('athlete_guardians', () => {
             const result = await clients.orgAdmin2
                 .from('athlete_guardians').select('*').eq('id', seeded.guardianshipId);
             expectSelectDenied(result, [seeded.guardianshipId], 'either');
+        });
+
+        it('athlete CAN read guardian links for self', async () => {
+            const result = await clients.athlete
+                .from('athlete_guardians')
+                .select('*')
+                .eq('athlete_id', seeded.athleteId);
+            expectSelectAllowed(result);
+        });
+
+        it('athlete CANNOT modify guardian links', async () => {
+            const result = await clients.athlete
+                .from('athlete_guardians')
+                .update({ status: 'inactive' })
+                .eq('id', seeded.guardianshipId)
+                .select();
+            expectWriteDenied(result, 'either');
         });
     });
 

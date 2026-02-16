@@ -43,6 +43,22 @@ const TEMPLATE_VARIABLES: Record<string, VariableDef[]> = {
     { name: 'athlete_name', description: 'Full name of athlete' },
     { name: 'athlete_first_name', description: 'First name of athlete' },
     { name: 'recipient_firstname', description: 'First name of guardian' },
+  ],
+  athlete_invite: [
+    { name: 'athlete_name', description: 'Full name of athlete' },
+    { name: 'athlete_first_name', description: 'First name of athlete' },
+    { name: 'recipient_firstname', description: 'First name of athlete' },
+    { name: 'organization_name', description: 'Name of organization' },
+    { name: 'invite_url', description: 'URL to accept invite' },
+    { name: 'invite_token', description: 'Invite token' },
+  ],
+  athlete_account_created: [
+    { name: 'athlete_name', description: 'Full name of athlete' },
+    { name: 'organization_name', description: 'Name of organization' },
+  ],
+  athlete_linked: [
+    { name: 'athlete_name', description: 'Full name of athlete' },
+    { name: 'organization_name', description: 'Name of organization' },
     { name: 'invite_url', description: 'Invitation acceptance link' },
     { name: 'header_image_url', description: 'Header image URL' },
     { name: 'sender_image_url', description: 'Sender image URL' },

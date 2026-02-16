@@ -12,6 +12,7 @@ import { useT } from '../../i18n/useI18n'
 import { useMobile } from '@/hooks/useMobile'
 import { getLink } from '../../utils/routes'
 import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
+import { athleteNavSections } from '../../utils/routes/navigation'
 
 // ============================================================================
 // ORGANIZATION ADMIN MENU STRUCTURE
@@ -31,7 +32,7 @@ import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 // ============================================================================
 
 
-type PortalRole = 'org_admin' | 'coach' | 'parent'
+type PortalRole = 'org_admin' | 'coach' | 'parent' | 'athlete'
 
 interface PortalNavProps {
   /**
@@ -269,6 +270,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
           label: 'Media & Programs',
           items: [
             { routeKey: 'portal.photos', text: 'Photos & Videos', icon: 'photo_library', path: getLink('portal.photos'), description: 'Team galleries' },
+            { routeKey: 'portal.videos', text: 'Video Library', icon: 'smart_display', path: getLink('portal.videos'), description: 'Watch team and athlete videos' },
             { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', path: getLink('portal.tryouts'), description: 'Tryout sessions' },
           ],
         },
@@ -295,10 +297,12 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   const determineRole = useCallback((): PortalRole => {
     if (forceRole) return forceRole
     
-    // Check roles in priority order: org_admin > coach > parent
+    // Check roles in priority order: org_admin > coach > parent > athlete
     if (isOrgAdmin()) return 'org_admin'
     if (hasAnyRole('coach')) return 'coach'
-    return 'parent'
+    if (hasAnyRole('parent')) return 'parent'
+    if (hasAnyRole('athlete')) return 'athlete'
+    return 'parent' // Default fallback
   }, [forceRole, isOrgAdmin, hasAnyRole])
 
   const currentRole = determineRole()
@@ -308,7 +312,9 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
     ? orgAdminNavSections 
     : currentRole === 'coach' 
       ? coachNavSections 
-      : parentNavSections
+      : currentRole === 'athlete'
+        ? athleteNavSections
+        : parentNavSections
 
   // Apply feature gate filtering - wait for org context to avoid warnings
   const { filteredSections: navSections } = useFilteredNavigation(
@@ -437,6 +443,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
     org_admin: 'Admin',
     coach: 'Coach',
     parent: 'Parent',
+    athlete: 'Athlete',
   }
 
   return (

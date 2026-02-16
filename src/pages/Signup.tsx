@@ -109,8 +109,25 @@ export default function Signup() {
         
         try {
           console.log('[Signup] Fetching invite details for token:', pendingToken)
-          const { data, error: rpcError } = await supabase
-            .rpc('get_parent_invite_details', { p_token: pendingToken })
+          
+          // Check URL params or sessionStorage for invite type
+          const urlParams = new URLSearchParams(window.location.search)
+          const inviteType = urlParams.get('type') || sessionStorage.getItem('pending_invite_type') || 'guardian'
+          sessionStorage.setItem('pending_invite_type', inviteType)
+          
+          // Call appropriate RPC based on invite type
+          let data: any = null
+          let rpcError: any = null
+          
+          if (inviteType === 'athlete') {
+            const result = await (supabase as any).rpc('get_athlete_invite_details', { p_token: pendingToken })
+            data = result.data
+            rpcError = result.error
+          } else {
+            const result = await supabase.rpc('get_parent_invite_details', { p_token: pendingToken })
+            data = result.data
+            rpcError = result.error
+          }
 
           console.log('[Signup] RPC response - data:', data, 'error:', rpcError)
 
@@ -132,8 +149,9 @@ export default function Signup() {
               setEmail(inviteDetails.email)
               setInviteEmail(inviteDetails.email)
               
-              // Store athlete_id in sessionStorage
+              // Store athlete_id and invite type in sessionStorage
               sessionStorage.setItem('pending_invite_athlete_id', inviteDetails.athlete_id)
+              sessionStorage.setItem('pending_invite_type', inviteType)
             } else {
               // Invalid invite - allow editing email
               console.warn('[Signup] Invalid invite details:', inviteDetails.message)
