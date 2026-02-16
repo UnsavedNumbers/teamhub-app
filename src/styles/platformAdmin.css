@@ -6437,10 +6437,48 @@ html.dark .pa-stat-box p[style*="color: var(--pa-n900)"] {
 }
 
 /* =====================================================================
-   FEATURE FLAG DETAIL PAGE
-   Minimal, condensed. Matches FeatureDetail: simple cards, no colors.
+   FEATURE FLAG LIST + DETAIL
    ===================================================================== */
 
+/* List: copy icon on hover over flag key */
+.pa-ff-key-cell {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--pa-space-2);
+}
+
+.pa-ff-key-copy {
+    flex-shrink: 0;
+    padding: var(--pa-space-1);
+    margin-top: 2px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--pa-n500);
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.pa-ff-key-cell:hover .pa-ff-key-copy {
+    opacity: 1;
+}
+
+.pa-ff-key-copy:hover {
+    color: var(--pa-n800);
+    background: var(--pa-n100);
+}
+
+.pa-ff-key-copy .material-symbols-outlined {
+    font-size: 18px;
+}
+
+html.dark .pa-ff-key-copy:hover {
+    color: var(--pa-text-primary);
+    background: var(--pa-n200);
+}
+
+/* Detail page */
 .pa-ff-detail-card {
     margin-bottom: var(--pa-space-4);
 }
@@ -6492,6 +6530,79 @@ html.dark .pa-ff-flag-info-desc {
 
 html.dark .pa-ff-flag-info-desc-empty {
     color: var(--pa-text-muted);
+}
+
+/* Inline description edit */
+.pa-ff-desc-inline {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--pa-space-2);
+    width: 100%;
+    text-align: left;
+    padding: var(--pa-space-2) 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: 4px;
+    color: inherit;
+}
+
+.pa-ff-desc-inline:hover {
+    background: var(--pa-n50);
+}
+
+.pa-ff-desc-inline .pa-ff-desc-edit-icon {
+    flex-shrink: 0;
+    font-size: 16px;
+    color: var(--pa-n400);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.pa-ff-desc-inline:hover .pa-ff-desc-edit-icon {
+    opacity: 1;
+}
+
+html.dark .pa-ff-desc-inline:hover {
+    background: var(--pa-n100);
+}
+
+.pa-ff-desc-edit {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-3);
+}
+
+.pa-ff-desc-textarea {
+    width: 100%;
+    padding: var(--pa-space-3);
+    font: var(--pa-text-body-m);
+    font-family: inherit;
+    color: var(--pa-n900);
+    border: 1px solid var(--pa-n200);
+    border-radius: 6px;
+    resize: vertical;
+    min-height: 72px;
+}
+
+.pa-ff-desc-textarea:focus {
+    outline: none;
+    border-color: var(--pa-n400);
+}
+
+.pa-ff-desc-textarea::placeholder {
+    color: var(--pa-n400);
+}
+
+html.dark .pa-ff-desc-textarea {
+    background: var(--pa-n50);
+    border-color: var(--pa-border-default);
+    color: var(--pa-text-primary);
+}
+
+.pa-ff-desc-edit-actions {
+    display: flex;
+    gap: var(--pa-space-2);
 }
 
 /* Environment rows: simple list, no colored cards */

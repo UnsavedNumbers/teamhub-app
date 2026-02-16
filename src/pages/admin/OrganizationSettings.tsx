@@ -94,7 +94,8 @@ export default function OrganizationSettings() {
   const { context, isReady } = useUserContext()
   const { summary: licenseSummary } = useLicense(currentOrganization?.id)
   const [searchParams, setSearchParams] = useSearchParams()
-  const { isEnabled } = useFeatureFlags(['org_advanced_settings'])
+  const { isEnabled } = useFeatureFlags(['org_advanced_settings', 'org_settings_attendance'])
+  const attendanceTabEnabled = isEnabled('org_settings_attendance')
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -114,11 +115,11 @@ export default function OrganizationSettings() {
 
   // Valid tab values for URL parameter
   const validTabs = useMemo(() => {
-    const baseTabs = ['overview', 'contact', 'appearance', 'attendance', 'registration', 'joinLinks', 'notifications', 'permissions', 'staff']
+    const baseTabs = ['overview', 'contact', 'appearance', ...(attendanceTabEnabled ? ['attendance'] : []), 'registration', 'joinLinks', 'notifications', 'permissions', 'staff']
     if (isEnabled('org_advanced_settings')) baseTabs.push('advanced')
     if (hasPaymentAccess) baseTabs.push('payments')
     return baseTabs
-  }, [hasPaymentAccess, isEnabled])
+  }, [hasPaymentAccess, isEnabled, attendanceTabEnabled])
 
   // Handle tab change - update URL
   const handleTabChange = useCallback((newTab: string) => {
@@ -139,6 +140,14 @@ export default function OrganizationSettings() {
       setActiveTab(tabParam)
     }
   }, [searchParams, validTabs])
+
+  // If attendance is disabled and we're on that tab, switch to overview
+  useEffect(() => {
+    if (!attendanceTabEnabled && activeTab === 'attendance') {
+      setActiveTab('overview')
+      setSearchParams({}, { replace: true })
+    }
+  }, [attendanceTabEnabled, activeTab, setSearchParams])
   
   // Check for onboarding redirect
   useEffect(() => {
@@ -363,7 +372,7 @@ export default function OrganizationSettings() {
           <TabsTrigger value="overview">{t('admin.organizationSettings.tabs.overview')}</TabsTrigger>
           <TabsTrigger value="contact">{t('admin.organizationSettings.tabs.contact')}</TabsTrigger>
           <TabsTrigger value="appearance">{t('admin.organizationSettings.tabs.appearance')}</TabsTrigger>
-          <TabsTrigger value="attendance">{t('admin.organizationSettings.tabs.attendance')}</TabsTrigger>
+          {attendanceTabEnabled && <TabsTrigger value="attendance">{t('admin.organizationSettings.tabs.attendance')}</TabsTrigger>}
           <TabsTrigger value="registration">{t('admin.organizationSettings.tabs.registration')}</TabsTrigger>
           <TabsTrigger value="joinLinks">{t('admin.organizationSettings.tabs.joinLinks')}</TabsTrigger>
           <TabsTrigger value="notifications">{t('admin.organizationSettings.tabs.notifications')}</TabsTrigger>
@@ -419,9 +428,11 @@ export default function OrganizationSettings() {
           )}
         </TabsContent>
 
-        <TabsContent value="attendance">
-           {settings && <AttendanceForm settings={settings.attendance} onSave={(d) => handleSaveSettings('attendance', d)} loading={saving} />}
-        </TabsContent>
+        {attendanceTabEnabled && (
+          <TabsContent value="attendance">
+            {settings && <AttendanceForm settings={settings.attendance} onSave={(d) => handleSaveSettings('attendance', d)} loading={saving} />}
+          </TabsContent>
+        )}
 
         <TabsContent value="registration">
            {settings && <RegistrationForm settings={settings.registration} onSave={(d) => handleSaveSettings('registration', d)} loading={saving} />}

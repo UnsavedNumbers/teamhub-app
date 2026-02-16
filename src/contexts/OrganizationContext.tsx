@@ -32,7 +32,7 @@ interface OrganizationContextType {
   isLoading: boolean
 }
 
-const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined)
+export const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined)
 
 const STORAGE_KEY = 'teamhub_current_org'
 

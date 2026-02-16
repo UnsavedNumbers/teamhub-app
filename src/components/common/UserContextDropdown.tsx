@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo, useContext } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { useOrganization } from '../../contexts/OrganizationContext'
+import { OrganizationContext } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
 import { getLink, RouteKeys, useCurrentRouteKey } from '@/utils/routes'
 import { formatRoleName, hasRole } from '@/utils/roleHelpers'
@@ -13,17 +13,10 @@ import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 
 export default function UserContextDropdown() {
   const { user, profile, signOut } = useAuth()
-  let currentOrganization, organizations, setCurrentOrganization
-  try {
-    const orgContext = useOrganization()
-    currentOrganization = orgContext.currentOrganization
-    organizations = orgContext.organizations
-    setCurrentOrganization = orgContext.setCurrentOrganization
-  } catch (err) {
-    // If useOrganization fails, render nothing (context not available)
-    return null
-  }
-  
+  const orgContext = useContext(OrganizationContext)
+  const currentOrganization = orgContext?.currentOrganization ?? null
+  const organizations = orgContext?.organizations ?? []
+  const setCurrentOrganization = orgContext?.setCurrentOrganization ?? (() => {})
   const { isOffline } = useOffline()
   const navigate = useNavigate()
   const t = useT()
@@ -98,7 +91,7 @@ export default function UserContextDropdown() {
     }
 
     // Find the organization
-    const org = profile.organizations.find(o => o.id === orgId)
+    const org = profile.organizations?.find(o => o.id === orgId)
     
     if (!org) {
       console.error('Organization not found:', orgId)
@@ -133,6 +126,8 @@ export default function UserContextDropdown() {
       setSwitching(false)
     }
   }, [switching, profile, isOffline, navigate, setCurrentOrganization])
+
+  if (orgContext === undefined) return null
 
   const initials = profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'
   const displayName = profile?.display_name || user?.email || 'User'

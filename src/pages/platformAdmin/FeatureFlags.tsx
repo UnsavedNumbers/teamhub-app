@@ -127,7 +127,7 @@ export default function FeatureFlags() {
           byKey.get(r.key)!.push(r)
         }
         const grouped: FeatureFlagListRow[] = []
-        byKey.forEach((envRows, key) => {
+        byKey.forEach((envRows) => {
           const sorted = envOrder
             .map((env) => envRows.find((r) => r.environment === env))
             .filter(Boolean) as typeof envRows
@@ -207,22 +207,30 @@ export default function FeatureFlags() {
       setDialogError(null)
       
       try {
-        const { data, error } = await supabase.rpc('admin_create_feature_flag', {
-          p_key: newFlag.key.trim().toLowerCase(),
-          p_value_type: newFlag.value_type,
-          p_description: newFlag.description || null,
-        } as any)
-        
-        if (error) {
-          setDialogError(error.message)
-          return
+        const key = newFlag.key.trim().toLowerCase()
+        const valueType = newFlag.value_type
+        const description = newFlag.description || null
+        const environments: ('dev' | 'staging' | 'prod')[] = ['dev', 'staging', 'prod']
+
+        for (const p_environment of environments) {
+          const { data, error } = await supabase.rpc('admin_create_feature_flag', {
+            p_key: key,
+            p_value_type: valueType,
+            p_environment,
+            p_description: description ?? undefined,
+          })
+
+          if (error) {
+            setDialogError(error.message)
+            return
+          }
+
+          if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+            setDialogError((data as RpcResponse)?.error || 'Unknown error')
+            return
+          }
         }
-        
-        if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
-          setDialogError((data as RpcResponse)?.error || 'Unknown error')
-          return
-        }
-        
+
         setCreateDialog(false)
         setNewFlag({ key: '', value_type: 'boolean', description: '' })
         showSuccess('Feature flag created successfully in all environments')
@@ -521,15 +529,32 @@ export default function FeatureFlags() {
       label: 'Key',
       sortable: true,
       render: (row) => (
-        <div>
-          <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
-            {row.key}
-          </div>
-          {row.description && (
-            <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginTop: '4px' }}>
-              {row.description}
+        <div className="pa-ff-key-cell">
+          <div>
+            <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
+              {row.key}
             </div>
-          )}
+            {row.description && (
+              <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginTop: '4px' }}>
+                {row.description}
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            className="pa-ff-key-copy"
+            onClick={(e) => {
+              e.stopPropagation()
+              navigator.clipboard.writeText(row.key).then(
+                () => showSuccess('Copied to clipboard'),
+                () => {}
+              )
+            }}
+            title="Copy flag key"
+            aria-label="Copy flag key"
+          >
+            <span className="material-symbols-outlined">content_copy</span>
+          </button>
         </div>
       ),
     },

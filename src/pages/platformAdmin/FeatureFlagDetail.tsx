@@ -10,18 +10,6 @@ import { t } from '../../i18n'
 import { showSuccess, showError } from '../../utils/toast'
 import type { FeatureFlag, FeatureFlagOverride, FeatureFlagAuditLog, RpcResponse } from '../../types/domain/FeatureFlag'
 
-// Helper function to display flag value
-function getValueDisplay(flag: FeatureFlag): string {
-  if (flag.valueType === 'boolean') {
-    return flag.defaultValueBoolean !== null ? String(flag.defaultValueBoolean) : 'N/A'
-  } else if (flag.valueType === 'integer') {
-    return flag.defaultValueInteger !== null ? String(flag.defaultValueInteger) : 'N/A'
-  } else if (flag.valueType === 'double') {
-    return flag.defaultValueDouble !== null ? String(flag.defaultValueDouble) : 'N/A'
-  }
-  return 'N/A'
-}
-
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 
 export default function FeatureFlagDetail() {
@@ -49,6 +37,11 @@ export default function FeatureFlagDetail() {
   const [editReason, setEditReason] = useState('')
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
+
+  // Inline description edit
+  const [editingDescription, setEditingDescription] = useState(false)
+  const [descriptionEditValue, setDescriptionEditValue] = useState('')
+  const [descriptionSaving, setDescriptionSaving] = useState(false)
   
   // Validate route parameter
   const isValidId = useMemo(() => {
@@ -279,13 +272,14 @@ export default function FeatureFlagDetail() {
       
       // If flag doesn't exist for this environment, create it first
       if (!envFlag) {
-        const { data: createData, error: createError } = await supabase
+        const { data: createData, error: createError } = await db
           .from('feature_flags')
           .insert({
             key: flag.key,
             value_type: flag.valueType,
             description: flag.description,
             environment: editingEnv,
+            org_id: null,
           })
           .select()
           .single()
@@ -340,7 +334,46 @@ export default function FeatureFlagDetail() {
       setEditLoading(false)
     }
   }
-  
+
+  const startEditingDescription = useCallback(() => {
+    setDescriptionEditValue(flag?.description ?? '')
+    setEditingDescription(true)
+  }, [flag?.description])
+
+  const cancelEditingDescription = useCallback(() => {
+    setEditingDescription(false)
+    setDescriptionEditValue('')
+  }, [])
+
+  const saveDescription = useCallback(async () => {
+    if (!flag) return
+    const value = descriptionEditValue.trim() || null
+    setDescriptionSaving(true)
+    try {
+      const { error } = await supabase
+        .from('feature_flags')
+        .update({ description: value })
+        .eq('key', flag.key)
+        .is('org_id', null)
+      if (error) throw error
+      setEditingDescription(false)
+      setDescriptionEditValue('')
+      setFlag((prev) => (prev ? { ...prev, description: value } : null))
+      setFlagsByEnv((prev) => {
+        const next = { ...prev }
+        ;(['dev', 'staging', 'prod'] as const).forEach((env) => {
+          if (next[env]) next[env] = { ...next[env]!, description: value }
+        })
+        return next
+      })
+      showSuccess(t('platformAdmin.featureFlags.detail.descriptionUpdated'))
+    } catch (err) {
+      showError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setDescriptionSaving(false)
+    }
+  }, [flag, descriptionEditValue])
+
   useEffect(() => {
     fetchFlag()
   }, [fetchFlag])
@@ -565,10 +598,40 @@ export default function FeatureFlagDetail() {
               </div>
               <div className="pa-form-group">
                 <div className="pa-ff-flag-info-key-label">{t('platformAdmin.featureFlags.detail.descriptionLabel')}</div>
-                {flag.description ? (
-                  <div className="pa-ff-flag-info-desc">{flag.description}</div>
+                {editingDescription ? (
+                  <div className="pa-ff-desc-edit">
+                    <textarea
+                      className="pa-ff-desc-textarea"
+                      value={descriptionEditValue}
+                      onChange={(e) => setDescriptionEditValue(e.target.value)}
+                      placeholder={t('platformAdmin.featureFlags.detail.noDescription')}
+                      rows={3}
+                      disabled={descriptionSaving}
+                      autoFocus
+                    />
+                    <div className="pa-ff-desc-edit-actions">
+                      <Button variant="ghost" size="small" onClick={cancelEditingDescription} disabled={descriptionSaving}>
+                        {t('common.cancel')}
+                      </Button>
+                      <Button variant="primary" size="small" onClick={saveDescription} disabled={descriptionSaving}>
+                        {descriptionSaving ? t('common.saving') : t('common.save')}
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="pa-ff-flag-info-desc-empty">{t('platformAdmin.featureFlags.detail.noDescription')}</div>
+                  <button
+                    type="button"
+                    className="pa-ff-desc-inline"
+                    onClick={startEditingDescription}
+                    title={t('platformAdmin.featureFlags.detail.editDescription')}
+                  >
+                    {flag.description ? (
+                      <span className="pa-ff-flag-info-desc">{flag.description}</span>
+                    ) : (
+                      <span className="pa-ff-flag-info-desc-empty">{t('platformAdmin.featureFlags.detail.noDescription')}</span>
+                    )}
+                    <span className="pa-ff-desc-edit-icon material-symbols-outlined" aria-hidden>edit</span>
+                  </button>
                 )}
               </div>
             </div>
