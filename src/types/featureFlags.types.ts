@@ -154,7 +154,6 @@ export interface CreateFeatureFlagRequest {
   key: string
   value_type: FeatureFlagValueType
   description?: string
-  environment: FeatureFlagEnvironment
 }
 
 /**

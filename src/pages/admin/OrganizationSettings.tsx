@@ -6,6 +6,7 @@ import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycl
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useFeatureFlags } from '../../utils/featureFlags'
 import { useLicense } from '../../hooks/useLicense'
 import { useI18n } from '../../i18n/useI18n'
 import { getErrorMessage } from '../../utils/errorUtils'
@@ -93,7 +94,8 @@ export default function OrganizationSettings() {
   const { context, isReady } = useUserContext()
   const { summary: licenseSummary } = useLicense(currentOrganization?.id)
   const [searchParams, setSearchParams] = useSearchParams()
-  
+  const { isEnabled } = useFeatureFlags(['org_advanced_settings'])
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -112,12 +114,11 @@ export default function OrganizationSettings() {
 
   // Valid tab values for URL parameter
   const validTabs = useMemo(() => {
-    const baseTabs = ['overview', 'contact', 'appearance', 'attendance', 'registration', 'joinLinks', 'notifications', 'permissions', 'staff', 'advanced']
-    if (hasPaymentAccess) {
-      baseTabs.push('payments')
-    }
+    const baseTabs = ['overview', 'contact', 'appearance', 'attendance', 'registration', 'joinLinks', 'notifications', 'permissions', 'staff']
+    if (isEnabled('org_advanced_settings')) baseTabs.push('advanced')
+    if (hasPaymentAccess) baseTabs.push('payments')
     return baseTabs
-  }, [hasPaymentAccess])
+  }, [hasPaymentAccess, isEnabled])
 
   // Handle tab change - update URL
   const handleTabChange = useCallback((newTab: string) => {
@@ -369,7 +370,7 @@ export default function OrganizationSettings() {
           <TabsTrigger value="permissions">{t('admin.organizationSettings.tabs.permissions')}</TabsTrigger>
           <TabsTrigger value="staff">{t('admin.organizationSettings.tabs.staff')}</TabsTrigger>
           {hasPaymentAccess && <TabsTrigger value="payments">{t('admin.organizationSettings.tabs.payments')}</TabsTrigger>}
-          <TabsTrigger value="advanced">{t('admin.organizationSettings.tabs.advanced')}</TabsTrigger>
+          {isEnabled('org_advanced_settings') && <TabsTrigger value="advanced">{t('admin.organizationSettings.tabs.advanced')}</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview">
@@ -448,9 +449,11 @@ export default function OrganizationSettings() {
           </TabsContent>
         )}
 
-        <TabsContent value="advanced">
-           {settings && <AdvancedForm settings={settings.advanced} onSave={(d) => handleSaveSettings('advanced', d)} loading={saving} />}
-        </TabsContent>
+        {isEnabled('org_advanced_settings') && (
+          <TabsContent value="advanced">
+             {settings && <AdvancedForm settings={settings.advanced} onSave={(d) => handleSaveSettings('advanced', d)} loading={saving} />}
+          </TabsContent>
+        )}
 
       </Tabs>
     </div>

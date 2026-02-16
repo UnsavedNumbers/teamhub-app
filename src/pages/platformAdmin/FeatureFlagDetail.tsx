@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, Card, Button, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState, StatCard, Tabs, TabsTrigger, TabsContent, Modal, Input, Switch } from '../../components/platformAdmin'
+import { PageHeader, Badge, Card, Button, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState, Tabs, TabsTrigger, TabsContent, Modal, Input, Switch } from '../../components/platformAdmin'
 import { isValidUUID } from '../../utils/uuid'
 import { isNotFoundError } from '../../utils/errorUtils'
 import { mapFeatureFlag, mapFeatureFlagOverride, mapFeatureFlagAuditLog } from '../../utils/domainMappers'
@@ -31,6 +31,11 @@ export default function FeatureFlagDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [flag, setFlag] = useState<FeatureFlag | null>(null)
+  const [flagsByEnv, setFlagsByEnv] = useState<Record<'dev' | 'staging' | 'prod', FeatureFlag | null>>({
+    dev: null,
+    staging: null,
+    prod: null,
+  })
   const [overrides, setOverrides] = useState<FeatureFlagOverride[]>([])
   const [auditLog, setAuditLog] = useState<FeatureFlagAuditLog[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,8 +43,8 @@ export default function FeatureFlagDetail() {
   const [notFound, setNotFound] = useState(false)
   const [activeTab, setActiveTab] = useState<'overrides' | 'audit'>('overrides')
   
-  // Edit default value dialog state
-  const [editDefaultOpen, setEditDefaultOpen] = useState(false)
+  // Edit default value state per environment
+  const [editingEnv, setEditingEnv] = useState<'dev' | 'staging' | 'prod' | null>(null)
   const [editValue, setEditValue] = useState<{ boolean?: boolean; integer?: number; double?: number }>({})
   const [editReason, setEditReason] = useState('')
   const [editLoading, setEditLoading] = useState(false)
@@ -65,27 +70,66 @@ export default function FeatureFlagDetail() {
     setNotFound(false)
     
     try {
-      const { data, error } = await db
+      // First fetch the flag by ID to get the key
+      const { data: flagData, error: flagError } = await db
         .from('admin_feature_flags_list')
         .select('*')
         .eq('id', id)
         .single()
       
-      if (error) {
-        if (isNotFoundError(error)) {
+      if (flagError) {
+        if (isNotFoundError(flagError)) {
           setNotFound(true)
           setFlag(null)
         } else {
-          setError(error.message || t('platformAdmin.featureFlags.detail.loadFailed'))
+          setError(flagError.message || t('platformAdmin.featureFlags.detail.loadFailed'))
           setFlag(null)
         }
-      } else if (data) {
-        setFlag(mapFeatureFlag(data))
-        setError(null)
-      } else {
+        setLoading(false)
+        return
+      }
+      
+      if (!flagData) {
         setNotFound(true)
         setFlag(null)
+        setLoading(false)
+        return
       }
+      
+      const initialFlag = mapFeatureFlag(flagData)
+      setFlag(initialFlag)
+      
+      // Now fetch all environments for this flag key
+      const { data: allEnvData, error: allEnvError } = await db
+        .from('admin_feature_flags_list')
+        .select('*')
+        .eq('key', initialFlag.key)
+        .is('deleted_at', null)
+      
+      if (allEnvError) {
+        console.error('Error fetching all environments:', allEnvError)
+        // Continue with just the initial flag
+        setFlagsByEnv({
+          dev: initialFlag.environment === 'dev' ? initialFlag : null,
+          staging: initialFlag.environment === 'staging' ? initialFlag : null,
+          prod: initialFlag.environment === 'prod' ? initialFlag : null,
+        })
+      } else {
+        const flagsMap: Record<'dev' | 'staging' | 'prod', FeatureFlag | null> = {
+          dev: null,
+          staging: null,
+          prod: null,
+        }
+        
+        allEnvData?.forEach((row: any) => {
+          const mappedFlag = mapFeatureFlag(row)
+          flagsMap[mappedFlag.environment] = mappedFlag
+        })
+        
+        setFlagsByEnv(flagsMap)
+      }
+      
+      setError(null)
     } catch (err) {
       console.error('Error fetching flag:', err)
       const errorMessage = err instanceof Error ? err.message : String(err)
@@ -98,13 +142,23 @@ export default function FeatureFlagDetail() {
   }, [id, isValidId])
   
   const fetchOverrides = useCallback(async () => {
-    if (!id) return
+    if (!flag) return
     
     try {
+      // Fetch overrides for all environments of this flag
+      const flagIds = Object.values(flagsByEnv)
+        .filter((f): f is FeatureFlag => f !== null)
+        .map(f => f.id)
+      
+      if (flagIds.length === 0) {
+        setOverrides([])
+        return
+      }
+      
       const { data, error } = await db
         .from('admin_feature_flag_overrides')
         .select('*')
-        .eq('feature_flag_id', id)
+        .in('feature_flag_id', flagIds)
         .order('created_at', { ascending: false })
       
       if (error) {
@@ -127,16 +181,26 @@ export default function FeatureFlagDetail() {
       console.error('Error details:', errorMessage)
       setOverrides([])
     }
-  }, [id])
+  }, [flag, flagsByEnv])
   
   const fetchAuditLog = useCallback(async () => {
-    if (!id) return
+    if (!flag) return
     
     try {
+      // Fetch audit log for all environments of this flag
+      const flagIds = Object.values(flagsByEnv)
+        .filter((f): f is FeatureFlag => f !== null)
+        .map(f => f.id)
+      
+      if (flagIds.length === 0) {
+        setAuditLog([])
+        return
+      }
+      
       const { data, error } = await db
         .from('admin_feature_flag_audit')
         .select('*')
-        .eq('feature_flag_id', id)
+        .in('feature_flag_id', flagIds)
         .order('created_at', { ascending: false })
         .limit(100)
       
@@ -158,25 +222,39 @@ export default function FeatureFlagDetail() {
       console.error('Error details:', errorMessage)
       setAuditLog([])
     }
-  }, [id])
+  }, [flag, flagsByEnv])
   
-  const openEditDefaultDialog = useCallback(() => {
+  const openEditDefaultDialog = useCallback((env: 'dev' | 'staging' | 'prod') => {
     if (!flag) return
-    // Initialize with current value
-    if (flag.valueType === 'boolean') {
-      setEditValue({ boolean: flag.defaultValueBoolean ?? false })
-    } else if (flag.valueType === 'integer') {
-      setEditValue({ integer: flag.defaultValueInteger ?? 0 })
-    } else if (flag.valueType === 'double') {
-      setEditValue({ double: flag.defaultValueDouble ?? 0 })
+    
+    setEditingEnv(env)
+    const envFlag = flagsByEnv[env]
+    
+    // Initialize with current value if exists, otherwise defaults
+    if (envFlag) {
+      if (flag.valueType === 'boolean') {
+        setEditValue({ boolean: envFlag.defaultValueBoolean ?? false })
+      } else if (flag.valueType === 'integer') {
+        setEditValue({ integer: envFlag.defaultValueInteger ?? 0 })
+      } else if (flag.valueType === 'double') {
+        setEditValue({ double: envFlag.defaultValueDouble ?? 0 })
+      }
+    } else {
+      // No flag exists for this environment - use defaults
+      if (flag.valueType === 'boolean') {
+        setEditValue({ boolean: false })
+      } else if (flag.valueType === 'integer') {
+        setEditValue({ integer: 0 })
+      } else if (flag.valueType === 'double') {
+        setEditValue({ double: 0.0 })
+      }
     }
     setEditReason('')
     setEditError(null)
-    setEditDefaultOpen(true)
-  }, [flag])
+  }, [flagsByEnv, flag])
   
   const handleSaveDefaultValue = async () => {
-    if (!flag || !id) return
+    if (!editingEnv || !flag) return
     
     // Validate that exactly one value type is set
     const valueCount = (editValue.boolean !== undefined ? 1 : 0) + 
@@ -197,14 +275,46 @@ export default function FeatureFlagDetail() {
     setEditError(null)
     
     try {
+      let envFlag = flagsByEnv[editingEnv]
+      
+      // If flag doesn't exist for this environment, create it first
+      if (!envFlag) {
+        const { data: createData, error: createError } = await supabase
+          .from('feature_flags')
+          .insert({
+            key: flag.key,
+            value_type: flag.valueType,
+            description: flag.description,
+            environment: editingEnv,
+          })
+          .select()
+          .single()
+        
+        if (createError) {
+          setEditError(createError.message || 'Failed to create flag for this environment')
+          return
+        }
+        
+        // Map the created flag
+        envFlag = mapFeatureFlag({
+          ...createData,
+          default_value_boolean: null,
+          default_value_integer: null,
+          default_value_double: null,
+          org_override_count: 0,
+          user_override_count: 0,
+        })
+      }
+      
+      // Now set the platform default
       const { data, error } = await supabase.rpc('admin_set_platform_default', {
-        p_feature_flag_id: id,
+        p_feature_flag_id: envFlag.id,
         p_value_boolean: editValue.boolean ?? null,
         p_value_integer: editValue.integer ?? null,
         p_value_double: editValue.double ?? null,
-        p_environment: flag.environment,
+        p_environment: editingEnv,
         p_reason: editReason.trim(),
-        p_expected_version: flag.version,
+        p_expected_version: envFlag.version,
       } as any)
       
       if (error) {
@@ -218,7 +328,7 @@ export default function FeatureFlagDetail() {
         return
       }
       
-      setEditDefaultOpen(false)
+      setEditingEnv(null)
       showSuccess(t('platformAdmin.featureFlags.detail.defaultValueUpdated'))
       fetchFlag()
       fetchAuditLog()
@@ -257,7 +367,7 @@ export default function FeatureFlagDetail() {
       id: 'scope_name',
       label: t('platformAdmin.featureFlags.detail.scope'),
       render: (row: FeatureFlagOverride & { id: string }) => (
-        <div className="pa-body-m" style={{ fontWeight: 600 }}>
+        <div className="pa-body-m pa-ff-detail-cell-value">
           {row.scopeName}
         </div>
       ),
@@ -277,7 +387,7 @@ export default function FeatureFlagDetail() {
       id: 'created_at',
       label: t('platformAdmin.featureFlags.detail.created'),
       render: (row: FeatureFlagOverride & { id: string }) => (
-        <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+        <div className="pa-body-s pa-ff-detail-cell-meta">
           {new Date(row.createdAt).toLocaleString()}
         </div>
       ),
@@ -289,7 +399,7 @@ export default function FeatureFlagDetail() {
       id: 'created_at',
       label: t('platformAdmin.featureFlags.detail.time'),
       render: (row: FeatureFlagAuditLog) => (
-        <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+        <div className="pa-body-s pa-ff-detail-cell-meta">
           {new Date(row.createdAt).toLocaleString()}
         </div>
       ),
@@ -316,7 +426,7 @@ export default function FeatureFlagDetail() {
       id: 'scope_type',
       label: t('platformAdmin.featureFlags.detail.scope'),
       render: (row: FeatureFlagAuditLog) => (
-        <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+        <div className="pa-body-s pa-ff-detail-cell-meta">
           {row.scopeType || t('platformAdmin.featureFlags.detail.flag')}
         </div>
       ),
@@ -325,7 +435,7 @@ export default function FeatureFlagDetail() {
       id: 'scope_id',
       label: t('platformAdmin.featureFlags.detail.target'),
       render: (row: FeatureFlagAuditLog) => (
-        <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+        <div className="pa-body-s pa-ff-detail-cell-meta">
           {row.scopeId || '-'}
         </div>
       ),
@@ -365,8 +475,8 @@ export default function FeatureFlagDetail() {
         <div className="pa-grid pa-grid-3 pa-gap-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="pa-card">
-              <div className="pa-skeleton" style={{ width: '60%', height: '20px', marginBottom: '16px' }} />
-              <div className="pa-skeleton" style={{ width: '100%', height: '40px' }} />
+              <div className="pa-skeleton pa-ff-detail-skeleton-title" />
+              <div className="pa-skeleton pa-ff-detail-skeleton-line" />
             </div>
           ))}
         </div>
@@ -436,204 +546,87 @@ export default function FeatureFlagDetail() {
           { label: 'Feature Flags', path: getLink('platformAdmin.featureFlags') },
           { label: flag.key },
         ]}
+        actions={
+          <Button variant="ghost" onClick={() => navigate(getLink('platformAdmin.featureFlags'))}>
+            <span className="material-symbols-outlined">arrow_back</span>
+            {t('platformAdmin.featureFlags.detail.backToFlags')}
+          </Button>
+        }
       />
       
-      {/* Back button */}
-      <div className="pa-mb-4">
-        <Button variant="ghost" onClick={() => navigate(getLink('platformAdmin.featureFlags'))}>
-          <span className="material-symbols-outlined" style={{ marginRight: '8px' }}>arrow_back</span>
-          {t('platformAdmin.featureFlags.detail.backToFlags')}
-        </Button>
-      </div>
-      
-      {/* Stat Cards */}
-      <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-4">
-        <StatCard
-          label={t('platformAdmin.featureFlags.detail.orgOverrides')}
-          value={flag.orgOverrideCount}
-          icon="business"
-        />
-        <StatCard
-          label={t('platformAdmin.featureFlags.detail.userOverrides')}
-          value={flag.userOverrideCount}
-          icon="person"
-        />
-        <StatCard
-          label={t('platformAdmin.featureFlags.detail.environment')}
-          value={flag.environment.toUpperCase()}
-          icon="public"
-        />
-      </div>
-      
-      {/* Flag Info Card - Uplifted Design */}
-      <Card title={t('platformAdmin.featureFlags.detail.flagInformation')} style={{ marginBottom: 'var(--pa-space-4)' }}>
-        
-        {/* Hero Section - Flag Key & Primary Value */}
-        <div style={{
-          background: 'linear-gradient(135deg, var(--pa-n25) 0%, var(--pa-n50) 100%)',
-          borderRadius: '8px',
-          padding: 'var(--pa-space-6)',
-          marginBottom: 'var(--pa-space-6)',
-          border: '1px solid var(--pa-n100)'
-        }}>
-          <div className="pa-grid" style={{ gridTemplateColumns: '1fr auto auto', gap: 'var(--pa-space-6)', alignItems: 'center' }}>
-            {/* Flag Key - Primary identifier */}
-            <div>
-              <div className="pa-body-xs" style={{ 
-                color: 'var(--pa-n500)', 
-                marginBottom: 'var(--pa-space-1)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                fontWeight: 600
-              }}>
-                <span className="material-symbols-outlined" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: '6px' }}>key</span>
-                {t('platformAdmin.featureFlags.detail.flagKey')}
+      {/* Flag info + Platform defaults: two cards on one row */}
+      <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+        <Card className="pa-ff-detail-card">
+          <div className="pa-ff-flag-info">
+            <div className="pa-ff-flag-info-body">
+              <div className="pa-form-group">
+                <div className="pa-ff-flag-info-key-label">{t('platformAdmin.featureFlags.detail.flagKey')}</div>
+                <div className="pa-ff-flag-info-key-value">{flag.key}</div>
               </div>
-              <div style={{
-                fontFamily: 'var(--pa-font-mono)',
-                fontSize: '28px',
-                fontWeight: 700,
-                color: 'var(--pa-n900)',
-                lineHeight: 1.2,
-                wordBreak: 'break-word'
-              }}>
-                {flag.key}
+              <div className="pa-form-group">
+                <div className="pa-ff-flag-info-key-label">{t('platformAdmin.featureFlags.detail.descriptionLabel')}</div>
+                {flag.description ? (
+                  <div className="pa-ff-flag-info-desc">{flag.description}</div>
+                ) : (
+                  <div className="pa-ff-flag-info-desc-empty">{t('platformAdmin.featureFlags.detail.noDescription')}</div>
+                )}
               </div>
             </div>
-
-            {/* Current Value Display */}
-            <div style={{
-              background: 'var(--pa-n0)',
-              borderRadius: '8px',
-              padding: 'var(--pa-space-4)',
-              border: '2px solid var(--pa-n200)',
-              minWidth: '140px',
-              textAlign: 'center'
-            }}>
-              <div className="pa-body-xs" style={{ 
-                color: 'var(--pa-n500)', 
-                marginBottom: 'var(--pa-space-1)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                fontWeight: 600
-              }}>
-                {t('platformAdmin.featureFlags.detail.currentValue')}
-              </div>
-              <div style={{
-                fontFamily: 'var(--pa-font-mono)',
-                fontSize: '24px',
-                fontWeight: 700,
-                color: flag.valueType === 'boolean' 
-                  ? (flag.defaultValueBoolean ? '#10b981' : '#ef4444')
-                  : 'var(--pa-n900)'
-              }}>
-                {getValueDisplay(flag)}
-              </div>
-            </div>
-
-            {/* Edit Action */}
-            {!flag.deletedAt && (
-              <Button 
-                variant="primary" 
-                onClick={openEditDefaultDialog}
-                style={{ minWidth: '120px' }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: '20px', marginRight: '8px' }}>edit</span>
-                {t('platformAdmin.featureFlags.detail.edit')}
-              </Button>
-            )}
           </div>
+        </Card>
+
+        <Card
+          title={t('platformAdmin.featureFlags.detail.platformDefaultsByEnvironment')}
+          className="pa-ff-detail-card"
+        >
+        <div className="pa-ff-env-list">
+          {(['dev', 'staging', 'prod'] as const).map((env) => {
+            const envFlag = flagsByEnv[env]
+            const hasValue = envFlag && (
+              (envFlag.valueType === 'boolean' && envFlag.defaultValueBoolean !== null) ||
+              (envFlag.valueType === 'integer' && envFlag.defaultValueInteger !== null) ||
+              (envFlag.valueType === 'double' && envFlag.defaultValueDouble !== null)
+            )
+            const valueText = envFlag && hasValue
+              ? (envFlag.valueType === 'boolean'
+                  ? String(envFlag.defaultValueBoolean)
+                  : envFlag.valueType === 'integer'
+                    ? String(envFlag.defaultValueInteger)
+                    : String(envFlag.defaultValueDouble))
+              : null
+
+            return (
+              <div key={env} className="pa-ff-env-row">
+                <span className="pa-ff-env-row__name">{env}</span>
+                <div className={`pa-ff-env-row__value ${!valueText ? 'pa-ff-env-row__value--empty' : ''}`}>
+                  {valueText ?? (
+                    <>
+                      {t('platformAdmin.featureFlags.detail.notSet')}
+                      <span className="pa-body-s"> — {t('platformAdmin.featureFlags.detail.clickToSet')}</span>
+                    </>
+                  )}
+                </div>
+                <div className="pa-ff-env-row__edit">
+                  {(!envFlag || !envFlag.deletedAt) && (
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      onClick={() => openEditDefaultDialog(env)}
+                    >
+                      <span className="material-symbols-outlined">edit</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
         </div>
-
-        {/* Information Panels Grid */}
-        <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2" style={{ gap: 'var(--pa-space-4)' }}>
-          
-          {/* Technical Details Panel */}
-          <div style={{
-            background: 'var(--pa-n25)',
-            borderRadius: '6px',
-            padding: 'var(--pa-space-4)',
-            border: '1px solid var(--pa-n100)'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              marginBottom: 'var(--pa-space-3)',
-              gap: 'var(--pa-space-2)'
-            }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-n600)' }}>settings</span>
-              <h4 className="pa-body-m" style={{ fontWeight: 700, color: 'var(--pa-n800)', margin: 0 }}>
-                {t('platformAdmin.featureFlags.detail.technicalDetails')}
-              </h4>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-3)' }}>
-              <div>
-                <div className="pa-body-xs" style={{ color: 'var(--pa-n600)', marginBottom: '4px', fontWeight: 600 }}>
-                  {t('platformAdmin.featureFlags.detail.valueType')}
-                </div>
-                <div className="pa-body-m" style={{ fontWeight: 500, color: 'var(--pa-n900)' }}>
-                  <Badge variant="neutral">{flag.valueType}</Badge>
-                </div>
-              </div>
-              
-              <div>
-                <div className="pa-body-xs" style={{ color: 'var(--pa-n600)', marginBottom: '4px', fontWeight: 600 }}>
-                  {t('platformAdmin.featureFlags.detail.environment')}
-                </div>
-                <div className="pa-body-m" style={{ fontWeight: 500, color: 'var(--pa-n900)' }}>
-                  <Badge variant="info">{flag.environment.toUpperCase()}</Badge>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Metadata Panel */}
-          <div style={{
-            background: 'var(--pa-n25)',
-            borderRadius: '6px',
-            padding: 'var(--pa-space-4)',
-            border: '1px solid var(--pa-n100)'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              marginBottom: 'var(--pa-space-3)',
-              gap: 'var(--pa-space-2)'
-            }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-n600)' }}>schedule</span>
-              <h4 className="pa-body-m" style={{ fontWeight: 700, color: 'var(--pa-n800)', margin: 0 }}>
-                {t('platformAdmin.featureFlags.detail.metadata')}
-              </h4>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-3)' }}>
-              <div>
-                <div className="pa-body-xs" style={{ color: 'var(--pa-n600)', marginBottom: '4px', fontWeight: 600 }}>
-                  {t('platformAdmin.featureFlags.detail.created')}
-                </div>
-                <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
-                  {new Date(flag.createdAt).toLocaleString()}
-                </div>
-              </div>
-              
-              <div>
-                <div className="pa-body-xs" style={{ color: 'var(--pa-n600)', marginBottom: '4px', fontWeight: 600 }}>
-                  {t('platformAdmin.featureFlags.detail.lastUpdated')}
-                </div>
-                <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
-                  {new Date(flag.updatedAt).toLocaleString()}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-        </div>
-      </Card>
+        </Card>
+      </div>
       
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'overrides' | 'audit')}>
-        <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2 pa-mb-4" style={{ borderBottom: '2px solid var(--pa-n100)' }}>
+        <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2 pa-mb-4 pa-ff-tabs-bar">
           <TabsTrigger value="overrides">
             {t('platformAdmin.featureFlags.detail.overridesTab')} ({overrides.length})
           </TabsTrigger>
@@ -679,79 +672,78 @@ export default function FeatureFlagDetail() {
       
       {/* Edit Default Value Modal */}
       <Modal
-        open={editDefaultOpen}
-        onClose={() => setEditDefaultOpen(false)}
-        title={t('platformAdmin.featureFlags.detail.editDefaultTitle')}
+        open={editingEnv !== null}
+        onClose={() => {
+          setEditingEnv(null)
+          setEditError(null)
+        }}
+        title={`Edit Platform Default - ${editingEnv?.toUpperCase()}`}
         size="small"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-4)' }}>
+        <div className="pa-form-modal-body">
           {editError && (
-            <div style={{ 
-              backgroundColor: '#fef2f2', 
-              border: '1px solid #fecaca', 
-              color: '#b91c1c', 
-              padding: 'var(--pa-space-3) var(--pa-space-4)', 
-              borderRadius: '4px' 
-            }}>
+            <div className="pa-form-error" role="alert">
               {editError}
             </div>
           )}
-          
-          <div>
-            <label className="pa-body-s" style={{ display: 'block', marginBottom: 'var(--pa-space-2)', color: 'var(--pa-n700)' }}>
-              {t('platformAdmin.featureFlags.detail.valueLabel')} ({flag.valueType})
-            </label>
-            
-            {flag.valueType === 'boolean' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)' }}>
-                <Switch
-                  checked={editValue.boolean ?? false}
-                  onCheckedChange={(checked) => setEditValue({ boolean: checked })}
+
+          {editingEnv && (flagsByEnv[editingEnv] || flag) && (
+            <div className="pa-form-group">
+              <label className="pa-form-modal-label">
+                {t('platformAdmin.featureFlags.detail.valueLabel')} ({flagsByEnv[editingEnv]?.valueType ?? flag.valueType})
+              </label>
+              {(flagsByEnv[editingEnv]?.valueType ?? flag.valueType) === 'boolean' && (
+                <div className="pa-form-row-inline">
+                  <Switch
+                    checked={editValue.boolean ?? false}
+                    onCheckedChange={(checked) => setEditValue({ boolean: checked })}
+                  />
+                  <span className="pa-body-m">
+                    {editValue.boolean ? 'true' : 'false'}
+                  </span>
+                </div>
+              )}
+              {(flagsByEnv[editingEnv]?.valueType ?? flag.valueType) === 'integer' && (
+                <Input
+                  type="number"
+                  value={editValue.integer?.toString() ?? ''}
+                  onChange={(e) => setEditValue({ integer: parseInt(e.target.value, 10) || 0 })}
+                  placeholder="0"
+                  className="pa-form-input-full"
                 />
-                <span className="pa-body-m">
-                  {editValue.boolean ? 'true' : 'false'}
-                </span>
-              </div>
-            )}
-            
-            {flag.valueType === 'integer' && (
-              <Input
-                type="number"
-                value={editValue.integer?.toString() ?? ''}
-                onChange={(e) => setEditValue({ integer: parseInt(e.target.value, 10) || 0 })}
-                placeholder="0"
-                style={{ width: '100%' }}
-              />
-            )}
-            
-            {flag.valueType === 'double' && (
-              <Input
-                type="number"
-                step="0.01"
-                value={editValue.double?.toString() ?? ''}
-                onChange={(e) => setEditValue({ double: parseFloat(e.target.value) || 0 })}
-                placeholder="0.0"
-                style={{ width: '100%' }}
-              />
-            )}
-          </div>
-          
-          <div>
-            <label className="pa-body-s" style={{ display: 'block', marginBottom: 'var(--pa-space-2)', color: 'var(--pa-n700)' }}>
+              )}
+              {(flagsByEnv[editingEnv]?.valueType ?? flag.valueType) === 'double' && (
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editValue.double?.toString() ?? ''}
+                  onChange={(e) => setEditValue({ double: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.0"
+                  className="pa-form-input-full"
+                />
+              )}
+            </div>
+          )}
+
+          <div className="pa-form-group">
+            <label className="pa-form-modal-label">
               {t('platformAdmin.featureFlags.detail.reasonLabel')} *
             </label>
             <Input
               value={editReason}
               onChange={(e) => setEditReason(e.target.value)}
               placeholder={t('platformAdmin.featureFlags.detail.reasonPlaceholder')}
-              style={{ width: '100%' }}
+              className="pa-form-input-full"
             />
           </div>
-          
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--pa-space-2)', paddingTop: 'var(--pa-space-4)' }}>
+
+          <div className="pa-form-modal-actions">
             <Button
               variant="ghost"
-              onClick={() => setEditDefaultOpen(false)}
+              onClick={() => {
+                setEditingEnv(null)
+                setEditError(null)
+              }}
               disabled={editLoading}
             >
               {t('common.cancel')}

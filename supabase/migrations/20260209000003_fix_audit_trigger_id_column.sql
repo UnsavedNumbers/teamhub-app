@@ -42,26 +42,7 @@ BEGIN
     flag_id_val := COALESCE(NEW.id, OLD.id);
   END IF;
   
-  -- Build old and new value JSONB
-  IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
-    old_val := jsonb_build_object(
-      'value_boolean', OLD.value_boolean,
-      'value_integer', OLD.value_integer,
-      'value_double', OLD.value_double,
-      'version', OLD.version
-    );
-  END IF;
-  
-  IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
-    new_val := jsonb_build_object(
-      'value_boolean', NEW.value_boolean,
-      'value_integer', NEW.value_integer,
-      'value_double', NEW.value_double,
-      'version', NEW.version
-    );
-  END IF;
-  
-  -- For feature_flags table, capture different fields
+  -- Build old and new value JSONB based on table (feature_flags has no value_boolean/value_integer/value_double)
   IF TG_TABLE_NAME = 'feature_flags' THEN
     IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
       old_val := jsonb_build_object(
@@ -73,7 +54,6 @@ BEGIN
         'version', OLD.version
       );
     END IF;
-    
     IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
       new_val := jsonb_build_object(
         'key', NEW.key,
@@ -81,6 +61,23 @@ BEGIN
         'description', NEW.description,
         'environment', NEW.environment,
         'deleted_at', NEW.deleted_at,
+        'version', NEW.version
+      );
+    END IF;
+  ELSE
+    IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
+      old_val := jsonb_build_object(
+        'value_boolean', OLD.value_boolean,
+        'value_integer', OLD.value_integer,
+        'value_double', OLD.value_double,
+        'version', OLD.version
+      );
+    END IF;
+    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+      new_val := jsonb_build_object(
+        'value_boolean', NEW.value_boolean,
+        'value_integer', NEW.value_integer,
+        'value_double', NEW.value_double,
         'version', NEW.version
       );
     END IF;

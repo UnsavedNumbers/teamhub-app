@@ -3506,6 +3506,7 @@ html.dark .pa-breadcrumb-current {
 
 .pa-page-header-content {
     flex: 1;
+    min-width: 0;
 }
 
 .pa-page-title {
@@ -3517,6 +3518,9 @@ html.dark .pa-breadcrumb-current {
     letter-spacing: -0.02em;
     color: var(--pa-n900);
     margin: 0 0 var(--pa-space-2) 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 html.dark .pa-page-title {
@@ -6430,4 +6434,207 @@ html.dark .pa-stat-box p[style*="color: var(--pa-n500)"] {
 
 html.dark .pa-stat-box p[style*="color: var(--pa-n900)"] {
     color: var(--pa-text-primary) !important;
+}
+
+/* =====================================================================
+   FEATURE FLAG DETAIL PAGE
+   Minimal, condensed. Matches FeatureDetail: simple cards, no colors.
+   ===================================================================== */
+
+.pa-ff-detail-card {
+    margin-bottom: var(--pa-space-4);
+}
+
+/* Flag info: simple form-group style (key + description) */
+.pa-ff-flag-info {
+    padding: 0;
+}
+
+.pa-ff-flag-info-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-4);
+}
+
+.pa-ff-flag-info-key-label {
+    font: var(--pa-text-body-s);
+    font-weight: 500;
+    color: var(--pa-n500);
+    margin-bottom: var(--pa-space-1);
+}
+
+.pa-ff-flag-info-key-value {
+    font-family: var(--pa-font-mono);
+    font: var(--pa-text-body-l);
+    font-weight: 600;
+    color: var(--pa-n900);
+    word-break: break-word;
+}
+
+html.dark .pa-ff-flag-info-key-value {
+    color: var(--pa-text-primary);
+}
+
+.pa-ff-flag-info-desc,
+.pa-ff-flag-info-desc-empty {
+    font: var(--pa-text-body-m);
+    color: var(--pa-n700);
+}
+
+.pa-ff-flag-info-desc-empty {
+    color: var(--pa-n500);
+    font-style: italic;
+}
+
+html.dark .pa-ff-flag-info-desc {
+    color: var(--pa-text-secondary);
+}
+
+html.dark .pa-ff-flag-info-desc-empty {
+    color: var(--pa-text-muted);
+}
+
+/* Environment rows: simple list, no colored cards */
+.pa-ff-env-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.pa-ff-env-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--pa-space-4);
+    padding: var(--pa-space-3) 0;
+    border-bottom: 1px solid var(--pa-n100);
+}
+
+.pa-ff-env-row:last-child {
+    border-bottom: none;
+}
+
+html.dark .pa-ff-env-row {
+    border-bottom-color: var(--pa-border-subtle);
+}
+
+.pa-ff-env-row__name {
+    font: var(--pa-text-body-m);
+    font-weight: 500;
+    color: var(--pa-n700);
+    min-width: 80px;
+}
+
+html.dark .pa-ff-env-row__name {
+    color: var(--pa-text-secondary);
+}
+
+.pa-ff-env-row__value {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    font: var(--pa-text-body-m);
+    font-family: var(--pa-font-mono);
+    color: var(--pa-n800);
+}
+
+html.dark .pa-ff-env-row__value {
+    color: var(--pa-text-primary);
+}
+
+.pa-ff-env-row__value--empty {
+    color: var(--pa-n500);
+    font-style: italic;
+}
+
+html.dark .pa-ff-env-row__value--empty {
+    color: var(--pa-text-muted);
+}
+
+.pa-ff-env-row__edit {
+    flex-shrink: 0;
+}
+
+.pa-ff-tabs-bar {
+    border-bottom: 1px solid var(--pa-n100);
+}
+
+html.dark .pa-ff-tabs-bar {
+    border-bottom-color: var(--pa-border-subtle);
+}
+
+/* Modal form body and validation */
+.pa-form-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-4);
+}
+
+.pa-form-error {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    padding: var(--pa-space-3) var(--pa-space-4);
+    border-radius: 4px;
+    font: var(--pa-text-body-s);
+}
+
+html.dark .pa-form-error {
+    background-color: rgba(185, 28, 28, 0.2);
+    border-color: #f87171;
+    color: #fca5a5;
+}
+
+.pa-form-modal-label {
+    display: block;
+    margin-bottom: var(--pa-space-2);
+    color: var(--pa-n700);
+    font: var(--pa-text-body-s);
+}
+
+html.dark .pa-form-modal-label {
+    color: var(--pa-text-secondary);
+}
+
+.pa-form-row-inline {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-3);
+}
+
+.pa-form-input-full {
+    width: 100%;
+}
+
+.pa-form-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--pa-space-2);
+    padding-top: var(--pa-space-4);
+}
+
+/* Feature flag detail table cells: value (bold), meta (muted) */
+.pa-ff-detail-cell-value {
+    font-weight: 600;
+}
+
+.pa-ff-detail-cell-meta {
+    color: var(--pa-n700);
+}
+
+html.dark .pa-ff-detail-cell-meta {
+    color: var(--pa-text-muted);
+}
+
+/* Loading skeleton for feature flag detail */
+.pa-ff-detail-skeleton-title {
+    width: 60%;
+    height: 20px;
+    margin-bottom: var(--pa-space-4);
+}
+
+.pa-ff-detail-skeleton-line {
+    width: 100%;
+    height: 40px;
 }

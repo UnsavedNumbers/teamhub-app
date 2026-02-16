@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useFeatureFlags } from '../../utils/featureFlags'
 import { 
   Card, 
   Input, 
@@ -123,6 +124,8 @@ export default function AdminSettings() {
   
   // URL Persistence
   const [searchParams, setSearchParams] = useSearchParams()
+  const { isEnabled, loading: flagsLoading } = useFeatureFlags(['orgadmin_advanced_personal_settings'])
+  const showAdvancedTab = flagsLoading || isEnabled('orgadmin_advanced_personal_settings')
   const activeTab = searchParams.get('tab') || 'profile'
 
   const handleTabChange = (value: string) => {
@@ -735,7 +738,7 @@ export default function AdminSettings() {
           <option value="notifications">Notifications</option>
           <option value="workflow">Workflow</option>
           <option value="security">Security</option>
-          <option value="advanced">Advanced</option>
+          {showAdvancedTab && <option value="advanced">Advanced</option>}
         </select>
       </div>
 
@@ -746,7 +749,7 @@ export default function AdminSettings() {
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="workflow">Workflow</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          {showAdvancedTab && <TabsTrigger value="advanced">Advanced</TabsTrigger>}
         </TabsList>
         
         <TabsContent value="profile">
@@ -818,14 +821,16 @@ export default function AdminSettings() {
           />
         </TabsContent>
 
-        <TabsContent value="advanced">
-          <AdvancedSettings 
-            preferences={preferences}
-            setPreferences={setPreferences}
-            onSave={handleSaveAdvanced}
-            saving={savingAdvanced}
-          />
-        </TabsContent>
+        {showAdvancedTab && (
+          <TabsContent value="advanced">
+            <AdvancedSettings 
+              preferences={preferences}
+              setPreferences={setPreferences}
+              onSave={handleSaveAdvanced}
+              saving={savingAdvanced}
+            />
+          </TabsContent>
+        )}
       </Tabs>
       
       {/* Email Change Modal */}
