@@ -299,11 +299,11 @@ export default function GuardianVideoDetail() {
 
       {/* Notes Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        {/* Athlete Feedback */}
+        {/* Feedback */}
         <div>
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold tracking-tight uppercase text-slate-900 dark:text-white">
-              Feedback for Athlete
+              Feedback
             </h3>
             <span className="bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-btn-primary-bg)] px-3 py-1 rounded-full text-xs font-bold">
               {athleteNotes.length} {athleteNotes.length === 1 ? 'NOTE' : 'NOTES'}
@@ -317,17 +317,23 @@ export default function GuardianVideoDetail() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {athleteNotes.map((note) => (
-                <VideoNoteCard
-                  key={note.id}
-                  note={note}
-                  isActive={activeNoteId === note.id}
-                  isGuardianView
-                  onSeek={handleSeekToNote}
-                  onStar={handleToggleStar}
-                  isStarred={starredNotes.has(note.id)}
-                />
-              ))}
+              {athleteNotes.map((note) => {
+                const isPersonalFeedback = (note.targets?.length && video.athlete_links?.length)
+                  ? note.targets.some(t => video.athlete_links!.some(l => l.athlete_id === t.athlete_id))
+                  : false
+                return (
+                  <VideoNoteCard
+                    key={note.id}
+                    note={note}
+                    isActive={activeNoteId === note.id}
+                    isGuardianView
+                    isPersonalFeedback={isPersonalFeedback}
+                    onSeek={handleSeekToNote}
+                    onStar={handleToggleStar}
+                    isStarred={starredNotes.has(note.id)}
+                  />
+                )
+              })}
             </div>
           )}
         </div>
@@ -356,6 +362,7 @@ export default function GuardianVideoDetail() {
                     note={note}
                     isActive={activeNoteId === note.id}
                     isGuardianView
+                    isPersonalFeedback={false}
                     onSeek={handleSeekToNote}
                   />
                 </div>

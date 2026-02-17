@@ -14,6 +14,8 @@ interface VideoNoteCardProps {
   note: VideoNote
   isActive?: boolean
   isGuardianView?: boolean
+  /** When true on guardian view, show "Personal feedback" badge for scope guardians. When false, hide the badge. */
+  isPersonalFeedback?: boolean
   onSeek?: (timestamp: number) => void
   onEdit?: (note: VideoNote) => void
   onDelete?: (note: VideoNote) => void
@@ -33,6 +35,7 @@ export default function VideoNoteCard({
   note,
   isActive = false,
   isGuardianView = false,
+  isPersonalFeedback = false,
   onSeek,
   onEdit,
   onDelete,
@@ -41,7 +44,9 @@ export default function VideoNoteCard({
   className
 }: VideoNoteCardProps) {
   const hasTimestamp = note.timestamp_start !== null && note.timestamp_start !== undefined
-  const authorName = note.author?.display_name || `${note.author?.first_name || ''} ${note.author?.last_name || ''}`.trim() || 'Coach'
+  const authorName = isGuardianView && note.author?.first_name
+    ? `${note.author.first_name}${note.author?.last_name ? ` ${note.author.last_name.charAt(0)}.` : ''}`.trim() || 'Coach'
+    : note.author?.display_name || `${note.author?.first_name || ''} ${note.author?.last_name || ''}`.trim() || 'Coach'
   const targetAthletes = note.targets || []
   
   // Determine if this is admin view (not guardian view)
@@ -180,7 +185,7 @@ export default function VideoNoteCard({
                   Coaches Only
                 </span>
               )}
-              {note.scope === 'guardians' && (
+              {note.scope === 'guardians' && (!isGuardianView || isPersonalFeedback) && (
                 <span className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
                   {isGuardianView ? 'Personal feedback' : 'Guardians'}
                 </span>
