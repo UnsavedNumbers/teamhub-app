@@ -135,13 +135,11 @@ supabase/migrations/
 public/demo-assets/videos/*.mp4
 public/demo-assets/videos/*.mov
 public/demo-assets/videos/*.webm
-# Exclude large jpg files (video copies, not thumbnails)
+# Exclude large jpg files (video copies, not thumbnails) - files >50MB
 public/demo-assets/videos/event-tournament-opening.jpg
 public/demo-assets/videos/training-core-workout.jpg
 public/demo-assets/videos/championship-game-final-quarter.jpg
 public/demo-assets/videos/highlights-season-2024.jpg
-# Allow small thumbnails (<10MB) - add specific files as needed
-!public/demo-assets/videos/practice-passing-drills.jpg
 
 # Docs
 designs/
