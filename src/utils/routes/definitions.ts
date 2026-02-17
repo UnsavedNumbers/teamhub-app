@@ -1135,6 +1135,21 @@ const platformAdmin = {
         },
     },
 
+    demoManagement: {
+        list: {
+            path: '/platform-admin/demo-management',
+            label: 'Demo Management',
+            icon: 'bolt',
+            description: 'Demo organizations and access codes',
+        },
+        detail: {
+            path: '/platform-admin/demo-management/:id',
+            params: ['id'] as const,
+            label: 'Demo Organization',
+            icon: 'bolt',
+        },
+    },
+
     // Users
     users: {
         list: {

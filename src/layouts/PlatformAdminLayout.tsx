@@ -38,6 +38,7 @@ const navSections: NavSection[] = [
     label: 'Organizations',
     items: [
       { text: 'Organizations', icon: 'apartment', path: getPath(RouteKeys.PLATFORM_ORGANIZATIONS), requiredAction: 'view_organizations' },
+      { text: 'Demo Management', icon: 'bolt', path: getPath(RouteKeys.PLATFORM_DEMO_MANAGEMENT), requiredAction: 'view_organizations' },
     ],
   },
   {

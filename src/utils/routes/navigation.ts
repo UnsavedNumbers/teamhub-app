@@ -468,6 +468,7 @@ export const platformAdminNavSections: {
             label: 'Organizations',
             items: [
                 { routeKey: 'platformAdmin.organizations.list', text: 'Organizations', icon: 'apartment', requiredAction: 'view_organizations' },
+                { routeKey: 'platformAdmin.demoManagement.list', text: 'Demo Management', icon: 'bolt', requiredAction: 'view_organizations' },
             ],
         },
         {
@@ -610,6 +611,7 @@ export const platformAdminGlobalNavSections: NavigationSection[] = [
                 label: '',
                 items: [
                     { routeKey: 'platformAdmin.organizations.list', text: 'Organizations', icon: 'apartment', description: 'All organizations' },
+                    { routeKey: 'platformAdmin.demoManagement.list', text: 'Demo Management', icon: 'bolt', description: 'Demo organizations and access codes' },
                 ],
             },
         ],

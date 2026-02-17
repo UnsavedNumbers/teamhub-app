@@ -40,6 +40,9 @@ export * from './fanService'
 // Organization Settings Services
 export * from './organizationSettingsService'
 export * from './organizationService'
+export * from './demoOrgService'
+export * from './demoCodeService'
+export * from './demoSessionService'
 
 // License Tiers Services
 export * from './licenseTiersService'

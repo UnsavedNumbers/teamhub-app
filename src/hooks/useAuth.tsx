@@ -10,12 +10,22 @@ import {
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { useOrganization, Organization } from '../contexts/OrganizationContext'
+import { useDemoSession } from '../contexts/DemoSessionContext'
 import type { PlatformAdminRole } from '../types/platformAdmin.types'
 import type { HomeLocation } from '../types/location'
 import { geocodeZipToHomeLocation } from '../utils/homeLocation'
 import { USE_FAKE_DATA } from '../data/config'
+import { generateDemoData } from '../data/fake/demoDataEngine'
 import { getDemoUserContext } from '../data/fake/userContext'
 import { getOrganizationById } from '../data/fake/fakeOrganizations'
+import { validateDemoCode } from '../data/services/demoCodeService'
+import { getDemoOrg } from '../data/services/demoOrgService'
+import {
+  clearStoredDemoCode,
+  createDemoSession,
+  endDemoSession,
+  getStoredDemoCode,
+} from '../data/services/demoSessionService'
 import { debug } from '../lib/debug'
 
 // Role types - now per organization (must match OrganizationContext.OrgMemberRole)
@@ -47,7 +57,7 @@ interface AuthContextType {
   profile: UserProfile | null
   session: Session | null
   loading: boolean
-  signInWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null }>
+  signInWithEmail: (email: string, password: string, demoCode?: string) => Promise<{ error: AuthError | null }>
   signInWithGoogle: () => Promise<{ error: AuthError | null }>
   signUp: (email: string, password: string, firstName: string, lastName: string, phone: string, zipcode: string, requiresOrgSetup?: boolean, signupMode?: 'fan' | 'parent') => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
@@ -74,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const { setOrganizations, currentOrganization } = useOrganization()
+  const { refreshSession } = useDemoSession()
 
   // Prevent duplicate profile fetches (Bug Prevention #1 & #7)
   const profileFetchRef = useRef<Set<string>>(new Set())
@@ -472,23 +483,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /* ===================== AUTH ACTIONS ===================== */
 
-  async function signInWithEmail(email: string, password: string) {
+  async function signInWithEmail(email: string, password: string, demoCode?: string) {
     return debug.group(`Auth.signInWithEmail: ${email}`, async () => {
         debug.flow('Auth', 'Login attempt', { email, method: 'email' })
         debug.perf.start('auth.signInWithEmail')
 
+        const toAuthError = (message: string): AuthError => ({ name: 'AuthError', message } as AuthError)
+
         if (USE_FAKE_DATA) {
       const demoContext = getDemoUserContext(email)
       if (!demoContext) {
-        return { error: { message: 'Invalid login credentials' } as AuthError }
+        return { error: toAuthError('Invalid login credentials') }
+      }
+
+      const normalizedDemoCode = (demoCode ?? getStoredDemoCode() ?? '').trim().toUpperCase()
+      let resolvedDemoOrgId = demoContext.orgId
+      let resolvedDemoOrgName = getOrganizationById(demoContext.orgId)?.name ?? 'Demo Organization'
+
+      if (normalizedDemoCode) {
+        const validation = await validateDemoCode(normalizedDemoCode)
+        if (!validation.valid || !validation.demoOrgId) {
+          const messageByReason: Record<string, string> = {
+            missing: 'Demo code is required.',
+            not_found: 'Invalid demo code.',
+            revoked: 'This demo code has been revoked.',
+            expired: 'This demo code has expired.',
+            inactive_org: 'This demo organization is inactive.',
+          }
+          const reason = validation.reason ?? 'not_found'
+          return { error: toAuthError(messageByReason[reason] ?? 'Invalid demo code.') }
+        }
+
+        const demoOrg = await getDemoOrg(validation.demoOrgId)
+        await generateDemoData(demoOrg, demoOrg.sports_sponsored, normalizedDemoCode)
+        await createDemoSession(normalizedDemoCode, demoContext.userId)
+        refreshSession()
+        resolvedDemoOrgId = validation.demoOrgId
+        resolvedDemoOrgName = getOrganizationById(validation.demoOrgId)?.name ?? demoOrg.name ?? 'Demo Organization'
       }
 
       const roles: OrgMemberRole[] = demoContext.roles
-      const organizationName = getOrganizationById(demoContext.orgId)?.name ?? 'Demo Organization'
       const organizations: Organization[] = [
         {
-          id: demoContext.orgId,
-          name: organizationName,
+          id: resolvedDemoOrgId,
+          name: resolvedDemoOrgName,
           roles,
           get role(): OrgMemberRole {
             return roles[0] ?? 'parent'
@@ -521,7 +559,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         home_zipcode: undefined,
         role: legacyRole,
         family_id: null,
-        org_id: demoContext.orgId,
+        org_id: resolvedDemoOrgId,
         organizations,
         isPlatformAdmin: demoContext.isPlatformAdmin,
         platformAdminRole: null,
@@ -533,8 +571,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setProfile(demoProfile)
             setOrganizations(organizations)
             setLoading(false)
+            clearStoredDemoCode()
             debug.perf.end('auth.signInWithEmail')
-            debug.flow('Auth', 'Login successful (demo)', { email, userId: demoContext.userId, roles: demoContext.roles })
+            debug.flow('Auth', 'Login successful (demo)', {
+              email,
+              userId: demoContext.userId,
+              roles: demoContext.roles,
+              demoOrgId: resolvedDemoOrgId,
+            })
             return { error: null }
         }
 
@@ -663,6 +707,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         debug.perf.start('auth.signOut')
 
         if (USE_FAKE_DATA) {
+          if (user?.id) {
+            await endDemoSession(user.id)
+          } else {
+            clearStoredDemoCode()
+            refreshSession()
+          }
           setUser(null)
           setProfile(null)
           setSession(null)

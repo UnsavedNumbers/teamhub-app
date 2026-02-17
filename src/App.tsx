@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-r
 import { lazy, Suspense } from 'react'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { OrganizationProvider } from './contexts/OrganizationContext'
+import { DemoSessionProvider } from './contexts/DemoSessionContext'
 import { LoadingStateProvider } from './contexts/LoadingStateContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -132,6 +133,8 @@ const PlatformFeatureFlags = lazy(() => import('./pages/platformAdmin/FeatureFla
 const PlatformFeatureFlagDetail = lazy(() => import('./pages/platformAdmin/FeatureFlagDetail'))
 const PlatformAdmins = lazy(() => import('./pages/platformAdmin/PlatformAdmins'))
 const PlatformAdminSettings = lazy(() => import('./pages/platformAdmin/PlatformAdminSettings'))
+const PlatformDemoManagement = lazy(() => import('./pages/platformAdmin/DemoManagement'))
+const PlatformDemoOrgDetail = lazy(() => import('./pages/platformAdmin/DemoOrgDetail'))
 const LicensesOverview = lazy(() => import('./pages/platformAdmin/LicensesOverview'))
 const LicenseTiers = lazy(() => import('./pages/platformAdmin/LicenseTiers'))
 const LicenseTierDetail = lazy(() => import('./pages/platformAdmin/LicenseTierDetail'))
@@ -234,6 +237,8 @@ const adminEventsCreatePath = getPath('admin.events.create').replace('/admin/', 
 const adminEventsDetailPath = getPath('admin.events.detail').replace('/admin/', '')
 const adminEventsEditPath = getPath('admin.events.edit').replace('/admin/', '')
 const adminEventsAttendancePath = getPath('admin.events.attendance').replace('/admin/', '')
+const platformDemoManagementPath = getPath('platformAdmin.demoManagement.list').replace('/platform-admin/', '')
+const platformDemoManagementDetailPath = getPath('platformAdmin.demoManagement.detail').replace('/platform-admin/', '')
 const AdminFamilies = lazy(() => import('./pages/admin/AdminFamilies'))
 const CreateFamily = lazy(() => import('./pages/admin/CreateFamily'))
 const FamilyDetail = lazy(() => import('./pages/admin/FamilyDetail'))
@@ -303,15 +308,17 @@ function HostGateLayout() {
 function App() {
   return (
     <I18nProvider>
-      <OrganizationProvider>
-        <AuthProvider>
-          <LoadingStateProvider>
-            <FeatureGateProvider>
-              <AppWithTheme />
-            </FeatureGateProvider>
-          </LoadingStateProvider>
-        </AuthProvider>
-      </OrganizationProvider>
+      <DemoSessionProvider>
+        <OrganizationProvider>
+          <AuthProvider>
+            <LoadingStateProvider>
+              <FeatureGateProvider>
+                <AppWithTheme />
+              </FeatureGateProvider>
+            </LoadingStateProvider>
+          </AuthProvider>
+        </OrganizationProvider>
+      </DemoSessionProvider>
     </I18nProvider>
   )
 }
@@ -673,6 +680,8 @@ function AppWithTheme() {
               {/* Organizations */}
               <Route path="organizations" element={<PlatformOrganizations />} />
               <Route path="organizations/:id" element={<PlatformOrganizationDetail />} />
+              <Route path={platformDemoManagementPath} element={<PlatformDemoManagement />} />
+              <Route path={platformDemoManagementDetailPath} element={<PlatformDemoOrgDetail />} />
               
               {/* Users */}
               <Route path="users" element={<PlatformUsers />} />
