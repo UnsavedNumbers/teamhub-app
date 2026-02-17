@@ -14,6 +14,12 @@ import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
 import { debug } from '../../lib/debug'
+import {
+  getMockGalleriesForOrg,
+  getMockGalleryById,
+  getMockPhotosForGallery,
+  getAllMockPhotos,
+} from '../fake/mockGalleries'
 const supabaseAny = supabase as any
 
 // ============================================================================
@@ -155,6 +161,311 @@ async function simulateDelay(): Promise<void> {
   if (FAKE_DATA_DELAY_MS > 0) {
     await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
   }
+}
+
+type FakeAutoGalleryType = Extract<GalleryType, 'athlete' | 'team' | 'event' | 'travel' | 'program' | 'season' | 'org'>
+
+const FAKE_GALLERY_BASE_PATH = '/demo-assets/photos'
+const FAKE_GALLERY_BASE_TIME = Date.UTC(2026, 0, 15, 12, 0, 0)
+
+const DEMO_LOCAL_GALLERY_FILENAMES: readonly string[] = [
+  'baseball-pitcher-and-ball-in-hand-player-ready-t-2026-01-09-09-18-02-utc.jpg',
+  'baseball-support-and-team-together-in-a-match-ga-2026-01-09-09-38-16-utc.jpg',
+  'basketball-kid-is-dribbling-and-guarding-a-ball-du-2026-01-09-10-26-50-utc.jpg',
+  'boy-sitting-on-bench-with-little-league-baseball-t-2026-01-11-08-01-42-utc.jpg',
+  'cheerleader-exercise-line-and-students-in-cheerle-2026-01-09-09-35-49-utc.jpg',
+  'cheerleader-sports-and-women-with-hands-raised-on-2026-01-09-10-10-05-utc.jpg',
+  'cheerleader-team-sports-and-hands-with-pompom-for-2026-01-09-10-22-08-utc.jpg',
+  'cheerleader-woman-jump-and-sports-outdoor-on-blue-2026-01-09-11-05-25-utc.jpg',
+  'close-up-of-kids-with-blurred-faces-playing-basket-2026-01-09-10-26-46-utc.jpg',
+  'close-up-view-of-dollar-banknotes-in-baseball-glov-2026-01-06-00-43-18-utc.jpg',
+  'cropped-view-of-little-children-in-sportswear-hold-2026-01-09-12-15-40-utc.jpg',
+  'equipment-room.jpg',
+  'facility-exterior.jpg',
+  'female-basketball-coach-motivating-her-team-during-2026-01-08-08-10-44-utc.jpg',
+  'female-football-sports-and-team-playing-match-on-2026-01-09-11-06-38-utc.jpg',
+  'female-players-playing-volleyball-in-the-court-2026-01-09-08-34-05-utc.jpg',
+  'players-action.jpg',
+  'soccer-action.jpg',
+  'team-celebration.jpg',
+  'team-warmup.jpg',
+  'tournament-field.jpg',
+  'tournament-trophy.jpg',
+] as const
+
+const FAKE_AUTO_GALLERY_FILES: Record<FakeAutoGalleryType, readonly string[]> = {
+  athlete: ['players-action.jpg', 'soccer-action.jpg', 'team-celebration.jpg'],
+  team: ['team-warmup.jpg', 'players-action.jpg', 'team-celebration.jpg'],
+  event: ['tournament-field.jpg', 'tournament-trophy.jpg', 'team-celebration.jpg'],
+  travel: ['tournament-field.jpg', 'team-warmup.jpg', 'facility-exterior.jpg'],
+  program: ['soccer-action.jpg', 'team-warmup.jpg', 'players-action.jpg'],
+  season: ['team-celebration.jpg', 'soccer-action.jpg', 'team-warmup.jpg'],
+  org: ['facility-exterior.jpg', 'equipment-room.jpg', 'team-celebration.jpg'],
+}
+
+const FAKE_GALLERY_NAME_BY_TYPE: Record<FakeAutoGalleryType, string> = {
+  athlete: 'Athlete Photos',
+  team: 'Team Photos',
+  event: 'Event Photos',
+  travel: 'Travel Photos',
+  program: 'Program Photos',
+  season: 'Season Photos',
+  org: 'Organization Photos',
+}
+
+/**
+ * In fake mode, entity galleries should resolve to real mock galleries that already exist.
+ * This prevents links to synthetic IDs that can drift from curated gallery pages.
+ */
+const FAKE_CANONICAL_GALLERY_ID_BY_TYPE: Record<FakeAutoGalleryType, string> = {
+  athlete: 'mock-gallery-3',
+  team: 'mock-gallery-1',
+  event: 'mock-gallery-1',
+  travel: 'mock-gallery-1',
+  program: 'mock-gallery-1',
+  season: 'mock-gallery-1',
+  org: 'mock-gallery-5',
+}
+
+function parseGeneratedFakeGalleryId(galleryId: string): { galleryType: FakeAutoGalleryType; entityId: string } | null {
+  const match = /^mock-gallery-(athlete|team|event|travel|program|season|org)-(.+)$/.exec(galleryId)
+  if (!match) return null
+  return {
+    galleryType: match[1] as FakeAutoGalleryType,
+    entityId: match[2],
+  }
+}
+
+function hashGallerySeed(seed: string): number {
+  let hash = 0
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
+  }
+  return hash
+}
+
+function rotateFilenames(seed: string): string[] {
+  const source = [...DEMO_LOCAL_GALLERY_FILENAMES]
+  if (source.length === 0) return source
+  const offset = hashGallerySeed(seed) % source.length
+  return source.slice(offset).concat(source.slice(0, offset))
+}
+
+function buildStockedFakePhotos(
+  galleryId: string,
+  preferredFiles: readonly string[] = [],
+): GalleryPhoto[] {
+  const preferred = preferredFiles.filter((file) => DEMO_LOCAL_GALLERY_FILENAMES.includes(file))
+  const preferredUnique = Array.from(new Set(preferred))
+  const rotated = rotateFilenames(galleryId).filter((file) => !preferredUnique.includes(file))
+  const files = [...preferredUnique, ...rotated]
+
+  return files.map((filename, i) => {
+    const id = `mock-photo-${galleryId}-${i}`
+    const created = new Date(FAKE_GALLERY_BASE_TIME - (files.length - i) * 24 * 60 * 60 * 1000).toISOString()
+    const path = `${FAKE_GALLERY_BASE_PATH}/${filename}`
+    return {
+      id,
+      gallery_id: galleryId,
+      album_id: null,
+      storage_path: path,
+      thumbnail_path: null,
+      thumbnail_sm_path: null,
+      thumbnail_md_path: null,
+      thumbnail_lg_path: null,
+      filename,
+      size_bytes: 200000,
+      sort_order: i + 1,
+      status: 'approved' as PhotoStatus,
+      approval_status: 'approved' as PhotoStatus,
+      blurhash: null,
+      can_download: undefined,
+      uploaded_by_user_id: 'demo',
+      taken_at: null,
+      created_at: created,
+      updated_at: created,
+      thumbnail_url: path,
+      url: path,
+    } as GalleryPhoto
+  })
+}
+
+function getFakeAutoGalleryPhotos(galleryId: string, galleryType: FakeAutoGalleryType): GalleryPhoto[] {
+  const files = FAKE_AUTO_GALLERY_FILES[galleryType] || FAKE_AUTO_GALLERY_FILES.org
+  return buildStockedFakePhotos(galleryId, files)
+}
+
+function mapGalleryTypeToFakeAutoType(galleryType: GalleryType): FakeAutoGalleryType {
+  if (galleryType === 'travel') return 'travel'
+  if (galleryType === 'athlete') return 'athlete'
+  if (galleryType === 'team') return 'team'
+  if (galleryType === 'event') return 'event'
+  if (galleryType === 'program') return 'program'
+  if (galleryType === 'season') return 'season'
+  return 'org'
+}
+
+function resolveFakeEntityGallery(
+  orgId: string,
+  galleryType: FakeAutoGalleryType,
+  entityId: string,
+): Gallery | null {
+  const mockGalleries = getMockGalleriesForOrg(orgId).map(buildFakeGallery)
+  const exact = mockGalleries.find(
+    (gallery) => gallery.gallery_type === galleryType && gallery.entity_id === entityId,
+  )
+  if (exact) return exact
+
+  const canonicalId = FAKE_CANONICAL_GALLERY_ID_BY_TYPE[galleryType]
+  const canonical =
+    mockGalleries.find((gallery) => gallery.id === canonicalId) ||
+    (() => {
+      const fallback = getMockGalleryById(canonicalId)
+      return fallback ? buildFakeGallery(fallback) : null
+    })()
+
+  if (!canonical) return null
+
+  return {
+    ...canonical,
+    gallery_type: galleryType,
+    entity_id: entityId,
+    name: FAKE_GALLERY_NAME_BY_TYPE[galleryType],
+  }
+}
+
+function mapMockPhotoToGalleryPhoto(photo: any): GalleryPhoto {
+  const thumbnailPath = photo.thumbnail_md_path || photo.thumbnail_path || null
+  return {
+    ...photo,
+    status: photo.status as PhotoStatus,
+    approval_status: (photo.approval_status || photo.status) as PhotoStatus,
+    can_download: photo.can_download ?? undefined,
+    url: getGalleryPhotoUrl(photo.storage_path),
+    thumbnail_url: getGalleryPhotoThumbnailUrl(thumbnailPath, photo.storage_path),
+    thumbnail_path: thumbnailPath,
+  } as GalleryPhoto
+}
+
+function getFakePhotosForGalleryId(galleryId: string): GalleryPhoto[] {
+  const generated = parseGeneratedFakeGalleryId(galleryId)
+  if (generated) {
+    const canonicalId = FAKE_CANONICAL_GALLERY_ID_BY_TYPE[generated.galleryType]
+    if (canonicalId && canonicalId !== galleryId) return getFakePhotosForGalleryId(canonicalId)
+    return getFakeAutoGalleryPhotos(galleryId, generated.galleryType)
+  }
+
+  const basePhotos = getMockPhotosForGallery(galleryId).map(mapMockPhotoToGalleryPhoto)
+  const preferredFiles = basePhotos
+    .map((photo) => photo.filename || photo.storage_path.split('/').pop() || '')
+    .filter((filename) => filename !== '')
+  const stockedPhotos = buildStockedFakePhotos(galleryId, preferredFiles)
+
+  if (basePhotos.length === 0) return stockedPhotos
+
+  const baseByFilename = new Map<string, GalleryPhoto>()
+  basePhotos.forEach((photo) => {
+    const filename = photo.filename || photo.storage_path.split('/').pop() || ''
+    if (!filename || baseByFilename.has(filename)) return
+    baseByFilename.set(filename, photo)
+  })
+
+  return stockedPhotos.map((photo) => {
+    const filename = photo.filename || ''
+    const base = filename ? baseByFilename.get(filename) : undefined
+    if (!base) return photo
+
+    return {
+      ...photo,
+      id: base.id,
+      status: base.status,
+      approval_status: (base.approval_status || base.status) as PhotoStatus,
+      can_download: base.can_download,
+      uploaded_by_user_id: base.uploaded_by_user_id || photo.uploaded_by_user_id,
+      caption: base.caption ?? photo.caption,
+      taken_at: base.taken_at ?? photo.taken_at,
+      created_at: base.created_at ?? photo.created_at,
+      updated_at: base.updated_at ?? photo.updated_at,
+      sort_order: base.sort_order ?? photo.sort_order,
+    } as GalleryPhoto
+  })
+}
+
+function buildFakeGallery(mockGallery: any): Gallery {
+  const photos = getFakePhotosForGalleryId(mockGallery.id)
+  const coverPhoto =
+    photos.find((photo) => photo.id === mockGallery.cover_photo_id) ??
+    photos[0] ??
+    null
+  const pendingCount = photos.filter((photo) => photo.status === 'pending').length
+
+  return {
+    ...(mockGallery as Gallery),
+    can_download: mockGallery.can_download ?? undefined,
+    cover_url: coverPhoto ? getGalleryPhotoThumbnailUrl(coverPhoto.thumbnail_path || null, coverPhoto.storage_path) : null,
+    photo_count: photos.length,
+    pending_count: pendingCount,
+  } as Gallery
+}
+
+function getFakeGalleriesForParams(context: UserContext, params: GetGalleriesParams): Gallery[] {
+  const effectiveOrgId = params.org_id || context.orgId || DEMO_ORG_A_ID
+
+  if (params.org_ids && params.org_ids.length > 0 && !params.org_ids.includes(effectiveOrgId)) {
+    return []
+  }
+
+  let galleries = getMockGalleriesForOrg(effectiveOrgId).map(buildFakeGallery)
+
+  if (params.gallery_type) {
+    galleries = galleries.filter((gallery) => gallery.gallery_type === params.gallery_type)
+  }
+
+  if (params.entity_id && params.entity_id !== '') {
+    galleries = galleries.filter((gallery) => gallery.entity_id === params.entity_id)
+  }
+
+  if (params.search && params.search.trim() !== '') {
+    const term = params.search.trim().toLowerCase()
+    galleries = galleries.filter((gallery) => {
+      const name = gallery.name.toLowerCase()
+      const description = (gallery.description || '').toLowerCase()
+      const entityName = (gallery.entity_name || '').toLowerCase()
+      return name.includes(term) || description.includes(term) || entityName.includes(term)
+    })
+  }
+
+  const orderDirection = params.order_direction || 'desc'
+  const ascending = orderDirection === 'asc'
+  galleries = [...galleries].sort((a, b) => {
+    const timeA = new Date(a.created_at).getTime()
+    const timeB = new Date(b.created_at).getTime()
+    if (timeA !== timeB) return ascending ? timeA - timeB : timeB - timeA
+    return ascending ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)
+  })
+
+  if (params.cursor) {
+    const cursorTime = new Date(params.cursor.created_at).getTime()
+    const cursorId = params.cursor.id
+    galleries = galleries.filter((gallery) => {
+      const galleryTime = new Date(gallery.created_at).getTime()
+      if (ascending) {
+        return galleryTime > cursorTime || (galleryTime === cursorTime && gallery.id > cursorId)
+      }
+      return galleryTime < cursorTime || (galleryTime === cursorTime && gallery.id < cursorId)
+    })
+  }
+
+  const offset = params.offset ?? 0
+  if (offset > 0) {
+    galleries = galleries.slice(offset)
+  }
+
+  if (params.limit) {
+    galleries = galleries.slice(0, params.limit)
+  }
+
+  return galleries
 }
 
 /**
@@ -361,10 +672,11 @@ export async function getGalleriesForUser(
   try {
     if (USE_FAKE_DATA) {
       await simulateDelay()
+      const fakeGalleries = getFakeGalleriesForParams(context, params)
       debug.perf.end('galleryService.getGalleriesForUser')
-      debug.data('GalleryService.getGalleriesForUser', 'Response (fake)', { galleryCount: 0 })
+      debug.data('GalleryService.getGalleriesForUser', 'Response (fake)', { galleryCount: fakeGalleries.length })
       console.groupEnd()
-      return { data: [], error: null }
+      return { data: fakeGalleries, error: null }
     }
     const orderDirection = params.order_direction || 'desc'
     const ascending = orderDirection === 'asc'
@@ -657,10 +969,24 @@ export async function getGalleryById(
 
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    const generated = parseGeneratedFakeGalleryId(galleryId)
+    if (generated) {
+      const fakeAthleteGallery = resolveFakeEntityGallery(
+        _context.orgId || DEMO_ORG_A_ID,
+        generated.galleryType,
+        generated.entityId,
+      )
+      debug.perf.end('galleryService.getGalleryById')
+      debug.data('GalleryService.getGalleryById', 'Response (fake)', { galleryId, hasData: !!fakeAthleteGallery })
+      console.groupEnd()
+      return { data: fakeAthleteGallery, error: null }
+    }
+
+    const mockGallery = getMockGalleryById(galleryId)
     debug.perf.end('galleryService.getGalleryById')
-    debug.data('GalleryService.getGalleryById', 'Response (fake)', { galleryId })
+    debug.data('GalleryService.getGalleryById', 'Response (fake)', { galleryId, hasData: !!mockGallery })
     console.groupEnd()
-    return { data: null, error: null }
+    return { data: mockGallery ? buildFakeGallery(mockGallery) : null, error: null }
   }
 
   try {
@@ -723,10 +1049,16 @@ export async function getGalleryByEntity(
 
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    const effectiveOrgId = _context.orgId || DEMO_ORG_A_ID
+    const fakeGallery = resolveFakeEntityGallery(
+      effectiveOrgId,
+      mapGalleryTypeToFakeAutoType(galleryType),
+      entityId,
+    )
     debug.perf.end('galleryService.getGalleryByEntity')
-    debug.data('GalleryService.getGalleryByEntity', 'Response (fake)', { galleryType, entityId })
+    debug.data('GalleryService.getGalleryByEntity', 'Response (fake)', { galleryType, entityId, hasData: !!fakeGallery })
     console.groupEnd()
-    return { data: null, error: null }
+    return { data: fakeGallery, error: null }
   }
 
   try {
@@ -781,10 +1113,14 @@ export async function getEntityGallery(
 
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    const effectiveOrgId = _context.orgId || DEMO_ORG_A_ID
+    const galleryType = mapEntityToGalleryType(entityType) as FakeAutoGalleryType
+    const fakeGallery = resolveFakeEntityGallery(effectiveOrgId, galleryType, entityId)
+
     debug.perf.end('galleryService.getEntityGallery')
-    debug.data('GalleryService.getEntityGallery', 'Response (fake)', { entityType, entityId })
+    debug.data('GalleryService.getEntityGallery', 'Response (fake)', { entityType, entityId, hasData: !!fakeGallery })
     console.groupEnd()
-    return { data: null, error: null }
+    return { data: fakeGallery, error: null }
   }
 
   try {
@@ -931,34 +1267,14 @@ export async function ensureEntityGallery(
 
   if (USE_FAKE_DATA) {
     await simulateDelay()
-    if (entityType === 'athlete') {
-      const galleryId = `mock-gallery-athlete-${entityId}`
-      const effectiveOrgId = orgId ?? context.orgId ?? DEMO_ORG_A_ID
-      const gallery: Gallery = {
-        id: galleryId,
-        org_id: effectiveOrgId,
-        gallery_type: 'athlete',
-        entity_id: entityId,
-        name: `Athlete photos`,
-        allow_contributions: true,
-        require_approval: false,
-        fans_can_see: false,
-        is_system_generated: true,
-        cover_generated_at: null,
-        cover_generation_status: null,
-        cover_thumbnails: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        photo_count: 3,
-      }
-      debug.perf.end('galleryService.ensureEntityGallery')
-      console.groupEnd()
-      return { data: gallery, error: null }
-    }
+    const effectiveOrgId = orgId ?? context.orgId ?? DEMO_ORG_A_ID
+    const galleryType = mapEntityToGalleryType(entityType) as FakeAutoGalleryType
+    const gallery = resolveFakeEntityGallery(effectiveOrgId, galleryType, entityId)
+
     debug.perf.end('galleryService.ensureEntityGallery')
     debug.flow('GalleryService.ensureEntityGallery', 'Entity gallery ensured (fake)', { entityType, entityId })
     console.groupEnd()
-    return { data: null, error: null }
+    return { data: gallery, error: null }
   }
 
   try {
@@ -1111,42 +1427,81 @@ export async function getPhotosForGallery(
 ): Promise<{ data: GalleryPhoto[]; error: Error | null }> {
   if (USE_FAKE_DATA) {
     await simulateDelay()
-    if (params.gallery_id.startsWith('mock-gallery-athlete-')) {
-      const base = '/demo-assets/photos'
-      const files = ['player-portrait.jpg', 'team-celebration.jpg', 'team-huddle.jpg']
-      const order = params.order_direction === 'asc' ? 1 : -1
-      const photos: GalleryPhoto[] = files.map((filename, i) => {
-        const id = `mock-athlete-photo-${params.gallery_id}-${i}`
-        const created = new Date(Date.now() - (3 - i) * 24 * 60 * 60 * 1000).toISOString()
-        const path = `${base}/${filename}`
-        return {
-          id,
-          gallery_id: params.gallery_id,
-          album_id: null,
-          storage_path: path,
-          thumbnail_path: null,
-          thumbnail_sm_path: null,
-          thumbnail_md_path: null,
-          thumbnail_lg_path: null,
-          filename,
-          size_bytes: 200000,
-          sort_order: i + 1,
-          status: 'approved' as PhotoStatus,
-          blurhash: null,
-          can_download: undefined,
-          uploaded_by_user_id: 'demo',
-          taken_at: null,
-          created_at: created,
-          updated_at: created,
-          thumbnail_url: path,
-          url: path,
-        } as GalleryPhoto
-      })
-      if (order === -1) photos.reverse()
-      const limit = params.limit ?? 100
-      return { data: photos.slice(0, limit), error: null }
+    let photos = getFakePhotosForGalleryId(params.gallery_id)
+
+    if (params.album_id !== undefined) {
+      if (params.album_id === null) {
+        photos = photos.filter((photo) => photo.album_id === null)
+      } else {
+        photos = photos.filter((photo) => photo.album_id === params.album_id)
+      }
     }
-    return { data: [], error: null }
+
+    if (params.status) {
+      photos = photos.filter((photo) => photo.status === params.status)
+    }
+
+    if (params.search && params.search.trim() !== '') {
+      const term = params.search.trim().toLowerCase()
+      photos = photos.filter((photo) => {
+        const caption = (photo.caption || '').toLowerCase()
+        const filename = (photo.filename || '').toLowerCase()
+        return caption.includes(term) || filename.includes(term)
+      })
+    }
+
+    if (params.from) {
+      const fromDate = new Date(params.from).getTime()
+      photos = photos.filter((photo) => new Date(photo.created_at).getTime() >= fromDate)
+    }
+
+    if (params.to) {
+      const toDate = new Date(params.to).getTime()
+      photos = photos.filter((photo) => new Date(photo.created_at).getTime() <= toDate)
+    }
+
+    const orderBy = params.order_by || 'sort_order'
+    const orderDirection = params.order_direction || (orderBy === 'sort_order' ? 'asc' : 'desc')
+    const ascending = orderDirection === 'asc'
+    photos = [...photos].sort((a, b) => {
+      if (orderBy === 'sort_order') {
+        const sortA = a.sort_order ?? 0
+        const sortB = b.sort_order ?? 0
+        if (sortA !== sortB) return ascending ? sortA - sortB : sortB - sortA
+      } else if (orderBy === 'taken_at') {
+        const takenA = new Date(a.taken_at || a.created_at).getTime()
+        const takenB = new Date(b.taken_at || b.created_at).getTime()
+        if (takenA !== takenB) return ascending ? takenA - takenB : takenB - takenA
+      } else {
+        const createdA = new Date(a.created_at).getTime()
+        const createdB = new Date(b.created_at).getTime()
+        if (createdA !== createdB) return ascending ? createdA - createdB : createdB - createdA
+      }
+      return ascending ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)
+    })
+
+    if (params.cursor) {
+      const cursorTime = new Date(params.cursor.created_at).getTime()
+      const cursorId = params.cursor.id
+      photos = photos.filter((photo) => {
+        const photoTime = new Date(photo.created_at).getTime()
+        if (ascending) {
+          return photoTime > cursorTime || (photoTime === cursorTime && photo.id > cursorId)
+        }
+        return photoTime < cursorTime || (photoTime === cursorTime && photo.id < cursorId)
+      })
+    }
+
+    const offset = params.offset ?? 0
+    if (offset > 0) {
+      photos = photos.slice(offset)
+    }
+
+    if (params.limit) {
+      photos = photos.slice(0, params.limit)
+    }
+
+    return { data: photos, error: null }
   }
 
   try {
@@ -1277,10 +1632,11 @@ export async function getPhotoById(
 
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    const mockPhoto = getAllMockPhotos().find((photo) => photo.id === photoId)
     debug.perf.end('galleryService.getPhotoById')
-    debug.data('GalleryService.getPhotoById', 'Response (fake)', { photoId })
+    debug.data('GalleryService.getPhotoById', 'Response (fake)', { photoId, hasData: !!mockPhoto })
     console.groupEnd()
-    return { data: null, error: null }
+    return { data: mockPhoto ? mapMockPhotoToGalleryPhoto(mockPhoto) : null, error: null }
   }
 
   try {
@@ -1366,10 +1722,17 @@ export async function getGalleryPhotoCounts(
   const empty: GalleryPhotoCounts = { total: 0, pending: 0, approved: 0, rejected: 0 }
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    const photos = getFakePhotosForGalleryId(galleryId)
+    const counts: GalleryPhotoCounts = {
+      total: photos.length,
+      pending: photos.filter((photo) => photo.status === 'pending').length,
+      approved: photos.filter((photo) => photo.status === 'approved').length,
+      rejected: photos.filter((photo) => photo.status === 'rejected').length,
+    }
     debug.perf.end('galleryService.getGalleryPhotoCounts')
-    debug.data('GalleryService.getGalleryPhotoCounts', 'Response (fake)', { galleryId, counts: empty })
+    debug.data('GalleryService.getGalleryPhotoCounts', 'Response (fake)', { galleryId, counts })
     console.groupEnd()
-    return { data: empty, error: null }
+    return { data: counts, error: null }
   }
 
   try {
@@ -1842,7 +2205,13 @@ export async function getOrCreateStaticGallery(
 ): Promise<{ id: string | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
     await simulateDelay()
-    return { id: null, error: null }
+    const effectiveOrgId = context.orgId || DEMO_ORG_A_ID
+    const fakeGallery = resolveFakeEntityGallery(
+      effectiveOrgId,
+      mapGalleryTypeToFakeAutoType(galleryType),
+      entityId,
+    )
+    return { id: fakeGallery?.id ?? null, error: null }
   }
 
   try {

@@ -13,7 +13,10 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { followOrg, unfollowOrg } from '../../data/services/fanService'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import AthleteAvatar from '../../components/portal/AthleteAvatar'
+import { useUserContext } from '../../hooks/useUserContext'
 import { showError, showSuccess } from '../../utils/toast'
+import type { Athlete } from '../../types/family'
 import '../../styles/fan.css'
 
 interface AthleteProfile {
@@ -47,6 +50,7 @@ export default function FanAthleteProfile() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   
+  const { context } = useUserContext()
   const [profile, setProfile] = useState<AthleteProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -159,11 +163,11 @@ export default function FanAthleteProfile() {
         
         <div className="fan-entity-info">
           <div className="fan-athlete-photo-large">
-            {profile.photo_url ? (
-              <img src={profile.photo_url} alt={fullName} />
-            ) : (
-              <span className="material-symbols-outlined">person</span>
-            )}
+            <AthleteAvatar
+              athlete={{ id: profile.id, first_name: profile.first_name, last_name: profile.last_name, org_id: profile.org_id ?? context?.orgId, has_profile_photo: !!profile.photo_url, profile_photo_updated_at: null } as unknown as Athlete}
+              photoSize="512"
+              className="w-full h-full object-cover"
+            />
             {profile.jersey_number && (
               <span className="fan-athlete-jersey">#{profile.jersey_number}</span>
             )}

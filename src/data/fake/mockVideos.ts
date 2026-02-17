@@ -19,14 +19,15 @@ function getVideoAssetUrl(filename: string): string {
 
 function getVideoThumbnailUrl(filename: string): string {
   const VIDEO_THUMBNAIL_MAP: Record<string, string> = {
-    'championship-game-final-quarter.mp4': '/demo-assets/photos/tournament-field.jpg',
-    'practice-passing-drills.mp4': '/demo-assets/videos/practice-passing-drills.jpg',
-    'training-core-workout.mp4': '/demo-assets/photos/team-warmup.jpg',
-    'highlights-season-2024.mp4': '/demo-assets/photos/team-celebration.jpg',
-    'event-tournament-opening.mp4': '/demo-assets/photos/tournament-trophy.jpg',
+    'dramatic-intro-sequence-with-a-senior-high-school-2025-12-17-14-18-19-utc.mp4': '/demo-assets/photos/tournament-field.jpg',
+    'youth-baseball-team-celebrating-with-team-huddle-2026-01-22-22-35-45-utc.mp4': '/demo-assets/photos/team-celebration.jpg',
+    'youth-baseball-team-celebrating-victory-together-o-2026-01-22-23-37-31-utc.mp4': '/demo-assets/photos/tournament-trophy.jpg',
+    'soccer-coach-explaining-game-strategy-to-his-multi-2026-01-20-14-08-25-utc.mp4': '/demo-assets/photos/soccer-action.jpg',
+    'junior-high-girl-walks-on-basketball-court-in-gymn-2026-01-22-17-49-11-utc.mp4': '/demo-assets/photos/players-action.jpg',
+    'group-of-teenagers-girls-training-indoors-in-sport-2026-01-21-12-20-42-utc.mp4': '/demo-assets/photos/team-warmup.jpg',
   }
 
-  return VIDEO_THUMBNAIL_MAP[filename] || '/demo-assets/videos/practice-passing-drills.jpg'
+  return VIDEO_THUMBNAIL_MAP[filename] || '/demo-assets/photos/tournament-field.jpg'
 }
 
 // ============================================================================
@@ -51,14 +52,14 @@ export const MOCK_VIDEOS: Video[] = [
     mux_playback_id: null,
     mux_upload_id: null,
     passthrough: null,
-    duration_seconds: 720,
+    duration_seconds: 8,
     aspect_ratio: '16:9',
     resolution_tier: '1080p',
     max_stored_resolution: '1080p',
     max_stored_frame_rate: 30,
-    thumbnail_url: getVideoThumbnailUrl('championship-game-final-quarter.mp4'),
+    thumbnail_url: getVideoThumbnailUrl('dramatic-intro-sequence-with-a-senior-high-school-2025-12-17-14-18-19-utc.mp4'),
     thumbnail_time_offset: 45,
-    duration: 720,
+    duration: 8,
     view_count: 125,
     team_id: 'team-1',
     season_id: null,
@@ -79,7 +80,7 @@ export const MOCK_VIDEOS: Video[] = [
     updated_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
     deleted_at: null,
     // Local video file path (for demo mode)
-    video_url: getVideoAssetUrl('championship-game-final-quarter.mp4'),
+    video_url: getVideoAssetUrl('dramatic-intro-sequence-with-a-senior-high-school-2025-12-17-14-18-19-utc.mp4'),
   } as Video & { video_url?: string },
   
   // Practice Videos
@@ -95,14 +96,14 @@ export const MOCK_VIDEOS: Video[] = [
     mux_playback_id: null,
     mux_upload_id: null,
     passthrough: null,
-    duration_seconds: 480,
+    duration_seconds: 5,
     aspect_ratio: '16:9',
     resolution_tier: '720p',
     max_stored_resolution: '720p',
     max_stored_frame_rate: 30,
-    thumbnail_url: getVideoThumbnailUrl('practice-passing-drills.mp4'),
+    thumbnail_url: getVideoThumbnailUrl('youth-baseball-team-celebrating-with-team-huddle-2026-01-22-22-35-45-utc.mp4'),
     thumbnail_time_offset: 30,
-    duration: 480,
+    duration: 5,
     view_count: 89,
     team_id: 'team-1',
     season_id: null,
@@ -122,7 +123,7 @@ export const MOCK_VIDEOS: Video[] = [
     created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
     updated_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
     deleted_at: null,
-    video_url: getVideoAssetUrl('practice-passing-drills.mp4'),
+    video_url: getVideoAssetUrl('youth-baseball-team-celebrating-with-team-huddle-2026-01-22-22-35-45-utc.mp4'),
   } as Video & { video_url?: string },
   
   // Training Videos
@@ -138,14 +139,14 @@ export const MOCK_VIDEOS: Video[] = [
     mux_playback_id: null,
     mux_upload_id: null,
     passthrough: null,
-    duration_seconds: 600,
+    duration_seconds: 10,
     aspect_ratio: '16:9',
     resolution_tier: '1080p',
     max_stored_resolution: '1080p',
     max_stored_frame_rate: 30,
-    thumbnail_url: getVideoThumbnailUrl('training-core-workout.mp4'),
+    thumbnail_url: getVideoThumbnailUrl('group-of-teenagers-girls-training-indoors-in-sport-2026-01-21-12-20-42-utc.mp4'),
     thumbnail_time_offset: 60,
-    duration: 600,
+    duration: 10,
     view_count: 156,
     team_id: null,
     season_id: null,
@@ -165,7 +166,7 @@ export const MOCK_VIDEOS: Video[] = [
     created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     updated_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     deleted_at: null,
-    video_url: getVideoAssetUrl('training-core-workout.mp4'),
+    video_url: getVideoAssetUrl('group-of-teenagers-girls-training-indoors-in-sport-2026-01-21-12-20-42-utc.mp4'),
   } as Video & { video_url?: string },
   
   // Highlight Videos
@@ -181,14 +182,14 @@ export const MOCK_VIDEOS: Video[] = [
     mux_playback_id: null,
     mux_upload_id: null,
     passthrough: null,
-    duration_seconds: 300,
+    duration_seconds: 12,
     aspect_ratio: '16:9',
     resolution_tier: '1080p',
     max_stored_resolution: '1080p',
     max_stored_frame_rate: 60,
-    thumbnail_url: getVideoThumbnailUrl('highlights-season-2024.mp4'),
+    thumbnail_url: getVideoThumbnailUrl('youth-baseball-team-celebrating-victory-together-o-2026-01-22-23-37-31-utc.mp4'),
     thumbnail_time_offset: 15,
-    duration: 300,
+    duration: 12,
     view_count: 234,
     team_id: 'team-1',
     season_id: null,
@@ -208,7 +209,7 @@ export const MOCK_VIDEOS: Video[] = [
     created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
     updated_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
     deleted_at: null,
-    video_url: getVideoAssetUrl('highlights-season-2024.mp4'),
+    video_url: getVideoAssetUrl('youth-baseball-team-celebrating-victory-together-o-2026-01-22-23-37-31-utc.mp4'),
   } as Video & { video_url?: string },
   
   // Event Videos
@@ -224,14 +225,14 @@ export const MOCK_VIDEOS: Video[] = [
     mux_playback_id: null,
     mux_upload_id: null,
     passthrough: null,
-    duration_seconds: 420,
+    duration_seconds: 25,
     aspect_ratio: '16:9',
     resolution_tier: '720p',
     max_stored_resolution: '720p',
     max_stored_frame_rate: 30,
-    thumbnail_url: getVideoThumbnailUrl('event-tournament-opening.mp4'),
+    thumbnail_url: getVideoThumbnailUrl('soccer-coach-explaining-game-strategy-to-his-multi-2026-01-20-14-08-25-utc.mp4'),
     thumbnail_time_offset: 20,
-    duration: 420,
+    duration: 25,
     view_count: 178,
     team_id: null,
     season_id: null,
@@ -251,7 +252,7 @@ export const MOCK_VIDEOS: Video[] = [
     created_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
     updated_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
     deleted_at: null,
-    video_url: getVideoAssetUrl('event-tournament-opening.mp4'),
+    video_url: getVideoAssetUrl('soccer-coach-explaining-game-strategy-to-his-multi-2026-01-20-14-08-25-utc.mp4'),
   } as unknown as Video & { video_url?: string },
 ]
 
@@ -269,7 +270,7 @@ export function getMockVideosForOrg(orgId: string): Video[] {
 /**
  * Get mock video by ID
  */
-export function getMockVideoById(videoId: string): (Video & { video_url?: string }) | undefined {
+export function getMockVideoById(videoId: string): (Video & { video_url?: string | null }) | undefined {
   return MOCK_VIDEOS.find((v) => v.id === videoId)
 }
 

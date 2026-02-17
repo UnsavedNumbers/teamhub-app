@@ -24,8 +24,24 @@ import type {
 } from '@/types/video'
 import type { Database, Json } from '@/lib/supabase.extended.types'
 import { useAuth } from './useAuth'
-import { USE_FAKE_DATA } from '@/data/config'
+import { DEMO_ORG_A_ID, USE_FAKE_DATA } from '@/data/config'
 import { getMockVideosForOrg, getMockVideoById } from '@/data/fake/mockVideos'
+import {
+  createMockVideoBookmark,
+  createMockVideoComment,
+  createMockVideoNote,
+  deleteMockVideoBookmark,
+  deleteMockVideoComment,
+  deleteMockVideoNote,
+  getMockVideoAthleteLinks,
+  getMockVideoBookmarks,
+  getMockVideoComments,
+  getMockVideoInteractionCounts,
+  getMockVideoNotes,
+  updateMockVideoBookmark,
+  updateMockVideoComment,
+  updateMockVideoNote,
+} from '@/data/fake/mockVideoInteractions'
 
 // ============================================================================
 // Edge Function URL Configuration
@@ -41,6 +57,22 @@ const getEdgeFunctionUrl = (functionName: string): string => {
 
 const TOKEN_REFRESH_SKEW_SECONDS = 30
 const DEFAULT_THUMBNAIL_TOKEN_EXPIRATION = 7200
+
+type ViewerRole = 'parent' | 'athlete' | 'coach' | 'org_admin' | 'staff'
+
+function getViewerRoles(profile: { organizations?: Array<{ roles?: string[] }> } | null): ViewerRole[] {
+  const next = new Set<ViewerRole>()
+  const orgs = profile?.organizations ?? []
+  for (const org of orgs) {
+    const roles = org.roles ?? []
+    for (const role of roles) {
+      if (role === 'parent' || role === 'athlete' || role === 'coach' || role === 'org_admin' || role === 'staff') {
+        next.add(role)
+      }
+    }
+  }
+  return Array.from(next)
+}
 
 async function getFreshAccessToken(preferredToken?: string): Promise<string | null> {
   try {
@@ -135,6 +167,7 @@ interface UseVideosReturn {
 
 export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
   const { orgId, filters = {}, pagination = {}, enabled = true } = options
+  const { user } = useAuth()
   const [videos, setVideos] = useState<Video[]>([])
   const [total, setTotal] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
@@ -156,7 +189,16 @@ export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
       if (USE_FAKE_DATA) {
         await new Promise(resolve => setTimeout(resolve, 300)) // Simulate delay
         
-        let mockVideos = getMockVideosForOrg(orgId)
+        let mockVideos = getMockVideosForOrg(orgId).map((video) => {
+          const counts = getMockVideoInteractionCounts(video.id, user?.id)
+          return {
+            ...video,
+            athlete_links: getMockVideoAthleteLinks(video.id),
+            notes_count: counts.notes,
+            comments_count: counts.comments,
+            bookmarks_count: counts.bookmarks,
+          } as Video
+        })
         
         // Apply filters
         if (filters.search) {
@@ -349,7 +391,7 @@ export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [orgId, JSON.stringify(filters), limit, sortBy, sortOrder, page, enabled])
+  }, [orgId, JSON.stringify(filters), limit, sortBy, sortOrder, page, enabled, user?.id])
   
   useEffect(() => {
     fetchVideos(false)
@@ -389,6 +431,7 @@ interface UsePortalVideoLibraryReturn {
 
 export function usePortalVideoLibrary(options: UsePortalVideoLibraryOptions = {}): UsePortalVideoLibraryReturn {
   const { orgId, filters = {}, pagination = {}, enabled = true } = options
+  const { user } = useAuth()
   const [videos, setVideos] = useState<Video[]>([])
   const [total, setTotal] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
@@ -410,7 +453,18 @@ export function usePortalVideoLibrary(options: UsePortalVideoLibraryOptions = {}
       if (USE_FAKE_DATA) {
         await new Promise(resolve => setTimeout(resolve, 300)) // Simulate delay
         
-        let mockVideos = getMockVideosForOrg(orgId).filter(v => v.status === 'ready')
+        let mockVideos = getMockVideosForOrg(orgId)
+          .filter(v => v.status === 'ready')
+          .map((video) => {
+            const counts = getMockVideoInteractionCounts(video.id, user?.id)
+            return {
+              ...video,
+              athlete_links: getMockVideoAthleteLinks(video.id),
+              notes_count: counts.notes,
+              comments_count: counts.comments,
+              bookmarks_count: counts.bookmarks,
+            } as Video
+          })
         
         // Apply filters
         if (filters.search) {
@@ -522,7 +576,7 @@ export function usePortalVideoLibrary(options: UsePortalVideoLibraryOptions = {}
     } finally {
       setIsLoading(false)
     }
-  }, [orgId, JSON.stringify(filters), limit, sortBy, sortOrder, page, enabled])
+  }, [orgId, JSON.stringify(filters), limit, sortBy, sortOrder, page, enabled, user?.id])
 
   useEffect(() => {
     fetchVideos(false)
@@ -552,6 +606,7 @@ interface UseVideoReturn {
 }
 
 export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideoReturn {
+  const { user } = useAuth()
   const [video, setVideo] = useState<Video | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -569,7 +624,14 @@ export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideo
         
         const mockVideo = getMockVideoById(videoId)
         if (mockVideo) {
-          setVideo(mockVideo as Video)
+          const counts = getMockVideoInteractionCounts(mockVideo.id, user?.id)
+          setVideo({
+            ...mockVideo,
+            athlete_links: getMockVideoAthleteLinks(mockVideo.id),
+            notes_count: counts.notes,
+            comments_count: counts.comments,
+            bookmarks_count: counts.bookmarks,
+          } as Video)
         } else {
           setError(new Error('Video not found'))
         }
@@ -631,7 +693,7 @@ export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideo
     } finally {
       setIsLoading(false)
     }
-  }, [videoId, enabled])
+  }, [videoId, enabled, user?.id])
   
   useEffect(() => {
     fetchVideo()
@@ -806,12 +868,43 @@ export function usePlaybackToken(options: UsePlaybackTokenOptions): UsePlaybackT
   const [error, setError] = useState<Error | null>(null)
   
   const fetchToken = useCallback(async () => {
-    if ((!videoId && !playbackId) || !enabled || !session?.access_token) return
+    if ((!videoId && !playbackId) || !enabled) return
     
     setIsLoading(true)
     setError(null)
     
     try {
+      if (USE_FAKE_DATA) {
+        await new Promise((resolve) => setTimeout(resolve, 80))
+        const mockVideo = videoId ? getMockVideoById(videoId) : undefined
+        const localStream = (mockVideo as (Video & { video_url?: string | null }) | undefined)?.video_url
+
+        if (!localStream) {
+          throw new Error('Video not available')
+        }
+
+        setPlaybackData({
+          playback_id: `local-${mockVideo?.id ?? playbackId ?? 'video'}`,
+          stream_url: localStream,
+          thumbnail_url: mockVideo?.thumbnail_url || '/demo-assets/photos/tournament-field.jpg',
+          animated_gif_url: mockVideo?.thumbnail_url || '/demo-assets/photos/tournament-field.jpg',
+          storyboard_url: '',
+          token: '',
+          thumbnail_token: '',
+          storyboard_token: '',
+          expires_in: expiration,
+          video: {
+            id: mockVideo?.id || videoId || 'local-video',
+            status: mockVideo?.status || 'ready',
+          },
+        })
+        return
+      }
+
+      if (!session?.access_token) {
+        throw new Error('Not authenticated')
+      }
+
       const response = await callMuxSignedPlayback({
         video_id: videoId,
         playback_id: playbackId,
@@ -996,10 +1089,11 @@ type VideoNoteInsert = Database['public']['Tables']['video_notes']['Insert']
 type VideoNoteUpdate = Database['public']['Tables']['video_notes']['Update']
 
 export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions): UseVideoNotesReturn {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [notes, setNotes] = useState<VideoNote[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
+  const viewerRoles = useMemo(() => getViewerRoles(profile), [profile])
   
   const fetchNotes = useCallback(async () => {
     if (!videoId || !enabled) return
@@ -1008,6 +1102,17 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
     setError(null)
     
     try {
+      if (USE_FAKE_DATA) {
+        await new Promise((resolve) => setTimeout(resolve, 80))
+        setNotes(
+          getMockVideoNotes(videoId, {
+            userId: user?.id,
+            roles: viewerRoles,
+          })
+        )
+        return
+      }
+
       const { data, error: fetchError } = await supabase
         .from('video_notes')
         .select(`
@@ -1027,7 +1132,7 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
     } finally {
       setIsLoading(false)
     }
-  }, [videoId, enabled])
+  }, [videoId, enabled, user?.id, viewerRoles])
   
   useEffect(() => {
     fetchNotes()
@@ -1049,6 +1154,17 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
     }
     
     try {
+      if (USE_FAKE_DATA) {
+        const newNote = createMockVideoNote(videoId, user.id, note)
+        setNotes(
+          getMockVideoNotes(videoId, {
+            userId: user.id,
+            roles: viewerRoles,
+          })
+        )
+        return newNote
+      }
+
       const { target_athlete_ids, drawing_data } = note
       const payload = {
         video_id: videoId,
@@ -1114,13 +1230,26 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
       console.error('Error creating note:', err)
       return null
     }
-  }, [videoId, user?.id])
+  }, [videoId, user?.id, viewerRoles])
   
   const updateNote = useCallback(async (
     noteId: string,
     updates: Partial<VideoNote>
   ): Promise<boolean> => {
     try {
+      if (USE_FAKE_DATA) {
+        const ok = updateMockVideoNote(noteId, updates)
+        if (ok && videoId) {
+          setNotes(
+            getMockVideoNotes(videoId, {
+              userId: user?.id,
+              roles: viewerRoles,
+            })
+          )
+        }
+        return ok
+      }
+
       const dbUpdates = {
         ...(updates.content !== undefined && { content: updates.content }),
         ...(updates.scope !== undefined && { scope: updates.scope }),
@@ -1142,10 +1271,23 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
       console.error('Error updating note:', err)
       return false
     }
-  }, [])
+  }, [videoId, user?.id, viewerRoles])
   
   const deleteNote = useCallback(async (noteId: string): Promise<boolean> => {
     try {
+      if (USE_FAKE_DATA) {
+        const ok = deleteMockVideoNote(noteId)
+        if (ok && videoId) {
+          setNotes(
+            getMockVideoNotes(videoId, {
+              userId: user?.id,
+              roles: viewerRoles,
+            })
+          )
+        }
+        return ok
+      }
+
       const { error: deleteError } = await supabase
         .from('video_notes')
         .delete()
@@ -1159,7 +1301,7 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
       console.error('Error deleting note:', err)
       return false
     }
-  }, [])
+  }, [videoId, user?.id, viewerRoles])
   
   return { notes, isLoading, error, createNote, updateNote, deleteNote, refresh: fetchNotes }
 }
@@ -1196,6 +1338,12 @@ export function useVideoBookmarks({ videoId, enabled = true }: UseVideoBookmarks
     setError(null)
     
     try {
+      if (USE_FAKE_DATA) {
+        await new Promise((resolve) => setTimeout(resolve, 80))
+        setBookmarks(getMockVideoBookmarks(videoId, user.id))
+        return
+      }
+
       const { data, error: fetchError } = await supabase
         .from('video_bookmarks')
         .select('*')
@@ -1225,6 +1373,12 @@ export function useVideoBookmarks({ videoId, enabled = true }: UseVideoBookmarks
     if (!videoId || !user?.id) return null
     
     try {
+      if (USE_FAKE_DATA) {
+        const newBookmark = createMockVideoBookmark(videoId, user.id, timestamp, label)
+        setBookmarks(getMockVideoBookmarks(videoId, user.id))
+        return newBookmark
+      }
+
       const { data, error: createError } = await supabase
         .from('video_bookmarks')
         .insert({
@@ -1252,6 +1406,14 @@ export function useVideoBookmarks({ videoId, enabled = true }: UseVideoBookmarks
     updates: Partial<VideoBookmark>
   ): Promise<boolean> => {
     try {
+      if (USE_FAKE_DATA) {
+        const ok = updateMockVideoBookmark(bookmarkId, updates)
+        if (ok && videoId && user?.id) {
+          setBookmarks(getMockVideoBookmarks(videoId, user.id))
+        }
+        return ok
+      }
+
       const { error: updateError } = await supabase
         .from('video_bookmarks')
         .update(updates)
@@ -1265,10 +1427,18 @@ export function useVideoBookmarks({ videoId, enabled = true }: UseVideoBookmarks
       console.error('Error updating bookmark:', err)
       return false
     }
-  }, [])
+  }, [videoId, user?.id])
   
   const deleteBookmark = useCallback(async (bookmarkId: string): Promise<boolean> => {
     try {
+      if (USE_FAKE_DATA) {
+        const ok = deleteMockVideoBookmark(bookmarkId)
+        if (ok && videoId && user?.id) {
+          setBookmarks(getMockVideoBookmarks(videoId, user.id))
+        }
+        return ok
+      }
+
       const { error: deleteError } = await supabase
         .from('video_bookmarks')
         .delete()
@@ -1282,7 +1452,7 @@ export function useVideoBookmarks({ videoId, enabled = true }: UseVideoBookmarks
       console.error('Error deleting bookmark:', err)
       return false
     }
-  }, [])
+  }, [videoId, user?.id])
   
   return { bookmarks, isLoading, error, createBookmark, updateBookmark, deleteBookmark, refresh: fetchBookmarks }
 }
@@ -1319,6 +1489,12 @@ export function useVideoComments({ videoId, enabled = true }: UseVideoCommentsOp
     setError(null)
     
     try {
+      if (USE_FAKE_DATA) {
+        await new Promise((resolve) => setTimeout(resolve, 80))
+        setComments(getMockVideoComments(videoId))
+        return
+      }
+
       const { data, error: fetchError } = await supabase
         .from('video_comments')
         .select(`
@@ -1350,6 +1526,16 @@ export function useVideoComments({ videoId, enabled = true }: UseVideoCommentsOp
     if (!videoId || !user?.id) return null
     
     try {
+      if (USE_FAKE_DATA) {
+        const newComment = createMockVideoComment(videoId, user.id, {
+          content,
+          timestamp: options?.timestamp,
+          parentId: options?.parentId,
+        })
+        setComments(getMockVideoComments(videoId))
+        return newComment
+      }
+
       const { data, error: createError } = await supabase
         .from('video_comments')
         .insert({
@@ -1381,6 +1567,14 @@ export function useVideoComments({ videoId, enabled = true }: UseVideoCommentsOp
     content: string
   ): Promise<boolean> => {
     try {
+      if (USE_FAKE_DATA) {
+        const ok = updateMockVideoComment(commentId, content)
+        if (ok && videoId) {
+          setComments(getMockVideoComments(videoId))
+        }
+        return ok
+      }
+
       const { error: updateError } = await supabase
         .from('video_comments')
         .update({ content, is_edited: true })
@@ -1396,10 +1590,18 @@ export function useVideoComments({ videoId, enabled = true }: UseVideoCommentsOp
       console.error('Error updating comment:', err)
       return false
     }
-  }, [])
+  }, [videoId])
   
   const deleteComment = useCallback(async (commentId: string): Promise<boolean> => {
     try {
+      if (USE_FAKE_DATA) {
+        const ok = deleteMockVideoComment(commentId)
+        if (ok && videoId) {
+          setComments(getMockVideoComments(videoId))
+        }
+        return ok
+      }
+
       const { error: deleteError } = await supabase
         .from('video_comments')
         .delete()
@@ -1413,7 +1615,7 @@ export function useVideoComments({ videoId, enabled = true }: UseVideoCommentsOp
       console.error('Error deleting comment:', err)
       return false
     }
-  }, [])
+  }, [videoId])
   
   return { comments, isLoading, error, createComment, updateComment, deleteComment, refresh: fetchComments }
 }
@@ -1448,6 +1650,21 @@ export function useAthleteVideos({ athleteId, enabled = true }: UseAthleteVideos
     setError(null)
     
     try {
+      if (USE_FAKE_DATA) {
+        await new Promise((resolve) => setTimeout(resolve, 120))
+        const filtered = getMockVideosForOrg(DEMO_ORG_A_ID)
+          .filter((video) => video.status === 'ready')
+          .filter((video) => getMockVideoAthleteLinks(video.id).some((link) => link.athlete_id === athleteId))
+          .map((video) => ({
+            ...video,
+            athlete_links: getMockVideoAthleteLinks(video.id),
+          })) as Video[]
+
+        setVideos(filtered)
+        setTotal(filtered.length)
+        return
+      }
+
       // Fetch videos linked to this athlete
       const { data: links, error: linksError } = await supabase
         .from('video_athlete_links')

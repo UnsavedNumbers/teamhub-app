@@ -103,7 +103,7 @@ export const parentNavSections: NavigationSection[] = [
             {
                 label: 'Media & Programs',
                 items: [
-                    { routeKey: 'portal.photos', text: 'Photos & Videos', icon: 'photo_library', description: 'Team galleries' },
+                    { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', description: 'Team galleries' },
                     { routeKey: 'portal.videos', text: 'Video Library', icon: 'smart_display', description: 'Watch team and athlete videos' },
                     { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
                 ],
@@ -193,7 +193,7 @@ export const athleteNavSections: NavigationSection[] = [
             {
                 label: 'Media',
                 items: [
-                    { routeKey: 'portal.photos', text: 'Photos & Videos', icon: 'photo_library', description: 'Team galleries' },
+                    { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', description: 'Team galleries' },
                     { routeKey: 'portal.videos', text: 'Video Library', icon: 'smart_display', description: 'Watch team and athlete videos' },
                 ],
             },

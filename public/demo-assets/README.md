@@ -72,6 +72,11 @@ All fake data services reference these local paths, so you can replace any asset
 1. Add your photo file to `public/demo-assets/athlete-photos/`
 2. Use the exact filename referenced in `src/data/fake/fakeUsers.ts`
 3. Format: `{first-name}-{last-name}.jpg` (lowercase, hyphenated)
+4. **For crisp display** on /portal/athletes and profile pages, run from the project root:
+   ```bash
+   npm run demo:resize-athlete-photos
+   ```
+   This generates 256px and 512px versions (e.g. `emma-johnson-256.jpg`, `emma-johnson-512.jpg`). Requires `sharp` as a dev dependency (`npm install -D sharp`). If you skip this step, the app will fall back to the full-size image (may look soft when scaled down).
 
 ## Recommended Specifications
 

@@ -86,6 +86,7 @@ export interface Video {
   max_stored_frame_rate: number | null
   thumbnail_url: string | null
   thumbnail_time_offset: number | null
+  video_url?: string | null
   duration?: number | null
   view_count?: number | null
   

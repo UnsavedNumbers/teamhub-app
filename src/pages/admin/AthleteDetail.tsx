@@ -4,7 +4,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getAthleteById } from '../../data/services/familyService'
 import { getAthleteSports } from '../../data/services/athleteSportsService'
 import { getAthleteGuardians, linkGuardianToAthlete, removeGuardianFromAthlete, validateGuardianEmail, getAthleteInvites, cancelInvite, resendInvite } from '../../data/services/guardianService'
-import { getAthletePhotoUrl } from '../../data/services/athletePhotoService'
+import AthleteAvatar from '../../components/portal/AthleteAvatar'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
 import { useT } from '../../i18n/useI18n'
@@ -12,7 +12,7 @@ import { Button, Card, Table, type TableColumn, Badge, ConfirmDialog } from '../
 import { Tabs, TabsList, TabsTrigger, TabsContent, StatCard } from '../../components/platformAdmin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import OfflineBanner from '../../components/admin/OfflineBanner'
-import { getDisplayName, calculateAge, getGenderLabel, formatSports, getAthleteInitials } from '../../utils/athleteHelpers'
+import { getDisplayName, calculateAge, getGenderLabel, formatSports } from '../../utils/athleteHelpers'
 import { formatPhoneDisplay } from '../../utils/phoneFormatting'
 import { GuardianMatchIndicator } from '../../components/admin/GuardianMatchIndicator'
 import { checkGuardianMatch, debounce } from '../../utils/guardianMatching'
@@ -64,7 +64,6 @@ export default function AthleteDetail() {
   const [guardians, setGuardians] = useState<Guardian[]>([])
   const [pendingInvites, setPendingInvites] = useState<PendingGuardianInvite[]>([])
   const [teams, setTeams] = useState<TeamMembership[]>([])
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -144,14 +143,6 @@ export default function AthleteDetail() {
       }
 
       setAthlete(athleteData)
-
-      // Load photo (using new photo system)
-      if (athleteData.has_profile_photo && athleteData.org_id && athleteData.id) {
-        const url = getAthletePhotoUrl(athleteData.org_id, athleteData.id, '512')
-        if (isMountedRef.current && url) {
-          setPhotoUrl(url)
-        }
-      }
 
       // Fetch sports
       const { data: sportsData } = await getAthleteSports(athleteId, context.orgId)
@@ -878,7 +869,6 @@ export default function AthleteDetail() {
   const age = calculateAge(athlete.date_of_birth)
   const genderLabel = getGenderLabel(athlete.gender)
   const { plays, interested } = formatSports(athlete.sports)
-  const initials = getAthleteInitials(athlete.first_name, athlete.last_name)
   const updatedLabel = formatUpdatedRelative(athlete.updated_at)
   const primaryColor = 'var(--oa-theme-action-primary, var(--org-btn-primary-bg, #137fec))'
 
@@ -999,32 +989,8 @@ export default function AthleteDetail() {
               }}
               className="dark:bg-slate-800 dark:border-slate-700"
             >
-              {photoUrl ? (
-                <img
-                  src={photoUrl}
-                  alt={displayName}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    background: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: primaryColor,
-                    fontSize: '48px',
-                    fontWeight: 900,
-                  }}
-                >
-                  {initials}
-                </div>
+              {athlete && (
+                <AthleteAvatar athlete={athlete} photoSize="512" className="w-full h-full object-cover" />
               )}
             </div>
 

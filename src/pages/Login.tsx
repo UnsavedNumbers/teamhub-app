@@ -38,7 +38,7 @@ export default function Login() {
   const navigate = useNavigate()
   const [logoVersion, setLogoVersion] = useState(0)
   const appContext = getHostAppContext()
-  const requireDemoCode = USE_FAKE_DATA && appContext !== 'platform-admin'
+  const showDemoCodeInput = USE_FAKE_DATA && appContext !== 'platform-admin'
 
   // Add lifecycle logging
   useDebugLifecycle('Login')
@@ -61,13 +61,7 @@ export default function Login() {
     debug.flow('Login', 'Form submission started', { email, rememberMe })
     debug.perf.start('login.formSubmission')
 
-    if (requireDemoCode && !demoCode.trim()) {
-      setError(t('errors.auth.demoCodeRequired'))
-      setLoading(false)
-      return
-    }
-
-    if (requireDemoCode) {
+    if (showDemoCodeInput && demoCode.trim()) {
       setPendingDemoCode(demoCode)
     }
 
@@ -275,7 +269,7 @@ export default function Login() {
       {/* Right side - Login Form */}
       <div className="flex-1 flex flex-col px-6 py-8 lg:px-20 xl:px-24 bg-white dark:bg-slate-900/50 overflow-y-auto">
         <div className="mx-auto w-full max-w-sm lg:w-96 flex flex-col">
-          {requireDemoCode && (
+          {showDemoCodeInput && (
             <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
               {t('errors.auth.demoBanner')}
             </div>
@@ -310,7 +304,7 @@ export default function Login() {
 
           {/* Email Form */}
           <form onSubmit={handleEmailLogin} className="space-y-6">
-            {requireDemoCode && (
+            {showDemoCodeInput && (
               <div>
                 <label 
                   htmlFor="demo-code" 
@@ -324,7 +318,6 @@ export default function Login() {
                     name="demo-code"
                     type="text"
                     autoComplete="off"
-                    required
                     tabIndex={0}
                     value={demoCode}
                     onChange={(e) => setDemoCode(e.target.value)}

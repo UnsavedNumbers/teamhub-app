@@ -586,8 +586,23 @@ export async function deleteAthletePhoto(
 // ============================================================================
 
 /**
+ * In fake mode, convert a base demo asset URL to a size-specific path so the
+ * browser loads 256/512px assets instead of one large image (avoids dotty downscaling).
+ * Resized assets are always .jpg (see scripts/resize-demo-athlete-photos.mjs).
+ * e.g. /demo-assets/athlete-photos/emma-johnson.jpg + '256' -> .../emma-johnson-256.jpg
+ */
+function getFakePhotoUrlForSize(photoUrl: string, size: PhotoSize): string {
+    if (size === 'original') return photoUrl
+    const match = photoUrl.match(/^(\/demo-assets\/athlete-photos\/)(.+?)(\.(jpg|jpeg|png|webp))$/i)
+    if (!match) return photoUrl
+    const [, basePath, name] = match
+    return `${basePath}${name}-${size}.jpg`
+}
+
+/**
  * Get public URL for athlete photo
  * In fake data mode returns gender-matched demo asset from /demo-assets/athlete-photos/
+ * with size-specific path (-256.jpg / -512.jpg) when requested so list and profile use crisp assets.
  */
 export function getAthletePhotoUrl(
     orgId: string,
@@ -596,7 +611,8 @@ export function getAthletePhotoUrl(
 ): string {
     if (USE_FAKE_DATA) {
         const child = getChildById(athleteId)
-        return child?.photo_url ?? ''
+        const baseUrl = child?.photo_url ?? ''
+        return baseUrl ? getFakePhotoUrlForSize(baseUrl, size) : ''
     }
     if (!orgId || !athleteId || !isValidUUID(orgId) || !isValidUUID(athleteId)) {
         return ''

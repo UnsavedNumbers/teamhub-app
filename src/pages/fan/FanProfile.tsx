@@ -17,8 +17,11 @@ import {
 } from '../../data/services/fanService'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import AthleteAvatar from '../../components/portal/AthleteAvatar'
+import { useUserContext } from '../../hooks/useUserContext'
 import { showError, showSuccess } from '../../utils/toast'
 import { supabase } from '../../lib/supabase'
+import type { Athlete } from '../../types/family'
 import '../../styles/fan.css'
 
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
@@ -685,7 +688,7 @@ function NotificationTypeRow({ title, description, value, onChange, disabled }: 
  */
 export function FanProfileLinkedAthletes() {
   const navigate = useNavigate()
-  
+  const { context } = useUserContext()
   const [loading, setLoading] = useState(true)
   const [linkedAthletes, setLinkedAthletes] = useState<any[]>([])
   const [showLinkModal, setShowLinkModal] = useState(false)
@@ -774,11 +777,11 @@ export function FanProfileLinkedAthletes() {
                 {linkedAthletes.map((athlete) => (
                   <div key={athlete.id} className="fan-linked-athlete-card">
                     <div className="fan-linked-athlete-avatar">
-                      {athlete.photo_url ? (
-                        <img src={athlete.photo_url} alt="" />
-                      ) : (
-                        <span className="material-symbols-outlined">person</span>
-                      )}
+                      <AthleteAvatar
+                        athlete={{ id: athlete.id, first_name: athlete.first_name, last_name: athlete.last_name, org_id: athlete.org_id ?? context?.orgId, has_profile_photo: !!athlete.photo_url, profile_photo_updated_at: null } as unknown as Athlete}
+                        photoSize="256"
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                     <div className="fan-linked-athlete-info">
                       <h3>{athlete.first_name} {athlete.last_name}</h3>

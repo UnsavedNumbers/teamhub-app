@@ -14,7 +14,7 @@ import { useDemoSession } from '../contexts/DemoSessionContext'
 import type { PlatformAdminRole } from '../types/platformAdmin.types'
 import type { HomeLocation } from '../types/location'
 import { geocodeZipToHomeLocation } from '../utils/homeLocation'
-import { USE_FAKE_DATA } from '../data/config'
+import { DEMO_ORG_A_ID, USE_FAKE_DATA } from '../data/config'
 import { generateDemoData } from '../data/fake/demoDataEngine'
 import { getDemoUserContext } from '../data/fake/userContext'
 import { getOrganizationById } from '../data/fake/fakeOrganizations'
@@ -74,6 +74,70 @@ interface AuthContextType {
 /* ===================== CONTEXT ===================== */
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+const FAKE_AUTH_STORAGE_KEY = 'teamhub_fake_auth_state'
+
+interface FakeAuthState {
+  userId: string
+  email: string
+  orgId: string
+  orgName: string
+  roles: OrgMemberRole[]
+  isPlatformAdmin: boolean
+}
+
+function readFakeAuthState(): FakeAuthState | null {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.sessionStorage.getItem(FAKE_AUTH_STORAGE_KEY)
+    if (!raw) return null
+
+    const parsed = JSON.parse(raw) as Partial<FakeAuthState>
+    if (!parsed || typeof parsed.email !== 'string' || parsed.email.trim().length === 0) {
+      return null
+    }
+
+    const roles = Array.isArray(parsed.roles)
+      ? parsed.roles.filter(
+          (role): role is OrgMemberRole =>
+            role === 'parent' || role === 'coach' || role === 'org_admin' || role === 'staff' || role === 'athlete',
+        )
+      : []
+
+    const safeEmail = parsed.email.trim().toLowerCase()
+    const safeUserId = typeof parsed.userId === 'string' && parsed.userId.trim().length > 0
+      ? parsed.userId.trim()
+      : ''
+    const safeOrgId = typeof parsed.orgId === 'string' && parsed.orgId.trim().length > 0
+      ? parsed.orgId.trim()
+      : DEMO_ORG_A_ID
+    const safeOrgName = typeof parsed.orgName === 'string' && parsed.orgName.trim().length > 0
+      ? parsed.orgName.trim()
+      : (getOrganizationById(safeOrgId)?.name ?? 'Demo Organization')
+
+    return {
+      userId: safeUserId,
+      email: safeEmail,
+      orgId: safeOrgId,
+      orgName: safeOrgName,
+      roles,
+      isPlatformAdmin: parsed.isPlatformAdmin === true,
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeFakeAuthState(state: FakeAuthState): void {
+  if (typeof window === 'undefined') return
+  window.sessionStorage.setItem(FAKE_AUTH_STORAGE_KEY, JSON.stringify(state))
+}
+
+function clearFakeAuthState(): void {
+  if (typeof window === 'undefined') return
+  window.sessionStorage.removeItem(FAKE_AUTH_STORAGE_KEY)
+}
 
 /* ===================== PROVIDER ===================== */
 
@@ -357,6 +421,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mountedRef.current = true
 
     if (USE_FAKE_DATA) {
+      const persisted = readFakeAuthState()
+      if (persisted) {
+        const resolvedContext = getDemoUserContext(persisted.email)
+        const resolvedOrgId = persisted.orgId || resolvedContext?.orgId || DEMO_ORG_A_ID
+        const resolvedOrgName =
+          persisted.orgName ||
+          getOrganizationById(resolvedOrgId)?.name ||
+          'Demo Organization'
+        const resolvedRoles: OrgMemberRole[] =
+          persisted.roles.length > 0
+            ? persisted.roles
+            : resolvedContext?.roles && resolvedContext.roles.length > 0
+              ? resolvedContext.roles
+              : ['parent']
+        const resolvedUserId = persisted.userId || resolvedContext?.userId || `demo-${persisted.email}`
+
+        const organizations: Organization[] = [
+          {
+            id: resolvedOrgId,
+            name: resolvedOrgName,
+            roles: resolvedRoles,
+            get role(): OrgMemberRole {
+              return this.roles[0] ?? 'parent'
+            },
+          },
+        ]
+
+        const demoUser = {
+          id: resolvedUserId,
+          email: persisted.email,
+          user_metadata: { signup_mode: 'parent' },
+        } as unknown as User
+
+        const legacyRole: LegacyUserRole | undefined = resolvedRoles.includes('org_admin')
+          ? 'admin'
+          : resolvedRoles.includes('coach')
+            ? 'coach'
+            : resolvedRoles.includes('parent')
+              ? 'parent'
+              : undefined
+
+        const demoProfile: UserProfile = {
+          id: resolvedUserId,
+          email: persisted.email,
+          phone: '',
+          first_name: '',
+          last_name: '',
+          display_name: persisted.email.split('@')[0] ?? null,
+          home_location: null,
+          home_zipcode: undefined,
+          role: legacyRole,
+          family_id: null,
+          org_id: resolvedOrgId,
+          organizations,
+          isPlatformAdmin: persisted.isPlatformAdmin,
+          platformAdminRole: null,
+          requiresOrgSetup: false,
+        }
+
+        if (mountedRef.current) {
+          setUser(demoUser)
+          setSession(null)
+          setProfile(demoProfile)
+          setOrganizations(organizations)
+        }
+      } else {
+        clearFakeAuthState()
+      }
+
       setLoading(false)
       return () => {
         mountedRef.current = false
@@ -566,6 +699,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         requiresOrgSetup: false,
       }
 
+      writeFakeAuthState({
+        userId: demoContext.userId,
+        email: demoContext.email ?? email.toLowerCase().trim(),
+        orgId: resolvedDemoOrgId,
+        orgName: resolvedDemoOrgName,
+        roles,
+        isPlatformAdmin: demoContext.isPlatformAdmin,
+      })
+
       setUser(demoUser)
       setSession(null)
             setProfile(demoProfile)
@@ -713,6 +855,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             clearStoredDemoCode()
             refreshSession()
           }
+          clearFakeAuthState()
           setUser(null)
           setProfile(null)
           setSession(null)

@@ -13,9 +13,9 @@ import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { debug } from '../lib/debug'
 import { getAthleteById } from '../data/services/familyService'
 import { getAthleteTeamHistory } from '../data/services/teamsService'
-import { getAthletePhotoUrl } from '../data/services/athletePhotoService'
-import { getDisplayName, getAthleteInitials } from '../utils/athleteHelpers'
+import { getDisplayName } from '../utils/athleteHelpers'
 import PortalLayout from '../components/portal/PortalLayout'
+import AthleteAvatar from '../components/portal/AthleteAvatar'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
@@ -49,7 +49,6 @@ export default function AthleteProfilePage() {
   const isAthlete = currentOrganization?.roles?.includes('athlete') ?? false
 
   const [athlete, setAthlete] = useState<Athlete | null>(null)
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const [activeTab, setActiveTab] = useState<'universal' | 'physical' | 'sports' | 'medical'>('universal')
@@ -71,17 +70,6 @@ export default function AthleteProfilePage() {
       if (data && !error) {
         debug.data('AthleteProfile', 'Athlete data loaded', { athleteId, athleteName: `${data.first_name} ${data.last_name}` })
         setAthlete(data)
-        // Also update photo if needed, but photoUrl is separate state?
-        // Actually photoUrl state update logic is inside the initial fetch.
-        // BasicInfoForm handles its own visual update or we reload everything.
-        // Let's reload photo url too just in case.
-         if (data.has_profile_photo && data.id) {
-            const orgId = data.org_id ?? context.orgId
-            if (orgId) {
-              const url = getAthletePhotoUrl(orgId, data.id, '512')
-              if (url) setPhotoUrl(url)
-            }
-         }
       } else if (error) {
         debug.error('AthleteProfile', 'Failed to load athlete data', { athleteId, error: error.message })
         setError(error)
@@ -180,17 +168,6 @@ export default function AthleteProfilePage() {
         }
 
         setAthlete(data)
-
-        // Load photo (use context.orgId when athlete.org_id missing, e.g. fake data)
-        if (data.has_profile_photo && data.id) {
-          const orgId = data.org_id ?? context.orgId
-          if (orgId) {
-            const url = getAthletePhotoUrl(orgId, data.id, '512')
-            if (isMountedRef.current && url) {
-              setPhotoUrl(url)
-            }
-          }
-        }
 
         setLoading(false)
       } catch (err) {
@@ -313,12 +290,6 @@ export default function AthleteProfilePage() {
   }
 
   const displayName = getDisplayName(athlete)
-  const initials = getAthleteInitials(athlete.first_name, athlete.last_name)
-
-
-
-
-
   return (
     <PortalLayout
       breadcrumbs={[
@@ -328,21 +299,11 @@ export default function AthleteProfilePage() {
       ]}
     >
       {/* Page Header */}
-      <div className="mb-8">
-        <div className="flex items-start gap-6 mb-6">
+      <div className="mb-8 space-y-4">
+        <div className="flex items-start gap-6">
           {/* Athlete Photo */}
-          <div className="flex-shrink-0">
-            {photoUrl ? (
-              <img
-                src={photoUrl}
-                alt={displayName}
-                className="w-24 h-24 rounded-full object-cover border-4 border-[var(--org-btn-primary-bg, #137fec)]"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[var(--org-btn-primary-bg, #137fec)] to-slate-600 flex items-center justify-center text-white text-3xl font-black">
-                {initials}
-              </div>
-            )}
+          <div className="flex-shrink-0 w-24 h-24 rounded-full overflow-hidden border-4 border-[var(--org-btn-primary-bg, #137fec)]">
+            <AthleteAvatar athlete={athlete} photoSize="512" className="w-full h-full rounded-full object-cover" />
           </div>
 
           {/* Title */}
@@ -351,19 +312,17 @@ export default function AthleteProfilePage() {
             <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
               Athlete Profile
             </p>
-            {athleteId && (
-              <div className="mt-4">
-                <PhotoSection
-                  entityType="athlete"
-                  entityId={athleteId}
-                  orgId={athlete?.org_id}
-                  title="Athlete Photos"
-                  canUpload
-                />
-              </div>
-            )}
           </div>
         </div>
+        {athleteId && (
+          <PhotoSection
+            entityType="athlete"
+            entityId={athleteId}
+            orgId={athlete?.org_id}
+            title="Athlete Photos"
+            canUpload
+          />
+        )}
       </div>
 
       {/* Tabs */}

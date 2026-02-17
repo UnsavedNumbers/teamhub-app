@@ -125,6 +125,7 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
   onMarkerClick
 }, ref) => {
   const playerRef = useRef<HTMLElement>(null)
+  const nativeVideoRef = useRef<HTMLVideoElement>(null)
   const [isScriptLoaded, setIsScriptLoaded] = useState(false)
   const [playerError, setPlayerError] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState(0)
@@ -146,6 +147,9 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
     type: 'video',
     enabled: !!videoId && isReady
   })
+  const directStreamUrl = playbackData?.stream_url || ''
+  const isDirectVideoSource =
+    directStreamUrl.startsWith('/demo-assets/videos/') || /\.mp4($|\?)/i.test(directStreamUrl)
   
   // Show status message for non-ready videos
   if (!isReady) {
@@ -190,16 +194,22 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
   
   // Load Mux Player script on mount
   useEffect(() => {
+    if (isDirectVideoSource) {
+      setPlayerError(null)
+      return
+    }
+
     loadMuxPlayerScript()
       .then(() => setIsScriptLoaded(true))
       .catch((err) => {
         setPlayerError(err.message)
         onError?.(err)
       })
-  }, [onError])
+  }, [onError, isDirectVideoSource])
   
   // Set up player event listeners and chapters
   useEffect(() => {
+    if (isDirectVideoSource) return
     const player = playerRef.current as any
     if (!player || !isScriptLoaded) return
     
@@ -269,10 +279,11 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
       player.removeEventListener('ended', handleEnded)
       player.removeEventListener('error', handleError)
     }
-  }, [isScriptLoaded, onReady, onPlay, onPause, onTimeUpdate, onEnded, onError])
+  }, [isScriptLoaded, onReady, onPlay, onPause, onTimeUpdate, onEnded, onError, isDirectVideoSource])
   
   // Re-add chapters when the chapters prop changes after initial load (e.g. bookmarks loaded late)
   useEffect(() => {
+    if (isDirectVideoSource) return
     const player = playerRef.current as any
     if (!player || !isScriptLoaded || chapters.length === 0) return
 
@@ -292,11 +303,11 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
       player.addEventListener('loadedmetadata', applyChapters, { once: true })
       return () => player.removeEventListener('loadedmetadata', applyChapters)
     }
-  }, [isScriptLoaded, chapters])
+  }, [isScriptLoaded, chapters, isDirectVideoSource])
 
   // Seek to a specific time
   const seekTo = useCallback((time: number) => {
-    const player = playerRef.current as any
+    const player = (nativeVideoRef.current as any) || (playerRef.current as any)
     if (player) {
       player.currentTime = time
     }
@@ -304,13 +315,13 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
 
   // Get current time
   const getCurrentTime = useCallback((): number => {
-    const player = playerRef.current as any
+    const player = (nativeVideoRef.current as any) || (playerRef.current as any)
     return player?.currentTime ?? currentTime
   }, [currentTime])
 
   // Play
   const play = useCallback(() => {
-    const player = playerRef.current as any
+    const player = (nativeVideoRef.current as any) || (playerRef.current as any)
     if (player && typeof player.play === 'function') {
       player.play()
     }
@@ -318,7 +329,7 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
 
   // Pause
   const pause = useCallback(() => {
-    const player = playerRef.current as any
+    const player = (nativeVideoRef.current as any) || (playerRef.current as any)
     if (player && typeof player.pause === 'function') {
       player.pause()
     }
@@ -339,7 +350,7 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
   }, [seekTo, onMarkerClick])
   
   // Loading state
-  if (isLoading || !isScriptLoaded) {
+  if (isLoading || (!isDirectVideoSource && !isScriptLoaded)) {
     return (
       <div className={cn(
         "relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center",
@@ -380,6 +391,87 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
           <Icon name="videocam_off" size="text-4xl" className="text-slate-400" />
           <span className="text-sm font-medium">Video not available</span>
         </div>
+      </div>
+    )
+  }
+
+  if (isDirectVideoSource) {
+    return (
+      <div className={cn("relative w-full", className)}>
+        <video
+          ref={nativeVideoRef}
+          src={directStreamUrl}
+          poster={poster || playbackData.thumbnail_url}
+          autoPlay={autoPlay}
+          muted={muted}
+          loop={loop}
+          controls={_controls}
+          playsInline
+          className="w-full"
+          style={{
+            aspectRatio: '16/9',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            background: 'black',
+          }}
+          onLoadedMetadata={(event) => {
+            const element = event.currentTarget
+            setDuration(element.duration || 0)
+            onReady?.()
+          }}
+          onPlay={() => {
+            setIsPlaying(true)
+            onPlay?.()
+          }}
+          onPause={(event) => {
+            setIsPlaying(false)
+            onPause?.()
+            onTimeUpdate?.(event.currentTarget.currentTime)
+          }}
+          onTimeUpdate={(event) => {
+            const time = event.currentTarget.currentTime || 0
+            setCurrentTime(time)
+            onTimeUpdate?.(time)
+          }}
+          onEnded={() => {
+            setIsPlaying(false)
+            onEnded?.()
+          }}
+          onError={() => {
+            const err = new Error('Video playback error')
+            setPlayerError(err.message)
+            onError?.(err)
+          }}
+        />
+
+        {markers.length > 0 && duration > 0 && (
+          <div className="relative w-full h-6 mt-2">
+            <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-1 bg-slate-200 dark:bg-slate-700 rounded-full">
+              <div
+                className="absolute top-0 left-0 h-full bg-[var(--org-btn-primary-bg)] rounded-full transition-all"
+                style={{ width: `${(currentTime / duration) * 100}%` }}
+              />
+
+              {markers.map((marker, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleMarkerClick(marker)}
+                  className={cn(
+                    "absolute top-1/2 -translate-y-1/2 size-3 rounded-full cursor-pointer hover:scale-150 transition-transform border-2 border-white shadow-md",
+                    marker.time <= currentTime
+                      ? "bg-[var(--org-btn-primary-bg)]"
+                      : "bg-slate-400"
+                  )}
+                  style={{
+                    left: `${(marker.time / duration) * 100}%`,
+                    backgroundColor: marker.color
+                  }}
+                  title={marker.label || `${Math.floor(marker.time / 60)}:${String(Math.floor(marker.time % 60)).padStart(2, '0')}`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     )
   }

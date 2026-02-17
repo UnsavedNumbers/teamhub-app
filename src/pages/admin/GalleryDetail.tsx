@@ -19,6 +19,7 @@ import {
   type KeysetCursor,
 } from '@/data/services/galleryService'
 import { getMockGalleryById, getMockPhotosForGallery } from '@/data/fake/mockGalleries'
+import { FAKE_DATA_DELAY_MS } from '@/data/config'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
 import { usePhotoFilters } from '@/hooks/usePhotoFilters'
@@ -197,6 +198,9 @@ export default function GalleryDetail() {
     }
 
     if (USE_FAKE_DATA) {
+      if (FAKE_DATA_DELAY_MS > 0) {
+        await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+      }
       const mockPhotosDb = getMockPhotosForGallery(id)
       const mockPhotos = mockPhotosDb.map(
         (p) => ({ ...p, can_download: p.can_download ?? undefined }) as unknown as GalleryPhoto,
@@ -258,6 +262,7 @@ export default function GalleryDetail() {
   useEffect(() => {
     loadGallery()
     loadAlbums()
+    // Use stable deps so effect doesn't re-run on every render (context reference changes frequently)
   }, [loadGallery, loadAlbums])
 
   useEffect(() => {
@@ -269,7 +274,7 @@ export default function GalleryDetail() {
   useEffect(() => {
     loadPhotos(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, context, viewMode, filters.q, filters.album, filters.athlete, filters.sort, filters.status, filters.from, filters.to, gridPageSize, rowsPerPage, page])
+  }, [id, context?.userId, context?.orgId, viewMode, filters.q, filters.album, filters.athlete, filters.sort, filters.status, filters.from, filters.to, gridPageSize, rowsPerPage, page])
 
   useInfinitePhotos({
     hasMore: viewMode === 'grid' ? hasMore : false,

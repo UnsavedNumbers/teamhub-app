@@ -101,7 +101,8 @@ export default function Photos() {
     }
 
     loadGalleries()
-  }, [context, isReady])
+    // Use stable deps so the effect doesn't re-run every render (context is often a new object reference)
+  }, [isReady, context.userId, context.orgId])
 
   const sortOptions = useMemo(
     () => [

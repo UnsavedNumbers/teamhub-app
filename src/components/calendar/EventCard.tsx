@@ -61,7 +61,7 @@ export default function EventCard({ event, sport = null, onClick, compact = fals
       </div>
         
       {/* Card Content */}
-      <div className="pa-p-3 flex-1 flex flex-col justify-end">
+      <div className="px-3 pt-3 pb-4 flex-1 flex flex-col justify-end">
         <div className="min-w-0 flex-1">
           <div className={`pa-font-semibold text-slate-900 dark:text-white group-hover:text-[var(--org-link-color)] transition-colors mb-1 ${isCancelled ? 'line-through text-slate-500 dark:text-slate-400' : ''}`}>
             {event.title}
@@ -78,7 +78,7 @@ export default function EventCard({ event, sport = null, onClick, compact = fals
           )}
 
           {!compact && (
-            <div className="space-y-1.5 text-sm text-slate-600 dark:text-slate-400 mt-2">
+            <div className="space-y-1.5 text-sm text-slate-600 dark:text-slate-400 mt-2 pb-1">
                {event.arrival_time && (
                 <div className="flex items-center gap-2">
                   <Icon name="schedule" size="text-base" className="text-amber-500" />

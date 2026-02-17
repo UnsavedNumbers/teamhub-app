@@ -21,7 +21,10 @@ import {
 import type { FanOrgFollow } from '../../types/staffAndFan'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import AthleteAvatar from '../../components/portal/AthleteAvatar'
+import { useUserContext } from '../../hooks/useUserContext'
 import { showError, showSuccess } from '../../utils/toast'
+import type { Athlete } from '../../types/family'
 import '../../styles/fan.css'
 import '../../styles/fan-layouts.css'
 
@@ -260,6 +263,7 @@ function MyFollowingTab({ onSwitchToDiscover }: MyFollowingTabProps) {
                 id={athlete.id}
                 name={`${athlete.first_name} ${athlete.last_name}`}
                 logoUrl={athlete.photo_url}
+                athlete={athlete}
                 subtitle={athlete.team_name}
                 sport={athlete.sport}
                 onUnfollow={() => handleUnfollow('athlete', athlete.id)}
@@ -289,13 +293,15 @@ interface FollowingCardProps {
   name: string
   slug?: string
   logoUrl?: string
+  athlete?: { id: string; first_name: string; last_name: string; org_id?: string; photo_url?: string | null }
   subtitle?: string
   sport?: string
   onUnfollow: () => void
   onClick: () => void
 }
 
-function FollowingCard({ type, name, logoUrl, subtitle, sport, onUnfollow, onClick }: FollowingCardProps) {
+function FollowingCard({ type, name, logoUrl, athlete, subtitle, sport, onUnfollow, onClick }: FollowingCardProps) {
+  const { context } = useUserContext()
   const [isUnfollowing, setIsUnfollowing] = useState(false)
 
   const handleUnfollow = async (e: React.MouseEvent) => {
@@ -315,8 +321,14 @@ function FollowingCard({ type, name, logoUrl, subtitle, sport, onUnfollow, onCli
 
   return (
     <div className="fan-following-card" onClick={onClick}>
-      <div className="fan-following-card-avatar">
-        {logoUrl ? (
+      <div className="fan-following-card-avatar overflow-hidden">
+        {type === 'athlete' && athlete ? (
+          <AthleteAvatar
+            athlete={{ id: athlete.id, first_name: athlete.first_name, last_name: athlete.last_name, org_id: athlete.org_id ?? context?.orgId, has_profile_photo: !!athlete.photo_url, profile_photo_updated_at: null } as unknown as Athlete}
+            photoSize="256"
+            className="w-full h-full object-cover"
+          />
+        ) : logoUrl ? (
           <img src={logoUrl} alt={name} />
         ) : (
           <span className="material-symbols-outlined">{getIcon()}</span>

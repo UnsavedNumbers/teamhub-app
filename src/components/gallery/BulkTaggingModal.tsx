@@ -9,6 +9,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { supabase } from '../../lib/supabase'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getMockGalleryById } from '../../data/fake/mockGalleries'
 import {
   getGalleryPhotoUrl,
   type GalleryPhoto,
@@ -17,12 +19,15 @@ import {
 import {
   getSuggestedPeopleForGallery,
   searchPeopleForGallery,
+  setTagsForPhoto,
   type GalleryContext,
   type SuggestedPerson,
 } from '../../data/services/taggingService'
+import AthleteAvatar from '../portal/AthleteAvatar'
 import Button from '../portal/Button'
 import Icon from '../portal/Icon'
 import { showError, showSuccess } from '../../utils/toast'
+import type { Athlete } from '../../types/family'
 
 // ============================================================================
 // Props Interface
@@ -111,18 +116,22 @@ export function BulkTaggingModal({
 
   // Load gallery info and suggestions when modal opens
   useEffect(() => {
-    if (!isOpen || !isReady || !context.orgId || photos.length === 0) return
+    if (!isOpen || !isReady || photos.length === 0) return
+    if (!USE_FAKE_DATA && !context.orgId) return
 
     const loadData = async () => {
       setLoading(true)
 
       try {
-        // Get gallery info from first photo
-        const { data: galleryData } = await supabase
-          .from('galleries')
-          .select('*')
-          .eq('id', photos[0].gallery_id)
-          .single()
+        const galleryData = USE_FAKE_DATA
+          ? getMockGalleryById(photos[0].gallery_id)
+          : (
+            await supabase
+              .from('galleries')
+              .select('*')
+              .eq('id', photos[0].gallery_id)
+              .single()
+          ).data
 
         if (!galleryData) {
           setLoading(false)
@@ -236,6 +245,9 @@ export function BulkTaggingModal({
       const personIds = Array.from(selectedIds)
       const photoIds = photos.map((p) => p.id)
 
+      if (USE_FAKE_DATA) {
+        await Promise.all(photoIds.map((photoId) => setTagsForPhoto(photoId, personIds)))
+      } else {
       // Bulk insert tags for all selected photos
       const tagsToInsert = photoIds.flatMap((photoId) =>
         personIds.map((personId) => ({
@@ -252,6 +264,7 @@ export function BulkTaggingModal({
         })
 
       if (insertError) throw insertError
+      }
 
       showSuccess(
         t('gallery.bulkTagging.saveSuccess', {
@@ -399,19 +412,12 @@ export function BulkTaggingModal({
                       aria-label={`Toggle ${displayName}`}
                     >
                       <div className="flex flex-col items-center gap-2">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-slate-600 flex items-center justify-center text-white font-bold">
-                          {person.photo_url ? (
-                            <img
-                              src={person.photo_url}
-                              alt={displayName}
-                              className="h-full w-full rounded-full object-cover"
-                            />
-                          ) : (
-                            <span>
-                              {person.first_name[0]}
-                              {person.last_name[0]}
-                            </span>
-                          )}
+                        <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-slate-600 flex items-center justify-center text-white font-bold">
+                          <AthleteAvatar
+                            athlete={{ id: person.id, first_name: person.first_name, last_name: person.last_name, org_id: context?.orgId, has_profile_photo: !!person.photo_url, profile_photo_updated_at: null } as unknown as Athlete}
+                            photoSize="256"
+                            className="h-full w-full rounded-full object-cover"
+                          />
                         </div>
                         <div className="text-xs text-center truncate w-full">
                           {displayName}

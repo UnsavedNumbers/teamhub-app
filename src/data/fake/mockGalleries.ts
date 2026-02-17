@@ -53,12 +53,12 @@ export const MOCK_GALLERY_PHOTOS: GalleryPhoto[] = [
     id: 'mock-photo-2',
     gallery_id: 'mock-gallery-1',
     album_id: null,
-    storage_path: getPhotoAssetUrl('team-huddle.jpg'),
+    storage_path: getPhotoAssetUrl('team-warmup.jpg'),
     thumbnail_path: null,
     thumbnail_sm_path: null,
     thumbnail_md_path: null,
     thumbnail_lg_path: null,
-    filename: 'team-huddle.jpg',
+    filename: 'team-warmup.jpg',
     size_bytes: 198000,
     sort_order: 2,
     status: 'approved',
@@ -135,12 +135,12 @@ export const MOCK_GALLERY_PHOTOS: GalleryPhoto[] = [
     id: 'mock-photo-6',
     gallery_id: 'mock-gallery-3',
     album_id: null,
-    storage_path: getPhotoAssetUrl('player-portrait.jpg'),
+    storage_path: getPhotoAssetUrl('players-action.jpg'),
     thumbnail_path: null,
     thumbnail_sm_path: null,
     thumbnail_md_path: null,
     thumbnail_lg_path: null,
-    filename: 'player-portrait.jpg',
+    filename: 'players-action.jpg',
     size_bytes: 201000,
     sort_order: 1,
     status: 'approved',
@@ -378,10 +378,36 @@ export const MOCK_GALLERIES: Gallery[] = [
 ]
 
 /**
+ * Curated fake galleries used across portal/admin pages.
+ * Keep this list at exactly 3 entries for deterministic demo behavior.
+ */
+export const DEMO_GALLERY_IDS = ['mock-gallery-1', 'mock-gallery-3', 'mock-gallery-5'] as const
+const DEMO_GALLERY_ID_SET = new Set<string>(DEMO_GALLERY_IDS)
+
+export type MockGalleryWithComputed = Gallery & {
+  photo_count: number
+  pending_count: number
+  cover_url: string | null
+}
+
+/**
  * Get mock galleries for a specific organization
  */
-export function getMockGalleriesForOrg(orgId: string): Gallery[] {
-  return MOCK_GALLERIES.filter((g) => g.org_id === orgId)
+export function getMockGalleriesForOrg(orgId?: string | null): MockGalleryWithComputed[] {
+  const effectiveOrgId = orgId || DEMO_ORG_A_ID
+  return MOCK_GALLERIES
+    .filter((g) => g.org_id === effectiveOrgId && DEMO_GALLERY_ID_SET.has(g.id))
+    .map((gallery) => {
+      const photos = getMockPhotosForGallery(gallery.id)
+      const pendingCount = photos.filter((photo) => photo.status === 'pending').length
+      const coverPhoto = photos.find((photo) => photo.id === gallery.cover_photo_id) || photos[0] || null
+      return {
+        ...gallery,
+        photo_count: photos.length,
+        pending_count: pendingCount,
+        cover_url: coverPhoto?.storage_path || null,
+      }
+    })
 }
 
 /**

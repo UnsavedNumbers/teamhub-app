@@ -222,6 +222,7 @@ export default function AdminAthletes() {
                         jersey_number: d.jersey_number,
                         photo_url: null,
                         has_profile_photo: d.has_profile_photo,
+                        org_id: context.orgId,
                         primary_team: teamMembership?.team,
                         primary_sport: athleteSport?.sport,
                     } as AthleteCardData
