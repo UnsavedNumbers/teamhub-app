@@ -131,6 +131,15 @@ supabase/.temp
 .supabase.co
 supabase/migrations/
 
+# Demo assets - exclude large video files (>50MB)
+# Keep small thumbnails and photos, but exclude large video files
+public/demo-assets/videos/*.mp4
+public/demo-assets/videos/*.mov
+public/demo-assets/videos/*.webm
+# Allow small thumbnails (<10MB)
+!public/demo-assets/videos/*.jpg
+!public/demo-assets/videos/*.png
+
 # Docs
 designs/
 docs
