@@ -200,19 +200,19 @@ export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
         
         // Apply sorting
         mockVideos.sort((a, b) => {
-          let aVal: any, bVal: any
+          let aVal: string | number, bVal: string | number
           switch (sortBy) {
             case 'title':
               aVal = a.title.toLowerCase()
               bVal = b.title.toLowerCase()
               break
-            case 'duration':
+            case 'duration_seconds':
               aVal = a.duration_seconds ?? 0
               bVal = b.duration_seconds ?? 0
               break
-            case 'view_count':
-              aVal = a.view_count ?? 0
-              bVal = b.view_count ?? 0
+            case 'recorded_at':
+              aVal = new Date(a.recorded_at || a.created_at).getTime()
+              bVal = new Date(b.recorded_at || b.created_at).getTime()
               break
             case 'created_at':
             default:
