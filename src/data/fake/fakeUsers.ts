@@ -62,6 +62,7 @@ export interface FakeChild {
     allergies: string | null
     emergency_contact_name: string | null
     emergency_contact_phone: string | null
+    photo_url: string | null // Local asset path for demo mode
     created_at: string
     updated_at: string
 }
@@ -274,6 +275,11 @@ export const fakeFamilies: FakeFamily[] = [
 // Fake Children Data
 // ============================================================================
 
+// Helper: Get local athlete photo asset URL
+function getAthletePhotoUrl(filename: string): string {
+  return `/demo-assets/athlete-photos/${filename}`
+}
+
 export const fakeChildren: FakeChild[] = [
     // Johnson Family (parent-only@example.com)
     {
@@ -288,6 +294,7 @@ export const fakeChildren: FakeChild[] = [
         allergies: 'Peanuts',
         emergency_contact_name: 'Jennifer Johnson',
         emergency_contact_phone: '+1 (555) 123-4567',
+        photo_url: getAthletePhotoUrl('emma-johnson.jpg'),
         created_at: getDateInCurrentYear(1, 15, 10),
         updated_at: getDateInCurrentYear(1, 15, 10),
     },
@@ -303,6 +310,7 @@ export const fakeChildren: FakeChild[] = [
         allergies: null,
         emergency_contact_name: 'Jennifer Johnson',
         emergency_contact_phone: '+1 (555) 123-4567',
+        photo_url: getAthletePhotoUrl('liam-johnson.jpg'),
         created_at: getDateInCurrentYear(1, 15, 10),
         updated_at: getDateInCurrentYear(1, 15, 10),
     },
@@ -319,6 +327,7 @@ export const fakeChildren: FakeChild[] = [
         allergies: null,
         emergency_contact_name: 'Mike Smith',
         emergency_contact_phone: '+1 (555) 333-4444',
+        photo_url: getAthletePhotoUrl('olivia-smith.jpg'),
         created_at: '2024-02-10T14:00:00Z',
         updated_at: '2024-02-10T14:00:00Z',
     },
@@ -334,6 +343,7 @@ export const fakeChildren: FakeChild[] = [
         allergies: 'Shellfish',
         emergency_contact_name: 'Mike Smith',
         emergency_contact_phone: '+1 (555) 333-4444',
+        photo_url: getAthletePhotoUrl('noah-smith.jpg'),
         created_at: '2024-02-10T14:00:00Z',
         updated_at: '2024-02-10T14:00:00Z',
     },
@@ -350,6 +360,7 @@ export const fakeChildren: FakeChild[] = [
         allergies: null,
         emergency_contact_name: 'Robert Chen',
         emergency_contact_phone: '+1 (555) 456-7890',
+        photo_url: getAthletePhotoUrl('ava-williams.jpg'),
         created_at: getDateInCurrentYear(1, 20, 11),
         updated_at: getDateInCurrentYear(1, 20, 11),
     },
@@ -365,6 +376,7 @@ export const fakeChildren: FakeChild[] = [
         allergies: 'Dairy',
         emergency_contact_name: 'Robert Chen',
         emergency_contact_phone: '+1 (555) 456-7890',
+        photo_url: getAthletePhotoUrl('ethan-williams.jpg'),
         created_at: getDateInCurrentYear(1, 20, 11),
         updated_at: getDateInCurrentYear(1, 20, 11),
     },
@@ -381,6 +393,7 @@ export const fakeChildren: FakeChild[] = [
         allergies: null,
         emergency_contact_name: 'Robert Chen',
         emergency_contact_phone: '+1 (555) 456-7890',
+        photo_url: getAthletePhotoUrl('sophia-chen.jpg'),
         created_at: '2023-11-15T10:00:00Z',
         updated_at: '2023-11-15T10:00:00Z',
     },
@@ -397,6 +410,7 @@ export const fakeChildren: FakeChild[] = [
         allergies: null,
         emergency_contact_name: 'Maria Rodriguez',
         emergency_contact_phone: '+1 (555) 567-8901',
+        photo_url: getAthletePhotoUrl('mason-rodriguez.jpg'),
         created_at: getDateInCurrentYear(2, 1, 11),
         updated_at: getDateInCurrentYear(2, 1, 11),
     },
@@ -412,6 +426,7 @@ export const fakeChildren: FakeChild[] = [
         allergies: null,
         emergency_contact_name: 'Maria Rodriguez',
         emergency_contact_phone: '+1 (555) 567-8901',
+        photo_url: getAthletePhotoUrl('isabella-rodriguez.jpg'),
         created_at: getDateInCurrentYear(2, 1, 11),
         updated_at: getDateInCurrentYear(2, 1, 11),
     },
@@ -428,6 +443,7 @@ export const fakeChildren: FakeChild[] = [
         allergies: 'Tree nuts',
         emergency_contact_name: 'Priya Patel',
         emergency_contact_phone: '+1 (555) 999-0000',
+        photo_url: getAthletePhotoUrl('aiden-patel.jpg'),
         created_at: '2024-03-01T09:00:00Z',
         updated_at: '2024-03-01T09:00:00Z',
     },
@@ -712,6 +728,7 @@ for (let i = 0; i < 50; i++) {
             allergies: childIdx % 12 === 0 ? pick(['Peanuts', 'Tree nuts', 'Dairy', 'Shellfish', 'Gluten'], childIdx) : null,
             emergency_contact_name: `${firstName} ${lastName}`,
             emergency_contact_phone: generatePhone(2000 + i),
+            photo_url: getAthletePhotoUrl(`${childFirstName.toLowerCase()}-${lastName.toLowerCase()}.jpg`),
             created_at: createdAt,
             updated_at: createdAt,
         })

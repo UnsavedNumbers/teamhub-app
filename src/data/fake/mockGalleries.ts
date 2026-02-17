@@ -16,7 +16,16 @@ type GalleryPhoto = Database['public']['Tables']['gallery_photos']['Row']
 // ============================================================================
 
 /**
- * Mock photos using placeholder images
+ * Helper: Get local photo asset URL
+ * All demo photos are stored in /public/demo-assets/photos/
+ */
+function getPhotoAssetUrl(filename: string): string {
+  return `/demo-assets/photos/${filename}`
+}
+
+/**
+ * Mock photos using local assets stored in /public/demo-assets/photos/
+ * Replace these filenames with actual images to customize demo content.
  */
 export const MOCK_GALLERY_PHOTOS: GalleryPhoto[] = [
   // Team Championship Gallery
@@ -24,7 +33,7 @@ export const MOCK_GALLERY_PHOTOS: GalleryPhoto[] = [
     id: 'mock-photo-1',
     gallery_id: 'mock-gallery-1',
     album_id: null,
-    storage_path: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800',
+    storage_path: getPhotoAssetUrl('team-celebration.jpg'),
     thumbnail_path: null,
     thumbnail_sm_path: null,
     thumbnail_md_path: null,
@@ -44,7 +53,7 @@ export const MOCK_GALLERY_PHOTOS: GalleryPhoto[] = [
     id: 'mock-photo-2',
     gallery_id: 'mock-gallery-1',
     album_id: null,
-    storage_path: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=800',
+    storage_path: getPhotoAssetUrl('team-huddle.jpg'),
     thumbnail_path: null,
     thumbnail_sm_path: null,
     thumbnail_md_path: null,
@@ -64,7 +73,7 @@ export const MOCK_GALLERY_PHOTOS: GalleryPhoto[] = [
     id: 'mock-photo-3',
     gallery_id: 'mock-gallery-1',
     album_id: null,
-    storage_path: 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=800',
+    storage_path: getPhotoAssetUrl('players-action.jpg'),
     thumbnail_path: null,
     thumbnail_sm_path: null,
     thumbnail_md_path: null,
@@ -85,7 +94,7 @@ export const MOCK_GALLERY_PHOTOS: GalleryPhoto[] = [
     id: 'mock-photo-4',
     gallery_id: 'mock-gallery-2',
     album_id: null,
-    storage_path: 'https://images.unsplash.com/photo-1551958219-acbc608c6377?w=800',
+    storage_path: getPhotoAssetUrl('soccer-action.jpg'),
     thumbnail_path: null,
     thumbnail_sm_path: null,
     thumbnail_md_path: null,
@@ -105,7 +114,7 @@ export const MOCK_GALLERY_PHOTOS: GalleryPhoto[] = [
     id: 'mock-photo-5',
     gallery_id: 'mock-gallery-2',
     album_id: null,
-    storage_path: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800',
+    storage_path: getPhotoAssetUrl('team-warmup.jpg'),
     thumbnail_path: null,
     thumbnail_sm_path: null,
     thumbnail_md_path: null,
@@ -126,7 +135,7 @@ export const MOCK_GALLERY_PHOTOS: GalleryPhoto[] = [
     id: 'mock-photo-6',
     gallery_id: 'mock-gallery-3',
     album_id: null,
-    storage_path: 'https://images.unsplash.com/photo-1628779238951-be2c9f2a59f4?w=800',
+    storage_path: getPhotoAssetUrl('player-portrait.jpg'),
     thumbnail_path: null,
     thumbnail_sm_path: null,
     thumbnail_md_path: null,
@@ -147,7 +156,7 @@ export const MOCK_GALLERY_PHOTOS: GalleryPhoto[] = [
     id: 'mock-photo-7',
     gallery_id: 'mock-gallery-4',
     album_id: null,
-    storage_path: 'https://images.unsplash.com/photo-1589487391730-58f20eb2c308?w=800',
+    storage_path: getPhotoAssetUrl('tournament-field.jpg'),
     thumbnail_path: null,
     thumbnail_sm_path: null,
     thumbnail_md_path: null,
@@ -167,7 +176,7 @@ export const MOCK_GALLERY_PHOTOS: GalleryPhoto[] = [
     id: 'mock-photo-8',
     gallery_id: 'mock-gallery-4',
     album_id: null,
-    storage_path: 'https://images.unsplash.com/photo-1577223625816-7546f36abbc4?w=800',
+    storage_path: getPhotoAssetUrl('tournament-trophy.jpg'),
     thumbnail_path: null,
     thumbnail_sm_path: null,
     thumbnail_md_path: null,
@@ -188,7 +197,7 @@ export const MOCK_GALLERY_PHOTOS: GalleryPhoto[] = [
     id: 'mock-photo-9',
     gallery_id: 'mock-gallery-5',
     album_id: null,
-    storage_path: 'https://images.unsplash.com/photo-1526232761682-d26e03ac148e?w=800',
+    storage_path: getPhotoAssetUrl('facility-exterior.jpg'),
     thumbnail_path: null,
     thumbnail_sm_path: null,
     thumbnail_md_path: null,
@@ -208,7 +217,7 @@ export const MOCK_GALLERY_PHOTOS: GalleryPhoto[] = [
     id: 'mock-photo-10',
     gallery_id: 'mock-gallery-5',
     album_id: null,
-    storage_path: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800',
+    storage_path: getPhotoAssetUrl('equipment-room.jpg'),
     thumbnail_path: null,
     thumbnail_sm_path: null,
     thumbnail_md_path: null,

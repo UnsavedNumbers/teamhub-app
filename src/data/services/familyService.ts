@@ -85,9 +85,9 @@ function mapFakeChild(c: FakeChild): Child {
         emergency_contact_phone: c.emergency_contact_phone,
         phone: null,
         email: null,
-        photo_url: null,
-        profile_photo_updated_at: null,
-        has_profile_photo: false,
+        photo_url: c.photo_url || null, // Use photo_url from fake data if available
+        profile_photo_updated_at: c.photo_url ? new Date().toISOString() : null,
+        has_profile_photo: !!c.photo_url,
         created_at: c.created_at,
         updated_at: c.updated_at,
         deleted_at: null,

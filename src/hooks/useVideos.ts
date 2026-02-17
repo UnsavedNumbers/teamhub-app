@@ -24,6 +24,8 @@ import type {
 } from '@/types/video'
 import type { Database, Json } from '@/lib/supabase.extended.types'
 import { useAuth } from './useAuth'
+import { USE_FAKE_DATA } from '@/data/config'
+import { getMockVideosForOrg, getMockVideoById } from '@/data/fake/mockVideos'
 
 // ============================================================================
 // Edge Function URL Configuration
@@ -150,6 +152,101 @@ export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
     setError(null)
     
     try {
+      // Fake data mode: use mock videos
+      if (USE_FAKE_DATA) {
+        await new Promise(resolve => setTimeout(resolve, 300)) // Simulate delay
+        
+        let mockVideos = getMockVideosForOrg(orgId)
+        
+        // Apply filters
+        if (filters.search) {
+          const searchLower = filters.search.toLowerCase()
+          mockVideos = mockVideos.filter(v => 
+            v.title.toLowerCase().includes(searchLower) ||
+            (v.description?.toLowerCase().includes(searchLower) ?? false)
+          )
+        }
+        
+        if (filters.category) {
+          const categories = Array.isArray(filters.category) ? filters.category : [filters.category]
+          mockVideos = mockVideos.filter(v => categories.includes(v.category))
+        }
+        
+        if (filters.visibility) {
+          const visibilities = Array.isArray(filters.visibility) ? filters.visibility : [filters.visibility]
+          mockVideos = mockVideos.filter(v => visibilities.includes(v.visibility))
+        }
+        
+        if (filters.status) {
+          const statuses = Array.isArray(filters.status) ? filters.status : [filters.status]
+          mockVideos = mockVideos.filter(v => statuses.includes(v.status))
+        }
+        
+        if (filters.team_id) {
+          mockVideos = mockVideos.filter(v => v.team_id === filters.team_id)
+        }
+        
+        if (filters.event_id) {
+          mockVideos = mockVideos.filter(v => v.event_id === filters.event_id)
+        }
+        
+        if (filters.date_from) {
+          mockVideos = mockVideos.filter(v => v.recorded_at && v.recorded_at >= filters.date_from!)
+        }
+        
+        if (filters.date_to) {
+          mockVideos = mockVideos.filter(v => v.recorded_at && v.recorded_at <= filters.date_to!)
+        }
+        
+        // Apply sorting
+        mockVideos.sort((a, b) => {
+          let aVal: any, bVal: any
+          switch (sortBy) {
+            case 'title':
+              aVal = a.title.toLowerCase()
+              bVal = b.title.toLowerCase()
+              break
+            case 'duration':
+              aVal = a.duration_seconds ?? 0
+              bVal = b.duration_seconds ?? 0
+              break
+            case 'view_count':
+              aVal = a.view_count ?? 0
+              bVal = b.view_count ?? 0
+              break
+            case 'created_at':
+            default:
+              aVal = new Date(a.created_at).getTime()
+              bVal = new Date(b.created_at).getTime()
+              break
+          }
+          
+          if (sortOrder === 'asc') {
+            return aVal > bVal ? 1 : aVal < bVal ? -1 : 0
+          } else {
+            return aVal < bVal ? 1 : aVal > bVal ? -1 : 0
+          }
+        })
+        
+        // Apply pagination
+        const currentPage = isLoadMore ? page + 1 : 1
+        const offset = (currentPage - 1) * limit
+        const paginatedVideos = mockVideos.slice(offset, offset + limit)
+        
+        if (isLoadMore) {
+          setVideos(prev => [...prev, ...paginatedVideos])
+          setPage(currentPage)
+        } else {
+          setVideos(paginatedVideos)
+          setPage(1)
+        }
+        
+        setTotal(mockVideos.length)
+        setIsLoading(false)
+        return
+      }
+      
+      // Real data mode
       let query = supabase
         .from('videos')
         .select(`
@@ -309,6 +406,58 @@ export function usePortalVideoLibrary(options: UsePortalVideoLibraryOptions = {}
     setError(null)
 
     try {
+      // Fake data mode: use mock videos (only ready status)
+      if (USE_FAKE_DATA) {
+        await new Promise(resolve => setTimeout(resolve, 300)) // Simulate delay
+        
+        let mockVideos = getMockVideosForOrg(orgId).filter(v => v.status === 'ready')
+        
+        // Apply filters
+        if (filters.search) {
+          const searchLower = filters.search.toLowerCase()
+          mockVideos = mockVideos.filter(v => 
+            v.title.toLowerCase().includes(searchLower) ||
+            (v.description?.toLowerCase().includes(searchLower) ?? false)
+          )
+        }
+        
+        if (filters.team_id) {
+          mockVideos = mockVideos.filter(v => v.team_id === filters.team_id)
+        }
+        
+        if (filters.date_from) {
+          mockVideos = mockVideos.filter(v => v.recorded_at && v.recorded_at >= filters.date_from!)
+        }
+        
+        if (filters.date_to) {
+          mockVideos = mockVideos.filter(v => v.recorded_at && v.recorded_at <= filters.date_to!)
+        }
+        
+        // Apply sorting
+        mockVideos.sort((a, b) => {
+          const aVal = new Date(a.recorded_at || a.created_at).getTime()
+          const bVal = new Date(b.recorded_at || b.created_at).getTime()
+          return sortOrder === 'asc' ? aVal - bVal : bVal - aVal
+        })
+        
+        // Apply pagination
+        const currentPage = isLoadMore ? page + 1 : 1
+        const offset = (currentPage - 1) * limit
+        const paginatedVideos = mockVideos.slice(offset, offset + limit)
+        
+        if (isLoadMore) {
+          setVideos((prev) => [...prev, ...paginatedVideos])
+          setPage(currentPage)
+        } else {
+          setVideos(paginatedVideos)
+          setPage(1)
+        }
+        setTotal(mockVideos.length)
+        setIsLoading(false)
+        return
+      }
+      
+      // Real data mode
       let query = supabase
         .from('videos')
         .select(
@@ -414,6 +563,21 @@ export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideo
     setError(null)
     
     try {
+      // Fake data mode: use mock video
+      if (USE_FAKE_DATA) {
+        await new Promise(resolve => setTimeout(resolve, 300)) // Simulate delay
+        
+        const mockVideo = getMockVideoById(videoId)
+        if (mockVideo) {
+          setVideo(mockVideo as Video)
+        } else {
+          setError(new Error('Video not found'))
+        }
+        setIsLoading(false)
+        return
+      }
+      
+      // Real data mode
       const { data, error: fetchError } = await supabase
         .from('videos')
         .select(`
