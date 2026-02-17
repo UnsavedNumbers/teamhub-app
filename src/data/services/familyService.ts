@@ -24,7 +24,8 @@ import {
     type FakeChild,
     type FakeFamilyMember,
 } from '../fake/fakeUsers'
-import { getChildrenForUserId, getFamiliesForUserId } from '../fake/relationships'
+import { getChildrenForUserId, getFamiliesForUserId, getAssignedTeamsForCoach } from '../fake/relationships'
+import { getTeamMembersForSeason, SEASON_SPRING_CURRENT_ID } from '../fake/fakeTeams'
 import type {
     Family,
     Child,
@@ -58,7 +59,8 @@ async function simulateDelay(): Promise<void> {
 function buildPermissions(context: UserContext): PermissionSet {
     const ownedChildIds = getChildrenForUserId(context.userId)
     const ownedFamilyIds = getFamiliesForUserId(context.userId)
-    return calculatePermissions(context, [], ownedChildIds, ownedFamilyIds)
+    const assignedTeamIds = getAssignedTeamsForCoach(context.userId)
+    return calculatePermissions(context, assignedTeamIds, ownedChildIds, ownedFamilyIds)
 }
 
 // Convert Fake types to App types (casting where safely compatible for this demo)
@@ -69,7 +71,7 @@ function mapFakeFamily(f: FakeFamily): Family {
     } as Family
 }
 
-function mapFakeChild(c: FakeChild): Child {
+function mapFakeChild(c: FakeChild, orgId?: string | null): Child {
     return {
         id: c.id,
         family_id: c.family_id,
@@ -88,10 +90,20 @@ function mapFakeChild(c: FakeChild): Child {
         photo_url: c.photo_url || null, // Use photo_url from fake data if available
         profile_photo_updated_at: c.photo_url ? new Date().toISOString() : null,
         has_profile_photo: !!c.photo_url,
+        org_id: orgId ?? undefined,
+        // Universal fields
+        height_cm: c.height_cm ?? null,
+        weight_kg: c.weight_kg ?? null,
+        shoe_size_value: c.shoe_size_value ?? null,
+        shoe_size_system: c.shoe_size_system ?? null,
+        shoe_width: c.shoe_width ?? null,
+        tshirt_size: c.tshirt_size ?? null,
+        shorts_size: c.shorts_size ?? null,
+        dominant_hand: c.dominant_hand ?? null,
         created_at: c.created_at,
         updated_at: c.updated_at,
         deleted_at: null,
-        sports: [] // Fake data doesn't have sports
+        sports: [] // Sports loaded separately via getAthleteSports
     } as unknown as Child
 }
 
@@ -206,7 +218,7 @@ export async function getFamilyDetails(
             const members = getFamilyMembersForFamily(familyId).map(mapFakeMember)
             const children = fakeChildren
                 .filter((c) => c.family_id === familyId)
-                .map(mapFakeChild)
+                .map((c) => mapFakeChild(c, context.orgId))
 
             debug.perf.end('familyService.getFamilyDetails')
             debug.data('FamilyService.getFamilyDetails', 'Response (fake)', { familyId, hasData: true, memberCount: members.length, childCount: children.length })
@@ -507,7 +519,7 @@ export async function updateAthlete(
         debug.perf.end('familyService.updateAthlete')
         debug.flow('FamilyService.updateAthlete', 'Athlete updated (fake)', { athleteId })
         console.groupEnd()
-        return { data: mapFakeChild(child), error: null }
+        return { data: mapFakeChild(child, context.orgId), error: null }
     }
 
     try {
@@ -643,10 +655,24 @@ export async function getAthletes(
             if (permissions.canViewAllOrgData) {
                 const results = fakeChildren
                     .filter(c => fakeFamilies.find(f => f.id === c.family_id)?.org_id === context.orgId)
-                    .map(mapFakeChild)
+                    .map((c) => mapFakeChild(c, context.orgId))
                 return { data: results, error: null }
             }
-            const results = getChildrenForUser(context.userId).map(mapFakeChild)
+            if (permissions.canViewAssignedTeams && permissions.assignedTeamIds.length > 0) {
+                const athleteIds = new Set<string>()
+                for (const teamId of permissions.assignedTeamIds) {
+                    const members = getTeamMembersForSeason(teamId, SEASON_SPRING_CURRENT_ID)
+                    members.forEach((m) => athleteIds.add(m.athlete_id))
+                }
+                const results = fakeChildren
+                    .filter((c) => athleteIds.has(c.id))
+                    .map((c) => mapFakeChild(c, context.orgId))
+                debug.perf.end('familyService.getAthletes')
+                debug.data('FamilyService.getAthletes', 'Response (fake coach roster)', { athleteCount: results.length })
+                console.groupEnd()
+                return { data: results, error: null }
+            }
+            const results = getChildrenForUser(context.userId).map((c) => mapFakeChild(c, context.orgId))
             debug.perf.end('familyService.getAthletes')
             debug.data('FamilyService.getAthletes', 'Response (fake)', { athleteCount: results.length })
             console.groupEnd()
@@ -801,7 +827,7 @@ export async function searchAthletes(
             
             let results = fakeChildren
                 .filter(c => fakeFamilies.find(f => f.id === c.family_id)?.org_id === context.orgId)
-                .map(mapFakeChild)
+                .map((c) => mapFakeChild(c, context.orgId))
             
             // Apply search filter
             if (params.search && params.search.length >= 2) {
@@ -1098,10 +1124,29 @@ export async function getAthleteById(
                 }
             }
             
+            // Load athlete sports (same as real data path)
+            let sports: Array<{ sport_id: string; sport_name: string; sport_type: 'plays' | 'interested' }> = []
+            try {
+                const { data: sportsData, error: sportsError } = await getAthleteSports(athleteId, context.orgId)
+                if (!sportsError && sportsData) {
+                    sports = sportsData.map(s => ({
+                        sport_id: s.sport_id,
+                        sport_name: s.sport_name,
+                        sport_type: s.sport_type
+                    }))
+                }
+            } catch (err) {
+                console.warn('[getAthleteById] Error loading athlete sports (fake):', err)
+                // Continue without sports data
+            }
+            
+            const mappedChild = mapFakeChild(child, context.orgId)
+            mappedChild.sports = sports
+            
             debug.perf.end('familyService.getAthleteById')
-            debug.data('FamilyService.getAthleteById', 'Response (fake)', { athleteId, hasData: true })
+            debug.data('FamilyService.getAthleteById', 'Response (fake)', { athleteId, hasData: true, sportCount: sports.length })
             console.groupEnd()
-            return { data: mapFakeChild(child), error: null }
+            return { data: mappedChild, error: null }
         } catch (err) {
             debug.perf.end('familyService.getAthleteById')
             debug.error('FamilyService.getAthleteById', 'Failed to get athlete (fake)', { error: err, athleteId })

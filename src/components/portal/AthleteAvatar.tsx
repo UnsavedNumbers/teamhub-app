@@ -53,11 +53,11 @@ export default function AthleteAvatar({ athlete, photoSize = '256', className = 
         }
     }, [photoUrl])
 
-    // If no photo URL or error loading, show avatar with initials
+    // If no photo URL or error loading, show avatar with initials (high contrast so initials are visible)
     if (!photoUrl || imageError) {
         return (
             <div
-                className={`w-full h-full bg-[var(--org-btn-primary-bg)]/20 flex items-center justify-center text-[var(--org-link-color)] font-black ${className}`}
+                className={`w-full h-full bg-slate-400 dark:bg-slate-600 flex items-center justify-center text-white font-black ${className}`}
                 aria-label={`${athlete.first_name} ${athlete.last_name}`}
             >
                 <span className="text-4xl">{initials}</span>
@@ -81,14 +81,13 @@ export default function AthleteAvatar({ athlete, photoSize = '256', className = 
             />
             {!imageLoaded && !imageError && (
                 <div className="absolute inset-0 bg-slate-200 dark:bg-slate-700 animate-pulse flex items-center justify-center">
-                    <div className="w-full h-full bg-[var(--org-btn-primary-bg)]/20 flex items-center justify-center">
-                        <span className="text-[var(--org-link-color)] font-black text-4xl">{initials}</span>
+                    <div className="w-full h-full bg-slate-400 dark:bg-slate-600 flex items-center justify-center">
+                        <span className="text-white font-black text-4xl">{initials}</span>
                     </div>
                 </div>
             )}
-            {/* Fallback avatar (hidden but ready) */}
             {imageError && (
-                <div className="absolute inset-0 bg-[var(--org-btn-primary-bg)]/20 flex items-center justify-center text-[var(--org-link-color)] font-black">
+                <div className="absolute inset-0 bg-slate-400 dark:bg-slate-600 flex items-center justify-center text-white font-black">
                     <span className="text-4xl">{initials}</span>
                 </div>
             )}

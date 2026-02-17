@@ -129,6 +129,87 @@ export function SportProfileCard({
     }
   }, [validateForm, updateProfile, profileData, equipmentData, onSave])
 
+  // Helper to determine four-field groupings
+  const getFourFieldGroup = (
+    field1: SportFieldDefinition,
+    field2: SportFieldDefinition,
+    field3: SportFieldDefinition,
+    field4: SportFieldDefinition
+  ): { className: string } | null => {
+    if (!field2 || !field3 || !field4) return null
+
+    // Football tackle equipment: helmet_size_circumference, helmet_brand_pref, shoulder_pad_size, shoulder_pad_style
+    if (
+      field1.field_key === 'helmet_size_circumference' &&
+      field2.field_key === 'helmet_brand_pref' &&
+      field3.field_key === 'shoulder_pad_size' &&
+      field4.field_key === 'shoulder_pad_style'
+    ) {
+      return { className: 'four-col-25' }
+    }
+
+    // Ice hockey equipment: skate_size, skate_width, helmet_size, cage_visor_pref
+    if (
+      field1.field_key === 'skate_size' &&
+      field2.field_key === 'skate_width' &&
+      field3.field_key === 'helmet_size' &&
+      field4.field_key === 'cage_visor_pref'
+    ) {
+      return { className: 'four-col-25' }
+    }
+
+    // Baseball/Softball equipment: glove_size_in, glove_type, bat_length_in, bat_weight_oz
+    if (
+      (field1.field_key === 'glove_size_in' || field1.field_key === 'glove_size') &&
+      field2.field_key === 'glove_type' &&
+      field3.field_key === 'bat_length_in' &&
+      field4.field_key === 'bat_weight_oz'
+    ) {
+      return { className: 'four-col-25' }
+    }
+
+    // Tennis equipment: racquet_grip_size, racquet_head_size_pref, string_tension_lbs, shoe_size
+    if (
+      field1.field_key === 'racquet_grip_size' &&
+      field2.field_key === 'racquet_head_size_pref' &&
+      field3.field_key === 'string_tension_lbs' &&
+      field4.field_key === 'shoe_size'
+    ) {
+      return { className: 'four-col-25' }
+    }
+
+    // Track equipment: sprint_spike_size, distance_spike_size, spike_length_pref, training_shoe_size
+    if (
+      field1.field_key === 'sprint_spike_size' &&
+      field2.field_key === 'distance_spike_size' &&
+      field3.field_key === 'spike_length_pref' &&
+      field4.field_key === 'training_shoe_size'
+    ) {
+      return { className: 'four-col-25' }
+    }
+
+    // General: four small size fields in sequence (equal quarters)
+    const sizeFieldPattern = /_(size|length|width|height|inseam|waist)$/
+    if (
+      sizeFieldPattern.test(field1.field_key) &&
+      sizeFieldPattern.test(field2.field_key) &&
+      sizeFieldPattern.test(field3.field_key) &&
+      sizeFieldPattern.test(field4.field_key)
+    ) {
+      const shortFieldTypes = ['text', 'enum', 'int', 'numeric']
+      if (
+        shortFieldTypes.includes(field1.field_type) &&
+        shortFieldTypes.includes(field2.field_type) &&
+        shortFieldTypes.includes(field3.field_type) &&
+        shortFieldTypes.includes(field4.field_type)
+      ) {
+        return { className: 'four-col-25' }
+      }
+    }
+
+    return null
+  }
+
   // Render fields with layout
   const renderFieldsWithLayout = (
     fields: SportFieldDefinition[],
@@ -144,12 +225,63 @@ export function SportProfileCard({
       const field = fields[i]
       const nextField = fields[i + 1]
       const nextNextField = fields[i + 2]
+      const nextNextNextField = fields[i + 3]
 
-      // Check for three-field groupings first
+      // Check for four-field groupings first
+      const fourFieldGroup = getFourFieldGroup(field, nextField, nextNextField, nextNextNextField)
+      if (fourFieldGroup && nextField && nextNextField && nextNextNextField) {
+        elements.push(
+          <div
+            key={`${field.field_key}-${nextField.field_key}-${nextNextField.field_key}-${nextNextNextField.field_key}`}
+            className={`form-row ${fourFieldGroup.className}`}
+          >
+            <div className="form-field">
+              <FieldRenderer
+                field={field}
+                value={data[field.field_key]}
+                onChange={(value) => onChange(field.field_key, value)}
+                disabled={disabled}
+                error={errors[field.field_key]}
+              />
+            </div>
+            <div className="form-field">
+              <FieldRenderer
+                field={nextField}
+                value={data[nextField.field_key]}
+                onChange={(value) => onChange(nextField.field_key, value)}
+                disabled={disabled}
+                error={errors[nextField.field_key]}
+              />
+            </div>
+            <div className="form-field">
+              <FieldRenderer
+                field={nextNextField}
+                value={data[nextNextField.field_key]}
+                onChange={(value) => onChange(nextNextField.field_key, value)}
+                disabled={disabled}
+                error={errors[nextNextField.field_key]}
+              />
+            </div>
+            <div className="form-field">
+              <FieldRenderer
+                field={nextNextNextField}
+                value={data[nextNextNextField.field_key]}
+                onChange={(value) => onChange(nextNextNextField.field_key, value)}
+                disabled={disabled}
+                error={errors[nextNextNextField.field_key]}
+              />
+            </div>
+          </div>
+        )
+        i += 4
+        continue
+      }
+
+      // Check for three-field groupings
       const threeFieldGroup = getThreeFieldGroup(field, nextField, nextNextField)
       if (threeFieldGroup && nextField && nextNextField) {
         elements.push(
-          <div key={`${field.field_key}-${nextField.field_key}-${nextNextField.field_key}`} className="form-row three-col-50-25-25">
+          <div key={`${field.field_key}-${nextField.field_key}-${nextNextField.field_key}`} className={`form-row ${threeFieldGroup.className}`}>
             <div className="form-field">
               <FieldRenderer
                 field={field}
@@ -238,10 +370,53 @@ export function SportProfileCard({
       return { className: 'three-col-50-25-25' }
     }
 
-    // Years of experience, wingspan, vertical jump (equal thirds)
+    // Basketball measurements: years_experience, wingspan_in, vertical_jump_in (equal thirds)
     if (field1.field_key === 'years_experience' && field2.field_key === 'wingspan_in' && field3.field_key === 'vertical_jump_in') {
       return { className: 'three-col-33' }
     }
+
+    // Soccer equipment: cleat_size, shin_guard_size, goalie_glove_size (equal thirds)
+    if (field1.field_key === 'cleat_size' && field2.field_key === 'shin_guard_size' && field3.field_key === 'goalie_glove_size') {
+      return { className: 'three-col-33' }
+    }
+
+    // Baseball/Softball pants: pants_waist, pants_inseam, pants_fit (equal thirds)
+    if (field1.field_key === 'pants_waist' && field2.field_key === 'pants_inseam' && field3.field_key === 'pants_fit') {
+      return { className: 'three-col-33' }
+    }
+    if (field1.field_key === 'pants_waist_in' && field2.field_key === 'pants_inseam_in' && field3.field_key === 'pants_fit') {
+      return { className: 'three-col-33' }
+    }
+
+    // Ice hockey stick: stick_length_in, stick_flex, stick_curve_pref (equal thirds)
+    if (field1.field_key === 'stick_length_in' && field2.field_key === 'stick_flex' && field3.field_key === 'stick_curve_pref') {
+      return { className: 'three-col-33' }
+    }
+
+    // Tennis racquet: racquet_grip_size, racquet_head_size_pref, string_tension_lbs (equal thirds)
+    if (field1.field_key === 'racquet_grip_size' && field2.field_key === 'racquet_head_size_pref' && field3.field_key === 'string_tension_lbs') {
+      return { className: 'three-col-33' }
+    }
+
+    // Track spikes: sprint_spike_size, distance_spike_size, spike_length_pref (equal thirds)
+    if (field1.field_key === 'sprint_spike_size' && field2.field_key === 'distance_spike_size' && field3.field_key === 'spike_length_pref') {
+      return { className: 'three-col-33' }
+    }
+
+    // Golf equipment: club_length_fit, grip_size, glove_size (equal thirds)
+    if (field1.field_key === 'club_length_fit' && field2.field_key === 'grip_size' && field3.field_key === 'glove_size') {
+      return { className: 'three-col-33' }
+    }
+
+    // General: three small size fields in sequence (equal thirds)
+    const sizeFieldPattern = /_(size|length|width|height|inseam|waist)$/
+    if (sizeFieldPattern.test(field1.field_key) && sizeFieldPattern.test(field2.field_key) && sizeFieldPattern.test(field3.field_key)) {
+      const shortFieldTypes = ['text', 'enum', 'int', 'numeric']
+      if (shortFieldTypes.includes(field1.field_type) && shortFieldTypes.includes(field2.field_type) && shortFieldTypes.includes(field3.field_type)) {
+        return { className: 'three-col-33' }
+      }
+    }
+
     return null
   }
 
@@ -277,6 +452,217 @@ export function SportProfileCard({
     // First and last name (if they appear in sport profiles)
     if (field1.field_key === 'first_name' && field2.field_key === 'last_name') {
       return { className: 'two-col-equal' }
+    }
+
+    // Baseball/Softball: glove_size_in + glove_type
+    if ((field1.field_key === 'glove_size_in' && field2.field_key === 'glove_type') ||
+        (field1.field_key === 'glove_size' && field2.field_key === 'glove_type')) {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Baseball/Softball: bat_length_in + bat_weight_oz
+    if (field1.field_key === 'bat_length_in' && field2.field_key === 'bat_weight_oz') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Baseball/Softball: pants_waist + pants_inseam (before pants_fit)
+    if ((field1.field_key === 'pants_waist' && field2.field_key === 'pants_inseam') ||
+        (field1.field_key === 'pants_waist_in' && field2.field_key === 'pants_inseam_in')) {
+      return { className: 'two-col-equal' }
+    }
+
+    // Football tackle: helmet_size_circumference + helmet_brand_pref
+    if (field1.field_key === 'helmet_size_circumference' && field2.field_key === 'helmet_brand_pref') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Football tackle: shoulder_pad_size + shoulder_pad_style
+    if (field1.field_key === 'shoulder_pad_size' && field2.field_key === 'shoulder_pad_style') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Football tackle: cleat_size + cleat_style
+    if (field1.field_key === 'cleat_size' && field2.field_key === 'cleat_style') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Football tackle: gloves_size + gloves_type
+    if (field1.field_key === 'gloves_size' && field2.field_key === 'gloves_type') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Football tackle: pants_waist + pants_inseam
+    if (field1.field_key === 'pants_waist' && field2.field_key === 'pants_inseam') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Ice hockey: skate_size + skate_width
+    if (field1.field_key === 'skate_size' && field2.field_key === 'skate_width') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Ice hockey: helmet_size + cage_visor_pref
+    if (field1.field_key === 'helmet_size' && field2.field_key === 'cage_visor_pref') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Ice hockey: stick_length_in + stick_flex
+    if (field1.field_key === 'stick_length_in' && field2.field_key === 'stick_flex') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Ice hockey: jersey_size + practice_jersey_size
+    if (field1.field_key === 'jersey_size' && field2.field_key === 'practice_jersey_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Soccer: cleat_size + cleat_type_pref
+    if (field1.field_key === 'cleat_size' && field2.field_key === 'cleat_type_pref') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Soccer: shin_guard_size + shin_guard_style
+    if (field1.field_key === 'shin_guard_size' && field2.field_key === 'shin_guard_style') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Soccer: jersey_size + shorts_size
+    if (field1.field_key === 'jersey_size' && field2.field_key === 'shorts_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Soccer: warmup_jacket_size + warmup_pants_size
+    if (field1.field_key === 'warmup_jacket_size' && field2.field_key === 'warmup_pants_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Tennis: racquet_grip_size + racquet_head_size_pref
+    if (field1.field_key === 'racquet_grip_size' && field2.field_key === 'racquet_head_size_pref') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Tennis: shoe_size + shoe_width
+    if (field1.field_key === 'shoe_size' && field2.field_key === 'shoe_width') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Tennis: warmup_jacket_size + warmup_pants_size
+    if (field1.field_key === 'warmup_jacket_size' && field2.field_key === 'warmup_pants_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Volleyball: shoe_size + shoe_width
+    if (field1.field_key === 'shoe_size' && field2.field_key === 'shoe_width') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Volleyball: spandex_size + spandex_length_pref
+    if (field1.field_key === 'spandex_size' && field2.field_key === 'spandex_length_pref') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Volleyball: warmup_jacket_size + warmup_pants_size
+    if (field1.field_key === 'warmup_jacket_size' && field2.field_key === 'warmup_pants_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Basketball: jersey_size + shorts_size
+    if (field1.field_key === 'jersey_size' && field2.field_key === 'shorts_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Basketball: shoe_size + shoe_width
+    if (field1.field_key === 'shoe_size' && field2.field_key === 'shoe_width') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Cheerleading/Poms: uniform_top_size + uniform_bottom_size
+    if (field1.field_key === 'uniform_top_size' && field2.field_key === 'uniform_bottom_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Cheerleading/Poms: warmup_jacket_size + warmup_pants_size
+    if (field1.field_key === 'warmup_jacket_size' && field2.field_key === 'warmup_pants_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Swimming/Diving: competition_suit_size + practice_suit_size
+    if (field1.field_key === 'competition_suit_size' && field2.field_key === 'practice_suit_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Gymnastics: competition_leotard_size + practice_leotard_size
+    if (field1.field_key === 'competition_leotard_size' && field2.field_key === 'practice_leotard_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Gymnastics: grip_size + grip_dowel_size
+    if (field1.field_key === 'grip_size' && field2.field_key === 'grip_dowel_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Golf: glove_size + glove_hand
+    if (field1.field_key === 'glove_size' && field2.field_key === 'glove_hand') {
+      return { className: 'two-col-60-40' }
+    }
+
+    // Golf: pants_size + pants_inseam
+    if (field1.field_key === 'pants_size' && field2.field_key === 'pants_inseam') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Cross country/Track: singlet_size + shorts_size
+    if (field1.field_key === 'singlet_size' && field2.field_key === 'shorts_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Cross country: racing_shoe_size + training_shoe_size
+    if (field1.field_key === 'racing_shoe_size' && field2.field_key === 'training_shoe_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Track: sprint_spike_size + distance_spike_size
+    if (field1.field_key === 'sprint_spike_size' && field2.field_key === 'distance_spike_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Track: warmup_jacket_size + warmup_pants_size
+    if (field1.field_key === 'warmup_jacket_size' && field2.field_key === 'warmup_pants_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Wrestling: warmup_jacket_size + warmup_pants_size
+    if (field1.field_key === 'warmup_jacket_size' && field2.field_key === 'warmup_pants_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Field hockey: jersey_size + skirt_shorts_size
+    if (field1.field_key === 'jersey_size' && field2.field_key === 'skirt_shorts_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Field hockey: cleat_size + turf_shoe_size
+    if (field1.field_key === 'cleat_size' && field2.field_key === 'turf_shoe_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Lacrosse: jersey_size + shorts_size
+    if (field1.field_key === 'jersey_size' && field2.field_key === 'shorts_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // Lacrosse: helmet_size + shoulder_pad_size
+    if (field1.field_key === 'helmet_size' && field2.field_key === 'shoulder_pad_size') {
+      return { className: 'two-col-equal' }
+    }
+
+    // General: two small size fields in sequence (equal width)
+    const sizeFieldPattern = /_(size|length|width|height|inseam|waist)$/
+    if (sizeFieldPattern.test(field1.field_key) && sizeFieldPattern.test(field2.field_key)) {
+      const shortFieldTypes = ['text', 'enum', 'int', 'numeric']
+      if (shortFieldTypes.includes(field1.field_type) && shortFieldTypes.includes(field2.field_type)) {
+        return { className: 'two-col-equal' }
+      }
     }
 
     return null
@@ -321,33 +707,25 @@ export function SportProfileCard({
         <CardTitle className="mb-2">
           {sportCode.replace('_', ' ')} Profile
         </CardTitle>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <p className="form-subtitle">
           Sport-specific details and equipment information
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-8 mb-6 border-b border-slate-200 dark:border-slate-700">
+      <div className="form-tabs">
         <button
           onClick={() => setActiveTab('profile')}
-          className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
-            activeTab === 'profile'
-              ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
-              : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-          }`}
+          className={`form-tab ${activeTab === 'profile' ? 'active' : ''}`}
         >
-          <span className="material-symbols-outlined text-sm mr-2">person</span>
+          <span className="material-symbols-outlined form-tab-icon">person</span>
           Profile
         </button>
         <button
           onClick={() => setActiveTab('equipment')}
-          className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
-            activeTab === 'equipment'
-              ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
-              : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-          }`}
+          className={`form-tab ${activeTab === 'equipment' ? 'active' : ''}`}
         >
-          <span className="material-symbols-outlined text-sm mr-2">inventory_2</span>
+          <span className="material-symbols-outlined form-tab-icon">inventory_2</span>
           Equipment
         </button>
       </div>
@@ -364,9 +742,9 @@ export function SportProfileCard({
       {activeTab === 'profile' && (
         <div className="form-fields">
           {profileFields.length === 0 ? (
-            <div className="text-center py-8">
-              <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">person</span>
-              <p className="text-slate-500 dark:text-slate-400">No profile fields configured</p>
+            <div className="profile-form-empty">
+              <span className="material-symbols-outlined empty-icon">person</span>
+              <p className="empty-text">No profile fields configured</p>
             </div>
           ) : (
             renderFieldsWithLayout(profileFields, profileData, handleProfileFieldChange, profileErrors, updating)
@@ -386,9 +764,9 @@ export function SportProfileCard({
 
           <div className="form-fields">
             {equipmentFields.length === 0 ? (
-              <div className="text-center py-8">
-                <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">inventory_2</span>
-                <p className="text-slate-500 dark:text-slate-400">No equipment fields configured</p>
+              <div className="equipment-form-empty">
+                <span className="material-symbols-outlined empty-icon">inventory_2</span>
+                <p className="empty-text">No equipment fields configured</p>
               </div>
             ) : (
               renderFieldsWithLayout(equipmentFields, equipmentData, handleEquipmentFieldChange, equipmentErrors, updating)

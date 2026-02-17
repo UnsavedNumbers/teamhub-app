@@ -313,7 +313,7 @@ body {
    Used by both Portal and Admin layouts
    ============================================================ */
 
-/* Main navigation container */
+/* Main navigation container - solid background so page content doesn't bleed through when sticky */
 .gn-root {
   position: sticky;
   top: 0;
@@ -323,11 +323,14 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: var(--gn-glass-bg);
-  backdrop-filter: var(--gn-glass-blur);
-  -webkit-backdrop-filter: var(--gn-glass-blur);
+  background: #ffffff;
   border-bottom: 1px solid var(--gn-glass-border);
   box-shadow: var(--gn-glass-shadow);
+}
+
+.dark .gn-root {
+  background: #0f172a;
+  border-bottom-color: var(--gn-glass-border);
 }
 
 /* Left section: logo + nav items */

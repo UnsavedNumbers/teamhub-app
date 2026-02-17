@@ -34,7 +34,7 @@ import { useT } from '../i18n/useI18n'
 import { showError } from '../utils/toast'
 
 export default function AthleteProfilePage() {
-  const { athleteId } = useParams<{ athleteId: string }>()
+  const { id: athleteId } = useParams<{ id: string }>()
 
   // Add lifecycle logging
   useDebugLifecycle('AthleteProfilePage', { athleteId })
@@ -75,9 +75,12 @@ export default function AthleteProfilePage() {
         // Actually photoUrl state update logic is inside the initial fetch.
         // BasicInfoForm handles its own visual update or we reload everything.
         // Let's reload photo url too just in case.
-         if (data.has_profile_photo && data.org_id && data.id) {
-            const url = getAthletePhotoUrl(data.org_id, data.id, '512')
-            if (url) setPhotoUrl(url)
+         if (data.has_profile_photo && data.id) {
+            const orgId = data.org_id ?? context.orgId
+            if (orgId) {
+              const url = getAthletePhotoUrl(orgId, data.id, '512')
+              if (url) setPhotoUrl(url)
+            }
          }
       } else if (error) {
         debug.error('AthleteProfile', 'Failed to load athlete data', { athleteId, error: error.message })
@@ -178,11 +181,14 @@ export default function AthleteProfilePage() {
 
         setAthlete(data)
 
-        // Load photo
-        if (data.has_profile_photo && data.org_id && data.id) {
-          const url = getAthletePhotoUrl(data.org_id, data.id, '512')
-          if (isMountedRef.current && url) {
-            setPhotoUrl(url)
+        // Load photo (use context.orgId when athlete.org_id missing, e.g. fake data)
+        if (data.has_profile_photo && data.id) {
+          const orgId = data.org_id ?? context.orgId
+          if (orgId) {
+            const url = getAthletePhotoUrl(orgId, data.id, '512')
+            if (isMountedRef.current && url) {
+              setPhotoUrl(url)
+            }
           }
         }
 

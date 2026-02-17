@@ -42,6 +42,7 @@ const statusLabels: Record<FeeAssignmentStatus, string> = {
 }
 
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+import { USE_FAKE_DATA } from '../data/config'
 
 export default function MyPayments() {
   useDebugLifecycle('MyPayments')
@@ -67,14 +68,21 @@ export default function MyPayments() {
   const [creatingPartialCheckout, setCreatingPartialCheckout] = useState(false)
 
 
-  const { context, isReady } = useUserContext()
+  const { context, isReady, isAuthenticated } = useUserContext()
   const navigate = useNavigate()
 
+  // In fake data mode, load payments even when no org is selected so /portal/payments shows demo data
+  const shouldLoad = isReady || (USE_FAKE_DATA && isAuthenticated)
+
   useEffect(() => {
-    if (!isReady) return
+    if (!shouldLoad) return
+    if (USE_FAKE_DATA && !context.orgId) {
+      setOrgAllowsPartialPayments(true)
+    } else {
+      fetchOrgPaymentPolicy()
+    }
     fetchAssignments()
-    fetchOrgPaymentPolicy()
-  }, [context, isReady])
+  }, [context, shouldLoad])
 
   async function fetchOrgPaymentPolicy() {
     try {

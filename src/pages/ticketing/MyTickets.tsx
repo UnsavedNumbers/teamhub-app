@@ -12,7 +12,14 @@ import TicketCard from '@/components/ticketing/TicketCard'
 import { useRouteLink } from '@/utils/routes'
 import FullScreenLoader from '@/components/common/FullScreenLoader'
 import { showSuccess, showError } from '@/utils/toast'
+import PortalLayout from '@/components/portal/PortalLayout'
+import { PageTitle } from '@/components/portal/Typography'
 import type { Ticket, TicketOrder, TicketType, TicketedEvent } from '@/types/ticketing'
+
+const MY_TICKETS_BREADCRUMBS = [
+  { label: 'Home', path: '/portal/dashboard' },
+  { label: 'My Tickets' },
+]
 
 type TicketEventSummary = Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
 
@@ -417,16 +424,18 @@ export default function MyTickets() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] py-8 px-4 flex justify-center items-start">
-        <FullScreenLoader message="Loading your tickets..." />
-      </div>
+      <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
+        <div className="flex justify-center items-start min-h-[200px]">
+          <FullScreenLoader message="Loading your tickets..." />
+        </div>
+      </PortalLayout>
     )
   }
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] py-8 px-4">
-        <div className="max-w-4xl mx-auto text-center py-12">
+      <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
+        <div className="text-center py-12">
           <div className="bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 p-4 rounded-xl inline-block mb-4">
             <span className="material-symbols-outlined text-4xl">error_outline</span>
           </div>
@@ -443,111 +452,125 @@ export default function MyTickets() {
             Retry
           </button>
         </div>
-      </div>
+      </PortalLayout>
     )
   }
 
   if (!orders || orders.length === 0) {
     return (
-      <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] py-8 px-4">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-black text-[#111418] dark:text-white mb-6 uppercase tracking-tight">
-            My Tickets
-          </h1>
-          <div className="bg-white dark:bg-[#1c2630] rounded-xl shadow-sm p-12 text-center border border-gray-100 dark:border-gray-800">
-            <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="material-symbols-outlined text-3xl text-gray-400">confirmation_number</span>
-            </div>
-            <h3 className="text-xl font-bold text-[#111418] dark:text-white mb-2">
-              No tickets found
-            </h3>
-            <p className="text-[#617589] dark:text-gray-400 text-lg mb-8 max-w-md mx-auto">
-              You haven't purchased any tickets yet. Browse upcoming events to get started.
-            </p>
-            <a
-              href={ticketsLink}
-              className="inline-flex items-center gap-2 px-8 py-3 bg-[#137fec] text-white font-black rounded-lg hover:bg-blue-700 uppercase tracking-wider shadow-lg shadow-blue-500/20 transition-all transform hover:-translate-y-0.5"
-            >
-              <span className="material-symbols-outlined">calendar_month</span>
-              Browse Events
-            </a>
-          </div>
+      <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
+        <div className="mb-6 sm:mb-8">
+          <PageTitle>My Tickets</PageTitle>
+          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
+            Your event tickets
+          </p>
         </div>
-      </div>
+        <div className="bg-white dark:bg-slate-900/50 rounded-xl shadow-sm p-12 text-center border border-slate-200 dark:border-slate-700">
+          <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span className="material-symbols-outlined text-3xl text-slate-400">confirmation_number</span>
+          </div>
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+            No tickets found
+          </h3>
+          <p className="text-slate-500 dark:text-slate-400 text-lg mb-8 max-w-md mx-auto">
+            You haven't purchased any tickets yet. Browse upcoming events to get started.
+          </p>
+          <a
+            href={ticketsLink}
+            className="inline-flex items-center gap-2 px-8 py-3 bg-[var(--org-btn-primary-bg)] text-white font-black rounded-lg hover:opacity-90 uppercase tracking-wider shadow-lg transition-all"
+          >
+            <span className="material-symbols-outlined">calendar_month</span>
+            Browse Events
+          </a>
+        </div>
+      </PortalLayout>
     )
   }
 
   if (isLoadingTickets) {
     return (
-      <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] py-8 text-[#111418] dark:text-white">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="animate-pulse bg-white dark:bg-[#1c2630] rounded-xl shadow-sm p-6 border border-gray-100 dark:border-gray-800">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-6" />
-            <div className="h-6 bg-gray-100 dark:bg-gray-800 rounded w-2/3 mb-4" />
-            <div className="h-[420px] bg-gray-100 dark:bg-gray-800 rounded-xl" />
-          </div>
+      <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
+        <div className="mb-6 sm:mb-8">
+          <PageTitle>My Tickets</PageTitle>
+          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
+            Your event tickets
+          </p>
         </div>
-      </div>
+        <div className="animate-pulse bg-white dark:bg-slate-900/50 rounded-xl shadow-sm p-6 border border-slate-200 dark:border-slate-700">
+          <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-1/3 mb-6" />
+          <div className="h-6 bg-slate-100 dark:bg-slate-800 rounded w-2/3 mb-4" />
+          <div className="h-[420px] bg-slate-100 dark:bg-slate-800 rounded-xl" />
+        </div>
+      </PortalLayout>
     )
   }
 
   if (isTicketsError) {
     return (
-      <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] py-8 px-4">
-        <div className="max-w-4xl mx-auto text-center py-12 bg-white dark:bg-[#1c2630] rounded-xl shadow-sm border border-red-100 dark:border-red-900/30">
-          <div className="bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 p-4 rounded-xl inline-block mb-4">
-            <span className="material-symbols-outlined text-4xl">error_outline</span>
-          </div>
-          <h2 className="text-xl font-bold text-[#111418] dark:text-white mb-2">
-            Unable to load ticket details
-          </h2>
-          <p className="text-gray-500 mb-6 max-w-md mx-auto">
-            {ticketsError instanceof Error ? ticketsError.message : 'We encountered a problem fetching your tickets. Please try again.'}
-          </p>
-          <button
-            onClick={() => refetchTickets()}
-            className="px-6 py-2 bg-[#137fec] text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            Retry
-          </button>
+      <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
+        <div className="text-center py-12 bg-white dark:bg-slate-900/50 rounded-xl shadow-sm border border-red-200 dark:border-red-900/30">
+            <div className="bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 p-4 rounded-xl inline-block mb-4">
+              <span className="material-symbols-outlined text-4xl">error_outline</span>
+            </div>
+            <h2 className="text-xl font-bold text-[#111418] dark:text-white mb-2">
+              Unable to load ticket details
+            </h2>
+            <p className="text-gray-500 mb-6 max-w-md mx-auto">
+              {ticketsError instanceof Error ? ticketsError.message : 'We encountered a problem fetching your tickets. Please try again.'}
+            </p>
+            <button
+              onClick={() => refetchTickets()}
+              className="px-6 py-2 bg-[#137fec] text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              Retry
+            </button>
         </div>
-      </div>
+      </PortalLayout>
     )
   }
 
   if (eventGroups.length === 0) {
     return (
-      <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] py-8 px-4">
-        <div className="max-w-4xl mx-auto text-center py-12 bg-white dark:bg-[#1c2630] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
-          <h2 className="text-xl font-bold text-[#111418] dark:text-white mb-2">No ticket records found</h2>
-          <p className="text-gray-500">We found your orders but no active ticket records for this account.</p>
+      <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
+        <div className="mb-6 sm:mb-8">
+          <PageTitle>My Tickets</PageTitle>
+          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
+            Your event tickets
+          </p>
         </div>
-      </div>
+        <div className="text-center py-12 bg-white dark:bg-slate-900/50 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No ticket records found</h2>
+          <p className="text-slate-500 dark:text-slate-400">We found your orders but no active ticket records for this account.</p>
+        </div>
+      </PortalLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] py-8 text-[#111418] dark:text-white">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-black text-[#111418] dark:text-white uppercase tracking-tight">
-            My Tickets
-          </h1>
+    <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
+      <div className="mb-6 sm:mb-8">
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 sm:gap-6">
+          <div className="flex-1">
+            <PageTitle>My Tickets</PageTitle>
+            <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
+              Your event tickets
+            </p>
+          </div>
           <a
             href={ticketsLink}
-            className="text-sm font-bold text-[#137fec] hover:text-blue-700 flex items-center gap-1"
+            className="text-sm font-bold text-[var(--org-link-color)] hover:underline flex items-center gap-1 shrink-0"
           >
             Find More Events
             <span className="material-symbols-outlined text-base">arrow_forward</span>
           </a>
         </div>
-
-        <div className="space-y-8">
-          {eventGroups.map((group) => (
-            <EventTicketCarousel key={group.eventKey} group={group} />
-          ))}
-        </div>
       </div>
-    </div>
+
+      <div className="space-y-8">
+        {eventGroups.map((group) => (
+          <EventTicketCarousel key={group.eventKey} group={group} />
+        ))}
+      </div>
+    </PortalLayout>
   )
 }

@@ -8,6 +8,8 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
+import { getSportProfilesForAthlete } from '../fake/fakeAthleteSportProfiles'
+import { getSportsForOrg } from '../fake/fakeTeams'
 
 export type SportType = 'plays' | 'interested'
 
@@ -53,10 +55,51 @@ export async function getAthleteSports(
     try {
         if (USE_FAKE_DATA) {
             await simulateDelay()
+            // Get sport profiles for this athlete
+            const profiles = getSportProfilesForAthlete(athleteId)
+            // Get all sports to map codes to IDs
+            const allSports = getSportsForOrg(orgId)
+            // Map sport codes to sport IDs
+            // Sport codes use snake_case, slugs use kebab-case
+            const sportCodeToId: Record<string, string> = {}
+            allSports.forEach(sport => {
+                if (sport.slug) {
+                    // Convert slug to code format (e.g., 'track-and-field' -> 'track_field', 'flag-football' -> 'flag_football')
+                    const code = sport.slug.replace(/-/g, '_')
+                    sportCodeToId[code] = sport.id
+                }
+                // Also map by name (case-insensitive) as fallback
+                if (sport.name) {
+                    const nameCode = sport.name.toLowerCase().replace(/\s+/g, '_').replace(/&/g, '').replace(/and/g, '')
+                    sportCodeToId[nameCode] = sport.id
+                }
+            })
+            // Create athlete sports from profiles (all are 'plays' since they have profiles)
+            const athleteSports: AthleteSportWithDetails[] = profiles
+                .map(profile => {
+                    const sportId = sportCodeToId[profile.sport_code] || ''
+                    const sport = allSports.find(s => s.id === sportId)
+                    // Only include if we found a matching sport
+                    if (!sportId || !sport) {
+                        console.warn(`[athleteSportsService] Could not find sport for code: ${profile.sport_code}`)
+                        return null
+                    }
+                    return {
+                        id: `athlete-sport-${athleteId}-${profile.sport_code}`,
+                        athlete_id: athleteId,
+                        sport_id: sportId,
+                        org_id: orgId,
+                        sport_type: 'plays' as SportType,
+                        sport_name: sport.name,
+                        created_at: profile.created_at,
+                        updated_at: profile.updated_at,
+                    }
+                })
+                .filter((s): s is AthleteSportWithDetails => s !== null)
             debug.perf.end('athleteSportsService.getAthleteSports')
-            debug.data('AthleteSportsService.getAthleteSports', 'Response (fake)', { athleteId, sportCount: 0 })
+            debug.data('AthleteSportsService.getAthleteSports', 'Response (fake)', { athleteId, sportCount: athleteSports.length })
             console.groupEnd()
-            return { data: [], error: null }
+            return { data: athleteSports, error: null }
         }
         const { data, error } = await supabase
             .from('athlete_sports')

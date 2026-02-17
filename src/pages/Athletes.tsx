@@ -347,20 +347,21 @@ export default function Athletes() {
             return (
               <Card
                 key={athlete.id}
+                noPadding
                 className="relative overflow-hidden rounded-xl hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/20 transition-all duration-300 cursor-pointer group"
                 onClick={() => handleCardClick(athlete.id)}
               >
-                {/* Image/Avatar Section */}
+                {/* Image spans full card */}
                 <div className="w-full aspect-square relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
                   <AthleteAvatar athlete={athlete} size="xl" className="w-full h-full rounded-none object-cover" />
                   {/* Gradient overlay for better text readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
                 </div>
 
-                {/* Content Overlay */}
-                <div className="absolute inset-0 flex flex-col justify-end p-4">
+                {/* Content Overlay - enough bottom padding so full name is visible */}
+                <div className="absolute inset-0 flex flex-col justify-end pb-6 pt-4 px-4">
                   <div className="text-white">
-                    <CardTitle className="text-xl font-bold mb-1 text-white drop-shadow-lg">{displayName}</CardTitle>
+                    <CardTitle className="text-xl font-bold mb-1 text-white drop-shadow-lg break-words">{displayName}</CardTitle>
                     
                     <div className="flex flex-wrap gap-2 text-sm font-medium text-white/95 mb-3 drop-shadow">
                       {age !== null && (
@@ -370,12 +371,6 @@ export default function Athletes() {
                         <>
                           {age !== null && <span>•</span>}
                           <span>{genderLabel}</span>
-                        </>
-                      )}
-                      {athlete.jersey_number && (
-                        <>
-                          {(age !== null || genderLabel !== 'Not specified') && <span>•</span>}
-                          <span>#{athlete.jersey_number}</span>
                         </>
                       )}
                     </div>

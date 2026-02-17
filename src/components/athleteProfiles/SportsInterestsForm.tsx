@@ -31,42 +31,38 @@ const SportItem = memo(({
     const isLocked = lockedSportIds.has(sport.id)
 
     return (
-        <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+        <div className="sport-item">
             <div>
-                <span className="text-sm font-medium text-slate-900 dark:text-white block">{sport.name}</span>
+                <span className="sport-item-name">{sport.name}</span>
                 {isLocked && (
-                    <span className="text-xs text-amber-600 dark:text-amber-500 flex items-center mt-1">
-                        <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <span className="sport-item-locked">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                         Enrolled in team
                     </span>
                 )}
             </div>
-            <div className="flex gap-4">
-                <label className={`flex items-center gap-2 ${isLocked ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`} title={isLocked ? "Cannot be removed while enrolled in a team" : ""}>
+            <div className="sport-item-controls">
+                <label className="form-checkbox-label" title={isLocked ? "Cannot be removed while enrolled in a team" : ""}>
                     <input
                         type="checkbox"
+                        className="form-checkbox"
                         checked={isPlaysSelected || isLocked}
                         disabled={isLocked}
                         onChange={() => !isLocked && onToggle(sport.id, 'plays')}
-                        className={`w-4 h-4 rounded focus:ring-[var(--org-btn-primary-bg, #137fec)] ${
-                            isLocked 
-                                ? 'text-slate-400 border-slate-200 bg-slate-100 dark:bg-slate-800 dark:border-slate-600' 
-                                : 'text-[var(--org-link-color)] border-slate-300'
-                        }`}
                     />
-                    <span className="text-sm text-slate-700 dark:text-slate-300">Plays</span>
+                    <span>Plays</span>
                 </label>
                 {!isLocked && (
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label className="form-checkbox-label">
                         <input
                             type="checkbox"
+                            className="form-checkbox"
                             checked={isInterestedSelected}
                             onChange={() => onToggle(sport.id, 'interested')}
-                            className="w-4 h-4 text-[var(--org-link-color)] border-slate-300 rounded focus:ring-[var(--org-btn-primary-bg, #137fec)]"
                         />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">Interested</span>
+                        <span>Interested</span>
                     </label>
                 )}
             </div>
@@ -174,20 +170,28 @@ export function SportsInterestsForm({ athlete, onSave }: SportsInterestsFormProp
   }
 
   if (isLoading) {
-    return <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
+    return (
+      <div className="profile-form-loading">
+        <div className="loading-spinner"></div>
+        <p className="loading-text">Loading sports...</p>
+      </div>
+    )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="portal-form">
       {error && (
-        <div className="text-red-600 text-sm mb-4">{error}</div>
+        <div className="form-error-banner">
+          <span className="material-symbols-outlined">error</span>
+          <span>{error}</span>
+        </div>
       )}
       
-      {sports.length === 0 ? (
-        <p className="text-sm text-slate-500">No sports available.</p>
-      ) : (
-        <div className="space-y-3">
-          {sports.map((sport) => (
+      <div className="form-fields">
+        {sports.length === 0 ? (
+          <p className="text-muted">No sports available.</p>
+        ) : (
+          sports.map((sport) => (
             <SportItem
               key={sport.id}
               sport={sport}
@@ -195,11 +199,11 @@ export function SportsInterestsForm({ athlete, onSave }: SportsInterestsFormProp
               lockedSportIds={lockedSportIds}
               onToggle={handleSportToggle}
             />
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
-      <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-700">
+      <div className="form-actions">
         <Button type="submit" variant="primary" disabled={isSubmitting}>
           {isSubmitting ? 'Saving...' : 'Save Changes'}
         </Button>

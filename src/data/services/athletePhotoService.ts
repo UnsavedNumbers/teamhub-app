@@ -12,6 +12,7 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
+import { getChildById } from '../fake/fakeUsers'
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
@@ -586,13 +587,17 @@ export async function deleteAthletePhoto(
 
 /**
  * Get public URL for athlete photo
- * No signed URLs needed - bucket is public
+ * In fake data mode returns gender-matched demo asset from /demo-assets/athlete-photos/
  */
 export function getAthletePhotoUrl(
     orgId: string,
     athleteId: string,
     size: PhotoSize = '256'
 ): string {
+    if (USE_FAKE_DATA) {
+        const child = getChildById(athleteId)
+        return child?.photo_url ?? ''
+    }
     if (!orgId || !athleteId || !isValidUUID(orgId) || !isValidUUID(athleteId)) {
         return ''
     }

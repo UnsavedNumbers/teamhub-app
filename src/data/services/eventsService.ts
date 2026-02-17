@@ -225,10 +225,57 @@ export interface CalendarEventSummary {
  * 
  * For full event details, use getEvents() or getEventById() instead
  */
+function calendarEventToSummary(e: CalendarEvent): CalendarEventSummary {
+    return {
+        id: e.id,
+        team_id: e.team_id,
+        season_id: e.season_id,
+        title: e.title,
+        type: e.type,
+        start_time: e.start_time,
+        end_time: e.end_time,
+        location: e.location,
+        arrival_time: e.arrival_time,
+        timezone: e.timezone,
+        is_cancelled: e.is_cancelled,
+        requires_travel: e.requires_travel ?? false,
+        rsvp_enabled: e.rsvp_config?.enabled ?? false,
+        rsvp_type: e.rsvp_config?.type ?? null,
+        visibility: (e as { visibility?: string }).visibility ?? 'internal',
+        team: e.team ?? null,
+        season: e.season ?? null,
+    }
+}
+
 export async function getCalendarEvents(
-    _context: UserContext,
+    context: UserContext,
     params: Omit<EventsQueryParams, 'lightweight'> = {}
 ): Promise<{ data: CalendarEventSummary[]; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const permissions = buildPermissions(context)
+            const childTeamMemberships = getChildTeamMemberships()
+            let events: CalendarEvent[]
+            if (params.startDate && params.endDate) {
+                events = getFakeEventsInDateRange(params.startDate, params.endDate)
+            } else {
+                events = getFakeAllEvents()
+            }
+            if (!params.includeCancelled) {
+                events = events.filter((e) => !e.is_cancelled)
+            }
+            events = filterEventsByRole(events, permissions, childTeamMemberships, context.orgId)
+            events.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+            const data = events.map(calendarEventToSummary)
+            return { data, error: null }
+        } catch (err) {
+            console.error('getCalendarEvents (fake) error:', err)
+            const classifiedError = classifySupabaseError(err instanceof Error ? err : new Error(String(err)))
+            return { data: [], error: classifiedError }
+        }
+    }
+
     // Real Supabase implementation with lightweight query
     try {
         let query = buildCalendarEventQuery(supabase)

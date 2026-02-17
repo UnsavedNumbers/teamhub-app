@@ -7,6 +7,11 @@
 
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import {
+    getSportProfileForAthlete,
+    getSportProfilesForAthlete,
+} from '../fake/fakeAthleteSportProfiles'
 import type {
     AthleteSportProfile,
 } from '../../types/athleteSportProfiles'
@@ -33,6 +38,12 @@ interface ServiceResponse<T> {
 /**
  * Get a single sport profile for an athlete
  */
+async function simulateDelay(): Promise<void> {
+    if (FAKE_DATA_DELAY_MS > 0) {
+        await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+    }
+}
+
 export async function getAthleteSportProfile(
     athleteId: string,
     sportCode: SportCode
@@ -54,6 +65,15 @@ export async function getAthleteSportProfile(
             debug.error('AthleteSportProfilesService.getAthleteSportProfile', 'sportCode is required', { athleteId, sportCode })
             console.groupEnd()
             throw new Error('sportCode is required')
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const profile = getSportProfileForAthlete(athleteId, sportCode)
+            debug.perf.end('athleteSportProfilesService.getAthleteSportProfile')
+            debug.data('AthleteSportProfilesService.getAthleteSportProfile', 'Response (fake)', { athleteId, sportCode, hasData: !!profile })
+            console.groupEnd()
+            return { data: profile, error: null }
         }
 
         const { data, error } = await supabase
@@ -103,6 +123,15 @@ export async function getAthleteSportProfiles(
         // Validate input
         if (!athleteId) {
             throw new Error('athleteId is required')
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const profiles = getSportProfilesForAthlete(athleteId)
+            debug.perf.end('athleteSportProfilesService.getAthleteSportProfiles')
+            debug.data('AthleteSportProfilesService.getAthleteSportProfiles', 'Response (fake)', { athleteId, profileCount: profiles.length })
+            console.groupEnd()
+            return { data: profiles, error: null }
         }
 
         const { data, error } = await supabase

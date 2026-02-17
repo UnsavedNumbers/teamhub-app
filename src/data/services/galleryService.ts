@@ -9,7 +9,7 @@
  * - Path: orgs/{org_id}/galleries/{gallery_id}/{photo_id}.jpg
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
@@ -208,6 +208,7 @@ export async function generateGalleryCover(
  */
 export function getGalleryPhotoUrl(storagePath: string): string {
   if (!storagePath) return ''
+  if (storagePath.startsWith('/')) return storagePath
 
   const { data } = supabase.storage
     .from('public-media')
@@ -930,6 +931,30 @@ export async function ensureEntityGallery(
 
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    if (entityType === 'athlete') {
+      const galleryId = `mock-gallery-athlete-${entityId}`
+      const effectiveOrgId = orgId ?? context.orgId ?? DEMO_ORG_A_ID
+      const gallery: Gallery = {
+        id: galleryId,
+        org_id: effectiveOrgId,
+        gallery_type: 'athlete',
+        entity_id: entityId,
+        name: `Athlete photos`,
+        allow_contributions: true,
+        require_approval: false,
+        fans_can_see: false,
+        is_system_generated: true,
+        cover_generated_at: null,
+        cover_generation_status: null,
+        cover_thumbnails: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        photo_count: 3,
+      }
+      debug.perf.end('galleryService.ensureEntityGallery')
+      console.groupEnd()
+      return { data: gallery, error: null }
+    }
     debug.perf.end('galleryService.ensureEntityGallery')
     debug.flow('GalleryService.ensureEntityGallery', 'Entity gallery ensured (fake)', { entityType, entityId })
     console.groupEnd()
@@ -1086,6 +1111,41 @@ export async function getPhotosForGallery(
 ): Promise<{ data: GalleryPhoto[]; error: Error | null }> {
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    if (params.gallery_id.startsWith('mock-gallery-athlete-')) {
+      const base = '/demo-assets/photos'
+      const files = ['player-portrait.jpg', 'team-celebration.jpg', 'team-huddle.jpg']
+      const order = params.order_direction === 'asc' ? 1 : -1
+      const photos: GalleryPhoto[] = files.map((filename, i) => {
+        const id = `mock-athlete-photo-${params.gallery_id}-${i}`
+        const created = new Date(Date.now() - (3 - i) * 24 * 60 * 60 * 1000).toISOString()
+        const path = `${base}/${filename}`
+        return {
+          id,
+          gallery_id: params.gallery_id,
+          album_id: null,
+          storage_path: path,
+          thumbnail_path: null,
+          thumbnail_sm_path: null,
+          thumbnail_md_path: null,
+          thumbnail_lg_path: null,
+          filename,
+          size_bytes: 200000,
+          sort_order: i + 1,
+          status: 'approved' as PhotoStatus,
+          blurhash: null,
+          can_download: undefined,
+          uploaded_by_user_id: 'demo',
+          taken_at: null,
+          created_at: created,
+          updated_at: created,
+          thumbnail_url: path,
+          url: path,
+        } as GalleryPhoto
+      })
+      if (order === -1) photos.reverse()
+      const limit = params.limit ?? 100
+      return { data: photos.slice(0, limit), error: null }
+    }
     return { data: [], error: null }
   }
 

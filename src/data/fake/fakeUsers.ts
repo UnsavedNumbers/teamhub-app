@@ -63,6 +63,15 @@ export interface FakeChild {
     emergency_contact_name: string | null
     emergency_contact_phone: string | null
     photo_url: string | null // Local asset path for demo mode
+    // Universal fields
+    height_cm: number | null
+    weight_kg: number | null
+    shoe_size_value: number | null
+    shoe_size_system: 'us' | 'eu' | 'uk' | null
+    shoe_width: 'narrow' | 'standard' | 'wide' | null
+    tshirt_size: string | null
+    shorts_size: string | null
+    dominant_hand: 'left' | 'right' | 'ambidextrous' | null
     created_at: string
     updated_at: string
 }
@@ -280,6 +289,10 @@ function getAthletePhotoUrl(filename: string): string {
   return `/demo-assets/athlete-photos/${filename}`
 }
 
+// Gender-matched demo athlete photo filenames (for generated children and fallbacks)
+const FEMALE_ATHLETE_PHOTO_FILES = ['emma-johnson.jpg', 'olivia-smith.jpg', 'ava-williams.jpg', 'sophia-chen.jpg', 'isabella-rodriguez.jpg'] as const
+const MALE_ATHLETE_PHOTO_FILES = ['liam-johnson.jpg', 'noah-smith.jpg', 'ethan-williams.jpg', 'mason-rodriguez.jpg', 'aiden-patel.jpg'] as const
+
 export const fakeChildren: FakeChild[] = [
     // Johnson Family (parent-only@example.com)
     {
@@ -295,6 +308,14 @@ export const fakeChildren: FakeChild[] = [
         emergency_contact_name: 'Jennifer Johnson',
         emergency_contact_phone: '+1 (555) 123-4567',
         photo_url: getAthletePhotoUrl('emma-johnson.jpg'),
+        height_cm: 140,
+        weight_kg: 32,
+        shoe_size_value: 3.5,
+        shoe_size_system: 'us',
+        shoe_width: 'standard',
+        tshirt_size: 'YS',
+        shorts_size: 'YS',
+        dominant_hand: 'right',
         created_at: getDateInCurrentYear(1, 15, 10),
         updated_at: getDateInCurrentYear(1, 15, 10),
     },
@@ -311,6 +332,14 @@ export const fakeChildren: FakeChild[] = [
         emergency_contact_name: 'Jennifer Johnson',
         emergency_contact_phone: '+1 (555) 123-4567',
         photo_url: getAthletePhotoUrl('liam-johnson.jpg'),
+        height_cm: 120,
+        weight_kg: 24,
+        shoe_size_value: 2,
+        shoe_size_system: 'us',
+        shoe_width: 'standard',
+        tshirt_size: 'YS',
+        shorts_size: 'YS',
+        dominant_hand: 'right',
         created_at: getDateInCurrentYear(1, 15, 10),
         updated_at: getDateInCurrentYear(1, 15, 10),
     },
@@ -328,6 +357,14 @@ export const fakeChildren: FakeChild[] = [
         emergency_contact_name: 'Mike Smith',
         emergency_contact_phone: '+1 (555) 333-4444',
         photo_url: getAthletePhotoUrl('olivia-smith.jpg'),
+        height_cm: 148,
+        weight_kg: 38,
+        shoe_size_value: 4,
+        shoe_size_system: 'us',
+        shoe_width: 'standard',
+        tshirt_size: 'YM',
+        shorts_size: 'YM',
+        dominant_hand: 'right',
         created_at: '2024-02-10T14:00:00Z',
         updated_at: '2024-02-10T14:00:00Z',
     },
@@ -344,6 +381,14 @@ export const fakeChildren: FakeChild[] = [
         emergency_contact_name: 'Mike Smith',
         emergency_contact_phone: '+1 (555) 333-4444',
         photo_url: getAthletePhotoUrl('noah-smith.jpg'),
+        height_cm: 135,
+        weight_kg: 30,
+        shoe_size_value: 3,
+        shoe_size_system: 'us',
+        shoe_width: 'wide',
+        tshirt_size: 'YM',
+        shorts_size: 'YM',
+        dominant_hand: 'right',
         created_at: '2024-02-10T14:00:00Z',
         updated_at: '2024-02-10T14:00:00Z',
     },
@@ -361,6 +406,14 @@ export const fakeChildren: FakeChild[] = [
         emergency_contact_name: 'Robert Chen',
         emergency_contact_phone: '+1 (555) 456-7890',
         photo_url: getAthletePhotoUrl('ava-williams.jpg'),
+        height_cm: 152,
+        weight_kg: 42,
+        shoe_size_value: 5,
+        shoe_size_system: 'us',
+        shoe_width: 'standard',
+        tshirt_size: 'YL',
+        shorts_size: 'YL',
+        dominant_hand: 'right',
         created_at: getDateInCurrentYear(1, 20, 11),
         updated_at: getDateInCurrentYear(1, 20, 11),
     },
@@ -377,6 +430,14 @@ export const fakeChildren: FakeChild[] = [
         emergency_contact_name: 'Robert Chen',
         emergency_contact_phone: '+1 (555) 456-7890',
         photo_url: getAthletePhotoUrl('ethan-williams.jpg'),
+        height_cm: 115,
+        weight_kg: 22,
+        shoe_size_value: 1.5,
+        shoe_size_system: 'us',
+        shoe_width: 'standard',
+        tshirt_size: 'YS',
+        shorts_size: 'YS',
+        dominant_hand: 'right',
         created_at: getDateInCurrentYear(1, 20, 11),
         updated_at: getDateInCurrentYear(1, 20, 11),
     },
@@ -394,6 +455,14 @@ export const fakeChildren: FakeChild[] = [
         emergency_contact_name: 'Robert Chen',
         emergency_contact_phone: '+1 (555) 456-7890',
         photo_url: getAthletePhotoUrl('sophia-chen.jpg'),
+        height_cm: 140,
+        weight_kg: 32,
+        shoe_size_value: 3.5,
+        shoe_size_system: 'us',
+        shoe_width: 'standard',
+        tshirt_size: 'YM',
+        shorts_size: 'YM',
+        dominant_hand: 'right',
         created_at: '2023-11-15T10:00:00Z',
         updated_at: '2023-11-15T10:00:00Z',
     },
@@ -411,6 +480,14 @@ export const fakeChildren: FakeChild[] = [
         emergency_contact_name: 'Maria Rodriguez',
         emergency_contact_phone: '+1 (555) 567-8901',
         photo_url: getAthletePhotoUrl('mason-rodriguez.jpg'),
+        height_cm: 145,
+        weight_kg: 36,
+        shoe_size_value: 4,
+        shoe_size_system: 'us',
+        shoe_width: 'standard',
+        tshirt_size: 'YM',
+        shorts_size: 'YM',
+        dominant_hand: 'right',
         created_at: getDateInCurrentYear(2, 1, 11),
         updated_at: getDateInCurrentYear(2, 1, 11),
     },
@@ -427,6 +504,14 @@ export const fakeChildren: FakeChild[] = [
         emergency_contact_name: 'Maria Rodriguez',
         emergency_contact_phone: '+1 (555) 567-8901',
         photo_url: getAthletePhotoUrl('isabella-rodriguez.jpg'),
+        height_cm: 125,
+        weight_kg: 26,
+        shoe_size_value: 2.5,
+        shoe_size_system: 'us',
+        shoe_width: 'standard',
+        tshirt_size: 'YS',
+        shorts_size: 'YS',
+        dominant_hand: 'right',
         created_at: getDateInCurrentYear(2, 1, 11),
         updated_at: getDateInCurrentYear(2, 1, 11),
     },
@@ -444,6 +529,14 @@ export const fakeChildren: FakeChild[] = [
         emergency_contact_name: 'Priya Patel',
         emergency_contact_phone: '+1 (555) 999-0000',
         photo_url: getAthletePhotoUrl('aiden-patel.jpg'),
+        height_cm: 130,
+        weight_kg: 29,
+        shoe_size_value: 3,
+        shoe_size_system: 'us',
+        shoe_width: 'standard',
+        tshirt_size: 'YS',
+        shorts_size: 'YS',
+        dominant_hand: 'right',
         created_at: '2024-03-01T09:00:00Z',
         updated_at: '2024-03-01T09:00:00Z',
     },
@@ -728,7 +821,15 @@ for (let i = 0; i < 50; i++) {
             allergies: childIdx % 12 === 0 ? pick(['Peanuts', 'Tree nuts', 'Dairy', 'Shellfish', 'Gluten'], childIdx) : null,
             emergency_contact_name: `${firstName} ${lastName}`,
             emergency_contact_phone: generatePhone(2000 + i),
-            photo_url: getAthletePhotoUrl(`${childFirstName.toLowerCase()}-${lastName.toLowerCase()}.jpg`),
+            photo_url: getAthletePhotoUrl(pick(childIsFemale ? [...FEMALE_ATHLETE_PHOTO_FILES] : [...MALE_ATHLETE_PHOTO_FILES], childIdx)),
+            height_cm: null,
+            weight_kg: null,
+            shoe_size_value: null,
+            shoe_size_system: null,
+            shoe_width: null,
+            tshirt_size: null,
+            shorts_size: null,
+            dominant_hand: null,
             created_at: createdAt,
             updated_at: createdAt,
         })
