@@ -11,6 +11,7 @@ import { getAthletes } from '../../data/services/familyService'
 import { getUnpaidFeeAssignmentsForOrg } from '../../data/services/paymentsService'
 import { getUpcomingEventsForUser } from '../../data/services/eventsService'
 import { getSeasons } from '../../data/services/seasonsService'
+import { USE_FAKE_DATA } from '../../data/config'
 import { STORAGE_KEYS } from '../../constants/storage'
 import {
   AdminPageHeader,
@@ -18,10 +19,11 @@ import {
   Select,
 } from '../../components/admin'
 import { cn } from '../../utils/cn'
+import { DEMO_PAGE_IMAGES } from '../../utils/demoImagePlaceholders'
 import '../../styles/orgAdmin.css'
 
 // ─── Unsplash imagery (free, production-safe, sports-themed) ────────────
-const IMG = {
+const REMOTE_IMG = {
   heroStadium: 'https://images.unsplash.com/photo-1521412644187-c49fa049e84d?auto=format&fit=crop&w=1600&q=80',
   heroTrack: 'https://images.unsplash.com/photo-1461896836934-bd45ba8fcde5?auto=format&fit=crop&w=1600&q=80',
   heroBasketball: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1600&q=80',
@@ -32,6 +34,10 @@ const IMG = {
   cardField: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80',
   cardUniforms: 'https://images.unsplash.com/photo-1580087256394-dc596e1c8f4f?auto=format&fit=crop&w=800&q=80',
 }
+
+const LOCAL_FAKE_IMG = DEMO_PAGE_IMAGES.adminDashboard
+
+const IMG = USE_FAKE_DATA ? LOCAL_FAKE_IMG : REMOTE_IMG
 
 // ─── Types ──────────────────────────────────────────────────────────────
 type DashboardLayout = 'stadium' | 'editorial' | 'athlete'

@@ -10,6 +10,7 @@ import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
 import type { VenueInsights, PlaceDetailsResponse } from '../../types/venueInsights'
 import { mapVenueInsightsRow } from '../../types/venueInsights'
+import { getDemoVenueInsightImages } from '../../utils/demoImagePlaceholders'
 
 export interface VenueInsightsResponse {
   place_details: PlaceDetailsResponse | null
@@ -58,6 +59,7 @@ function buildMockVenueInsights(placeId: string): VenueInsightsResponse {
 
   const fallback = catalog[Math.abs(placeId.length) % catalog.length]
   const selected = catalog.find((entry) => entry.placeId === placeId) || fallback
+  const photos = getDemoVenueInsightImages(placeId)
 
   return {
     place_details: {
@@ -99,8 +101,8 @@ function buildMockVenueInsights(placeId: string): VenueInsightsResponse {
       },
     } as PlaceDetailsResponse,
     photos: [
-      'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?auto=format&fit=crop&w=1200&q=80',
+      photos[0],
+      photos[1],
     ],
     ai_summary: selected.summary,
     ai_what_to_expect: selected.expect,

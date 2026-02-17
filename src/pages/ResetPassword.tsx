@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../i18n/useI18n'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { mapAuthError } from '../utils/authErrorMapper'
+import { DEMO_PAGE_IMAGES } from '../utils/demoImagePlaceholders'
 
 export default function ResetPassword() {
   useDebugLifecycle('ResetPassword')
@@ -19,6 +20,7 @@ export default function ResetPassword() {
   const { updatePassword, session } = useAuth()
   const navigate = useNavigate()
   const { t } = useI18n()
+  const heroImage = DEMO_PAGE_IMAGES.resetPasswordHero
 
   useEffect(() => {
     // Check if we have a valid session from the reset link
@@ -88,7 +90,7 @@ export default function ResetPassword() {
         <img
           alt="Empty sports stadium"
           className="absolute inset-0 h-full w-full object-cover"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0EioYyXup8hWypN337Pbn_TYldQzX6pJ4B-XzTwJNpPYzGkJM01_RX7voFn-WqPfzeKYEV3uehlCj6Ydm2kjcJgKhzjTJFk4ivzAGO71ShxUz2s0urAT6vdIuo1L6WOCPkjK_G3zgt7Ydml45W9KGChFKid43FWMrIDJEQ3Mo6QfpKjlwuFkFyCV5TwbqkBBH-M_0Uqg9OViXz-ry9d9HkTPPNWa7E6D153LVwiEQyYTbFEZdVULTK-loC4YTy2yXfn98L3Y0F-Q"
+          src={heroImage}
         />
         <div className="absolute inset-0 bg-slate-900/40 mix-blend-multiply"></div>
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>

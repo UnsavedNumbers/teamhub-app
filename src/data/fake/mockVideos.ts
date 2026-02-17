@@ -18,9 +18,15 @@ function getVideoAssetUrl(filename: string): string {
 }
 
 function getVideoThumbnailUrl(filename: string): string {
-  // Thumbnails use same filename with .jpg extension
-  const baseName = filename.replace(/\.(mp4|webm|mov)$/i, '')
-  return `/demo-assets/videos/${baseName}.jpg`
+  const VIDEO_THUMBNAIL_MAP: Record<string, string> = {
+    'championship-game-final-quarter.mp4': '/demo-assets/photos/tournament-field.jpg',
+    'practice-passing-drills.mp4': '/demo-assets/videos/practice-passing-drills.jpg',
+    'training-core-workout.mp4': '/demo-assets/photos/team-warmup.jpg',
+    'highlights-season-2024.mp4': '/demo-assets/photos/team-celebration.jpg',
+    'event-tournament-opening.mp4': '/demo-assets/photos/tournament-trophy.jpg',
+  }
+
+  return VIDEO_THUMBNAIL_MAP[filename] || '/demo-assets/videos/practice-passing-drills.jpg'
 }
 
 // ============================================================================

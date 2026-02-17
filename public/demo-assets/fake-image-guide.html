@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fake Image Guide</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #22c55e;
+      --border: #374151;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(180deg, var(--bg), #020617);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .panel {
+      background: color-mix(in srgb, var(--panel) 92%, black);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    h1, h2 { margin: 0 0 12px; }
+    h1 { font-size: 28px; }
+    h2 { font-size: 20px; margin-top: 10px; }
+    p, li { color: var(--muted); line-height: 1.5; }
+    code {
+      color: #86efac;
+      background: #0b1220;
+      border: 1px solid #1f2937;
+      border-radius: 6px;
+      padding: 1px 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    th, td {
+      text-align: left;
+      border: 1px solid var(--border);
+      padding: 10px;
+      vertical-align: top;
+    }
+    th {
+      background: #111827;
+      color: #d1d5db;
+      font-weight: 700;
+    }
+    td small { color: var(--muted); }
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      color: #052e16;
+      background: var(--accent);
+      border-radius: 999px;
+      padding: 2px 10px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <h1>Fake Data Local Image Guide <span class="badge">Fixed Names</span></h1>
+      <p>
+        This file documents the fixed local image mapping used by fake-data and auth/onboarding pages.
+        All files are served from <code>public/</code>.
+      </p>
+      <p>
+        Primary config files:
+        <code>src/utils/demoImagePlaceholders.ts</code> and <code>src/utils/authImages.ts</code>.
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>Auth And Onboarding Pages</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>File Name</th>
+            <th>Path</th>
+            <th>Page</th>
+            <th>Purpose</th>
+            <th>Config</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>splash-soccer.png</td><td>/images/auth/splash-soccer.png</td><td>Login</td><td>Left hero image for sign-in</td><td>AUTH_PAGE_HERO_IMAGES.login</td></tr>
+          <tr><td>splash-basketball.png</td><td>/images/auth/splash-basketball.png</td><td>Signup</td><td>Left hero image for registration</td><td>AUTH_PAGE_HERO_IMAGES.signup</td></tr>
+          <tr><td>splash-trackandfield.png</td><td>/images/auth/splash-trackandfield.png</td><td>Forgot Password</td><td>Hero image for reset request form</td><td>AUTH_PAGE_HERO_IMAGES.forgotPassword</td></tr>
+          <tr><td>splash-volleyball.png</td><td>/images/auth/splash-volleyball.png</td><td>Confirm Email</td><td>Right hero image after signup confirmation</td><td>AUTH_PAGE_HERO_IMAGES.confirmEmail</td></tr>
+          <tr><td>splash-flagfootball.png</td><td>/images/auth/splash-flagfootball.png</td><td>Organization Onboarding</td><td>Hero image for organization identity step</td><td>AUTH_PAGE_HERO_IMAGES.organizationOnboarding</td></tr>
+          <tr><td>facility-exterior.jpg</td><td>/demo-assets/photos/facility-exterior.jpg</td><td>Reset Password</td><td>Left hero image on reset-password form</td><td>DEMO_PAGE_IMAGES.resetPasswordHero</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Admin Dashboard (Fake Mode)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>File Name</th>
+            <th>Path</th>
+            <th>Page Area</th>
+            <th>Purpose</th>
+            <th>Config</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>tournament-field.jpg</td><td>/demo-assets/photos/tournament-field.jpg</td><td>Hero Stadium</td><td>Main hero background</td><td>DEMO_PAGE_IMAGES.adminDashboard.heroStadium</td></tr>
+          <tr><td>players-action.jpg</td><td>/demo-assets/photos/players-action.jpg</td><td>Hero Track</td><td>Alternate hero background</td><td>DEMO_PAGE_IMAGES.adminDashboard.heroTrack</td></tr>
+          <tr><td>soccer-action.jpg</td><td>/demo-assets/photos/soccer-action.jpg</td><td>Hero Basketball</td><td>Alternate hero background</td><td>DEMO_PAGE_IMAGES.adminDashboard.heroBasketball</td></tr>
+          <tr><td>team-huddle.jpg</td><td>/demo-assets/photos/team-huddle.jpg</td><td>Quick Action Card</td><td>Schedule card image</td><td>DEMO_PAGE_IMAGES.adminDashboard.cardSchedule</td></tr>
+          <tr><td>player-portrait.jpg</td><td>/demo-assets/photos/player-portrait.jpg</td><td>Quick Action Card</td><td>Players card image</td><td>DEMO_PAGE_IMAGES.adminDashboard.cardPlayers</td></tr>
+          <tr><td>equipment-room.jpg</td><td>/demo-assets/photos/equipment-room.jpg</td><td>Quick Action Card</td><td>Payments card image</td><td>DEMO_PAGE_IMAGES.adminDashboard.cardPayments</td></tr>
+          <tr><td>team-warmup.jpg</td><td>/demo-assets/photos/team-warmup.jpg</td><td>Quick Action Card</td><td>Training card image</td><td>DEMO_PAGE_IMAGES.adminDashboard.cardTraining</td></tr>
+          <tr><td>facility-exterior.jpg</td><td>/demo-assets/photos/facility-exterior.jpg</td><td>Quick Action Card</td><td>Field/photos card image</td><td>DEMO_PAGE_IMAGES.adminDashboard.cardField</td></tr>
+          <tr><td>tournament-trophy.jpg</td><td>/demo-assets/photos/tournament-trophy.jpg</td><td>Quick Action Card</td><td>Uniforms/announcement card image</td><td>DEMO_PAGE_IMAGES.adminDashboard.cardUniforms</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Portal Dashboard And Athletes</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>File Name</th>
+            <th>Path</th>
+            <th>Page</th>
+            <th>Purpose</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>hero-bg.webp (per sport)</td><td>/images/sports/&lt;sport-folder&gt;/hero-bg.webp</td><td>/portal/dashboard</td><td>Guardian/Athlete dashboard hero background by primary sport</td><td>SportHero + getSportImagePath</td></tr>
+          <tr><td>card-bg.webp (per sport)</td><td>/images/sports/&lt;sport-folder&gt;/card-bg.webp</td><td>/portal/dashboard</td><td>Dashboard cards and sport image panels by sport</td><td>SportCardImage + getSportImagePath</td></tr>
+          <tr><td>travel.png (when available)</td><td>/images/sports/&lt;sport-folder&gt;/travel*.png</td><td>/portal/travel and related cards</td><td>Travel-specific card image when defined</td><td>getSportImagePath('travel')</td></tr>
+          <tr><td>emma-johnson.jpg, liam-johnson.jpg, ...</td><td>/demo-assets/athlete-photos/...</td><td>/portal/athletes</td><td>Athlete profile photos in fake mode</td><td>fakeUsers.ts + athletePhotoService.ts</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Ticketing And Venue Insights (Fake Mode)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>File Name</th>
+            <th>Path</th>
+            <th>Feature</th>
+            <th>Purpose</th>
+            <th>Config</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>tournament-field.jpg</td><td>/demo-assets/photos/tournament-field.jpg</td><td>Ticketed Events</td><td>Cover/banner rotation pool</td><td>DEMO_TICKETING_EVENT_IMAGES</td></tr>
+          <tr><td>team-celebration.jpg</td><td>/demo-assets/photos/team-celebration.jpg</td><td>Ticketed Events</td><td>Cover/banner rotation pool</td><td>DEMO_TICKETING_EVENT_IMAGES</td></tr>
+          <tr><td>team-huddle.jpg</td><td>/demo-assets/photos/team-huddle.jpg</td><td>Ticketed Events</td><td>Cover/banner rotation pool</td><td>DEMO_TICKETING_EVENT_IMAGES</td></tr>
+          <tr><td>players-action.jpg</td><td>/demo-assets/photos/players-action.jpg</td><td>Ticketed Events</td><td>Cover/banner rotation pool</td><td>DEMO_TICKETING_EVENT_IMAGES</td></tr>
+          <tr><td>soccer-action.jpg</td><td>/demo-assets/photos/soccer-action.jpg</td><td>Ticketed Events</td><td>Cover/banner rotation pool</td><td>DEMO_TICKETING_EVENT_IMAGES</td></tr>
+          <tr><td>team-warmup.jpg</td><td>/demo-assets/photos/team-warmup.jpg</td><td>Ticketed Events</td><td>Cover/banner rotation pool</td><td>DEMO_TICKETING_EVENT_IMAGES</td></tr>
+          <tr><td>tournament-trophy.jpg</td><td>/demo-assets/photos/tournament-trophy.jpg</td><td>Ticketed Events</td><td>Cover/banner rotation pool</td><td>DEMO_TICKETING_EVENT_IMAGES</td></tr>
+          <tr><td>facility-exterior.jpg</td><td>/demo-assets/photos/facility-exterior.jpg</td><td>Ticketed Events</td><td>Cover/banner rotation pool</td><td>DEMO_TICKETING_EVENT_IMAGES</td></tr>
+          <tr><td>tournament-field.jpg + team-celebration.jpg</td><td>/demo-assets/photos/...</td><td>Venue Insights (riv-001)</td><td>Mock place photos for Riverside complex</td><td>getDemoVenueInsightImages('riv-001')</td></tr>
+          <tr><td>team-huddle.jpg + facility-exterior.jpg</td><td>/demo-assets/photos/...</td><td>Venue Insights (lin-001)</td><td>Mock place photos for Lincoln stadium</td><td>getDemoVenueInsightImages('lin-001')</td></tr>
+          <tr><td>tournament-field.jpg + facility-exterior.jpg</td><td>/demo-assets/photos/...</td><td>Venue Insights (default)</td><td>Fallback mock place photos</td><td>getDemoVenueInsightImages(placeId)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Core Fake Data Assets (Profiles, Galleries, Videos)</h2>
+      <p>These files are referenced directly in fake data modules and should remain available.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>File Name</th>
+            <th>Path</th>
+            <th>Feature/Pages</th>
+            <th>Purpose</th>
+            <th>Source File</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>emma-johnson.jpg, liam-johnson.jpg, olivia-smith.jpg, noah-smith.jpg, ava-williams.jpg, ethan-williams.jpg, sophia-chen.jpg, mason-rodriguez.jpg, isabella-rodriguez.jpg, aiden-patel.jpg</td><td>/demo-assets/athlete-photos/...</td><td>Athletes pages and fan athlete cards</td><td>Fixed profile photos for fake athletes</td><td>src/data/fake/fakeUsers.ts</td></tr>
+          <tr><td>team-celebration.jpg, team-huddle.jpg, players-action.jpg, soccer-action.jpg, team-warmup.jpg, player-portrait.jpg, tournament-field.jpg, tournament-trophy.jpg, facility-exterior.jpg, equipment-room.jpg</td><td>/demo-assets/photos/...</td><td>Gallery/photo pages</td><td>Mock gallery photos</td><td>src/data/fake/mockGalleries.ts</td></tr>
+          <tr><td>tournament-field.jpg, practice-passing-drills.jpg, team-warmup.jpg, team-celebration.jpg, tournament-trophy.jpg</td><td>/demo-assets/photos/... and /demo-assets/videos/practice-passing-drills.jpg</td><td>/portal/videos and video detail pages</td><td>Fixed local thumbnails for fake videos</td><td>src/data/fake/mockVideos.ts (getVideoThumbnailUrl)</td></tr>
+        </tbody>
+      </table>
+      <p><small>Note: the app references matching <code>.mp4</code> names for demo videos in <code>/demo-assets/videos/</code>.</small></p>
+    </div>
+  </div>
+</body>
+</html>

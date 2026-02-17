@@ -7,7 +7,7 @@ import {
   getSetupOrganizationFlag,
   cleanupStaleFlags,
 } from '../utils/setupOrganization'
-import { AUTH_HERO_IMAGES } from '../utils/authImages'
+import { AUTH_PAGE_HERO_IMAGES } from '../utils/authImages'
 import { mapAuthError } from '../utils/authErrorMapper'
 import { supabase } from '../lib/supabase'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
@@ -25,7 +25,7 @@ export default function Signup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [heroImage, setHeroImage] = useState<string>('')
+  const heroImage = AUTH_PAGE_HERO_IMAGES.signup
   const [inviteEmail, setInviteEmail] = useState<string | null>(null)
   const [isFromInvite, setIsFromInvite] = useState(false)
   const [tosAccepted, setTosAccepted] = useState(false)
@@ -74,14 +74,6 @@ export default function Signup() {
   useEffect(() => {
     setLogoVersion(prev => prev + 1)
   }, [resolvedTheme])
-
-  // Select random hero image on mount
-  useEffect(() => {
-    if (AUTH_HERO_IMAGES.length > 0) {
-      const randomImage = AUTH_HERO_IMAGES[Math.floor(Math.random() * AUTH_HERO_IMAGES.length)]
-      setHeroImage(randomImage)
-    }
-  }, [])
 
   // Handle invite details from location state or sessionStorage
   useEffect(() => {

@@ -12,7 +12,7 @@ import {
 } from '../utils/setupOrganization'
 import { getLoginRedirect } from '../utils/loginRedirect'
 import { getLink, RouteKeys } from '../utils/routes'
-import { AUTH_HERO_IMAGES } from '../utils/authImages'
+import { AUTH_PAGE_HERO_IMAGES } from '../utils/authImages'
 import { mapAuthError } from '../utils/authErrorMapper'
 import type { OrgMemberRole } from '../contexts/OrganizationContext'
 import { USE_FAKE_DATA } from '../data/config'
@@ -31,7 +31,7 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [heroImage, setHeroImage] = useState<string>('')
+  const heroImage = AUTH_PAGE_HERO_IMAGES.login
 
   const { signInWithEmail, user } = useAuth()
   const { resolvedTheme } = useTheme()
@@ -52,14 +52,6 @@ export default function Login() {
   useEffect(() => {
     setLogoVersion(prev => prev + 1)
   }, [resolvedTheme])
-
-  // Select random hero image on mount
-  useEffect(() => {
-    if (AUTH_HERO_IMAGES.length > 0) {
-      const randomImage = AUTH_HERO_IMAGES[Math.floor(Math.random() * AUTH_HERO_IMAGES.length)]
-      setHeroImage(randomImage)
-    }
-  }, [])
 
   async function handleEmailLogin(e: FormEvent) {
     e.preventDefault()

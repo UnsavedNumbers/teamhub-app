@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useLocation, Link } from 'react-router-dom'
 import { useTheme } from '../hooks/useTheme'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { getSetupOrganizationFlag } from '../utils/setupOrganization'
-import { AUTH_HERO_IMAGES } from '../utils/authImages'
+import { AUTH_PAGE_HERO_IMAGES } from '../utils/authImages'
 
 interface ConfirmEmailState {
   email?: string
@@ -16,7 +16,7 @@ export default function ConfirmEmail() {
   const location = useLocation()
   const state = location.state as ConfirmEmailState | null
   const { resolvedTheme } = useTheme()
-  const [heroImage, setHeroImage] = useState<string>('')
+  const heroImage = AUTH_PAGE_HERO_IMAGES.confirmEmail
   const [logoVersion] = useState(0)
 
   // Check for org setup intent from both state and localStorage
@@ -26,14 +26,6 @@ export default function ConfirmEmail() {
     getSetupOrganizationFlag()
 
   const email = state?.email
-
-  // Select random hero image on mount
-  useEffect(() => {
-    if (AUTH_HERO_IMAGES.length > 0) {
-      const randomImage = AUTH_HERO_IMAGES[Math.floor(Math.random() * AUTH_HERO_IMAGES.length)]
-      setHeroImage(randomImage)
-    }
-  }, [])
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">

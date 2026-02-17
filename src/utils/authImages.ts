@@ -26,6 +26,18 @@ export const AUTH_IMAGE_FILES: string[] = [
 export const AUTH_HERO_IMAGES = AUTH_IMAGE_FILES.map(filename => `/images/auth/${filename}`)
 
 /**
+ * Fixed page-to-image mapping for auth and onboarding screens.
+ * Uses named local files from /public/images/auth/.
+ */
+export const AUTH_PAGE_HERO_IMAGES = {
+  login: '/images/auth/splash-soccer.png',
+  signup: '/images/auth/splash-basketball.png',
+  forgotPassword: '/images/auth/splash-trackandfield.png',
+  confirmEmail: '/images/auth/splash-volleyball.png',
+  organizationOnboarding: '/images/auth/splash-flagfootball.png',
+} as const
+
+/**
  * Get a random auth hero image
  * Returns a random image path, or empty string if no images available
  */

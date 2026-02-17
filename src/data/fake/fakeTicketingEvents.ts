@@ -7,6 +7,7 @@ import {
   TicketingVenue,
 } from '@/types/ticketing'
 import { DEMO_ORG_A_ID } from '../config'
+import { DEMO_TICKETING_EVENT_IMAGES } from '@/utils/demoImagePlaceholders'
 
 type TicketingEventWithDerived = TicketedEvent & {
   ticket_types?: Array<{
@@ -78,14 +79,9 @@ const OPPONENTS = [
   'Pioneer Eagles',
 ]
 
-const COVER_IMAGES = [
-  'https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1471295253337-3ceaaedca402?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1521412644187-c49fa049e84d?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1543357480-c60d40007a3f?auto=format&fit=crop&w=1200&q=80',
-]
+const COVER_IMAGES = DEMO_TICKETING_EVENT_IMAGES.length > 0
+  ? DEMO_TICKETING_EVENT_IMAGES
+  : ['/images/sports/default/hero-bg.webp']
 
 const EVENT_TYPES: TicketedEvent['event_type'][] = ['game', 'tournament', 'fundraiser', 'social_event', 'other']
 
@@ -102,7 +98,7 @@ function toIsoFromNow(daysOffset: number, hour: number): string {
   return date.toISOString()
 }
 
-function pick<T>(list: T[], index: number): T {
+function pick<T>(list: readonly T[], index: number): T {
   return list[Math.abs(index) % list.length]
 }
 
