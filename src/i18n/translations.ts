@@ -3446,7 +3446,7 @@ export const en = {
         // Demo mode
         demoMode: {
             title: 'Demo Mode Active',
-            message: 'Changes are disabled in demo mode. Configure Supabase to enable editing.',
+            message: 'Video editing tools are not available in demo mode.',
             disabled: 'This action is disabled in demo mode',
         },
         

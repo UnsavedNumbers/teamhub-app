@@ -113,8 +113,8 @@ html.dark .oa-root a:focus-visible {
     left: 0;
     right: 0;
     height: 60px;
-    background: var(--pa-n0);
-    border-bottom: 1px solid var(--pa-n100);
+    background: var(--org-surface-card, var(--pa-n0));
+    border-bottom: 1px solid var(--org-border-default, var(--pa-n100));
     align-items: center;
     justify-content: space-between;
     padding: 0 var(--pa-space-4);
@@ -139,6 +139,11 @@ html.dark .oa-root a:focus-visible {
     .oa-content {
         padding: var(--pa-space-4);
     }
+}
+
+html.dark .oa-mobile-header {
+    background: var(--org-surface-card, var(--pa-n900));
+    border-bottom-color: var(--org-border-default, var(--pa-n700));
 }
 
 @media (max-width: 767px) {
@@ -173,17 +178,25 @@ html.dark .oa-root a:focus-visible {
     justify-content: center;
     width: 44px;
     height: 44px;
-    background: var(--pa-n0);
-    border: 1px solid var(--pa-n200);
+    background: var(--org-surface-card, var(--pa-n0));
+    border: 1px solid var(--org-border-default, var(--pa-n200));
     border-radius: 8px;
-    color: var(--pa-n900);
+    color: var(--org-text-primary, var(--pa-n900));
     cursor: pointer;
     transition: all 0.2s ease;
     touch-action: manipulation;
 }
 
 .oa-mobile-menu-toggle:hover {
-    background: var(--pa-n50);
+    background: var(--org-surface-hover, var(--pa-n50));
+    border-color: var(--org-border-active, var(--pa-n300));
+    color: var(--org-link-color, var(--pa-n900));
+}
+
+.oa-mobile-menu-toggle[aria-expanded="true"] {
+    background: var(--org-btn-primary-bg, var(--pa-n900));
+    border-color: var(--org-btn-primary-bg, var(--pa-n900));
+    color: var(--org-btn-primary-text, var(--pa-white));
 }
 
 .oa-mobile-menu-toggle:active {

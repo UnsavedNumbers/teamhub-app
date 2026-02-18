@@ -14,6 +14,48 @@ const fakeTravelContactsStore = new Map<
   Record<TravelContactCategoryOrg, OrganizationTravelContactRow | null>
 >()
 
+const DEMO_TRAVEL_CONTACT_PRESETS: Record<
+  TravelContactCategoryOrg,
+  { first_name: string; last_name: string; email: string; phone: string | null }
+> = {
+  transportation: {
+    first_name: 'Megan',
+    last_name: 'Tran',
+    email: 'transportation@riversideyouth.org',
+    phone: '(555) 210-1101',
+  },
+  lodging: {
+    first_name: 'Diego',
+    last_name: 'Navarro',
+    email: 'lodging@riversideyouth.org',
+    phone: '(555) 210-1102',
+  },
+  venue: {
+    first_name: 'Priya',
+    last_name: 'Patel',
+    email: 'venue@riversideyouth.org',
+    phone: '(555) 210-1103',
+  },
+  emergency: {
+    first_name: 'Coach',
+    last_name: 'Davis',
+    email: 'emergency@riversideyouth.org',
+    phone: '(555) 210-1199',
+  },
+  general: {
+    first_name: 'Lauren',
+    last_name: 'Kim',
+    email: 'travel@riversideyouth.org',
+    phone: '(555) 210-1104',
+  },
+  default: {
+    first_name: 'Jordan',
+    last_name: 'Reed',
+    email: 'support@riversideyouth.org',
+    phone: '(555) 210-1100',
+  },
+}
+
 async function simulateDelay(): Promise<void> {
   if (FAKE_DATA_DELAY_MS > 0) {
     await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
@@ -28,13 +70,14 @@ function ensureFakeContacts(
 
   const now = new Date().toISOString()
   const initial = TRAVEL_CONTACT_CATEGORIES_ORG.reduce((acc, cat) => {
+    const preset = DEMO_TRAVEL_CONTACT_PRESETS[cat]
     acc[cat] = {
       org_id: orgId,
       category: cat,
-      first_name: '',
-      last_name: '',
-      email: '',
-      phone: null,
+      first_name: preset.first_name,
+      last_name: preset.last_name,
+      email: preset.email,
+      phone: preset.phone,
       updated_at: now,
     }
     return acc

@@ -327,6 +327,46 @@ export async function submitUniformSizes(
     await simulateDelay()
     try {
         if (USE_FAKE_DATA) {
+            const now = new Date().toISOString()
+            let submission = fakeUniformSubmissions.find(
+                (entry) => entry.kit_id === kitId && entry.child_id === childId,
+            )
+
+            if (!submission) {
+                submission = {
+                    id: `sub-demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                    kit_id: kitId,
+                    child_id: childId,
+                    status: 'locked',
+                    submitted_at: now,
+                    submitted_by_user_id: _context.userId,
+                    created_at: now,
+                    updated_at: now,
+                }
+                fakeUniformSubmissions.push(submission)
+            } else {
+                submission.status = 'locked'
+                submission.submitted_at = now
+                submission.submitted_by_user_id = _context.userId
+                submission.updated_at = now
+            }
+
+            for (let index = fakeUniformSizeSelections.length - 1; index >= 0; index -= 1) {
+                if (fakeUniformSizeSelections[index].submission_id === submission.id) {
+                    fakeUniformSizeSelections.splice(index, 1)
+                }
+            }
+
+            items.forEach((item) => {
+                fakeUniformSizeSelections.push({
+                    id: `size-demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                    submission_id: submission!.id,
+                    item_id: item.item_id,
+                    size: item.size,
+                    quantity: 1,
+                })
+            })
+
             debug.perf.end('uniformsService.submitUniformSizes')
             debug.flow('UniformsService.submitUniformSizes', 'Uniform sizes submitted (fake)', { kitId, childId })
             console.groupEnd()

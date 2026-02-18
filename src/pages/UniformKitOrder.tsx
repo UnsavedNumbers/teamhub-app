@@ -243,8 +243,13 @@ export default function UniformKitOrder() {
     if (isKitLocked() || isKitExpired()) return true
     
     const status = getSubmissionStatus(childId)
-    // Status enum: 'not_submitted' | 'submitted' | 'locked' | 'fulfilled'
-    return status === 'locked' || status === 'fulfilled'
+    // Support both real and fake status enums.
+    return (
+      status === 'locked' ||
+      status === 'fulfilled' ||
+      status === 'ordered' ||
+      status === 'delivered'
+    )
   }
 
   if (loading) {

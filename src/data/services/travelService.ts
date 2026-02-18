@@ -52,6 +52,7 @@ import {
     TRAVEL_CONTACT_CATEGORY_LABELS,
 } from '../../types/travelContacts'
 import { getErrorMessage } from '../../utils/errorUtils'
+import { getOrganizationTravelContacts } from './organizationTravelContactsService'
 
 // ============================================================================
 // Re-exports for convenience
@@ -108,6 +109,64 @@ function toError(err: unknown, fallbackMessage: string): Error {
     if (err instanceof Error) return err
     const message = getErrorMessage(err)
     return new Error(message || fallbackMessage)
+}
+
+const fakeTravelPlanContactsStore = new Map<
+    string,
+    Record<TravelContactCategory, TravelPlanContactRow | null>
+>()
+
+function isSupportedFakeTravelPlanId(planId: string | null | undefined): planId is string {
+    return typeof planId === 'string' && planId.trim().length > 0
+}
+
+function createFakeTravelPlanContactRow(
+    planId: string,
+    category: TravelContactCategory,
+    overrides: Partial<TravelPlanContactRow> = {},
+): TravelPlanContactRow {
+    return {
+        id: overrides.id ?? `tpc-${planId}-${category}`,
+        travel_plan_id: planId,
+        category,
+        is_custom: overrides.is_custom ?? false,
+        first_name: overrides.first_name ?? null,
+        last_name: overrides.last_name ?? null,
+        email: overrides.email ?? null,
+        phone: overrides.phone ?? null,
+        updated_at: overrides.updated_at ?? new Date().toISOString(),
+    }
+}
+
+function emptyTravelPlanContactResult(): Record<TravelContactCategory, TravelPlanContactRow | null> {
+    return TRAVEL_CONTACT_CATEGORIES.reduce((acc, category) => {
+        acc[category] = null
+        return acc
+    }, {} as Record<TravelContactCategory, TravelPlanContactRow | null>)
+}
+
+function ensureFakeTravelPlanContacts(planId: string): Record<TravelContactCategory, TravelPlanContactRow | null> {
+    const existing = fakeTravelPlanContactsStore.get(planId)
+    if (existing) return existing
+
+    const seeded = TRAVEL_CONTACT_CATEGORIES.reduce((acc, category) => {
+        // Default fake behavior: plan inherits org contacts unless explicitly customized.
+        acc[category] = createFakeTravelPlanContactRow(planId, category, { is_custom: false })
+        return acc
+    }, {} as Record<TravelContactCategory, TravelPlanContactRow | null>)
+
+    fakeTravelPlanContactsStore.set(planId, seeded)
+    return seeded
+}
+
+function hasContactData(row: TravelPlanContactRow | null | undefined): boolean {
+    if (!row) return false
+    return Boolean(
+        (row.first_name && row.first_name.trim()) ||
+        (row.last_name && row.last_name.trim()) ||
+        (row.email && row.email.trim()) ||
+        (row.phone && row.phone.trim()),
+    )
 }
 
 /**
@@ -1914,24 +1973,28 @@ export async function getTravelPlanContacts(
     debug.data('TravelService.getTravelPlanContacts', 'Request', { planId })
     debug.perf.start('travelService.getTravelPlanContacts')
 
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+
+        if (!isSupportedFakeTravelPlanId(planId)) {
+            debug.perf.end('travelService.getTravelPlanContacts')
+            debug.error('TravelService.getTravelPlanContacts', 'Invalid plan ID (fake)', { planId })
+            console.groupEnd()
+            return { data: emptyTravelPlanContactResult(), error: new Error('Invalid plan ID') }
+        }
+
+        const result = ensureFakeTravelPlanContacts(planId)
+        debug.perf.end('travelService.getTravelPlanContacts')
+        debug.data('TravelService.getTravelPlanContacts', 'Response (fake)', { planId })
+        console.groupEnd()
+        return { data: result, error: null }
+    }
+
     if (!isValidUUID(planId)) {
         debug.perf.end('travelService.getTravelPlanContacts')
         debug.error('TravelService.getTravelPlanContacts', 'Invalid plan ID', { planId })
         console.groupEnd()
         return { data: {} as any, error: new Error('Invalid plan ID') }
-    }
-
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        // Return empty structure for fake mode until fake store is implemented
-        const result = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
-            acc[cat] = null
-            return acc
-        }, {} as Record<TravelContactCategory, TravelPlanContactRow | null>)
-        debug.perf.end('travelService.getTravelPlanContacts')
-        debug.data('TravelService.getTravelPlanContacts', 'Response (fake)', { planId })
-        console.groupEnd()
-        return { data: result, error: null }
     }
 
     const baseResult = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
@@ -1988,19 +2051,28 @@ export async function deleteTravelPlanContactsForPlan(
     debug.flow('TravelService.deleteTravelPlanContactsForPlan', 'Deleting travel plan contacts', { planId })
     debug.perf.start('travelService.deleteTravelPlanContactsForPlan')
 
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+
+        if (!isSupportedFakeTravelPlanId(planId)) {
+            debug.perf.end('travelService.deleteTravelPlanContactsForPlan')
+            debug.error('TravelService.deleteTravelPlanContactsForPlan', 'Invalid plan ID (fake)', { planId })
+            console.groupEnd()
+            return { error: new Error('Invalid plan ID') }
+        }
+
+        fakeTravelPlanContactsStore.delete(planId)
+        debug.perf.end('travelService.deleteTravelPlanContactsForPlan')
+        debug.flow('TravelService.deleteTravelPlanContactsForPlan', 'Contacts deleted (fake)', { planId })
+        console.groupEnd()
+        return { error: null }
+    }
+
     if (!isValidUUID(planId)) {
         debug.perf.end('travelService.deleteTravelPlanContactsForPlan')
         debug.error('TravelService.deleteTravelPlanContactsForPlan', 'Invalid plan ID', { planId })
         console.groupEnd()
         return { error: new Error('Invalid plan ID') }
-    }
-
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        debug.perf.end('travelService.deleteTravelPlanContactsForPlan')
-        debug.flow('TravelService.deleteTravelPlanContactsForPlan', 'Contacts deleted (fake)', { planId })
-        console.groupEnd()
-        return { error: null }
     }
 
     try {
@@ -2038,13 +2110,31 @@ export async function insertTravelPlanContacts(
         phone?: string | null;
     }[]
 ): Promise<{ error: Error | null }> {
-    if (!isValidUUID(planId)) {
-        return { error: new Error('Invalid plan ID') }
-    }
-
     if (USE_FAKE_DATA) {
         await simulateDelay()
+        if (!isSupportedFakeTravelPlanId(planId)) {
+            return { error: new Error('Invalid plan ID') }
+        }
+
+        const existing = ensureFakeTravelPlanContacts(planId)
+        const updated: Record<TravelContactCategory, TravelPlanContactRow | null> = { ...existing }
+
+        contacts.forEach((contact) => {
+            updated[contact.category] = createFakeTravelPlanContactRow(planId, contact.category, {
+                is_custom: true,
+                first_name: contact.first_name,
+                last_name: contact.last_name,
+                email: contact.email,
+                phone: contact.phone ?? null,
+            })
+        })
+
+        fakeTravelPlanContactsStore.set(planId, updated)
         return { error: null }
+    }
+
+    if (!isValidUUID(planId)) {
+        return { error: new Error('Invalid plan ID') }
     }
 
     try {
@@ -2103,19 +2193,40 @@ export async function upsertTravelPlanContacts(
     debug.flow('TravelService.upsertTravelPlanContacts', 'Upserting travel plan contacts', { planId, contactCount: contacts.length })
     debug.perf.start('travelService.upsertTravelPlanContacts')
 
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+
+        if (!isSupportedFakeTravelPlanId(planId)) {
+            debug.perf.end('travelService.upsertTravelPlanContacts')
+            debug.error('TravelService.upsertTravelPlanContacts', 'Invalid plan ID (fake)', { planId })
+            console.groupEnd()
+            return { error: new Error('Invalid plan ID') }
+        }
+
+        const existing = ensureFakeTravelPlanContacts(planId)
+        const updated: Record<TravelContactCategory, TravelPlanContactRow | null> = { ...existing }
+        contacts.forEach((contact) => {
+            updated[contact.category] = createFakeTravelPlanContactRow(planId, contact.category, {
+                is_custom: contact.is_custom,
+                first_name: contact.first_name ?? null,
+                last_name: contact.last_name ?? null,
+                email: contact.email ?? null,
+                phone: contact.phone ?? null,
+            })
+        })
+        fakeTravelPlanContactsStore.set(planId, updated)
+
+        debug.perf.end('travelService.upsertTravelPlanContacts')
+        debug.flow('TravelService.upsertTravelPlanContacts', 'Contacts upserted (fake)', { planId })
+        console.groupEnd()
+        return { error: null }
+    }
+
     if (!isValidUUID(planId)) {
         debug.perf.end('travelService.upsertTravelPlanContacts')
         debug.error('TravelService.upsertTravelPlanContacts', 'Invalid plan ID', { planId })
         console.groupEnd()
         return { error: new Error('Invalid plan ID') }
-    }
-
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        debug.perf.end('travelService.upsertTravelPlanContacts')
-        debug.flow('TravelService.upsertTravelPlanContacts', 'Contacts upserted (fake)', { planId })
-        console.groupEnd()
-        return { error: null }
     }
 
     try {
@@ -2169,24 +2280,56 @@ export async function resolveAllTravelContactsForPlan(
     debug.data('TravelService.resolveAllTravelContactsForPlan', 'Request', { planId })
     debug.perf.start('travelService.resolveAllTravelContactsForPlan')
 
-    if (!isValidUUID(planId)) {
-        debug.perf.end('travelService.resolveAllTravelContactsForPlan')
-        debug.error('TravelService.resolveAllTravelContactsForPlan', 'Invalid plan ID', { planId })
-        console.groupEnd()
-        return { data: {} as any, error: new Error('Invalid plan ID') }
-    }
-
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        // Return nulls/empties
+
+        if (!isSupportedFakeTravelPlanId(planId)) {
+            debug.perf.end('travelService.resolveAllTravelContactsForPlan')
+            debug.error('TravelService.resolveAllTravelContactsForPlan', 'Invalid plan ID (fake)', { planId })
+            console.groupEnd()
+            return { data: {} as any, error: new Error('Invalid plan ID') }
+        }
+
+        const planContacts = ensureFakeTravelPlanContacts(planId)
+        const { data: orgContacts, error: orgContactsError } = await getOrganizationTravelContacts(_context)
+        if (orgContactsError) {
+            debug.perf.end('travelService.resolveAllTravelContactsForPlan')
+            debug.error('TravelService.resolveAllTravelContactsForPlan', 'Failed to load org contacts (fake)', {
+                planId,
+                error: orgContactsError,
+            })
+            console.groupEnd()
+            return { data: {} as any, error: orgContactsError }
+        }
+
+        const defaultOrgContact = orgContacts.default
         const result = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
-            acc[cat] = { first_name: '', last_name: '', email: '', phone: null }
+            const planRow = planContacts[cat]
+            const categoryOrgContact = orgContacts[cat]
+            const resolvedSource =
+                planRow?.is_custom && hasContactData(planRow)
+                    ? planRow
+                    : (categoryOrgContact ?? defaultOrgContact)
+
+            acc[cat] = {
+                first_name: resolvedSource?.first_name ?? '',
+                last_name: resolvedSource?.last_name ?? '',
+                email: resolvedSource?.email ?? '',
+                phone: resolvedSource?.phone ?? null,
+            }
             return acc
         }, {} as ResolvedTravelContacts)
         debug.perf.end('travelService.resolveAllTravelContactsForPlan')
         debug.data('TravelService.resolveAllTravelContactsForPlan', 'Response (fake)', { planId })
         console.groupEnd()
         return { data: result, error: null }
+    }
+
+    if (!isValidUUID(planId)) {
+        debug.perf.end('travelService.resolveAllTravelContactsForPlan')
+        debug.error('TravelService.resolveAllTravelContactsForPlan', 'Invalid plan ID', { planId })
+        console.groupEnd()
+        return { data: {} as any, error: new Error('Invalid plan ID') }
     }
 
     try {

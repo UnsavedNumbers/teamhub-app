@@ -7,6 +7,7 @@
 import { useState, useCallback } from 'react'
 import { useVideoDownload } from '@/hooks/useVideosExtended'
 import Icon from '@/components/portal/Icon'
+import Button from '@/components/portal/Button'
 import { cn } from '@/utils/cn'
 import { showSuccess, showError } from '@/utils/toast'
 
@@ -127,29 +128,28 @@ export default function VideoDownloadButton({
   // Default button variant
   return (
     <div className="relative">
-      <button
+      <Button
+        variant="secondary"
         onClick={() => setIsMenuOpen(!isMenuOpen)}
         disabled={isLoading}
         className={cn(
-          "flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all",
-          isLoading
-            ? "border-gray-200 text-gray-400 cursor-not-allowed"
-            : "border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-primary-bg)] hover:text-[var(--org-btn-primary-bg)]",
+          "flex items-center gap-2",
+          isLoading && "opacity-50 cursor-not-allowed",
           className
         )}
       >
         {isLoading ? (
           <>
-            <Icon name="sync" size="text-lg" className="animate-spin" />
-            <span className="text-sm font-medium">Loading...</span>
+            <Icon name="sync" size="text-sm" className="mr-2 animate-spin" />
+            <span>Loading...</span>
           </>
         ) : (
           <>
-            <Icon name="download" size="text-lg" />
-            <span className="text-sm font-medium">Download</span>
+            <Icon name="download" size="text-sm" className="mr-2" />
+            <span>Download</span>
           </>
         )}
-      </button>
+      </Button>
 
       {isMenuOpen && (
         <QualityMenu

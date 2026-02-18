@@ -2,6 +2,9 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
+import { fakeTryouts, fakeTryoutRegistrations } from '../fake/fakeTryouts'
+import { getChildById } from '../fake/fakeUsers'
+import { getChildrenForUserId } from '../fake/relationships'
 
 export interface Tryout {
     id: string
@@ -163,36 +166,76 @@ function mapDbRegistrationToService(dbRow: any): TryoutRegistration {
     }
 }
 
-const MOCK_TRYOUTS: Tryout[] = [
-    {
-        id: 'tryout-1',
-        title: 'U12 Competitive Tryouts',
-        description: 'Annual tryouts for the competitive season.',
-        org_id: 'org-1',
-        start_at: '2025-05-15T09:00:00Z',
-        tryout_date: '2025-05-15',
-        start_time: '09:00',
-        location: 'Main Complex Field 1',
-        age_group: 'U12',
-        entry_fee: 2500,
-        status: 'open',
-        type: 'Tryout'
-    },
-    {
-        id: 'tryout-2',
-        title: 'U14 Elite Tryouts',
-        description: 'Elite squad selection.',
-        org_id: 'org-1',
-        start_at: '2025-05-16T10:00:00Z',
-        tryout_date: '2025-05-16',
-        start_time: '10:00',
-        location: 'Main Complex Field 2',
-        age_group: 'U14',
-        entry_fee: 3000,
-        status: 'open',
-        type: 'Tryout'
+type TryoutFlowStatus = TryoutRegistration['status']
+
+let fakeRegistrationSequence = 1000
+
+function mapFakeTryoutToServiceModel(row: typeof fakeTryouts[number]): Tryout {
+    const startAt = `${row.tryout_date}T${row.start_time}:00Z`
+    const status: Tryout['status'] =
+        row.status === 'cancelled'
+            ? 'cancelled'
+            : row.status === 'registration_open' || row.status === 'upcoming'
+                ? 'open'
+                : 'closed'
+
+    return {
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        org_id: row.org_id,
+        start_at: startAt,
+        tryout_date: row.tryout_date,
+        start_time: row.start_time,
+        location: row.location,
+        age_group: row.age_group,
+        entry_fee: 0,
+        status,
+        type: 'Tryout',
     }
-]
+}
+
+function mapFakeRegistrationToServiceModel(
+    row: typeof fakeTryoutRegistrations[number],
+): TryoutRegistration {
+    const child = getChildById(row.athlete_id)
+    const status: TryoutFlowStatus =
+        row.status === 'cancelled'
+            ? 'declined'
+            : 'registered'
+
+    return {
+        id: row.id,
+        tryout_id: row.tryout_id,
+        child_id: row.athlete_id,
+        status,
+        offer_deadline: null,
+        notes: row.notes_from_parent ?? null,
+        child: child
+            ? {
+                first_name: child.first_name,
+                last_name: child.last_name,
+            }
+            : undefined,
+    }
+}
+
+let fakeTryoutsStore: Tryout[] = fakeTryouts.map(mapFakeTryoutToServiceModel)
+let fakeTryoutRegistrationsStore: TryoutRegistration[] = fakeTryoutRegistrations.map(mapFakeRegistrationToServiceModel)
+
+function getFakeRegistrationsForContext(context: UserContext): TryoutRegistration[] {
+    const childIds = new Set(getChildrenForUserId(context.userId))
+    return fakeTryoutRegistrationsStore.filter((registration) => childIds.has(registration.child_id))
+}
+
+function getServiceChildName(childId: string): { first_name: string; last_name: string } | undefined {
+    const child = getChildById(childId)
+    if (!child) return undefined
+    return {
+        first_name: child.first_name,
+        last_name: child.last_name,
+    }
+}
 
 async function simulateDelay() {
     if (FAKE_DATA_DELAY_MS > 0) {
@@ -211,10 +254,12 @@ export async function getTryouts(
     await simulateDelay()
     try {
         if (USE_FAKE_DATA) {
+            const orgId = _orgId ?? _context.orgId
+            const data = fakeTryoutsStore.filter((tryout) => !orgId || tryout.org_id === orgId)
             debug.perf.end('tryoutsService.getTryouts')
-            debug.data('TryoutsService.getTryouts', 'Response (fake)', { tryoutCount: MOCK_TRYOUTS.length })
+            debug.data('TryoutsService.getTryouts', 'Response (fake)', { tryoutCount: data.length })
             console.groupEnd()
-            return { data: MOCK_TRYOUTS, error: null }
+            return { data, error: null }
         }
 
         const orgId = _orgId ?? _context.orgId
@@ -259,7 +304,7 @@ export async function getTryoutById(
     await simulateDelay()
     try {
         if (USE_FAKE_DATA) {
-            const found = MOCK_TRYOUTS.find(t => t.id === tryoutId)
+            const found = fakeTryoutsStore.find(t => t.id === tryoutId)
             debug.perf.end('tryoutsService.getTryoutById')
             debug.data('TryoutsService.getTryoutById', 'Response (fake)', { tryoutId, found: !!found })
             console.groupEnd()
@@ -303,10 +348,11 @@ export async function getTryoutRegistrations(
     await simulateDelay()
     try {
         if (USE_FAKE_DATA) {
+            const registrations = getFakeRegistrationsForContext(_context)
             debug.perf.end('tryoutsService.getTryoutRegistrations')
-            debug.data('TryoutsService.getTryoutRegistrations', 'Response (fake)', { registrationCount: 0 })
+            debug.data('TryoutsService.getTryoutRegistrations', 'Response (fake)', { registrationCount: registrations.length })
             console.groupEnd()
-            return { data: [], error: null }
+            return { data: registrations, error: null }
         }
         const { data, error } = await supabase
             .from('tryout_registrations')
@@ -340,8 +386,42 @@ export async function registerAthleteForTryout(
     await simulateDelay()
     try {
         if (USE_FAKE_DATA) {
+            const alreadyRegistered = fakeTryoutRegistrationsStore.some(
+                (registration) =>
+                    registration.tryout_id === _tryoutId &&
+                    registration.child_id === _childId &&
+                    registration.status !== 'declined',
+            )
+            if (alreadyRegistered) {
+                debug.perf.end('tryoutsService.registerAthleteForTryout')
+                debug.error('TryoutsService.registerAthleteForTryout', 'Duplicate registration (fake)', {
+                    tryoutId: _tryoutId,
+                    childId: _childId,
+                })
+                console.groupEnd()
+                return { error: new Error('Athlete is already registered for this tryout') }
+            }
+
+            const now = new Date().toISOString()
+            fakeTryoutRegistrationsStore = [
+                ...fakeTryoutRegistrationsStore,
+                {
+                    id: `tryout-reg-${fakeRegistrationSequence++}`,
+                    tryout_id: _tryoutId,
+                    child_id: _childId,
+                    status: 'registered',
+                    offer_deadline: null,
+                    notes: 'Registration confirmed in demo mode.',
+                    child: getServiceChildName(_childId),
+                },
+            ]
+
             debug.perf.end('tryoutsService.registerAthleteForTryout')
-            debug.flow('TryoutsService.registerAthleteForTryout', 'Athlete registered (fake)', { tryoutId: _tryoutId, childId: _childId })
+            debug.flow('TryoutsService.registerAthleteForTryout', 'Athlete registered (fake)', {
+                tryoutId: _tryoutId,
+                childId: _childId,
+                createdAt: now,
+            })
             console.groupEnd()
             return { error: null }
         }
@@ -376,10 +456,25 @@ export async function createTryout(
     await simulateDelay()
     try {
         if (USE_FAKE_DATA) {
+            const created: Tryout = {
+                id: `tryout-${Date.now()}`,
+                title: tryout.title || 'Tryout',
+                description: tryout.description || null,
+                org_id: tryout.org_id || _context.orgId,
+                start_at: tryout.start_at || null,
+                tryout_date: tryout.tryout_date || null,
+                start_time: tryout.start_time || null,
+                location: tryout.location || null,
+                age_group: tryout.age_group || 'U12',
+                entry_fee: tryout.entry_fee || 0,
+                status: tryout.status || 'open',
+                type: tryout.type || 'Tryout',
+            }
+            fakeTryoutsStore = [created, ...fakeTryoutsStore]
             debug.perf.end('tryoutsService.createTryout')
             debug.flow('TryoutsService.createTryout', 'Tryout created (fake)', { tryoutTitle: tryout.title })
             console.groupEnd()
-            return { data: { ...MOCK_TRYOUTS[0], ...tryout }, error: null }
+            return { data: created, error: null }
         }
         const orgId = tryout.org_id ?? _context.orgId
         if (!orgId) {
@@ -444,10 +539,14 @@ export async function getAdminTryoutRegistrations(
     await simulateDelay()
     try {
         if (USE_FAKE_DATA) {
+            const registrations = fakeTryoutRegistrationsStore.filter((registration) => registration.tryout_id === _tryoutId)
             debug.perf.end('tryoutsService.getAdminTryoutRegistrations')
-            debug.data('TryoutsService.getAdminTryoutRegistrations', 'Response (fake)', { tryoutId: _tryoutId, registrationCount: 0 })
+            debug.data('TryoutsService.getAdminTryoutRegistrations', 'Response (fake)', {
+                tryoutId: _tryoutId,
+                registrationCount: registrations.length,
+            })
             console.groupEnd()
-            return { data: [], error: null }
+            return { data: registrations, error: null }
         }
         const { data, error } = await supabase
             .from('tryout_registrations')
@@ -468,5 +567,90 @@ export async function getAdminTryoutRegistrations(
         console.groupEnd()
         console.error('getAdminTryoutRegistrations error:', err)
         return { data: [], error: toServiceError(err) }
+    }
+}
+
+export async function updateTryoutRegistrationStatus(
+    _context: UserContext,
+    registrationId: string,
+    status: TryoutRegistration['status'],
+    notes?: string | null,
+): Promise<{ data: TryoutRegistration | null; error: Error | null }> {
+    console.groupCollapsed(`%cupdateTryoutRegistrationStatus: ${registrationId} -> ${status}`, 'color: #666; font-weight: bold;');
+    debug.flow('TryoutsService.updateTryoutRegistrationStatus', 'Updating registration status', {
+        registrationId,
+        status,
+    })
+    debug.perf.start('tryoutsService.updateTryoutRegistrationStatus')
+
+    await simulateDelay()
+    try {
+        if (USE_FAKE_DATA) {
+            const index = fakeTryoutRegistrationsStore.findIndex((registration) => registration.id === registrationId)
+            if (index === -1) {
+                debug.perf.end('tryoutsService.updateTryoutRegistrationStatus')
+                debug.error('TryoutsService.updateTryoutRegistrationStatus', 'Registration not found (fake)', {
+                    registrationId,
+                    status,
+                })
+                console.groupEnd()
+                return { data: null, error: new Error('Registration not found') }
+            }
+
+            const nextOfferDeadline =
+                status === 'offered'
+                    ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+                    : null
+            const updated: TryoutRegistration = {
+                ...fakeTryoutRegistrationsStore[index],
+                status,
+                offer_deadline: nextOfferDeadline,
+                notes: notes ?? fakeTryoutRegistrationsStore[index].notes ?? null,
+            }
+            fakeTryoutRegistrationsStore[index] = updated
+
+            debug.perf.end('tryoutsService.updateTryoutRegistrationStatus')
+            debug.flow('TryoutsService.updateTryoutRegistrationStatus', 'Registration updated (fake)', {
+                registrationId,
+                status,
+            })
+            console.groupEnd()
+            return { data: updated, error: null }
+        }
+
+        const payload: Record<string, string | null> = { status }
+        if (notes !== undefined) payload.notes = notes
+        if (status === 'offered') {
+            payload.offer_deadline = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+        } else {
+            payload.offer_deadline = null
+        }
+
+        const { data, error } = await supabase
+            .from('tryout_registrations')
+            .update(payload)
+            .eq('id', registrationId)
+            .select('*, athlete:athletes(first_name, last_name), tryout:tryouts(*)')
+            .single()
+
+        if (error) throw error
+        const mapped = mapDbRegistrationToService(data)
+
+        debug.perf.end('tryoutsService.updateTryoutRegistrationStatus')
+        debug.flow('TryoutsService.updateTryoutRegistrationStatus', 'Registration updated successfully', {
+            registrationId,
+            status,
+        })
+        console.groupEnd()
+        return { data: mapped, error: null }
+    } catch (err) {
+        debug.perf.end('tryoutsService.updateTryoutRegistrationStatus')
+        debug.error('TryoutsService.updateTryoutRegistrationStatus', 'Failed to update registration', {
+            error: err,
+            registrationId,
+            status,
+        })
+        console.groupEnd()
+        return { data: null, error: toServiceError(err) }
     }
 }

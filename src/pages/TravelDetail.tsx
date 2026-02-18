@@ -6,6 +6,7 @@ import { getTravelPlanById, formatDateRange, resolveAllTravelContactsForPlan, ge
 import { getOrganizationTravelContacts } from '../data/services/organizationTravelContactsService'
 import { getOrganizationDetails } from '../data/services/organizationService'
 import { getEvents } from '../data/services/eventsService'
+import { USE_FAKE_DATA } from '../data/config'
 import { TRAVEL_CONTACT_CATEGORIES, TRAVEL_CONTACT_CATEGORY_LABELS, type ResolvedTravelContacts, type TravelContactCategory } from '../types/travelContacts'
 import type { TravelPlanContactRow } from '../types/travelContacts'
 import type { OrganizationTravelContactRow } from '../types/travelContacts'
@@ -313,62 +314,72 @@ export default function TravelDetail() {
 
         // Fetch team name
         try {
-          console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Fetching team name`)
-          const teamStartTime = Date.now()
-          const { data: teamData, error: teamError } = await supabase
-            .from('teams')
-            .select('name')
-            .eq('id', data.team_id)
-            .eq('org_id', context.orgId)
-            .single()
-          const teamDuration = Date.now() - teamStartTime
-          console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Team fetch completed`, {
-            duration: `${teamDuration}ms`,
-            hasData: !!teamData,
-            hasError: !!teamError,
-          })
-
           if (!isMountedRef.current) return
 
-          if (!teamError && teamData) {
-            setTeamName(teamData.name)
+          if (USE_FAKE_DATA) {
+            setTeamName(data.team?.name || 'Travel Team')
           } else {
-            setTeamName('Unknown Team')
+            console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Fetching team name`)
+            const teamStartTime = Date.now()
+            const { data: teamData, error: teamError } = await supabase
+              .from('teams')
+              .select('name')
+              .eq('id', data.team_id)
+              .eq('org_id', context.orgId)
+              .single()
+            const teamDuration = Date.now() - teamStartTime
+            console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Team fetch completed`, {
+              duration: `${teamDuration}ms`,
+              hasData: !!teamData,
+              hasError: !!teamError,
+            })
+
+            if (!isMountedRef.current) return
+            if (!teamError && teamData) {
+              setTeamName(teamData.name)
+            } else {
+              setTeamName('Unknown Team')
+            }
           }
         } catch (err) {
           if (!isMountedRef.current) return
           console.error(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Team fetch error:`, err)
-          setTeamName('Unknown Team')
+          setTeamName(USE_FAKE_DATA ? (data.team?.name || 'Travel Team') : 'Unknown Team')
         }
 
-        // Fetch emergency contact (first coach)
+        // Fetch emergency contact (first coach) in real mode only.
+        // In demo mode, use resolved travel contacts so card data matches org settings.
         try {
-          console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Fetching emergency contact`)
-          const coachStartTime = Date.now()
-          const { data: coachData, error: coachError } = await supabase
-            .from('organization_members')
-            .select('user:users(display_name, phone), role')
-            .eq('org_id', context.orgId)
-            .eq('role', 'coach')
-            .limit(1)
-            .maybeSingle()
-          const coachDuration = Date.now() - coachStartTime
-          console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Coach fetch completed`, {
-            duration: `${coachDuration}ms`,
-            hasData: !!coachData,
-            hasError: !!coachError,
-          })
+          if (USE_FAKE_DATA) {
+            setEmergencyContact(null)
+          } else {
+            console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Fetching emergency contact`)
+            const coachStartTime = Date.now()
+            const { data: coachData, error: coachError } = await supabase
+              .from('organization_members')
+              .select('user:users(display_name, phone), role')
+              .eq('org_id', context.orgId)
+              .eq('role', 'coach')
+              .limit(1)
+              .maybeSingle()
+            const coachDuration = Date.now() - coachStartTime
+            console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Coach fetch completed`, {
+              duration: `${coachDuration}ms`,
+              hasData: !!coachData,
+              hasError: !!coachError,
+            })
 
-          if (!isMountedRef.current) return
+            if (!isMountedRef.current) return
 
-          if (!coachError && coachData?.user) {
-            const user = coachData.user as unknown as { display_name: string | null; phone: string | null }
-            if (user.phone) {
-              setEmergencyContact({
-                name: user.display_name || 'Coach',
-                phone: user.phone,
-                role: 'Head Coach',
-              })
+            if (!coachError && coachData?.user) {
+              const user = coachData.user as unknown as { display_name: string | null; phone: string | null }
+              if (user.phone) {
+                setEmergencyContact({
+                  name: user.display_name || 'Coach',
+                  phone: user.phone,
+                  role: 'Head Coach',
+                })
+              }
             }
           }
         } catch (err) {
