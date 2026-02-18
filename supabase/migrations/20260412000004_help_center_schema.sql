@@ -167,13 +167,7 @@ CREATE POLICY "Platform admins can manage role mappings"
 CREATE POLICY "Platform admins can manage category page mappings"
   ON help_category_page_mappings
   FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM users
-      WHERE users.id = auth.uid()
-      AND users.is_platform_admin = TRUE
-    )
-  );
+  USING (public.is_platform_admin(auth.uid()));
 
 -- Platform admins can manage sections
 CREATE POLICY "Platform admins can manage sections"
