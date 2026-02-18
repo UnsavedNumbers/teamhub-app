@@ -772,35 +772,46 @@ export default function PaymentDetail() {
 
           {/* Right Column - Sidebar */}
           <div className="space-y-8">
-            {/* Destination */}
-            <div className="space-y-4">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">DESTINATION</h3>
-              <Card className={`p-5 transition-all group ${assignment.team?.id || assignment.season?.id ? 'hover:border-[var(--org-btn-primary-bg, #137fec)] cursor-pointer' : 'cursor-default'}`}>
-                <div
-                  className="flex items-center gap-4"
-                  onClick={() => {
-                    if (assignment.team?.id) {
-                      navigate(getLink('admin.teams.detail', { id: assignment.team.id }))
-                    } else if (assignment.season?.id) {
-                      navigate(getLink('admin.seasons.detail', { id: assignment.season.id }))
-                    }
-                  }}
-                >
-                  <div className="size-10 bg-[var(--org-btn-primary-bg, #137fec)]/10 text-[var(--org-btn-primary-bg, #137fec)] rounded-lg flex items-center justify-center group-hover:bg-[var(--org-btn-primary-bg, #137fec)] group-hover:text-white transition-colors">
-                    <span className="material-symbols-outlined">sports_soccer</span>
+            {/* Details (Team, Season, Due Date, Created) */}
+            {(assignment.team || assignment.season || assignment.due_date) && (
+              <div className="space-y-4">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">DETAILS</h3>
+                <Card>
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {assignment.team && (
+                      <div className="px-6 py-4">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Team</p>
+                        <p className="font-bold text-slate-900 dark:text-white">
+                          {assignment.team.name}
+                        </p>
+                      </div>
+                    )}
+                    {assignment.season && (
+                      <div className="px-6 py-4">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Season</p>
+                        <p className="font-bold text-slate-900 dark:text-white">
+                          {assignment.season.name}
+                        </p>
+                      </div>
+                    )}
+                    {assignment.due_date && (
+                      <div className="px-6 py-4">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Due Date</p>
+                        <p className="font-bold text-slate-900 dark:text-white">
+                          {new Date(assignment.due_date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    )}
+                    <div className="px-6 py-4">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Created</p>
+                      <p className="font-bold text-slate-900 dark:text-white">
+                        {new Date(assignment.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-slate-900 dark:text-white leading-tight">
-                      {assignment.team?.name || assignment.fee?.title || 'Fee'}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {context.organizationName || 'Organization'}
-                    </p>
-                  </div>
-                  <span className="material-symbols-outlined text-slate-300 group-hover:text-[var(--org-btn-primary-bg, #137fec)]">open_in_new</span>
-                </div>
-              </Card>
-            </div>
+                </Card>
+              </div>
+            )}
 
             {/* Payment Method */}
             {assignment.payments && assignment.payments.length > 0 && (
@@ -878,45 +889,6 @@ export default function PaymentDetail() {
                 </Button>
               </Card>
             </div>
-
-            {/* Additional Info - Team, Season, etc. */}
-            {(assignment.team || assignment.season || assignment.due_date) && (
-              <div className="space-y-4">
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">DETAILS</h3>
-                <Card className="p-5 space-y-3">
-                  {assignment.team && (
-                    <div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Team</p>
-                      <p className="text-sm font-medium text-slate-900 dark:text-white">
-                        {assignment.team.name}
-                      </p>
-                    </div>
-                  )}
-                  {assignment.season && (
-                    <div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Season</p>
-                      <p className="text-sm font-medium text-slate-900 dark:text-white">
-                        {assignment.season.name}
-                      </p>
-                    </div>
-                  )}
-                  {assignment.due_date && (
-                    <div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Due Date</p>
-                      <p className="text-sm font-medium text-slate-900 dark:text-white">
-                        {new Date(assignment.due_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Created</p>
-                    <p className="text-sm font-medium text-slate-900 dark:text-white">
-                      {new Date(assignment.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </Card>
-              </div>
-            )}
 
             {/* Contact Registrar */}
             <Card className="p-6 bg-slate-100 dark:bg-slate-800/30 border-dashed border-slate-300 dark:border-slate-700">

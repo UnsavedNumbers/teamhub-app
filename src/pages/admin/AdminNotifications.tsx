@@ -12,7 +12,6 @@ import {
   Card,
   Button,
   Badge,
-  EmptyState,
 } from '../../components/admin'
 import { AdminFilterPanel } from '../../components/platformAdmin'
 import type { FilterSectionConfig } from '../../components/platformAdmin/AdminFilterPanel'
@@ -298,7 +297,13 @@ export default function AdminNotifications() {
   return (
     <div className="oa-root oa-bg-gray-50/30 dark:oa-bg-slate-950">
       <AdminPageHeader
-        title="Notifications"
+        breadcrumbs={[{ label: 'Notifications' }]}
+        title={
+          <span className="oa-flex oa-items-center oa-gap-2 oa-justify-start">
+            <span className="material-symbols-outlined oa-text-[1.25em] oa-align-middle" aria-hidden>notifications</span>
+            <span>Notifications</span>
+          </span>
+        }
         subtitle="Stay informed about important updates and activities across your organization"
         actions={
           <div className="oa-flex oa-gap-3">
@@ -351,12 +356,13 @@ export default function AdminNotifications() {
                 </div>
             ) : filteredNotifications.length === 0 ? (
                 <Card className="oa-border-2 oa-border-dashed">
-                    <EmptyState 
-                        icon="notifications_off" 
-                        title="No Notifications Found" 
-                        description="Try adjusting your filters to see more results, or check back later for new updates." 
-                        noCard
-                    />
+                    <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+                        <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>notifications_off</span>
+                        <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0">
+                            <h3 className="oa-h3 oa-mb-0">No Notifications Found</h3>
+                            <p className="oa-body-m oa-text-muted oa-mb-0">Try adjusting your filters to see more results, or check back later for new updates.</p>
+                        </div>
+                    </div>
                 </Card>
             ) : (
                 groupedNotifications.map((group, idx) => (

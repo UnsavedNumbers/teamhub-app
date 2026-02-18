@@ -2637,6 +2637,8 @@ export const en = {
             account: 'Account',
             billing: 'Billing',
             settings: 'Settings',
+            helpSupport: 'Help & Support',
+            contactSupport: 'Contact Support',
             children: 'Athletes',
         },
         announcements: {
@@ -5135,6 +5137,82 @@ export const en = {
         demoCode: 'Demo code',
         demoCodePlaceholder: 'Enter code',
     },
+
+    contact: {
+        title: {
+            help: 'Contact Support',
+            portal: 'Contact Support',
+            admin: 'Contact Support',
+        },
+        subtitle: {
+            help: 'Have a question or need help? Send us a message and we\'ll get back to you soon.',
+            portal: 'Need assistance with your account or have a question? We\'re here to help.',
+            admin: 'Have questions about your organization or need technical support? Contact us.',
+        },
+        subject: {
+            label: 'Subject',
+            required: 'Please select a subject',
+            help: {
+                general_question: 'General Question',
+                account_help: 'Account Help',
+                billing_question: 'Billing Question',
+                bug_report: 'Bug Report',
+                feature_request: 'Feature Request',
+                other: 'Other',
+            },
+            portal: {
+                schedule_question: 'Schedule Question',
+                travel_question: 'Travel Question',
+                payments_question: 'Payments Question',
+                roster_question: 'Roster Question',
+                uniforms_question: 'Uniforms Question',
+                announcements_question: 'Announcements Question',
+                huddles_question: 'Huddles Question',
+                bug_report: 'Bug Report',
+                feature_request: 'Feature Request',
+                other: 'Other',
+            },
+            admin: {
+                onboarding_help: 'Onboarding Help',
+                billing_and_license: 'Billing & License',
+                payments_and_payouts: 'Payments & Payouts',
+                rls_or_permissions: 'RLS or Permissions',
+                data_issue: 'Data Issue',
+                feature_request: 'Feature Request',
+                bug_report: 'Bug Report',
+                other: 'Other',
+            },
+        },
+        message: {
+            label: 'Message',
+            placeholder: 'Please describe your question or issue...',
+            required: 'Please enter a message',
+        },
+        name: {
+            label: 'Name',
+            placeholder: 'Your name',
+            required: 'Please enter your name',
+        },
+        email: {
+            label: 'Email',
+            placeholder: 'your.email@example.com',
+            required: 'Please enter your email address',
+        },
+        submit: {
+            label: 'Send Message',
+            sending: 'Sending...',
+        },
+        success: {
+            title: 'Message Sent',
+            message: 'Thank you for contacting us. We\'ll get back to you as soon as possible.',
+            dismiss: 'Dismiss',
+        },
+        error: {
+            title: 'Error',
+            message: 'Failed to send your message. Please try again.',
+            retry: 'Retry',
+        },
+    },
 }
 
 /**
@@ -7422,6 +7500,8 @@ export const es = {
             account: 'Cuenta',
             billing: 'FacturaciÃ³n',
             settings: 'ConfiguraciÃ³n',
+            helpSupport: 'Ayuda y Soporte',
+            contactSupport: 'Contactar Soporte',
             children: 'Atletas',
         },
         announcements: {
@@ -9262,6 +9342,82 @@ export const es = {
         phone: 'TelÃ©fono',
         demoCode: 'CÃ³digo demo',
         demoCodePlaceholder: 'Ingresa cÃ³digo',
+    },
+
+    contact: {
+        title: {
+            help: 'Contactar Soporte',
+            portal: 'Contactar Soporte',
+            admin: 'Contactar Soporte',
+        },
+        subtitle: {
+            help: 'Â¿Tienes una pregunta o necesitas ayuda? EnvÃ­anos un mensaje y te responderemos pronto.',
+            portal: 'Â¿Necesitas ayuda con tu cuenta o tienes una pregunta? Estamos aquÃ­ para ayudarte.',
+            admin: 'Â¿Tienes preguntas sobre tu organizaciÃ³n o necesitas soporte tÃ©cnico? ContÃ¡ctanos.',
+        },
+        subject: {
+            label: 'Asunto',
+            required: 'Por favor selecciona un asunto',
+            help: {
+                general_question: 'Pregunta General',
+                account_help: 'Ayuda con la Cuenta',
+                billing_question: 'Pregunta de FacturaciÃ³n',
+                bug_report: 'Reporte de Error',
+                feature_request: 'Solicitud de FunciÃ³n',
+                other: 'Otro',
+            },
+            portal: {
+                schedule_question: 'Pregunta sobre Horarios',
+                travel_question: 'Pregunta sobre Viajes',
+                payments_question: 'Pregunta sobre Pagos',
+                roster_question: 'Pregunta sobre Lista',
+                uniforms_question: 'Pregunta sobre Uniformes',
+                announcements_question: 'Pregunta sobre Anuncios',
+                huddles_question: 'Pregunta sobre Huddles',
+                bug_report: 'Reporte de Error',
+                feature_request: 'Solicitud de FunciÃ³n',
+                other: 'Otro',
+            },
+            admin: {
+                onboarding_help: 'Ayuda con IncorporaciÃ³n',
+                billing_and_license: 'FacturaciÃ³n y Licencia',
+                payments_and_payouts: 'Pagos y Desembolsos',
+                rls_or_permissions: 'RLS o Permisos',
+                data_issue: 'Problema de Datos',
+                feature_request: 'Solicitud de FunciÃ³n',
+                bug_report: 'Reporte de Error',
+                other: 'Otro',
+            },
+        },
+        message: {
+            label: 'Mensaje',
+            placeholder: 'Por favor describe tu pregunta o problema...',
+            required: 'Por favor ingresa un mensaje',
+        },
+        name: {
+            label: 'Nombre',
+            placeholder: 'Tu nombre',
+            required: 'Por favor ingresa tu nombre',
+        },
+        email: {
+            label: 'Correo ElectrÃ³nico',
+            placeholder: 'tu.correo@ejemplo.com',
+            required: 'Por favor ingresa tu direcciÃ³n de correo electrÃ³nico',
+        },
+        submit: {
+            label: 'Enviar Mensaje',
+            sending: 'Enviando...',
+        },
+        success: {
+            title: 'Mensaje Enviado',
+            message: 'Gracias por contactarnos. Te responderemos lo antes posible.',
+            dismiss: 'Cerrar',
+        },
+        error: {
+            title: 'Error',
+            message: 'No se pudo enviar tu mensaje. Por favor intenta de nuevo.',
+            retry: 'Reintentar',
+        },
     },
 } as unknown as typeof en
 

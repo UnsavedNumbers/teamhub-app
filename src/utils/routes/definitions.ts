@@ -223,6 +223,12 @@ const portal = {
         icon: 'help',
         description: 'Get assistance',
     },
+    helpContact: {
+        path: '/help/contact',
+        label: 'Contact Support',
+        icon: 'mail',
+        description: 'Contact support',
+    },
     helpCategory: {
         path: '/help/:categorySlug',
         params: ['categorySlug'] as const,
@@ -234,6 +240,12 @@ const portal = {
         params: ['categorySlug', 'articleSlug'] as const,
         label: 'Help Article',
         icon: 'help',
+    },
+    contact: {
+        path: '/portal/contact',
+        label: 'Contact Support',
+        icon: 'mail',
+        description: 'Contact support',
     },
 
     // Photos
@@ -1039,6 +1051,20 @@ const admin = {
         description: 'Personal settings',
         requiresOrg: false,
     },
+    contact: {
+        path: '/admin/contact',
+        label: 'Contact Support',
+        icon: 'mail',
+        description: 'Contact support',
+        requiresOrg: false,
+    },
+    help: {
+        path: '/help',
+        label: 'Help & Support',
+        icon: 'help',
+        description: 'Knowledge base and help center',
+        requiresOrg: false,
+    },
 
     // Photos
     photos: {
@@ -1370,6 +1396,14 @@ const platformAdmin = {
             label: 'Audit & History',
             icon: 'history',
         },
+    },
+
+    // Contact Submissions
+    contactSubmissions: {
+        path: '/platform-admin/contact-submissions',
+        label: 'Contact Submissions',
+        icon: 'mail',
+        description: 'View contact form submissions',
     },
 
     // Help Center

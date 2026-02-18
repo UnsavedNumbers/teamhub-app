@@ -12,7 +12,7 @@ import { showSuccess, showError } from '../../utils/toast'
 import { validateCancelEvent, EVENT_ERRORS } from '../../utils/eventValidation'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
-import { ConfirmDialog, AdminPageHeader, EmptyState } from '../../components/admin'
+import { Card, ConfirmDialog, AdminPageHeader } from '../../components/admin'
 import EventsHeader from '../../components/admin/EventsHeader'
 import EventsFilters from '../../components/admin/EventsFilters'
 import EventsList from '../../components/admin/EventsList'
@@ -560,15 +560,20 @@ export default function Events() {
             />
 
             {events.length === 0 && !loading ? (
-                <EmptyState
-                    icon="event"
-                    title="NO EVENTS"
-                    description="No events match your current filters."
-                >
-                    <button className="oa-btn oa-btn--primary" onClick={() => navigate(getLink('admin.events.create'))}>
-                        {t('admin.events.create')}
-                    </button>
-                </EmptyState>
+                <Card className="oa-border-2 oa-border-dashed">
+                    <div className="oa-flex oa-flex-col oa-gap-4">
+                        <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+                            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>event</span>
+                            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0">
+                                <h3 className="oa-h3 oa-mb-0">NO EVENTS</h3>
+                                <p className="oa-body-m oa-text-muted oa-mb-0">No events match your current filters.</p>
+                            </div>
+                        </div>
+                        <button className="oa-btn oa-btn--primary" onClick={() => navigate(getLink('admin.events.create'))}>
+                            {t('admin.events.create')}
+                        </button>
+                    </div>
+                </Card>
             ) : (
                 <>
                     {viewMode === 'list' && (

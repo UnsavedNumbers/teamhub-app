@@ -149,5 +149,6 @@ logs
 dist/index.html
 /emails/mjml/need-to-convert/
 .cursor/
+.claude/
 !docs/future/notifications
 !.github/workflows

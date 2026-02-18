@@ -63,6 +63,7 @@ const PhotosGallery = lazy(() => import('./pages/PhotosGallery'))
 const HelpHomepage = lazy(() => import('./pages/help/HelpHomepage'))
 const CategoryLandingPage = lazy(() => import('./pages/help/CategoryLandingPage'))
 const ArticlePage = lazy(() => import('./pages/help/ArticlePage'))
+const HelpContactPage = lazy(() => import('./pages/help/ContactPage'))
 
 // Ticketing Pages
 import TicketEventList from './pages/ticketing/TicketEventList'
@@ -88,6 +89,7 @@ const PortalCreateEvent = lazy(() => import('./pages/portal/PortalCreateEvent'))
 const PortalEditEvent = lazy(() => import('./pages/portal/PortalEditEvent'))
 const FollowedOrgs = lazy(() => import('./pages/portal/FollowedOrgs'))
 const BookmarkedEvents = lazy(() => import('./pages/portal/BookmarkedEvents'))
+const PortalContactPage = lazy(() => import('./pages/portal/ContactPage'))
 
 // Fan Pages - Lazy loaded
 const FanHome = lazy(() => import('./pages/fan/FanHome'))
@@ -139,6 +141,7 @@ const PlatformFeatureFlags = lazy(() => import('./pages/platformAdmin/FeatureFla
 const PlatformFeatureFlagDetail = lazy(() => import('./pages/platformAdmin/FeatureFlagDetail'))
 const PlatformAdmins = lazy(() => import('./pages/platformAdmin/PlatformAdmins'))
 const PlatformAdminSettings = lazy(() => import('./pages/platformAdmin/PlatformAdminSettings'))
+const ContactSubmissions = lazy(() => import('./pages/platformAdmin/ContactSubmissions'))
 const HelpCenterSettings = lazy(() => import('./pages/platformAdmin/HelpCenterSettings'))
 const HelpCenterRoleMappings = lazy(() => import('./pages/platformAdmin/HelpCenterRoleMappings'))
 const HelpCenterCategoryPages = lazy(() => import('./pages/platformAdmin/HelpCenterCategoryPages'))
@@ -242,6 +245,7 @@ const CheckoutSuccess = lazy(() => import('./pages/admin/CheckoutSuccess'))
 const CheckoutCancel = lazy(() => import('./pages/admin/CheckoutCancel'))
 const TrialExpired = lazy(() => import('./pages/admin/TrialExpired'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
+const AdminContactPage = lazy(() => import('./pages/admin/ContactPage'))
 
 const adminEventsListPath = getPath('admin.events.list').replace('/admin/', '')
 const adminEventsCreatePath = getPath('admin.events.create').replace('/admin/', '')
@@ -460,6 +464,7 @@ function AppWithTheme() {
 
             {/* Redirect root portal to dashboard */}
             <Route path="notifications" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.messages"><Suspense fallback={<AdminLoadingSpinner />}><Notifications /></Suspense></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="contact" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><Suspense fallback={<AdminLoadingSpinner />}><PortalContactPage /></Suspense></ProtectedRoute>} />
             <Route index element={<Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace />} />
 
             {/* Catch-all to prevent blank/"blue" screens on unknown portal routes */}
@@ -469,6 +474,7 @@ function AppWithTheme() {
 
           {/* Help Center Routes - Accessible to all authenticated users */}
           <Route path="/help" element={<ProtectedRoute><HelpHomepage /></ProtectedRoute>} />
+          <Route path="/help/contact" element={<ProtectedRoute><Suspense fallback={<FullScreenLoader />}><HelpContactPage /></Suspense></ProtectedRoute>} />
           <Route path="/help/:categorySlug" element={<ProtectedRoute><CategoryLandingPage /></ProtectedRoute>} />
           <Route path="/help/:categorySlug/:articleSlug" element={<ProtectedRoute><ArticlePage /></ProtectedRoute>} />
 
@@ -686,6 +692,8 @@ function AppWithTheme() {
               {/* Personal Settings */}
               <Route path="settings" element={<AdminSettings />} />
               <Route path="settings/sport-profiles" element={<AdminSportSettings />} />
+              <Route path="contact" element={<Suspense fallback={<AdminLoadingSpinner />}><AdminContactPage /></Suspense>} />
+              <Route path="help" element={<Navigate to="/help" replace />} />
             </Route>
           </Route>
 
@@ -739,6 +747,9 @@ function AppWithTheme() {
               {/* Platform Admins */}
               <Route path="admins" element={<PlatformAdmins />} />
               <Route path="settings" element={<PlatformAdminSettings />} />
+              
+              {/* Contact Submissions */}
+              <Route path="contact-submissions" element={<ContactSubmissions />} />
               
               {/* Help Center */}
               <Route path="help-center/settings" element={<HelpCenterSettings />} />

@@ -408,6 +408,7 @@ export default function HelpHomepage() {
           </div>
           <div className="flex space-x-8 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
             <Link to={getLink('portal.help')} className="hover:text-[#0062FF] transition-colors">{t('portal.settings.helpCenter.footerKnowledgeBase')}</Link>
+            <Link to={getLink('portal.helpContact')} className="hover:text-[#0062FF] transition-colors">{t('contact.title.help')}</Link>
             <Link to={getHomeLink(userRole)} className="hover:text-[#0062FF] transition-colors">Home</Link>
             {(userRole === 'parent' || userRole === 'athlete') && (
               <Link to={getPortalLink()} className="hover:text-[#0062FF] transition-colors">Portal</Link>

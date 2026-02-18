@@ -142,6 +142,8 @@ export default function AdminLayout() {
       children: [
         { routeKey: 'admin.organization.billing', text: t('admin.navigation.billing'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING), requiresOrg: false },
         { routeKey: 'admin.settings', text: t('admin.navigation.settings'), icon: 'settings', path: getPath(RouteKeys.ADMIN_SETTINGS), requiresOrg: false },
+        { routeKey: 'admin.help', text: t('admin.navigation.helpSupport'), icon: 'help', path: getLink('admin.help'), requiresOrg: false },
+        { routeKey: 'admin.contact', text: t('admin.navigation.contactSupport'), icon: 'mail', path: getLink('admin.contact'), requiresOrg: false },
       ],
     },
   ], [t])

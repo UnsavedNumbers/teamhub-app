@@ -97,26 +97,27 @@ export const parentNavSections: NavigationSection[] = [
             },
         ],
     },
-    {
-        label: 'More',
-        groups: [
-            {
-                label: 'Media & Programs',
-                items: [
-                    { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', description: 'Team galleries' },
-                    { routeKey: 'portal.videos', text: 'Video Library', icon: 'smart_display', description: 'Watch team and athlete videos' },
-                    { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
-                ],
-            },
-            {
-                label: 'Account',
-                items: [
-                    { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', description: 'Account preferences' },
-                    { routeKey: 'portal.help', text: 'Help & Support', icon: 'help', description: 'Get assistance' },
-                ],
-            },
-        ],
-    },
+        {
+            label: 'More',
+            groups: [
+                {
+                    label: 'Media & Programs',
+                    items: [
+                        { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', description: 'Team galleries' },
+                        { routeKey: 'portal.videos', text: 'Video Library', icon: 'smart_display', description: 'Watch team and athlete videos' },
+                        { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
+                    ],
+                },
+                {
+                    label: 'Account',
+                    items: [
+                        { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', description: 'Account preferences' },
+                        { routeKey: 'portal.help', text: 'Help & Support', icon: 'help', description: 'Get assistance' },
+                        { routeKey: 'portal.contact', text: 'Contact Support', icon: 'mail', description: 'Contact support' },
+                    ],
+                },
+            ],
+        },
 ]
 
 /**
@@ -202,6 +203,7 @@ export const athleteNavSections: NavigationSection[] = [
                 items: [
                     { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', description: 'Account preferences' },
                     { routeKey: 'portal.help', text: 'Help & Support', icon: 'help', description: 'Get assistance' },
+                    { routeKey: 'portal.contact', text: 'Contact Support', icon: 'mail', description: 'Contact support' },
                 ],
             },
         ],
@@ -443,6 +445,8 @@ export const adminMenuItems: MenuItemDefinition[] = [
         requiresOrg: false,
         children: [
             { text: 'Settings', icon: 'settings', routeKey: 'admin.settings', requiresOrg: false },
+            { text: 'Help & Support', icon: 'help', routeKey: 'admin.help', requiresOrg: false },
+            { text: 'Contact Support', icon: 'mail', routeKey: 'admin.contact', requiresOrg: false },
         ],
     },
 ]

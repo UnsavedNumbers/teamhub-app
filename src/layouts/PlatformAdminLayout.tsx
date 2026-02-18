@@ -60,6 +60,7 @@ const navSections: NavSection[] = [
     items: [
       { text: 'Event Log', icon: 'history', path: getPath(RouteKeys.PLATFORM_AUDIT), requiredAction: 'view_audit_log' },
       { text: 'Feature Flags', icon: 'flag', path: getPath(RouteKeys.PLATFORM_FEATURE_FLAGS), requiredAction: 'view_feature_flags' },
+      { text: 'Contact Submissions', icon: 'mail', path: getLink('platformAdmin.contactSubmissions'), requiredAction: 'view_dashboard' },
     ],
   },
   {
