@@ -53,6 +53,57 @@ export interface ServiceResponse<T> {
   error: Error | null
 }
 
+const THUMBNAILS_BUCKET = 'help-center-thumbnails'
+const THUMBNAILS_FOLDER = 'category-thumbnails'
+
+function getSlugFromFileName(fileName: string): string {
+  return fileName.replace(/\.[^/.]+$/, '')
+}
+
+async function getCategoryThumbnailUrls(
+  categorySlugs: string[]
+): Promise<Record<string, string>> {
+  if (categorySlugs.length === 0) {
+    return {}
+  }
+
+  try {
+    const slugSet = new Set(categorySlugs)
+    const { data: files, error } = await supabase.storage
+      .from(THUMBNAILS_BUCKET)
+      .list(THUMBNAILS_FOLDER, {
+        limit: 1000,
+        sortBy: { column: 'updated_at', order: 'desc' },
+      })
+
+    if (error || !files) {
+      return {}
+    }
+
+    const thumbnails: Record<string, string> = {}
+
+    for (const file of files) {
+      const slug = getSlugFromFileName(file.name)
+
+      if (!slugSet.has(slug) || thumbnails[slug]) {
+        continue
+      }
+
+      const { data: urlData } = supabase.storage
+        .from(THUMBNAILS_BUCKET)
+        .getPublicUrl(`${THUMBNAILS_FOLDER}/${file.name}`)
+
+      if (urlData?.publicUrl) {
+        thumbnails[slug] = urlData.publicUrl
+      }
+    }
+
+    return thumbnails
+  } catch {
+    return {}
+  }
+}
+
 // ============================================================================
 // Role-Based Category Fetching
 // ============================================================================
@@ -86,25 +137,8 @@ export async function getCategoriesForRole(
       categoryIds.includes(cat.id)
     )
 
-    // Get thumbnails from storage
-    const thumbnails: Record<string, string> = {}
-    for (const category of categories) {
-      try {
-        const { data: urlData } = supabase.storage
-          .from('help-center-thumbnails')
-          .getPublicUrl(`category-thumbnails/${category.slug}.jpg`)
-
-        if (urlData?.publicUrl) {
-          // Check if file actually exists by trying to load it
-          const response = await fetch(urlData.publicUrl, { method: 'HEAD' })
-          if (response.ok) {
-            thumbnails[category.slug] = urlData.publicUrl
-          }
-        }
-      } catch {
-        // Ignore thumbnail errors
-      }
-    }
+    // Get thumbnails from storage (supports jpg/png/webp)
+    const thumbnails = await getCategoryThumbnailUrls(categories.map(category => category.slug))
 
     // Get category page mappings for descriptions (cover photos now come from category images)
     const categoryPages: Record<string, CategoryPageMapping> = {}
@@ -190,22 +224,8 @@ export async function getCategoryDetails(
     const posts = allPostsResult.data || []
     const articleCount = posts.filter(post => post.categories.includes(category.id)).length
 
-    // Get thumbnail
-    let thumbnailUrl: string | undefined
-    try {
-      const { data: urlData } = supabase.storage
-        .from('help-center-thumbnails')
-        .getPublicUrl(`category-thumbnails/${category.slug}.jpg`)
-
-      if (urlData?.publicUrl) {
-        const response = await fetch(urlData.publicUrl, { method: 'HEAD' })
-        if (response.ok) {
-          thumbnailUrl = urlData.publicUrl
-        }
-      }
-    } catch {
-      // Ignore
-    }
+    const thumbnailUrls = await getCategoryThumbnailUrls([category.slug])
+    const thumbnailUrl = thumbnailUrls[category.slug]
 
     // Get category image URL
     const getCategoryImageUrl = (cat: WordPressCategory): string => {

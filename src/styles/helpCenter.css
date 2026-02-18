@@ -2,6 +2,30 @@
  * Help Center Styles
  */
 
+/* Hero Section */
+.help-hero-section {
+  background: radial-gradient(circle at 50% -20%, #1e293b 0%, #020617 70%);
+  position: relative;
+}
+
+.help-hero-section::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #0062FF, transparent);
+}
+
+:root {
+  --help-primary: #0062FF;
+}
+
+html.dark {
+  --help-primary: #0062FF;
+}
+
 /* Tool Link Styling */
 .help-article-content a.tool-link {
   color: #2563eb;
