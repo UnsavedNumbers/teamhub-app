@@ -6,7 +6,7 @@
  *   team_memberships: org_admin, coach, parent, staff, fan
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
 import { seeded, clients, anonClient } from '../setup';
 import {
     expectSelectAllowed,

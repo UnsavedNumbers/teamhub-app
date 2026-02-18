@@ -11,7 +11,7 @@ import {
   copyStripeIdToClipboard,
 } from '../../utils/platformAdminMasking'
 import type { AdminPayment, PlatformAdminRole } from '../../types/platformAdmin.types'
-import { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { showSuccess, showInfo } from '../../utils/toast'
 
 // Status filter options

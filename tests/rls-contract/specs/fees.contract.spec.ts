@@ -6,12 +6,11 @@
  *   fee_assignments: org_admin, parent (own), fan, cross-org
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
 import { seeded, clients, anonClient } from '../setup';
 import {
     expectSelectAllowed,
     expectSelectDenied,
-    expectWriteAllowed,
     expectWriteDenied,
 } from '../helpers';
 

@@ -6,7 +6,7 @@
  *   gallery_photos: org_admin, parent, fan
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
 import { seeded, clients, anonClient } from '../setup';
 import {
     expectSelectAllowed,

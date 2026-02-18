@@ -93,6 +93,16 @@ const navSections: NavSection[] = [
       { text: 'Structure', icon: 'account_tree', path: getLink('platformAdmin.structure'), requiredAction: 'view_structure' },
     ],
   },
+  {
+    label: 'Help Center',
+    items: [
+      { text: 'WordPress Settings', icon: 'help', path: getLink('platformAdmin.helpCenter.settings'), requiredAction: 'view_dashboard' },
+      { text: 'Role Mappings', icon: 'link', path: getLink('platformAdmin.helpCenter.roleMappings'), requiredAction: 'view_dashboard' },
+      { text: 'Category Pages', icon: 'description', path: getLink('platformAdmin.helpCenter.categoryPages'), requiredAction: 'view_dashboard' },
+      { text: 'Sections', icon: 'folder', path: getLink('platformAdmin.helpCenter.sections'), requiredAction: 'view_dashboard' },
+      { text: 'Category Thumbnails', icon: 'image', path: getLink('platformAdmin.helpCenter.thumbnails'), requiredAction: 'view_dashboard' },
+    ],
+  },
 ]
 
 // Loading spinner using our design system

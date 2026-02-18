@@ -31,7 +31,7 @@ function ContactRow({
     const isCustom = useWatch({ control, name: `${name}.${index}.is_custom` })
 
     return (
-        <div key={field.id} className="oa-category-row">
+        <div className="oa-category-row">
             <div className="oa-category-header">
                 <h4 className="oa-category-title">{label}</h4>
                 <div className="oa-category-toggle">

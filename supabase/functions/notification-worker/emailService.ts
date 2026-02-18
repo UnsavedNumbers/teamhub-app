@@ -153,7 +153,7 @@ export async function sendNotificationEmail(
       throw new Error(`Unknown email type: ${job.type}`);
     }
 
-    let subject = injectVariables(config.subject, job.payload, { noEscape: true });
+    const subject = injectVariables(config.subject, job.payload, { noEscape: true });
     const preview = injectVariables(config.preview, job.payload, { noEscape: true });
 
     // Generate plain text fallback

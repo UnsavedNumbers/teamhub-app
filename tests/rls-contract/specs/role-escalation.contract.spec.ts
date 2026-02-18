@@ -11,11 +11,10 @@
  * These tests are critical security assertions that prevent privilege escalation.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
 import { seeded, clients } from '../setup';
 import {
     expectWriteDenied,
-    expectWriteAllowed,
 } from '../helpers';
 
 describe('role escalation protection', () => {

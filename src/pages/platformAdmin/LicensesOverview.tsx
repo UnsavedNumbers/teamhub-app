@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { StatCard, PageHeader, Card, Button, OfflineBanner } from '../../components/platformAdmin'
 import type { LicenseMetrics, LicenseAlert } from '../../types/licenseTiers.types'
+import { getLink } from '../../utils/routes'
 
 // Loading skeleton for stats
 function StatsSkeleton() {
@@ -114,7 +115,7 @@ export default function LicensesOverview() {
             return acc
           }, {} as Record<string, number>)
 
-          const duplicates = Object.entries(priceIdCounts).filter(([_, count]: [string, number]) => count > 1)
+          const duplicates = (Object.entries(priceIdCounts) as Array<[string, number]>).filter(([, count]) => count > 1)
           if (duplicates.length > 0) {
             newAlerts.push({
               type: 'error',
@@ -160,7 +161,7 @@ export default function LicensesOverview() {
         actions={
           <Button
             variant="primary"
-            onClick={() => navigate('/platform-admin/licenses/tiers')}
+            onClick={() => navigate(getLink('platformAdmin.licenses.tiers'))}
           >
             Manage Tiers
           </Button>
@@ -225,13 +226,13 @@ export default function LicensesOverview() {
           label="Active License Tiers"
           value={metrics?.active_tiers ?? 0}
           icon="workspace_premium"
-          onClick={() => navigate('/platform-admin/licenses/tiers')}
+          onClick={() => navigate(getLink('platformAdmin.licenses.tiers'))}
         />
         <StatCard
           label="Features in Catalog"
           value={metrics?.total_features ?? 0}
           icon="inventory_2"
-          onClick={() => navigate('/platform-admin/licenses/features')}
+          onClick={() => navigate(getLink('platformAdmin.licenses.features'))}
         />
         <StatCard
           label="Features (Power Only)"
@@ -253,19 +254,19 @@ export default function LicensesOverview() {
           label="Organizations on Basic"
           value={metrics?.orgs_on_basic ?? 0}
           icon="apartment"
-          onClick={() => navigate('/platform-admin/organizations')}
+          onClick={() => navigate(getLink('platformAdmin.organizations.list'))}
         />
         <StatCard
           label="Organizations on Power"
           value={metrics?.orgs_on_power ?? 0}
           icon="apartment"
-          onClick={() => navigate('/platform-admin/organizations')}
+          onClick={() => navigate(getLink('platformAdmin.organizations.list'))}
         />
         <StatCard
           label="Active Overrides"
           value={metrics?.active_overrides ?? 0}
           icon="rule"
-          onClick={() => navigate('/platform-admin/licenses/overrides')}
+          onClick={() => navigate(getLink('platformAdmin.licenses.overrides'))}
         />
         <StatCard
           label="Tiers Missing Price ID"
@@ -292,7 +293,7 @@ export default function LicensesOverview() {
           <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-3" style={{ gap: 'var(--pa-space-4)' }}>
             <button
               className="pa-btn pa-btn--secondary"
-              onClick={() => navigate('/platform-admin/licenses/features/new')}
+              onClick={() => navigate(`${getLink('platformAdmin.licenses.features')}/new`)}
               style={{ textAlign: 'left', justifyContent: 'flex-start', padding: 'var(--pa-space-4)' }}
             >
               <div className="pa-flex pa-items-center pa-gap-3">
@@ -305,7 +306,7 @@ export default function LicensesOverview() {
             </button>
             <button
               className="pa-btn pa-btn--secondary"
-              onClick={() => navigate('/platform-admin/licenses/tiers/new')}
+              onClick={() => navigate(`${getLink('platformAdmin.licenses.tiers')}/new`)}
               style={{ textAlign: 'left', justifyContent: 'flex-start', padding: 'var(--pa-space-4)' }}
             >
               <div className="pa-flex pa-items-center pa-gap-3">
@@ -318,7 +319,7 @@ export default function LicensesOverview() {
             </button>
             <button
               className="pa-btn pa-btn--secondary"
-              onClick={() => navigate('/platform-admin/licenses/overrides/new')}
+              onClick={() => navigate(`${getLink('platformAdmin.licenses.overrides')}/new`)}
               style={{ textAlign: 'left', justifyContent: 'flex-start', padding: 'var(--pa-space-4)' }}
             >
               <div className="pa-flex pa-items-center pa-gap-3">

@@ -62,6 +62,18 @@ const ROUTE_NAMESPACE_CONFIG: RouteNamespaceConfig[] = [
       fan: '/fan',
     },
   },
+  {
+    namespace: '/help',
+    allowedRoles: ['parent', 'org_admin', 'coach', 'athlete', 'platform_admin'],
+    redirectTo: {
+      parent: '/help',
+      athlete: '/help',
+      org_admin: '/help',
+      coach: '/help',
+      platform_admin: '/help',
+      fan: '/fan',
+    },
+  },
 ];
 
 /**

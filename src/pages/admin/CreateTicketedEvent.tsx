@@ -10,7 +10,7 @@ import { useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { AdminPageHeader, Card, Button, Input } from '@/components/admin'
 import { FileUpload } from '@/components/common/FileUpload'
-import { getLink, useRouteLink } from '@/utils/routes'
+import { getLink } from '@/utils/routes'
 import type { TicketedEventType, TicketedEventStatus } from '@/types/ticketing'
 import { uploadTicketBanner } from '@/data/services/organizationService'
 import '../../styles/orgAdmin.css'
@@ -90,7 +90,7 @@ export default function CreateTicketedEvent() {
       if (data.event_id) {
         navigate(`${getLink('admin.events.detail', { id: data.event_id })}?view=ticketing`)
       } else {
-        navigate('/admin/ticketing/events')
+        navigate(getLink('admin.ticketingEvents.list'))
       }
     },
   })
@@ -105,8 +105,8 @@ export default function CreateTicketedEvent() {
       <AdminPageHeader
         title="Create Ticketed Event"
         breadcrumbs={[
-          { label: 'Admin', path: '/admin/dashboard' },
-          { label: 'Ticketing', path: '/admin/ticketing/events' },
+          { label: 'Admin', path: getLink('admin.dashboard') },
+          { label: 'Ticketing', path: getLink('admin.ticketingEvents.list') },
           { label: 'Create Event' }
         ]}
       />

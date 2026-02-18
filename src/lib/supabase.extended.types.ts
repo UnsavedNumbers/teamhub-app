@@ -1,0 +1,13 @@
+import type { Database as BaseDatabase } from './database.types'
+
+export type SupabaseExtended = BaseDatabase
+export type Database = BaseDatabase
+
+export type {
+  Json,
+  Tables,
+  TablesInsert,
+  TablesUpdate,
+  Enums,
+  CompositeTypes,
+} from './database.types'

@@ -218,10 +218,22 @@ const portal = {
 
     // Help & Support
     help: {
-        path: '/portal/help',
+        path: '/help',
         label: 'Help & Support',
         icon: 'help',
         description: 'Get assistance',
+    },
+    helpCategory: {
+        path: '/help/:categorySlug',
+        params: ['categorySlug'] as const,
+        label: 'Help Category',
+        icon: 'help',
+    },
+    helpArticle: {
+        path: '/help/:categorySlug/:articleSlug',
+        params: ['categorySlug', 'articleSlug'] as const,
+        label: 'Help Article',
+        icon: 'help',
     },
 
     // Photos
@@ -1357,6 +1369,40 @@ const platformAdmin = {
             path: '/platform-admin/licenses/audit',
             label: 'Audit & History',
             icon: 'history',
+        },
+    },
+
+    // Help Center
+    helpCenter: {
+        settings: {
+            path: '/platform-admin/help-center/settings',
+            label: 'WordPress Settings',
+            icon: 'help',
+            description: 'WordPress connection and sync',
+        },
+        roleMappings: {
+            path: '/platform-admin/help-center/role-mappings',
+            label: 'Role Mappings',
+            icon: 'link',
+            description: 'Map roles to categories',
+        },
+        categoryPages: {
+            path: '/platform-admin/help-center/category-pages',
+            label: 'Category Pages',
+            icon: 'description',
+            description: 'Map categories to pages',
+        },
+        sections: {
+            path: '/platform-admin/help-center/sections',
+            label: 'Sections',
+            icon: 'folder',
+            description: 'Configure display sections',
+        },
+        thumbnails: {
+            path: '/platform-admin/help-center/thumbnails',
+            label: 'Category Thumbnails',
+            icon: 'image',
+            description: 'Upload category thumbnails',
         },
     },
 } as const satisfies Record<string, RouteDefinition | Record<string, RouteDefinition>>

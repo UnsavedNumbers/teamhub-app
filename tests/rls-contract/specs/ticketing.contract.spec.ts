@@ -6,7 +6,7 @@
  *   purchases:       own-user scoping, direct insert denial
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
 import { seeded, clients, anonClient } from '../setup';
 import {
     expectSelectAllowed,

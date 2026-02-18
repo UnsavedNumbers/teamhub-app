@@ -5,7 +5,7 @@ import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type Co
 import { canPerformAction, getDeniedMessage } from '../../utils/platformAdminPermissions'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import type { AdminOrganization, AdminRpcResponse, PlatformAdminRole, OrganizationStatus } from '../../types/platformAdmin.types'
-import { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { showSuccess, showError } from '../../utils/toast'
 import { cn } from '../../utils/cn'
 

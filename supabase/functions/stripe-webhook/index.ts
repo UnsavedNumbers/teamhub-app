@@ -306,7 +306,7 @@ serve(async (req) => {
   }
 
   // Track the result of processing for the final response
-  let webhookResult: {
+  const webhookResult: {
     payment_type?: PaymentType
     message?: string
     order_id?: string | null

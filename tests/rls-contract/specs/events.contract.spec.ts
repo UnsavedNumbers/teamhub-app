@@ -7,7 +7,7 @@
  * Covers both public events (visibility='public') and private events (visibility='private').
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
 import { seeded, clients, anonClient } from '../setup';
 import {
     expectSelectAllowed,

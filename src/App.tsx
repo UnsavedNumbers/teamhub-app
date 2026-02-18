@@ -59,6 +59,11 @@ import Photos from './pages/Photos'
 const Notifications = lazy(() => import('./pages/Notifications'))
 const PhotosGallery = lazy(() => import('./pages/PhotosGallery'))
 
+// Help Center Pages
+const HelpHomepage = lazy(() => import('./pages/help/HelpHomepage'))
+const CategoryLandingPage = lazy(() => import('./pages/help/CategoryLandingPage'))
+const ArticlePage = lazy(() => import('./pages/help/ArticlePage'))
+
 // Ticketing Pages
 import TicketEventList from './pages/ticketing/TicketEventList'
 import TicketEventDetail from './pages/ticketing/TicketEventDetail'
@@ -134,6 +139,11 @@ const PlatformFeatureFlags = lazy(() => import('./pages/platformAdmin/FeatureFla
 const PlatformFeatureFlagDetail = lazy(() => import('./pages/platformAdmin/FeatureFlagDetail'))
 const PlatformAdmins = lazy(() => import('./pages/platformAdmin/PlatformAdmins'))
 const PlatformAdminSettings = lazy(() => import('./pages/platformAdmin/PlatformAdminSettings'))
+const HelpCenterSettings = lazy(() => import('./pages/platformAdmin/HelpCenterSettings'))
+const HelpCenterRoleMappings = lazy(() => import('./pages/platformAdmin/HelpCenterRoleMappings'))
+const HelpCenterCategoryPages = lazy(() => import('./pages/platformAdmin/HelpCenterCategoryPages'))
+const HelpCenterSections = lazy(() => import('./pages/platformAdmin/HelpCenterSections'))
+const HelpCenterThumbnails = lazy(() => import('./pages/platformAdmin/HelpCenterThumbnails'))
 const PlatformDemoManagement = lazy(() => import('./pages/platformAdmin/DemoManagement'))
 const PlatformDemoOrgDetail = lazy(() => import('./pages/platformAdmin/DemoOrgDetail'))
 const LicensesOverview = lazy(() => import('./pages/platformAdmin/LicensesOverview'))
@@ -457,6 +467,11 @@ function AppWithTheme() {
             <Route path="*" element={<Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace={false} />} />
           </Route>
 
+          {/* Help Center Routes - Accessible to all authenticated users */}
+          <Route path="/help" element={<ProtectedRoute><HelpHomepage /></ProtectedRoute>} />
+          <Route path="/help/:categorySlug" element={<ProtectedRoute><CategoryLandingPage /></ProtectedRoute>} />
+          <Route path="/help/:categorySlug/:articleSlug" element={<ProtectedRoute><ArticlePage /></ProtectedRoute>} />
+
           {/* Fan Routes - Public fan experience */}
           <Route path="/fan" element={<Suspense fallback={<AdminLoadingSpinner />}><FanLayout /></Suspense>}>
             {/* Public routes - accessible without auth for browsing */}
@@ -724,6 +739,13 @@ function AppWithTheme() {
               {/* Platform Admins */}
               <Route path="admins" element={<PlatformAdmins />} />
               <Route path="settings" element={<PlatformAdminSettings />} />
+              
+              {/* Help Center */}
+              <Route path="help-center/settings" element={<HelpCenterSettings />} />
+              <Route path="help-center/role-mappings" element={<HelpCenterRoleMappings />} />
+              <Route path="help-center/category-pages" element={<HelpCenterCategoryPages />} />
+              <Route path="help-center/sections" element={<HelpCenterSections />} />
+              <Route path="help-center/thumbnails" element={<HelpCenterThumbnails />} />
               
               {/* Licenses & Entitlements */}
               <Route path="licenses" element={<LicensesOverview />} />

@@ -50,6 +50,23 @@ function applyThemeTokens(tokens: ThemeTokens): void {
  */
 const PLATFORM_ADMIN_PATH_PREFIX = '/platform-admin'
 
+/** Paths where org theme must never be shown (login, signup, etc.) */
+const NO_ORG_THEME_PATHS: readonly string[] = [
+  '/portal/login',
+  '/portal/signup',
+  '/portal/forgot-password',
+  '/portal/reset-password',
+  '/portal/accept-invite',
+  '/portal/join/link',
+  '/portal/auth/callback',
+  '/portal/confirm-email',
+  '/portal/unauthorized',
+]
+
+function isNoOrgThemePath(pathname: string): boolean {
+  return NO_ORG_THEME_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))
+}
+
 export function useOrganizationTheme(): { ready: boolean } {
   const location = useLocation()
   const { currentOrganization } = useOrganization()
@@ -62,8 +79,10 @@ export function useOrganizationTheme(): { ready: boolean } {
   const [, setHasLoadedOrgTheme] = useState(false)
 
   const isPlatformAdminRoute = location.pathname.startsWith(PLATFORM_ADMIN_PATH_PREFIX)
+  const isNoOrgThemeRoute = isNoOrgThemePath(location.pathname)
+  const useDefaultThemeOnly = isPlatformAdminRoute || isNoOrgThemeRoute
 
-  // Listen for theme change events (do not apply org theme when on platform admin)
+  // Listen for theme change events (do not apply org theme when on platform admin or auth routes)
   useLayoutEffect(() => {
     const handleThemeChanged = (e: Event) => {
       const customEvent = e as CustomEvent<{ themeId?: string | null }>
@@ -72,6 +91,8 @@ export function useOrganizationTheme(): { ready: boolean } {
         setThemeId(newThemeId)
         if (location.pathname.startsWith(PLATFORM_ADMIN_PATH_PREFIX)) {
           applyThemeTokens(getPlatformAdminFixedTokens())
+        } else if (isNoOrgThemePath(location.pathname)) {
+          applyThemeTokens(generateTokens(getDefaultTheme(), resolvedTheme === 'dark'))
         } else {
           const theme = newThemeId ? getTheme(newThemeId) : getDefaultTheme()
           applyThemeTokens(generateTokens(theme, resolvedTheme === 'dark'))
@@ -88,14 +109,17 @@ export function useOrganizationTheme(): { ready: boolean } {
   }, [resolvedTheme, location.pathname])
 
   // Memoize token generation - only recalculate when theme ID or mode changes
-  // When on platform admin route, use fixed PA tokens (no org colors)
+  // When on platform admin route, use fixed PA tokens; on auth routes use default theme (no org colors)
   const tokens = useMemo(() => {
     if (isPlatformAdminRoute) {
       return getPlatformAdminFixedTokens()
     }
+    if (isNoOrgThemeRoute) {
+      return generateTokens(getDefaultTheme(), resolvedTheme === 'dark')
+    }
     const theme = themeId ? getTheme(themeId) : getDefaultTheme()
     return generateTokens(theme, resolvedTheme === 'dark')
-  }, [themeId, resolvedTheme, isPlatformAdminRoute])
+  }, [themeId, resolvedTheme, isPlatformAdminRoute, isNoOrgThemeRoute])
 
   // Apply default theme immediately on mount to prevent FOUC
   useLayoutEffect(() => {
@@ -123,18 +147,20 @@ export function useOrganizationTheme(): { ready: boolean } {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [tokens])
 
-  // Load and apply organization theme (skip when on platform admin - we use fixed PA tokens)
+  // Load and apply organization theme (skip when on platform admin or auth routes)
   useLayoutEffect(() => {
     const abortController = new AbortController()
 
     const loadAndApplyTheme = async () => {
-      if (isPlatformAdminRoute) {
+      if (useDefaultThemeOnly) {
+        setThemeId(null)
         setHasLoadedOrgTheme(true)
         setIsLoading(false)
         return
       }
       if (!context || !currentOrganization) {
-        // No organization - use default theme
+        // No organization - clear any previous org theme and use default
+        setThemeId(null)
         setHasLoadedOrgTheme(true)
         setIsLoading(false)
         return
@@ -185,7 +211,7 @@ export function useOrganizationTheme(): { ready: boolean } {
     return () => {
       abortController.abort()
     }
-  }, [context, currentOrganization?.id, themeVersion, isPlatformAdminRoute])
+  }, [context, currentOrganization?.id, themeVersion, useDefaultThemeOnly])
 
   // Return ready state - theme is always ready (default theme is applied immediately)
   // Loading state is only for background updates, doesn't block rendering
