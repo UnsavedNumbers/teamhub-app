@@ -7,6 +7,8 @@
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 
+const supabaseUntyped = supabase as any
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -45,7 +47,7 @@ export interface ServiceResponse<T> {
  */
 export async function getRoleCategoryMappings(): Promise<ServiceResponse<RoleCategoryMapping[]>> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseUntyped
       .from('help_role_category_mappings')
       .select('*')
       .order('role', { ascending: true })
@@ -55,7 +57,7 @@ export async function getRoleCategoryMappings(): Promise<ServiceResponse<RoleCat
       return { data: null, error }
     }
 
-    const mappings: RoleCategoryMapping[] = (data || []).map(item => ({
+    const mappings: RoleCategoryMapping[] = (data || []).map((item: any) => ({
       id: item.id,
       role: item.role,
       wordpressCategoryId: item.wordpress_category_id,
@@ -80,7 +82,7 @@ export async function getMappingsForRole(
   role: 'parent' | 'coach' | 'org_admin' | 'athlete' | 'platform_admin'
 ): Promise<ServiceResponse<RoleCategoryMapping[]>> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseUntyped
       .from('help_role_category_mappings')
       .select('*')
       .eq('role', role)
@@ -89,7 +91,7 @@ export async function getMappingsForRole(
       return { data: null, error }
     }
 
-    const mappings: RoleCategoryMapping[] = (data || []).map(item => ({
+    const mappings: RoleCategoryMapping[] = (data || []).map((item: any) => ({
       id: item.id,
       role: item.role,
       wordpressCategoryId: item.wordpress_category_id,
@@ -118,7 +120,7 @@ export async function createRoleCategoryMapping(
   }
 ): Promise<ServiceResponse<RoleCategoryMapping>> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseUntyped
       .from('help_role_category_mappings')
       .insert({
         role: mapping.role,
@@ -157,7 +159,7 @@ export async function createRoleCategoryMapping(
  */
 export async function deleteRoleCategoryMapping(id: string): Promise<ServiceResponse<void>> {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseUntyped
       .from('help_role_category_mappings')
       .delete()
       .eq('id', id)
@@ -188,7 +190,7 @@ export async function replaceRoleMappings(
 ): Promise<ServiceResponse<RoleCategoryMapping[]>> {
   try {
     // Delete existing mappings for this role
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await supabaseUntyped
       .from('help_role_category_mappings')
       .delete()
       .eq('role', role)
@@ -202,7 +204,7 @@ export async function replaceRoleMappings(
       return { data: [], error: null }
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseUntyped
       .from('help_role_category_mappings')
       .insert(
         mappings.map(m => ({
@@ -219,7 +221,7 @@ export async function replaceRoleMappings(
       return { data: null, error }
     }
 
-    const results: RoleCategoryMapping[] = (data || []).map(item => ({
+    const results: RoleCategoryMapping[] = (data || []).map((item: any) => ({
       id: item.id,
       role: item.role,
       wordpressCategoryId: item.wordpress_category_id,
@@ -246,7 +248,7 @@ export async function replaceRoleMappings(
  */
 export async function getCategoryPageMappings(): Promise<ServiceResponse<CategoryPageMapping[]>> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseUntyped
       .from('help_category_page_mappings')
       .select('*')
       .order('category_slug', { ascending: true })
@@ -256,7 +258,7 @@ export async function getCategoryPageMappings(): Promise<ServiceResponse<Categor
       return { data: null, error }
     }
 
-    const mappings: CategoryPageMapping[] = (data || []).map(item => ({
+    const mappings: CategoryPageMapping[] = (data || []).map((item: any) => ({
       id: item.id,
       categorySlug: item.category_slug,
       wordpressPageId: item.wordpress_page_id,
@@ -281,7 +283,7 @@ export async function getCategoryPageMapping(
   categorySlug: string
 ): Promise<ServiceResponse<CategoryPageMapping>> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseUntyped
       .from('help_category_page_mappings')
       .select('*')
       .eq('category_slug', categorySlug)
@@ -324,7 +326,7 @@ export async function upsertCategoryPageMapping(
   }
 ): Promise<ServiceResponse<CategoryPageMapping>> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseUntyped
       .from('help_category_page_mappings')
       .upsert(
         {
@@ -368,7 +370,7 @@ export async function upsertCategoryPageMapping(
  */
 export async function deleteCategoryPageMapping(categorySlug: string): Promise<ServiceResponse<void>> {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseUntyped
       .from('help_category_page_mappings')
       .delete()
       .eq('category_slug', categorySlug)

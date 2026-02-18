@@ -251,6 +251,88 @@ html.dark {
   border-left-color: #3b82f6;
 }
 
+/* Pro-Tip Box Styling */
+.help-article-content .pro-tip,
+.help-article-content [class*="pro-tip"],
+.help-article-content blockquote.pro-tip-border {
+  background-color: #ffffff;
+  border-left: 4px solid #0062FF;
+  padding: 2rem;
+  margin: 3rem 0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.help-article-content .pro-tip-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.help-article-content .pro-tip-header .material-symbols-outlined {
+  color: #0062FF;
+  font-weight: 700;
+}
+
+.help-article-content .pro-tip-header span:last-child {
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #0062FF;
+}
+
+.help-article-content .pro-tip p {
+  color: #334155;
+  font-weight: 500;
+  font-style: italic;
+  line-height: 1.75;
+  margin-bottom: 0;
+}
+
+/* Step-by-step sections */
+.help-article-content .step-item,
+.help-article-content [class*="step"] {
+  display: flex;
+  align-items: flex-start;
+  background-color: #ffffff;
+  border: 1px solid #f1f5f9;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.help-article-content .step-number {
+  width: 2rem;
+  height: 2rem;
+  background-color: rgba(0, 98, 255, 0.1);
+  color: #0062FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.75rem;
+  margin-right: 1.5rem;
+  margin-top: 0.25rem;
+  flex-shrink: 0;
+}
+
+.help-article-content .step-content h4 {
+  font-family: 'Lexend', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.025em;
+  color: #0f172a;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.help-article-content .step-content p {
+  color: #475569;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
 .help-article-content strong {
   font-weight: 700;
   color: #0f172a;

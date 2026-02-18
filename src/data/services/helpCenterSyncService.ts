@@ -20,6 +20,8 @@ import {
   initializeWordPressApi,
 } from './wordpressApiService'
 
+const supabaseUntyped = supabase as any
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -59,7 +61,7 @@ async function cacheItem(
   try {
     const expiresAtValue = expiresAt || new Date(Date.now() + 60 * 60 * 1000) // 1 hour default
 
-    const { error } = await supabase
+    const { error } = await supabaseUntyped
       .from('help_wordpress_cache')
       .upsert(
         {
@@ -92,7 +94,7 @@ async function cacheItem(
  */
 async function clearExpiredCache(): Promise<void> {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseUntyped
       .from('help_wordpress_cache')
       .delete()
       .lt('expires_at', new Date().toISOString())
@@ -470,7 +472,7 @@ export async function syncWordPressData(
 
     // Update sync timestamp in config
     try {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseUntyped
         .from('help_wordpress_config')
         .update({
           last_sync_at: new Date().toISOString(),
@@ -511,7 +513,7 @@ export async function syncWordPressData(
  * Get WordPress config ID (helper function)
  */
 async function getConfigId(): Promise<string | null> {
-  const { data } = await supabase
+  const { data } = await supabaseUntyped
     .from('help_wordpress_config')
     .select('id')
     .limit(1)
@@ -529,7 +531,7 @@ export async function getCachedWordPressData<T>(
   wordpressSlug?: string
 ): Promise<{ data: T | null; error: Error | null }> {
   try {
-    let query = supabase
+    let query = supabaseUntyped
       .from('help_wordpress_cache')
       .select('data')
       .eq('cache_type', cacheType)
@@ -570,7 +572,7 @@ export async function getAllCachedWordPressData<T>(
   cacheType: 'category' | 'tag' | 'post' | 'page'
 ): Promise<{ data: T[]; error: Error | null }> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseUntyped
       .from('help_wordpress_cache')
       .select('data')
       .eq('cache_type', cacheType)
@@ -580,7 +582,7 @@ export async function getAllCachedWordPressData<T>(
       return { data: [], error }
     }
 
-    const items = (data || []).map(item => item.data as T)
+    const items = (data || []).map((item: any) => item.data as T)
     return { data: items, error: null }
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err))

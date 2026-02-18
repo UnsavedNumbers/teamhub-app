@@ -15,12 +15,14 @@ import { showError } from '../../utils/toast'
 import { getLink } from '../../utils/routes'
 import { debug } from '../../lib/debug'
 import { useT } from '../../i18n/useI18n'
+import { getMarketingSiteUrl, getHomeLink, getPortalLink, getAdminPortalLink } from '../../utils/helpCenter/helpLinks'
+import { APP_NAME } from '../../constants/app'
 import '../../styles/helpCenter.css'
 
 type UserRole = 'parent' | 'coach' | 'org_admin' | 'athlete' | 'platform_admin'
 
 // Helper to get category navigation items with translations
-function getCategoryNavItems(t: (key: string) => string) {
+function getCategoryNavItems(t: (key: any) => string) {
   return [
     { slug: 'onboard', labelKey: 'categoryNavGettingStarted', titleKey: 'categoryNavGettingStarted' },
     { slug: 'profile', labelKey: 'categoryNavAccountSettings', titleKey: 'categoryNavAccount' },
@@ -398,17 +400,22 @@ export default function HelpHomepage() {
         <div className="pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center space-x-8">
             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-              {t('portal.settings.helpCenter.footerVersion')}
+              {APP_NAME}
             </span>
             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#0062FF]">
               {t('portal.settings.helpCenter.footerStatus')}
             </span>
           </div>
           <div className="flex space-x-8 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-            <a href="#" className="hover:text-[#0062FF] transition-colors">{t('portal.settings.helpCenter.footerKnowledgeBase')}</a>
-            <a href="#" className="hover:text-[#0062FF] transition-colors">{t('portal.settings.helpCenter.footerDeveloperApi')}</a>
-            <a href="#" className="hover:text-[#0062FF] transition-colors">{t('portal.settings.helpCenter.footerSupportTicket')}</a>
-            <a href="#" className="hover:text-[#0062FF] transition-colors">{t('portal.settings.helpCenter.footerServiceStatus')}</a>
+            <Link to={getLink('portal.help')} className="hover:text-[#0062FF] transition-colors">{t('portal.settings.helpCenter.footerKnowledgeBase')}</Link>
+            <Link to={getHomeLink(userRole)} className="hover:text-[#0062FF] transition-colors">Home</Link>
+            {(userRole === 'parent' || userRole === 'athlete') && (
+              <Link to={getPortalLink()} className="hover:text-[#0062FF] transition-colors">Portal</Link>
+            )}
+            {userRole === 'org_admin' && (
+              <Link to={getAdminPortalLink()} className="hover:text-[#0062FF] transition-colors">Admin Portal</Link>
+            )}
+            <a href={getMarketingSiteUrl()} target="_blank" rel="noopener noreferrer" className="hover:text-[#0062FF] transition-colors">YouthSports.team</a>
           </div>
         </div>
       </footer>

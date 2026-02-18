@@ -8,8 +8,8 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { mapAuthRoleToStandardRole } from '../../lib/routeGuard'
-import { getArticleBySlug, getCategoryArticles } from '../../data/services/helpCenterDataService'
-import type { HelpArticle } from '../../data/services/helpCenterDataService'
+import { getArticleBySlug, getCategoriesForRole } from '../../data/services/helpCenterDataService'
+import type { HelpCategory, HelpArticle } from '../../data/services/helpCenterDataService'
 import { replaceToolLinksInHtml } from '../../utils/helpCenter/parseToolLinks'
 import { getToolLinkElement } from '../../utils/helpCenter/toolLinkRegistry'
 import { navigateToToolLink } from '../../utils/helpCenter/toolLinkNavigation'
@@ -18,6 +18,8 @@ import { showError } from '../../utils/toast'
 import { debug } from '../../lib/debug'
 import { getLink } from '../../utils/routes'
 import { useT } from '../../i18n/useI18n'
+import { getMarketingSiteUrl, getHomeLink, getPortalLink, getAdminPortalLink } from '../../utils/helpCenter/helpLinks'
+import { APP_NAME } from '../../constants/app'
 import '../../styles/helpCenter.css'
 
 type UserRole = 'parent' | 'coach' | 'org_admin' | 'athlete' | 'platform_admin'
@@ -29,7 +31,7 @@ export default function ArticlePage() {
   const t = useT()
   const [loading, setLoading] = useState(true)
   const [article, setArticle] = useState<HelpArticle | null>(null)
-  const [relatedArticles, setRelatedArticles] = useState<HelpArticle[]>([])
+  const [categories, setCategories] = useState<HelpCategory[]>([])
   const [toolLinkPopup, setToolLinkPopup] = useState<{
     element: any
     context?: string
@@ -95,6 +97,7 @@ export default function ArticlePage() {
 
     setLoading(true)
     try {
+      // Load article
       const result = await getArticleBySlug(categorySlug, articleSlug)
       if (result.error) {
         if (t) showError(t('errorMessages.fetchFailed'))
@@ -110,17 +113,10 @@ export default function ArticlePage() {
 
       setArticle(result.data)
 
-      // Load related articles (same category, different article)
-      const categoryArticlesResult = await getCategoryArticles(categorySlug, userRole)
-      if (!categoryArticlesResult.error && categoryArticlesResult.data) {
-        const allArticles = [
-          ...(categoryArticlesResult.data.sections || []).flatMap(s => s.articles || []),
-          ...(categoryArticlesResult.data.generalArticles || []),
-        ]
-        const related = allArticles
-          .filter(a => a && a.id !== result.data?.id)
-          .slice(0, 5)
-        setRelatedArticles(related)
+      // Load categories for sidebar navigation
+      const categoriesResult = await getCategoriesForRole(userRole)
+      if (!categoriesResult.error && categoriesResult.data) {
+        setCategories(categoriesResult.data)
       }
     } catch (err) {
       if (t) showError(t('errorMessages.fetchFailed'))
@@ -171,13 +167,52 @@ export default function ArticlePage() {
     }
   }, [article, handleToolLinkNavigation])
 
+  // Process content to add IDs to headings for navigation
+  const processContentWithHeadingIds = useCallback((html: string) => {
+    if (!html) return html
+    
+    // Create a temporary div to parse HTML
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = html
+    
+    // Add IDs to h2 headings
+    const headings = tempDiv.querySelectorAll('h2')
+    headings.forEach((h2, index) => {
+      const id = `heading-${index}`
+      h2.id = id
+    })
+    
+    return tempDiv.innerHTML
+  }, [])
+
+  // Extract headings from content for "On This Page" navigation
+  const extractHeadings = useCallback(() => {
+    if (!contentRef.current) return []
+    const headings = contentRef.current.querySelectorAll('h2')
+    return Array.from(headings).map((h2, index) => ({
+      id: h2.id || `heading-${index}`,
+      text: h2.textContent || '',
+    }))
+  }, [])
+
+  const [headings, setHeadings] = useState<Array<{ id: string; text: string }>>([])
+
+  useEffect(() => {
+    if (article) {
+      // Wait for content to render, then extract headings
+      setTimeout(() => {
+        setHeadings(extractHeadings())
+      }, 100)
+    }
+  }, [article, extractHeadings])
+
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A]">
+      <div className="min-h-screen bg-[#F8FAFC]">
         <div className="max-w-[1440px] mx-auto px-8 py-24">
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#0062FF]"></div>
-            <p className="mt-4 text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest text-sm">
+            <p className="mt-4 text-slate-600 font-bold uppercase tracking-widest text-sm">
               {t('portal.settings.helpCenter.loadingArticle')}
             </p>
           </div>
@@ -188,10 +223,10 @@ export default function ArticlePage() {
 
   if (!article) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A]">
+      <div className="min-h-screen bg-[#F8FAFC]">
         <div className="max-w-[1440px] mx-auto px-8 py-24">
           <div className="text-center py-12">
-            <h1 className="font-impact font-[900] text-4xl uppercase tracking-tighter mb-6 text-slate-900 dark:text-white">
+            <h1 className="font-impact font-[900] text-4xl uppercase tracking-tighter mb-6 text-slate-900">
               {t('portal.settings.helpCenter.articleNotFound')}
             </h1>
             <Link
@@ -207,23 +242,13 @@ export default function ArticlePage() {
     )
   }
 
-  // Process content to replace tool links (only when article exists)
+  // Process content to replace tool links and add heading IDs
   const processedContent = article && article.content && handleToolLinkNavigation
-    ? replaceToolLinksInHtml(article.content, handleToolLinkNavigation)
+    ? (() => {
+        const withToolLinks = replaceToolLinksInHtml(article.content, handleToolLinkNavigation)
+        return processContentWithHeadingIds(withToolLinks)
+      })()
     : ''
-
-  // Helper to get icon for article category
-  const getArticleIcon = (categorySlug: string): string => {
-    const iconMap: Record<string, string> = {
-      'onboard': 'menu_book',
-      'profile': 'person',
-      'roster': 'groups',
-      'season': 'event',
-      'billing': 'payments',
-      'comply': 'security',
-    }
-    return iconMap[categorySlug] || 'article'
-  }
 
   // Helper to get category label
   const getArticleCategoryLabel = (article: HelpArticle): string => {
@@ -235,131 +260,253 @@ export default function ArticlePage() {
       'billing': t('portal.settings.helpCenter.categoryNavPaymentsBilling'),
       'comply': t('portal.settings.helpCenter.categoryNavSafetyCompliance'),
     }
-    return categoryMap[article.categorySlug || ''] || t('portal.settings.helpCenter.general')
+    return categoryMap[article.categorySlug || ''] || article.categoryName || t('portal.settings.helpCenter.general')
+  }
+
+  // Format date for display
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    }).toUpperCase()
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A]">
-      {/* Hero Section */}
-      <section className="help-hero-section text-white pt-24 pb-16 px-8">
-        <div className="max-w-[1440px] mx-auto">
-          {/* Breadcrumbs */}
-          <nav className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-8">
-            <Link to={getLink('portal.help')} className="hover:text-white transition-colors">
-              {t('portal.settings.helpCenter.breadcrumbSupport')}
-            </Link>
-            <span className="material-symbols-outlined text-xs">chevron_right</span>
-            <Link
-              to={getLink('portal.helpCategory', { categorySlug: article.categorySlug || '' })}
-              className="hover:text-white transition-colors"
-            >
-              {article.categoryName || ''}
-            </Link>
-            <span className="material-symbols-outlined text-xs">chevron_right</span>
-            <span className="text-[#0062FF]">{article.title || ''}</span>
-          </nav>
-
-          {/* Article Title */}
-          <h1 className="font-impact font-[900] text-5xl md:text-6xl lg:text-7xl uppercase tracking-tighter leading-none mb-6 max-w-4xl">
-            {article.title}
-          </h1>
-
-          {/* Article Meta */}
-          <div className="flex items-center gap-6 text-sm text-slate-400">
-            {article.readingTime && (
-              <span className="font-bold uppercase tracking-widest">
-                {t('portal.settings.helpCenter.minRead', { minutes: article.readingTime })}
-              </span>
-            )}
-            <span className="font-bold uppercase tracking-widest">
-              {t('portal.settings.helpCenter.updated', { date: new Date(article.lastModified).toLocaleDateString() })}
-            </span>
-            <span className="font-bold uppercase tracking-widest text-[#0062FF]">
-              {getArticleCategoryLabel(article)}
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Content */}
-      <main className="max-w-[1440px] mx-auto px-8 py-16">
-        <div className="grid grid-cols-12 gap-16">
-          {/* Article Content */}
-          <article className="col-span-12 lg:col-span-8">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-12">
-              <div
-                ref={contentRef}
-                className="prose prose-lg max-w-none help-article-content dark:prose-invert prose-headings:font-impact prose-headings:uppercase prose-headings:tracking-tighter prose-h1:text-4xl prose-h1:font-[900] prose-h2:text-3xl prose-h2:font-[900] prose-h3:text-2xl prose-h3:font-[900] prose-p:text-slate-700 dark:prose-p:text-slate-300 prose-p:leading-relaxed prose-a:text-[#0062FF] prose-a:no-underline hover:prose-a:underline prose-strong:text-slate-900 dark:prose-strong:text-white prose-strong:font-bold"
-                dangerouslySetInnerHTML={{ __html: processedContent }}
-              />
+    <div className="min-h-screen bg-[#F8FAFC]">
+      <div className="max-w-[1440px] mx-auto flex">
+        {/* Left Sidebar Navigation */}
+        <aside className="w-80 border-r border-slate-200 min-h-[calc(100vh-80px)] p-8 sticky top-20 hidden lg:block">
+          <nav className="space-y-12">
+            {/* Main Categories */}
+            <div>
+              <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6">
+                {getArticleCategoryLabel(article).toUpperCase()}
+              </h5>
+              <ul className="space-y-4">
+                {categories.slice(0, 4).map((category) => (
+                  <li key={category.id}>
+                    <Link
+                      to={getLink('portal.helpCategory', { categorySlug: category.slug })}
+                      className={`block text-sm font-bold uppercase tracking-tight ${
+                        category.slug === categorySlug
+                          ? 'text-[#0062FF]'
+                          : 'text-slate-500 hover:text-[#0062FF]'
+                      }`}
+                    >
+                      {category.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </article>
-
-          {/* Sidebar */}
-          <aside className="col-span-12 lg:col-span-4">
-            {/* Related Articles */}
-            {relatedArticles.length > 0 && (
-              <div className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 p-12 mb-8">
-                <h3 className="font-impact font-black uppercase tracking-widest text-sm mb-12 flex items-center">
-                  <span className="w-8 h-[2px] bg-[#0062FF] mr-3"></span>
-                  {t('portal.settings.helpCenter.relatedArticles')}
-                </h3>
-                <ul className="space-y-8">
-                  {relatedArticles.map((related) => (
-                    <li key={related.id} className="flex items-start group">
-                      <span className="material-symbols-outlined text-[#0062FF] mr-4 text-2xl font-bold flex-shrink-0 mt-1">
-                        {getArticleIcon(related.categorySlug || '')}
-                      </span>
-                      <div className="flex-1">
-                        <span className="block font-black text-[10px] uppercase tracking-widest opacity-60 mb-1">
-                          {getArticleCategoryLabel(related)}
-                        </span>
-                        <Link
-                          to={getLink('portal.helpArticle', {
-                            categorySlug: related.categorySlug || '',
-                            articleSlug: related.slug || '',
-                          })}
-                          className="text-lg font-bold leading-tight uppercase tracking-tight group-hover:text-[#0062FF] transition-colors cursor-pointer block"
-                        >
-                          {related.title}
-                        </Link>
-                        {related.excerpt && (
-                          <p className="text-sm text-slate-400 dark:text-slate-500 mt-2 line-clamp-2 normal-case">
-                            {related.excerpt}
-                          </p>
-                        )}
-                      </div>
+            {/* Additional Categories */}
+            {categories.length > 4 && (
+              <div>
+                <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6">
+                  MORE CATEGORIES
+                </h5>
+                <ul className="space-y-4">
+                  {categories.slice(4).map((category) => (
+                    <li key={category.id}>
+                      <Link
+                        to={getLink('portal.helpCategory', { categorySlug: category.slug })}
+                        className={`block text-sm font-bold uppercase tracking-tight ${
+                          category.slug === categorySlug
+                            ? 'text-[#0062FF]'
+                            : 'text-slate-500 hover:text-[#0062FF]'
+                        }`}
+                      >
+                        {category.name}
+                      </Link>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
+          </nav>
+        </aside>
 
-            {/* Back to Category */}
+        {/* Main Content */}
+        <main className="flex-1 px-8 md:px-16 py-16 max-w-5xl">
+          {/* Breadcrumbs */}
+          <nav className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-12">
+            <Link to={getLink('portal.help')} className="hover:text-[#0062FF]">
+              {t('portal.settings.helpCenter.breadcrumbSupport')}
+            </Link>
+            <span className="material-symbols-outlined text-xs">chevron_right</span>
             <Link
               to={getLink('portal.helpCategory', { categorySlug: article.categorySlug || '' })}
-              className="w-full group flex items-center justify-between p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-[#0062FF] dark:hover:border-[#0062FF] transition-all"
+              className="hover:text-[#0062FF]"
             >
-              <div className="flex items-center">
-                <span className="material-symbols-outlined text-slate-400 group-hover:text-[#0062FF] mr-6 text-3xl">
-                  arrow_back
-                </span>
-                <div className="text-left">
-                  <span className="block font-black text-[10px] uppercase tracking-widest text-slate-400 mb-1">
-                    {t('portal.settings.helpCenter.breadcrumbSupport')}
-                  </span>
-                  <span className="font-bold text-lg uppercase tracking-tight">
-                    {article.categoryName || ''}
-                  </span>
-                </div>
-              </div>
-              <span className="material-symbols-outlined text-[#0062FF] opacity-0 group-hover:opacity-100 transition-opacity">
-                arrow_forward
-              </span>
+              {article.categoryName || ''}
             </Link>
-          </aside>
-        </div>
-      </main>
+            <span className="material-symbols-outlined text-xs">chevron_right</span>
+            <span className="text-slate-900">{article.title || ''}</span>
+          </nav>
+
+          {/* Article Header */}
+          <header className="mb-16">
+            <h1 className="font-impact font-[900] text-7xl md:text-[90px] uppercase tracking-tighter leading-[0.85] mb-10 text-slate-900">
+              {article.title}
+            </h1>
+            <div className="flex items-center space-x-8 border-y border-slate-200 py-6">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Last Updated
+                </span>
+                <span className="text-sm font-bold font-impact uppercase tracking-tight">
+                  {formatDate(article.lastModified)}
+                </span>
+              </div>
+              <div className="w-px h-8 bg-slate-200"></div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Read Time
+                </span>
+                <span className="text-sm font-bold font-impact uppercase tracking-tight">
+                  {article.readingTime || 4} MIN
+                </span>
+              </div>
+              <div className="w-px h-8 bg-slate-200"></div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Category
+                </span>
+                <Link
+                  to={getLink('portal.helpCategory', { categorySlug: article.categorySlug || '' })}
+                  className="text-sm font-bold font-impact uppercase tracking-tight text-[#0062FF] hover:underline"
+                >
+                  {getArticleCategoryLabel(article)}
+                </Link>
+              </div>
+            </div>
+          </header>
+
+          {/* Article Content */}
+          <article className="prose prose-slate max-w-none">
+            <div
+              ref={contentRef}
+              className="help-article-content prose-headings:font-impact prose-headings:uppercase prose-headings:tracking-tighter prose-headings:text-slate-900 prose-headings:font-black prose-h2:text-3xl prose-h2:mt-16 prose-h2:mb-8 prose-p:text-xl prose-p:text-slate-600 prose-p:leading-relaxed prose-p:font-normal prose-p:mb-12 prose-strong:text-slate-900 prose-strong:font-bold"
+              dangerouslySetInnerHTML={{ __html: processedContent }}
+            />
+          </article>
+
+          {/* Was This Helpful Section */}
+          <section className="border-t border-slate-200 pt-16 mt-24">
+            <div className="bg-slate-900 text-white p-12 text-center">
+              <h3 className="font-impact font-black text-2xl uppercase tracking-tight mb-8">
+                WAS THIS HELPFUL?
+              </h3>
+              <div className="flex justify-center space-x-6">
+                <button
+                  className="bg-white text-slate-900 px-12 py-6 font-impact font-black text-xl uppercase tracking-widest hover:bg-[#0062FF] hover:text-white border-2 border-transparent transition-all relative"
+                  style={{
+                    boxShadow: '0 8px 0 0 rgba(0, 0, 0, 0.1)',
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.transform = 'translateY(6px)'
+                    e.currentTarget.style.boxShadow = '0 2px 0 0 rgba(0, 0, 0, 0.1)'
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 8px 0 0 rgba(0, 0, 0, 0.1)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 8px 0 0 rgba(0, 0, 0, 0.1)'
+                  }}
+                >
+                  YES
+                </button>
+                <button
+                  className="bg-slate-800 text-white px-12 py-6 font-impact font-black text-xl uppercase tracking-widest hover:bg-red-600 border-2 border-slate-700 transition-all relative"
+                  style={{
+                    boxShadow: '0 8px 0 0 rgba(0, 0, 0, 0.1)',
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.transform = 'translateY(6px)'
+                    e.currentTarget.style.boxShadow = '0 2px 0 0 rgba(0, 0, 0, 0.1)'
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 8px 0 0 rgba(0, 0, 0, 0.1)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 8px 0 0 rgba(0, 0, 0, 0.1)'
+                  }}
+                >
+                  NO
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* Footer */}
+          <footer className="mt-24 pb-16 border-t border-slate-200 pt-12">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+              <div className="flex items-center space-x-8">
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+                  {APP_NAME}
+                </span>
+              </div>
+              <div className="flex space-x-8 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+                <Link to={getHomeLink(userRole)} className="hover:text-[#0062FF] transition-colors">Home</Link>
+                {(userRole === 'parent' || userRole === 'athlete') && (
+                  <Link to={getPortalLink()} className="hover:text-[#0062FF] transition-colors">Portal</Link>
+                )}
+                {userRole === 'org_admin' && (
+                  <Link to={getAdminPortalLink()} className="hover:text-[#0062FF] transition-colors">Admin Portal</Link>
+                )}
+                <a href={getMarketingSiteUrl()} target="_blank" rel="noopener noreferrer" className="hover:text-[#0062FF] transition-colors">YouthSports.team</a>
+              </div>
+            </div>
+          </footer>
+        </main>
+
+        {/* Right Sidebar */}
+        <aside className="w-80 p-8 pt-20 hidden xl:block">
+          <div className="space-y-12">
+            {/* On This Page Navigation */}
+            {headings.length > 0 && (
+              <div>
+                <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6">
+                  ON THIS PAGE
+                </h5>
+                <nav className="space-y-4 border-l border-slate-200 pl-6">
+                  {headings.map((heading, index) => (
+                    <a
+                      key={heading.id}
+                      href={`#${heading.id}`}
+                      className={`block text-xs font-bold uppercase tracking-widest ${
+                        index === 0 ? 'text-[#0062FF]' : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                    >
+                      {heading.text}
+                    </a>
+                  ))}
+                </nav>
+              </div>
+            )}
+
+            {/* Need More Help Section */}
+            <div className="bg-slate-50 p-6">
+              <span className="material-symbols-outlined text-[#0062FF] mb-4 block">support_agent</span>
+              <h5 className="text-sm font-black uppercase tracking-tight mb-2">Need more help?</h5>
+              <p className="text-xs text-slate-500 mb-4 font-medium uppercase tracking-tighter">
+                Live support available 24/7 for Enterprise admins.
+              </p>
+              <Link
+                to={getLink('portal.help')}
+                className="text-[10px] font-black text-[#0062FF] uppercase tracking-[0.2em] flex items-center hover:underline"
+              >
+                Contact Support <span className="material-symbols-outlined text-sm ml-1">arrow_forward</span>
+              </Link>
+            </div>
+          </div>
+        </aside>
+      </div>
 
       {/* Tool Link Popup */}
       {toolLinkPopup && (

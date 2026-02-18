@@ -8,6 +8,8 @@ import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import type { WordPressConfig } from './wordpressApiService'
 
+const supabaseUntyped = supabase as any
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -37,7 +39,7 @@ export interface ServiceResponse<T> {
  */
 export async function getWordPressConfig(): Promise<ServiceResponse<HelpCenterConfig>> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseUntyped
       .from('help_wordpress_config')
       .select('*')
       .limit(1)
@@ -128,7 +130,7 @@ export async function saveWordPressConfig(
     let result
     if (existing.data) {
       // Update existing
-      const { data, error } = await supabase
+      const { data, error } = await supabaseUntyped
         .from('help_wordpress_config')
         .update(configData)
         .eq('id', existing.data.id)
@@ -139,7 +141,7 @@ export async function saveWordPressConfig(
       result = data
     } else {
       // Create new
-      const { data, error } = await supabase
+      const { data, error } = await supabaseUntyped
         .from('help_wordpress_config')
         .insert(configData)
         .select()
@@ -185,7 +187,7 @@ export async function updateConnectionStatus(
       updateData.last_error = error
     }
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseUntyped
       .from('help_wordpress_config')
       .update(updateData)
 
@@ -219,7 +221,7 @@ export async function getWordPressConfigForApi(): Promise<ServiceResponse<WordPr
     const config = configResult.data
 
     // Get credentials (in production, decrypt here)
-    const { data: configWithCreds } = await supabase
+    const { data: configWithCreds } = await supabaseUntyped
       .from('help_wordpress_config')
       .select('credentials_encrypted')
       .eq('id', config.id)

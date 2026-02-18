@@ -349,6 +349,7 @@ export default function Events() {
             const { data: newEvent, error: insertError } = await supabase
                 .from('events')
                 .insert({
+                    org_id: fullEvent.org_id,
                     title: `${fullEvent.title} (Copy)`,
                     type: fullEvent.type,
                     team_id: fullEvent.team_id,

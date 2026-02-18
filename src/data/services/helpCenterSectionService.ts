@@ -7,6 +7,8 @@
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 
+const supabaseUntyped = supabase as any
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -45,7 +47,7 @@ export interface ServiceResponse<T> {
  */
 export async function getSections(): Promise<ServiceResponse<SectionWithTags[]>> {
   try {
-    const { data: sections, error: sectionsError } = await supabase
+    const { data: sections, error: sectionsError } = await supabaseUntyped
       .from('help_sections')
       .select('*')
       .order('display_order', { ascending: true })
@@ -58,7 +60,7 @@ export async function getSections(): Promise<ServiceResponse<SectionWithTags[]>>
     // Get tag combinations for each section
     const sectionsWithTags: SectionWithTags[] = []
     for (const section of sections || []) {
-      const { data: combinations, error: combError } = await supabase
+      const { data: combinations, error: combError } = await supabaseUntyped
         .from('help_section_tag_combinations')
         .select('*')
         .eq('section_id', section.id)
@@ -75,7 +77,7 @@ export async function getSections(): Promise<ServiceResponse<SectionWithTags[]>>
         isActive: section.is_active,
         createdAt: section.created_at,
         updatedAt: section.updated_at,
-        tagCombinations: (combinations || []).map(comb => ({
+        tagCombinations: (combinations || []).map((comb: any) => ({
           id: comb.id,
           sectionId: comb.section_id,
           tagIds: comb.tag_ids,
@@ -105,7 +107,7 @@ export async function createSection(
 ): Promise<ServiceResponse<SectionWithTags>> {
   try {
     // Create section
-    const { data: sectionData, error: sectionError } = await supabase
+    const { data: sectionData, error: sectionError } = await supabaseUntyped
       .from('help_sections')
       .insert({
         name: section.name,
@@ -122,7 +124,7 @@ export async function createSection(
 
     // Create tag combinations
     if (section.tagCombinations && section.tagCombinations.length > 0) {
-      const { error: combError } = await supabase
+      const { error: combError } = await supabaseUntyped
         .from('help_section_tag_combinations')
         .insert(
           section.tagCombinations.map(tagIds => ({
@@ -152,7 +154,7 @@ export async function createSection(
  */
 export async function getSection(id: string): Promise<ServiceResponse<SectionWithTags>> {
   try {
-    const { data: section, error: sectionError } = await supabase
+    const { data: section, error: sectionError } = await supabaseUntyped
       .from('help_sections')
       .select('*')
       .eq('id', id)
@@ -162,7 +164,7 @@ export async function getSection(id: string): Promise<ServiceResponse<SectionWit
       return { data: null, error: sectionError }
     }
 
-    const { data: combinations, error: combError } = await supabase
+    const { data: combinations, error: combError } = await supabaseUntyped
       .from('help_section_tag_combinations')
       .select('*')
       .eq('section_id', id)
@@ -178,7 +180,7 @@ export async function getSection(id: string): Promise<ServiceResponse<SectionWit
       isActive: section.is_active,
       createdAt: section.created_at,
       updatedAt: section.updated_at,
-      tagCombinations: (combinations || []).map(comb => ({
+      tagCombinations: (combinations || []).map((comb: any) => ({
         id: comb.id,
         sectionId: comb.section_id,
         tagIds: comb.tag_ids,
@@ -213,7 +215,7 @@ export async function updateSection(
     if (updates.isActive !== undefined) updateData.is_active = updates.isActive
 
     if (Object.keys(updateData).length > 0) {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseUntyped
         .from('help_sections')
         .update(updateData)
         .eq('id', id)
@@ -227,7 +229,7 @@ export async function updateSection(
     // Update tag combinations if provided
     if (updates.tagCombinations !== undefined) {
       // Delete existing combinations
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await supabaseUntyped
         .from('help_section_tag_combinations')
         .delete()
         .eq('section_id', id)
@@ -239,7 +241,7 @@ export async function updateSection(
 
       // Create new combinations
       if (updates.tagCombinations.length > 0) {
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseUntyped
           .from('help_section_tag_combinations')
           .insert(
             updates.tagCombinations.map(tagIds => ({
@@ -269,7 +271,7 @@ export async function updateSection(
  */
 export async function deleteSection(id: string): Promise<ServiceResponse<void>> {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseUntyped
       .from('help_sections')
       .delete()
       .eq('id', id)
@@ -295,7 +297,7 @@ export async function reorderSections(
 ): Promise<ServiceResponse<void>> {
   try {
     const updates = sectionOrders.map(({ id, order }) =>
-      supabase
+      supabaseUntyped
         .from('help_sections')
         .update({ display_order: order })
         .eq('id', id)
