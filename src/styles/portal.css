@@ -1084,8 +1084,9 @@
 /* Event Hero Banner */
 .event-hero-banner {
   position: relative;
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
   margin-top: -2rem;
   margin-bottom: 2rem;
   min-height: 380px;

@@ -19,6 +19,7 @@ import {
 import { PhotoUploadZone } from '@/components/admin/galleries/PhotoUploadZone'
 import { OrgAdminGalleryView } from '@/components/orgAdmin/OrgAdminGalleryView'
 import { GalleryEditModal } from '@/components/admin/galleries/GalleryEditModal'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import '../../styles/orgAdmin.css'
 
 type ViewMode = 'grid' | 'list'
@@ -37,6 +38,8 @@ export default function PhotoDetail() {
   const [editOpen, setEditOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [deleteTargetIds, setDeleteTargetIds] = useState<string[] | null>(null)
+  const [approveAllPendingIds, setApproveAllPendingIds] = useState<string[] | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -122,8 +125,11 @@ export default function PhotoDetail() {
       return
     }
 
-    if (!window.confirm(t('photos.confirmDelete' as any))) return
+    setDeleteTargetIds(ids)
+  }
 
+  const confirmDelete = async (ids: string[]) => {
+    if (ids.length === 0) return
     const { error } = await deletePhotos(context!, gallery?.id || '', ids)
     if (error) {
       showError(error.message)
@@ -140,6 +146,13 @@ export default function PhotoDetail() {
     ])
     setPhotos(photosResult.data || [])
     setPendingCount(pendingResult.data)
+  }
+
+  const handleApproveAllClick = () => {
+    if (!gallery || photos.length === 0) return
+    const pendingIds = photos.filter((p) => (p.approval_status || p.status) === 'pending').map((p) => p.id)
+    if (pendingIds.length === 0) return
+    setApproveAllPendingIds(pendingIds)
   }
 
   const handleSetCover = async (photoId: string) => {
@@ -188,6 +201,40 @@ export default function PhotoDetail() {
 
   return (
     <div className="oa-root">
+      <ConfirmDialog
+        open={deleteTargetIds !== null}
+        title={t('common.delete')}
+        description={t('photos.confirmDelete' as any)}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={() => {
+          const ids = deleteTargetIds
+          setDeleteTargetIds(null)
+          if (ids && ids.length > 0) {
+            void confirmDelete(ids)
+          }
+        }}
+        onCancel={() => setDeleteTargetIds(null)}
+      />
+
+      <ConfirmDialog
+        open={approveAllPendingIds !== null}
+        title={t('photos.approveAll')}
+        description={t('photos.approveAllConfirm')}
+        confirmLabel={t('photos.approveAll')}
+        cancelLabel={t('common.cancel')}
+        variant="primary"
+        onConfirm={() => {
+          const pendingIds = approveAllPendingIds
+          setApproveAllPendingIds(null)
+          if (pendingIds && pendingIds.length > 0) {
+            void handleModerate(pendingIds, 'approve')
+          }
+        }}
+        onCancel={() => setApproveAllPendingIds(null)}
+      />
+
       <div className="oa-container oa-space-y-4">
         <PageHeader
           title={gallery?.name || t('photos.viewGallery')}
@@ -204,14 +251,7 @@ export default function PhotoDetail() {
               <Button variant="ghost" onClick={() => setEditOpen(true)}>
                 {t('photos.updateAlbumInfo')}
               </Button>
-              <Button variant="primary" onClick={async () => {
-                if (!gallery || photos.length === 0) return
-                const pendingIds = photos.filter((p) => (p.approval_status || p.status) === 'pending').map((p) => p.id)
-                if (pendingIds.length === 0) return
-                const confirm = window.confirm(t('photos.approveAllConfirm'))
-                if (!confirm) return
-                await handleModerate(pendingIds, 'approve')
-              }}>
+              <Button variant="primary" onClick={handleApproveAllClick}>
                 {t('photos.approveAll')}
               </Button>
             </>

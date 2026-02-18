@@ -27,6 +27,7 @@ import { usePagination } from '@/hooks/usePagination'
 import { useHideEmptyGalleries } from './useHideEmptyGalleries'
 import { showError, showSuccess } from '@/utils/toast'
 import { GalleryEditModal } from '@/components/admin/galleries/GalleryEditModal'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import './PhotosSearchView.css'
 
 import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
@@ -47,6 +48,7 @@ export function PhotosSearchView() {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [galleryToEdit, setGalleryToEdit] = useState<Gallery | null>(null)
   const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([])
+  const [galleryToDelete, setGalleryToDelete] = useState<Gallery | null>(null)
 
   // Filters with URL sync
   const [search, setSearch] = useState(searchParams.get('q') || '')
@@ -339,6 +341,20 @@ export function PhotosSearchView() {
            hideEmpty
   }, [search, entityType, dateRange, photoStatus, sizeRange, hideEmpty])
 
+  const confirmDeleteGallery = async () => {
+    if (!context || !galleryToDelete) return
+    const { error: deleteError } = await deleteGallery(context, galleryToDelete.id)
+    if (deleteError) {
+      showError(deleteError.message || t('photos.errors.deleteGallery'))
+      return
+    }
+    showSuccess(t('photos.success.galleryDeleted'))
+    setGalleries(prev => prev.filter(g => g.id !== galleryToDelete.id))
+    setGalleryToDelete(null)
+    setGalleryToEdit(null)
+    setEditModalOpen(false)
+  }
+
   if (loading) {
     return (
       <div className="photos-search">
@@ -623,21 +639,22 @@ export function PhotosSearchView() {
               showError(t('photos.demoMode.deleteBlocked'))
               return
             }
-            if (!context || !galleryToEdit) return
-            const confirm = window.confirm(t('photos.confirmDeletePhotos', { count: galleryPhotos.length }))
-            if (!confirm) return
-            const { error: deleteError } = await deleteGallery(context, galleryToEdit.id)
-            if (deleteError) {
-              showError(deleteError.message || t('photos.errors.deleteGallery'))
-              return
-            }
-            showSuccess(t('photos.success.galleryDeleted'))
-            setGalleries(prev => prev.filter(g => g.id !== galleryToEdit.id))
-            setGalleryToEdit(null)
-            setEditModalOpen(false)
+            if (!galleryToEdit) return
+            setGalleryToDelete(galleryToEdit)
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={galleryToDelete !== null}
+        title={t('common.delete')}
+        description={t('photos.confirmDeletePhotos', { count: galleryPhotos.length })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={() => { void confirmDeleteGallery() }}
+        onCancel={() => setGalleryToDelete(null)}
+      />
     </div>
   )
 }

@@ -7,6 +7,7 @@
 
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type {
     OrgSportProfileSettings,
     FieldOverride,
@@ -22,6 +23,36 @@ interface ServiceResponse<T> {
 }
 
 const supabaseAny = supabase as any
+const fakeOrgSportSettingsStore = new Map<string, OrgSportProfileSettings>()
+
+function getFakeSettingsKey(orgId: string, sportCode: SportCode): string {
+    return `${orgId}:${sportCode}`
+}
+
+function cloneOverrides(overrides: Record<string, FieldOverride>): Record<string, FieldOverride> {
+    return Object.fromEntries(
+        Object.entries(overrides ?? {}).map(([fieldKey, override]) => [fieldKey, { ...override }])
+    )
+}
+
+function cloneSettings(settings: OrgSportProfileSettings): OrgSportProfileSettings {
+    return {
+        ...settings,
+        overrides: cloneOverrides(settings.overrides),
+    }
+}
+
+function buildFakeSettingsId(orgId: string, sportCode: SportCode): string {
+    const safeOrgId = orgId.replace(/[^a-zA-Z0-9_-]/g, '')
+    const safeSportCode = String(sportCode).replace(/[^a-zA-Z0-9_-]/g, '')
+    return `mock-org-sport-settings-${safeOrgId}-${safeSportCode}`
+}
+
+async function simulateDelay(): Promise<void> {
+    if (FAKE_DATA_DELAY_MS > 0) {
+        await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+    }
+}
 
 /**
  * Get org sport profile settings for a specific sport
@@ -47,6 +78,21 @@ export async function getOrgSportSettings(
             debug.error('OrgSportSettingsService.getOrgSportSettings', 'sportCode is required', { orgId, sportCode })
             console.groupEnd()
             throw new Error('sportCode is required')
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const key = getFakeSettingsKey(orgId, sportCode)
+            const existing = fakeOrgSportSettingsStore.get(key)
+
+            debug.perf.end('orgSportSettingsService.getOrgSportSettings')
+            debug.data('OrgSportSettingsService.getOrgSportSettings', 'Response (fake)', {
+                orgId,
+                sportCode,
+                hasData: !!existing,
+            })
+            console.groupEnd()
+            return { data: existing ? cloneSettings(existing) : null, error: null }
         }
 
         const { data, error } = await supabaseAny
@@ -96,6 +142,22 @@ export async function getAllOrgSportSettings(
             throw new Error('orgId is required')
         }
 
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const allSettings = Array.from(fakeOrgSportSettingsStore.values())
+                .filter((setting) => setting.org_id === orgId)
+                .sort((a, b) => a.sport_code.localeCompare(b.sport_code))
+                .map(cloneSettings)
+
+            debug.perf.end('orgSportSettingsService.getAllOrgSportSettings')
+            debug.data('OrgSportSettingsService.getAllOrgSportSettings', 'Response (fake)', {
+                orgId,
+                settingCount: allSettings.length,
+            })
+            console.groupEnd()
+            return { data: allSettings, error: null }
+        }
+
         const { data, error } = await supabaseAny
             .from('org_sport_profile_settings')
             .select('*')
@@ -136,6 +198,35 @@ export async function upsertOrgSportSettings(
         }
         if (!overrides || typeof overrides !== 'object') {
             throw new Error('overrides must be a valid object')
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+
+            const key = getFakeSettingsKey(orgId, sportCode)
+            const existing = fakeOrgSportSettingsStore.get(key)
+            const now = new Date().toISOString()
+            const next: OrgSportProfileSettings = existing
+                ? {
+                    ...existing,
+                    overrides: cloneOverrides(overrides),
+                    version: (existing.version ?? 0) + 1,
+                    updated_by: existing.updated_by ?? 'demo-org-admin',
+                    updated_at: now,
+                }
+                : {
+                    id: buildFakeSettingsId(orgId, sportCode),
+                    org_id: orgId,
+                    sport_code: sportCode,
+                    overrides: cloneOverrides(overrides),
+                    version: 1,
+                    updated_by: 'demo-org-admin',
+                    updated_at: now,
+                    created_at: now,
+                }
+
+            fakeOrgSportSettingsStore.set(key, next)
+            return { data: cloneSettings(next), error: null }
         }
 
         // Get current user ID for audit trail
@@ -323,6 +414,13 @@ export async function deleteOrgSportSettings(
         }
         if (!sportCode) {
             throw new Error('sportCode is required')
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const key = getFakeSettingsKey(orgId, sportCode)
+            fakeOrgSportSettingsStore.delete(key)
+            return { data: null, error: null }
         }
 
         const { error } = await supabaseAny

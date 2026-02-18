@@ -4,6 +4,7 @@ import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import { Button, Card, InlineNotice } from '@/components/platformAdmin'
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import {
   deleteGallery,
   deletePhotos,
@@ -84,6 +85,8 @@ export default function GalleryDetail() {
   const [lightboxIndex, setLightboxIndex] = useState(-1)
   const [bulkTaggingPhotos, setBulkTaggingPhotos] = useState<GalleryPhoto[]>([])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [showDeleteGalleryConfirm, setShowDeleteGalleryConfirm] = useState(false)
+  const [showApproveAllConfirm, setShowApproveAllConfirm] = useState(false)
   const mountedRef = useRef(true)
   const loadingMoreRef = useRef(false)
   const photoFeedRef = useRef<HTMLDivElement>(null)
@@ -347,15 +350,18 @@ export default function GalleryDetail() {
     return Array.from(map.values()).map((athlete) => ({ value: athlete.id, label: athlete.name }))
   }, [photos])
 
-  const handleDeleteGallery = async () => {
+  const handleDeleteGallery = () => {
     if (USE_FAKE_DATA) {
       showError(t('photos.demoMode.deleteBlocked'))
       return
     }
 
     if (!context || !gallery) return
-    const confirm = window.confirm(t('photos.confirmDeletePhotos', { count: photos.length }))
-    if (!confirm) return
+    setShowDeleteGalleryConfirm(true)
+  }
+
+  const confirmDeleteGallery = async () => {
+    if (!context || !gallery) return
     const { error } = await deleteGallery(context, gallery.id)
     if (error) {
       showError(error.message)
@@ -392,7 +398,7 @@ export default function GalleryDetail() {
 
   if (!id) return null
 
-  const handleApproveAll = async () => {
+  const handleApproveAll = () => {
     if (USE_FAKE_DATA) {
       showError(t('photos.demoMode.deleteBlocked'))
       return
@@ -401,8 +407,10 @@ export default function GalleryDetail() {
       showError(t('photos.noPendingPhotos'))
       return
     }
-    const confirm = window.confirm(t('photos.approveAllConfirm'))
-    if (!confirm) return
+    setShowApproveAllConfirm(true)
+  }
+
+  const confirmApproveAll = async () => {
     if (!id || !context) return
     const { data: pendingPhotos } = await getPhotosForGallery(context, {
       gallery_id: id,
@@ -500,6 +508,34 @@ export default function GalleryDetail() {
 
   return (
     <div className="org-structure-page">
+      <ConfirmDialog
+        open={showDeleteGalleryConfirm}
+        title={t('common.delete')}
+        description={t('photos.confirmDeletePhotos', { count: photos.length })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={() => {
+          setShowDeleteGalleryConfirm(false)
+          void confirmDeleteGallery()
+        }}
+        onCancel={() => setShowDeleteGalleryConfirm(false)}
+      />
+
+      <ConfirmDialog
+        open={showApproveAllConfirm}
+        title={t('photos.approveAll')}
+        description={t('photos.approveAllConfirm')}
+        confirmLabel={t('photos.approveAll')}
+        cancelLabel={t('common.cancel')}
+        variant="primary"
+        onConfirm={() => {
+          setShowApproveAllConfirm(false)
+          void confirmApproveAll()
+        }}
+        onCancel={() => setShowApproveAllConfirm(false)}
+      />
+
       <AdminPageHeader
         title={gallery?.name || t('photos.allGalleries')}
         subtitle={entityMeta?.label}

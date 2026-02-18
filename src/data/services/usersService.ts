@@ -19,6 +19,7 @@ import type {
 } from '../../types/staffAndFan'
 import { DEFAULT_STAFF_PERMISSIONS } from '../../constants/permissions'
 import { getUserByEmail, getUserById, fakeUsers } from '../fake/fakeUsers'
+import { listFakeOrganizationUsers } from '../fake/fakeOrgUsers'
 import { debug } from '../../lib/debug'
 
 
@@ -168,18 +169,7 @@ export async function getOrganizationUsers(
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
-
-            const demoUsers: OrgUser[] = [
-                {
-                    id: context.userId,
-                    email: 'admin@example.com',
-                    display_name: 'Admin User',
-                    phone: null,
-                    roles: ['admin'],
-                    created_at: new Date().toISOString(),
-                },
-            ]
-
+            const demoUsers = listFakeOrganizationUsers(context.orgId, context.userId)
             return { data: demoUsers, error: null }
         } catch (err) {
             return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }

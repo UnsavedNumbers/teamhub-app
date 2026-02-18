@@ -155,7 +155,9 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  overflow-x: clip;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .fan-page img,
@@ -230,19 +232,22 @@
 }
 
 .fan-container {
-  max-width: var(--content-max-width);
+  width: 100%;
+  max-width: min(var(--content-max-width), 100%);
   margin: 0 auto;
   padding: 0 var(--spacing-6);
 }
 
 .fan-container-wide {
-  max-width: var(--container-max-width);
+  width: 100%;
+  max-width: min(var(--container-max-width), 100%);
   margin: 0 auto;
   padding: 0 var(--spacing-6);
 }
 
 .fan-main {
   padding: var(--spacing-12) 0;
+  overflow-x: hidden;
 }
 
 .fan-grid {
@@ -346,6 +351,11 @@
 }
 
 .fan-header-icon {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--color-text-muted);
   transition: color var(--transition-normal);
 }
@@ -651,7 +661,7 @@
   padding-right: var(--spacing-2);
   scrollbar-width: none;
   -ms-overflow-style: none;
-  max-width: calc(100vw - var(--spacing-4));
+  max-width: 100%;
 }
 
 .fan-events-scroll::-webkit-scrollbar {
@@ -1493,8 +1503,9 @@
 
 /* Hero Section - Full Width Breakout */
 .fan-org-profile-hero {
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
   background-color: var(--color-zinc-50);
   padding-top: var(--spacing-16);
   padding-bottom: 0;
@@ -1801,8 +1812,9 @@
 
 /* Content Grid */
 .fan-org-profile-content {
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
   background-color: var(--color-background);
 }
 
@@ -4012,4 +4024,48 @@
   flex-shrink: 0;
   font-size: 0.875rem;
   color: var(--color-zinc-300);
+}
+
+/* ----------------------------------------------------------------------------
+   Responsive Guardrails
+   ---------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  .fan-container,
+  .fan-container-wide {
+    padding-left: var(--spacing-4);
+    padding-right: var(--spacing-4);
+  }
+
+  .fan-main {
+    padding: var(--spacing-8) 0;
+  }
+
+  .fan-header {
+    height: 4rem;
+  }
+
+  .fan-header-inner {
+    padding-left: var(--spacing-4);
+    padding-right: var(--spacing-4);
+  }
+
+  .fan-header-left {
+    gap: var(--spacing-4);
+  }
+
+  .fan-header-right {
+    gap: var(--spacing-3);
+  }
+
+  .fan-grid {
+    gap: var(--spacing-8);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .fan-container,
+  .fan-container-wide {
+    padding-left: var(--spacing-5);
+    padding-right: var(--spacing-5);
+  }
 }

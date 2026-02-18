@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { getEvents, getEventsCount } from '../../data/services/eventsService'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getSeasonsForOrg, getSportsForOrg, getTeamsForOrg } from '../../data/fake/fakeTeams'
 import { getLink } from '../../utils/routes'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
@@ -98,6 +100,17 @@ export default function Events() {
 
         const loadFilterData = async () => {
             try {
+                if (USE_FAKE_DATA) {
+                    const fakeTeams = getTeamsForOrg(context.orgId).map((team) => ({ id: team.id, name: team.name }))
+                    const fakeSports = getSportsForOrg(context.orgId).map((sport) => ({ id: sport.id, name: sport.name }))
+                    const fakeSeasons = getSeasonsForOrg(context.orgId).map((season) => ({ id: season.id, name: season.name }))
+
+                    setTeams(fakeTeams)
+                    setSports(fakeSports)
+                    setSeasons(fakeSeasons)
+                    return
+                }
+
                 // Load teams
                 const { data: teamsData } = await supabase
                     .from('teams')
@@ -149,12 +162,14 @@ export default function Events() {
             const queryParams = {
                 timeContext,
                 search: filters.search || undefined,
-                dateFrom: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
-                dateTo: filters.dateTo ? new Date(filters.dateTo) : undefined,
+                startDate: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
+                endDate: filters.dateTo ? new Date(filters.dateTo) : undefined,
                 eventTypes: filters.eventTypes.length > 0 ? filters.eventTypes : undefined,
                 teamIds: filters.teamIds.length > 0 ? filters.teamIds : undefined,
+                sportIds: filters.sportIds.length > 0 ? filters.sportIds : undefined,
                 seasonIds: filters.seasonIds.length > 0 ? filters.seasonIds : undefined,
                 status: filters.status.length > 0 ? filters.status : undefined,
+                locationSearch: filters.locationSearch || undefined,
                 visibleToFans: filters.visibleToFans || undefined,
                 orderBy,
                 order,
@@ -167,8 +182,8 @@ export default function Events() {
             if (viewMode === 'calendar') {
                 const year = calendarDate.getFullYear()
                 const month = calendarDate.getMonth()
-                queryParams.dateFrom = new Date(year, month, 1)
-                queryParams.dateTo = new Date(year, month + 1, 0, 23, 59, 59)
+                queryParams.startDate = new Date(year, month, 1)
+                queryParams.endDate = new Date(year, month + 1, 0, 23, 59, 59)
                 delete (queryParams as any).offset
                 delete (queryParams as any).limit
             }

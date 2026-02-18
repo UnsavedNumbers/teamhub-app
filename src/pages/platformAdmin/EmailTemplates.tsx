@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { getLink } from '../../utils/routes';
 import { PageHeader, PlatformDataTable, Badge, Button, ColumnConfig } from '../../components/platformAdmin';
+import { ConfirmDialog } from '../../components/admin/ConfirmDialog';
 import { emailTemplatesService } from '../../data/services/emailTemplatesService';
 import { EmailTemplate } from '../../types/emailTemplates.types';
 import { toast } from 'react-hot-toast';
@@ -14,6 +15,11 @@ export default function EmailTemplates() {
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    action: 'duplicate' | 'delete' | null;
+    templateId: string | null;
+  }>({ open: false, action: null, templateId: null });
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -38,15 +44,32 @@ export default function EmailTemplates() {
   };
 
 
-  const handleDuplicate = async (id: string) => {
-    if (!confirm('Are you sure you want to duplicate this template?')) return;
+  const handleDuplicate = (id: string) => {
+    setConfirmDialog({ open: true, action: 'duplicate', templateId: id });
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmDialog.templateId || !confirmDialog.action) return;
+    const templateId = confirmDialog.templateId;
+    const action = confirmDialog.action;
+    setConfirmDialog({ open: false, action: null, templateId: null });
+
     try {
-      await emailTemplatesService.duplicateTemplate(id);
-      toast.success('Template duplicated');
-      fetchTemplates();
+      if (action === 'duplicate') {
+        await emailTemplatesService.duplicateTemplate(templateId);
+        toast.success('Template duplicated');
+      } else {
+        await emailTemplatesService.deleteEmailTemplate(templateId);
+        toast.success('Deleted');
+      }
+      await fetchTemplates();
     } catch (error) {
-      console.error('Failed to duplicate template', error);
-      toast.error('Failed to duplicate template');
+      if (action === 'duplicate') {
+        console.error('Failed to duplicate template', error);
+        toast.error('Failed to duplicate template');
+      } else {
+        toast.error('Failed to delete');
+      }
     }
   };
 
@@ -112,13 +135,7 @@ export default function EmailTemplates() {
             title={row.is_active ? "Deactivate template to delete it" : "Delete template"}
             onClick={(e: MouseEvent) => { 
                 e.stopPropagation();
-                if(confirm('Are you sure you want to delete this template?')) {
-                    // Call delete service
-                    emailTemplatesService.deleteEmailTemplate(row.id).then(() => {
-                        toast.success('Deleted');
-                        fetchTemplates(); // Use fetchTemplates instead of fetchData
-                    }).catch(() => toast.error('Failed to delete'));
-                }
+                setConfirmDialog({ open: true, action: 'delete', templateId: row.id });
             }}
           >
             Delete
@@ -153,6 +170,25 @@ export default function EmailTemplates() {
         onPageChange={setPage}
         onRowsPerPageChange={setRowsPerPage}
         onRowClick={(row) => handleEdit(row.slug)}
+      />
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={
+          confirmDialog.action === 'duplicate'
+            ? 'Are you sure you want to duplicate this template?'
+            : 'Are you sure you want to delete this template?'
+        }
+        description={
+          confirmDialog.action === 'duplicate'
+            ? 'Are you sure you want to duplicate this template?'
+            : 'Are you sure you want to delete this template?'
+        }
+        confirmLabel={confirmDialog.action === 'duplicate' ? 'Duplicate' : 'Delete'}
+        cancelLabel="Cancel"
+        variant={confirmDialog.action === 'delete' ? 'danger' : 'primary'}
+        onConfirm={() => { void handleConfirmAction() }}
+        onCancel={() => setConfirmDialog({ open: false, action: null, templateId: null })}
       />
     </div>
   );

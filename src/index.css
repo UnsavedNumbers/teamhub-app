@@ -71,6 +71,9 @@ select:-webkit-autofill:focus {
   --z-bottom-sheet: 900;
   --z-drawer: 1000;
   --z-nav: 100;
+  --touch-target-min: 44px;
+  --gn-header-height: 64px;
+  --gn-header-height-mobile: 56px;
 
   /* Organization Theme Variables (applied dynamically by useOrganizationTheme hook) */
   --org-primary: #1e40af;
@@ -151,6 +154,7 @@ select:-webkit-autofill:focus {
 *,
 *::before,
 *::after {
+  box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -184,10 +188,63 @@ html.dark {
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
+}
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+main,
+section,
+article,
+aside,
+header,
+footer,
+nav {
+  max-width: 100%;
+}
+
+img,
+picture,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+
+  button,
+  [role="button"],
+  .gn-nav-trigger,
+  .gn-util-btn,
+  .mobile-drawer-link,
+  .mobile-drawer-section-link,
+  .mobile-drawer-close,
+  .mobile-sheet-close {
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+    touch-action: manipulation;
+  }
 }
 
 /* Material Symbols Rounded config */
@@ -318,7 +375,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  height: 64px;
+  height: var(--gn-header-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -403,7 +460,7 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  height: 40px;
+  min-height: var(--touch-target-min);
   padding: 0 12px;
   border: none;
   background: transparent;
@@ -448,8 +505,8 @@ body {
 
 /* Utility buttons (theme, notifications) */
 .gn-util-btn {
-  width: 40px;
-  height: 40px;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -794,11 +851,11 @@ body {
   /* Mobile mega menu becomes full-width drawer */
   .gn-mega {
     position: fixed;
-    top: 64px;
+    top: var(--gn-header-height-mobile);
     left: 0;
     right: 0;
     max-width: none;
-    max-height: calc(100vh - 64px);
+    max-height: calc(100dvh - var(--gn-header-height-mobile));
     overflow-y: auto;
     border-radius: 0;
     border-left: none;
@@ -811,7 +868,12 @@ body {
   }
 
   .gn-root {
-    padding: 0 16px;
+    height: var(--gn-header-height-mobile);
+    padding: 0 12px;
+  }
+
+  .gn-right {
+    gap: 8px;
   }
 
   .gn-brand-text {
@@ -836,11 +898,11 @@ body {
   /* Tablet mega menu becomes full-width drawer */
   .gn-mega {
     position: fixed;
-    top: 64px;
+    top: var(--gn-header-height);
     left: 0;
     right: 0;
     max-width: none;
-    max-height: calc(100vh - 64px);
+    max-height: calc(100dvh - var(--gn-header-height));
     overflow-y: auto;
     border-radius: 0;
     border-left: none;
@@ -882,7 +944,7 @@ body {
   top: 0;
   left: 0;
   bottom: 0;
-  width: min(320px, 85vw);
+  width: min(360px, 88vw);
   max-width: 400px;
   background: var(--gn-glass-bg);
   backdrop-filter: var(--gn-glass-blur);

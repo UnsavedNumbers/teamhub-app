@@ -7,6 +7,8 @@
 
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { fakeNotifications } from '../fake/fakeMessages'
 
 export interface NotificationErrorStats {
   totalFailed: number
@@ -22,6 +24,12 @@ export interface NotificationErrorStats {
   }>
 }
 
+async function simulateDelay(): Promise<void> {
+  if (FAKE_DATA_DELAY_MS > 0) {
+    await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+  }
+}
+
 /**
  * Get error statistics for failed notifications
  */
@@ -30,6 +38,58 @@ export async function getNotificationErrorStats(
   days: number = 7
 ): Promise<{ data: NotificationErrorStats | null; error: Error | null }> {
   try {
+    if (USE_FAKE_DATA) {
+      await simulateDelay()
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - days)
+
+      const scoped = fakeNotifications.filter((item) => {
+        if (orgId && item.org_id !== orgId) return false
+        return new Date(item.created_at) >= startDate
+      })
+
+      const failedSignals = scoped.filter(
+        (item) =>
+          item.presentation_type === 'urgent' ||
+          item.action.includes('failed') ||
+          item.action.includes('error')
+      )
+
+      const fallbackFailures = failedSignals.length > 0
+        ? failedSignals
+        : scoped.slice(0, Math.min(3, scoped.length))
+
+      const failuresByType: Record<string, number> = {}
+      const failuresByError: Record<string, number> = {}
+      const recentFailures = fallbackFailures.map((notif, index) => {
+        const type = notif.action
+        const error =
+          index % 2 === 0
+            ? 'Delivery provider timeout'
+            : 'Recipient opted out of this channel'
+        failuresByType[type] = (failuresByType[type] || 0) + 1
+        failuresByError[error] = (failuresByError[error] || 0) + 1
+        return {
+          id: notif.id,
+          type,
+          error,
+          retry_count: index % 3,
+          created_at: notif.created_at,
+        }
+      })
+
+      return {
+        data: {
+          totalFailed: recentFailures.length,
+          totalRetries: recentFailures.reduce((sum, item) => sum + item.retry_count, 0),
+          failuresByType,
+          failuresByError,
+          recentFailures,
+        },
+        error: null,
+      }
+    }
+
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
     
@@ -105,6 +165,21 @@ export async function getPendingRetryJobs(
   orgId?: string
 ): Promise<{ data: Array<{ id: string; type: string; retry_count: number; next_retry_at: string }> | null; error: Error | null }> {
   try {
+    if (USE_FAKE_DATA) {
+      await simulateDelay()
+      const scoped = fakeNotifications.filter((item) => !orgId || item.org_id === orgId)
+      const data = scoped.slice(0, 5).map((notif, index) => {
+        const retryAt = new Date(Date.now() + (index + 1) * 60_000).toISOString()
+        return {
+          id: notif.id,
+          type: notif.action,
+          retry_count: index % 3,
+          next_retry_at: retryAt,
+        }
+      })
+      return { data, error: null }
+    }
+
     const now = new Date().toISOString()
     
     let query = supabase

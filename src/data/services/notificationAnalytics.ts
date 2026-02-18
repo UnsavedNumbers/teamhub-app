@@ -7,6 +7,8 @@
 
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { fakeNotifications } from '../fake/fakeMessages'
 
 export interface NotificationMetrics {
   // Overall stats
@@ -57,6 +59,12 @@ export interface NotificationDeliveryStats {
   averageDeliveryTime: number // milliseconds
 }
 
+async function simulateDelay(): Promise<void> {
+  if (FAKE_DATA_DELAY_MS > 0) {
+    await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+  }
+}
+
 /**
  * Get comprehensive notification metrics for an organization
  */
@@ -65,6 +73,57 @@ export async function getNotificationMetrics(
   days: number = 30
 ): Promise<{ data: NotificationMetrics | null; error: Error | null }> {
   try {
+    if (USE_FAKE_DATA) {
+      await simulateDelay()
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - days)
+      const now = new Date()
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+      const inAppList = fakeNotifications.filter(
+        (item) => item.org_id === orgId && new Date(item.created_at) >= startDate
+      )
+
+      const emailCount = Math.max(1, Math.round(inAppList.length * 0.65))
+      const digestCount = Math.round(inAppList.length * 0.2)
+      const totalJobs = emailCount + digestCount
+      const failedCount = Math.max(0, Math.round(totalJobs * 0.08))
+      const sentCount = Math.max(0, totalJobs - failedCount)
+      const queuedCount = Math.max(0, Math.round(totalJobs * 0.05))
+      const retryCount = Math.max(0, Math.round(failedCount * 1.5))
+
+      const notificationsByType: Record<string, number> = {}
+      for (const notif of inAppList) {
+        const actionType = notif.action.split('_')[0] || 'general'
+        notificationsByType[actionType] = (notificationsByType[actionType] || 0) + 1
+      }
+
+      const metrics: NotificationMetrics = {
+        totalNotifications: inAppList.length,
+        totalSent: sentCount,
+        totalFailed: failedCount,
+        totalPending: queuedCount,
+        successRate: totalJobs > 0 ? (sentCount / totalJobs) * 100 : 100,
+        inAppCount: inAppList.length,
+        emailCount,
+        digestCount,
+        queuedCount,
+        sentCount,
+        failedCount,
+        notificationsByType,
+        notificationsToday: inAppList.filter((n) => new Date(n.created_at) >= today).length,
+        notificationsThisWeek: inAppList.filter((n) => new Date(n.created_at) >= weekAgo).length,
+        notificationsThisMonth: inAppList.filter((n) => new Date(n.created_at) >= monthAgo).length,
+        retryCount,
+        averageRetries: totalJobs > 0 ? retryCount / totalJobs : 0,
+        maxRetries: Math.max(1, Math.round(retryCount / Math.max(1, failedCount))),
+      }
+
+      return { data: metrics, error: null }
+    }
+
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
     
@@ -179,6 +238,44 @@ export async function getNotificationTrends(
   days: number = 30
 ): Promise<{ data: NotificationTrend[] | null; error: Error | null }> {
   try {
+    if (USE_FAKE_DATA) {
+      await simulateDelay()
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - days)
+
+      const inAppList = fakeNotifications.filter(
+        (item) => item.org_id === orgId && new Date(item.created_at) >= startDate
+      )
+
+      const trendsMap = new Map<string, NotificationTrend>()
+      for (let offset = 0; offset <= days; offset += 1) {
+        const day = new Date()
+        day.setDate(day.getDate() - offset)
+        const date = day.toISOString().split('T')[0]
+        trendsMap.set(date, { date, sent: 0, failed: 0, inApp: 0, email: 0 })
+      }
+
+      for (const notif of inAppList) {
+        const date = new Date(notif.created_at).toISOString().split('T')[0]
+        const trend = trendsMap.get(date)
+        if (!trend) continue
+        trend.inApp += 1
+        trend.email += 1
+        const isFailureSignal =
+          notif.presentation_type === 'urgent' ||
+          notif.action.includes('failed') ||
+          notif.action.includes('error')
+        if (isFailureSignal) {
+          trend.failed += 1
+        } else {
+          trend.sent += 1
+        }
+      }
+
+      const trends = Array.from(trendsMap.values()).sort((a, b) => a.date.localeCompare(b.date))
+      return { data: trends, error: null }
+    }
+
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
     
@@ -276,6 +373,30 @@ export async function getNotificationDeliveryStats(
   days: number = 30
 ): Promise<{ data: NotificationDeliveryStats | null; error: Error | null }> {
   try {
+    if (USE_FAKE_DATA) {
+      await simulateDelay()
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - days)
+
+      const inAppList = fakeNotifications.filter(
+        (item) => item.org_id === orgId && new Date(item.created_at) >= startDate
+      )
+      const emailDelivered = Math.max(1, Math.round(inAppList.length * 0.62))
+      const failed = Math.max(0, Math.round(emailDelivered * 0.07))
+      const sent = Math.max(0, emailDelivered - failed)
+
+      const stats: NotificationDeliveryStats = {
+        totalDelivered: inAppList.length + sent,
+        inAppDelivered: inAppList.length,
+        emailDelivered: sent,
+        emailSuccessRate: emailDelivered > 0 ? (sent / emailDelivered) * 100 : 100,
+        inAppSuccessRate: 100,
+        averageDeliveryTime: 1350,
+      }
+
+      return { data: stats, error: null }
+    }
+
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
     

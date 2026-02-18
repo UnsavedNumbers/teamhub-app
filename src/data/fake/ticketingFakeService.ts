@@ -18,12 +18,14 @@ import type {
 import { DEMO_ORG_A_ID, DEMO_TRANSACTION_DELAY_MS } from '../config'
 import {
   adjustFakeTicketTypeCapacity,
+  DEMO_SOCIAL_RESERVED_TICKETED_EVENT_ID,
   getFakeTicketedEventById,
   getFakeTicketTypesForEvent,
   getFakeTicketingEvents,
   getFakeVenues,
   type TicketingEventsQuery,
 } from './fakeTicketingEvents'
+import { DEMO_RESERVED_SEAT_MAP_ID } from './ticketingFakeConstants'
 import { createServiceResponse } from '../services/responseHelpers'
 import { getLink, RouteKeys } from '@/utils/routes'
 import { fakeUsers } from './fakeUsers'
@@ -335,11 +337,12 @@ function ensureFakeSeatMaps(orgId: string): FakeSeatMapRecord[] {
 
   const events = getFakeTicketedEvents({ org_id: orgId })
   const now = nowIso()
-  const mapAId = randomId('smap')
-  const mapBId = randomId('smap')
-  const mapCId = randomId('smap')
+  const useDeterministicIds = orgId === DEMO_ORG_A_ID
+  const mapAId = useDeterministicIds ? DEMO_RESERVED_SEAT_MAP_ID : randomId('smap')
+  const mapBId = useDeterministicIds ? 'seatmap-lower-bowl-001' : randomId('smap')
+  const mapCId = useDeterministicIds ? 'seatmap-practice-court-001' : randomId('smap')
 
-  const primaryEvent = events[0] ?? null
+  const primaryEvent = events.find((event) => event.id === DEMO_SOCIAL_RESERVED_TICKETED_EVENT_ID) ?? events[0] ?? null
   const secondaryEvent = events[1] ?? null
 
   const maps: FakeSeatMapRecord[] = [
@@ -358,7 +361,7 @@ function ensureFakeSeatMaps(orgId: string): FakeSeatMapRecord[] {
       published_snapshot_id: null,
       created_at: now,
       updated_at: now,
-      sections: buildSeatSectionGrid(mapAId, 'A', 1, 4, 1, 12),
+      sections: buildSeatSectionGrid(mapAId, 'A', 1, 14, 1, 32),
     },
     {
       id: mapBId,

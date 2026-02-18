@@ -12,7 +12,7 @@ import { Badge, Button, ProgressBar, DatePicker } from '@/components/platformAdm
 import OrgDataTable from '@/components/admin/OrgDataTable'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
-import { supabase } from '@/lib/supabase'
+import { getOrganizationSlug } from '@/data/services/organizationService'
 import {
   bulkTicketingEvents,
   deleteTicketingEvent,
@@ -97,17 +97,11 @@ const eventStatusVariant: Record<TicketedEvent['status'], 'success' | 'warning' 
 }
 
 const fetchOrgSlug = async (orgId: string) => {
-  const { data, error } = await supabase
-    .from('organizations')
-    .select('slug')
-    .eq('id', orgId)
-    .maybeSingle()
-
-  if (error || !data?.slug) {
+  const { data, error } = await getOrganizationSlug(orgId)
+  if (error || !data) {
     return null
   }
-
-  return data.slug as string
+  return data
 }
 
 function parseFilters(params: URLSearchParams): Filters {

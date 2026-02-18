@@ -1,5 +1,6 @@
 import {
   TicketSaleStatus,
+  TicketSeatingMode,
   TicketedEvent,
   TicketType,
   TicketingProgram,
@@ -8,16 +9,21 @@ import {
 } from '@/types/ticketing'
 import { DEMO_ORG_A_ID } from '../config'
 import { DEMO_TICKETING_EVENT_IMAGES } from '@/utils/demoImagePlaceholders'
+import { DEMO_RESERVED_SEAT_MAP_ID } from './ticketingFakeConstants'
+
+type FakeTicketType = {
+  id: string
+  name: string
+  capacity_total: number
+  capacity_remaining: number
+  price_cents: number
+  is_active?: boolean
+  seating_mode?: TicketSeatingMode
+  seat_map_id?: string | null
+}
 
 type TicketingEventWithDerived = TicketedEvent & {
-  ticket_types?: Array<{
-    id: string
-    name: string
-    capacity_total: number
-    capacity_remaining: number
-    price_cents: number
-    is_active?: boolean
-  }>
+  ticket_types?: FakeTicketType[]
 }
 
 const programs: TicketingProgram[] = [
@@ -84,6 +90,8 @@ const COVER_IMAGES = DEMO_TICKETING_EVENT_IMAGES.length > 0
   : ['/images/sports/default/hero-bg.webp']
 
 const EVENT_TYPES: TicketedEvent['event_type'][] = ['game', 'tournament', 'fundraiser', 'social_event', 'other']
+export const DEMO_SOCIAL_RESERVED_TICKETED_EVENT_ID = 'evt-social-family-night-001'
+export const DEMO_SOCIAL_RESERVED_CALENDAR_EVENT_ID = 'event-ticketing-social-family-night-001'
 
 const DEFAULT_TIMEZONE = 'America/Chicago'
 
@@ -131,14 +139,7 @@ function createTicketTypes(eventId: string, index: number, salesStartAt: string 
   const earlyBirdCapacity = 100 + (index % 4) * 20
   const atDoorCapacity = 70 + (index % 5) * 10
 
-  const types: Array<{
-    id: string
-    name: string
-    capacity_total: number
-    capacity_remaining: number
-    price_cents: number
-    is_active?: boolean
-  }> = [
+  const types: FakeTicketType[] = [
     {
       id: `${eventId}-tt-ga`,
       name: 'General Admission',
@@ -284,7 +285,7 @@ function buildEvent(
     created_at: createdAt,
     updated_at: updatedAt,
     team_id: null,
-    event_id: null,
+    event_id: `event-${eventId}`,
     ticket_types: ticketing.ticketTypes,
   }
 
@@ -301,9 +302,112 @@ function buildEvent(
   return { event, ticketsSold, revenueCents }
 }
 
+function createCuratedSocialReservedEvent(): { event: TicketingEventWithDerived; ticketsSold: number; revenueCents: number } {
+  const venue = venues.find((entry) => entry.id === 'venue-sac-riverside') ?? venues[0]
+  const program = programs.find((entry) => entry.id === 'prog-soccer') ?? programs[0]
+  const season = seasons.find((entry) => entry.id === 'season-spring-current') ?? seasons[0]
+
+  const startsAt = toIsoFromNow(11, 18)
+  const endsAt = toIsoFromNow(11, 22)
+  const createdAt = toIsoFromNow(-30, 10)
+  const updatedAt = toIsoFromNow(-1, 15)
+  const salesStartAt = toIsoFromNow(-21, 14)
+  const salesEndAt = toIsoFromNow(11, 17)
+
+  const ticketTypes: FakeTicketType[] = [
+    {
+      id: `${DEMO_SOCIAL_RESERVED_TICKETED_EVENT_ID}-tt-vip-lounge`,
+      name: 'VIP Lounge Table',
+      capacity_total: 48,
+      capacity_remaining: 16,
+      price_cents: 14500,
+      is_active: true,
+      seating_mode: 'reserved_seating',
+      seat_map_id: DEMO_RESERVED_SEAT_MAP_ID,
+    },
+    {
+      id: `${DEMO_SOCIAL_RESERVED_TICKETED_EVENT_ID}-tt-club-lower`,
+      name: 'Club Lower Bowl',
+      capacity_total: 180,
+      capacity_remaining: 72,
+      price_cents: 6200,
+      is_active: true,
+      seating_mode: 'reserved_seating',
+      seat_map_id: DEMO_RESERVED_SEAT_MAP_ID,
+    },
+    {
+      id: `${DEMO_SOCIAL_RESERVED_TICKETED_EVENT_ID}-tt-family-endzone`,
+      name: 'Family Endzone',
+      capacity_total: 220,
+      capacity_remaining: 110,
+      price_cents: 3400,
+      is_active: true,
+      seating_mode: 'reserved_seating',
+      seat_map_id: DEMO_RESERVED_SEAT_MAP_ID,
+    },
+  ]
+
+  const event: TicketingEventWithDerived = {
+    id: DEMO_SOCIAL_RESERVED_TICKETED_EVENT_ID,
+    org_id: DEMO_ORG_A_ID,
+    program_id: program.id,
+    season_id: season?.id ?? null,
+    venue_id: venue?.id ?? null,
+    opponent: null,
+    is_home: true,
+    event_type: 'social_event',
+    title: 'Family Night on the Field',
+    description: 'Community social event with reserved seating packages and live entertainment.',
+    event_description:
+      'Celebrate the season with a family social night featuring player introductions, live music, and a community awards ceremony. Reserved seating options include VIP lounge tables, club lower bowl seats, and family endzone seating with quick concession access.',
+    starts_at: startsAt,
+    ends_at: endsAt,
+    timezone: DEFAULT_TIMEZONE,
+    venue_name: venue?.name ?? null,
+    venue_city: venue?.city ?? null,
+    venue_state: venue?.state ?? null,
+    venue_postal_code: venue?.postal_code ?? null,
+    venue_address_line1: venue?.address_line1 ?? null,
+    venue_address_line2: venue?.address_line2 ?? null,
+    venue_country: venue?.country ?? 'US',
+    venue_is_virtual: false,
+    venue_virtual_link: null,
+    sales_start_at: salesStartAt,
+    sales_end_at: salesEndAt,
+    cover_image_path: COVER_IMAGES[0] ?? null,
+    ticket_banner_url: COVER_IMAGES[1] ?? COVER_IMAGES[0] ?? null,
+    status: 'published',
+    visibility: 'visible',
+    created_at: createdAt,
+    updated_at: updatedAt,
+    team_id: null,
+    event_id: DEMO_SOCIAL_RESERVED_CALENDAR_EVENT_ID,
+    ticket_types: ticketTypes,
+  }
+
+  const ticketsSold = ticketTypes.reduce((sum, ticketType) => {
+    const sold = Math.max(0, ticketType.capacity_total - ticketType.capacity_remaining)
+    return sum + sold
+  }, 0)
+
+  const revenueCents = ticketTypes.reduce((sum, ticketType) => {
+    const sold = Math.max(0, ticketType.capacity_total - ticketType.capacity_remaining)
+    return sum + sold * ticketType.price_cents
+  }, 0)
+
+  return { event, ticketsSold, revenueCents }
+}
+
 function seedTicketingCatalog() {
   const seededEvents: TicketingEventWithDerived[] = []
   const seededOrdersByEvent: Record<string, { ticketsSold: number; revenueCents: number }> = {}
+
+  const curatedSocial = createCuratedSocialReservedEvent()
+  seededEvents.push(curatedSocial.event)
+  seededOrdersByEvent[curatedSocial.event.id] = {
+    ticketsSold: curatedSocial.ticketsSold,
+    revenueCents: curatedSocial.revenueCents,
+  }
 
   let cursor = 0
 
@@ -377,6 +481,8 @@ function mapTicketType(
     capacity_remaining: type.capacity_remaining ?? null,
     sales_start_at: event.sales_start_at ?? null,
     sales_end_at: event.sales_end_at ?? null,
+    seating_mode: type.seating_mode ?? 'general_admission',
+    seat_map_id: type.seat_map_id ?? null,
     sort_order: index,
     is_active: type.is_active !== false,
     created_at: event.created_at,
@@ -563,8 +669,9 @@ export function getFakeTicketingEvents(orgId: string, params: TicketingEventsQue
 }
 
 export function createFakeTicketingEvent(orgId: string, payload: Partial<TicketedEvent>) {
+  const nextEventId = `evt-${String(events.length + 1).padStart(3, '0')}`
   const newEvent: TicketingEventWithDerived = {
-    id: `evt-${String(events.length + 1).padStart(3, '0')}`,
+    id: nextEventId,
     org_id: orgId,
     event_type: payload.event_type || 'game',
     title: payload.title || 'Untitled Event',
@@ -596,7 +703,7 @@ export function createFakeTicketingEvent(orgId: string, payload: Partial<Tickete
     opponent: payload.opponent || null,
     is_home: payload.is_home ?? true,
     team_id: payload.team_id ?? null,
-    event_id: payload.event_id ?? null,
+    event_id: payload.event_id ?? `event-${nextEventId}`,
     ticket_types: [],
   }
 
@@ -637,6 +744,7 @@ export function duplicateFakeTicketingEvent(orgId: string, id: string) {
     title: `${source.title} (Copy)`,
     status: 'draft',
     visibility: 'hidden',
+    event_id: source.event_id ? `${source.event_id}-copy-${events.length + 1}` : `event-${nextId}`,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     ticket_types: cloneTicketTypes,
@@ -678,6 +786,11 @@ export function bulkFakeTicketingEvents(orgId: string, ids: string[], action: st
 
 export function getFakeTicketedEventById(eventId: string, orgId?: string | null): TicketedEvent | null {
   const match = events.find((event) => event.id === eventId && (!orgId || event.org_id === orgId))
+  return match ? deriveEvent(match) : null
+}
+
+export function getFakeTicketedEventByCalendarEventId(calendarEventId: string, orgId?: string | null): TicketedEvent | null {
+  const match = events.find((event) => event.event_id === calendarEventId && (!orgId || event.org_id === orgId))
   return match ? deriveEvent(match) : null
 }
 

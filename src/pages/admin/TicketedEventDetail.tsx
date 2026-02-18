@@ -40,6 +40,12 @@ function isUuid(value: string | null | undefined): value is string {
   return !!value && UUID_PATTERN.test(value)
 }
 
+function isSupportedTicketedEventId(value: string | null | undefined): value is string {
+  if (!value) return false
+  if (isUuid(value)) return true
+  return USE_FAKE_DATA
+}
+
 function formatDateRange(start: string, end: string, fallback: string): string {
   const startDate = new Date(start)
   const endDate = new Date(end)
@@ -112,7 +118,7 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
   const { isOnline } = useOnlineStatus()
   const id = (ticketedEventId ?? routeId ?? '').trim()
   const hasEventId = id.length > 0
-  const hasValidEventId = isUuid(id)
+  const hasValidEventId = isSupportedTicketedEventId(id)
   const navigate = useNavigate()
   const scannerPath = useRouteLink('admin.ticketingScannerEvent', { eventId: id || '' })
   const addTicketTypePath = useRouteLink('admin.ticketingEvents.ticketTypes.create', { id: id || '' })

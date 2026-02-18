@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CreateDemoPOCInput, DemoOrgPOC, UpdateDemoPOCInput } from '@/types/demoManagement'
 import { addPOC, listPOCs, removePOC, setPrimaryPOC, updatePOC } from '@/data/services/demoOrgService'
 import { Button, Input, Modal } from '@/components/platformAdmin'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import { useI18n } from '@/i18n/useI18n'
 
 interface POCManagerProps {
@@ -37,6 +38,7 @@ export default function POCManager({ orgId }: POCManagerProps) {
   const [error, setError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingPoc, setEditingPoc] = useState<DemoOrgPOC | null>(null)
+  const [pocToDelete, setPocToDelete] = useState<DemoOrgPOC | null>(null)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState<PocFormState>(defaultPocFormState)
 
@@ -116,10 +118,7 @@ export default function POCManager({ orgId }: POCManagerProps) {
     }
   }
 
-  const handleDelete = async (poc: DemoOrgPOC): Promise<void> => {
-    const confirmed = window.confirm(t('platformAdmin.demoManagement.pocs.confirmDelete'))
-    if (!confirmed) return
-
+  const confirmDelete = async (poc: DemoOrgPOC): Promise<void> => {
     setError(null)
     try {
       await removePOC(orgId, poc.id)
@@ -189,7 +188,7 @@ export default function POCManager({ orgId }: POCManagerProps) {
                 <Button variant="ghost" onClick={() => openEditModal(poc)}>
                   {t('common.edit')}
                 </Button>
-                <Button variant="ghost" onClick={() => void handleDelete(poc)}>
+                <Button variant="ghost" onClick={() => setPocToDelete(poc)}>
                   {t('common.remove')}
                 </Button>
               </div>
@@ -258,6 +257,23 @@ export default function POCManager({ orgId }: POCManagerProps) {
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={pocToDelete !== null}
+        title={t('common.remove')}
+        description={t('platformAdmin.demoManagement.pocs.confirmDelete')}
+        confirmLabel={t('common.remove')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={() => {
+          const poc = pocToDelete
+          setPocToDelete(null)
+          if (poc) {
+            void confirmDelete(poc)
+          }
+        }}
+        onCancel={() => setPocToDelete(null)}
+      />
     </div>
   )
 }

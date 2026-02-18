@@ -154,7 +154,7 @@ export default function CreateUser() {
         title="Create User" 
         subtitle={t('admin.users.createSubtitle')} 
         breadcrumbs={[
-          { label: 'Users', path: '/admin/users' },
+          { label: 'Users', path: '/admin/organization/users' },
           { label: 'Create User' },
         ]}
       />
@@ -276,7 +276,7 @@ export default function CreateUser() {
             </div>
 
             <div className="oa-flex oa-justify-end oa-gap-3">
-              <OrgAdminButton variant="primary" onClick={() => navigate('/admin/users')}>Cancel</OrgAdminButton>
+              <OrgAdminButton variant="primary" onClick={() => navigate('/admin/organization/users')}>Cancel</OrgAdminButton>
               <Button type="submit" loading={saving}>Create User</Button>
             </div>
           </form>

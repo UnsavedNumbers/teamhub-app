@@ -20,7 +20,7 @@ interface VideoCommentsPanelProps {
   videoId: string
   disabled?: boolean
   className?: string
-  /** When provided, use ConfirmDialog for delete confirmation (e.g. on admin pages) */
+  /** Optional override copy for delete confirmation */
   deleteConfirmDialog?: { title: string; description: string }
   /** Callback when user clicks a timestamp in comment content */
   onSeek?: (seconds: number) => void
@@ -179,12 +179,8 @@ export default function VideoCommentsPanel({
   }, [replyContent, createComment, disabled])
 
   const handleDeleteClick = useCallback((commentId: string) => {
-    if (deleteConfirmDialog) {
-      setCommentToDeleteId(commentId)
-    } else if (window.confirm(t('videoLibrary.comments.deleteConfirm'))) {
-      deleteComment(commentId)
-    }
-  }, [deleteConfirmDialog, deleteComment])
+    setCommentToDeleteId(commentId)
+  }, [])
 
   const handleConfirmDeleteComment = useCallback(() => {
     if (commentToDeleteId) {
@@ -466,18 +462,16 @@ export default function VideoCommentsPanel({
           {threadedComments.map(comment => renderComment(comment))}
         </div>
       )}
-      {deleteConfirmDialog && (
-        <ConfirmDialog
-          open={commentToDeleteId !== null}
-          title={deleteConfirmDialog.title}
-          description={deleteConfirmDialog.description}
-          confirmLabel={t('common.delete')}
-          cancelLabel={t('common.cancel')}
-          variant="danger"
-          onConfirm={handleConfirmDeleteComment}
-          onCancel={() => setCommentToDeleteId(null)}
-        />
-      )}
+      <ConfirmDialog
+        open={commentToDeleteId !== null}
+        title={deleteConfirmDialog?.title || t('videoLibrary.comments.deleteComment')}
+        description={deleteConfirmDialog?.description || t('videoLibrary.comments.deleteConfirm')}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={handleConfirmDeleteComment}
+        onCancel={() => setCommentToDeleteId(null)}
+      />
     </div>
   )
 }

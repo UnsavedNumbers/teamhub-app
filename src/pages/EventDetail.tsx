@@ -17,6 +17,7 @@ import Icon from '../components/portal/Icon'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
 import { PhotoSection } from '../components/galleries/PhotoSection'
+import { ConfirmDialog } from '../components/admin/ConfirmDialog'
 import { useT } from '../i18n/useI18n'
 import { getLink, RouteKeys } from '@/utils/routes'
 import BookmarkButton from '../components/fan/BookmarkButton'
@@ -269,6 +270,7 @@ export default function EventDetail() {
     precipitation: number
   } | null>(null)
   const [loadingWeather, setLoadingWeather] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const { data: bookmarkedEventsData } = useQuery({
     queryKey: ['bookmarked-events'],
@@ -607,8 +609,13 @@ export default function EventDetail() {
     })
   }
 
-  const handleDelete = async () => {
-    if (!eventId || !window.confirm('Are you sure you want to delete this event? This cannot be undone.')) return
+  const handleDelete = () => {
+    if (!eventId) return
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!eventId) return
     
     setLoading(true)
     const { error } = await deleteEvent(context, eventId, currentOrganization)
@@ -1384,6 +1391,20 @@ export default function EventDetail() {
             eventType={event.type}
             eventStartTime={event.start_time}
             variant="event"
+          />
+
+          <ConfirmDialog
+            open={showDeleteConfirm}
+            title="Are you sure you want to delete this event? This cannot be undone."
+            description="Are you sure you want to delete this event? This cannot be undone."
+            confirmLabel={t('common.delete')}
+            cancelLabel={t('common.cancel')}
+            variant="danger"
+            onConfirm={() => {
+              setShowDeleteConfirm(false)
+              void confirmDelete()
+            }}
+            onCancel={() => setShowDeleteConfirm(false)}
           />
 
 

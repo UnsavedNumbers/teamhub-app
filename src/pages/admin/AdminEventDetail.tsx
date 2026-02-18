@@ -62,6 +62,26 @@ function getDirectionsUrl(origin: string | null | undefined, destination: string
   return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin.trim())}&destination=${encodeURIComponent(destination.trim())}&traffic=1`
 }
 
+const DEFAULT_FAKE_COMMUTE_ORIGIN = 'Riverside Youth Athletics HQ, Riverside, CA'
+
+function buildFakeCommuteSummary(origin: string, destination: string, referenceStart?: string | null): CommuteSummary {
+  const hashSource = `${origin}|${destination}|${referenceStart || ''}`
+  let seed = 0
+  for (let index = 0; index < hashSource.length; index += 1) {
+    seed = (seed + hashSource.charCodeAt(index) * (index + 3)) % 997
+  }
+
+  const distanceMiles = 6 + (seed % 24) + ((seed % 10) / 10)
+  const durationMinutes = 14 + (seed % 38)
+  const trafficExtraMinutes = 4 + (seed % 11)
+
+  return {
+    distance: `${distanceMiles.toFixed(1)} mi`,
+    duration: `${durationMinutes} min`,
+    durationInTraffic: `${durationMinutes + trafficExtraMinutes} min`,
+  }
+}
+
 function getWeatherIcon(condition: string): string {
   const c = condition.toLowerCase()
   if (c.includes('clear') || c.includes('sunny')) return 'wb_sunny'
@@ -185,6 +205,11 @@ export default function AdminEventDetail() {
     if (!event?.event_location) return ''
     return buildVenueAddress(event.event_location)
   }, [event?.event_location])
+  const effectiveCommuteStartLocation = useMemo(() => {
+    if (commuteStartLocation.trim()) return commuteStartLocation.trim()
+    if (USE_FAKE_DATA) return DEFAULT_FAKE_COMMUTE_ORIGIN
+    return ''
+  }, [commuteStartLocation])
 
   const fetchEvent = useCallback(async () => {
     if (!isReady || !id) return
@@ -251,7 +276,7 @@ export default function AdminEventDetail() {
 
   useEffect(() => {
     const fetchCommuteSummary = async () => {
-      if (!commuteStartLocation || !venueAddress) {
+      if (!effectiveCommuteStartLocation || !venueAddress) {
         setCommuteSummary(null)
         return
       }
@@ -260,7 +285,12 @@ export default function AdminEventDetail() {
       setCommuteSummary(null)
 
       try {
-        const origins = encodeURIComponent(commuteStartLocation)
+        if (USE_FAKE_DATA) {
+          setCommuteSummary(buildFakeCommuteSummary(effectiveCommuteStartLocation, venueAddress, event?.start_time))
+          return
+        }
+
+        const origins = encodeURIComponent(effectiveCommuteStartLocation)
         const destinations = encodeURIComponent(venueAddress)
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/distance-matrix?origins=${origins}&destinations=${destinations}`
 
@@ -290,7 +320,7 @@ export default function AdminEventDetail() {
     }
 
     void fetchCommuteSummary()
-  }, [commuteStartLocation, venueAddress])
+  }, [effectiveCommuteStartLocation, event?.start_time, venueAddress])
 
   useEffect(() => {
     const fetchWeather = async () => {
@@ -696,7 +726,7 @@ export default function AdminEventDetail() {
   const rsvpEnabledValue = Boolean(eventMeta.rsvp_enabled ?? event.rsvp_config?.enabled)
   const rsvpTypeValue = eventMeta.rsvp_type || event.rsvp_config?.type || null
   const routeToAttendance = rsvpEnabledValue
-  const directionsUrl = getDirectionsUrl(commuteStartLocation, venueAddress)
+  const directionsUrl = getDirectionsUrl(effectiveCommuteStartLocation, venueAddress)
   const relativeTime = getRelativeTimeLabel(event.start_time)
   const timezoneDisplay = formatTimezoneDisplay(event.timezone, event.start_time)
   const isRecurring = hasRecurringSchedule(event.recurring_pattern)
@@ -1128,10 +1158,10 @@ export default function AdminEventDetail() {
 
               {!isEditingCommute ? (
                 <div className="space-y-4">
-                  {commuteStartLocation && (
+                  {effectiveCommuteStartLocation && (
                     <div>
                       <div className="oa-stat-item__label">{t('admin.events.detailPage.startingPoint')}</div>
-                      <div className="text-sm" style={{ marginTop: 2 }}>{commuteStartLocation}</div>
+                      <div className="text-sm" style={{ marginTop: 2 }}>{effectiveCommuteStartLocation}</div>
                     </div>
                   )}
 
@@ -1159,7 +1189,7 @@ export default function AdminEventDetail() {
                     </div>
                   )}
 
-                  {!commuteStartLocation && !loadingCommute && (
+                  {!effectiveCommuteStartLocation && !loadingCommute && (
                     <div className="oa-empty-hint">
                       <span className="material-symbols-outlined">add_location_alt</span>
                       <p>{t('admin.events.detailPage.noCommuteSet')}</p>
@@ -1169,12 +1199,12 @@ export default function AdminEventDetail() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       className="oa-btn oa-btn--secondary oa-btn--compact"
-                      onClick={() => { setIsEditingCommute(true); setCommuteInputValue(commuteStartLocation) }}
+                      onClick={() => { setIsEditingCommute(true); setCommuteInputValue(commuteStartLocation || effectiveCommuteStartLocation) }}
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                        {commuteStartLocation ? 'edit' : 'add_location_alt'}
+                        {effectiveCommuteStartLocation ? 'edit' : 'add_location_alt'}
                       </span>
-                      {commuteStartLocation ? t('common.edit') : t('admin.events.detailPage.setStartingPoint')}
+                      {effectiveCommuteStartLocation ? t('common.edit') : t('admin.events.detailPage.setStartingPoint')}
                     </button>
 
                     {directionsUrl && (
@@ -1212,7 +1242,7 @@ export default function AdminEventDetail() {
                     <button
                       className="oa-btn oa-btn--secondary oa-btn--compact"
                       type="button"
-                      onClick={() => { setIsEditingCommute(false); setCommuteInputValue(commuteStartLocation) }}
+                      onClick={() => { setIsEditingCommute(false); setCommuteInputValue(commuteStartLocation || effectiveCommuteStartLocation) }}
                     >
                       {t('common.cancel')}
                     </button>

@@ -68,6 +68,7 @@ export default function EditEvent() {
   const [bannerFile, setBannerFile] = useState<File | null>(null)
   const [bannerFilePreviewUrl, setBannerFilePreviewUrl] = useState<string | null>(null)
   const [removingBanner, setRemovingBanner] = useState(false)
+  const [removeBannerDialog, setRemoveBannerDialog] = useState(false)
   const [isPastEvent, setIsPastEvent] = useState(false)
   const [visibility, setVisibility] = useState<'public' | 'private'>('private')
 
@@ -960,16 +961,21 @@ export default function EditEvent() {
   const storedBannerPreviewUrl = getTicketBannerPublicUrl(watchTicketingBannerUrl)
   const bannerPreviewUrl = bannerFilePreviewUrl || storedBannerPreviewUrl
 
-  const handleRemoveBanner = async () => {
+  const handleRemoveBanner = () => {
     if (removingBanner || saving) return
 
     const existingBannerValue = watchTicketingBannerUrl?.trim() || ''
     const hasPersistedBanner = existingBannerValue.length > 0
 
     if (!hasPersistedBanner && !bannerFile) return
+    setRemoveBannerDialog(true)
+  }
 
-    const confirmed = window.confirm('Remove this banner image?')
-    if (!confirmed) return
+  const confirmRemoveBanner = async () => {
+    const existingBannerValue = watchTicketingBannerUrl?.trim() || ''
+    const hasPersistedBanner = existingBannerValue.length > 0
+
+    if (!hasPersistedBanner && !bannerFile) return
 
     if (hasPersistedBanner && isOffline) {
       showError('You are offline. Reconnect to remove the banner from storage.')
@@ -1624,6 +1630,21 @@ export default function EditEvent() {
             </fieldset>
           </form>
       </div>
+
+      {/* Banner Removal Confirmation Dialog */}
+      <ConfirmDialog
+        open={removeBannerDialog}
+        title="Remove this banner image?"
+        description="Remove this banner image?"
+        confirmLabel={removingBanner ? 'Removing...' : 'Remove'}
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          setRemoveBannerDialog(false)
+          void confirmRemoveBanner()
+        }}
+        onCancel={() => setRemoveBannerDialog(false)}
+      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

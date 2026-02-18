@@ -15,6 +15,7 @@ import { showSuccess, showError } from '@/utils/toast'
 import { getErrorMessage } from '@/utils/errorUtils'
 import { AdminPageHeader } from '@/components/platformAdmin'
 import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import { t } from '@/i18n'
 import '../../styles/orgAdmin.css'
 
@@ -30,6 +31,7 @@ export default function TicketingOrderDetail() {
   const orgId = currentOrganization?.id
   const [isRefunding, setIsRefunding] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<'refund' | 'complete' | null>(null)
 
   const { data: orderResponse, isLoading, error, refetch } = useQuery({
     queryKey: ['ticket-order-admin', orderId],
@@ -54,12 +56,8 @@ export default function TicketingOrderDetail() {
     )
   }
 
-  const handleRefund = async () => {
+  const processRefund = async () => {
     if (!orderId || !order) return
-
-    if (!confirm(t('ticketing.orderDetail.refundConfirm'))) {
-      return
-    }
 
     try {
       setIsRefunding(true)
@@ -84,12 +82,8 @@ export default function TicketingOrderDetail() {
     }
   }
 
-  const handleCompleteOrder = async () => {
+  const completeOrder = async () => {
     if (!orderId || !order) return
-
-    if (!confirm(t('ticketing.orderDetail.stuckOrderWarning') + '. ' + t('ticketing.orderDetail.stuckOrderDescription') + ' Continue?')) {
-      return
-    }
 
     try {
       setIsCompleting(true)
@@ -108,6 +102,16 @@ export default function TicketingOrderDetail() {
     } finally {
       setIsCompleting(false)
     }
+  }
+
+  const handleRefund = () => {
+    if (!orderId || !order) return
+    setConfirmAction('refund')
+  }
+
+  const handleCompleteOrder = () => {
+    if (!orderId || !order) return
+    setConfirmAction('complete')
   }
 
   // Validate orderId format
@@ -388,6 +392,31 @@ export default function TicketingOrderDetail() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmAction !== null}
+        title={confirmAction === 'refund' ? t('ticketing.orderDetail.refundOrder') : t('ticketing.orderDetail.completeOrder')}
+        description={
+          confirmAction === 'refund'
+            ? t('ticketing.orderDetail.refundConfirm')
+            : `${t('ticketing.orderDetail.stuckOrderWarning')}. ${t('ticketing.orderDetail.stuckOrderDescription')} Continue?`
+        }
+        confirmLabel={confirmAction === 'refund' ? t('ticketing.orderDetail.refundOrder') : t('ticketing.orderDetail.completeOrder')}
+        cancelLabel={t('common.cancel')}
+        variant={confirmAction === 'refund' ? 'danger' : 'primary'}
+        onConfirm={() => {
+          const action = confirmAction
+          setConfirmAction(null)
+          if (action === 'refund') {
+            void processRefund()
+            return
+          }
+          if (action === 'complete') {
+            void completeOrder()
+          }
+        }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </div>
   )
 }

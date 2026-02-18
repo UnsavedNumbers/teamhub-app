@@ -7,6 +7,11 @@
 
 import { supabase } from '../lib/supabase'
 import { getErrorMessage } from '../utils/errorUtils'
+import { USE_FAKE_DATA } from '../data/config'
+import {
+  createFakeOrganizationUser,
+  updateFakeOrganizationUser,
+} from '../data/fake/fakeOrgUsers'
 
 export interface CreateUserParams {
   org_id: string
@@ -48,6 +53,30 @@ export async function createOrganizationUser(
     // Validate role
     if (!['parent', 'coach', 'admin'].includes(params.role)) {
       throw new Error('Invalid role. Must be parent, coach, or admin')
+    }
+
+    if (USE_FAKE_DATA) {
+      const { user, error: fakeError } = createFakeOrganizationUser({
+        orgId: params.org_id,
+        email: params.email,
+        firstName: params.first_name,
+        lastName: params.last_name,
+        phone: params.phone,
+        role: params.role,
+      })
+
+      if (fakeError || !user) {
+        return {
+          success: false,
+          error: fakeError?.message || 'Failed to create user',
+        }
+      }
+
+      return {
+        success: true,
+        user_id: user.id,
+        message: 'User created successfully',
+      }
     }
 
     // Call Edge Function
@@ -111,6 +140,29 @@ export async function updateOrganizationUser(
     // Validate role if provided
     if (params.role && !['parent', 'coach', 'admin'].includes(params.role)) {
       throw new Error('Invalid role. Must be parent, coach, or admin')
+    }
+
+    if (USE_FAKE_DATA) {
+      const { error: fakeError } = updateFakeOrganizationUser({
+        orgId: params.org_id,
+        userId: params.user_id,
+        firstName: params.first_name,
+        lastName: params.last_name,
+        phone: params.phone,
+        role: params.role,
+      })
+
+      if (fakeError) {
+        return {
+          success: false,
+          error: fakeError.message,
+        }
+      }
+
+      return {
+        success: true,
+        message: 'User updated successfully',
+      }
     }
 
     // Build update object

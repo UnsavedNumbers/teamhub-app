@@ -176,7 +176,7 @@ export function ProtectedRoute({
     const checkoutSuccessPath = getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS)
     const checkoutCancelPath = getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL)
     
-    const isPaywallAllowedRoute = 
+    const isPaywallAllowedRoute =
       location.pathname === trialExpiredPath ||
       location.pathname === billingPath ||
       location.pathname === checkoutSuccessPath ||

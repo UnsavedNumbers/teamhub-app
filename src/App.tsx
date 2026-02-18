@@ -557,6 +557,9 @@ function AppWithTheme() {
               <Route path="organization/seasons/:id" element={<RedirectWithParams to="/admin/seasons" />} />
               <Route path="organization/seasons" element={<Navigate to="/admin/seasons" replace />} />
               <Route path="organization/teams" element={<Navigate to="/admin/teams" replace />} />
+              <Route path="users" element={<Navigate to="/admin/organization/users" replace />} />
+              <Route path="scanner" element={<Navigate to="/admin/ticketing/scanner" replace />} />
+              <Route path="staff" element={<Navigate to="/admin/organization?tab=staff" replace />} />
               <Route path="events/create" element={<Navigate to={getLink(RouteKeys.ADMIN_CREATE_EVENT)} replace />} />
               <Route path="athletes/:id/edit" element={<RedirectWithParams to="/admin/athletes" />} />
               <Route path="families/:familyId/athletes/new" element={<RedirectWithParams to="/admin/guardians" paramKey="familyId" suffix="/athletes/new" />} />

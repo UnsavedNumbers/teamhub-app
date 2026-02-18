@@ -15,6 +15,7 @@ import { AdminPageHeader } from '../../components/admin/AdminPageHeader'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/platformAdmin'
 import { getUserPreferences, updateUserPreferences, type UserPreferences } from '../../data/services/preferencesService'
 import { supabase } from '../../lib/supabase'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../../data/config'
 import { showSuccess, showError } from '../../utils/toast'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { validatePhoneFormat } from '../../utils/phoneValidation'
@@ -326,19 +327,23 @@ export default function AdminSettings() {
     setError(null)
     
     try {
-      // Update first_name, last_name, phone, and display_name in users table
-      // Bug 4 prevention: Use updated_at for optimistic conflict detection
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ 
-          first_name: trimmedFirstName,
-          last_name: trimmedLastName,
-          phone: trimmedPhone,
-          display_name: `${trimmedFirstName} ${trimmedLastName}`.trim(),
-        } as any) // Type cast to handle auto-generated types
-        .eq('id', user.id)
-      
-      if (updateError) throw updateError
+      if (USE_FAKE_DATA) {
+        await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+      } else {
+        // Update first_name, last_name, phone, and display_name in users table
+        // Bug 4 prevention: Use updated_at for optimistic conflict detection
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            first_name: trimmedFirstName,
+            last_name: trimmedLastName,
+            phone: trimmedPhone,
+            display_name: `${trimmedFirstName} ${trimmedLastName}`.trim(),
+          } as any) // Type cast to handle auto-generated types
+          .eq('id', user.id)
+
+        if (updateError) throw updateError
+      }
       
       // Update timezone in preferences (phone is now in users table)
       const updatedPrefs: UserPreferences = {
@@ -631,8 +636,12 @@ export default function AdminSettings() {
     setChangingEmail(true)
     
     try {
-      const { error } = await updateEmail(newEmail, '/admin/settings')
-      if (error) throw error
+      if (USE_FAKE_DATA) {
+        await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+      } else {
+        const { error } = await updateEmail(newEmail, '/admin/settings')
+        if (error) throw error
+      }
       
       showSuccess('Confirmation links have been sent to your current and new email addresses. Click both links to complete the change.')
       setShowEmailModal(false)
@@ -670,8 +679,12 @@ export default function AdminSettings() {
     setPasswordSuccess(false)
     
     try {
-      const { error: pwError } = await updatePassword(newPassword)
-      if (pwError) throw pwError
+      if (USE_FAKE_DATA) {
+        await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+      } else {
+        const { error: pwError } = await updatePassword(newPassword)
+        if (pwError) throw pwError
+      }
       
       showSuccess('Password changed successfully!')
       setShowPasswordModal(false)
@@ -694,7 +707,9 @@ export default function AdminSettings() {
   // Handle sign out all sessions
   const handleSignOutAll = async () => {
     try {
-      await supabase.auth.signOut({ scope: 'global' })
+      if (!USE_FAKE_DATA) {
+        await supabase.auth.signOut({ scope: 'global' })
+      }
       window.location.href = '/login'
     } catch (err) {
       console.error('Error signing out:', err)

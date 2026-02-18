@@ -11,6 +11,7 @@ import type { SportFieldDefinition } from '../../types/athleteSportProfiles'
 import type { SportCode, FieldGroup } from '../../types/sports'
 import { getSportFieldCatalog, SPORT_FIELD_CATALOG, type FieldCatalogEntry } from '../../constants/sportFieldCatalog'
 import { CACHE_TTL } from '../../constants/api'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 
 const isMissingTableError = (err: any) =>
     err?.code === 'PGRST205' ||
@@ -25,6 +26,12 @@ interface ServiceResponse<T> {
 }
 
 const supabaseAny = supabase as any
+
+async function simulateDelay(): Promise<void> {
+    if (FAKE_DATA_DELAY_MS > 0) {
+        await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+    }
+}
 
 /**
  * In-memory cache for field definitions
@@ -51,6 +58,17 @@ export async function getSportFieldDefinitions(
             debug.error('SportFieldDefinitionsService.getSportFieldDefinitions', 'sportCode is required', { sportCode })
             console.groupEnd()
             throw new Error('sportCode is required')
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const demoResolved = maybeFallbackFromCatalog(sportCode) || []
+            const cacheKey = `sport:${sportCode}`
+            setCachedDefinitions(cacheKey, demoResolved)
+            debug.perf.end('sportFieldDefinitionsService.getSportFieldDefinitions')
+            debug.data('SportFieldDefinitionsService.getSportFieldDefinitions', 'Response (fake)', { sportCode, count: demoResolved.length })
+            console.groupEnd()
+            return { data: demoResolved, error: null }
         }
 
         // Check cache
@@ -148,6 +166,17 @@ export async function getSportFieldDefinitionsByGroup(
             throw new Error('fieldGroup is required')
         }
 
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const demoResolved = maybeFallbackFromCatalog(sportCode, fieldGroup) || []
+            const cacheKey = `sport:${sportCode}:group:${fieldGroup}`
+            setCachedDefinitions(cacheKey, demoResolved)
+            debug.perf.end('sportFieldDefinitionsService.getSportFieldDefinitionsByGroup')
+            debug.data('SportFieldDefinitionsService.getSportFieldDefinitionsByGroup', 'Response (fake)', { sportCode, fieldGroup, count: demoResolved.length })
+            console.groupEnd()
+            return { data: demoResolved, error: null }
+        }
+
         // Check cache
         const cacheKey = `sport:${sportCode}:group:${fieldGroup}`
         const cachedData = getCachedDefinitions(cacheKey)
@@ -228,6 +257,14 @@ export async function getSportFieldDefinitionsByGroup(
  */
 export async function getAllSportFieldDefinitions(): Promise<ServiceResponse<SportFieldDefinition[]>> {
     try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const demoResolved = allCatalogAsDefinitions()
+            const cacheKey = 'all_sports'
+            setCachedDefinitions(cacheKey, demoResolved)
+            return { data: demoResolved, error: null }
+        }
+
         // Check cache
         const cacheKey = 'all_sports'
         const cachedData = getCachedDefinitions(cacheKey)

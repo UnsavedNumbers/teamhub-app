@@ -39,6 +39,12 @@ function isUuid(value: string | null | undefined): value is string {
   return !!value && UUID_PATTERN.test(value)
 }
 
+function isSupportedTicketedEventId(value: string | null | undefined): value is string {
+  if (!value) return false
+  if (isUuid(value)) return true
+  return USE_FAKE_DATA
+}
+
 function toIsoTimestamp(date: string, time: string): string | null {
   if (!date || !time) return null
   return new Date(`${date}T${time}`).toISOString()
@@ -93,7 +99,7 @@ export default function EditTicketType() {
   const eventsPath = useRouteLink('admin.ticketingEvents.list')
   const ticketedEventId = (id ?? '').trim()
   const hasEventParam = ticketedEventId.length > 0
-  const hasValidEventParam = isUuid(ticketedEventId)
+  const hasValidEventParam = isSupportedTicketedEventId(ticketedEventId)
 
   const eventQuery = useQuery({
     queryKey: ['ticketed-event', ticketedEventId],

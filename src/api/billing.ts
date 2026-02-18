@@ -2,6 +2,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { LicensePlan } from '../utils/licenseUtils'
 import { t } from '../i18n'
 import { USE_FAKE_DATA, DEMO_TRANSACTION_DELAY_MS } from '../data/config'
+import { getFakeTicketOrdersWithRelations } from '../data/fake/ticketingFakeService'
 
 interface CheckoutSessionParams {
   organizationId: string
@@ -55,8 +56,54 @@ function ensureConfigured() {
   }
 }
 
+function buildFakeBillingHistory(organizationId: string): BillingEvent[] {
+  const orders = getFakeTicketOrdersWithRelations(organizationId)
+    .filter((order) => order.status === 'paid' || order.status === 'refunded' || order.status === 'pending_payment')
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 24)
+
+  return orders.map((order) => {
+    const createdAt = order.processed_at ?? order.created_at
+    const isRefund = order.status === 'refunded'
+    const isFailed = order.status === 'pending_payment'
+    const amountCents = order.total_cents || 0
+    const description = isRefund
+      ? `Refund issued for ${order.event?.title ?? 'ticket order'}`
+      : `Ticket revenue for ${order.event?.title ?? 'organization event'}`
+    const status = isRefund ? 'refunded' : isFailed ? 'failed' : 'paid'
+
+    return {
+      id: `demo-billing-${order.id}`,
+      event_type: isRefund ? 'charge.refunded' : isFailed ? 'invoice.payment_failed' : 'invoice.payment_succeeded',
+      stripe_event_id: `evt_demo_${order.id}`,
+      stripe_object_id: order.stripe_payment_intent_id ?? `pi_demo_${order.id}`,
+      processed_at: createdAt,
+      created_at: createdAt,
+      payload: {
+        data: {
+          object: {
+            amount_paid: isFailed ? 0 : amountCents,
+            amount_due: amountCents,
+            currency: 'usd',
+            hosted_invoice_url: '#',
+            status,
+            description,
+          },
+        },
+      },
+      amount: amountCents / 100,
+      currency: 'USD',
+      invoice_url: '#',
+      payment_status: status,
+      description,
+    }
+  })
+}
+
 export async function createCheckoutSession(params: CheckoutSessionParams) {
-  ensureConfigured()
+  if (!USE_FAKE_DATA) {
+    ensureConfigured()
+  }
 
   const { organizationId, requestedPlan, successUrl, cancelUrl } = params
   if (!organizationId || !requestedPlan || !successUrl || !cancelUrl) {
@@ -85,7 +132,9 @@ export async function createCheckoutSession(params: CheckoutSessionParams) {
 }
 
 export async function createCustomerPortalSession(params: PortalSessionParams) {
-  ensureConfigured()
+  if (!USE_FAKE_DATA) {
+    ensureConfigured()
+  }
 
   const { organizationId, returnUrl } = params
   if (!organizationId || !returnUrl) {
@@ -112,6 +161,11 @@ export async function createCustomerPortalSession(params: PortalSessionParams) {
 }
 
 export async function getBillingHistory(organizationId: string): Promise<BillingEvent[]> {
+  if (USE_FAKE_DATA) {
+    await new Promise((r) => setTimeout(r, DEMO_TRANSACTION_DELAY_MS))
+    return buildFakeBillingHistory(organizationId)
+  }
+
   ensureConfigured()
 
   const { data, error } = await supabase

@@ -14,6 +14,7 @@ import {
 import OrgDataTable from '../../../components/admin/OrgDataTable'
 import type { ColumnConfig } from '../../../components/admin/OrgDataTable'
 import { OrgAdminButton } from '../../../components/admin/OrgAdminButton'
+import { ConfirmDialog } from '../../../components/admin/ConfirmDialog'
 import { 
   getOrgStaff, 
   addStaffMember, 
@@ -45,6 +46,7 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
   const [viewingAuditLog, setViewingAuditLog] = useState<string | null>(null)
+  const [revokeTargetUserId, setRevokeTargetUserId] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(25)
 
@@ -137,9 +139,8 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
     }
   }
 
-  const handleRevokeAccess = async (userId: string) => {
+  const confirmRevokeAccess = async (userId: string) => {
     if (!context) return
-    if (!confirm(t('admin.staff.revokeConfirm'))) return
 
     try {
       if (!navigator.onLine) {
@@ -250,7 +251,7 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
             <Button
               variant="ghost"
               size="compact"
-              onClick={() => handleRevokeAccess(row.user_id)}
+              onClick={() => setRevokeTargetUserId(row.user_id)}
             >
               {t('admin.staff.revokeAccess')}
             </Button>
@@ -340,6 +341,23 @@ export default function StaffSection({ organizationId }: StaffSectionProps) {
           onClose={() => setViewingAuditLog(null)}
         />
       )}
+
+      <ConfirmDialog
+        open={revokeTargetUserId !== null}
+        title={t('admin.staff.revokeAccess')}
+        description={t('admin.staff.revokeConfirm')}
+        confirmLabel={t('admin.staff.revokeAccess')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={() => {
+          const userId = revokeTargetUserId
+          setRevokeTargetUserId(null)
+          if (userId) {
+            void confirmRevokeAccess(userId)
+          }
+        }}
+        onCancel={() => setRevokeTargetUserId(null)}
+      />
     </div>
   )
 }

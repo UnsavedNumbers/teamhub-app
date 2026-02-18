@@ -24,6 +24,12 @@ import {
     getChildRSVPForEvent as getFakeChildRSVPForEvent,
     getAllEvents as getFakeAllEvents,
 } from '../fake/fakeEvents'
+import { getTeamById } from '../fake/fakeTeams'
+import {
+    getFakeTicketedEventByCalendarEventId,
+    getFakeTicketedEventById,
+    getFakeTicketingEvents,
+} from '../fake/fakeTicketingEvents'
 import { getChildrenForUserId, getAssignedTeamsForCoach, getChildTeamMemberships } from '../fake/relationships'
 import { t } from '@/i18n'
 import { buildEventQuery, buildCalendarEventQuery } from './queryHelpers'
@@ -247,6 +253,316 @@ function calendarEventToSummary(e: CalendarEvent): CalendarEventSummary {
     }
 }
 
+function getBaseFakeEvents(params: EventsQueryParams): CalendarEvent[] {
+    if (params.startDate && params.endDate) {
+        return getFakeEventsInDateRange(params.startDate, params.endDate)
+    }
+    if (params.teamId) {
+        return getFakeEventsForTeam(params.teamId)
+    }
+    if (params.seasonId) {
+        return getFakeEventsForSeason(params.seasonId)
+    }
+    return getFakeAllEvents()
+}
+
+function deriveFakeEventStatus(event: CalendarEvent, now: Date): 'scheduled' | 'cancelled' | 'completed' {
+    if (event.is_cancelled) return 'cancelled'
+    if (new Date(event.end_time).getTime() < now.getTime()) return 'completed'
+    return 'scheduled'
+}
+
+function normalizeTicketedEventSummary(ticketedEvent: any): NonNullable<CalendarEvent['ticketed_event']> {
+    return {
+        id: ticketedEvent.id,
+        org_id: ticketedEvent.org_id,
+        team_id: ticketedEvent.team_id ?? null,
+        event_type: ticketedEvent.event_type ?? null,
+        title: ticketedEvent.title,
+        description: ticketedEvent.description ?? null,
+        starts_at: ticketedEvent.starts_at,
+        ends_at: ticketedEvent.ends_at,
+        timezone: ticketedEvent.timezone ?? null,
+        venue_name: ticketedEvent.venue_name ?? null,
+        venue_city: ticketedEvent.venue_city ?? null,
+        venue_state: ticketedEvent.venue_state ?? null,
+        venue_postal_code: ticketedEvent.venue_postal_code ?? null,
+        sales_start_at: ticketedEvent.sales_start_at ?? null,
+        sales_end_at: ticketedEvent.sales_end_at ?? null,
+        status: ticketedEvent.status,
+        visibility: ticketedEvent.visibility ?? null,
+        event_description: ticketedEvent.event_description ?? null,
+        ticket_banner_url: ticketedEvent.ticket_banner_url ?? null,
+        ticket_types: (ticketedEvent.ticket_types ?? []).map((ticketType: any) => ({
+            id: ticketType.id,
+            name: ticketType.name,
+            description: ticketType.description ?? null,
+            price_cents: ticketType.price_cents ?? 0,
+            currency: ticketType.currency ?? 'USD',
+            capacity_total: ticketType.capacity_total ?? null,
+            capacity_remaining: ticketType.capacity_remaining ?? null,
+            sort_order: ticketType.sort_order ?? null,
+            is_active: ticketType.is_active ?? null,
+        })),
+    }
+}
+
+function toSyntheticEventLocation(eventId: string, ticketedEvent: any): EventLocation {
+    return {
+        id: `loc-ticketing-${eventId}`,
+        event_id: eventId,
+        venue_name: ticketedEvent.venue_name ?? null,
+        address_line1: ticketedEvent.venue_address_line1 ?? null,
+        address_line2: ticketedEvent.venue_address_line2 ?? null,
+        city: ticketedEvent.venue_city ?? null,
+        state: ticketedEvent.venue_state ?? null,
+        postal_code: ticketedEvent.venue_postal_code ?? null,
+        place_id: null,
+        country: ticketedEvent.venue_country ?? 'US',
+        latitude: null,
+        longitude: null,
+        is_tbd: false,
+        is_virtual: Boolean(ticketedEvent.venue_is_virtual),
+        virtual_link: ticketedEvent.venue_virtual_link ?? null,
+        created_at: ticketedEvent.created_at,
+        updated_at: ticketedEvent.updated_at,
+    }
+}
+
+function toFallbackEventLocation(event: CalendarEvent): EventLocation | null {
+    if (!event.location?.trim()) return null
+    return {
+        id: `loc-fallback-${event.id}`,
+        event_id: event.id,
+        venue_name: event.location.trim(),
+        address_line1: null,
+        address_line2: null,
+        city: null,
+        state: null,
+        postal_code: null,
+        place_id: null,
+        country: 'US',
+        latitude: null,
+        longitude: null,
+        is_tbd: false,
+        is_virtual: false,
+        virtual_link: null,
+        created_at: event.created_at,
+        updated_at: event.updated_at,
+    }
+}
+
+function withFakeEventRelations(event: CalendarEvent, orgId: string): CalendarEvent {
+    const ticketedEvent = getFakeTicketedEventByCalendarEventId(event.id, orgId)
+    const persistedLocation = getFakeEventLocation(event.id)
+    const syntheticLocation = ticketedEvent ? toSyntheticEventLocation(event.id, ticketedEvent) : null
+    const fallbackLocation = toFallbackEventLocation(event)
+
+    return {
+        ...event,
+        event_location: persistedLocation ?? syntheticLocation ?? fallbackLocation,
+        ticketed_event: ticketedEvent ? normalizeTicketedEventSummary(ticketedEvent) : null,
+    }
+}
+
+function createSyntheticCalendarEventFromTicketing(calendarEventId: string, ticketedEvent: any): CalendarEvent {
+    const start = new Date(ticketedEvent.starts_at)
+    const arrival = new Date(start.getTime() - 45 * 60 * 1000).toISOString()
+    const locationParts = [ticketedEvent.venue_name, ticketedEvent.venue_city, ticketedEvent.venue_state]
+        .filter(Boolean)
+        .join(', ')
+
+    const mappedType: EventType =
+        ticketedEvent.event_type === 'game'
+            ? 'game'
+            : ticketedEvent.event_type === 'tournament'
+                ? 'tournament'
+                : ticketedEvent.event_type === 'fundraiser' || ticketedEvent.event_type === 'social_event'
+                    ? 'social'
+                    : ticketedEvent.event_type === 'travel'
+                        ? 'travel'
+                        : 'meeting'
+
+    const isCancelled = ticketedEvent.status === 'cancelled'
+
+    return {
+        id: calendarEventId,
+        team_id: ticketedEvent.team_id ?? null,
+        season_id: ticketedEvent.season_id ?? null,
+        title: ticketedEvent.title,
+        type: mappedType,
+        start_time: ticketedEvent.starts_at,
+        end_time: ticketedEvent.ends_at,
+        arrival_time: arrival,
+        timezone: ticketedEvent.timezone ?? 'America/Chicago',
+        location: locationParts || ticketedEvent.venue_name || null,
+        notes: ticketedEvent.description ?? ticketedEvent.event_description ?? null,
+        uniform_notes: null,
+        equipment_notes: null,
+        weather_dependent: false,
+        external_link: null,
+        is_cancelled: isCancelled,
+        cancellation_reason: isCancelled ? 'Event cancelled' : null,
+        cancelled_at: isCancelled ? ticketedEvent.updated_at : null,
+        cancelled_by_user_id: null,
+        created_by_user_id: null,
+        created_at: ticketedEvent.created_at,
+        updated_at: ticketedEvent.updated_at,
+        event_location: toSyntheticEventLocation(calendarEventId, ticketedEvent),
+        ticketed_event: normalizeTicketedEventSummary(ticketedEvent),
+        team: ticketedEvent.team_id
+            ? {
+                id: ticketedEvent.team_id,
+                name: 'Ticketed Team Event',
+                org_id: ticketedEvent.org_id,
+            }
+            : undefined,
+    }
+}
+
+function applyFakeEventFilters(
+    events: CalendarEvent[],
+    params: EventsQueryParams,
+    applyPagination: boolean,
+): CalendarEvent[] {
+    const now = new Date()
+    let filtered = [...events]
+
+    if (!params.includeCancelled) {
+        filtered = filtered.filter((event) => !event.is_cancelled)
+    }
+
+    if (params.timeContext === 'upcoming') {
+        filtered = filtered.filter((event) => new Date(event.start_time).getTime() >= now.getTime())
+    } else if (params.timeContext === 'past') {
+        filtered = filtered.filter((event) => new Date(event.start_time).getTime() < now.getTime())
+    }
+
+    if (params.startDate) {
+        const startMs = params.startDate.getTime()
+        filtered = filtered.filter((event) => new Date(event.start_time).getTime() >= startMs)
+    }
+
+    if (params.endDate) {
+        const endMs = params.endDate.getTime()
+        filtered = filtered.filter((event) => new Date(event.start_time).getTime() <= endMs)
+    }
+
+    if (params.teamIds && params.teamIds.length > 0) {
+        const allowed = new Set(params.teamIds)
+        filtered = filtered.filter((event) => !!event.team_id && allowed.has(event.team_id))
+    }
+
+    if (params.seasonIds && params.seasonIds.length > 0) {
+        const allowed = new Set(params.seasonIds)
+        filtered = filtered.filter((event) => !!event.season_id && allowed.has(event.season_id))
+    }
+
+    if (params.sportIds && params.sportIds.length > 0) {
+        const allowed = new Set(params.sportIds)
+        filtered = filtered.filter((event) => {
+            const team = event.team_id ? getTeamById(event.team_id) : null
+            return !!team?.sport_id && allowed.has(team.sport_id)
+        })
+    }
+
+    if (params.eventTypes && params.eventTypes.length > 0) {
+        const allowed = new Set(params.eventTypes)
+        filtered = filtered.filter((event) => allowed.has(event.type))
+    }
+
+    if (params.status && params.status.length > 0) {
+        const allowed = new Set(params.status)
+        filtered = filtered.filter((event) => allowed.has(deriveFakeEventStatus(event, now)))
+    }
+
+    if (params.visibleToFans) {
+        filtered = filtered.filter((event) => ((event as { visibility?: string | null }).visibility ?? 'public') === 'public')
+    }
+
+    if (params.search && params.search.trim() !== '') {
+        const query = params.search.trim().toLowerCase()
+        filtered = filtered.filter((event) => {
+            const haystack = [
+                event.title,
+                event.notes,
+                event.location,
+                event.uniform_notes,
+                event.equipment_notes,
+                event.team?.name,
+                event.season?.name,
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase()
+            return haystack.includes(query)
+        })
+    }
+
+    if (params.locationSearch && params.locationSearch.trim() !== '') {
+        const query = params.locationSearch.trim().toLowerCase()
+        filtered = filtered.filter((event) => {
+            const locationText = [
+                event.location,
+                event.event_location?.venue_name,
+                event.event_location?.address_line1,
+                event.event_location?.city,
+                event.event_location?.state,
+                event.event_location?.postal_code,
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase()
+            return locationText.includes(query)
+        })
+    }
+
+    const orderBy = params.orderBy || 'start_time'
+    const sortDirection = params.order === 'desc' ? -1 : 1
+    filtered.sort((a, b) => {
+        const timeValue = (value: string | null | undefined) => (value ? new Date(value).getTime() : 0)
+
+        let comparison = 0
+        switch (orderBy) {
+            case 'title':
+                comparison = a.title.localeCompare(b.title)
+                break
+            case 'type':
+                comparison = a.type.localeCompare(b.type)
+                break
+            case 'created_at':
+                comparison = timeValue(a.created_at) - timeValue(b.created_at)
+                break
+            case 'updated_at':
+                comparison = timeValue(a.updated_at) - timeValue(b.updated_at)
+                break
+            case 'end_time':
+                comparison = timeValue(a.end_time) - timeValue(b.end_time)
+                break
+            case 'arrival_time':
+                comparison = timeValue(a.arrival_time) - timeValue(b.arrival_time)
+                break
+            case 'start_time':
+            default:
+                comparison = timeValue(a.start_time) - timeValue(b.start_time)
+                break
+        }
+        return comparison * sortDirection
+    })
+
+    if (!applyPagination) {
+        return filtered
+    }
+
+    if (params.offset !== undefined && params.limit !== undefined) {
+        return filtered.slice(params.offset, params.offset + params.limit)
+    }
+    if (params.limit !== undefined) {
+        return filtered.slice(0, params.limit)
+    }
+    return filtered
+}
+
 export async function getCalendarEvents(
     context: UserContext,
     params: Omit<EventsQueryParams, 'lightweight'> = {}
@@ -378,40 +694,11 @@ export async function getEvents(
 
             const permissions = buildPermissions(context)
             const childTeamMemberships = getChildTeamMemberships()
+            const baseEvents = getBaseFakeEvents(params).map((event) => withFakeEventRelations(event, context.orgId))
+            const visibleEvents = filterEventsByRole(baseEvents, permissions, childTeamMemberships, context.orgId)
+            const filteredEvents = applyFakeEventFilters(visibleEvents, params, true)
 
-            // Get all fake events
-            let events: CalendarEvent[]
-
-            if (params.startDate && params.endDate) {
-                events = getFakeEventsInDateRange(params.startDate, params.endDate)
-            } else if (params.teamId) {
-                events = getFakeEventsForTeam(params.teamId)
-            } else if (params.seasonId) {
-                events = getFakeEventsForSeason(params.seasonId)
-            } else {
-                events = getFakeAllEvents()
-            }
-
-            // Apply filters
-            if (!params.includeCancelled) {
-                events = events.filter((e) => !e.is_cancelled)
-            }
-            if (params.visibleToFans) {
-                events = events.filter((e) => ((e as { visibility?: string | null }).visibility ?? null) === 'public')
-            }
-
-            // Filter by role-based permissions
-            events = filterEventsByRole(events, permissions, childTeamMemberships, context.orgId)
-
-            // Sort by start time
-            events.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
-
-            // Apply limit
-            if (params.limit) {
-                events = events.slice(0, params.limit)
-            }
-
-            return { data: events, error: null }
+            return { data: filteredEvents, error: null }
         }
 
         // Real Supabase implementation - NO FALLBACK
@@ -528,28 +815,11 @@ export async function getEventsCount(
             await simulateDelay()
             const permissions = buildPermissions(context)
             const childTeamMemberships = getChildTeamMemberships()
+            const baseEvents = getBaseFakeEvents(params).map((event) => withFakeEventRelations(event, context.orgId))
+            const visibleEvents = filterEventsByRole(baseEvents, permissions, childTeamMemberships, context.orgId)
+            const filteredEvents = applyFakeEventFilters(visibleEvents, params, false)
 
-            let events: CalendarEvent[]
-            if (params.startDate && params.endDate) {
-                events = getFakeEventsInDateRange(params.startDate, params.endDate)
-            } else if (params.teamId) {
-                events = getFakeEventsForTeam(params.teamId)
-            } else if (params.seasonId) {
-                events = getFakeEventsForSeason(params.seasonId)
-            } else {
-                events = getFakeAllEvents()
-            }
-
-            if (!params.includeCancelled) {
-                events = events.filter((e) => !e.is_cancelled)
-            }
-            if (params.visibleToFans) {
-                events = events.filter((e) => ((e as { visibility?: string | null }).visibility ?? null) === 'public')
-            }
-
-            events = filterEventsByRole(events, permissions, childTeamMemberships, context.orgId)
-
-            return { data: events.length, error: null }
+            return { data: filteredEvents.length, error: null }
         } catch (err) {
             console.error('getEventsCount error:', err)
             return { data: 0, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -635,15 +905,33 @@ export async function getEventDetails(
             await simulateDelay()
 
             const permissions = buildPermissions(context)
+            const childTeamMemberships = getChildTeamMemberships()
             const event = getFakeEventById(eventId)
 
-            if (!event) {
+            if (event) {
+                const enrichedEvent = withFakeEventRelations(event, context.orgId)
+                const filtered = filterEventsByRole([enrichedEvent], permissions, childTeamMemberships, context.orgId)
+                return { data: filtered[0] ?? null, error: null }
+            }
+
+            const ticketedDirect = getFakeTicketedEventById(eventId, context.orgId)
+            const ticketedByCalendarId = getFakeTicketedEventByCalendarEventId(eventId, context.orgId)
+            const ticketedFallback =
+                ticketedDirect ??
+                ticketedByCalendarId ??
+                getFakeTicketingEvents(context.orgId, { page: 1, perPage: 300 }).data.find((candidate) => candidate.event_id === eventId) ??
+                null
+
+            if (!ticketedFallback) {
                 return { data: null, error: null }
             }
 
-            // Check permissions
-            const childTeamMemberships = getChildTeamMemberships()
-            const filtered = filterEventsByRole([event], permissions, childTeamMemberships, context.orgId)
+            const syntheticEventId =
+                ticketedDirect && eventId === ticketedDirect.id
+                    ? eventId
+                    : ticketedFallback.event_id || eventId || `event-${ticketedFallback.id}`
+            const syntheticEvent = createSyntheticCalendarEventFromTicketing(syntheticEventId, ticketedFallback)
+            const filtered = filterEventsByRole([syntheticEvent], permissions, childTeamMemberships, context.orgId)
 
             if (filtered.length === 0) {
                 return { data: null, error: null }

@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { Save, Eye, AlertTriangle, XCircle } from 'lucide-react';
 
 import { PageHeader, Card, Button, Input, Select, Badge, Switch } from '../../components/platformAdmin';
+import { ConfirmDialog } from '../../components/admin/ConfirmDialog';
 import { emailTemplatesService } from '../../data/services/emailTemplatesService';
 import { EmailTemplate, EmailTemplateFormData, NotificationJobType } from '../../types/emailTemplates.types';
 import { EmailTemplateVariables } from '../../components/platformAdmin/EmailTemplateVariables';
@@ -38,6 +39,12 @@ export default function EmailTemplateEditor() {
   // Preview State
   const [showPreview, setShowPreview] = useState(false);
   const [previewHtml, setPreviewHtml] = useState('');
+  const [activeToggleDialog, setActiveToggleDialog] = useState<{
+    open: boolean;
+    checked: boolean;
+    action: 'activate' | 'deactivate' | null;
+    message: string;
+  }>({ open: false, checked: false, action: null, message: '' });
 
   // Validation State
   const [syntaxErrors, setSyntaxErrors] = useState<string[]>([]);
@@ -197,6 +204,22 @@ export default function EmailTemplateEditor() {
     // The component EmailTemplateVariables copies to clipboard.
     // We can show a toast.
     toast.success(`Copied ${variableCode} to clipboard`);
+  };
+
+  const handleConfirmToggleActive = async () => {
+    if (isCreateMode || !template || !activeToggleDialog.action) return;
+
+    const action = activeToggleDialog.action;
+    const checked = activeToggleDialog.checked;
+    setActiveToggleDialog({ open: false, checked: false, action: null, message: '' });
+
+    try {
+      await emailTemplatesService.toggleTemplateActive(template.id, checked);
+      toast.success(`Template ${action}d`);
+      loadTemplate();
+    } catch (e) {
+      toast.error(`Failed to ${action} template`);
+    }
   };
 
   const quillModules = useMemo(() => ({
@@ -377,23 +400,15 @@ export default function EmailTemplateEditor() {
                  <Switch 
                     checked={template.is_active}
                     disabled={isCreateMode}
-                    onCheckedChange={async (checked) => {
+                    onCheckedChange={(checked) => {
                         if (isCreateMode) return;
                         
                         const action = checked ? 'activate' : 'deactivate';
                         const message = checked 
                             ? 'Are you sure you want to activate this template? ensuring it is ready for production use?'
                             : 'Deactivate this template? Emails will fallback to hardcoded defaults.';
-                        
-                        if (confirm(message)) {
-                            try {
-                                await emailTemplatesService.toggleTemplateActive(template.id, checked);
-                                toast.success(`Template ${action}d`);
-                                loadTemplate();
-                            } catch(e) { 
-                                toast.error(`Failed to ${action} template`); 
-                            }
-                        }
+
+                        setActiveToggleDialog({ open: true, checked, action, message });
                     }}
                  />
               </div>
@@ -436,6 +451,17 @@ export default function EmailTemplateEditor() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={activeToggleDialog.open}
+        title={activeToggleDialog.message}
+        description={activeToggleDialog.message}
+        confirmLabel={activeToggleDialog.action === 'activate' ? 'Activate' : 'Deactivate'}
+        cancelLabel="Cancel"
+        variant={activeToggleDialog.action === 'deactivate' ? 'danger' : 'primary'}
+        onConfirm={() => { void handleConfirmToggleActive() }}
+        onCancel={() => setActiveToggleDialog({ open: false, checked: false, action: null, message: '' })}
+      />
     </div>
   );
 }

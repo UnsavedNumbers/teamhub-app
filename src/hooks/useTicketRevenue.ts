@@ -4,6 +4,8 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { USE_FAKE_DATA } from '@/data/config'
+import { getFakeTicketOrdersWithRelations } from '@/data/fake/ticketingFakeService'
 
 export interface TicketRevenueByEvent {
   ticketed_event_id: string
@@ -24,6 +26,94 @@ export interface MonthlyTicketRevenue {
   ticket_count: number
 }
 
+function inDateRange(value: string | null | undefined, start: Date, end: Date): boolean {
+  if (!value) return false
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return false
+  return date >= start && date <= end
+}
+
+function buildFakeEventRevenue(
+  orgId: string,
+  startDate: Date,
+  endDate: Date
+): TicketRevenueByEvent[] {
+  const orders = getFakeTicketOrdersWithRelations(orgId)
+  const eventMap = new Map<string, TicketRevenueByEvent>()
+
+  orders
+    .filter((order) => order.status === 'paid')
+    .filter((order) => inDateRange(order.processed_at ?? order.created_at, startDate, endDate))
+    .forEach((order) => {
+      const eventId = order.event?.id
+      if (!eventId) return
+
+      if (!eventMap.has(eventId)) {
+        eventMap.set(eventId, {
+          ticketed_event_id: eventId,
+          event_title: order.event?.title || 'Unknown Event',
+          gross_cents: 0,
+          platform_fee_cents: 0,
+          org_revenue_cents: 0,
+          order_count: 0,
+          ticket_count: 0,
+        })
+      }
+
+      const item = eventMap.get(eventId)!
+      const gross = order.total_cents || 0
+      const platform = order.platform_fee_cents ?? Math.round(gross * 0.08)
+      const revenue = order.org_revenue_cents ?? gross - platform
+      item.gross_cents += gross
+      item.platform_fee_cents += platform
+      item.org_revenue_cents += revenue
+      item.order_count += 1
+      item.ticket_count += order.ticket_count || 0
+    })
+
+  return Array.from(eventMap.values()).sort((a, b) => b.org_revenue_cents - a.org_revenue_cents)
+}
+
+function buildFakeMonthlyRevenue(
+  orgId: string,
+  startDate: Date,
+  endDate: Date
+): MonthlyTicketRevenue[] {
+  const orders = getFakeTicketOrdersWithRelations(orgId)
+  const monthMap = new Map<string, MonthlyTicketRevenue>()
+
+  orders
+    .filter((order) => order.status === 'paid')
+    .filter((order) => inDateRange(order.processed_at ?? order.created_at, startDate, endDate))
+    .forEach((order) => {
+      const sourceDate = new Date(order.processed_at ?? order.created_at)
+      const monthKey = `${sourceDate.getFullYear()}-${String(sourceDate.getMonth() + 1).padStart(2, '0')}`
+
+      if (!monthMap.has(monthKey)) {
+        monthMap.set(monthKey, {
+          month: monthKey,
+          gross_cents: 0,
+          platform_fee_cents: 0,
+          org_revenue_cents: 0,
+          order_count: 0,
+          ticket_count: 0,
+        })
+      }
+
+      const month = monthMap.get(monthKey)!
+      const gross = order.total_cents || 0
+      const platform = order.platform_fee_cents ?? Math.round(gross * 0.08)
+      const revenue = order.org_revenue_cents ?? gross - platform
+      month.gross_cents += gross
+      month.platform_fee_cents += platform
+      month.org_revenue_cents += revenue
+      month.order_count += 1
+      month.ticket_count += order.ticket_count || 0
+    })
+
+  return Array.from(monthMap.values()).sort((a, b) => b.month.localeCompare(a.month))
+}
+
 /**
  * Get ticket revenue by event for an organization
  */
@@ -35,6 +125,10 @@ export function useTicketRevenueByEvent(orgId: string | undefined, dateRange?: {
 
       const startDate = dateRange?.start || new Date(new Date().getFullYear(), 0, 1)
       const endDate = dateRange?.end || new Date()
+
+      if (USE_FAKE_DATA) {
+        return buildFakeEventRevenue(orgId, startDate, endDate)
+      }
 
       // Query stripe_connect_transactions joined with ticket_orders and ticketed_events
       const { data: transactions, error } = await supabase
@@ -116,6 +210,10 @@ export function useMonthlyTicketRevenue(orgId: string | undefined, months: numbe
       const endDate = new Date()
       const startDate = new Date()
       startDate.setMonth(startDate.getMonth() - months)
+
+      if (USE_FAKE_DATA) {
+        return buildFakeMonthlyRevenue(orgId, startDate, endDate)
+      }
 
       const { data: transactions, error } = await supabase
         .from('stripe_connect_transactions')

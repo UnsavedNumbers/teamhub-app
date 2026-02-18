@@ -8,6 +8,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useOrganization } from '@/contexts/OrganizationContext'
+import { useUserContext } from '@/hooks/useUserContext'
 import { 
   VideoUploader, 
   VideoFilterPanel, 
@@ -21,7 +22,7 @@ import { useBulkVideoOperations, useVideoSearch } from '@/hooks/useVideosExtende
 import { cn } from '@/utils/cn'
 import type { VideoCategory, VideoStatus } from '@/types/video'
 import type { VideoFilters } from '@/components/video/VideoFilterPanel'
-import { supabase } from '@/lib/supabase'
+import { getTeams } from '@/data/services/teamsService'
 import { AdminPageHeader, Card } from '@/components/platformAdmin'
 import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import Button from '@/components/portal/Button'
@@ -42,6 +43,7 @@ interface FilterState {
 
 export default function CoachVideoLibrary() {
   const { currentOrganization } = useOrganization()
+  const { context, isReady: isUserContextReady } = useUserContext()
   void useVideoSearch
   
   // State for filters and sorting
@@ -98,6 +100,7 @@ export default function CoachVideoLibrary() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [videoToDelete, setVideoToDelete] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
   
   // Data for filters
   const [teams, setTeams] = useState<Array<{ id: string; name: string }>>([])
@@ -125,20 +128,20 @@ export default function CoachVideoLibrary() {
   
   // Load teams for filters
   useEffect(() => {
-    if (!currentOrganization?.id) return
+    if (!isUserContextReady || !context.orgId) return
     
     const loadTeams = async () => {
-      const { data } = await supabase
-        .from('teams')
-        .select('id, name')
-        .eq('org_id', currentOrganization.id)
-        .order('name')
-      
-      if (data) setTeams(data)
+      const { data, error } = await getTeams(context, { activeOnly: true })
+      if (error) {
+        console.error('Error loading teams:', error)
+        setTeams([])
+        return
+      }
+      setTeams((data || []).map((team) => ({ id: team.id, name: team.name })))
     }
     
     loadTeams()
-  }, [currentOrganization?.id])
+  }, [context, isUserContextReady])
   
   // Calculate total pages
   const totalPages = Math.ceil((total || 0) / pageSize)
@@ -261,10 +264,12 @@ export default function CoachVideoLibrary() {
     setSelectedVideoIds([])
   }, [])
   
-  const handleBulkDelete = useCallback(async () => {
+  const handleBulkDelete = useCallback(() => {
     if (selectedVideoIds.length === 0) return
-    if (!confirm(t('videoLibrary.bulk.confirmDelete' as any, { count: selectedVideoIds.length }))) return
-    
+    setShowBulkDeleteConfirm(true)
+  }, [selectedVideoIds.length])
+
+  const confirmBulkDelete = useCallback(async () => {
     const result = await bulkDelete(selectedVideoIds)
     if (result.succeeded.length > 0) {
       showSuccess(t('videoLibrary.bulk.deleteSuccess' as any, { count: result.succeeded.length }))
@@ -667,6 +672,20 @@ export default function CoachVideoLibrary() {
         onConfirm={handleConfirmDelete}
         onCancel={handleCloseDeleteModal}
       />
+
+      <ConfirmDialog
+        open={showBulkDeleteConfirm}
+        title={t('videoLibrary.actions.delete')}
+        description={t('videoLibrary.bulk.confirmDelete' as any, { count: selectedVideoIds.length })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={() => {
+          setShowBulkDeleteConfirm(false)
+          void confirmBulkDelete()
+        }}
+        onCancel={() => setShowBulkDeleteConfirm(false)}
+      />
       
       {/* Close dropdown when clicking outside */}
       {activeDropdown && (
@@ -793,7 +812,7 @@ function CoachVideoCard({ video, isSelected, onSelect, onEdit, onShare, onDelete
     <div className="group flex flex-col gap-3 pb-3 relative">
       {/* Selection Checkbox */}
       {onSelect && (
-        <div className="absolute top-2 left-2 z-20">
+        <div className="absolute top-2 right-2 z-20">
           <label
             className="flex items-center justify-center size-6 bg-white dark:bg-gray-900 rounded border-2 border-gray-300 dark:border-gray-600 cursor-pointer hover:border-[var(--org-btn-secondary-bg)] transition-colors"
             onClick={(e) => e.stopPropagation()}
