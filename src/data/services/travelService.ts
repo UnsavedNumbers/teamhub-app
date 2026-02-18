@@ -1267,7 +1267,7 @@ export async function updateTravelPlan(
         }
 
         let newFilePath: string | null = null
-        let oldFilePath: string | null = existingPlanTyped.itinerary_file_path ?? null
+        const oldFilePath: string | null = existingPlanTyped.itinerary_file_path ?? null
 
         // Handle file upload/replace
         if (data.itinerary_file && isValidFile(data.itinerary_file)) {

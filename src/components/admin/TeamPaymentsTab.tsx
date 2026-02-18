@@ -30,6 +30,7 @@ interface PaymentDisplay {
 }
 
 export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabProps) {
+  // All hooks must be called unconditionally at the top
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const [payments, setPayments] = useState<PaymentDisplay[]>([])
@@ -40,39 +41,6 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
   const handleViewAllPayments = useCallback(() => {
     navigate(`/admin/payments?teamId=${teamId}`)
   }, [navigate, teamId])
-
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
-
-  // If no season, show message (payments can still work without season, but less useful)
-  if (!seasonId) {
-    return (
-      <div className="pa-card">
-        <EmptyState
-          icon="payments"
-          title="No active season"
-          description="Please select an active season to view team payments, or view all organization payments."
-          noCard
-        />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--pa-space-4)' }}>
-          <Button variant="secondary" onClick={() => navigate('/admin/payments')}>
-            View All Organization Payments
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
 
   const fetchPayments = useCallback(async () => {
     if (!isReady || !teamId) {
@@ -147,12 +115,39 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
   }, [context, isReady, teamId, seasonId])
 
   useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
     fetchPayments()
   }, [fetchPayments])
 
   const handleViewOrganizationPayments = useCallback(() => {
     navigate('/admin/payments')
   }, [navigate])
+
+  // Early returns after all hooks are called
+  // If no season, show message (payments can still work without season, but less useful)
+  if (!seasonId) {
+    return (
+      <div className="pa-card">
+        <EmptyState
+          icon="payments"
+          title="No active season"
+          description="Please select an active season to view team payments, or view all organization payments."
+          noCard
+        />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--pa-space-4)' }}>
+          <Button variant="secondary" onClick={() => navigate('/admin/payments')}>
+            View All Organization Payments
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

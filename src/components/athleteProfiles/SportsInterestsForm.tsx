@@ -110,7 +110,7 @@ export function SportsInterestsForm({ athlete, onSave }: SportsInterestsFormProp
 
   // Initialize selected sports from athlete data, enforcing locks
   useEffect(() => {
-    let initialSelected = athlete.sports ? athlete.sports.map(s => ({
+    const initialSelected = athlete.sports ? athlete.sports.map(s => ({
         sport_id: s.sport_id,
         sport_type: s.sport_type as SportType
     })) : []

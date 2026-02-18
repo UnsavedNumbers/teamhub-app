@@ -393,18 +393,6 @@ export default function CreateAthletePortal() {
 
     const isFormValid = formData.first_name.trim() && formData.last_name.trim() && formData.date_of_birth
 
-    // Memoized toggle handler for sports
-    const handleSportToggle = useCallback((sportId: string, sportType: SportType) => {
-        setSelectedSports(prev => {
-            const exists = prev.some(s => s.sport_id === sportId && s.sport_type === sportType)
-            if (exists) {
-                return prev.filter(s => !(s.sport_id === sportId && s.sport_type === sportType))
-            } else {
-                return [...prev, { sport_id: sportId, sport_type: sportType }]
-            }
-        })
-    }, [])
-
     return (
         <PortalLayout
             breadcrumbs={[

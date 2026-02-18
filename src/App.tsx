@@ -16,6 +16,7 @@ import { getLink, getPath, RouteKeys } from './utils/routes'
 import { I18nProvider } from './i18n/I18nProvider'
 import { Toaster } from './components/Toaster'
 import { ConditionalRouteLogger } from './lib/debug/integrations/RouteLogger'
+import { USE_FAKE_DATA } from './data/config'
 
 // Marketing Page
 import Marketing from './pages/Marketing'
@@ -408,8 +409,22 @@ function AppWithTheme() {
             <Route path="calendar" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><Calendar /></ProtectedRoute>} />
             <Route path="payments" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.payments"><MyPayments /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="payments/:id" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.payments.detail"><PaymentDetail /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="payments/success" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><PaymentSuccess /></ProtectedRoute>} />
-            <Route path="payments/cancel" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><PaymentCancel /></ProtectedRoute>} />
+            <Route
+              path="payments/success"
+              element={
+                USE_FAKE_DATA
+                  ? <PaymentSuccess />
+                  : <ProtectedRoute allowedRoles={['parent', 'athlete']}><PaymentSuccess /></ProtectedRoute>
+              }
+            />
+            <Route
+              path="payments/cancel"
+              element={
+                USE_FAKE_DATA
+                  ? <PaymentCancel />
+                  : <ProtectedRoute allowedRoles={['parent', 'athlete']}><PaymentCancel /></ProtectedRoute>
+              }
+            />
             <Route path="uniforms" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.uniforms"><Uniforms /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="uniforms/:kitId" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.uniforms.detail"><UniformKitOrder /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="travel" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.travel"><Travel /></FeatureGateRoute></ProtectedRoute>} />

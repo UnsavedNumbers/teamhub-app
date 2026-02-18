@@ -547,7 +547,7 @@ export async function getFeeAssignmentsForTeam(
             }
 
             // Step 3: Get fee assignments for these fees and athletes
-            let query = buildFeeAssignmentQuery(supabase)
+            const query = buildFeeAssignmentQuery(supabase)
                 .eq('org_id', context.orgId)
                 .in('fee_id', feeIds)
                 .in('athlete_id', athleteIds)
@@ -595,7 +595,7 @@ export async function getFeeAssignmentsForTeam(
             }
 
             // Get fee assignments
-            let query = buildFeeAssignmentQuery(supabase)
+            const query = buildFeeAssignmentQuery(supabase)
                 .eq('org_id', context.orgId)
                 .in('fee_id', feeIds)
                 .in('athlete_id', athleteIds)

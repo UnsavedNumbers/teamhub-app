@@ -26,11 +26,7 @@ export function useDebugLifecycle(
   componentName: string,
   props?: Record<string, unknown>
 ): void {
-  // Early return in production - this hook does nothing
-  if (!import.meta.env.DEV) {
-    return;
-  }
-
+  // All hooks must be called unconditionally - check DEV inside effects
   const renderCountRef = useRef(0);
   const hasMountedRef = useRef(false);
 
@@ -38,6 +34,11 @@ export function useDebugLifecycle(
   renderCountRef.current += 1;
 
   useEffect(() => {
+    // Early return in production - this hook does nothing
+    if (!import.meta.env.DEV) {
+      return;
+    }
+
     // Only log mount once
     if (!hasMountedRef.current) {
       hasMountedRef.current = true;
@@ -57,6 +58,11 @@ export function useDebugLifecycle(
 
   // Log unmount
   useEffect(() => {
+    // Early return in production - this hook does nothing
+    if (!import.meta.env.DEV) {
+      return;
+    }
+
     return () => {
       debug.flow(componentName, 'Unmounted', {
         totalRenders: renderCountRef.current,

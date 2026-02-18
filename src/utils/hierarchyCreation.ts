@@ -189,7 +189,7 @@ export function validateEntityExists(
       return dataArrays.seasons?.some(s => s.id === entityId) ?? false
     default:
       // Exhaustive check - TypeScript will error if we miss a case
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+       
       return (entityType as never, false)
   }
 }
@@ -235,7 +235,7 @@ export function validateParentChildRelationship(
       // These have no children in the hierarchy
       return false
     default:
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+       
       return (parentType as never, false)
   }
 }

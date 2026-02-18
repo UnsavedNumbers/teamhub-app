@@ -161,7 +161,7 @@ export default function AdminChildren() {
 
   // Sort and paginate data
   const sortedAndPaginatedData = useMemo(() => {
-    let sorted = [...children]
+    const sorted = [...children]
 
     // Apply sorting
     if (sortColumn) {

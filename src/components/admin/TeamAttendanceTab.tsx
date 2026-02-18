@@ -18,6 +18,7 @@ interface TeamAttendanceTabProps {
 }
 
 export function TeamAttendanceTab({ teamId, seasonId, teamName }: TeamAttendanceTabProps) {
+  // All hooks must be called unconditionally at the top
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const [attendanceEvents, setAttendanceEvents] = useState<AttendanceEventSummary[]>([])
@@ -28,32 +29,6 @@ export function TeamAttendanceTab({ teamId, seasonId, teamName }: TeamAttendance
   const handleViewAllAttendance = useCallback(() => {
     navigate(`/admin/attendance?teamId=${teamId}`)
   }, [navigate, teamId])
-
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
-
-  // If no season, show message
-  if (!seasonId) {
-    return (
-      <div className="pa-card">
-        <EmptyState
-          icon="how_to_reg"
-          title="No active season"
-          description="Please select an active season to view attendance records."
-          noCard
-        />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--pa-space-4)' }}>
-          <Button variant="secondary" onClick={() => navigate(`/admin/attendance?teamId=${teamId}`)}>
-            View All Organization Attendance
-          </Button>
-        </div>
-      </div>
-    )
-  }
 
   const fetchAttendance = useCallback(async () => {
     if (!isReady || !teamId) {
@@ -103,12 +78,39 @@ export function TeamAttendanceTab({ teamId, seasonId, teamName }: TeamAttendance
   }, [context, isReady, teamId])
 
   useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
     fetchAttendance()
   }, [fetchAttendance])
 
   const handleViewOrganizationAttendance = useCallback(() => {
     navigate('/admin/attendance')
   }, [navigate])
+
+  // Early returns after all hooks are called
+  // If no season, show message
+  if (!seasonId) {
+    return (
+      <div className="pa-card">
+        <EmptyState
+          icon="how_to_reg"
+          title="No active season"
+          description="Please select an active season to view attendance records."
+          noCard
+        />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--pa-space-4)' }}>
+          <Button variant="secondary" onClick={() => navigate(`/admin/attendance?teamId=${teamId}`)}>
+            View All Organization Attendance
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

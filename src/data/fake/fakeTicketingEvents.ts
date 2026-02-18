@@ -462,7 +462,7 @@ function seedTicketingCatalog() {
 const seededCatalog = seedTicketingCatalog()
 
 let events: TicketingEventWithDerived[] = seededCatalog.seededEvents
-let fakeOrdersByEvent: Record<string, { ticketsSold: number; revenueCents: number }> = seededCatalog.seededOrdersByEvent
+const fakeOrdersByEvent: Record<string, { ticketsSold: number; revenueCents: number }> = seededCatalog.seededOrdersByEvent
 
 function mapTicketType(
   event: TicketingEventWithDerived,

@@ -292,7 +292,7 @@ export default function GalleryDetail() {
         // Update local state immediately for instant UI feedback
         setLocalSearchQuery(updates.q || '')
         // Remove 'q' from updates as it will be handled by debounce effect
-        const { q, ...otherUpdates } = updates
+        const { q: _q, ...otherUpdates } = updates
         if (Object.keys(otherUpdates).length > 0) {
           setFilters(otherUpdates)
         }
@@ -350,6 +350,39 @@ export default function GalleryDetail() {
     return Array.from(map.values()).map((athlete) => ({ value: athlete.id, label: athlete.name }))
   }, [photos])
 
+  
+  
+
+  
+
+  const entityMeta = useMemo(() => {
+    if (!gallery) return null
+    const label = gallery.entity_name || t(`photos.galleryType.${gallery.gallery_type}`)
+    if (!gallery.entity_id) {
+      if (gallery.gallery_type === 'org') {
+        return { label: gallery.org_name || label, link: getLink('admin.organization.base') }
+      }
+      return { label }
+    }
+
+    switch (gallery.gallery_type) {
+      case 'team':
+        return { label, link: getLink('admin.teams.detail', { id: gallery.entity_id }) }
+      case 'event':
+        return { label, link: getLink('admin.events.detail', { id: gallery.entity_id }) }
+      case 'season':
+        return { label, link: getLink('admin.seasons.detail', { id: gallery.entity_id }) }
+      case 'program':
+        return { label, link: getLink('admin.programs.detail', { id: gallery.entity_id }) }
+      case 'athlete':
+        return { label, link: getLink('admin.athletes.detail', { id: gallery.entity_id }) }
+      case 'travel':
+        return { label, link: getLink('admin.travel.edit', { id: gallery.entity_id }) }
+      default:
+        return { label }
+    }
+  }, [gallery, t])
+
   const handleDeleteGallery = () => {
     if (USE_FAKE_DATA) {
       showError(t('photos.demoMode.deleteBlocked'))
@@ -396,6 +429,9 @@ export default function GalleryDetail() {
     setEditOpen(true)
   }
 
+  
+  
+
   if (!id) return null
 
   const handleApproveAll = () => {
@@ -434,33 +470,7 @@ export default function GalleryDetail() {
     }
   }
 
-  const entityMeta = useMemo(() => {
-    if (!gallery) return null
-    const label = gallery.entity_name || t(`photos.galleryType.${gallery.gallery_type}`)
-    if (!gallery.entity_id) {
-      if (gallery.gallery_type === 'org') {
-        return { label: gallery.org_name || label, link: getLink('admin.organization.base') }
-      }
-      return { label }
-    }
-
-    switch (gallery.gallery_type) {
-      case 'team':
-        return { label, link: getLink('admin.teams.detail', { id: gallery.entity_id }) }
-      case 'event':
-        return { label, link: getLink('admin.events.detail', { id: gallery.entity_id }) }
-      case 'season':
-        return { label, link: getLink('admin.seasons.detail', { id: gallery.entity_id }) }
-      case 'program':
-        return { label, link: getLink('admin.programs.detail', { id: gallery.entity_id }) }
-      case 'athlete':
-        return { label, link: getLink('admin.athletes.detail', { id: gallery.entity_id }) }
-      case 'travel':
-        return { label, link: getLink('admin.travel.edit', { id: gallery.entity_id }) }
-      default:
-        return { label }
-    }
-  }, [gallery, t])
+  
 
   // Show loading skeleton while gallery is still being fetched or photos are loading
   if (!galleryFetched || loading) {

@@ -151,47 +151,6 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
   const isDirectVideoSource =
     directStreamUrl.startsWith('/demo-assets/videos/') || /\.mp4($|\?)/i.test(directStreamUrl)
   
-  // Show status message for non-ready videos
-  if (!isReady) {
-    const statusMessages: Record<string, { icon: string; title: string; subtitle: string }> = {
-      pending_upload: {
-        icon: 'cloud_upload',
-        title: 'Upload Pending',
-        subtitle: 'This video is waiting to be uploaded.'
-      },
-      uploading: {
-        icon: 'cloud_upload',
-        title: 'Uploading...',
-        subtitle: 'This video is currently being uploaded.'
-      },
-      processing: {
-        icon: 'hourglass_top',
-        title: 'Processing...',
-        subtitle: 'This video is being processed by Mux. This usually takes a few minutes.'
-      },
-      errored: {
-        icon: 'error',
-        title: 'Processing Failed',
-        subtitle: 'There was an error processing this video.'
-      },
-    }
-    const msg = statusMessages[status] || statusMessages.pending_upload
-    
-    return (
-      <div className="relative w-full bg-black" style={{ aspectRatio: '16/9' }}>
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-8">
-          {status === 'processing' || status === 'uploading' ? (
-            <div className="size-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-4" />
-          ) : (
-            <Icon name={msg.icon} size="text-5xl" className="mb-4 text-white/70" />
-          )}
-          <h3 className="text-lg font-bold mb-1">{msg.title}</h3>
-          <p className="text-sm text-white/60">{msg.subtitle}</p>
-        </div>
-      </div>
-    )
-  }
-  
   // Load Mux Player script on mount
   useEffect(() => {
     if (isDirectVideoSource) {
@@ -349,7 +308,48 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
     onMarkerClick?.(marker)
   }, [seekTo, onMarkerClick])
   
-  // Loading state
+  // Show status message for non-ready videos (after all hooks)
+  if (!isReady) {
+    const statusMessages: Record<string, { icon: string; title: string; subtitle: string }> = {
+      pending_upload: {
+        icon: 'cloud_upload',
+        title: 'Upload Pending',
+        subtitle: 'This video is waiting to be uploaded.'
+      },
+      uploading: {
+        icon: 'cloud_upload',
+        title: 'Uploading...',
+        subtitle: 'This video is currently being uploaded.'
+      },
+      processing: {
+        icon: 'hourglass_top',
+        title: 'Processing...',
+        subtitle: 'This video is being processed by Mux. This usually takes a few minutes.'
+      },
+      errored: {
+        icon: 'error',
+        title: 'Processing Failed',
+        subtitle: 'There was an error processing this video.'
+      },
+    }
+    const msg = statusMessages[status] || statusMessages.pending_upload
+    
+    return (
+      <div className="relative w-full bg-black" style={{ aspectRatio: '16/9' }}>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-8">
+          {status === 'processing' || status === 'uploading' ? (
+            <div className="size-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-4" />
+          ) : (
+            <Icon name={msg.icon} size="text-5xl" className="mb-4 text-white/70" />
+          )}
+          <h3 className="text-lg font-bold mb-1">{msg.title}</h3>
+          <p className="text-sm text-white/60">{msg.subtitle}</p>
+        </div>
+      </div>
+    )
+  }
+  
+  // Loading state (after all hooks)
   if (isLoading || (!isDirectVideoSource && !isScriptLoaded)) {
     return (
       <div className={cn(

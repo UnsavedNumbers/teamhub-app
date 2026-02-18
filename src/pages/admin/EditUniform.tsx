@@ -25,10 +25,8 @@ export default function EditUniform() {
   const [error, setError] = useState<string | null>(null)
 
   const kitId = id
-  if (!kitId) {
-    return <Navigate to="/admin/uniforms" />
-  }
 
+  // All hooks must be called before early returns
   useEffect(() => {
     if (!isReady || !context || !kitId) return
 
@@ -76,6 +74,11 @@ export default function EditUniform() {
 
     loadUniform()
   }, [id, context, isReady])
+
+  // Early return after all hooks are called
+  if (!kitId) {
+    return <Navigate to="/admin/uniforms" />
+  }
 
   const handleSubmit = async (data: CreateUniformKitDTO) => {
     if (!context || !isReady || !id) {

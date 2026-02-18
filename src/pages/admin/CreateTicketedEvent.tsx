@@ -90,7 +90,7 @@ export default function CreateTicketedEvent() {
       if (data.event_id) {
         navigate(`${getLink('admin.events.detail', { id: data.event_id })}?view=ticketing`)
       } else {
-        navigate(useRouteLink('admin.ticketingEvents.list'))
+        navigate('/admin/ticketing/events')
       }
     },
   })

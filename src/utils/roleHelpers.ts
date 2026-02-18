@@ -98,7 +98,7 @@ export function formatRoleName(role: OrgMemberRole): string {
       return 'Athlete'
     default:
       // TypeScript exhaustiveness check - this should never happen
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+       
       const _exhaustive: never = role
       void _exhaustive
       return String(role).charAt(0).toUpperCase() + String(role).slice(1)

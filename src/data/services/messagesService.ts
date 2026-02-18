@@ -482,7 +482,7 @@ export async function createAnnouncement(
         }
 
         // Manually fetch role for consistent return
-        let result = data as unknown as { author?: { email?: string; role?: string }; org_id?: string }
+        const result = data as unknown as { author?: { email?: string; role?: string }; org_id?: string }
         if (result) {
             const targetOrgId = result.org_id || orgId
             let role = 'parent'
@@ -955,7 +955,7 @@ export async function createMessage(
             return { data: null, error: new Error('Failed to create message') }
         }
 
-        let result = data as unknown as { author?: { email?: string; role?: string } }
+        const result = data as unknown as { author?: { email?: string; role?: string } }
         if (result) {
             const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', teamId).single()
             let role = 'parent'

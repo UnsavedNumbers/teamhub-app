@@ -127,6 +127,12 @@ export default function UserContextDropdown() {
     }
   }, [switching, profile, isOffline, navigate, setCurrentOrganization])
 
+  // Close handler
+  const handleClose = useCallback(() => {
+    setIsOpen(false)
+  }, [])
+
+  // Early return after all hooks are called
   if (orgContext === undefined) return null
 
   const initials = profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'
@@ -160,11 +166,6 @@ export default function UserContextDropdown() {
     : isOrgAdminContext
       ? getLink(RouteKeys.ADMIN_SETTINGS)
       : getLink(RouteKeys.PORTAL_SETTINGS)
-
-  // Close handler
-  const handleClose = useCallback(() => {
-    setIsOpen(false)
-  }, [])
 
   // Menu content component (reused for both desktop dropdown and mobile sheet)
   const menuContent = (

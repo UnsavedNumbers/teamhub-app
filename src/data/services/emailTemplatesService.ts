@@ -250,7 +250,7 @@ export const emailTemplatesService = {
         // This regex finds content between braces and runs a replacement function
         return html.replace(/{{([\s\S]*?)}}/g, (_, inner) => {
             // Replace common entities: &nbsp; -> space, &lt; -> <, &gt; -> >, &amp; -> &
-            let cleaned = inner
+            const cleaned = inner
                 .replace(/&nbsp;/g, ' ')
                 .replace(/&lt;/g, '<')
                 .replace(/&gt;/g, '>')

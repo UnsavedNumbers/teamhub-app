@@ -963,7 +963,7 @@ export async function searchAthletes(
         
         // Fetch current teams for each athlete (Issue #7 solution - always fresh)
         const athleteIds = (normalized || []).map((a: any) => a.id)
-        let currentTeamsMap: Map<string, CurrentTeam[]> = new Map()
+        const currentTeamsMap: Map<string, CurrentTeam[]> = new Map()
         
         if (athleteIds.length > 0) {
             const { data: teamsData } = await supabase
