@@ -136,16 +136,20 @@ export function useOrganizationTheme(): { ready: boolean } {
   }, [tokens])
 
   // Re-apply tokens when tab becomes visible (fixes potential loss during background checks)
+  // But only if we're on platform admin route - other routes have org-specific themes
   useLayoutEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        applyThemeTokens(tokens)
+        // Only re-apply on platform admin routes to avoid flicker on org routes
+        if (isPlatformAdminRoute) {
+          applyThemeTokens(tokens)
+        }
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [tokens])
+  }, [tokens, isPlatformAdminRoute])
 
   // Load and apply organization theme (skip when on platform admin or auth routes)
   useLayoutEffect(() => {

@@ -144,12 +144,22 @@ export default function PlatformAdminLayout() {
   // Keep previous profile to prevent remounting when profile temporarily becomes null
   // (e.g., during auth state updates or tab visibility changes)
   const profileRef = useRef<ReturnType<typeof useAuth>['profile']>(null)
+  const themeLoadedRef = useRef(false)
+  
   useEffect(() => {
     if (profile) {
       profileRef.current = profile
     }
   }, [profile])
+  
+  useEffect(() => {
+    if (themeLoaded) {
+      themeLoadedRef.current = true
+    }
+  }, [themeLoaded])
+  
   const stableProfile = profile || profileRef.current
+  const stableThemeLoaded = themeLoaded || themeLoadedRef.current
 
   // Get admin role from profile (Bug Prevention #1, Technical Bug #4)
   const adminRole = stableProfile?.platformAdminRole ?? null
@@ -249,7 +259,7 @@ export default function PlatformAdminLayout() {
   // Show loading only on initial load (when we haven't loaded profile yet)
   // Don't remount if profile temporarily becomes null after initial load
   const hasInitiallyLoaded = profileRef.current !== null
-  if (!themeLoaded || (!stableProfile && !hasInitiallyLoaded)) {
+  if (!stableThemeLoaded || (!stableProfile && !hasInitiallyLoaded)) {
     return <LoadingSpinner />
   }
 
