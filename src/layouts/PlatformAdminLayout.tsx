@@ -141,8 +141,18 @@ export default function PlatformAdminLayout() {
   const navigate = useNavigate()
   const { profile, signOut } = useAuth()
 
+  // Keep previous profile to prevent remounting when profile temporarily becomes null
+  // (e.g., during auth state updates or tab visibility changes)
+  const profileRef = useRef<ReturnType<typeof useAuth>['profile']>(null)
+  useEffect(() => {
+    if (profile) {
+      profileRef.current = profile
+    }
+  }, [profile])
+  const stableProfile = profile || profileRef.current
+
   // Get admin role from profile (Bug Prevention #1, Technical Bug #4)
-  const adminRole = profile?.platformAdminRole ?? null
+  const adminRole = stableProfile?.platformAdminRole ?? null
 
   // Close mobile sidebar on route change
   const handleMobileSidebarClose = useCallback(() => {
@@ -236,8 +246,10 @@ export default function PlatformAdminLayout() {
       })
   }, [adminRole])
 
-  // Show loading while theme loads or profile is loading
-  if (!themeLoaded || !profile) {
+  // Show loading only on initial load (when we haven't loaded profile yet)
+  // Don't remount if profile temporarily becomes null after initial load
+  const hasInitiallyLoaded = profileRef.current !== null
+  if (!themeLoaded || (!stableProfile && !hasInitiallyLoaded)) {
     return <LoadingSpinner />
   }
 

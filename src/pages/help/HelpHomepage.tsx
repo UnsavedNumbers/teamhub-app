@@ -173,14 +173,14 @@ export default function HelpHomepage() {
   // Helper to get category label
   const getArticleCategoryLabel = (article: HelpArticle): string => {
     const categoryMap: Record<string, string> = {
-      'onboard': 'Getting Started',
-      'profile': 'Account Settings',
-      'roster': 'Team Management',
-      'season': 'Events & Schedules',
-      'billing': 'Payments & Billing',
-      'comply': 'Safety & Compliance',
+      'onboard': t('portal.settings.helpCenter.categoryNavGettingStarted'),
+      'profile': t('portal.settings.helpCenter.categoryNavAccountSettings'),
+      'roster': t('portal.settings.helpCenter.categoryNavTeamManagement'),
+      'season': t('portal.settings.helpCenter.categoryNavEventsSchedules'),
+      'billing': t('portal.settings.helpCenter.categoryNavPaymentsBilling'),
+      'comply': t('portal.settings.helpCenter.categoryNavSafetyCompliance'),
     }
-    return categoryMap[article.categorySlug || ''] || 'Documentation'
+    return categoryMap[article.categorySlug || ''] || t('portal.settings.helpCenter.general')
   }
 
   if (authLoading || loading) {

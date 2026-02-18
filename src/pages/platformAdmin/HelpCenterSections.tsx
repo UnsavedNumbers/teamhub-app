@@ -19,6 +19,52 @@ import type { WordPressTag } from '../../data/services/wordpressApiService'
 import type { SectionWithTags } from '../../data/services/helpCenterSectionService'
 import { debug } from '../../lib/debug'
 
+const MODAL_STATE_KEY = 'helpCenterSections_modalState'
+
+interface ModalState {
+  showEditModal: boolean
+  editingSection: SectionWithTags | null
+  sectionName: string
+  sectionOrder: number
+  sectionActive: boolean
+  selectedTagCombinations: number[][]
+}
+
+function loadModalState(): ModalState {
+  try {
+    const stored = sessionStorage.getItem(MODAL_STATE_KEY)
+    if (stored) {
+      return JSON.parse(stored)
+    }
+  } catch (e) {
+    console.warn('Failed to load modal state:', e)
+  }
+  return {
+    showEditModal: false,
+    editingSection: null,
+    sectionName: '',
+    sectionOrder: 0,
+    sectionActive: true,
+    selectedTagCombinations: [],
+  }
+}
+
+function saveModalState(state: ModalState) {
+  try {
+    sessionStorage.setItem(MODAL_STATE_KEY, JSON.stringify(state))
+  } catch (e) {
+    console.warn('Failed to save modal state:', e)
+  }
+}
+
+function clearModalState() {
+  try {
+    sessionStorage.removeItem(MODAL_STATE_KEY)
+  } catch (e) {
+    console.warn('Failed to clear modal state:', e)
+  }
+}
+
 export default function HelpCenterSections() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -27,18 +73,32 @@ export default function HelpCenterSections() {
   const [tags, setTags] = useState<WordPressTag[]>([])
   const [sections, setSections] = useState<SectionWithTags[]>([])
 
-  // Edit state
-  const [editingSection, setEditingSection] = useState<SectionWithTags | null>(null)
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [sectionName, setSectionName] = useState('')
-  const [sectionOrder, setSectionOrder] = useState(0)
-  const [sectionActive, setSectionActive] = useState(true)
-  const [selectedTagCombinations, setSelectedTagCombinations] = useState<number[][]>([])
+  // Edit state - restore from session storage
+  const initialModalState = loadModalState()
+  const [editingSection, setEditingSection] = useState<SectionWithTags | null>(initialModalState.editingSection)
+  const [showEditModal, setShowEditModal] = useState(initialModalState.showEditModal)
+  const [sectionName, setSectionName] = useState(initialModalState.sectionName)
+  const [sectionOrder, setSectionOrder] = useState(initialModalState.sectionOrder)
+  const [sectionActive, setSectionActive] = useState(initialModalState.sectionActive)
+  const [selectedTagCombinations, setSelectedTagCombinations] = useState(initialModalState.selectedTagCombinations)
 
   // Load data
   useEffect(() => {
     loadData()
   }, [])
+
+  // Persist modal state to session storage whenever it changes
+  useEffect(() => {
+    const currentModalState: ModalState = {
+      showEditModal,
+      editingSection,
+      sectionName,
+      sectionOrder,
+      sectionActive,
+      selectedTagCombinations,
+    }
+    saveModalState(currentModalState)
+  }, [showEditModal, editingSection, sectionName, sectionOrder, sectionActive, selectedTagCombinations])
 
   async function loadData() {
     setLoading(true)
@@ -142,7 +202,7 @@ export default function HelpCenterSections() {
         showSuccess('Section created successfully')
       }
 
-      setShowEditModal(false)
+      closeModal()
       await loadData()
     } catch (err) {
       showError('Failed to save section')
@@ -150,6 +210,11 @@ export default function HelpCenterSections() {
     } finally {
       setSaving(false)
     }
+  }
+
+  function closeModal() {
+    setShowEditModal(false)
+    clearModalState()
   }
 
   async function handleDelete(id: string) {
@@ -267,7 +332,7 @@ export default function HelpCenterSections() {
       {showEditModal && (
         <Modal
           open={showEditModal}
-          onClose={() => setShowEditModal(false)}
+          onClose={closeModal}
           title={editingSection ? 'Edit Section' : 'Create Section'}
         >
           <div className="pa-space-y-4">
@@ -347,7 +412,7 @@ export default function HelpCenterSections() {
             </div>
 
             <div className="pa-flex pa-justify-end pa-gap-3 pa-pt-4 pa-border-t">
-              <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+              <Button variant="secondary" onClick={closeModal}>
                 Cancel
               </Button>
               <Button variant="primary" onClick={handleSave} disabled={saving}>
