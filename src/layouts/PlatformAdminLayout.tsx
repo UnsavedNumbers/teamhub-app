@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import {
@@ -326,7 +326,7 @@ export default function PlatformAdminLayout() {
         {/* Footer */}
         <div className="pa-sidebar-footer">
           <div className="pa-sidebar-user">
-            <span className="pa-sidebar-email">{profile?.email || 'Unknown'}</span>
+            <span className="pa-sidebar-email">{stableProfile?.email || 'Unknown'}</span>
             <button
               className="pa-btn pa-btn--secondary pa-btn--compact"
               onClick={handleSignOut}
