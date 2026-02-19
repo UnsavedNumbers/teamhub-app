@@ -34,6 +34,15 @@ type SortOption = 'newest' | 'most_viewed'
 
 const ARTICLES_PER_PAGE = 20
 
+/** Title for topic page while loading (avoids showing previous page title or generic "Loading...") */
+function getTopicPageTitleFromSlug(slug: string | undefined): string {
+  if (!slug) return ''
+  return slug
+    .split(/[-_]/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
 export default function TopicPage() {
   const { roleSlug, topicSlug } = useParams<{ roleSlug: string; topicSlug: string }>()
   const { user, profile, loading: authLoading } = useAuth()
@@ -162,16 +171,22 @@ export default function TopicPage() {
   }, [roleSlug])
 
   const currentRoleSlug = getCurrentRoleSlug()
+  const showSkeleton =
+    authLoading ||
+    loading ||
+    (category != null && category.slug !== topicSlug)
+  const loadingTitle =
+    getTopicPageTitleFromSlug(topicSlug) || t('portal.settings.helpCenter.loading')
   const topicExcerpt = (category?.description || '')
     .replace(/<[^>]*>/g, ' ')
     .replace(/&nbsp;/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 
-  if (authLoading || loading) {
+  if (showSkeleton) {
     return (
       <HelpFeatureLayout
-        pageTitle={category?.name || t('portal.settings.helpCenter.loading')}
+        pageTitle={loadingTitle}
         pageDescription={t('portal.settings.helpCenter.loading')}
         sidebarSections={[]}
         headerActions={<HelpHeaderSearch scopeRole={userRole || undefined} />}
@@ -201,9 +216,12 @@ export default function TopicPage() {
     )
   }
 
+  const pageTitle =
+    category.slug === topicSlug ? category.name : getTopicPageTitleFromSlug(topicSlug)
+
   return (
     <HelpFeatureLayout
-      pageTitle={category.name}
+      pageTitle={pageTitle}
       pageDescription={topicExcerpt}
       sidebarSections={[]}
       headerActions={<HelpHeaderSearch scopeRole={userRole || undefined} />}

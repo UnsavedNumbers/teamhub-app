@@ -1265,10 +1265,61 @@ html.dark {
   min-height: 180px;
 }
 
+.help-role-card--square {
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: none;
+}
+
+.help-role-card--with-image {
+  background: #1f2937;
+}
+
+.help-role-card-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1);
+  transition: transform 0.24s ease;
+  will-change: transform;
+}
+
+.help-role-card-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.56);
+  pointer-events: none;
+}
+
+.help-role-card--square .help-role-card-title {
+  position: relative;
+  z-index: 2;
+}
+
 .help-role-card:hover {
   border-color: var(--help-accent);
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.help-role-card--square:hover {
+  border: 0;
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+
+.help-role-card--with-image:hover .help-role-card-media {
+  transform: scale(1.04);
 }
 
 .help-role-card-icon {

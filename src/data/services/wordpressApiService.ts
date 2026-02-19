@@ -38,6 +38,7 @@ export interface WordPressCategory {
       src: string
     } | null
   }
+  z_taxonomy_image_url?: string | null
 }
 
 export interface WordPressTag {
@@ -275,16 +276,38 @@ class WordPressApiClient {
    * WordPress categories may include image data via plugins (Category Images) or ACF fields
    */
   async getCategories(parentId?: number): Promise<ServiceResponse<WordPressCategory[]>> {
-    const params = new URLSearchParams()
-    if (parentId !== undefined) {
-      params.append('parent', parentId.toString())
+    const buildEndpoint = (includeEditContext: boolean): string => {
+      const params = new URLSearchParams()
+      if (parentId !== undefined) {
+        params.append('parent', parentId.toString())
+      }
+      params.append('per_page', '100')
+      // Some plugins (for example taxonomy image plugins) only expose term image
+      // fields in edit context for authenticated requests.
+      if (includeEditContext) {
+        params.append('context', 'edit')
+      }
+      return `/categories${params.toString() ? `?${params.toString()}` : ''}`
     }
-    params.append('per_page', '100')
-    // Note: WordPress REST API v2 doesn't include category images by default
-    // Images may be added via plugins (Category Images) or ACF, which will be in the response
-    
-    const endpoint = `/categories${params.toString() ? `?${params.toString()}` : ''}`
-    return this.makeRequest<WordPressCategory[]>(endpoint)
+
+    const canUseEditContext =
+      this.config?.authMethod !== 'public' &&
+      Boolean(this.config?.credentials)
+
+    const firstAttempt = await this.makeRequest<WordPressCategory[]>(
+      buildEndpoint(canUseEditContext)
+    )
+
+    if (!firstAttempt.error || !canUseEditContext) {
+      return firstAttempt
+    }
+
+    // Fallback to view context if edit context is blocked for this credential set.
+    debug.data('WordPressApiService', 'Retrying categories without edit context', {
+      parentId,
+      error: firstAttempt.error.message,
+    })
+    return this.makeRequest<WordPressCategory[]>(buildEndpoint(false))
   }
 
   /**

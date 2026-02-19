@@ -4,7 +4,7 @@
  * Displays a role category and its child categories with article lists.
  */
 
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { mapAuthRoleToStandardRole } from '../../lib/routeGuard'
@@ -29,6 +29,7 @@ import { showError } from '../../utils/toast'
 import { debug } from '../../lib/debug'
 import { getLink, getPath } from '../../utils/routes'
 import { useT } from '../../i18n/useI18n'
+import type { TranslationKey } from '../../i18n'
 import { HelpFeatureLayout } from '../../components/help/HelpFeatureLayout'
 import { HelpHeaderSearch } from '../../components/help/HelpHeaderSearch'
 import { HelpRoleSwitcher } from '../../components/help/HelpRoleSwitcher'
@@ -36,6 +37,19 @@ import { CategoryLandingPageSkeleton } from '../../components/help/HelpSkeletons
 import '../../styles/helpCenter.css'
 
 type UserRole = 'parent' | 'coach' | 'org_admin' | 'athlete' | 'platform_admin'
+
+/** In-memory cache for category landing page data keyed by categorySlug (same session = instant back/forward) */
+const categoryPageCache = new Map<
+  string,
+  {
+    category: HelpCategory
+    sections: HelpSection[]
+    generalArticles: HelpArticle[]
+    subcategoryGroups: HelpSubcategoryGroup[]
+    featuredTagIds: number[]
+    postExcerptsById: Record<number, string>
+  }
+>()
 
 function decodeHtmlEntities(value: string): string {
   return value.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (_, entity: string) => {
@@ -71,11 +85,34 @@ function decodeHtmlEntities(value: string): string {
   })
 }
 
+/** Title for category slug while loading or when no category yet (avoids showing previous page title) */
+function getCategoryPageTitleFromSlug(
+  slug: string | undefined,
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+): string {
+  if (!slug) return t('portal.settings.helpCenter.loading')
+  const roleLabels: Record<string, TranslationKey> = {
+    guardians: 'portal.settings.helpCenter.roleGuardians',
+    coaches: 'portal.settings.helpCenter.roleCoaches',
+    'org-admins': 'portal.settings.helpCenter.roleOrgAdmins',
+    'organization-admins': 'portal.settings.helpCenter.roleOrgAdmins',
+    athletes: 'portal.settings.helpCenter.roleAthletes',
+    'platform-admins': 'portal.settings.helpCenter.rolePlatformAdmins',
+  }
+  const key = roleLabels[slug]
+  if (key) return t(key)
+  return slug
+    .split(/[-_]/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
 export default function CategoryLandingPage() {
   const { categorySlug } = useParams<{ categorySlug: string }>()
   const { user, profile, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const t = useT()
+  const categorySlugRef = useRef(categorySlug)
 
   const [loading, setLoading] = useState(true)
   const [category, setCategory] = useState<HelpCategory | null>(null)
@@ -96,6 +133,8 @@ export default function CategoryLandingPage() {
         profile.organizations || []
       ) as UserRole)
     : null
+
+  categorySlugRef.current = categorySlug
 
   // Determine current role from category slug
   const getCurrentRoleSlug = useCallback(() => {
@@ -123,12 +162,20 @@ export default function CategoryLandingPage() {
   const loadCategoryData = useCallback(async () => {
     if (!categorySlug || !userRole) return
 
-    if (window.location.hostname === 'localhost') {
-      console.log('[CategoryLandingPage] 🚀 Loading category data')
-      console.log('[CategoryLandingPage] 📍 Requested category slug:', categorySlug)
-      console.log('[CategoryLandingPage] 👤 User role:', userRole)
+    const cacheKey = `${categorySlug}`
+    const cached = categoryPageCache.get(cacheKey)
+    if (cached) {
+      setCategory(cached.category)
+      setSections(cached.sections)
+      setGeneralArticles(cached.generalArticles)
+      setSubcategoryGroups(cached.subcategoryGroups)
+      setFeaturedTagIds(cached.featuredTagIds)
+      setPostExcerptsById(cached.postExcerptsById)
+      setLoading(false)
+      return
     }
 
+    setCategory(null)
     setLoading(true)
     try {
       const categoryResult = await getCategoryDetails(categorySlug)
@@ -140,14 +187,16 @@ export default function CategoryLandingPage() {
         navigate(getLink('portal.help'))
         return
       }
-      setCategory(categoryResult.data)
+      if (categorySlugRef.current !== categorySlug) return
+      const categoryData = categoryResult.data
+      setCategory(categoryData)
 
       if (window.location.hostname === 'localhost') {
         console.log('[CategoryLandingPage] ✅ Category found:', {
-          id: categoryResult.data.id,
-          name: categoryResult.data.name,
-          slug: categoryResult.data.slug,
-          parentId: categoryResult.data.parentId
+          id: categoryData.id,
+          name: categoryData.name,
+          slug: categoryData.slug,
+          parentId: categoryData.parentId
         })
         console.log('[CategoryLandingPage] 🔄 Fetching articles and subcategories...')
       }
@@ -159,6 +208,8 @@ export default function CategoryLandingPage() {
         getAllWordPressDataDirect<WordPressPost>('post'),
       ])
 
+      if (categorySlugRef.current !== categorySlug) return
+
       if (articlesResult.error) {
         debug.data('CategoryLandingPage', 'Error loading articles, continuing with empty articles', { error: articlesResult.error })
       }
@@ -166,49 +217,47 @@ export default function CategoryLandingPage() {
         debug.data('CategoryLandingPage', 'Error loading subcategories, continuing with empty subcategories', { error: childCategoriesResult.error })
       }
 
-      setSections(articlesResult.data?.sections || [])
-      setGeneralArticles(articlesResult.data?.generalArticles || [])
-      setSubcategoryGroups(childCategoriesResult.data || [])
-      if (!tagsResult.error) {
-        const featuredIds = (tagsResult.data || [])
-          .filter((tag) => tag.slug?.toLowerCase() === 'featured' || tag.name?.toLowerCase() === 'featured')
-          .map((tag) => tag.id)
-        setFeaturedTagIds(featuredIds)
-      } else {
-        setFeaturedTagIds([])
-      }
-      if (!postsResult.error) {
-        const excerpts = Object.fromEntries(
-          (postsResult.data || []).map((post) => [
-            post.id,
-            decodeHtmlEntities((post.excerpt?.rendered || '').replace(/<[^>]*>/g, '').trim()),
-          ])
-        )
-        setPostExcerptsById(excerpts)
-      } else {
-        setPostExcerptsById({})
-      }
+      const sectionsData = articlesResult.data?.sections || []
+      const generalArticlesData = articlesResult.data?.generalArticles || []
+      const subcategoryGroupsData = childCategoriesResult.data || []
+      const featuredIds = !tagsResult.error
+        ? (tagsResult.data || [])
+            .filter((tag) => tag.slug?.toLowerCase() === 'featured' || tag.name?.toLowerCase() === 'featured')
+            .map((tag) => tag.id)
+        : []
+      const excerpts = !postsResult.error
+        ? Object.fromEntries(
+            (postsResult.data || []).map((post) => [
+              post.id,
+              decodeHtmlEntities((post.excerpt?.rendered || '').replace(/<[^>]*>/g, '').trim()),
+            ])
+          )
+        : {}
+
+      setSections(sectionsData)
+      setGeneralArticles(generalArticlesData)
+      setSubcategoryGroups(subcategoryGroupsData)
+      setFeaturedTagIds(featuredIds)
+      setPostExcerptsById(excerpts)
+
+      categoryPageCache.set(cacheKey, {
+        category: categoryData,
+        sections: sectionsData,
+        generalArticles: generalArticlesData,
+        subcategoryGroups: subcategoryGroupsData,
+        featuredTagIds: featuredIds,
+        postExcerptsById: excerpts,
+      })
 
       if (window.location.hostname === 'localhost') {
         console.log('[CategoryLandingPage] ✅ Data loaded successfully')
-        console.log('[CategoryLandingPage] 📊 Subcategory groups:', childCategoriesResult.data?.length || 0)
-        if (childCategoriesResult.data && childCategoriesResult.data.length > 0) {
-          childCategoriesResult.data.forEach((group, idx) => {
-            console.log(`[CategoryLandingPage] 📊 Group ${idx + 1}: "${group.name}" (slug: ${group.slug}) - ${group.articles?.length || 0} articles`)
-            if (group.articles && group.articles.length > 0) {
-              console.log(`[CategoryLandingPage] 📄 Articles in "${group.name}":`, group.articles.map(a => ({ id: a.id, title: a.title, slug: a.slug })))
-            }
-          })
-        }
-        console.log('[CategoryLandingPage] 📊 Direct articles:', generalArticles.length)
-        console.log('[CategoryLandingPage] 📊 Sections:', sections.length)
+        console.log('[CategoryLandingPage] 📊 Subcategory groups:', subcategoryGroupsData?.length || 0)
       }
 
       debug.data('CategoryLandingPage', 'Loaded data successfully', {
         categorySlug,
-        subcategoryGroups: childCategoriesResult.data,
-        subcategoryCount: childCategoriesResult.data?.length || 0,
-        articlesCount: childCategoriesResult.data?.reduce((sum, group) => sum + (group.articles?.length || 0), 0) || 0,
+        subcategoryCount: subcategoryGroupsData?.length || 0,
+        articlesCount: subcategoryGroupsData?.reduce((sum, group) => sum + (group.articles?.length || 0), 0) || 0,
       })
     } catch (err) {
       showError(t('errorMessages.fetchFailed'))
@@ -369,10 +418,14 @@ export default function CategoryLandingPage() {
   }
 
 
-  if (authLoading || loading) {
+  const showSkeleton =
+    authLoading ||
+    loading ||
+    (category != null && category.slug !== categorySlug)
+  if (showSkeleton) {
     return (
       <HelpFeatureLayout
-        pageTitle={category?.name || t('portal.settings.helpCenter.loading')}
+        pageTitle={getCategoryPageTitleFromSlug(categorySlug, t)}
         pageDescription={t('portal.settings.helpCenter.loading')}
         sidebarSections={[]}
         headerActions={<HelpHeaderSearch scopeRole={userRole || undefined} />}
@@ -403,6 +456,10 @@ export default function CategoryLandingPage() {
   }
 
   const isRolePage = subcategoryGroups.length > 0
+  const pageTitle =
+    category && category.slug === categorySlug
+      ? category.name
+      : getCategoryPageTitleFromSlug(categorySlug, t)
   const rolePageLinkOptions = isRolePage && categorySlug
     ? { rolePageCategorySlug: categorySlug, topicSlugs: subcategoryGroups.map((g) => g.slug || '').filter(Boolean) }
     : undefined
@@ -416,7 +473,7 @@ export default function CategoryLandingPage() {
 
   return (
     <HelpFeatureLayout
-      pageTitle={category.name}
+      pageTitle={pageTitle}
       pageDescription={(category.description || '').replace(/<[^>]*>/g, '').substring(0, 240)}
       sidebarSections={[]}
       headerActions={<HelpHeaderSearch scopeRole={userRole || undefined} />}

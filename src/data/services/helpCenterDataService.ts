@@ -250,6 +250,35 @@ function toPlainText(value?: string | null): string {
     .trim()
 }
 
+function isCategoryImagePlaceholder(url?: string | null): boolean {
+  if (!url) return true
+  return /\/wp-content\/plugins\/categories-images\/assets\/images\/placeholder\./i.test(url)
+}
+
+export function getCategoryImageUrl(category: WordPressCategory): string | undefined {
+  const rawCategory = category as unknown as Record<string, unknown>
+  const stringCandidates: Array<string | undefined | null> = [
+    category.z_taxonomy_image_url,
+    category.image?.url,
+    category.image?.src,
+    category.acf?.image?.url,
+    category.acf?.image?.src,
+    typeof rawCategory.taxonomy_image_url === 'string' ? rawCategory.taxonomy_image_url : undefined,
+    typeof rawCategory.taxonomy_image === 'string' ? rawCategory.taxonomy_image : undefined,
+    typeof rawCategory.category_image_url === 'string' ? rawCategory.category_image_url : undefined,
+    typeof rawCategory.category_image === 'string' ? rawCategory.category_image : undefined,
+  ]
+
+  for (const candidate of stringCandidates) {
+    if (typeof candidate !== 'string') continue
+    const value = candidate.trim()
+    if (!value || isCategoryImagePlaceholder(value)) continue
+    return value
+  }
+
+  return undefined
+}
+
 function resolveAccessibleCategoryIds(
   allCategories: WordPressCategory[],
   baseCategoryIds: number[],
@@ -379,19 +408,6 @@ export async function getCategoriesForRole(
       })
     })
 
-    // Helper function to extract category image URL
-    const getCategoryImageUrl = (category: WordPressCategory): string | undefined => {
-      // Try direct image field first (Category Images plugin)
-      if (category.image?.url || category.image?.src) {
-        return category.image.url || category.image.src
-      }
-      // Try ACF image field
-      if (category.acf?.image?.url || category.acf?.image?.src) {
-        return category.acf.image.url || category.acf.image.src
-      }
-      return undefined
-    }
-
     // Build help categories
     const helpCategories: HelpCategory[] = categories.map(category => {
       const pageMapping = categoryPages[category.slug]
@@ -455,25 +471,12 @@ export async function getCategoryDetails(
     const wordpressDescription = toPlainText(category.description?.rendered)
     const mappedDescription = toPlainText(pageMapping?.pageContentHtml)
 
-    // Get category image URL
-    const getCategoryImageUrl = (cat: WordPressCategory): string => {
-      // Try direct image field first (Category Images plugin)
-      if (cat.image?.url || cat.image?.src) {
-        return cat.image.url || cat.image.src
-      }
-      // Try ACF image field
-      if (cat.acf?.image?.url || cat.acf?.image?.src) {
-        return cat.acf.image.url || cat.acf.image.src
-      }
-      return ''
-    }
-
     const helpCategory: HelpCategory & { coverPhotoUrl: string; description: string } = {
       id: category.id,
       name: decodeHtmlEntities(category.name),
       slug: category.slug,
       parentId: category.parent,
-      coverPhotoUrl: getCategoryImageUrl(category), // Use WordPress category image
+      coverPhotoUrl: getCategoryImageUrl(category) || '', // Use WordPress category image
       description: wordpressDescription || mappedDescription,
       thumbnailUrl,
       articleCount,
@@ -597,7 +600,7 @@ export async function getCategoryArticles(
         title: toPlainText(post.title.rendered),
         slug: post.slug,
         excerpt: toPlainText(post.excerpt.rendered),
-        content: post.content.rendered,
+        content: decodeHtmlEntities(post.content.rendered),
         featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
         categorySlug: articleCategory.slug,
         categoryName: decodeHtmlEntities(articleCategory.name),
@@ -731,7 +734,7 @@ export async function getCategoryChildArticles(
         title: toPlainText(post.title.rendered),
         slug: post.slug,
         excerpt: toPlainText(post.excerpt.rendered),
-        content: post.content.rendered,
+        content: decodeHtmlEntities(post.content.rendered),
         featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
         categorySlug: category.slug,
         categoryName: decodeHtmlEntities(category.name),
@@ -887,7 +890,7 @@ export async function getCategorySubcategoryGroups(
         title: toPlainText(post.title.rendered),
         slug: post.slug,
         excerpt: toPlainText(post.excerpt.rendered),
-        content: post.content.rendered,
+        content: decodeHtmlEntities(post.content.rendered),
         featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
         categorySlug: childCategory.slug,
         categoryName: decodeHtmlEntities(childCategory.name),
@@ -987,7 +990,7 @@ export async function getArticleBySlug(
       title: toPlainText(post.title.rendered),
       slug: post.slug,
       excerpt: toPlainText(post.excerpt.rendered) || toPlainText(post.content.rendered).substring(0, 240),
-      content: post.content.rendered,
+      content: decodeHtmlEntities(post.content.rendered),
       featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
       categorySlug: articleCategory.slug,
       categoryName: decodeHtmlEntities(articleCategory.name),
@@ -1098,7 +1101,7 @@ async function searchArticlesClientSide(
           title: toPlainText(post.title.rendered),
           slug: post.slug,
           excerpt: toPlainText(post.excerpt.rendered),
-          content: post.content.rendered,
+          content: decodeHtmlEntities(post.content.rendered),
           featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
           categorySlug: '',
           categoryName: '',
@@ -1115,7 +1118,7 @@ async function searchArticlesClientSide(
         title: toPlainText(post.title.rendered),
         slug: post.slug,
         excerpt: toPlainText(post.excerpt.rendered),
-        content: post.content.rendered,
+        content: decodeHtmlEntities(post.content.rendered),
         featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
         categorySlug: category.slug,
         categoryName: decodeHtmlEntities(category.name),
