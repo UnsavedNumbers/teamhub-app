@@ -62,6 +62,7 @@ const PhotosGallery = lazy(() => import('./pages/PhotosGallery'))
 // Help Center Pages
 const HelpHomepage = lazy(() => import('./pages/help/HelpHomepage'))
 const CategoryLandingPage = lazy(() => import('./pages/help/CategoryLandingPage'))
+const TopicPage = lazy(() => import('./pages/help/TopicPage'))
 const ArticlePage = lazy(() => import('./pages/help/ArticlePage'))
 const HelpContactPage = lazy(() => import('./pages/help/ContactPage'))
 
@@ -476,6 +477,7 @@ function AppWithTheme() {
           <Route path="/help" element={<ProtectedRoute><HelpHomepage /></ProtectedRoute>} />
           <Route path="/help/contact" element={<ProtectedRoute><Suspense fallback={<FullScreenLoader />}><HelpContactPage /></Suspense></ProtectedRoute>} />
           <Route path="/help/:parentCategorySlug/:categorySlug/:articleSlug" element={<ProtectedRoute><ArticlePage /></ProtectedRoute>} />
+          <Route path="/help/:roleSlug/:topicSlug" element={<ProtectedRoute><Suspense fallback={<FullScreenLoader />}><TopicPage /></Suspense></ProtectedRoute>} />
           <Route path="/help/:categorySlug" element={<ProtectedRoute><CategoryLandingPage /></ProtectedRoute>} />
           <Route path="/help/:categorySlug/:articleSlug" element={<ProtectedRoute><ArticlePage /></ProtectedRoute>} />
 

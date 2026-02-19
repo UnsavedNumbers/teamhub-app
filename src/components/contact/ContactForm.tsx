@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useT } from '../../i18n/useI18n'
+import type { TranslationKey } from '../../i18n'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useUserContext } from '../../hooks/useUserContext'
@@ -17,7 +18,6 @@ import { getGuardianAthletes } from '../../data/services/guardianService'
 import { getTeamsForParent, getTeamsForCoach } from '../../data/services/teamsService'
 import { buildContactPayload, submitContact } from '../../services/contactService'
 import type { ContactFormProps, ContactFormState, ContactFormErrors } from './ContactForm.types'
-import type { ContactSurface } from '../../types/contact'
 import '../../styles/portal.css'
 import '../../styles/orgAdmin.css'
 
@@ -90,8 +90,8 @@ export function ContactForm({
 
   // Get subject label from translations
   const getSubjectLabel = useCallback((subjectEnum: string): string => {
-    const key = `contact.subject.${surface}.${subjectEnum}` as const
-    const label = t(key)
+    const key = `contact.subject.${surface}.${subjectEnum}`
+    const label = t(key as TranslationKey)
     // If translation returns the key itself, fallback to enum value
     return label === key ? subjectEnum : label
   }, [surface, t])
@@ -104,7 +104,7 @@ export function ContactForm({
       }
     }
 
-    const roleContext = currentOrganization?.roles?.includes('org_admin')
+    const roleContext: 'org_admin' | 'coach' | 'guardian' | 'public' = currentOrganization?.roles?.includes('org_admin')
       ? 'org_admin'
       : currentOrganization?.roles?.includes('coach')
         ? 'coach'

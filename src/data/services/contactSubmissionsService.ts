@@ -216,7 +216,7 @@ export async function getContactSubmissions(
   }
 
   try {
-    let query = supabase
+    let query = (supabase as any)
       .from('contact_submissions')
       .select('*', { count: 'exact' })
       .order('submitted_at', { ascending: false })
@@ -253,7 +253,7 @@ export async function getContactSubmissions(
     const to = from + rowsPerPage - 1
     query = query.range(from, to)
 
-    const { data, error, count } = await query
+    const { data, error } = await query
 
     if (error) throw error
 
@@ -292,7 +292,7 @@ export async function getContactSubmissionById(
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('contact_submissions')
       .select('*')
       .eq('id', id)
@@ -338,7 +338,7 @@ export async function createContactSubmission(
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('contact_submissions')
       .insert(payload)
       .select()
@@ -388,7 +388,7 @@ export async function updateContactSubmission(
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('contact_submissions')
       .update(updates)
       .eq('id', id)
@@ -440,7 +440,7 @@ export async function getContactSubmissionStats(): Promise<ServiceResponse<{
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('contact_submissions')
       .select('status', { count: 'exact' })
 

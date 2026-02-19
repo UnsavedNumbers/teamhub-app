@@ -14,18 +14,25 @@ import {
   getCategorySubcategoryGroups,
   searchArticles,
 } from '../../data/services/helpCenterDataService'
-import { getAllCachedWordPressData } from '../../data/services/helpCenterSyncService'
+import {
+  getAllWordPressTagsDirect,
+  getAllWordPressDataDirect,
+} from '../../data/services/helpCenterDataService'
 import type {
   HelpCategory,
   HelpSection,
   HelpArticle,
   HelpSubcategoryGroup,
 } from '../../data/services/helpCenterDataService'
-import type { WordPressPost, WordPressTag } from '../../data/services/wordpressApiService'
+import type { WordPressPost } from '../../data/services/wordpressApiService'
 import { showError } from '../../utils/toast'
 import { debug } from '../../lib/debug'
 import { getLink, getPath } from '../../utils/routes'
 import { useT } from '../../i18n/useI18n'
+import { HelpFeatureLayout } from '../../components/help/HelpFeatureLayout'
+import { HelpHeaderSearch } from '../../components/help/HelpHeaderSearch'
+import { HelpRoleSwitcher } from '../../components/help/HelpRoleSwitcher'
+import { CategoryLandingPageSkeleton } from '../../components/help/HelpSkeletons'
 import '../../styles/helpCenter.css'
 
 type UserRole = 'parent' | 'coach' | 'org_admin' | 'athlete' | 'platform_admin'
@@ -55,6 +62,19 @@ export default function CategoryLandingPage() {
         profile.organizations || []
       ) as UserRole)
     : null
+
+  // Determine current role from category slug
+  const getCurrentRoleSlug = useCallback(() => {
+    if (!categorySlug) return undefined
+    const roleMap: Record<string, string> = {
+      'guardians': 'guardians',
+      'coaches': 'coaches',
+      'org-admins': 'org-admins',
+      'athletes': 'athletes',
+      'platform-admins': 'platform-admins',
+    }
+    return roleMap[categorySlug] || categorySlug
+  }, [categorySlug])
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -101,8 +121,8 @@ export default function CategoryLandingPage() {
       const [articlesResult, childCategoriesResult, tagsResult, postsResult] = await Promise.all([
         getCategoryArticles(categorySlug, userRole),
         getCategorySubcategoryGroups(categorySlug),
-        getAllCachedWordPressData<WordPressTag>('tag'),
-        getAllCachedWordPressData<WordPressPost>('post'),
+        getAllWordPressTagsDirect(),
+        getAllWordPressDataDirect<WordPressPost>('post'),
       ])
 
       if (articlesResult.error) {
@@ -257,8 +277,21 @@ export default function CategoryLandingPage() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim() && searchResults.length > 0) {
-      // Navigate to first result or show results
       const firstResult = searchResults[0]
+      if (firstResult.categoryPath && firstResult.categoryPath.length > 1) {
+        const parentPath = firstResult.categoryPath.slice(0, -1).filter(slug => slug !== 'help')
+        if (parentPath.length === 1) {
+          navigate(getLink('portal.helpArticleNested', {
+            parentCategorySlug: parentPath[0],
+            categorySlug: firstResult.categorySlug || '',
+            articleSlug: firstResult.slug || '',
+          }))
+          return
+        }
+        navigate(`${getPath('portal.help')}/${parentPath.join('/')}/${firstResult.categorySlug}/${firstResult.slug}`)
+        return
+      }
+
       navigate(getLink('portal.helpArticle', {
         categorySlug: firstResult.categorySlug || '',
         articleSlug: firstResult.slug || '',
@@ -266,344 +299,243 @@ export default function CategoryLandingPage() {
     }
   }
 
+  const resolveArticleLink = (
+    article: HelpArticle,
+    fallbackCategorySlug?: string,
+    options?: { rolePageCategorySlug: string; topicSlugs: string[] }
+  ) => {
+    // On a role page, if the article belongs to a topic (subcategory), build /help/{role}/{topic}/{article}
+    if (
+      options?.rolePageCategorySlug &&
+      article.categorySlug &&
+      article.slug &&
+      options.topicSlugs.includes(article.categorySlug)
+    ) {
+      return getLink('portal.helpArticleNested', {
+        parentCategorySlug: options.rolePageCategorySlug,
+        categorySlug: article.categorySlug,
+        articleSlug: article.slug,
+      })
+    }
+    if (article.categoryPath && article.categoryPath.length > 1) {
+      const parentPath = article.categoryPath.slice(0, -1).filter(slug => slug !== 'help')
+      if (parentPath.length === 1) {
+        return getLink('portal.helpArticleNested', {
+          parentCategorySlug: parentPath[0],
+          categorySlug: article.categorySlug || '',
+          articleSlug: article.slug || '',
+        })
+      }
+      return `${getPath('portal.help')}/${parentPath.join('/')}/${article.categorySlug}/${article.slug}`
+    }
+    return getLink('portal.helpArticle', {
+      categorySlug: article.categorySlug || fallbackCategorySlug || '',
+      articleSlug: article.slug || '',
+    })
+  }
+
+
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-[#f5f7f8] dark:bg-[#101922]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#0d7ff2]"></div>
-            <p className="mt-4 text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest text-sm">
-              {t('portal.settings.helpCenter.loading')}
-            </p>
-          </div>
-        </div>
-      </div>
+      <HelpFeatureLayout
+        pageTitle={category?.name || t('portal.settings.helpCenter.loading')}
+        pageDescription={t('portal.settings.helpCenter.loading')}
+        sidebarSections={[]}
+        headerActions={<HelpHeaderSearch scopeRole={userRole || undefined} />}
+        headerRoleSwitcher={<HelpRoleSwitcher currentRoleSlug={getCurrentRoleSlug()} />}
+      >
+        <CategoryLandingPageSkeleton />
+      </HelpFeatureLayout>
     )
   }
 
   if (!category) {
     return (
-      <div className="min-h-screen bg-[#f5f7f8] dark:bg-[#101922]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-          <h1 className="text-4xl font-bold mb-6 text-slate-900 dark:text-white">
-            {t('portal.settings.helpCenter.categoryNotFound')}
-          </h1>
-          <Link
-            to={getLink('portal.help')}
-            className="inline-flex items-center gap-2 px-8 py-4 bg-[#0d7ff2] text-white font-bold rounded-lg hover:bg-[#0d7ff2]/90 transition-colors"
-          >
+      <HelpFeatureLayout
+        pageTitle={t('portal.settings.helpCenter.categoryNotFound')}
+        pageDescription={t('portal.settings.helpCenter.noArticles')}
+        sidebarSections={[]}
+        headerActions={<HelpHeaderSearch scopeRole={userRole || undefined} />}
+        headerRoleSwitcher={<HelpRoleSwitcher currentRoleSlug={getCurrentRoleSlug()} />}
+      >
+        <div className="help-uber-card">
+          <Link to={getLink('portal.help')} className="help-uber-primary-button">
             <span className="material-symbols-outlined">arrow_back</span>
             {t('portal.settings.helpCenter.backToHelp')}
           </Link>
         </div>
-      </div>
+      </HelpFeatureLayout>
     )
   }
 
+  const isRolePage = subcategoryGroups.length > 0
+  const rolePageLinkOptions = isRolePage && categorySlug
+    ? { rolePageCategorySlug: categorySlug, topicSlugs: subcategoryGroups.map((g) => g.slug || '').filter(Boolean) }
+    : undefined
+
+  const featuredArticleLink = featuredArticle
+    ? resolveArticleLink(featuredArticle, category.slug, rolePageLinkOptions)
+    : ''
+  const featuredArticleExcerpt = featuredArticle ? (postExcerptsById[featuredArticle.id] || featuredArticle.excerpt || '') : ''
+
+  const currentRoleSlug = getCurrentRoleSlug()
+
   return (
-    <div className="min-h-screen bg-[#f5f7f8] dark:bg-[#101922]">
-      <section
-        className="relative bg-[#101922] py-24 overflow-hidden"
-        style={{
-          background: 'radial-gradient(circle at 50% -20%, rgba(13, 127, 242, 0.15) 0%, rgba(16, 25, 34, 1) 70%)',
-        }}
-      >
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: 'radial-gradient(#0d7ff2 0.5px, transparent 0.5px)',
-            backgroundSize: '24px 24px',
-            backgroundColor: '#1a242d',
-            pointerEvents: 'none',
-          }}
-        ></div>
+    <HelpFeatureLayout
+      pageTitle={category.name}
+      pageDescription={(category.description || '').replace(/<[^>]*>/g, '').substring(0, 240)}
+      sidebarSections={[]}
+      headerActions={<HelpHeaderSearch scopeRole={userRole || undefined} />}
+      headerRoleSwitcher={<HelpRoleSwitcher currentRoleSlug={currentRoleSlug} />}
+    >
 
-        <div className="max-w-4xl mx-auto px-4 relative z-10 text-center">
-          <nav className="flex justify-center gap-2 text-[#0d7ff2]/60 text-xs font-semibold uppercase tracking-widest mb-6">
-            <Link to={getLink('portal.help')} className="hover:text-[#0d7ff2]">
-              {t('portal.settings.helpCenter.breadcrumbSupport')}
-            </Link>
-            <span>/</span>
-            <span className="text-[#0d7ff2]">{category.name}</span>
-          </nav>
+      <nav className="help-uber-breadcrumb" aria-label={t('portal.settings.helpCenter.breadcrumbHelpCenter')}>
+        <Link to={getLink('portal.help')}>{t('portal.settings.helpCenter.breadcrumbHelpCenter')}</Link>
+        <span className="material-symbols-outlined text-sm" aria-hidden="true">chevron_right</span>
+        <span>{category.name}</span>
+      </nav>
 
-          <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 tracking-tighter">
-            {category.name}
-          </h1>
-
-          {category.description && (
-            <p className="text-slate-400 text-lg mb-10 font-light max-w-2xl mx-auto">
-              {category.description.replace(/<[^>]*>/g, '').substring(0, 220)}
-            </p>
-          )}
-
-          {/* Search Bar */}
-          <form onSubmit={handleSearchSubmit} className="relative max-w-2xl mx-auto">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-slate-400">search</span>
-            </div>
+      {/* Prominent Search Field - only show on role pages */}
+      {isRolePage && (
+        <section className="help-uber-panel" style={{ marginBottom: '1.5rem' }}>
+          <form onSubmit={handleSearchSubmit} className="help-uber-search-wrap">
+            <span className="material-symbols-outlined help-uber-search-icon">search</span>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-32 py-5 rounded-xl bg-white text-slate-900 border-none focus:ring-4 focus:ring-[#0d7ff2]/40 text-lg placeholder:text-slate-400 shadow-2xl shadow-[#0d7ff2]/20"
-              placeholder={`Search ${category.name.toLowerCase()} guides, articles, and FAQs...`}
+              onFocus={() => {
+                if (searchResults.length > 0) {
+                  setShowSearchResults(true)
+                }
+              }}
+              onBlur={() => {
+                setTimeout(() => setShowSearchResults(false), 200)
+              }}
+              className="help-uber-search-input"
+              placeholder={t('portal.settings.helpCenter.searchPlaceholder')}
+              aria-label={t('portal.settings.helpCenter.searchPlaceholder')}
             />
-            <button
-              type="submit"
-              className="absolute right-2 top-2 bottom-2 bg-[#0d7ff2] text-white px-6 rounded-lg font-bold hover:bg-[#0d7ff2]/90 transition-colors"
-            >
-              Search
+            <button type="submit" className="help-uber-search-button">
+              {t('common.search')}
             </button>
-          </form>
-        </div>
-      </section>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-20">
-        {featuredArticle && (() => {
-          const featuredArticleExcerpt = postExcerptsById[featuredArticle.id] || featuredArticle.excerpt || ''
-          const featuredArticleLink = (() => {
-            if (featuredArticle.categoryPath && featuredArticle.categoryPath.length > 1) {
-              const parentPath = featuredArticle.categoryPath.slice(0, -1).filter(slug => slug !== 'help')
-              if (parentPath.length === 1) {
-                return getLink('portal.helpArticleNested', {
-                  parentCategorySlug: parentPath[0],
-                  categorySlug: featuredArticle.categorySlug || '',
-                  articleSlug: featuredArticle.slug || '',
-                })
-              }
-              return `${getPath('portal.help')}/${parentPath.join('/')}/${featuredArticle.categorySlug}/${featuredArticle.slug}`
-            }
-            return getLink('portal.helpArticle', {
-              categorySlug: featuredArticle.categorySlug || '',
-              articleSlug: featuredArticle.slug || '',
-            })
-          })()
-
-          return (
-            <div className="mb-8">
-              <div className="relative overflow-hidden bg-[#1a242d] border border-slate-800 rounded-xl p-1 shadow-2xl">
-                <div className="absolute top-0 right-0 p-6 opacity-10">
-                  <span className="material-symbols-outlined text-9xl text-[#0d7ff2]">analytics</span>
-                </div>
-                <div className="flex flex-col lg:flex-row gap-8 items-center bg-[#101922]/50 p-8 rounded-lg relative overflow-hidden">
-                  <div
-                    className="absolute inset-0 opacity-5"
-                    style={{
-                      backgroundImage: 'radial-gradient(#0d7ff2 0.5px, transparent 0.5px)',
-                      backgroundSize: '24px 24px',
-                      backgroundColor: '#1a242d',
-                      pointerEvents: 'none',
-                    }}
-                  ></div>
-                  <div className="w-full lg:w-1/2 aspect-video rounded-lg overflow-hidden border border-slate-700 shadow-inner group">
-                    {featuredArticle.featuredImageUrl || category?.coverPhotoUrl ? (
-                      <img
-                        src={featuredArticle.featuredImageUrl || category?.coverPhotoUrl}
-                        alt={featuredArticle.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-slate-900 flex items-center justify-center text-slate-500">
-                        <span className="material-symbols-outlined text-5xl">article</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="w-full lg:w-1/2 space-y-4">
-                    <div className="flex items-center gap-2">
-                      <span className="bg-[#0d7ff2] text-white text-[10px] font-black px-2 py-1 rounded tracking-tighter">
-                        {t('photos.browse.featuredLabel')}
-                      </span>
-                      <span className="text-slate-500 text-xs font-medium uppercase tracking-widest">
-                        {t('portal.settings.helpCenter.minRead', { minutes: featuredArticle.readingTime || 5 })}
-                      </span>
-                    </div>
-                    <h2 className="text-3xl font-bold text-white leading-tight">{featuredArticle.title}</h2>
-                    <p className="text-slate-400 font-sans leading-relaxed">{featuredArticleExcerpt}</p>
-                    <div className="pt-4 flex gap-4">
-                      <Link
-                        to={featuredArticleLink}
-                        className="bg-[#0d7ff2] text-white px-8 py-3 rounded-lg font-bold hover:shadow-lg hover:shadow-[#0d7ff2]/30 transition-all flex items-center gap-2"
-                      >
-                        {t('common.view')} <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )
-        })()}
-
-        {/* Display Subcategory Groups as Tiles */}
-        {subcategoryGroups.length > 0 && (
-          <>
-            <div className="flex items-end justify-between mb-8">
-              <div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Knowledge Base</h3>
-                <p className="text-slate-500 dark:text-slate-400 font-sans">Browse technical documentation and FAQs</p>
-              </div>
-              <div className="flex gap-2">
-                <button className="p-2 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-[#1a242d] transition-colors">
-                  <span className="material-symbols-outlined">grid_view</span>
-                </button>
-                <button className="p-2 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-[#1a242d] transition-colors">
-                  <span className="material-symbols-outlined">list</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Subcategory Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-              {subcategoryGroups.map((group) => {
-                const categoryLink = `${getPath('portal.help')}/${categorySlug || ''}/${group.slug || ''}`
-                const articleCount = group.articles?.length || 0
-
-                return (
-                  <Link
-                    key={group.id}
-                    to={categoryLink}
-                    className="group relative bg-[#1a242d] border border-slate-800 rounded-xl p-6 flex flex-col justify-between h-full card-hover"
-                  >
-                    <div
-                      className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity rounded-xl"
-                      style={{
-                        backgroundImage: 'radial-gradient(#0d7ff2 0.5px, transparent 0.5px)',
-                        backgroundSize: '24px 24px',
-                        backgroundColor: '#1a242d',
-                        pointerEvents: 'none',
-                      }}
-                    ></div>
-                    <div className="relative z-10">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="w-12 h-12 rounded-lg bg-[#0d7ff2]/10 flex items-center justify-center text-[#0d7ff2]">
-                          <span className="material-symbols-outlined text-xl">folder_open</span>
-                        </div>
-                      </div>
-                      <h4 className="text-lg font-bold text-white mb-2 leading-snug group-hover:text-[#0d7ff2] transition-colors">
-                        {group.name}
-                      </h4>
-                      <p className="text-slate-400 font-sans text-sm leading-relaxed mb-6">
-                        {group.description || `${articleCount} article${articleCount !== 1 ? 's' : ''}`}
-                      </p>
-                    </div>
-                    <div className="relative z-10 flex items-center justify-between text-xs text-slate-500 font-medium border-t border-slate-800 pt-4 mt-auto">
-                      <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-sm">article</span>
-                        {articleCount} article{articleCount !== 1 ? 's' : ''}
-                      </span>
-                      <span className="text-[#0d7ff2] flex items-center gap-1">
-                        Browse <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                      </span>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          </>
-        )}
-
-        {/* Display Articles within Subcategories */}
-        {displayArticles.length > 0 && (
-          <>
-            <div className="flex items-end justify-between mb-8">
-              <div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">All Articles</h3>
-                <p className="text-slate-500 dark:text-slate-400 font-sans">Featured articles and resources</p>
-              </div>
-            </div>
-
-            {/* Article Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayArticles.map((article) => {
-                const articleCategorySlug = article.categorySlug || category.slug || ''
-                const isNew = article.lastModified && new Date(article.lastModified) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-                const isUpdated = article.lastModified && new Date(article.lastModified) > new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) && !isNew
-
-                const articleLink = (() => {
-                  if (article.categoryPath && article.categoryPath.length > 1) {
-                    const parentPath = article.categoryPath.slice(0, -1).filter(slug => slug !== 'help')
-                    if (parentPath.length === 1) {
-                      return getLink('portal.helpArticleNested', {
-                        parentCategorySlug: parentPath[0],
-                        categorySlug: article.categorySlug || '',
-                        articleSlug: article.slug || '',
-                      })
-                    }
-                    return `${getPath('portal.help')}/${parentPath.join('/')}/${article.categorySlug}/${article.slug}`
-                  }
-                  return getLink('portal.helpArticle', {
-                    categorySlug: articleCategorySlug,
-                    articleSlug: article.slug || '',
-                  })
-                })()
-
-                return (
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="help-uber-search-results" role="listbox" aria-label={t('portal.settings.helpCenter.searchPlaceholder')}>
+                {searchResults.map((article) => (
                   <Link
                     key={article.id}
-                    to={articleLink}
-                    className="group relative bg-[#1a242d] border border-slate-800 rounded-xl p-6 flex flex-col justify-between h-full card-hover"
+                    to={resolveArticleLink(article, category.slug, rolePageLinkOptions)}
+                    className="help-uber-search-result-item"
+                    onClick={() => {
+                      setShowSearchResults(false)
+                      setSearchQuery('')
+                    }}
                   >
-                    <div
-                      className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity rounded-xl"
-                      style={{
-                        backgroundImage: 'radial-gradient(#0d7ff2 0.5px, transparent 0.5px)',
-                        backgroundSize: '24px 24px',
-                        backgroundColor: '#1a242d',
-                        pointerEvents: 'none',
-                      }}
-                    ></div>
-                    <div className="relative z-10">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="w-10 h-10 rounded-lg bg-[#0d7ff2]/10 flex items-center justify-center text-[#0d7ff2]">
-                          <span className="material-symbols-outlined">article</span>
-                        </div>
-                        {isNew && (
-                          <span className="bg-[#0d7ff2] text-white text-[9px] font-black px-1.5 py-0.5 rounded tracking-tighter">NEW</span>
-                        )}
-                        {isUpdated && !isNew && (
-                          <span className="bg-slate-700 text-slate-300 text-[9px] font-black px-1.5 py-0.5 rounded tracking-tighter uppercase">UPDATED</span>
-                        )}
-                      </div>
-                      <h4 className="text-lg font-bold text-white mb-2 leading-snug group-hover:text-[#0d7ff2] transition-colors">
-                        {article.title}
-                      </h4>
-                      <p className="text-slate-400 font-sans text-sm leading-relaxed mb-6">
-                        {article.excerpt || ''}
-                      </p>
-                    </div>
-                    <div className="relative z-10 flex items-center justify-between text-xs text-slate-500 font-medium border-t border-slate-800 pt-4 mt-auto">
-                      <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-sm">schedule</span>
-                        {article.readingTime || '5'} min
-                      </span>
-                      <span className="text-[#0d7ff2] flex items-center gap-1">
-                        Read article <span className="material-symbols-outlined text-sm">open_in_new</span>
-                      </span>
-                    </div>
+                    <div className="help-uber-search-result-title">{article.title || ''}</div>
+                    <div className="help-uber-search-result-meta">{article.categoryName || ''}</div>
+                    <div className="help-uber-search-result-meta">{article.excerpt || ''}</div>
                   </Link>
-                )
-              })}
-            </div>
-          </>
-        )}
+                ))}
+              </div>
+            )}
 
-        {subcategoryGroups.length === 0 && displayArticles.length === 0 && !featuredArticle && (
-          <div className="bg-white dark:bg-[#1a242d] rounded-xl border border-slate-200 dark:border-slate-800 p-8 text-center">
-            <h2 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">
-              {t('portal.settings.helpCenter.noArticles')}
-            </h2>
+            {showSearchResults && searchQuery && searchResults.length === 0 && !searching && (
+              <div className="help-uber-search-results">
+                <div className="help-uber-search-result-item">{t('portal.settings.helpCenter.noResults', { query: searchQuery })}</div>
+              </div>
+            )}
+          </form>
+        </section>
+      )}
+
+      {featuredArticle && (
+        <article className="help-uber-card" style={{ marginBottom: '1rem' }}>
+          <div className="help-uber-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', alignItems: 'center' }}>
+            {featuredArticle.featuredImageUrl || category.coverPhotoUrl ? (
+              <img
+                src={featuredArticle.featuredImageUrl || category.coverPhotoUrl}
+                alt={featuredArticle.title}
+                className="help-uber-featured-media"
+                loading="lazy"
+              />
+            ) : (
+              <div className="help-uber-panel" style={{ display: 'grid', placeItems: 'center', minHeight: '180px' }}>
+                <span className="material-symbols-outlined help-uber-accent" style={{ fontSize: '2rem' }}>article</span>
+              </div>
+            )}
+            <div>
+              <div className="help-uber-meta-row" style={{ marginTop: 0 }}>
+                <span className="help-uber-accent">{t('photos.browse.featuredLabel')}</span>
+                <span>{t('portal.settings.helpCenter.minRead', { minutes: featuredArticle.readingTime || 5 })}</span>
+              </div>
+              <h2 className="help-uber-article-title" style={{ fontSize: '1.6rem', marginTop: '0.4rem' }}>{featuredArticle.title}</h2>
+              <p className="help-uber-article-excerpt">{featuredArticleExcerpt}</p>
+              <div className="help-uber-actions" style={{ marginTop: '0.7rem' }}>
+                <Link to={featuredArticleLink} className="help-uber-primary-button">
+                  {t('common.viewDetails')}
+                  <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </article>
+      )}
+
+      {/* Topics List - only show on role pages, as simple list */}
+      {isRolePage && subcategoryGroups.length > 0 && (
+        <section style={{ marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--help-text)' }}>
+            {t('portal.settings.helpCenter.allTopics') || 'All topics'}
+          </h2>
+          <div className="help-topics-list">
+            {subcategoryGroups.map((group) => {
+              const categoryLink = `${getPath('portal.help')}/${categorySlug || ''}/${group.slug || ''}`
+              const articleCount = group.articles?.length || 0
+              return (
+                <Link key={group.id} to={categoryLink} className="help-topic-list-item">
+                  <span className="material-symbols-outlined help-topic-list-icon">folder_open</span>
+                  <span className="help-topic-list-name">{group.name}</span>
+                  <span className="help-topic-list-count">{articleCount} {articleCount === 1 ? t('portal.settings.helpCenter.article') || 'article' : t('portal.settings.helpCenter.articles') || 'articles'}</span>
+                  <span className="material-symbols-outlined help-topic-list-chevron">chevron_right</span>
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Articles - only show if NOT a role page (i.e., it's a topic page that should redirect) */}
+      {!isRolePage && displayArticles.length > 0 && (
+        <section className="help-uber-grid">
+          {displayArticles.map((article) => (
             <Link
-              to={getLink('portal.help')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[#0d7ff2] text-white font-semibold rounded-lg hover:bg-[#0d7ff2]/90 transition-colors"
+              key={article.id}
+              to={resolveArticleLink(article, category.slug, rolePageLinkOptions)}
+              className="help-uber-card help-uber-article-link"
             >
+              <div className="help-uber-meta-row" style={{ marginTop: 0 }}>
+                <span className="material-symbols-outlined help-uber-accent">article</span>
+                <span>{article.readingTime || 5} min</span>
+              </div>
+              <h3 className="help-uber-article-title">{article.title}</h3>
+              <p className="help-uber-article-excerpt line-clamp-2">{article.excerpt || ''}</p>
+            </Link>
+          ))}
+        </section>
+      )}
+
+      {subcategoryGroups.length === 0 && displayArticles.length === 0 && !featuredArticle && (
+        <div className="help-uber-card">
+          <p className="help-uber-article-excerpt">{t('portal.settings.helpCenter.noArticles')}</p>
+          <div className="help-uber-actions" style={{ marginTop: '0.7rem' }}>
+            <Link to={getLink('portal.help')} className="help-uber-primary-button">
               <span className="material-symbols-outlined">arrow_back</span>
               {t('portal.settings.helpCenter.backToHelp')}
             </Link>
           </div>
-        )}
-      </main>
-    </div>
+        </div>
+      )}
+    </HelpFeatureLayout>
   )
 }
-

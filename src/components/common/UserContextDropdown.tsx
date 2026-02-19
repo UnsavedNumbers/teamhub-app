@@ -268,7 +268,7 @@ export default function UserContextDropdown() {
       {/* 5. Support */}
       <div className="py-1 border-b border-slate-100 dark:border-slate-700">
         <Link 
-          to={settingsPath} 
+          to={getLink(RouteKeys.PORTAL_HELP)} 
           onClick={handleClose} 
           className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px] no-underline hover:no-underline"
         >

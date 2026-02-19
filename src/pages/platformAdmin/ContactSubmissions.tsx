@@ -6,8 +6,6 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useT } from '../../i18n/useI18n'
 import { useAuth } from '../../hooks/useAuth'
 import { PageHeader, PlatformDataTable, FilterBar, Badge, OfflineBanner, type ColumnConfig } from '../../components/platformAdmin'
 import { getContactSubmissions, getContactSubmissionStats, updateContactSubmission, type ContactSubmission, type ContactSubmissionFilters } from '../../data/services/contactSubmissionsService'
@@ -16,9 +14,7 @@ import { showSuccess, showError } from '../../utils/toast'
 import '../../styles/platformAdmin.css'
 
 export default function ContactSubmissions() {
-  const t = useT()
   const { user } = useAuth()
-  const navigate = useNavigate()
 
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([])
   const [loading, setLoading] = useState(true)
@@ -182,7 +178,7 @@ export default function ContactSubmissions() {
           {submission.name && <div style={{ fontWeight: 600 }}>{submission.name}</div>}
           <div style={{ fontSize: '0.875rem', color: '#64748b' }}>{submission.email || 'No email'}</div>
           {submission.role_context && submission.role_context !== 'public' && (
-            <Badge variant="secondary" style={{ marginTop: '0.25rem', fontSize: '0.75rem' }}>
+            <Badge variant="neutral" style={{ marginTop: '0.25rem', fontSize: '0.75rem' }}>
               {submission.role_context}
             </Badge>
           )}
@@ -198,15 +194,16 @@ export default function ContactSubmissions() {
       id: 'status',
       label: 'Status',
       render: (submission) => {
-        const statusColors: Record<ContactSubmission['status'], 'success' | 'warning' | 'info' | 'secondary'> = {
+        const statusColors: Record<ContactSubmission['status'], 'success' | 'warning' | 'info' | 'neutral'> = {
           new: 'info',
           in_progress: 'warning',
           resolved: 'success',
-          closed: 'secondary',
+          closed: 'neutral',
         }
+        const status = submission.status as ContactSubmission['status']
         return (
-          <Badge variant={statusColors[submission.status]}>
-            {submission.status.replace('_', ' ').toUpperCase()}
+          <Badge variant={statusColors[status]}>
+            {status.replace('_', ' ').toUpperCase()}
           </Badge>
         )
       },

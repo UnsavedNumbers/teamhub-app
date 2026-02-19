@@ -23,6 +23,9 @@ export interface WordPressCategory {
   slug: string
   parent: number
   count: number
+  description?: {
+    rendered: string
+  }
   image?: {
     id: number
     url: string

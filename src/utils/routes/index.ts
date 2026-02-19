@@ -134,6 +134,7 @@ export const RouteKeys = {
     PORTAL_TICKET_ACCESS: 'portal.ticketAccess',
     PORTAL_MY_TICKETS: 'portal.myTickets',
     PORTAL_TICKET_VALIDATE: 'portal.ticketValidate',
+    PORTAL_HELP: 'portal.help',
 
     // Org-Scoped Public Routes
     PORTAL_ORG_LANDING: 'portal.orgLanding',

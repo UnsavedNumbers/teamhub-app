@@ -16,10 +16,12 @@ import { navigateToToolLink } from '../../utils/helpCenter/toolLinkNavigation'
 import { ToolLinkPopup } from '../../components/help/ToolLinkPopup'
 import { showError } from '../../utils/toast'
 import { debug } from '../../lib/debug'
-import { getLink } from '../../utils/routes'
+import { getLink, getPath } from '../../utils/routes'
 import { useT } from '../../i18n/useI18n'
-import { getMarketingSiteUrl, getHomeLink, getPortalLink, getAdminPortalLink } from '../../utils/helpCenter/helpLinks'
-import { APP_NAME } from '../../constants/app'
+import { HelpFeatureLayout } from '../../components/help/HelpFeatureLayout'
+import { HelpHeaderSearch } from '../../components/help/HelpHeaderSearch'
+import { HelpRoleSwitcher } from '../../components/help/HelpRoleSwitcher'
+import { ArticlePageSkeleton } from '../../components/help/HelpSkeletons'
 import '../../styles/helpCenter.css'
 
 type UserRole = 'parent' | 'coach' | 'org_admin' | 'athlete' | 'platform_admin'
@@ -31,7 +33,7 @@ export default function ArticlePage() {
   const t = useT()
   const [loading, setLoading] = useState(true)
   const [article, setArticle] = useState<HelpArticle | null>(null)
-  const [categories, setCategories] = useState<HelpCategory[]>([])
+  const [, setCategories] = useState<HelpCategory[]>([])
   const [toolLinkPopup, setToolLinkPopup] = useState<{
     element: any
     context?: string
@@ -196,7 +198,7 @@ export default function ArticlePage() {
     }))
   }, [])
 
-  const [headings, setHeadings] = useState<Array<{ id: string; text: string }>>([])
+  const [, setHeadings] = useState<Array<{ id: string; text: string }>>([])
 
   useEffect(() => {
     if (article) {
@@ -207,39 +209,70 @@ export default function ArticlePage() {
     }
   }, [article, extractHeadings])
 
+  // Determine role slug from article category path
+  const getCurrentRoleSlug = useCallback(() => {
+    if (!article) return undefined
+    if (article.categoryPath && article.categoryPath.length > 1) {
+      // First category in path (after 'help') is usually the role
+      const pathWithoutHelp = article.categoryPath.filter(slug => slug !== 'help')
+      if (pathWithoutHelp.length > 0) {
+        const roleMap: Record<string, string> = {
+          'guardians': 'guardians',
+          'coaches': 'coaches',
+          'org-admins': 'org-admins',
+          'organization-admins': 'org-admins',
+          'athletes': 'athletes',
+        }
+        return roleMap[pathWithoutHelp[0]] || pathWithoutHelp[0]
+      }
+    }
+    // Fallback: try to extract from categorySlug or parentCategorySlug
+    if (parentCategorySlug) {
+      const roleMap: Record<string, string> = {
+        'guardians': 'guardians',
+        'coaches': 'coaches',
+        'org-admins': 'org-admins',
+        'organization-admins': 'org-admins',
+        'athletes': 'athletes',
+      }
+      return roleMap[parentCategorySlug] || parentCategorySlug
+    }
+    return undefined
+  }, [article, parentCategorySlug])
+
+
+  const currentRoleSlug = getCurrentRoleSlug()
+
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC]">
-        <div className="max-w-[1440px] mx-auto px-8 py-24">
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#0062FF]"></div>
-            <p className="mt-4 text-slate-600 font-bold uppercase tracking-widest text-sm">
-              {t('portal.settings.helpCenter.loadingArticle')}
-            </p>
-          </div>
-        </div>
-      </div>
+      <HelpFeatureLayout
+        pageTitle={t('portal.settings.helpCenter.loadingArticle')}
+        pageDescription={t('portal.settings.helpCenter.loading')}
+        sidebarSections={[]}
+        headerActions={<HelpHeaderSearch scopeRole={userRole || undefined} />}
+        headerRoleSwitcher={<HelpRoleSwitcher currentRoleSlug={currentRoleSlug} />}
+      >
+        <ArticlePageSkeleton />
+      </HelpFeatureLayout>
     )
   }
 
   if (!article) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC]">
-        <div className="max-w-[1440px] mx-auto px-8 py-24">
-          <div className="text-center py-12">
-            <h1 className="font-impact font-[900] text-4xl uppercase tracking-tighter mb-6 text-slate-900">
-              {t('portal.settings.helpCenter.articleNotFound')}
-            </h1>
-            <Link
-              to={getLink('portal.help')}
-              className="inline-flex items-center gap-2 px-8 py-4 bg-[#0062FF] text-white font-black uppercase tracking-widest text-sm hover:bg-[#0052CC] transition-colors"
-            >
-              <span className="material-symbols-outlined">arrow_back</span>
-              {t('portal.settings.helpCenter.backToHelp')}
-            </Link>
-          </div>
+      <HelpFeatureLayout
+        pageTitle={t('portal.settings.helpCenter.articleNotFound')}
+        pageDescription={t('portal.settings.helpCenter.noArticles')}
+        sidebarSections={[]}
+        headerActions={<HelpHeaderSearch scopeRole={userRole || undefined} />}
+        headerRoleSwitcher={<HelpRoleSwitcher currentRoleSlug={undefined} />}
+      >
+        <div className="help-uber-card">
+          <Link to={getLink('portal.help')} className="help-uber-primary-button">
+            <span className="material-symbols-outlined">arrow_back</span>
+            {t('portal.settings.helpCenter.backToHelp')}
+          </Link>
         </div>
-      </div>
+      </HelpFeatureLayout>
     )
   }
 
@@ -251,293 +284,68 @@ export default function ArticlePage() {
       })()
     : ''
 
-  // Helper to get category label
-  const getArticleCategoryLabel = (article: HelpArticle): string => {
-    const categoryMap: Record<string, string> = {
-      'onboard': t('portal.settings.helpCenter.categoryNavGettingStarted'),
-      'profile': t('portal.settings.helpCenter.categoryNavAccountSettings'),
-      'roster': t('portal.settings.helpCenter.categoryNavTeamManagement'),
-      'season': t('portal.settings.helpCenter.categoryNavEventsSchedules'),
-      'billing': t('portal.settings.helpCenter.categoryNavPaymentsBilling'),
-      'comply': t('portal.settings.helpCenter.categoryNavSafetyCompliance'),
-    }
-    return categoryMap[article.categorySlug || ''] || article.categoryName || t('portal.settings.helpCenter.general')
-  }
-
-  // Format date for display
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    }).toUpperCase()
-  }
-
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      <div className="max-w-[1440px] mx-auto flex">
-        {/* Left Sidebar Navigation */}
-        <aside className="w-80 border-r border-slate-200 min-h-[calc(100vh-80px)] p-8 sticky top-20 hidden lg:block">
-          <nav className="space-y-12">
-            {/* Main Categories */}
-            <div>
-              <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6">
-                {getArticleCategoryLabel(article).toUpperCase()}
-              </h5>
-              <ul className="space-y-4">
-                {categories.slice(0, 4).map((category) => (
-                  <li key={category.id}>
-                    <Link
-                      to={getLink('portal.helpCategory', { categorySlug: category.slug })}
-                      className={`block text-sm font-bold uppercase tracking-tight ${
-                        category.slug === categorySlug
-                          ? 'text-[#0062FF]'
-                          : 'text-slate-500 hover:text-[#0062FF]'
-                      }`}
-                    >
-                      {category.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Additional Categories */}
-            {categories.length > 4 && (
-              <div>
-                <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6">
-                  MORE CATEGORIES
-                </h5>
-                <ul className="space-y-4">
-                  {categories.slice(4).map((category) => (
-                    <li key={category.id}>
-                      <Link
-                        to={getLink('portal.helpCategory', { categorySlug: category.slug })}
-                        className={`block text-sm font-bold uppercase tracking-tight ${
-                          category.slug === categorySlug
-                            ? 'text-[#0062FF]'
-                            : 'text-slate-500 hover:text-[#0062FF]'
-                        }`}
-                      >
-                        {category.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </nav>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 px-8 md:px-16 py-16 max-w-5xl">
-          {/* Breadcrumbs */}
-          <nav className="flex items-start space-x-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-12">
-            <Link to={getLink('portal.help')} className="hover:text-[#0062FF]">
-              {t('portal.settings.helpCenter.breadcrumbKnowledge')}
-            </Link>
+    <>
+      <HelpFeatureLayout
+        pageTitle={article.title}
+        pageDescription={article.excerpt || ''}
+        sidebarSections={[]}
+        headerActions={<HelpHeaderSearch scopeRole={userRole || undefined} />}
+        headerRoleSwitcher={<HelpRoleSwitcher currentRoleSlug={currentRoleSlug} />}
+        beforeTitle={
+          <nav className="help-uber-breadcrumb" aria-label={t('portal.settings.helpCenter.breadcrumbHelpCenter')}>
+            <Link to={getLink('portal.help')}>{t('portal.settings.helpCenter.breadcrumbHelpCenter')}</Link>
             {article.categoryPath && article.categoryPath.length > 1 ? (
               <>
-                {article.categoryPath.slice(0, -1).filter(slug => slug !== 'help').map((slug) => {
-                  const originalIdx = article.categoryPath!.slice(0, -1).findIndex(s => s === slug)
+                {article.categoryPath.filter(slug => slug !== 'help').map((slug, i) => {
+                  const idx = article.categoryPath!.indexOf(slug)
+                  const title = (idx >= 0 && article.categoryNames?.[idx]) ?? slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                  const pathSegments = article.categoryPath!.filter(s => s !== 'help').slice(0, i + 1)
+                  const href = pathSegments.length === 1
+                    ? getLink('portal.helpCategory', { categorySlug: pathSegments[0] })
+                    : `${getPath('portal.help')}/${pathSegments.join('/')}`
                   return (
-                    <Fragment key={slug}>
-                      <span className="material-symbols-outlined text-xs">chevron_right</span>
-                      <Link
-                        to={getLink('portal.helpCategory', { categorySlug: slug })}
-                        className="hover:text-[#0062FF]"
-                      >
-                        {article.categoryNames?.[originalIdx] || slug}
-                      </Link>
+                    <Fragment key={`${slug}-${i}`}>
+                      <span className="material-symbols-outlined text-sm" aria-hidden="true">chevron_right</span>
+                      <Link to={href}>{title}</Link>
                     </Fragment>
                   )
                 })}
-                <span className="material-symbols-outlined text-xs">chevron_right</span>
-                <Link
-                  to={getLink('portal.helpCategory', { categorySlug: article.categorySlug || '' })}
-                  className="hover:text-[#0062FF]"
-                >
-                  {article.categoryName || ''}
-                </Link>
               </>
             ) : (
               <>
-                <span className="material-symbols-outlined text-xs">chevron_right</span>
-                <Link
-                  to={getLink('portal.helpCategory', { categorySlug: article.categorySlug || '' })}
-                  className="hover:text-[#0062FF]"
-                >
-                  {article.categoryName || ''}
+                <span className="material-symbols-outlined text-sm" aria-hidden="true">chevron_right</span>
+                <Link to={getLink('portal.helpCategory', { categorySlug: article.categorySlug || '' })}>
+                  {article.categoryName || article.categorySlug?.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || ''}
                 </Link>
               </>
             )}
-            <span className="material-symbols-outlined text-xs">chevron_right</span>
-            <span className="text-slate-900">{article.title || ''}</span>
           </nav>
+        }
+      >
+        <section style={{ marginBottom: '1rem' }}>
+          <p className="help-uber-meta-row" style={{ marginTop: 0, marginBottom: 0 }}>
+            {t('portal.settings.helpCenter.articleReadingTime', { minutes: article.readingTime || 4 })}
+          </p>
+        </section>
 
-          {/* Article Header */}
-          <header className="mb-16">
-            <h1 className="font-impact font-[900] text-7xl md:text-[90px] uppercase tracking-tighter leading-[0.85] mb-10 text-slate-900">
-              {article.title}
-            </h1>
-            <div className="flex items-center space-x-8 border-y border-slate-200 py-6">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  Last Updated
-                </span>
-                <span className="text-sm font-bold font-impact uppercase tracking-tight">
-                  {formatDate(article.lastModified)}
-                </span>
-              </div>
-              <div className="w-px h-8 bg-slate-200"></div>
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  Read Time
-                </span>
-                <span className="text-sm font-bold font-impact uppercase tracking-tight">
-                  {article.readingTime || 4} MIN
-                </span>
-              </div>
-              <div className="w-px h-8 bg-slate-200"></div>
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  Category
-                </span>
-                <Link
-                  to={getLink('portal.helpCategory', { categorySlug: article.categorySlug || '' })}
-                  className="text-sm font-bold font-impact uppercase tracking-tight text-[#0062FF]"
-                >
-                  {getArticleCategoryLabel(article)}
-                </Link>
-              </div>
-            </div>
-          </header>
+        <article>
+          <div
+            ref={contentRef}
+            className="help-article-content"
+            dangerouslySetInnerHTML={{ __html: processedContent }}
+          />
+        </article>
 
-          {/* Article Content */}
-          <article className="prose prose-slate max-w-none">
-            <div
-              ref={contentRef}
-              className="help-article-content prose-headings:font-impact prose-headings:uppercase prose-headings:tracking-tighter prose-headings:text-slate-900 prose-headings:font-black prose-h2:text-3xl prose-h2:mt-16 prose-h2:mb-8 prose-p:text-xl prose-p:text-slate-600 prose-p:leading-relaxed prose-p:font-normal prose-p:mb-12 prose-strong:text-slate-900 prose-strong:font-bold"
-              dangerouslySetInnerHTML={{ __html: processedContent }}
-            />
-          </article>
-
-          {/* Was This Helpful Section */}
-          <section className="border-t border-slate-200 pt-16 mt-24">
-            <div className="bg-slate-900 text-white p-12 text-center">
-              <h3 className="font-impact font-black text-2xl uppercase tracking-tight mb-8">
-                WAS THIS HELPFUL?
-              </h3>
-              <div className="flex justify-center space-x-6">
-                <button
-                  className="bg-white text-slate-900 px-12 py-6 font-impact font-black text-xl uppercase tracking-widest hover:bg-[#0062FF] hover:text-white border-2 border-transparent transition-all relative"
-                  style={{
-                    boxShadow: '0 8px 0 0 rgba(0, 0, 0, 0.1)',
-                  }}
-                  onMouseDown={(e) => {
-                    e.currentTarget.style.transform = 'translateY(6px)'
-                    e.currentTarget.style.boxShadow = '0 2px 0 0 rgba(0, 0, 0, 0.1)'
-                  }}
-                  onMouseUp={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)'
-                    e.currentTarget.style.boxShadow = '0 8px 0 0 rgba(0, 0, 0, 0.1)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)'
-                    e.currentTarget.style.boxShadow = '0 8px 0 0 rgba(0, 0, 0, 0.1)'
-                  }}
-                >
-                  YES
-                </button>
-                <button
-                  className="bg-slate-800 text-white px-12 py-6 font-impact font-black text-xl uppercase tracking-widest hover:bg-red-600 border-2 border-slate-700 transition-all relative"
-                  style={{
-                    boxShadow: '0 8px 0 0 rgba(0, 0, 0, 0.1)',
-                  }}
-                  onMouseDown={(e) => {
-                    e.currentTarget.style.transform = 'translateY(6px)'
-                    e.currentTarget.style.boxShadow = '0 2px 0 0 rgba(0, 0, 0, 0.1)'
-                  }}
-                  onMouseUp={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)'
-                    e.currentTarget.style.boxShadow = '0 8px 0 0 rgba(0, 0, 0, 0.1)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)'
-                    e.currentTarget.style.boxShadow = '0 8px 0 0 rgba(0, 0, 0, 0.1)'
-                  }}
-                >
-                  NO
-                </button>
-              </div>
-            </div>
-          </section>
-
-          {/* Footer */}
-          <footer className="mt-24 pb-16 border-t border-slate-200 pt-12">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-              <div className="flex items-center space-x-8">
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-                  {APP_NAME}
-                </span>
-              </div>
-              <div className="flex space-x-8 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-                <Link to={getHomeLink(userRole)} className="hover:text-[#0062FF] transition-colors">Home</Link>
-                {(userRole === 'parent' || userRole === 'athlete') && (
-                  <Link to={getPortalLink()} className="hover:text-[#0062FF] transition-colors">Portal</Link>
-                )}
-                {userRole === 'org_admin' && (
-                  <Link to={getAdminPortalLink()} className="hover:text-[#0062FF] transition-colors">Admin Portal</Link>
-                )}
-                <a href={getMarketingSiteUrl()} target="_blank" rel="noopener noreferrer" className="hover:text-[#0062FF] transition-colors">YouthSports.team</a>
-              </div>
-            </div>
-          </footer>
-        </main>
-
-        {/* Right Sidebar */}
-        <aside className="w-80 p-8 pt-20 hidden xl:block">
-          <div className="space-y-12">
-            {/* On This Page Navigation */}
-            {headings.length > 0 && (
-              <div>
-                <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6">
-                  ON THIS PAGE
-                </h5>
-                <nav className="space-y-4 border-l border-slate-200 pl-6">
-                  {headings.map((heading, index) => (
-                    <a
-                      key={heading.id}
-                      href={`#${heading.id}`}
-                      className={`block text-xs font-bold uppercase tracking-widest ${
-                        index === 0 ? 'text-[#0062FF]' : 'text-slate-500 hover:text-slate-900'
-                      }`}
-                    >
-                      {heading.text}
-                    </a>
-                  ))}
-                </nav>
-              </div>
-            )}
-
-            {/* Need More Help Section */}
-            <div className="bg-slate-50 p-6">
-              <span className="material-symbols-outlined text-[#0062FF] mb-4 block">support_agent</span>
-              <h5 className="text-sm font-black uppercase tracking-tight mb-2">Need more help?</h5>
-              <p className="text-xs text-slate-500 mb-4 font-medium uppercase tracking-tighter">
-                Live support available 24/7 for Enterprise admins.
-              </p>
-              <Link
-                to={getLink('portal.help')}
-                className="text-[10px] font-black text-[#0062FF] uppercase tracking-[0.2em] flex items-center"
-              >
-                Contact Support <span className="material-symbols-outlined text-sm ml-1">arrow_forward</span>
-              </Link>
-            </div>
+        <section className="help-uber-panel" style={{ marginTop: '1rem' }}>
+          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Was this helpful?</h3>
+          <div className="help-uber-actions" style={{ marginTop: '0.7rem' }}>
+            <button type="button" className="help-uber-secondary-button">Yes</button>
+            <button type="button" className="help-uber-secondary-button">No</button>
           </div>
-        </aside>
-      </div>
+        </section>
+      </HelpFeatureLayout>
 
-      {/* Tool Link Popup */}
       {toolLinkPopup && (
         <ToolLinkPopup
           element={toolLinkPopup.element}
@@ -546,6 +354,6 @@ export default function ArticlePage() {
           onClose={() => setToolLinkPopup(null)}
         />
       )}
-    </div>
+    </>
   )
 }

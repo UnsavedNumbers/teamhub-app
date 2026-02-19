@@ -13,25 +13,54 @@ import { getWordPressConfigForApi } from './helpCenterConfigService'
 import {
   type WordPressCategory,
   type WordPressPost,
-  getWordPressCategories,
-  getWordPressPosts,
   initializeWordPressApi,
 } from './wordpressApiService'
+import {
+  getCachedWordPressCategories,
+  getCachedWordPressPosts,
+  getCachedWordPressTags,
+} from './wordpressApiCacheService'
 import type { CategoryPageMapping } from './helpCenterMappingService'
+import type { WordPressTag } from './wordpressApiService'
 
 // ============================================================================
-// Helper Functions - Direct WordPress API (No Cache)
+// Helper Functions - Cached WordPress API
 // ============================================================================
 
 /**
- * Get all WordPress data directly from API (no cache)
+ * Get all WordPress tags with caching
  */
-async function getAllWordPressDataDirect<T extends WordPressCategory | WordPressPost>(
+export async function getAllWordPressTagsDirect(): Promise<{ data: WordPressTag[]; error: Error | null }> {
+  try {
+    const configResult = await getWordPressConfigForApi()
+    if (configResult.error || !configResult.data) {
+      return { data: [], error: configResult.error || new Error('WordPress configuration not found') }
+    }
+
+    initializeWordPressApi(configResult.data)
+    const result = await getCachedWordPressTags(configResult.data)
+    
+    if (result.error) {
+      return { data: [], error: result.error }
+    }
+    
+    return { data: result.data || [], error: null }
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err))
+    debug.error('HelpCenterDataService', 'Exception getting WordPress tags', { error })
+    return { data: [], error }
+  }
+}
+
+/**
+ * Get all WordPress data with stale-while-revalidate caching (5 minute cache)
+ */
+export async function getAllWordPressDataDirect<T extends WordPressCategory | WordPressPost>(
   type: 'category' | 'post'
 ): Promise<{ data: T[]; error: Error | null }> {
   try {
     if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      console.log(`[HelpCenter] 🌐 Fetching WordPress ${type}s directly from API (no cache)`)
+      console.log(`[HelpCenter] 🌐 Fetching WordPress ${type}s with cache (stale-while-revalidate)`)
     }
 
     const configResult = await getWordPressConfigForApi()
@@ -49,7 +78,7 @@ async function getAllWordPressDataDirect<T extends WordPressCategory | WordPress
     initializeWordPressApi(configResult.data)
 
     if (type === 'category') {
-      const result = await getWordPressCategories(configResult.data)
+      const result = await getCachedWordPressCategories(configResult.data)
       if (result.error) {
         if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
           console.error('[HelpCenter] ❌ Error fetching categories:', result.error)
@@ -57,7 +86,7 @@ async function getAllWordPressDataDirect<T extends WordPressCategory | WordPress
         return { data: [], error: result.error }
       }
       if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-        console.log(`[HelpCenter] ✅ Fetched ${result.data?.length || 0} categories from WordPress API`)
+        console.log(`[HelpCenter] ✅ Fetched ${result.data?.length || 0} categories (cached)`)
       }
       return { data: (result.data || []) as T[], error: null }
     } else if (type === 'post') {
@@ -67,7 +96,7 @@ async function getAllWordPressDataDirect<T extends WordPressCategory | WordPress
       let hasMore = true
 
       while (hasMore) {
-        const result = await getWordPressPosts(configResult.data, { perPage, page })
+        const result = await getCachedWordPressPosts(configResult.data, { perPage, page })
         if (result.error) {
           if (allPosts.length > 0) {
             if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
@@ -86,7 +115,7 @@ async function getAllWordPressDataDirect<T extends WordPressCategory | WordPress
       }
 
       if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-        console.log(`[HelpCenter] ✅ Fetched ${allPosts.length} posts from WordPress API (across ${page - 1} pages)`)
+        console.log(`[HelpCenter] ✅ Fetched ${allPosts.length} posts (cached, across ${page - 1} pages)`)
       }
       return { data: allPosts as T[], error: null }
     }
