@@ -11,6 +11,10 @@
   --help-border: #e5e5e5;
   --help-hover: #efefef;
   --help-accent: #111111;
+  --help-list-marker: color-mix(in srgb, var(--help-text) 42%, transparent);
+  --help-list-marker-soft: color-mix(in srgb, var(--help-text) 30%, transparent);
+  --help-list-focus-bg: color-mix(in srgb, var(--help-accent) 8%, transparent);
+  --help-list-focus-ring: color-mix(in srgb, var(--help-accent) 40%, transparent);
   --help-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
   background: var(--help-bg);
   color: var(--help-text);
@@ -536,6 +540,35 @@
   .help-uber-search-button {
     padding: 0 0.75rem;
   }
+
+  .help-article-content :where(ul, ol) {
+    margin: 0.85rem 0 1.1rem;
+    line-height: 1.68;
+  }
+
+  .help-article-content :where(li) {
+    padding-inline-start: 1.45rem;
+    font-size: 1rem;
+    line-height: 1.68;
+  }
+
+  .help-article-content :where(li + li) {
+    margin-top: 0.72rem;
+  }
+
+  .help-article-content ol > li {
+    padding-inline-start: 2.05rem;
+  }
+
+  .help-article-content ul > li::before {
+    width: 0.44rem;
+    height: 0.44rem;
+  }
+
+  .help-article-content ol > li::before {
+    width: 1.65rem;
+    font-size: 0.82em;
+  }
 }
 
 /* Hero Section */
@@ -663,19 +696,101 @@ html.dark {
   color: var(--help-text);
 }
 
-.help-article-content ul,
+.help-article-content :where(ul, ol) {
+  margin: 1rem 0 1.35rem;
+  padding-inline-start: 0;
+  list-style: none;
+  line-height: 1.72;
+  font-family: "Inter", "Segoe UI", "SF Pro Text", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.help-article-content :where(li) {
+  position: relative;
+  margin: 0;
+  padding-inline-start: 1.6rem;
+  color: var(--help-text);
+  font-size: 1.03rem;
+  line-height: 1.72;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.help-article-content :where(li + li) {
+  margin-top: 0.85rem;
+}
+
+.help-article-content ul > li::before {
+  content: '';
+  position: absolute;
+  left: 0.25rem;
+  top: 0.82em;
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 999px;
+  background: var(--help-list-marker);
+  transform: translateY(-50%);
+}
+
+.help-article-content ul ul > li::before {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 0.08rem;
+  background: var(--help-list-marker-soft);
+}
+
+.help-article-content ul ul ul > li::before {
+  width: 0.52rem;
+  height: 2px;
+  border-radius: 2px;
+  top: 0.84em;
+}
+
 .help-article-content ol {
-  margin-bottom: 1.25rem;
-  padding-left: 1.5rem;
+  counter-reset: help-list-item;
 }
 
-.help-article-content li {
-  margin-bottom: 0.75rem;
-  color: var(--help-text);
+.help-article-content ol > li {
+  counter-increment: help-list-item;
+  padding-inline-start: 2.3rem;
 }
 
-.dark .help-article-content li {
-  color: var(--help-text);
+.help-article-content ol > li::before {
+  content: counter(help-list-item, decimal-leading-zero) ".";
+  position: absolute;
+  left: 0;
+  top: 0.04em;
+  width: 1.8rem;
+  text-align: right;
+  color: var(--help-list-marker);
+  font-size: 0.84em;
+  font-weight: 650;
+  line-height: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.help-article-content ol ol {
+  counter-reset: help-list-item;
+}
+
+.help-article-content ol ol > li::before {
+  content: counter(help-list-item, lower-alpha) ")";
+  color: var(--help-list-marker-soft);
+  width: 1.6rem;
+}
+
+.help-article-content li > :where(ul, ol) {
+  margin-top: 0.65rem;
+  margin-bottom: 0.2rem;
+}
+
+.help-article-content :where(ul ul, ol ol, ul ol, ol ul) {
+  margin-inline-start: 0.25rem;
+}
+
+.help-article-content li:focus-within {
+  background: var(--help-list-focus-bg);
+  border-radius: 0.5rem;
+  outline: 2px solid var(--help-list-focus-ring);
+  outline-offset: 2px;
 }
 
 .help-article-content a:not(.tool-link) {
@@ -828,7 +943,7 @@ html.dark {
 .help-article-content .step-item,
 .help-article-content [class*="step"] {
   display: flex;
-  align-items: flex-start;
+  align-items: baseline;
   background-color: var(--help-surface);
   border: 1px solid var(--help-border);
   padding: 1.5rem;
@@ -836,17 +951,11 @@ html.dark {
 }
 
 .help-article-content .step-number {
-  width: 2rem;
-  height: 2rem;
-  background-color: color-mix(in srgb, var(--help-accent) 14%, transparent);
-  color: var(--help-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 900;
-  font-size: 0.75rem;
-  margin-right: 1.5rem;
-  margin-top: 0.25rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  font-weight: 700;
+  color: var(--help-text);
+  margin-right: 1rem;
   flex-shrink: 0;
 }
 

@@ -37,6 +37,40 @@ import '../../styles/helpCenter.css'
 
 type UserRole = 'parent' | 'coach' | 'org_admin' | 'athlete' | 'platform_admin'
 
+function decodeHtmlEntities(value: string): string {
+  return value.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (_, entity: string) => {
+    const named: Record<string, string> = {
+      amp: '&',
+      lt: '<',
+      gt: '>',
+      quot: '"',
+      apos: "'",
+      nbsp: ' ',
+      hellip: '...',
+    }
+
+    if (entity in named) {
+      return named[entity]
+    }
+
+    if (entity.startsWith('#x') || entity.startsWith('#X')) {
+      const code = Number.parseInt(entity.slice(2), 16)
+      return Number.isFinite(code) && code >= 0 && code <= 0x10ffff
+        ? String.fromCodePoint(code)
+        : `&${entity};`
+    }
+
+    if (entity.startsWith('#')) {
+      const code = Number.parseInt(entity.slice(1), 10)
+      return Number.isFinite(code) && code >= 0 && code <= 0x10ffff
+        ? String.fromCodePoint(code)
+        : `&${entity};`
+    }
+
+    return `&${entity};`
+  })
+}
+
 export default function CategoryLandingPage() {
   const { categorySlug } = useParams<{ categorySlug: string }>()
   const { user, profile, loading: authLoading } = useAuth()
@@ -147,7 +181,7 @@ export default function CategoryLandingPage() {
         const excerpts = Object.fromEntries(
           (postsResult.data || []).map((post) => [
             post.id,
-            (post.excerpt?.rendered || '').replace(/<[^>]*>/g, '').trim(),
+            decodeHtmlEntities((post.excerpt?.rendered || '').replace(/<[^>]*>/g, '').trim()),
           ])
         )
         setPostExcerptsById(excerpts)
@@ -376,7 +410,7 @@ export default function CategoryLandingPage() {
   const featuredArticleLink = featuredArticle
     ? resolveArticleLink(featuredArticle, category.slug, rolePageLinkOptions)
     : ''
-  const featuredArticleExcerpt = featuredArticle ? (postExcerptsById[featuredArticle.id] || featuredArticle.excerpt || '') : ''
+  const featuredArticleExcerpt = featuredArticle ? (featuredArticle.excerpt || postExcerptsById[featuredArticle.id] || '') : ''
 
   const currentRoleSlug = getCurrentRoleSlug()
 

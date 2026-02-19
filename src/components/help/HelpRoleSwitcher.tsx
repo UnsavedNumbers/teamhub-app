@@ -58,8 +58,10 @@ export function HelpRoleSwitcher({ currentRoleSlug, onRoleChange }: HelpRoleSwit
 
       const mappings = mappingsResult.data || []
       const rolesWithSlugs = baseRoles.map(role => {
-        // Find the first mapping for this role (primary category)
-        const roleMapping = mappings.find(m => m.role === role.role)
+        const roleMappings = mappings.filter(m => m.role === role.role)
+        const roleMapping =
+          roleMappings.find(m => m.wordpressCategorySlug === role.slug) ||
+          roleMappings[0]
         return {
           ...role,
           categorySlug: roleMapping?.wordpressCategorySlug,

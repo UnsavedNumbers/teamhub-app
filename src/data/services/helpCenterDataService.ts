@@ -200,32 +200,46 @@ function getSlugFromFileName(fileName: string): string {
 function decodeHtmlEntities(value?: string | null): string {
   if (!value) return ''
 
-  return value.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (_, entity: string) => {
-    const named: Record<string, string> = {
-      amp: '&',
-      lt: '<',
-      gt: '>',
-      quot: '"',
-      apos: "'",
-      nbsp: ' ',
-    }
+  const decodePass = (input: string): string =>
+    input.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (_, entity: string) => {
+      const named: Record<string, string> = {
+        amp: '&',
+        lt: '<',
+        gt: '>',
+        quot: '"',
+        apos: "'",
+        nbsp: ' ',
+      }
 
-    if (entity in named) {
-      return named[entity]
-    }
+      if (entity in named) {
+        return named[entity]
+      }
 
-    if (entity.startsWith('#x') || entity.startsWith('#X')) {
-      const code = Number.parseInt(entity.slice(2), 16)
-      return Number.isFinite(code) ? String.fromCodePoint(code) : `&${entity};`
-    }
+      if (entity.startsWith('#x') || entity.startsWith('#X')) {
+        const code = Number.parseInt(entity.slice(2), 16)
+        return Number.isFinite(code) && code >= 0 && code <= 0x10ffff
+          ? String.fromCodePoint(code)
+          : `&${entity};`
+      }
 
-    if (entity.startsWith('#')) {
-      const code = Number.parseInt(entity.slice(1), 10)
-      return Number.isFinite(code) ? String.fromCodePoint(code) : `&${entity};`
-    }
+      if (entity.startsWith('#')) {
+        const code = Number.parseInt(entity.slice(1), 10)
+        return Number.isFinite(code) && code >= 0 && code <= 0x10ffff
+          ? String.fromCodePoint(code)
+          : `&${entity};`
+      }
 
-    return `&${entity};`
-  })
+      return `&${entity};`
+    })
+
+  let decoded = value
+  for (let i = 0; i < 3; i++) {
+    const next = decodePass(decoded)
+    if (next === decoded) break
+    decoded = next
+  }
+
+  return decoded
 }
 
 function toPlainText(value?: string | null): string {
