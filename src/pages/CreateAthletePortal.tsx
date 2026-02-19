@@ -19,6 +19,7 @@ import { uploadAthletePhoto } from '../data/services/athletePhotoService'
 import { checkGuardianMatch, normalizeEmail, validateGuardianEmail } from '../utils/guardianMatching'
 import { validatePhoneFormat } from '../utils/phoneValidation'
 import { getSystemSports } from '../data/services/sportsService'
+import { getLink } from '../utils/routes'
 import type { Gender, CreateAthleteDTO, GuardianMatch, RelationshipType } from '../types/family'
 import type { Sport } from '../data/types/organization'
 
@@ -203,6 +204,22 @@ export default function CreateAthletePortal() {
         loadSports()
     }, [])
 
+    const handleSportToggle = useCallback((sportId: string, sportType: SportType) => {
+        setSelectedSports((prev) => {
+            const isSelected = prev.some(
+                (sport) => sport.sport_id === sportId && sport.sport_type === sportType
+            )
+
+            if (isSelected) {
+                return prev.filter(
+                    (sport) => !(sport.sport_id === sportId && sport.sport_type === sportType)
+                )
+            }
+
+            return [...prev, { sport_id: sportId, sport_type: sportType }]
+        })
+    }, [])
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         
@@ -341,7 +358,7 @@ export default function CreateAthletePortal() {
             }
 
             // Success - navigate back to athletes list
-            navigate('/portal/athletes')
+            navigate(getLink('portal.athletes'))
         } catch (err) {
             console.error('Error creating athlete:', err)
             setError(err instanceof Error ? err.message : 'Failed to create athlete')
@@ -354,8 +371,8 @@ export default function CreateAthletePortal() {
         return (
             <PortalLayout
                 breadcrumbs={[
-                    { label: 'Home', path: '/portal/dashboard' },
-                    { label: 'My Athletes', path: '/portal/athletes' },
+                    { label: 'Home', path: getLink('portal.dashboard') },
+                    { label: 'My Athletes', path: getLink('portal.athletes') },
                     { label: 'Add Athlete' }
                 ]}
             >
@@ -379,8 +396,8 @@ export default function CreateAthletePortal() {
         return (
             <PortalLayout
                 breadcrumbs={[
-                    { label: 'Home', path: '/portal/dashboard' },
-                    { label: 'My Athletes', path: '/portal/athletes' },
+                    { label: 'Home', path: getLink('portal.dashboard') },
+                    { label: 'My Athletes', path: getLink('portal.athletes') },
                     { label: 'Add Athlete' }
                 ]}
             >
@@ -393,23 +410,11 @@ export default function CreateAthletePortal() {
 
     const isFormValid = formData.first_name.trim() && formData.last_name.trim() && formData.date_of_birth
 
-    // Memoized toggle handler for sports
-    const handleSportToggle = useCallback((sportId: string, sportType: SportType) => {
-        setSelectedSports(prev => {
-            const exists = prev.some(s => s.sport_id === sportId && s.sport_type === sportType)
-            if (exists) {
-                return prev.filter(s => !(s.sport_id === sportId && s.sport_type === sportType))
-            } else {
-                return [...prev, { sport_id: sportId, sport_type: sportType }]
-            }
-        })
-    }, [])
-
     return (
         <PortalLayout
             breadcrumbs={[
-                { label: 'Home', path: '/portal/dashboard' },
-                { label: 'My Athletes', path: '/portal/athletes' },
+                { label: 'Home', path: getLink('portal.dashboard') },
+                { label: 'My Athletes', path: getLink('portal.athletes') },
                 { label: 'Add Athlete' }
             ]}
         >
@@ -731,7 +736,7 @@ export default function CreateAthletePortal() {
                     <Button
                         type="button"
                         variant="secondary"
-                        onClick={() => navigate('/portal/athletes')}
+                        onClick={() => navigate(getLink('portal.athletes'))}
                         disabled={isSubmitting}
                     >
                         Cancel

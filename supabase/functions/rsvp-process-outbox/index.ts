@@ -175,10 +175,21 @@ serve(async (req) => {
               }
             })
 
-          // Send email if available (placeholder - implement email sending)
           if (recipient.email) {
-            // TODO: Implement email sending via Resend or similar
-            console.log(`Would send email to ${recipient.email}: ${subject}`)
+            const orgId = (await supabase.from('teams').select('org_id').eq('id', row.team_id).single()).data?.org_id
+            await supabase.from("notification_jobs").insert({
+              org_id: orgId,
+              user_id: recipient.id,
+              email: recipient.email,
+              type: "rsvp_notification",
+              payload: {
+                event_title: eventTitle,
+                body,
+              },
+              status: "queued",
+            }).catch((err) => {
+              if (err.code !== '23505') console.error('Failed to queue RSVP email:', err)
+            })
           }
         }
 

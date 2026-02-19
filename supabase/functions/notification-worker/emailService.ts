@@ -1,12 +1,15 @@
 // Email service for Supabase Edge Functions
 // Note: This is a Deno environment, so we use Deno APIs instead of Node.js
 
+import { getOrganizationBranding, injectBrandingVariables, type OrganizationBranding } from './brandingService.ts'
+import Handlebars from 'npm:handlebars@4.7.7'
+
 export interface NotificationJob {
   id: string;
   org_id: string;
   user_id?: string;
   email: string;
-  type: 'new_event' | 'new_message' | 'payment_receipt' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email' | 'guardian_invite' | 'ticket_receipt';
+  type: 'new_event' | 'new_message' | 'payment_receipt' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email' | 'guardian_invite' | 'athlete_invite' | 'athlete_account_created' | 'athlete_linked' | 'ticket_receipt' | 'uniform_notification' | 'travel_notification' | 'photo_moderation' | 'rsvp_notification';
   payload: Record<string, any>;
   status: 'queued' | 'sent' | 'failed';
   error?: string;
@@ -58,20 +61,91 @@ const EMAIL_CONFIG = {
     subject: 'You\'re invited to connect with {{athlete_name}}',
     preview: 'Accept your guardian invite on YouthSports Team Hub'
   },
+  athlete_invite: {
+    subject: 'You\'re invited to create your athlete account - {{organization_name}}',
+    preview: 'Accept your athlete invite on YouthSports Team Hub'
+  },
+  athlete_account_created: {
+    subject: 'Welcome to {{organization_name}}',
+    preview: 'Your athlete account has been created'
+  },
+  athlete_linked: {
+    subject: 'Account Linked - {{organization_name}}',
+    preview: 'Your account has been linked to your athlete profile'
+  },
   ticket_receipt: {
     subject: 'Your Tickets: {{event_title}}',
     preview: 'Your tickets are ready'
+  },
+  uniform_notification: {
+    subject: '{{subject}}',
+    preview: '{{body}}'
+  },
+  travel_notification: {
+    subject: '{{subject}}',
+    preview: 'Travel plan update'
+  },
+  photo_moderation: {
+    subject: '{{subject}}',
+    preview: 'Photo moderation update'
+  },
+  rsvp_notification: {
+    subject: 'RSVP Required: {{event_title}}',
+    preview: 'Please RSVP for this event'
   }
 };
 
 /**
  * Send a notification email using the compiled MJML template
  */
-export async function sendNotificationEmail(job: NotificationJob): Promise<EmailResult> {
+const PLACEHOLDER_IMAGE_URL = 'https://placehold.co/1x1/ffffff/ffffff.png';
+
+export async function sendNotificationEmail(
+  job: NotificationJob,
+  supabase?: any
+): Promise<EmailResult> {
   try {
-    // Load compiled HTML template from Supabase storage or external URL
-    // For now, we'll use a simple approach - templates should be hosted or embedded
-    const htmlContent = await loadTemplate(job.type, job.payload);
+    // For guardian_invite, ensure template vars are set (skill: payload must have all required keys)
+    if (job.type === 'guardian_invite') {
+      const localPart = job.email?.split('@')[0]?.trim() || '';
+      job.payload = {
+        ...job.payload,
+        recipient_firstname: localPart || 'there',
+      };
+    }
+    
+    // For athlete_invite, ensure template vars are set
+    if (job.type === 'athlete_invite') {
+      const localPart = job.email?.split('@')[0]?.trim() || '';
+      job.payload = {
+        ...job.payload,
+        recipient_firstname: localPart || 'there',
+      };
+    }
+
+    let branding: OrganizationBranding | null = null;
+    if (supabase && job.org_id) {
+      branding = await getOrganizationBranding(job.org_id, supabase);
+      job.payload = {
+        ...job.payload,
+        organization_logo_url: branding.logo_url || '',
+        organization_name: branding.organization_name,
+        organization_primary_color: branding.primary_color,
+        organization_secondary_color: branding.secondary_color,
+        email_footer_text: branding.email_footer_text || `© ${new Date().getFullYear()} ${branding.organization_name}. All rights reserved.`,
+        email_from_name: branding.email_from_name,
+        ...(job.type === 'guardian_invite' && {
+          header_image_url: branding.logo_url || PLACEHOLDER_IMAGE_URL,
+          sender_image_url: branding.logo_url || PLACEHOLDER_IMAGE_URL,
+        }),
+      };
+    }
+
+    let htmlContent = await loadTemplate(job.type, job.payload, supabase);
+
+    if (branding) {
+      htmlContent = injectBrandingVariables(htmlContent, branding);
+    }
 
     // Get subject and preview
     const config = EMAIL_CONFIG[job.type];
@@ -79,8 +153,8 @@ export async function sendNotificationEmail(job: NotificationJob): Promise<Email
       throw new Error(`Unknown email type: ${job.type}`);
     }
 
-    let subject = injectVariables(config.subject, job.payload);
-    const preview = injectVariables(config.preview, job.payload);
+    const subject = injectVariables(config.subject, job.payload, { noEscape: true });
+    const preview = injectVariables(config.preview, job.payload, { noEscape: true });
 
     // Generate plain text fallback
     const textContent = generatePlainText(htmlContent);
@@ -98,7 +172,9 @@ export async function sendNotificationEmail(job: NotificationJob): Promise<Email
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'notifications@youthsports.team',
+        from: job.payload.email_from_name
+          ? `${job.payload.email_from_name} <notifications@youthsports.team>`
+          : 'notifications@youthsports.team',
         to: job.email,
         subject,
         html: htmlContent,
@@ -128,10 +204,28 @@ export async function sendNotificationEmail(job: NotificationJob): Promise<Email
 }
 
 /**
- * Load email template - in production this would load from storage or be embedded
+ * Load email template - fetches from DB or falls back to hardcoded
  */
-async function loadTemplate(type: string, payload: Record<string, any>): Promise<string> {
-  // For now, return a basic HTML template
+async function loadTemplate(type: string, payload: Record<string, any>, supabase?: any): Promise<string> {
+  // Try to load from Supabase if client is provided
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('email_templates')
+        .select('html_content')
+        .eq('type', type) // Use job type (which maps to db 'type' enum)
+        .eq('is_active', true)
+        .maybeSingle(); // Use maybeSingle to avoid error if not found
+
+      if (data && data.html_content) {
+        return injectVariables(data.html_content, payload, type);
+      }
+    } catch (e) {
+      console.warn(`Failed to fetch email template for ${type}:`, e);
+    }
+  }
+
+  // Fallback to basic HTML templates
   // In production, you'd load the compiled MJML from Supabase storage or embed it
   const templates: Record<string, string> = {
     new_event: `
@@ -154,9 +248,12 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
             </div>
             <p>{{#if is_required}}This is a required event. Please make sure to attend.{{else}}This is an optional event.{{/if}}</p>
             <div style="text-align: center; margin: 30px 0;">
-              <a href="{{url}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Event</a>
+              <a href="{{url}}" style="background-color: {{organization_primary_color}}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Event</a>
             </div>
             <p>Questions? Contact your coach or team administrator.</p>
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
+              {{email_footer_text}}
+            </div>
           </div>
         </body>
       </html>
@@ -170,8 +267,14 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
         </head>
         <body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px;">
-            <h1 style="color: #1e293b; margin-bottom: 20px;">YouthSports Team Hub</h1>
-            <h2 style="color: #1e293b;">New Message from {{sender_name}}</h2>
+            {{#if organization_logo_url}}
+            <div style="text-align: center; margin-bottom: 20px;">
+              <img src="{{organization_logo_url}}" alt="{{organization_name}}" style="max-height: 60px; max-width: 200px;" />
+            </div>
+            {{else}}
+            <h1 style="color: {{organization_secondary_color}}; margin-bottom: 20px;">{{organization_name}}</h1>
+            {{/if}}
+            <h2 style="color: {{organization_secondary_color}};">New Message from {{sender_name}}</h2>
             <p>Hi {{recipient_name}},</p>
             <p>You have a new message{{#if team_name}} for {{team_name}}{{/if}}:</p>
             <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -180,9 +283,12 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
               {{#if message_subject}}<p><strong>Subject: {{message_subject}}</strong></p>{{/if}}
             </div>
             <div style="text-align: center; margin: 30px 0;">
-              <a href="{{url}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Message</a>
+              <a href="{{url}}" style="background-color: {{organization_primary_color}}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Message</a>
             </div>
             <p>You can reply to this message through the Team Hub app.</p>
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
+              {{email_footer_text}}
+            </div>
           </div>
         </body>
       </html>
@@ -196,8 +302,14 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
         </head>
         <body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px;">
-            <h1 style="color: #1e293b; margin-bottom: 20px;">YouthSports Team Hub</h1>
-            <h2 style="color: #1e293b;">Payment Receipt</h2>
+            {{#if organization_logo_url}}
+            <div style="text-align: center; margin-bottom: 20px;">
+              <img src="{{organization_logo_url}}" alt="{{organization_name}}" style="max-height: 60px; max-width: 200px;" />
+            </div>
+            {{else}}
+            <h1 style="color: {{organization_secondary_color}}; margin-bottom: 20px;">{{organization_name}}</h1>
+            {{/if}}
+            <h2 style="color: {{organization_secondary_color}};">Payment Receipt</h2>
             <p>Hi {{recipient_name}},</p>
             <p>Thank you for your payment. Here are the details:</p>
             <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -214,9 +326,12 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
             </div>
             {{/if}}
             <div style="text-align: center; margin: 30px 0;">
-              <a href="{{url}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Receipt</a>
+              <a href="{{url}}" style="background-color: {{organization_primary_color}}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Receipt</a>
             </div>
             <p>If you have any questions about this payment, please contact your organization administrator.</p>
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
+              {{email_footer_text}}
+            </div>
           </div>
         </body>
       </html>
@@ -251,7 +366,7 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
               </tr>
             </thead>
             <tbody>
-              {{items_html}}
+              {{{items_html}}}
             </tbody>
             <tfoot>
               <tr>
@@ -416,6 +531,10 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
                     <tr>
                       <td align="left" style="font-size:0px;padding:10px 25px;word-break:break-word;">
                         <div style="font-family:Arial, sans-serif;font-size:14px;line-height:1.5;text-align:left;color:#333333;">Best,<br> The {{organization_name}} Team</div>
+                    </tr>
+                    <tr>
+                      <td align="left" style="font-size:0px;padding:10px 25px;word-break:break-word;">
+                        <div style="font-family:Arial, sans-serif;font-size:12px;line-height:1.5;text-align:center;color:#94a3b8;">{{email_footer_text}}</div>
                       </td>
                     </tr>
                   </tbody>
@@ -490,6 +609,44 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
     <!--[if mso | IE]></td></tr></table><![endif]-->
   </div>
 </body>
+</html>`,
+    uniform_notification: `<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>{{subject}}</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2>{{title}}</h2>
+  <p>{{body}}</p>
+  <p style="color: #6b7280; font-size: 12px;">{{email_footer_text}}</p>
+</body>
+</html>`,
+    travel_notification: `<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>{{subject}}</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2>{{title}}</h2>
+  <p><strong>{{location}}</strong><br/>{{date_range}}<br/>Status: {{status}}</p>
+  <p>{{body}}</p>
+  <p style="color: #6b7280; font-size: 12px;">{{email_footer_text}}</p>
+</body>
+</html>`,
+    photo_moderation: `<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>{{subject}}</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2>{{title}}</h2>
+  <p>{{body}}</p>
+  {{#if gallery_link}}<p><a href="{{gallery_link}}">View Gallery</a></p>{{/if}}
+  <p style="color: #6b7280; font-size: 12px;">{{email_footer_text}}</p>
+</body>
+</html>`,
+    rsvp_notification: `<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>RSVP Required: {{event_title}}</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2>RSVP Required: {{event_title}}</h2>
+  <p>{{body}}</p>
+  <p style="color: #6b7280; font-size: 12px;">{{email_footer_text}}</p>
+</body>
 </html>`
   };
 
@@ -502,57 +659,21 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
 }
 
 /**
- * HTML escape function (T6)
+ * Inject variables into template content using Handlebars
  */
-function escapeHtml(text: string): string {
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+function injectVariables(template: string, variables: Record<string, any>, optionsOrType?: string | { noEscape?: boolean }): string {
+  const options = (typeof optionsOrType === 'object') ? optionsOrType : {};
+  const compileOptions = options.noEscape ? { noEscape: true } : {};
 
-/**
- * Inject variables into template content
- */
-function injectVariables(template: string, variables: Record<string, any>, type?: string): string {
-  let result = template;
-  
-  // For ticket_receipt, HTML-escape string values (T6)
-  const shouldEscape = type === 'ticket_receipt';
-
-  // Handle simple variable replacement
-  for (const [key, value] of Object.entries(variables)) {
-    const regex = new RegExp(`{{${key}}}`, 'g');
-    // Don't escape items_html (pre-rendered HTML) or qr_image_data_url (data URL)
-    if (shouldEscape && typeof value === 'string' && key !== 'items_html' && key !== 'qr_image_data_url' && key !== 'ticket_url') {
-      result = result.replace(regex, escapeHtml(value));
-    } else {
-      result = result.replace(regex, String(value));
-    }
+  try {
+    const compiled = Handlebars.compile(template, compileOptions);
+    return compiled(variables);
+  } catch (error) {
+    console.error('Handlebars compilation error:', error);
+    // Fallback to simpler replacement if Handlebars fails? 
+    // Or just re-throw. For now, let's return the template with error note or original
+    return template;
   }
-
-  // Handle conditional blocks (basic handlebars-style)
-  result = result.replace(/{{#if\s+(\w+)}}(.*?){{\/if}}/gs, (match, condition, content) => {
-    return variables[condition] ? content : '';
-  });
-
-  // Handle each loops (basic)
-  result = result.replace(/{{#each\s+(\w+)}}(.*?){{\/each}}/gs, (match, arrayName, content) => {
-    const array = variables[arrayName];
-    if (!Array.isArray(array)) return '';
-
-    return array.map(item => {
-      let itemContent = content;
-      for (const [key, value] of Object.entries(item)) {
-        itemContent = itemContent.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
-      }
-      return itemContent;
-    }).join('');
-  });
-
-  return result;
 }
 
 /**

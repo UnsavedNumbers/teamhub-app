@@ -4,7 +4,6 @@ import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, Card, FilterBar, ConfirmDialog, Button, Input, Select, PlatformDataTable, type ColumnConfig, ErrorState } from '../../components/platformAdmin'
 import { EntitySelect } from '../../components/common/EntitySelect'
 import { canPerformAction } from '../../utils/platformAdminPermissions'
-import { getEnvironment } from '../../utils/featureFlags'
 import { mapFeatureFlagOverride, isRpcSuccessResponse } from '../../utils/typeAdapters'
 import type { 
   AdminFeatureFlag, 
@@ -19,16 +18,31 @@ import { showSuccess } from '../../utils/toast'
 
 type TabType = 'flags' | 'overrides' | 'audit'
 
+/** One row per flag key (all environments combined) for the list table */
+export interface FeatureFlagListRow {
+  id: string
+  key: string
+  value_type: FeatureFlagValueType
+  description: string | null
+  deleted_at: string | null
+  org_override_count: number
+  user_override_count: number
+  created_at: string
+}
+
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FeatureFlags() {
+  useDebugLifecycle('FeatureFlags')
+  
   const db = supabase as any
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabType>('flags')
-  const [flags, setFlags] = useState<AdminFeatureFlag[]>([])
+  const [flags, setFlags] = useState<FeatureFlagListRow[]>([])
   const [overrides, setOverrides] = useState<FeatureFlagOverride[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [environmentFilter, setEnvironmentFilter] = useState<FeatureFlagEnvironment | 'all'>('all')
   const [showDeleted, setShowDeleted] = useState(false)
   
   // Pagination
@@ -38,11 +52,10 @@ export default function FeatureFlags() {
   
   // Dialog states
   const [createDialog, setCreateDialog] = useState(false)
-  const [editDefaultDialog, setEditDefaultDialog] = useState<{ open: boolean; flag: AdminFeatureFlag | null }>({ open: false, flag: null })
   const [orgOverrideDialog, setOrgOverrideDialog] = useState<{ open: boolean; flag: AdminFeatureFlag | null }>({ open: false, flag: null })
   const [userOverrideDialog, setUserOverrideDialog] = useState<{ open: boolean; flag: AdminFeatureFlag | null }>({ open: false, flag: null })
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; flag: AdminFeatureFlag | null }>({ open: false, flag: null })
-  const [restoreDialog, setRestoreDialog] = useState<{ open: boolean; flag: AdminFeatureFlag | null }>({ open: false, flag: null })
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; flag: FeatureFlagListRow | null }>({ open: false, flag: null })
+  const [restoreDialog, setRestoreDialog] = useState<{ open: boolean; flag: FeatureFlagListRow | null }>({ open: false, flag: null })
   const [overrideToRemove, setOverrideToRemove] = useState<FeatureFlagOverride | null>(null)
   
   const [dialogLoading, setDialogLoading] = useState(false)
@@ -54,14 +67,12 @@ export default function FeatureFlags() {
     key: '',
     value_type: 'boolean',
     description: '',
-    environment: getEnvironment(),
   })
   const [newOrgFlag, setNewOrgFlag] = useState<{ org_id: string | null; feature_key: string; enabled: boolean }>({
     org_id: null,
     feature_key: '',
     enabled: false,
   })
-  const [defaultValue, setDefaultValue] = useState<{ boolean?: boolean; integer?: number; double?: number }>({})
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null)
   const [orgValue, setOrgValue] = useState<{ boolean?: boolean; integer?: number; double?: number }>({})
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
@@ -75,57 +86,67 @@ export default function FeatureFlags() {
     setError(null)
 
     try {
-      // Use admin_feature_flags_list view for platform-wide feature flags
       let query = supabase
         .from('admin_feature_flags_list')
-        .select('*', { count: 'exact' })
-
-      // Only filter by environment if not "all"
-      if (environmentFilter !== 'all') {
-        query = query.eq('environment', environmentFilter)
-      }
+        .select('*')
 
       if (search) {
         query = query.or(`key.ilike.%${search}%,description.ilike.%${search}%`)
       }
-      
+
       if (!showDeleted) {
         query = query.is('deleted_at', null)
       }
-      
-      query = query.order('environment', { ascending: true }).order('key', { ascending: true })
-      
-      const from = page * rowsPerPage
-      const to = from + rowsPerPage - 1
-      query = query.range(from, to)
-      
-      const { data, error, count } = await query
 
-      if (error) {
-        console.error('Error fetching feature flags:', error)
-        setError(error.message || 'Failed to load feature flags')
+      query = query.order('environment', { ascending: true }).order('key', { ascending: true })
+
+      const { data, error: fetchError } = await query
+
+      if (fetchError) {
+        console.error('Error fetching feature flags:', fetchError)
+        setError(fetchError.message || 'Failed to load feature flags')
         setFlags([])
         setTotalCount(0)
       } else {
-        // Map to AdminFeatureFlag type
-        const mappedFlags = (data || []).map((row: any) => ({
+        const rows = (data || []).map((row: any) => ({
           id: row.id,
           key: row.key,
           value_type: row.value_type,
           description: row.description,
           environment: row.environment,
           deleted_at: row.deleted_at,
-          version: row.version,
+          org_override_count: row.org_override_count ?? 0,
+          user_override_count: row.user_override_count ?? 0,
           created_at: row.created_at,
-          updated_at: row.updated_at,
-          default_value_boolean: row.default_value_boolean,
-          default_value_integer: row.default_value_integer,
-          default_value_double: row.default_value_double,
-          org_override_count: row.org_override_count,
-          user_override_count: row.user_override_count,
-        })) as AdminFeatureFlag[]
-        setFlags(mappedFlags)
-        setTotalCount(count || 0)
+        }))
+
+        const envOrder: FeatureFlagEnvironment[] = ['dev', 'staging', 'prod']
+        const byKey = new Map<string, typeof rows>()
+        for (const r of rows) {
+          if (!byKey.has(r.key)) byKey.set(r.key, [])
+          byKey.get(r.key)!.push(r)
+        }
+        const grouped: FeatureFlagListRow[] = []
+        byKey.forEach((envRows) => {
+          const sorted = envOrder
+            .map((env) => envRows.find((r) => r.environment === env))
+            .filter(Boolean) as typeof envRows
+          const rep = sorted[0]
+          const deleted = envRows.find((r) => r.deleted_at)
+          grouped.push({
+            id: rep.id,
+            key: rep.key,
+            value_type: rep.value_type,
+            description: rep.description,
+            deleted_at: deleted?.deleted_at ?? null,
+            org_override_count: envRows.reduce((s, r) => s + (r.org_override_count ?? 0), 0),
+            user_override_count: envRows.reduce((s, r) => s + (r.user_override_count ?? 0), 0),
+            created_at: rep.created_at,
+          })
+        })
+        grouped.sort((a, b) => a.key.localeCompare(b.key))
+        setFlags(grouped)
+        setTotalCount(grouped.length)
         setError(null)
       }
     } catch (err) {
@@ -135,7 +156,7 @@ export default function FeatureFlags() {
     } finally {
       setLoading(false)
     }
-  }, [page, rowsPerPage, search, environmentFilter, showDeleted])
+  }, [search, showDeleted])
   
   const fetchOverrides = useCallback(async () => {
     try {
@@ -186,26 +207,33 @@ export default function FeatureFlags() {
       setDialogError(null)
       
       try {
-        const { data, error } = await supabase.rpc('admin_create_feature_flag', {
-          p_key: newFlag.key.trim().toLowerCase(),
-          p_value_type: newFlag.value_type,
-          p_description: newFlag.description || null,
-          p_environment: newFlag.environment,
-        } as any)
-        
-        if (error) {
-          setDialogError(error.message)
-          return
+        const key = newFlag.key.trim().toLowerCase()
+        const valueType = newFlag.value_type
+        const description = newFlag.description || null
+        const environments: ('dev' | 'staging' | 'prod')[] = ['dev', 'staging', 'prod']
+
+        for (const p_environment of environments) {
+          const { data, error } = await supabase.rpc('admin_create_feature_flag', {
+            p_key: key,
+            p_value_type: valueType,
+            p_environment,
+            p_description: description ?? undefined,
+          })
+
+          if (error) {
+            setDialogError(error.message)
+            return
+          }
+
+          if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+            setDialogError((data as RpcResponse)?.error || 'Unknown error')
+            return
+          }
         }
-        
-        if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
-          setDialogError((data as RpcResponse)?.error || 'Unknown error')
-          return
-        }
-        
+
         setCreateDialog(false)
-        setNewFlag({ key: '', value_type: 'boolean', description: '', environment: getEnvironment() })
-        showSuccess('Feature flag created successfully')
+        setNewFlag({ key: '', value_type: 'boolean', description: '' })
+        showSuccess('Feature flag created successfully in all environments')
         await fetchFlags()
       } catch (err) {
         setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -249,54 +277,6 @@ export default function FeatureFlags() {
       } finally {
         setDialogLoading(false)
       }
-    }
-  }
-  
-  const handleSetPlatformDefault = async (reason: string) => {
-    if (!editDefaultDialog.flag) return
-    
-    const flag = editDefaultDialog.flag
-    const valueCount = (defaultValue.boolean !== undefined ? 1 : 0) + 
-                       (defaultValue.integer !== undefined ? 1 : 0) + 
-                       (defaultValue.double !== undefined ? 1 : 0)
-    
-    if (valueCount !== 1) {
-      setDialogError('Exactly one value must be provided')
-      return
-    }
-    
-    setDialogLoading(true)
-    setDialogError(null)
-    
-    try {
-      const { data, error } = await supabase.rpc('admin_set_platform_default', {
-        p_feature_flag_id: flag.id,
-        p_value_boolean: defaultValue.boolean ?? null,
-        p_value_integer: defaultValue.integer ?? null,
-        p_value_double: defaultValue.double ?? null,
-        p_environment: flag.environment,
-        p_reason: reason,
-        p_expected_version: flag.version,
-      } as any)
-      
-      if (error) {
-        setDialogError(error.message)
-        return
-      }
-      
-      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
-        setDialogError((data as RpcResponse)?.error || 'Unknown error')
-        return
-      }
-      
-      setEditDefaultDialog({ open: false, flag: null })
-      setDefaultValue({})
-      showSuccess('Platform default updated successfully')
-      fetchFlags()
-    } catch (err) {
-      setDialogError(err instanceof Error ? err.message : 'Unknown error')
-    } finally {
-      setDialogLoading(false)
     }
   }
   
@@ -466,31 +446,41 @@ export default function FeatureFlags() {
     }
   }
   
+  const fetchFlagRowsByKey = useCallback(async (flagKey: string) => {
+    const { data, error } = await supabase
+      .from('admin_feature_flags_list')
+      .select('id, environment, deleted_at')
+      .eq('key', flagKey)
+    if (error) throw error
+    return (data || []) as { id: string; environment: FeatureFlagEnvironment; deleted_at: string | null }[]
+  }, [])
+
   const handleDeleteFlag = async (reason: string) => {
     if (!deleteDialog.flag) return
-    
+
     setDialogLoading(true)
     setDialogError(null)
-    
+
     try {
-      const { data, error } = await supabase.rpc('admin_delete_feature_flag', {
-        p_feature_flag_id: deleteDialog.flag!.id,
-        p_environment: deleteDialog.flag!.environment,
-        p_reason: reason,
-      } as any)
-      
-      if (error) {
-        setDialogError(error.message)
-        return
+      const rows = await fetchFlagRowsByKey(deleteDialog.flag.key)
+      const toDelete = rows.filter((r) => !r.deleted_at)
+      for (const row of toDelete) {
+        const { data, error } = await supabase.rpc('admin_delete_feature_flag', {
+          p_feature_flag_id: row.id,
+          p_environment: row.environment,
+          p_reason: reason,
+        } as any)
+        if (error) {
+          setDialogError(error.message)
+          return
+        }
+        if (data && !(data as unknown as RpcResponse).success) {
+          setDialogError((data as unknown as RpcResponse).error || 'Unknown error')
+          return
+        }
       }
-      
-      if (data && !(data as unknown as RpcResponse).success) {
-        setDialogError((data as unknown as RpcResponse).error || 'Unknown error')
-        return
-      }
-      
       setDeleteDialog({ open: false, flag: null })
-      showSuccess('Feature flag deleted successfully')
+      showSuccess(toDelete.length > 1 ? 'Feature flag deleted in all environments.' : 'Feature flag deleted successfully.')
       fetchFlags()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -498,32 +488,33 @@ export default function FeatureFlags() {
       setDialogLoading(false)
     }
   }
-  
+
   const handleRestoreFlag = async (reason: string) => {
     if (!restoreDialog.flag) return
-    
+
     setDialogLoading(true)
     setDialogError(null)
-    
+
     try {
-      const { data, error } = await supabase.rpc('admin_restore_feature_flag', {
-        p_feature_flag_id: restoreDialog.flag!.id,
-        p_environment: restoreDialog.flag!.environment,
-        p_reason: reason,
-      } as any)
-      
-      if (error) {
-        setDialogError(error.message)
-        return
+      const rows = await fetchFlagRowsByKey(restoreDialog.flag.key)
+      const toRestore = rows.filter((r) => r.deleted_at)
+      for (const row of toRestore) {
+        const { data, error } = await supabase.rpc('admin_restore_feature_flag', {
+          p_feature_flag_id: row.id,
+          p_environment: row.environment,
+          p_reason: reason,
+        } as any)
+        if (error) {
+          setDialogError(error.message)
+          return
+        }
+        if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+          setDialogError((data as RpcResponse)?.error || 'Unknown error')
+          return
+        }
       }
-      
-      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
-        setDialogError((data as RpcResponse)?.error || 'Unknown error')
-        return
-      }
-      
       setRestoreDialog({ open: false, flag: null })
-      showSuccess('Feature flag restored successfully')
+      showSuccess(toRestore.length > 1 ? 'Feature flag restored in all environments.' : 'Feature flag restored successfully.')
       fetchFlags()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -532,49 +523,39 @@ export default function FeatureFlags() {
     }
   }
   
-  const getValueDisplay = (flag: AdminFeatureFlag): string => {
-    if (flag.value_type === 'boolean') {
-      return flag.default_value_boolean !== null ? String(flag.default_value_boolean) : 'Not set'
-    }
-    if (flag.value_type === 'integer') {
-      return flag.default_value_integer !== null ? String(flag.default_value_integer) : 'Not set'
-    }
-    if (flag.value_type === 'double') {
-      return flag.default_value_double !== null ? String(flag.default_value_double) : 'Not set'
-    }
-    return 'Not set'
-  }
-  
-  const flagColumns: ColumnConfig<AdminFeatureFlag>[] = [
+  const flagColumns: ColumnConfig<FeatureFlagListRow>[] = [
     {
       id: 'key',
       label: 'Key',
       sortable: true,
       render: (row) => (
-      <div>
-          <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
-            {row.key}
+        <div className="pa-ff-key-cell">
+          <div>
+            <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
+              {row.key}
             </div>
-          {row.description && (
-            <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginTop: '4px' }}>
-              {row.description}
+            {row.description && (
+              <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginTop: '4px' }}>
+                {row.description}
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            className="pa-ff-key-copy"
+            onClick={(e) => {
+              e.stopPropagation()
+              navigator.clipboard.writeText(row.key).then(
+                () => showSuccess('Copied to clipboard'),
+                () => {}
+              )
+            }}
+            title="Copy flag key"
+            aria-label="Copy flag key"
+          >
+            <span className="material-symbols-outlined">content_copy</span>
+          </button>
         </div>
-          )}
-      </div>
-      ),
-    },
-    {
-      id: 'environment',
-      label: 'Environment',
-      sortable: true,
-      render: (row) => (
-        <Badge variant={
-          row.environment === 'prod' ? 'danger' : 
-          row.environment === 'staging' ? 'warning' : 
-          'info'
-        }>
-          {row.environment.toUpperCase()}
-        </Badge>
       ),
     },
     {
@@ -587,9 +568,9 @@ export default function FeatureFlags() {
     {
       id: 'default_value',
       label: 'Platform Default',
-      render: (row) => (
-        <div className="pa-body-m" style={{ fontFamily: 'var(--pa-font-mono)' }}>
-          {getValueDisplay(row)}
+      render: () => (
+        <div className="pa-body-s" style={{ color: 'var(--pa-n500)' }}>
+          —
         </div>
       ),
     },
@@ -615,22 +596,6 @@ export default function FeatureFlags() {
       align: 'right',
       render: (row) => (
         <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-          <Button
-            variant="ghost"
-            size="small"
-            onClick={(e: React.MouseEvent) => {
-              e.stopPropagation()
-              setEditDefaultDialog({ open: true, flag: row })
-              setDefaultValue({
-                boolean: row.default_value_boolean ?? undefined,
-                integer: row.default_value_integer ?? undefined,
-                double: row.default_value_double ?? undefined,
-              })
-            }}
-            title="Edit default value"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
-          </Button>
           {row.deleted_at ? (
             <Button
               variant="ghost"
@@ -767,20 +732,9 @@ export default function FeatureFlags() {
       <FilterBar
         searchValue={search}
         onSearchChange={setSearch}
-          searchPlaceholder="Search by key or description..."
+        searchPlaceholder="Search by key or description..."
         onClearAll={() => setSearch('')}
       />
-        <Select
-          value={environmentFilter}
-          onChange={(e) => setEnvironmentFilter(e.target.value as FeatureFlagEnvironment | 'all')}
-          style={{ minWidth: '150px' }}
-          options={[
-            { value: 'all', label: 'All Environments' },
-            { value: 'dev', label: 'Dev' },
-            { value: 'staging', label: 'Staging' },
-            { value: 'prod', label: 'Production' },
-          ]}
-        />
         {activeTab === 'flags' && (
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
             <input
@@ -817,7 +771,7 @@ export default function FeatureFlags() {
               </div>
               <PlatformDataTable
                 columns={flagColumns}
-                rows={flags}
+                rows={flags.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)}
                 loading={loading}
                 emptyMessage="No feature flags found. Try adjusting your filters."
                 page={page}
@@ -854,7 +808,7 @@ export default function FeatureFlags() {
           onClick={() => {
             setCreateDialog(false)
             setFlagType('platform')
-            setNewFlag({ key: '', value_type: 'boolean', description: '', environment: getEnvironment() })
+            setNewFlag({ key: '', value_type: 'boolean', description: '' })
             setNewOrgFlag({ org_id: null, feature_key: '', enabled: false })
             setDialogError(null)
           }}
@@ -883,7 +837,7 @@ export default function FeatureFlags() {
             </div>
             <div style={{ padding: 'var(--pa-space-5)' }}>
               <p className="pa-body-m" style={{ margin: '0 0 var(--pa-space-4) 0', color: 'var(--pa-n700)' }}>
-                Create a new feature flag. The key must be unique within the environment and contain only lowercase letters, numbers, and underscores.
+                Create a new feature flag. The flag will be created in all environments (dev, staging, prod) with default values. The key must be unique and contain only lowercase letters, numbers, and underscores.
               </p>
               <div className="pa-form-group">
                 <label className="pa-label">Flag Type *</label>
@@ -976,19 +930,6 @@ export default function FeatureFlags() {
                       style={{ minHeight: '80px' }}
                     />
                   </div>
-                  <div className="pa-form-group">
-                    <label className="pa-label">Environment *</label>
-                    <Select
-                      value={newFlag.environment}
-                      onChange={(e) => setNewFlag({ ...newFlag, environment: e.target.value as FeatureFlagEnvironment })}
-                      disabled={dialogLoading}
-                      options={[
-                        { value: 'dev', label: 'Dev' },
-                        { value: 'staging', label: 'Staging' },
-                        { value: 'prod', label: 'Prod' },
-                      ]}
-                    />
-                  </div>
                 </>
               )}
               {flagType === 'org' && (
@@ -1035,7 +976,7 @@ export default function FeatureFlags() {
                 onClick={() => {
                   setCreateDialog(false)
                   setFlagType('platform')
-                  setNewFlag({ key: '', value_type: 'boolean', description: '', environment: getEnvironment() })
+                  setNewFlag({ key: '', value_type: 'boolean', description: '' })
                   setNewOrgFlag({ org_id: null, feature_key: '', enabled: false })
                   setDialogError(null)
                 }}
@@ -1055,85 +996,6 @@ export default function FeatureFlags() {
         </div>
       )}
       
-      {/* Edit Platform Default Dialog */}
-      {editDefaultDialog.open && editDefaultDialog.flag && (
-        <FormModal
-          open={editDefaultDialog.open}
-          title="Set Platform Default"
-          description={`Set the platform default value for "${editDefaultDialog.flag.key}"`}
-          confirmLabel="Set Default"
-          loading={dialogLoading}
-          error={dialogError}
-          onConfirm={handleSetPlatformDefault}
-          onCancel={() => {
-            setEditDefaultDialog({ open: false, flag: null })
-            setDefaultValue({})
-            setDialogError(null)
-          }}
-          requireReason
-        >
-          {editDefaultDialog.flag.value_type === 'boolean' && (
-            <div className="pa-form-group">
-              <label className="pa-label">Value *</label>
-              <Select
-                value={defaultValue.boolean !== undefined ? String(defaultValue.boolean) : ''}
-                onChange={(e) => setDefaultValue({ boolean: e.target.value === 'true' })}
-                disabled={dialogLoading}
-                options={[
-                  { value: '', label: 'Select...' },
-                  { value: 'true', label: 'True' },
-                  { value: 'false', label: 'False' },
-                ]}
-              />
-            </div>
-          )}
-          {editDefaultDialog.flag.value_type === 'integer' && (
-            <div className="pa-form-group">
-              <label className="pa-label">Value *</label>
-              <Input
-                type="number"
-                value={defaultValue.integer ?? ''}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10)
-                  if (!isNaN(val) && val >= -2147483648 && val <= 2147483647) {
-                    setDefaultValue({ integer: val })
-                  } else if (e.target.value === '') {
-                    setDefaultValue({ integer: undefined })
-                  }
-                }}
-                placeholder="Enter integer value"
-                disabled={dialogLoading}
-                min={-2147483648}
-                max={2147483647}
-              />
-              <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginTop: '4px' }}>
-                Range: -2,147,483,648 to 2,147,483,647
-              </div>
-            </div>
-          )}
-          {editDefaultDialog.flag.value_type === 'double' && (
-            <div className="pa-form-group">
-              <label className="pa-label">Value *</label>
-              <Input
-                type="number"
-                step="any"
-                value={defaultValue.double ?? ''}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value)
-                  if (!isNaN(val)) {
-                    setDefaultValue({ double: val })
-                  } else if (e.target.value === '') {
-                    setDefaultValue({ double: undefined })
-                  }
-                }}
-                placeholder="Enter double value"
-                disabled={dialogLoading}
-              />
-            </div>
-          )}
-        </FormModal>
-      )}
-
       {/* Org Override Dialog */}
       {orgOverrideDialog.open && orgOverrideDialog.flag && (
         <FormModal

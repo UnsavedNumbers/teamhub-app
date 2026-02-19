@@ -13,7 +13,7 @@ import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 interface ProtectedRouteProps {
   children: React.ReactNode
   // UX-only role checking - RLS handles actual authorization
-  allowedRoles?: ('parent' | 'coach' | 'admin' | 'org_admin')[]
+  allowedRoles?: ('parent' | 'coach' | 'admin' | 'org_admin' | 'athlete')[]
   // Optional: require specific organization (for org-scoped routes)
   requireOrganization?: boolean
 }
@@ -176,7 +176,7 @@ export function ProtectedRoute({
     const checkoutSuccessPath = getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS)
     const checkoutCancelPath = getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL)
     
-    const isPaywallAllowedRoute = 
+    const isPaywallAllowedRoute =
       location.pathname === trialExpiredPath ||
       location.pathname === billingPath ||
       location.pathname === checkoutSuccessPath ||

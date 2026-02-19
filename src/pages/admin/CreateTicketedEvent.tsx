@@ -10,17 +10,26 @@ import { useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { AdminPageHeader, Card, Button, Input } from '@/components/admin'
 import { FileUpload } from '@/components/common/FileUpload'
-import { useRouteLink } from '@/utils/routes'
+import { getLink } from '@/utils/routes'
 import type { TicketedEventType, TicketedEventStatus } from '@/types/ticketing'
 import { uploadTicketBanner } from '@/data/services/organizationService'
 import '../../styles/orgAdmin.css'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function CreateTicketedEvent() {
+  useDebugLifecycle('CreateTicketedEvent')
+  
   const navigate = useNavigate()
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     event_type: 'other' as TicketedEventType,
+    sport_id: '',
+    program_id: '',
+    season_id: '',
+    team_id: '',
     starts_at: '',
     ends_at: '',
     timezone: 'America/New_York',
@@ -63,7 +72,7 @@ export default function CreateTicketedEvent() {
           sales_start_at: formData.sales_start_at || null,
           sales_end_at: formData.sales_end_at || null,
         } as any)
-        .select('id')
+        .select('id,event_id')
         .single()
 
       if (error) throw error
@@ -78,7 +87,11 @@ export default function CreateTicketedEvent() {
       return data
     },
     onSuccess: (data) => {
-      navigate(useRouteLink('admin.ticketingEvents.detail', { id: data.id }))
+      if (data.event_id) {
+        navigate(`${getLink('admin.events.detail', { id: data.event_id })}?view=ticketing`)
+      } else {
+        navigate(getLink('admin.ticketingEvents.list'))
+      }
     },
   })
 
@@ -92,8 +105,8 @@ export default function CreateTicketedEvent() {
       <AdminPageHeader
         title="Create Ticketed Event"
         breadcrumbs={[
-          { label: 'Admin', path: '/admin/dashboard' },
-          { label: 'Ticketing', path: '/admin/ticketing/events' },
+          { label: 'Admin', path: getLink('admin.dashboard') },
+          { label: 'Ticketing', path: getLink('admin.ticketingEvents.list') },
           { label: 'Create Event' }
         ]}
       />

@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+import { debug } from '../../lib/debug'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getTeams } from '../../data/services/teamsService'
 import { supabase } from '../../lib/supabase'
@@ -25,6 +27,9 @@ interface EventFormProps {
 export default function EventForm({ initialValues, onSubmit, loading: parentLoading, error: parentError, mode }: EventFormProps) {
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+
+  // Add lifecycle logging
+  useDebugLifecycle('EventForm', { mode, initialValues })
   
   const [sports, setSports] = useState<{ id: string; name: string }[]>([])
   const [programs, setPrograms] = useState<{ id: string; name: string; sport_id: string }[]>([])
@@ -79,6 +84,7 @@ export default function EventForm({ initialValues, onSubmit, loading: parentLoad
       sales_start_at: '',
       sales_end_at: '',
       status: 'draft',
+      internal_description: '',
       event_description: '',
       ticket_banner_url: '',
       ticket_types: []
@@ -95,6 +101,13 @@ export default function EventForm({ initialValues, onSubmit, loading: parentLoad
   const watchSportId = watch('sport_id')
   const watchProgramId = watch('program_id')
   const watchSeasonId = watch('season_id')
+
+  // Log validation errors
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      debug.data('EventForm', 'Validation errors', { errors: Object.keys(errors), mode })
+    }
+  }, [errors, mode])
 
   // Data fetching logic similar to admin/CreateEvent.tsx
   const fetchSports = useCallback(async () => {
@@ -267,9 +280,9 @@ export default function EventForm({ initialValues, onSubmit, loading: parentLoad
 
           <div className="md:col-span-2">
             <label className={labelClass}>Team</label>
-            <Controller name="team_id" control={control} rules={{ required: 'Required' }} render={({ field }) => (
+            <Controller name="team_id" control={control} render={({ field }) => (
                <select {...field} className={inputClass} disabled={!watchSeasonId}>
-                 <option value="">Select Team</option>
+                 <option value="">Select Team (Optional)</option>
                  {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                </select>
              )} />

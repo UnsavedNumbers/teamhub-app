@@ -157,7 +157,6 @@ async function handleEventsList(orgId: string, url: URL, client: any) {
   if (seasonIds.length > 0) query = query.in("season_id", seasonIds)
   if (venueIds.length > 0) query = query.in("venue_id", venueIds)
   if (status) query = query.eq("status", status)
-  if (search) query = query.textSearch("search_vector", search, { type: "websearch", config: "english" })
   if (dateFrom) query = query.gte("starts_at", dateFrom.toISOString())
   if (dateTo) query = query.lte("starts_at", dateTo.toISOString())
 
@@ -194,26 +193,66 @@ async function handleEventsList(orgId: string, url: URL, client: any) {
         ? Math.min(100, Math.round((ticketsSold / row.capacityTotal) * 100))
         : null
 
+    // Fallbacks when program/season/venue embeds are null (e.g. program_id/season_id/venue_id not set)
+    const programs = row.programs ?? (row.program_name_cached ? { name: row.program_name_cached } : null)
+    const seasons = row.seasons ?? (row.season_name_cached ? { name: row.season_name_cached } : null)
+    const venues =
+      row.venues ?? (row.venue_name ? { name: row.venue_name, city: row.venue_city, state: row.venue_state } : null)
+
     return {
       ...row,
+      programs,
+      seasons,
+      venues,
       sale_status,
       tickets_sold: ticketsSold,
       revenue_cents: orderMetrics.revenueCents,
       ticket_progress_pct: ticketProgress,
+      capacity_total: row.capacityTotal ?? null,
+      capacity_remaining: row.capacityRemaining ?? null,
     }
   })
 
+  const searchTerms = search
+    ? search
+      .toLowerCase()
+      .split(/\s+/)
+      .map((term) => term.trim())
+      .filter(Boolean)
+    : []
+
+  const searchFiltered =
+    searchTerms.length === 0
+      ? hydrated
+      : hydrated.filter((e) => {
+        const searchableBlob = [
+          e.title,
+          e.description,
+          e.opponent,
+          e.venue_name,
+          e.venue_city,
+          e.venue_state,
+          e.programs?.name ?? e.program_name_cached,
+          e.seasons?.name ?? e.season_name_cached,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+
+        return searchTerms.every((term) => searchableBlob.includes(term))
+      })
+
   // Apply sale_status filter after computation
   const filtered = saleStatusFilter
-    ? hydrated.filter((e) => e.sale_status === saleStatusFilter)
-    : hydrated
+    ? searchFiltered.filter((e) => e.sale_status === saleStatusFilter)
+    : searchFiltered
 
   // Aggregations
   const countsByStatus: Record<string, number> = {}
   const countsByProgram: Record<string, number> = {}
   for (const e of filtered) {
     countsByStatus[e.status] = (countsByStatus[e.status] || 0) + 1
-    const programLabel = e.programs?.name || "Unassigned"
+    const programLabel = e.programs?.name ?? e.program_name_cached ?? "Unassigned"
     countsByProgram[programLabel] = (countsByProgram[programLabel] || 0) + 1
   }
 
@@ -629,8 +668,11 @@ serve(async (req) => {
       }
 
       if (req.method === "DELETE" && targetId) {
-        const result = await handleEventsDelete(orgId, targetId, client)
-        return json(result, 204)
+        await handleEventsDelete(orgId, targetId, client)
+        return new Response('{"deleted":true}', {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
       }
     }
 

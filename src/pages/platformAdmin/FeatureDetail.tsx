@@ -13,7 +13,11 @@ import { useI18n } from '../../i18n/useI18n'
 const FEATURE_CATEGORIES_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
 const FEATURE_TYPES_OPTIONS = FEATURE_TYPES.map(type => ({ value: type, label: type }))
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FeatureDetail() {
+  useDebugLifecycle('FeatureDetail')
+  
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const isNew = id === 'new'

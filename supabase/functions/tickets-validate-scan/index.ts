@@ -41,6 +41,26 @@ function normalizeEntryCode(code: string): string {
   return code.toUpperCase().replace(/[^A-Z0-9]/g, "")
 }
 
+function buildEntryCodeCandidates(code: string): string[] {
+  const rawUpper = code.toUpperCase().trim()
+  const normalized = normalizeEntryCode(code)
+  const candidates = new Set<string>()
+
+  if (rawUpper) candidates.add(rawUpper)
+  if (normalized) candidates.add(normalized)
+
+  if (normalized.length >= 8) {
+    const dashed8 = `${normalized.slice(0, 4)}-${normalized.slice(4, 8)}`
+    candidates.add(dashed8)
+  }
+  if (normalized.length >= 12) {
+    const dashed12 = `${normalized.slice(0, 4)}-${normalized.slice(4, 8)}-${normalized.slice(8, 12)}`
+    candidates.add(dashed12)
+  }
+
+  return Array.from(candidates)
+}
+
 serve(async (req) => {
   // Preflight
   if (req.method === "OPTIONS") {
@@ -58,9 +78,7 @@ serve(async (req) => {
     return json(req, { error: "Server misconfigured" }, 500)
   }
 
-  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
-    global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
-  })
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
   // Parse payload
   let payload: any
@@ -71,12 +89,12 @@ serve(async (req) => {
   }
 
   const ticketedEventId = payload?.ticketed_event_id as string | undefined
-  const selectedEventId = payload?.selected_event_id as string | undefined // For event mismatch detection
   const qrTokenRaw = payload?.qr_token_raw as string | undefined
   const entryCode = payload?.entry_code as string | undefined
   const clientDeviceId = payload?.client_device_id as string | undefined
   const forceValidate = payload?.force_validate as boolean | undefined // Skip event check
   const crossEventAdmission = payload?.cross_event_admission as boolean | undefined // Log cross-event
+  let qrTokenHash: string | null = null
 
   if (!ticketedEventId) {
     return json(req, { error: "Missing ticketed_event_id" }, 400)
@@ -92,13 +110,13 @@ serve(async (req) => {
 
   let scannerUserId: string | null = null
   let orgId: string | null = null
-  let authorizedEventId: string | null = null
 
   if (authHeader && authHeader.startsWith("Bearer ")) {
     // Logged-in user
+    const accessToken = authHeader.replace("Bearer ", "")
     const {
       data: { user },
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser(accessToken)
 
     if (!user) {
       return json(req, { error: "Unauthorized" }, 401)
@@ -179,7 +197,6 @@ serve(async (req) => {
     }
 
     orgId = staffLink.org_id
-    authorizedEventId = staffLink.ticketed_event_id
 
     // Increment use count
     await supabase
@@ -209,47 +226,63 @@ serve(async (req) => {
   let ticket: any = null
 
   if (entryCode) {
-    const normalized = normalizeEntryCode(entryCode)
-    // For manual entry, require event match for scoping (unless force_validate)
-    let query = supabase
+    const entryCandidates = buildEntryCodeCandidates(entryCode)
+    const query = supabase
       .from("tickets")
       .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
-      .eq("entry_code", normalized)
-    
-    // Scope to event if provided and not forcing
-    if (ticketedEventId && !forceValidate) {
-      query = query.eq("ticketed_event_id", ticketedEventId)
-    }
-    
-    const { data } = await query.single()
-    ticket = data
+      .eq("org_id", orgId!)
+      .in("entry_code", entryCandidates)
+
+    const { data } = await query.limit(10)
+    const matchedTicket = (data ?? []).find((row) => row.ticketed_event_id === ticketedEventId) ?? (data ?? [])[0] ?? null
+    ticket = matchedTicket
   } else if (qrTokenRaw) {
+    const qrPayload = qrTokenRaw.trim()
+    const normalizedFromQr = normalizeEntryCode(qrPayload)
+    const looksLikeEntryCode = normalizedFromQr.length >= 6 && normalizedFromQr.length <= 16 && normalizedFromQr === normalizedFromQr.replace(/[^A-Z0-9]/g, "")
+
+    if (looksLikeEntryCode) {
+      const entryCandidates = buildEntryCodeCandidates(qrPayload)
+      const { data: entryCodeMatches } = await supabase
+        .from("tickets")
+        .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
+        .eq("org_id", orgId!)
+        .in("entry_code", entryCandidates)
+        .limit(10)
+
+      const entryCodeMatch = (entryCodeMatches ?? []).find((row) => row.ticketed_event_id === ticketedEventId) ?? (entryCodeMatches ?? [])[0] ?? null
+
+      if (entryCodeMatch) {
+        ticket = entryCodeMatch
+      }
+    }
+
+    if (!ticket) {
     // First try to find by qr_token_hash
-    const qrTokenHash = await hashToken(qrTokenRaw)
+    qrTokenHash = await hashToken(qrPayload)
     const { data: tokenMatch } = await supabase
       .from("tickets")
       .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
+      .eq("org_id", orgId!)
       .eq("qr_token_hash", qrTokenHash)
-      .single()
+      .maybeSingle()
     
     if (tokenMatch) {
       ticket = tokenMatch
     } else {
       // QR code might contain entry_code instead of qr_token (common for displayed QR codes)
       // Normalize and try entry_code lookup
-      const normalizedFromQr = normalizeEntryCode(qrTokenRaw)
-      let query = supabase
+      const entryCandidates = buildEntryCodeCandidates(qrPayload)
+      const query = supabase
         .from("tickets")
         .select("id, org_id, ticketed_event_id, order_id, ticket_type_id, status, used_at, used_by_user_id")
-        .eq("entry_code", normalizedFromQr)
-      
-      // Scope to event if provided and not forcing
-      if (ticketedEventId && !forceValidate) {
-        query = query.eq("ticketed_event_id", ticketedEventId)
-      }
-      
-      const { data: entryCodeMatch } = await query.single()
+        .eq("org_id", orgId!)
+        .in("entry_code", entryCandidates)
+
+      const { data: entryCodeMatches } = await query.limit(10)
+      const entryCodeMatch = (entryCodeMatches ?? []).find((row) => row.ticketed_event_id === ticketedEventId) ?? (entryCodeMatches ?? [])[0] ?? null
       ticket = entryCodeMatch
+    }
     }
   }
 
@@ -545,13 +578,39 @@ serve(async (req) => {
     .eq("id", ticket.order_id)
     .single()
 
+  const { data: seatAssignment } = await supabase
+    .from("seat_assignments")
+    .select(`
+      seat_map_sections (
+        section_name,
+        row_identifier,
+        seat_identifier,
+        seat_attributes
+      )
+    `)
+    .eq("ticket_id", ticket.id)
+    .maybeSingle()
+
+  const seatSection = (seatAssignment as any)?.seat_map_sections?.section_name ?? null
+  const seatRow = (seatAssignment as any)?.seat_map_sections?.row_identifier ?? null
+  const seatNumber = (seatAssignment as any)?.seat_map_sections?.seat_identifier ?? null
+  const seatAttributes = (seatAssignment as any)?.seat_map_sections?.seat_attributes ?? null
+  const seatDisplay = seatSection && seatRow && seatNumber
+    ? `Section ${seatSection}, Row ${seatRow}, Seat ${seatNumber}`
+    : null
+
   return json(req, {
     result: "valid",
     ticket_type_name: ticketType?.name || null,
-    event_confirmation: `Valid for ${ticketedEventId}`,
+    event_confirmation: seatDisplay ? `Valid Entry - ${seatDisplay}` : `Valid for ${ticketedEventId}`,
     validated_count: validatedCount || 0,
     remaining_capacity: ticketTypeData?.capacity_remaining ?? null,
     order_context: orderContext,
     purchaser_name: order?.purchaser_name || null,
+    seat_section: seatSection,
+    seat_row: seatRow,
+    seat_number: seatNumber,
+    seat_attributes: seatAttributes,
+    seat_display: seatDisplay,
   })
 })

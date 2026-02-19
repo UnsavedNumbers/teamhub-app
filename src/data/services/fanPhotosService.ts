@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import { getGalleriesForUser, getGalleryById, getPhotosForGallery, type Gallery, type GalleryPhoto, type GetPhotosParams, type KeysetCursor } from './galleryService'
 import type { UserContext } from '../fake/userContext'
 
@@ -34,6 +35,9 @@ export async function getFanGalleries(
         order_direction?: 'asc' | 'desc'
     }
 ): Promise<{ data: FanGallery[]; grouped: FanGalleryGroup[]; error: Error | null }> {
+    debug.data('FanPhotosService.getFanGalleries', 'Request', { options })
+    debug.perf.start('fanPhotosService.getFanGalleries')
+
     try {
         const { data: userData, error: userError } = await supabase.auth.getUser()
         if (userError || !userData.user) {
@@ -104,12 +108,16 @@ export async function getFanGalleries(
         })
         grouped.push(...Array.from(groupMap.values()))
 
+        debug.perf.end('fanPhotosService.getFanGalleries')
+        debug.data('FanPhotosService.getFanGalleries', 'Response', { galleryCount: fanGalleries.length, groupCount: grouped.length })
         return {
             data: fanGalleries,
             grouped,
             error: null,
         }
     } catch (err) {
+        debug.perf.end('fanPhotosService.getFanGalleries')
+        debug.error('FanPhotosService.getFanGalleries', 'Failed to get fan galleries', { error: err })
         return {
             data: [],
             grouped: [],
@@ -142,17 +150,23 @@ export async function getFanGallery(
         // Check fan visibility
         const fanGallery = gallery as any
         if (!fanGallery || fanGallery.fans_can_see !== true) {
+            debug.perf.end('fanPhotosService.getFanGallery')
+            debug.error('FanPhotosService.getFanGallery', 'Gallery not accessible to fans', { galleryId })
             return {
                 data: null,
                 error: new Error('Gallery not found or not accessible'),
             }
         }
 
+        debug.perf.end('fanPhotosService.getFanGallery')
+        debug.data('FanPhotosService.getFanGallery', 'Response', { galleryId, galleryName: fanGallery.name })
         return {
             data: fanGallery as FanGallery,
             error: null,
         }
     } catch (err) {
+        debug.perf.end('fanPhotosService.getFanGallery')
+        debug.error('FanPhotosService.getFanGallery', 'Failed to get gallery', { error: err, galleryId })
         return {
             data: null,
             error: err instanceof Error ? err : new Error('Failed to get gallery'),
@@ -172,6 +186,8 @@ export async function getFanGalleryPhotos(
         const { data: gallery, error: galleryError } = await getFanGallery(galleryId)
 
         if (galleryError || !gallery) {
+            debug.perf.end('fanPhotosService.getFanGalleryPhotos')
+            debug.error('FanPhotosService.getFanGalleryPhotos', 'Gallery not accessible', { error: galleryError, galleryId })
             return {
                 data: [],
                 error: galleryError || new Error('Gallery not accessible'),
@@ -216,6 +232,9 @@ export async function getFanGalleryPhotos(
 export async function getFanAthleteGalleries(
     athleteId: string
 ): Promise<{ data: FanGallery[]; error: Error | null }> {
+    debug.data('FanPhotosService.getFanAthleteGalleries', 'Request', { athleteId })
+    debug.perf.start('fanPhotosService.getFanAthleteGalleries')
+
     try {
         const context: UserContext = {
             userId: '',
@@ -239,11 +258,15 @@ export async function getFanAthleteGalleries(
             (gallery: any) => gallery.fans_can_see === true
         ) as FanGallery[]
 
+        debug.perf.end('fanPhotosService.getFanAthleteGalleries')
+        debug.data('FanPhotosService.getFanAthleteGalleries', 'Response', { athleteId, galleryCount: fanGalleries.length })
         return {
             data: fanGalleries,
             error: null,
         }
     } catch (err) {
+        debug.perf.end('fanPhotosService.getFanAthleteGalleries')
+        debug.error('FanPhotosService.getFanAthleteGalleries', 'Failed to get athlete galleries', { error: err, athleteId })
         return {
             data: [],
             error: err instanceof Error ? err : new Error('Failed to get athlete galleries'),

@@ -20,6 +20,7 @@ import {
   shouldShowUpgradePrompt,
 } from '@/lib/featureGate';
 import { getLink, RouteKeys } from '@/utils/routes';
+import { USE_FAKE_DATA } from '@/data/config';
 
 /** sessionStorage key for redirect-loop detection */
 const REDIRECT_COUNTER_KEY = '__fg_redirect_count';
@@ -110,6 +111,12 @@ export function FeatureGateRoute({
 
   // Access granted — clear the redirect counter so future loops start fresh
   if (allowed) {
+    clearRedirectCounter();
+    return <>{children}</>;
+  }
+
+  // In fake data mode, allow portal payments without an organization so demo shows the payments page
+  if (USE_FAKE_DATA && reason_code === 'no_organization' && (routeKey === 'portal.payments' || routeKey === 'portal.payments.detail')) {
     clearRedirectCounter();
     return <>{children}</>;
   }

@@ -1,6 +1,8 @@
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
 import type { NotificationAction } from '../../types/notifications'
+import { notifyUsers } from './notificationServiceCore'
 
 const supabaseAny = supabase as any
 
@@ -14,10 +16,17 @@ interface AthleteTeamNotificationInput {
 }
 
 export async function distributeAthleteAddedNotifications(input: AthleteTeamNotificationInput): Promise<void> {
-    if (USE_FAKE_DATA) return
+    debug.flow('AthleteNotifications.distributeAthleteAddedNotifications', 'Distributing notifications', { athleteId: input.athlete_id, teamId: input.team_id, orgId: input.org_id })
+    debug.perf.start('athleteNotifications.distributeAthleteAddedNotifications')
+
+    if (USE_FAKE_DATA) {
+        debug.perf.end('athleteNotifications.distributeAthleteAddedNotifications')
+        return
+    }
 
     try {
-        const recipients = new Set<string>()
+        const guardianUserIds: string[] = []
+        const coachUserIds: string[] = []
 
         // Get guardians of the athlete
         const { data: athlete, error: athleteError } = await supabase
@@ -29,17 +38,13 @@ export async function distributeAthleteAddedNotifications(input: AthleteTeamNoti
         if (!athleteError && athlete?.family_id) {
             const { data: users, error: userError } = await supabase
                 .from('users')
-                .select('id, preferences')
+                .select('id')
                 .eq('family_id', athlete.family_id)
 
             if (!userError && users) {
                 users.forEach(u => {
-                    const prefs = u.preferences as any
-                    const notifications = prefs?.notifications
-                    const isEnabled = notifications?.registration_activity !== false
-
-                    if (isEnabled) {
-                        recipients.add(u.id)
+                    if (u.id !== input.action_by_user_id) {
+                        guardianUserIds.push(u.id)
                     }
                 })
             }
@@ -52,39 +57,67 @@ export async function distributeAthleteAddedNotifications(input: AthleteTeamNoti
             .eq('team_id', input.team_id)
 
         if (!coachError && coaches) {
-            coaches.forEach((c: any) => recipients.add(c.user_id))
+            coaches.forEach((c: any) => {
+                if (c.user_id !== input.action_by_user_id) {
+                    coachUserIds.push(c.user_id)
+                }
+            })
         }
 
-        recipients.delete(input.action_by_user_id)
-
-        if (recipients.size === 0) return
-
         const action: NotificationAction = 'athlete_added_to_team'
+        let totalInAppCount = 0
 
-        const notificationsToInsert = Array.from(recipients).map(userId => ({
-            user_id: userId,
-            org_id: input.org_id,
-            team_id: input.team_id,
-            action: action,
-            title: `Athlete Added to Team`,
-            body: `${input.athlete_name} has been added to ${input.team_name}`,
-            link_url: `/athletes/${input.athlete_id}`,
-            role_context: 'guardian',
-            entity_type: 'athlete',
-            entity_id: input.athlete_id,
-            created_at: new Date().toISOString(),
-            metadata: {
-                team_name: input.team_name
+        // Notify guardians
+        if (guardianUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: guardianUserIds,
+                orgId: input.org_id,
+                teamId: input.team_id,
+                action,
+                roleContext: 'guardian',
+                title: `Athlete Added to Team`,
+                body: `${input.athlete_name} has been added to ${input.team_name}`,
+                linkUrl: `/admin/athletes/${input.athlete_id}`,
+                entityType: 'athlete',
+                entityId: input.athlete_id,
+                metadata: {
+                    team_name: input.team_name
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
             }
-        }))
+        }
 
-        const { error: insertError } = await supabaseAny
-            .from('user_notifications')
-            .insert(notificationsToInsert as any)
+        // Notify coaches
+        if (coachUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: coachUserIds,
+                orgId: input.org_id,
+                teamId: input.team_id,
+                action,
+                roleContext: 'coach',
+                title: `Athlete Added to Team`,
+                body: `${input.athlete_name} has been added to ${input.team_name}`,
+                linkUrl: `/admin/athletes/${input.athlete_id}`,
+                entityType: 'athlete',
+                entityId: input.athlete_id,
+                metadata: {
+                    team_name: input.team_name
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
 
-        if (insertError) throw insertError
-
-        console.log(`[NotificationService] Distributed ${notificationsToInsert.length} athlete-added notifications`)
+        debug.perf.end('athleteNotifications.distributeAthleteAddedNotifications')
+        debug.flow('AthleteNotifications.distributeAthleteAddedNotifications', 'Notifications distributed', {
+            athleteId: input.athlete_id,
+            teamId: input.team_id,
+            count: totalInAppCount,
+        })
+        console.log(`[NotificationService] Distributed ${totalInAppCount} athlete-added notifications`)
 
     } catch (err) {
         console.error('[NotificationService] Error distributing athlete-added notifications:', err)
@@ -92,10 +125,21 @@ export async function distributeAthleteAddedNotifications(input: AthleteTeamNoti
 }
 
 export async function distributeAthleteRemovedNotifications(input: AthleteTeamNotificationInput): Promise<void> {
-    if (USE_FAKE_DATA) return
+    debug.flow('AthleteNotifications.distributeAthleteRemovedNotifications', 'Distributing notifications', {
+        athleteId: input.athlete_id,
+        teamId: input.team_id,
+        orgId: input.org_id,
+    })
+    debug.perf.start('athleteNotifications.distributeAthleteRemovedNotifications')
+
+    if (USE_FAKE_DATA) {
+        debug.perf.end('athleteNotifications.distributeAthleteRemovedNotifications')
+        return
+    }
 
     try {
-        const recipients = new Set<string>()
+        const guardianUserIds: string[] = []
+        const coachUserIds: string[] = []
 
         const { data: athlete, error: athleteError } = await supabase
             .from('athletes')
@@ -106,17 +150,13 @@ export async function distributeAthleteRemovedNotifications(input: AthleteTeamNo
         if (!athleteError && athlete?.family_id) {
             const { data: users, error: userError } = await supabase
                 .from('users')
-                .select('id, preferences')
+                .select('id')
                 .eq('family_id', athlete.family_id)
 
             if (!userError && users) {
                 users.forEach(u => {
-                    const prefs = u.preferences as any
-                    const notifications = prefs?.notifications
-                    const isEnabled = notifications?.registration_activity !== false
-
-                    if (isEnabled) {
-                        recipients.add(u.id)
+                    if (u.id !== input.action_by_user_id) {
+                        guardianUserIds.push(u.id)
                     }
                 })
             }
@@ -128,41 +168,71 @@ export async function distributeAthleteRemovedNotifications(input: AthleteTeamNo
             .eq('team_id', input.team_id)
 
         if (!coachError && coaches) {
-            coaches.forEach((c: any) => recipients.add(c.user_id))
+            coaches.forEach((c: any) => {
+                if (c.user_id !== input.action_by_user_id) {
+                    coachUserIds.push(c.user_id)
+                }
+            })
         }
 
-        recipients.delete(input.action_by_user_id)
-
-        if (recipients.size === 0) return
-
         const action: NotificationAction = 'athlete_removed_from_team'
+        let totalInAppCount = 0
 
-        const notificationsToInsert = Array.from(recipients).map(userId => ({
-            user_id: userId,
-            org_id: input.org_id,
-            team_id: input.team_id,
-            action: action,
-            title: `Athlete Removed from Team`,
-            body: `${input.athlete_name} has been removed from ${input.team_name}`,
-            link_url: `/athletes/${input.athlete_id}`,
-            role_context: 'guardian',
-            entity_type: 'athlete',
-            entity_id: input.athlete_id,
-            created_at: new Date().toISOString(),
-            metadata: {
-                team_name: input.team_name
+        // Notify guardians
+        if (guardianUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: guardianUserIds,
+                orgId: input.org_id,
+                teamId: input.team_id,
+                action,
+                roleContext: 'guardian',
+                title: `Athlete Removed from Team`,
+                body: `${input.athlete_name} has been removed from ${input.team_name}`,
+                linkUrl: `/admin/athletes/${input.athlete_id}`,
+                entityType: 'athlete',
+                entityId: input.athlete_id,
+                metadata: {
+                    team_name: input.team_name
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
             }
-        }))
+        }
 
-        const { error: insertError } = await supabaseAny
-            .from('user_notifications')
-            .insert(notificationsToInsert as any)
+        // Notify coaches
+        if (coachUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: coachUserIds,
+                orgId: input.org_id,
+                teamId: input.team_id,
+                action,
+                roleContext: 'coach',
+                title: `Athlete Removed from Team`,
+                body: `${input.athlete_name} has been removed from ${input.team_name}`,
+                linkUrl: `/admin/athletes/${input.athlete_id}`,
+                entityType: 'athlete',
+                entityId: input.athlete_id,
+                metadata: {
+                    team_name: input.team_name
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
 
-        if (insertError) throw insertError
-
-        console.log(`[NotificationService] Distributed ${notificationsToInsert.length} athlete-removed notifications`)
+        debug.perf.end('athleteNotifications.distributeAthleteRemovedNotifications')
+        debug.flow('AthleteNotifications.distributeAthleteRemovedNotifications', 'Notifications distributed', {
+            athleteId: input.athlete_id,
+            teamId: input.team_id,
+            count: totalInAppCount,
+        })
+        console.log(`[NotificationService] Distributed ${totalInAppCount} athlete-removed notifications`)
 
     } catch (err) {
+        debug.perf.end('athleteNotifications.distributeAthleteRemovedNotifications')
+        debug.error('AthleteNotifications.distributeAthleteRemovedNotifications', 'Failed to distribute notifications', { error: err, athleteId: input.athlete_id, teamId: input.team_id })
         console.error('[NotificationService] Error distributing athlete-removed notifications:', err)
     }
 }

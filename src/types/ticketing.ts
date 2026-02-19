@@ -4,13 +4,115 @@
  * TypeScript types for the ticketing system (events, tickets, orders, validation)
  */
 
-export type TicketedEventType = 'game' | 'tournament' | 'concert' | 'fundraiser' | 'other'
+export type TicketedEventType = 'game' | 'tournament' | 'concert' | 'fundraiser' | 'travel' | 'social_event' | 'other'
 export type TicketedEventStatus = 'draft' | 'published' | 'cancelled' | 'completed'
+export type TicketedEventVisibility = 'visible' | 'hidden'
 export type TicketOrderStatus = 'pending_payment' | 'paid' | 'refunded' | 'cancelled'
 export type TicketStatus = 'active' | 'used' | 'refunded' | 'voided'
 export type TicketScanResult = 'valid' | 'already_used' | 'invalid' | 'wrong_event' | 'refunded' | 'voided' | 'not_found'
 export type ScanMethod = 'qr' | 'manual'
 export type TicketSaleStatus = 'off' | 'scheduled' | 'on_sale' | 'ended' | 'sold_out'
+export type TicketSeatingMode = 'general_admission' | 'reserved_seating'
+
+export interface SeatAttributes {
+  accessible?: boolean
+  obstructed_view?: boolean
+  companion_required?: boolean
+  vip?: boolean
+  [key: string]: unknown
+}
+
+export interface SeatMap {
+  id: string
+  org_id: string
+  venue_id: string | null
+  team_id: string | null
+  ticketed_event_id: string | null  // legacy, nullable after migration
+  name: string
+  chart_image_url: string | null
+  metadata: Record<string, unknown>
+  status: 'draft' | 'published'
+  version: number
+  published_at: string | null
+  published_snapshot_id: string | null
+  created_at: string
+  updated_at: string
+  // Joined relations (optional)
+  venue?: Venue | null
+  team?: { id: string; name: string } | null
+  usage_count?: number
+}
+
+export interface SeatMapSnapshot {
+  id: string
+  seat_map_id: string
+  version: number
+  name: string
+  chart_image_url: string | null
+  metadata: Record<string, unknown>
+  sections_data: unknown[]
+  section_count: number
+  published_at: string
+  created_at: string
+}
+
+export interface SeatMapSection {
+  id: string
+  seat_map_id: string
+  section_name: string
+  row_identifier: string
+  seat_identifier: string
+  position_metadata: Record<string, unknown>
+  seat_attributes: SeatAttributes
+  is_available: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface SeatMapWithSections extends SeatMap {
+  sections: SeatMapSection[]
+}
+
+export interface SeatAssignment {
+  id: string
+  ticket_id: string
+  seat_map_section_id: string
+  assigned_at: string
+}
+
+export interface SeatHold {
+  id: string
+  seat_map_section_id: string
+  order_id: string
+  expires_at: string
+  created_at: string
+}
+
+export interface SeatSelection {
+  seat_map_section_id: string
+  section: string
+  row: string
+  seat: string
+}
+
+export interface SeatAvailability {
+  available: boolean
+  attributes: SeatAttributes
+  section: string
+  row: string
+  seat: string
+}
+
+export type SeatAvailabilityMap = Record<string, SeatAvailability>
+
+export interface BulkSeatConfig {
+  section_name: string
+  row_start: number
+  row_end: number
+  seat_start: number
+  seat_end: number
+  seat_attributes?: SeatAttributes
+}
 
 export interface TicketingProgram {
   id: string
@@ -33,15 +135,31 @@ export interface TicketingSeason {
   is_active?: boolean | null
 }
 
-export interface TicketingVenue {
+export interface Venue {
   id: string
   org_id: string
   name: string
+  google_place_id?: string | null
   address?: string | null
+  address_line1?: string | null
+  address_line2?: string | null
   city?: string | null
   state?: string | null
+  postal_code?: string | null
+  country?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  maps_url?: string | null
+  is_virtual?: boolean
+  virtual_link?: string | null
   capacity?: number | null
+  default_seat_map_id?: string | null
+  created_at?: string
+  updated_at?: string
 }
+
+/** @deprecated Use Venue instead */
+export type TicketingVenue = Venue
 
 export interface TicketedEvent {
   id: string
@@ -83,6 +201,7 @@ export interface TicketedEvent {
 
   // Status
   status: TicketedEventStatus
+  visibility?: TicketedEventVisibility | null
   sale_status?: TicketSaleStatus
 
   created_at: string
@@ -91,7 +210,7 @@ export interface TicketedEvent {
   // Relations (optional)
   program?: TicketingProgram | null
   season?: TicketingSeason | null
-  venue?: TicketingVenue | null
+  venue?: Venue | null
 
   // Derived metrics (for admin dashboards)
   tickets_sold?: number
@@ -115,6 +234,8 @@ export interface TicketType {
   sales_end_at: string | null
   sort_order: number
   is_active: boolean
+  seating_mode?: TicketSeatingMode
+  seat_map_id?: string | null
   created_at: string
   updated_at: string
 }
@@ -168,6 +289,13 @@ export interface Ticket {
   used_by_user_id: string | null
   created_at: string
   updated_at: string
+  seat_assignment_id?: string | null
+  seat_info?: {
+    section: string
+    row: string
+    seat: string
+    attributes?: SeatAttributes
+  } | null
   // Relations (populated by select)
   ticket_orders?: { purchaser_email: string }
 }
@@ -216,6 +344,10 @@ export interface CreateCheckoutRequest {
     quantity: number
   }>
   purchaser_email: string
+  seat_selections?: Array<{
+    ticket_type_id: string
+    seat_map_section_ids: string[]
+  }>
   org_slug?: string // Optional org slug for URL construction in checkout
   return_base_url?: string // Optional base URL for redirects (e.g. window.location.origin)
 }
@@ -230,6 +362,8 @@ export interface ValidateScanRequest {
   qr_token_raw?: string
   entry_code?: string
   client_device_id?: string
+  force_validate?: boolean
+  cross_event_admission?: boolean
 }
 
 export interface OrderContext {
@@ -261,6 +395,11 @@ export interface ValidateScanResponse {
   validated_count?: number
   remaining_capacity?: number | null
   purchaser_name?: string | null
+  seat_section?: string | null
+  seat_row?: string | null
+  seat_number?: string | null
+  seat_attributes?: SeatAttributes | null
+  seat_display?: string | null
   // Event mismatch handling
   event_mismatch?: boolean
   ticket_event_id?: string

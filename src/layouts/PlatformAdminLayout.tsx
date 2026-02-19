@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import {
@@ -31,12 +31,14 @@ const navSections: NavSection[] = [
     label: 'Overview',
     items: [
       { text: 'Dashboard', icon: 'dashboard', path: getPath(RouteKeys.PLATFORM_DASHBOARD), requiredAction: 'view_dashboard' },
+      { text: 'Personal Settings', icon: 'settings', path: getPath(RouteKeys.PLATFORM_SETTINGS), requiredAction: 'view_dashboard' },
     ],
   },
   {
     label: 'Organizations',
     items: [
       { text: 'Organizations', icon: 'apartment', path: getPath(RouteKeys.PLATFORM_ORGANIZATIONS), requiredAction: 'view_organizations' },
+      { text: 'Demo Management', icon: 'bolt', path: getPath(RouteKeys.PLATFORM_DEMO_MANAGEMENT), requiredAction: 'view_organizations' },
     ],
   },
   {
@@ -58,12 +60,14 @@ const navSections: NavSection[] = [
     items: [
       { text: 'Event Log', icon: 'history', path: getPath(RouteKeys.PLATFORM_AUDIT), requiredAction: 'view_audit_log' },
       { text: 'Feature Flags', icon: 'flag', path: getPath(RouteKeys.PLATFORM_FEATURE_FLAGS), requiredAction: 'view_feature_flags' },
+      { text: 'Contact Submissions', icon: 'mail', path: getLink('platformAdmin.contactSubmissions'), requiredAction: 'view_dashboard' },
     ],
   },
   {
     label: 'Emails',
     items: [
       { text: 'Email Preview', icon: 'email', path: getLink('platformAdmin.emailPreview'), requiredAction: 'view_email_preview' },
+      { text: 'Templates', icon: 'edit_square', path: getLink('platformAdmin.emails.list'), requiredAction: 'manage_email_templates' },
     ],
   },
   {
@@ -88,6 +92,16 @@ const navSections: NavSection[] = [
     label: 'System',
     items: [
       { text: 'Structure', icon: 'account_tree', path: getLink('platformAdmin.structure'), requiredAction: 'view_structure' },
+    ],
+  },
+  {
+    label: 'Help Center',
+    items: [
+      { text: 'WordPress Settings', icon: 'help', path: getLink('platformAdmin.helpCenter.settings'), requiredAction: 'view_dashboard' },
+      { text: 'Role Mappings', icon: 'link', path: getLink('platformAdmin.helpCenter.roleMappings'), requiredAction: 'view_dashboard' },
+      { text: 'Category Pages', icon: 'description', path: getLink('platformAdmin.helpCenter.categoryPages'), requiredAction: 'view_dashboard' },
+      { text: 'Sections', icon: 'folder', path: getLink('platformAdmin.helpCenter.sections'), requiredAction: 'view_dashboard' },
+      { text: 'Category Thumbnails', icon: 'image', path: getLink('platformAdmin.helpCenter.thumbnails'), requiredAction: 'view_dashboard' },
     ],
   },
 ]
@@ -128,8 +142,28 @@ export default function PlatformAdminLayout() {
   const navigate = useNavigate()
   const { profile, signOut } = useAuth()
 
+  // Keep previous profile to prevent remounting when profile temporarily becomes null
+  // (e.g., during auth state updates or tab visibility changes)
+  const profileRef = useRef<ReturnType<typeof useAuth>['profile']>(null)
+  const themeLoadedRef = useRef(false)
+  
+  useEffect(() => {
+    if (profile) {
+      profileRef.current = profile
+    }
+  }, [profile])
+  
+  useEffect(() => {
+    if (themeLoaded) {
+      themeLoadedRef.current = true
+    }
+  }, [themeLoaded])
+  
+  const stableProfile = profile || profileRef.current
+  const stableThemeLoaded = themeLoaded || themeLoadedRef.current
+
   // Get admin role from profile (Bug Prevention #1, Technical Bug #4)
-  const adminRole = profile?.platformAdminRole ?? null
+  const adminRole = stableProfile?.platformAdminRole ?? null
 
   // Close mobile sidebar on route change
   const handleMobileSidebarClose = useCallback(() => {
@@ -223,8 +257,10 @@ export default function PlatformAdminLayout() {
       })
   }, [adminRole])
 
-  // Show loading while theme loads or profile is loading
-  if (!themeLoaded || !profile) {
+  // Show loading only on initial load (when we haven't loaded profile yet)
+  // Don't remount if profile temporarily becomes null after initial load
+  const hasInitiallyLoaded = profileRef.current !== null
+  if (!stableThemeLoaded || (!stableProfile && !hasInitiallyLoaded)) {
     return <LoadingSpinner />
   }
 
@@ -301,7 +337,7 @@ export default function PlatformAdminLayout() {
         {/* Footer */}
         <div className="pa-sidebar-footer">
           <div className="pa-sidebar-user">
-            <span className="pa-sidebar-email">{profile?.email || 'Unknown'}</span>
+            <span className="pa-sidebar-email">{stableProfile?.email || 'Unknown'}</span>
             <button
               className="pa-btn pa-btn--secondary pa-btn--compact"
               onClick={handleSignOut}

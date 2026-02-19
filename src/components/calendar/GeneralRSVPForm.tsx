@@ -19,20 +19,12 @@ const STATUS_OPTIONS: { value: GeneralRSVPStatus; label: string; color: string }
 ]
 
 export default function GeneralRSVPForm({ eventId, userId, currentRSVP, disabled = false, onRSVPUpdate }: GeneralRSVPFormProps) {
+  // All hooks must be called unconditionally at the top
   const { context, isReady } = useUserContext()
   const [status, setStatus] = useState<GeneralRSVPStatus | null>(currentRSVP?.status || null)
   const [note, setNote] = useState<string>(currentRSVP?.note || '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Guard: Don't render if context not ready
-  if (!isReady || !context) {
-    return (
-      <div className="text-sm text-slate-500 italic">
-        Loading...
-      </div>
-    )
-  }
 
   useEffect(() => {
     if (currentRSVP) {
@@ -44,6 +36,32 @@ export default function GeneralRSVPForm({ eventId, userId, currentRSVP, disabled
       setNote('')
     }
   }, [currentRSVP])
+
+  // Use useEffect for debounced note updates (only when note changes, not status)
+  useEffect(() => {
+    if (!status || disabled || loading || !context) return
+    // Skip if note hasn't changed from current RSVP
+    if (currentRSVP?.note === note) return
+    
+    const timeoutId = setTimeout(async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const { data, error: rsvpError } = await setGeneralRSVP(context, eventId, userId, status, note || null)
+        if (rsvpError) {
+          setError(rsvpError.message)
+        } else if (data) {
+          onRSVPUpdate?.(data)
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to update note')
+      } finally {
+        setLoading(false)
+      }
+    }, 1000)
+    
+    return () => clearTimeout(timeoutId)
+  }, [note, status, eventId, userId, disabled, loading, context, currentRSVP, onRSVPUpdate])
 
   const handleStatusChange = async (newStatus: GeneralRSVPStatus) => {
     if (disabled || loading || !context) return
@@ -76,31 +94,14 @@ export default function GeneralRSVPForm({ eventId, userId, currentRSVP, disabled
     }
   }
 
-  // Use useEffect for debounced note updates (only when note changes, not status)
-  useEffect(() => {
-    if (!status || disabled || loading || !context) return
-    // Skip if note hasn't changed from current RSVP
-    if (currentRSVP?.note === note) return
-    
-    const timeoutId = setTimeout(async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const { data, error: rsvpError } = await setGeneralRSVP(context, eventId, userId, status, note || null)
-        if (rsvpError) {
-          setError(rsvpError.message)
-        } else if (data) {
-          onRSVPUpdate?.(data)
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to update note')
-      } finally {
-        setLoading(false)
-      }
-    }, 1000)
-    
-    return () => clearTimeout(timeoutId)
-  }, [note, status, eventId, userId, disabled, loading, context, currentRSVP, onRSVPUpdate])
+  // Guard: Don't render if context not ready
+  if (!isReady || !context) {
+    return (
+      <div className="text-sm text-slate-500 italic">
+        Loading...
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-3">

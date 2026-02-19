@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { startTransition } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useFeatureFlags } from '../../utils/featureFlags'
 import { useLicense } from '../../hooks/useLicense'
 import { useI18n } from '../../i18n/useI18n'
 import { getErrorMessage } from '../../utils/errorUtils'
@@ -69,17 +71,32 @@ import type { StripeConnectStatus } from '../../types/stripeConnect.types'
 import { type OrganizationSettings as OrgSettingsType, type GeneralSettings } from '@/types/organizationSettings'
 import ContactSection from './organizationSettings/ContactSection'
 import StaffSection from './organizationSettings/StaffSection'
+import JoinLinksSection from './organizationSettings/JoinLinksSection'
 
 import type { Organization } from '../../types/domain/Organization'
 import '../../styles/orgAdmin.css'
 
+const PERMISSION_EVENT_TYPES = [
+  { key: 'practice', label: 'Practice' },
+  { key: 'game', label: 'Game' },
+  { key: 'tournament', label: 'Tournament' },
+  { key: 'meeting', label: 'Meeting' },
+  { key: 'tryout', label: 'Tryout' },
+  { key: 'travel', label: 'Travel' },
+  { key: 'pickup_dropoff', label: 'Pickup/Dropoff' },
+  { key: 'social', label: 'Social' },
+] as const
+
 export default function OrganizationSettings() {
+  useDebugLifecycle('OrganizationSettings')
   const { t } = useI18n()
   const { currentOrganization } = useOrganization()
   const { context, isReady } = useUserContext()
   const { summary: licenseSummary } = useLicense(currentOrganization?.id)
   const [searchParams, setSearchParams] = useSearchParams()
-  
+  const { isEnabled } = useFeatureFlags(['org_advanced_settings', 'org_settings_attendance'])
+  const attendanceTabEnabled = isEnabled('org_settings_attendance')
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -98,12 +115,11 @@ export default function OrganizationSettings() {
 
   // Valid tab values for URL parameter
   const validTabs = useMemo(() => {
-    const baseTabs = ['overview', 'contact', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'staff', 'advanced']
-    if (hasPaymentAccess) {
-      baseTabs.push('payments')
-    }
+    const baseTabs = ['overview', 'contact', 'appearance', ...(attendanceTabEnabled ? ['attendance'] : []), 'registration', 'joinLinks', 'notifications', 'permissions', 'staff']
+    if (isEnabled('org_advanced_settings')) baseTabs.push('advanced')
+    if (hasPaymentAccess) baseTabs.push('payments')
     return baseTabs
-  }, [hasPaymentAccess])
+  }, [hasPaymentAccess, isEnabled, attendanceTabEnabled])
 
   // Handle tab change - update URL
   const handleTabChange = useCallback((newTab: string) => {
@@ -124,6 +140,14 @@ export default function OrganizationSettings() {
       setActiveTab(tabParam)
     }
   }, [searchParams, validTabs])
+
+  // If attendance is disabled and we're on that tab, switch to overview
+  useEffect(() => {
+    if (!attendanceTabEnabled && activeTab === 'attendance') {
+      setActiveTab('overview')
+      setSearchParams({}, { replace: true })
+    }
+  }, [attendanceTabEnabled, activeTab, setSearchParams])
   
   // Check for onboarding redirect
   useEffect(() => {
@@ -348,13 +372,14 @@ export default function OrganizationSettings() {
           <TabsTrigger value="overview">{t('admin.organizationSettings.tabs.overview')}</TabsTrigger>
           <TabsTrigger value="contact">{t('admin.organizationSettings.tabs.contact')}</TabsTrigger>
           <TabsTrigger value="appearance">{t('admin.organizationSettings.tabs.appearance')}</TabsTrigger>
-          <TabsTrigger value="attendance">{t('admin.organizationSettings.tabs.attendance')}</TabsTrigger>
+          {attendanceTabEnabled && <TabsTrigger value="attendance">{t('admin.organizationSettings.tabs.attendance')}</TabsTrigger>}
           <TabsTrigger value="registration">{t('admin.organizationSettings.tabs.registration')}</TabsTrigger>
+          <TabsTrigger value="joinLinks">{t('admin.organizationSettings.tabs.joinLinks')}</TabsTrigger>
           <TabsTrigger value="notifications">{t('admin.organizationSettings.tabs.notifications')}</TabsTrigger>
           <TabsTrigger value="permissions">{t('admin.organizationSettings.tabs.permissions')}</TabsTrigger>
           <TabsTrigger value="staff">{t('admin.organizationSettings.tabs.staff')}</TabsTrigger>
           {hasPaymentAccess && <TabsTrigger value="payments">{t('admin.organizationSettings.tabs.payments')}</TabsTrigger>}
-          <TabsTrigger value="advanced">{t('admin.organizationSettings.tabs.advanced')}</TabsTrigger>
+          {isEnabled('org_advanced_settings') && <TabsTrigger value="advanced">{t('admin.organizationSettings.tabs.advanced')}</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview">
@@ -403,12 +428,18 @@ export default function OrganizationSettings() {
           )}
         </TabsContent>
 
-        <TabsContent value="attendance">
-           {settings && <AttendanceForm settings={settings.attendance} onSave={(d) => handleSaveSettings('attendance', d)} loading={saving} />}
-        </TabsContent>
+        {attendanceTabEnabled && (
+          <TabsContent value="attendance">
+            {settings && <AttendanceForm settings={settings.attendance} onSave={(d) => handleSaveSettings('attendance', d)} loading={saving} />}
+          </TabsContent>
+        )}
 
         <TabsContent value="registration">
            {settings && <RegistrationForm settings={settings.registration} onSave={(d) => handleSaveSettings('registration', d)} loading={saving} />}
+        </TabsContent>
+
+        <TabsContent value="joinLinks">
+          {currentOrganization && <JoinLinksSection orgId={currentOrganization.id} />}
         </TabsContent>
 
         <TabsContent value="notifications">
@@ -429,9 +460,11 @@ export default function OrganizationSettings() {
           </TabsContent>
         )}
 
-        <TabsContent value="advanced">
-           {settings && <AdvancedForm settings={settings.advanced} onSave={(d) => handleSaveSettings('advanced', d)} loading={saving} />}
-        </TabsContent>
+        {isEnabled('org_advanced_settings') && (
+          <TabsContent value="advanced">
+             {settings && <AdvancedForm settings={settings.advanced} onSave={(d) => handleSaveSettings('advanced', d)} loading={saving} />}
+          </TabsContent>
+        )}
 
       </Tabs>
     </div>
@@ -1059,34 +1092,43 @@ function NotificationsForm({ settings, onSave, loading }: { settings: OrgSetting
 
 function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsType['visibility'], onSave: (d: any) => void, loading: boolean }) {
     const { t } = useI18n()
-    const { control, handleSubmit, reset } = useForm({
-    defaultValues: { 
+
+  const fanVisibilityDefaults = useMemo(
+    () =>
+      PERMISSION_EVENT_TYPES.reduce<Record<string, boolean>>((acc, eventType) => {
+        acc[eventType.key] = settings.fan_visibility_defaults?.[eventType.key] ?? false
+        return acc
+      }, {}),
+    [settings.fan_visibility_defaults]
+  )
+
+  const { control, handleSubmit, reset } = useForm({
+    defaultValues: {
       ...settings,
-      fan_visibility_defaults: settings.fan_visibility_defaults || {}
-    }
+      fan_visibility_defaults: fanVisibilityDefaults,
+    },
   })
 
   useEffect(() => {
-    reset({ 
+    reset({
       ...settings,
-      fan_visibility_defaults: settings.fan_visibility_defaults || {}
+      fan_visibility_defaults: fanVisibilityDefaults,
     })
-  }, [reset, settings])
+  }, [fanVisibilityDefaults, reset, settings])
 
-  const eventTypes = [
-    { key: 'practice', label: 'Practice' },
-    { key: 'game', label: 'Game' },
-    { key: 'tournament', label: 'Tournament' },
-    { key: 'meeting', label: 'Meeting' },
-    { key: 'tryout', label: 'Tryout' },
-    { key: 'travel', label: 'Travel' },
-    { key: 'pickup_dropoff', label: 'Pickup/Dropoff' },
-    { key: 'social', label: 'Social' },
-  ]
+  const handleSave = (data: any) => {
+    onSave({
+      ...data,
+      fan_visibility_defaults: PERMISSION_EVENT_TYPES.reduce<Record<string, boolean>>((acc, eventType) => {
+        acc[eventType.key] = data.fan_visibility_defaults?.[eventType.key] ?? false
+        return acc
+      }, {}),
+    })
+  }
 
   return (
     <Card>
-       <form onSubmit={handleSubmit(onSave)}>
+      <form onSubmit={handleSubmit(handleSave)}>
         <h3 className="oa-h3 oa-mb-4">{t('admin.organizationSettings.permissions.title')}</h3>
         <p className="oa-text-sm oa-text-muted oa-mb-4">{t('admin.organizationSettings.permissions.description')}</p>
         
@@ -1129,7 +1171,7 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
             }}
           >
             <div className="oa-flex oa-flex-col oa-gap-3">
-              {eventTypes.map((eventType) => (
+              {PERMISSION_EVENT_TYPES.map((eventType) => (
                 <Controller
                   key={eventType.key}
                   name={`fan_visibility_defaults.${eventType.key}` as any}

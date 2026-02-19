@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import EmptyState from '@/components/platformAdmin/EmptyState'
 import { Badge, Button, DatePicker } from '@/components/platformAdmin'
 import { useOrganization } from '@/contexts/OrganizationContext'
@@ -416,7 +417,10 @@ function TableView({
   )
 }
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketingOrders() {
+  useDebugLifecycle('TicketingOrders')
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { currentOrganization } = useOrganization()
@@ -427,6 +431,7 @@ export default function TicketingOrders() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [searchInput, setSearchInput] = useState('')
+  const [orderIdToDelete, setOrderIdToDelete] = useState<string | null>(null)
 
   const filters = parseFilters(searchParams)
 
@@ -489,8 +494,13 @@ export default function TicketingOrders() {
   }
 
   const handleDelete = (id: string) => {
-    if (!window.confirm('Delete this order? This cannot be undone.')) return
-    deleteMutation.mutate(id)
+    setOrderIdToDelete(id)
+  }
+
+  const handleConfirmDelete = () => {
+    if (!orderIdToDelete) return
+    deleteMutation.mutate(orderIdToDelete)
+    setOrderIdToDelete(null)
   }
 
   const hasActiveFilters =
@@ -636,6 +646,17 @@ export default function TicketingOrders() {
           </Button>
         </div>
       )}
+
+      <ConfirmDialog
+        open={orderIdToDelete !== null}
+        title="Delete this order? This cannot be undone."
+        description="Delete this order? This cannot be undone."
+        confirmLabel={deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setOrderIdToDelete(null)}
+      />
     </div>
   )
 }

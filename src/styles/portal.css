@@ -99,11 +99,49 @@
   width: 100%;
 }
 
-@media (min-width: 640px) {
+/* Tablet: still single column for three-column groups */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .form-row.three-col-33 .form-field:nth-child(1),
+  .form-row.three-col-33 .form-field:nth-child(2),
+  .form-row.three-col-33 .form-field:nth-child(3) {
+    width: 100%;
+  }
+}
+
+/* Desktop: three equal columns */
+@media (min-width: 1024px) {
   .form-row.three-col-33 .form-field:nth-child(1),
   .form-row.three-col-33 .form-field:nth-child(2),
   .form-row.three-col-33 .form-field:nth-child(3) {
     width: calc(33.333% - 0.666rem);
+  }
+}
+
+/* Four-column equal quarters (25/25/25/25) */
+.form-row.four-col-25 .form-field:nth-child(1),
+.form-row.four-col-25 .form-field:nth-child(2),
+.form-row.four-col-25 .form-field:nth-child(3),
+.form-row.four-col-25 .form-field:nth-child(4) {
+  width: 100%;
+}
+
+/* Tablet: still single column for four-column groups */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .form-row.four-col-25 .form-field:nth-child(1),
+  .form-row.four-col-25 .form-field:nth-child(2),
+  .form-row.four-col-25 .form-field:nth-child(3),
+  .form-row.four-col-25 .form-field:nth-child(4) {
+    width: 100%;
+  }
+}
+
+/* Desktop: four equal columns */
+@media (min-width: 1024px) {
+  .form-row.four-col-25 .form-field:nth-child(1),
+  .form-row.four-col-25 .form-field:nth-child(2),
+  .form-row.four-col-25 .form-field:nth-child(3),
+  .form-row.four-col-25 .form-field:nth-child(4) {
+    width: calc(25% - 0.75rem);
   }
 }
 
@@ -150,33 +188,128 @@
   }
 }
 
-/* Labels */
-.form-label {
-  font-size: 0.625rem; /* text-xs */
+/* ====================================================================================
+   SECTION HEADERS
+   ==================================================================================== */
+.form-section-title,
+.field-section-title {
+  font-size: 1.125rem; /* 18px - 20-30% larger than field labels */
   font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--text-muted, #94a3b8);
-  text-transform: uppercase;
+  color: var(--text-primary, #0f172a);
+  margin-bottom: 0.5rem;
+  margin-top: 1.5rem;
 }
 
-/* Inputs / selects / textareas share visual styling */
+.field-group-section {
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.field-section-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-muted, #64748b);
+  margin-bottom: 1rem;
+}
+
+.form-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.form-header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.form-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+  margin: 0;
+}
+
+.form-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-muted, #64748b);
+  margin: 0;
+}
+
+.form-verified-badge,
+.form-completeness-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(19, 127, 236, 0.08);
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--org-btn-primary-bg, #137fec);
+}
+
+.verified-icon,
+.completeness-text {
+  font-size: 1rem;
+}
+
+/* ====================================================================================
+   LABELS
+   ==================================================================================== */
+.form-label {
+  font-size: 0.875rem; /* 14px */
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-primary, #0f172a);
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.field-required {
+  color: #dc2626;
+  margin-left: 0.25rem;
+}
+
+.field-unit {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+  margin-left: 0.5rem;
+  font-weight: 400;
+}
+
+/* ====================================================================================
+   INPUT FIELD STYLING
+   ==================================================================================== */
 .form-input,
 .form-select,
 .form-textarea {
   display: block;
   width: 100%;
-  border-radius: 0.375rem;
-  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem; /* 6px */
+  padding: 0.625rem 0.75rem; /* 10px vertical, 12px horizontal */
   background: var(--input-bg, #ffffff);
   color: var(--text-primary, #0f172a);
-  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.12);
   outline: none;
   font-size: 0.875rem;
+  min-height: 2.5rem; /* 40px for accessibility */
+  transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 
 .form-textarea {
   min-height: 72px;
+  resize: vertical;
+}
+
+.form-input:hover:not(:disabled),
+.form-select:hover:not(:disabled),
+.form-textarea:hover:not(:disabled) {
+  border-color: rgba(15, 23, 42, 0.2);
 }
 
 .form-input:focus,
@@ -184,6 +317,28 @@
 .form-textarea:focus {
   box-shadow: 0 0 0 4px rgba(19, 127, 236, 0.12);
   border-color: var(--org-btn-primary-bg, #137fec);
+}
+
+.form-input:disabled,
+.form-select:disabled,
+.form-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: rgba(15, 23, 42, 0.03);
+}
+
+/* Error states */
+.form-input.form-input-error,
+.form-select.form-input-error,
+.form-textarea.form-input-error {
+  border-color: #dc2626;
+}
+
+.form-input.form-input-error:focus,
+.form-select.form-input-error:focus,
+.form-textarea.form-input-error:focus {
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
+  border-color: #dc2626;
 }
 
 /* Size helpers */
@@ -206,30 +361,246 @@
   color: var(--org-btn-primary-bg, #137fec);
 }
 
-.field-help { font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem; }
-.field-unit { font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem; }
-
-/* Radio/checkbox styles */
-.radio-row { display:flex; gap:1rem; align-items:center; }
-.form-radio-label { display: inline-flex; align-items:center; gap:0.5rem; font-size:0.875rem; color:var(--text-primary); }
-.form-radio-label input { accent-color: var(--org-btn-primary-bg, #137fec); }
-.checkbox-row { display:flex; align-items:center; gap:0.5rem; }
-
-/* Form actions: mobile-first full-width CTAs, desktop right-aligned */
-.form-actions { display:flex; gap:0.75rem; align-items:center; margin-top: 0.5rem; }
-.form-actions .btn-primary,
-.form-actions .btn-secondary { width: 100%; }
-@media (min-width: 640px) {
-  .form-actions .btn-primary,
-  .form-actions .btn-secondary { width: auto; }
-  .form-actions { justify-content: flex-end; }
+/* ====================================================================================
+   HELP TEXT & VALIDATION STYLING
+   ==================================================================================== */
+.field-help {
+  font-size: 0.75rem; /* 12px - smaller than field labels */
+  color: var(--text-muted, #64748b);
+  margin-top: 0.25rem;
+  line-height: 1.4;
 }
 
-/* Banners */
+.field-error {
+  font-size: 0.75rem;
+  color: #dc2626;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.field-error::before {
+  content: '⚠';
+  font-size: 0.875rem;
+}
+
+/* ====================================================================================
+   CHECKBOX STANDARDIZATION - Circular Design
+   ==================================================================================== */
+.form-checkbox-label,
+.form-radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-primary, #0f172a);
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Hide default checkbox/radio */
+.form-checkbox-label input[type="checkbox"],
+.form-radio-label input[type="radio"],
+.form-checkbox-label input[type="checkbox"].form-checkbox,
+.form-radio-label input[type="radio"].form-radio {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.125rem; /* 18px */
+  height: 1.125rem; /* 18px */
+  border: 2px solid rgba(15, 23, 42, 0.2);
+  border-radius: 50%; /* Circular */
+  background: var(--input-bg, #ffffff);
+  cursor: pointer;
+  position: relative;
+  transition: all 200ms ease;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.form-checkbox-label input[type="checkbox"]:checked,
+.form-radio-label input[type="radio"]:checked,
+.form-checkbox-label input[type="checkbox"].form-checkbox:checked,
+.form-radio-label input[type="radio"].form-radio:checked {
+  background: var(--org-btn-primary-bg, #137fec);
+  border-color: var(--org-btn-primary-bg, #137fec);
+}
+
+.form-checkbox-label input[type="checkbox"]:checked::after,
+.form-radio-label input[type="radio"]:checked::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 0.375rem; /* 6px */
+  height: 0.375rem; /* 6px */
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.form-checkbox-label input[type="checkbox"]:focus,
+.form-radio-label input[type="radio"]:focus,
+.form-checkbox-label input[type="checkbox"].form-checkbox:focus,
+.form-radio-label input[type="radio"].form-radio:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(19, 127, 236, 0.12);
+}
+
+.form-checkbox-label input[type="checkbox"]:disabled,
+.form-radio-label input[type="radio"]:disabled,
+.form-checkbox-label input[type="checkbox"].form-checkbox:disabled,
+.form-radio-label input[type="radio"].form-radio:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Radio row - checkboxes/radios in horizontal layout */
+.radio-row {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.checkbox-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+/* Mobile: stack checkboxes vertically */
+@media (max-width: 639px) {
+  .checkbox-row {
+    gap: 0.75rem;
+  }
+  
+  .radio-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+}
+
+/* Tablet: allow horizontal layout */
+@media (min-width: 640px) {
+  .checkbox-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+}
+
+/* ====================================================================================
+   FORM ROW ALIGNMENT RULES
+   ==================================================================================== */
+.form-row {
+  align-items: flex-start; /* Align fields to top for proper label/input alignment */
+}
+
+.form-row .form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure buttons align with inputs in the same row - match input top position */
+.form-row .btn-primary,
+.form-row .btn-secondary {
+  align-self: flex-start;
+  margin-top: 1.75rem; /* Match label height (0.875rem) + label margin-bottom (0.5rem) + input top */
+}
+
+/* ====================================================================================
+   FORM ACTIONS - CTA PLACEMENT
+   ==================================================================================== */
+.form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: stretch;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.form-actions .btn-primary,
+.form-actions .btn-secondary {
+  width: 100%;
+  min-height: 2.5rem; /* Match input height */
+}
+
+/* Tablet: full-width or right-aligned */
+@media (min-width: 640px) {
+  .form-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+  }
+  
+  .form-actions .btn-primary,
+  .form-actions .btn-secondary {
+    width: auto;
+  }
+}
+
+/* ====================================================================================
+   BANNERS & NOTIFICATIONS
+   ==================================================================================== */
 .form-unsaved-warning,
 .form-error-banner,
-.form-info-banner { display:flex; gap:0.5rem; align-items:center; color: #7c2d2d; }
-.form-info-banner { color: #0f5132; }
+.form-info-banner,
+.form-privacy-notice {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.form-error-banner {
+  background: rgba(220, 38, 38, 0.1);
+  color: #7c2d2d;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.form-info-banner {
+  background: rgba(5, 81, 50, 0.1);
+  color: #0f5132;
+  border: 1px solid rgba(5, 81, 50, 0.2);
+}
+
+.form-unsaved-warning {
+  background: rgba(251, 191, 36, 0.1);
+  color: #78350f;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.form-privacy-notice {
+  background: rgba(19, 127, 236, 0.08);
+  color: var(--org-btn-primary-bg, #137fec);
+  border: 1px solid rgba(19, 127, 236, 0.2);
+  margin-bottom: 1.5rem;
+}
+
+.privacy-notice-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.privacy-notice-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.privacy-notice-text {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
 
 /* Button utilities copied from portal Button component */
 .btn-primary {
@@ -272,9 +643,342 @@
   background-color: rgba(15, 23, 42, 0.03);
 }
 
-/* Small utility */
-.hidden-mobile { display:block; }
-@media (max-width:639px) { .hidden-mobile { display:none; } }
+/* ====================================================================================
+   RESPONSIVE BREAKPOINTS & LAYOUT RULES
+   ==================================================================================== */
+
+/* Mobile: Single-column, full-width inputs */
+@media (max-width: 639px) {
+  .form-row {
+    flex-direction: column;
+  }
+  
+  .form-row .form-field {
+    width: 100% !important;
+  }
+  
+  .form-input,
+  .form-select,
+  .form-textarea {
+    width: 100%;
+  }
+  
+  .form-field--small,
+  .form-field--medium {
+    width: 100% !important;
+  }
+}
+
+/* Tablet: Allow limited two-column rows */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .form-row.two-col .form-field {
+    width: calc(50% - 0.5rem);
+  }
+  
+  .form-field--small {
+    width: 8rem;
+  }
+  
+  .form-field--medium {
+    width: 12rem;
+  }
+}
+
+/* Desktop: Constrained, intentional widths */
+@media (min-width: 1024px) {
+  .form-field--small {
+    width: 8rem;
+  }
+  
+  .form-field--medium {
+    width: 16rem;
+  }
+  
+  /* Sport/category selectors: medium width */
+  .form-select[data-field-type="sport"],
+  .form-select[data-field-type="category"] {
+    width: 18rem;
+    max-width: 18rem;
+  }
+  
+  /* Date selectors: smaller width */
+  .form-input[type="date"],
+  .form-input[type="time"] {
+    width: 12rem;
+    max-width: 12rem;
+  }
+}
+
+/* ====================================================================================
+   FORM CONTAINER & SPACING
+   ==================================================================================== */
+.portal-form {
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .portal-form {
+    padding: 0 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .portal-form {
+    padding: 0;
+  }
+}
+
+/* ====================================================================================
+   TAB STYLING (for SportProfileCard)
+   ==================================================================================== */
+.form-tabs {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.form-tab {
+  padding: 1rem 0.5rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 2px solid transparent;
+  transition: color 200ms ease, border-color 200ms ease;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  cursor: pointer;
+  color: var(--text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-tab:hover {
+  color: var(--text-primary, #0f172a);
+}
+
+.form-tab.active {
+  color: var(--org-btn-primary-bg, #137fec);
+  border-bottom-color: var(--org-btn-primary-bg, #137fec);
+}
+
+.form-tab-icon {
+  font-size: 1rem;
+}
+
+/* ====================================================================================
+   GRID LAYOUTS (for BasicInfoForm)
+   ==================================================================================== */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .form-grid.form-grid-two-col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ====================================================================================
+   SPORTS INTERESTS FORM STYLING
+   ==================================================================================== */
+.sport-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: rgba(15, 23, 42, 0.02);
+  border-radius: 0.5rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  margin-bottom: 0.75rem;
+}
+
+.sport-item-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary, #0f172a);
+}
+
+.sport-item-locked {
+  font-size: 0.75rem;
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.sport-item-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.sport-item-controls label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text-primary, #0f172a);
+}
+
+.sport-item-controls label:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+/* Dark mode support */
+.dark .sport-item {
+  background: rgba(30, 41, 59, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .sport-item-name {
+  color: #ffffff;
+}
+
+.dark .sport-item-controls label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ====================================================================================
+   LOADING & EMPTY STATES
+   ==================================================================================== */
+.profile-form-loading,
+.equipment-form-loading,
+.medical-form-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  gap: 1rem;
+}
+
+.loading-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid rgba(15, 23, 42, 0.1);
+  border-top-color: var(--org-btn-primary-bg, #137fec);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 0.875rem;
+  color: var(--text-muted, #64748b);
+}
+
+.profile-form-error,
+.equipment-form-error,
+.medical-form-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 2rem;
+  color: #dc2626;
+}
+
+.error-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+}
+
+.error-detail {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+}
+
+.profile-form-empty,
+.equipment-form-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  color: var(--text-muted, #64748b);
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+}
+
+.empty-detail {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+  max-width: 24rem;
+}
+
+.medical-form-permission-denied {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.permission-icon {
+  font-size: 3rem;
+  color: var(--text-muted, #64748b);
+}
+
+.permission-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+.permission-text {
+  font-size: 0.875rem;
+  color: var(--text-primary, #0f172a);
+}
+
+.permission-detail {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+  max-width: 24rem;
+}
+
+/* ====================================================================================
+   UTILITIES
+   ==================================================================================== */
+.hidden-mobile { display: block; }
+@media (max-width: 639px) { .hidden-mobile { display: none; } }
+
+.text-center {
+  text-align: center;
+}
+
+.text-muted {
+  color: var(--text-muted, #64748b);
+}
 
 /* Portal form group */
 .portal-form-group {
@@ -380,8 +1084,9 @@
 /* Event Hero Banner */
 .event-hero-banner {
   position: relative;
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
   margin-top: -2rem;
   margin-bottom: 2rem;
   min-height: 380px;

@@ -8,6 +8,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import { USE_FAKE_DATA } from '../../data/config'
 import { getTeams, deleteTeam } from '../../data/services/teamsService'
 import { getSports, getPrograms } from '../../data/services/sportsService'
@@ -21,6 +22,9 @@ import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
 
 export default function TeamsManagement() {
+  // Add lifecycle logging
+  useDebugLifecycle('TeamsManagement')
+
   const { context, isReady } = useUserContext()
   const { isOffline } = useOffline()
   const location = useLocation()

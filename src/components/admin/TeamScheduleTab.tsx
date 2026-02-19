@@ -18,6 +18,7 @@ interface TeamScheduleTabProps {
 }
 
 export function TeamScheduleTab({ teamId, seasonId, teamName }: TeamScheduleTabProps) {
+  // All hooks must be called unconditionally at the top
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -28,32 +29,6 @@ export function TeamScheduleTab({ teamId, seasonId, teamName }: TeamScheduleTabP
   const handleViewOrganizationSchedule = useCallback(() => {
     navigate(`/admin/events?teamId=${teamId}`)
   }, [navigate, teamId])
-
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
-
-  // If no season, show message
-  if (!seasonId) {
-    return (
-      <div className="pa-card">
-        <EmptyState
-          icon="event"
-          title="No active season"
-          description="Please select an active season to view the team schedule."
-          noCard
-        />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--pa-space-4)' }}>
-          <Button variant="secondary" onClick={() => navigate(`/admin/events?teamId=${teamId}`)}>
-            View All Organization Events
-          </Button>
-        </div>
-      </div>
-    )
-  }
 
   const fetchEvents = useCallback(async () => {
     if (!isReady || !teamId) {
@@ -97,12 +72,39 @@ export function TeamScheduleTab({ teamId, seasonId, teamName }: TeamScheduleTabP
   }, [context, isReady, teamId, seasonId])
 
   useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
     fetchEvents()
   }, [fetchEvents])
 
   const handleViewAllEvents = useCallback(() => {
     navigate(`/admin/events?teamId=${teamId}`)
   }, [navigate, teamId])
+
+  // Early returns after all hooks are called
+  // If no season, show message
+  if (!seasonId) {
+    return (
+      <div className="pa-card">
+        <EmptyState
+          icon="event"
+          title="No active season"
+          description="Please select an active season to view the team schedule."
+          noCard
+        />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--pa-space-4)' }}>
+          <Button variant="secondary" onClick={() => navigate(`/admin/events?teamId=${teamId}`)}>
+            View All Organization Events
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

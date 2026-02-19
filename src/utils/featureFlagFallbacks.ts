@@ -23,7 +23,10 @@ export const FALLBACK_FLAGS: Record<string, boolean | number> = {
   travel_enabled: false,
   uniforms_enabled: false,
   messaging_enabled: false,
-  
+  orgadmin_advanced_personal_settings: false,
+  org_advanced_settings: false,
+  org_settings_attendance: false,
+
   // Integer flags
   // Example: max_team_size: 20,
   

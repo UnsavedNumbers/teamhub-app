@@ -16,7 +16,7 @@ type GroupConfig = {
 
 const DEFAULT_CHANNELS: DeliveryChannel[] = ['in_app', 'email']
 
-const GROUP_CONFIGS: GroupConfig[] = [
+export const GROUP_CONFIGS: GroupConfig[] = [
   {
     id: 'events',
     labelKey: 'portal.settings.notifications.groups.events',
@@ -86,6 +86,8 @@ export function buildDefaultNotificationGroups(role: NotificationRole, t: Transl
       actions: actions.map((id) => ({ id, enabled: true })),
       allEnabled: true,
       digestEnabled: false,
+      digestWindow: 'daily',
+      quietHoursEnabled: false,
       channels: [...DEFAULT_CHANNELS],
     } satisfies NotificationGroup
   }).filter(Boolean) as NotificationGroup[]
@@ -116,6 +118,11 @@ export function mergeNotificationPreferences(
       ...def,
       allEnabled: existing.allEnabled ?? def.allEnabled,
       digestEnabled: existing.digestEnabled ?? def.digestEnabled,
+      digestWindow: existing.digestWindow ?? def.digestWindow,
+      quietHoursEnabled: existing.quietHoursEnabled ?? def.quietHoursEnabled,
+      quietHoursStart: existing.quietHoursStart ?? def.quietHoursStart,
+      quietHoursEnd: existing.quietHoursEnd ?? def.quietHoursEnd,
+      timezone: existing.timezone ?? def.timezone,
       channels: channels.length > 0 ? channels : def.channels,
       actions,
     }

@@ -11,8 +11,11 @@ import { getTicketsByAccessToken } from '@/data/services'
 import TicketCard from '@/components/ticketing/TicketCard'
 import type { OrgContext } from '@/utils/orgResolution'
 import { OrgScopedRoute } from '@/components/OrgScopedRoute'
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
 
 function TicketAccessContent({ org }: { org: OrgContext }) {
+  useDebugLifecycle('TicketAccessContent')
+  
   const { token } = useParams<{ token: string }>()
 
   const { data: ticketsResponse, error } = useQuery({

@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
 import Icon from '@/components/portal/Icon'
 import Button from '@/components/portal/Button'
 import { cn } from '@/utils/cn'
@@ -63,6 +64,7 @@ function loadMuxPlayerScript(): Promise<void> {
 
 export default function SharedVideoPage() {
   const { token } = useParams<{ token: string }>()
+  useDebugLifecycle('SharedVideoPage', { token })
   
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -465,30 +467,4 @@ export default function SharedVideoPage() {
       </footer>
     </div>
   )
-}
-
-// Declare mux-player element for TypeScript
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace JSX {
-    interface IntrinsicElements {
-      'mux-player': React.DetailedHTMLProps<
-        React.HTMLAttributes<HTMLElement> & {
-          'playback-id'?: string
-          'playback-token'?: string
-          'thumbnail-token'?: string
-          'storyboard-token'?: string
-          'stream-type'?: 'on-demand' | 'live'
-          'start-time'?: number
-          autoplay?: boolean
-          muted?: boolean
-          loop?: boolean
-          poster?: string
-          'primary-color'?: string
-          'secondary-color'?: string
-        },
-        HTMLElement
-      >
-    }
-  }
 }

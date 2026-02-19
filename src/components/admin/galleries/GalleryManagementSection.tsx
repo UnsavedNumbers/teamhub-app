@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, EmptyState, Modal } from '@/components/platformAdmin'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import {
   deleteGallery,
   getGalleriesForUser,
@@ -41,6 +42,7 @@ export function GalleryManagementSection({
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [editing, setEditing] = useState<Gallery | null>(null)
+  const [pendingDeleteGalleryId, setPendingDeleteGalleryId] = useState<string | null>(null)
   const [showDemoModal, setShowDemoModal] = useState(false)
   const navigate = useNavigate()
 
@@ -74,15 +76,17 @@ export function GalleryManagementSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entityId, entityType, orgId, onGalleriesLoaded, onLoadingChange])
 
-  const handleDelete = async (galleryId: string) => {
+  const handleDelete = (galleryId: string) => {
     if (USE_FAKE_DATA) {
       setShowDemoModal(true)
       return
     }
 
+    setPendingDeleteGalleryId(galleryId)
+  }
+
+  const confirmDeleteGallery = async (galleryId: string) => {
     if (!context) return
-    const confirm = window.confirm(t('photos.confirmDeletePhotos', { count: 1 }))
-    if (!confirm) return
     const { error } = await deleteGallery(context, galleryId)
     if (error) {
       showError(error.message)
@@ -257,6 +261,23 @@ export function GalleryManagementSection({
           </Button>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={pendingDeleteGalleryId !== null}
+        title={t('common.delete')}
+        description={t('photos.confirmDeletePhotos', { count: 1 })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={() => {
+          const galleryId = pendingDeleteGalleryId
+          setPendingDeleteGalleryId(null)
+          if (galleryId) {
+            void confirmDeleteGallery(galleryId)
+          }
+        }}
+        onCancel={() => setPendingDeleteGalleryId(null)}
+      />
     </div>
   )
 }

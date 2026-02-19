@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
+import { debug } from '../../lib/debug'
 import type {
     AttendanceRecord,
     AttendanceSettings,
@@ -33,12 +34,18 @@ const delay = () => new Promise(resolve => setTimeout(resolve, FAKE_DATA_DELAY_M
 // ============================================================================
 
 export async function getAttendanceSettings(context: UserContext): Promise<{ data: AttendanceSettings | null; error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await delay()
-        return { data: FAKE_SETTINGS, error: null }
-    }
+    console.groupCollapsed(`%cgetAttendanceSettings: ${context.orgId}`, 'color: #666; font-weight: bold;');
+    debug.data('AttendanceService.getAttendanceSettings', 'Request', { context: { userId: context.userId, orgId: context.orgId } })
+    debug.perf.start('attendanceService.getAttendanceSettings')
 
     try {
+        if (USE_FAKE_DATA) {
+            await delay()
+            debug.perf.end('attendanceService.getAttendanceSettings')
+            debug.data('AttendanceService.getAttendanceSettings', 'Response (fake)', { orgId: context.orgId })
+            console.groupEnd()
+            return { data: FAKE_SETTINGS, error: null }
+        }
         type AttendanceSettingsRow = Database['public']['Tables']['organization_attendance_settings']['Row'];
 
         const { data, error } = await supabase
@@ -70,20 +77,32 @@ export async function getAttendanceSettings(context: UserContext): Promise<{ dat
             }
         }
 
+        debug.perf.end('attendanceService.getAttendanceSettings')
+        debug.data('AttendanceService.getAttendanceSettings', 'Response', { orgId: context.orgId, hasData: !!data })
+        console.groupEnd()
         return { data: data as AttendanceSettings, error: error ? new Error(error.message) : null }
     } catch (e: any) {
+        debug.perf.end('attendanceService.getAttendanceSettings')
+        debug.error('AttendanceService.getAttendanceSettings', 'Failed to get attendance settings', { error: e, context: { userId: context.userId, orgId: context.orgId } })
+        console.groupEnd()
         return { data: null, error: e }
     }
 }
 
 export async function updateAttendanceSettings(context: UserContext, settings: Partial<AttendanceSettings>): Promise<{ error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await delay()
-        FAKE_SETTINGS = { ...FAKE_SETTINGS, ...settings, updated_at: new Date().toISOString() }
-        return { error: null }
-    }
+    console.groupCollapsed(`%cupdateAttendanceSettings: ${context.orgId}`, 'color: #666; font-weight: bold;');
+    debug.flow('AttendanceService.updateAttendanceSettings', 'Updating settings', { context: { userId: context.userId, orgId: context.orgId }, settings })
+    debug.perf.start('attendanceService.updateAttendanceSettings')
 
     try {
+        if (USE_FAKE_DATA) {
+            await delay()
+            FAKE_SETTINGS = { ...FAKE_SETTINGS, ...settings, updated_at: new Date().toISOString() }
+            debug.perf.end('attendanceService.updateAttendanceSettings')
+            debug.flow('AttendanceService.updateAttendanceSettings', 'Settings updated (fake)', { settings: Object.keys(settings) })
+            console.groupEnd()
+            return { error: null }
+        }
         type AttendanceSettingsUpsert = Database['public']['Tables']['attendance_settings']['Insert']
         const upsertData = {
             org_id: context.orgId,
@@ -93,8 +112,21 @@ export async function updateAttendanceSettings(context: UserContext, settings: P
         const { error } = await supabase
             .from('attendance_settings')
             .upsert(upsertData)
-        return { error: error ? new Error(error.message) : null }
+
+        debug.perf.end('attendanceService.updateAttendanceSettings')
+        if (error) {
+            debug.error('AttendanceService.updateAttendanceSettings', 'Failed to update settings', { error: error.message, settings: Object.keys(settings) })
+            console.groupEnd()
+            return { error: new Error(error.message) }
+        } else {
+            debug.flow('AttendanceService.updateAttendanceSettings', 'Settings updated successfully', { settings: Object.keys(settings) })
+            console.groupEnd()
+            return { error: null }
+        }
     } catch (e: any) {
+        debug.perf.end('attendanceService.updateAttendanceSettings')
+        debug.error('AttendanceService.updateAttendanceSettings', 'Exception updating settings', { error: e, settings: Object.keys(settings) })
+        console.groupEnd()
         return { error: e }
     }
 }
@@ -107,14 +139,21 @@ export async function getEventAttendance(
     _context: UserContext,
     eventId: string
 ): Promise<{ data: AttendanceRecord[]; error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await delay()
-        // Generate mock records based on event existing
-        // This is simplified; in a real fake implementation we'd store these
-        return { data: [], error: null }
-    }
+    console.groupCollapsed(`%cgetEventAttendance: ${eventId}`, 'color: #666; font-weight: bold;');
+    debug.data('AttendanceService.getEventAttendance', 'Request', { eventId })
+    debug.perf.start('attendanceService.getEventAttendance')
 
     try {
+        if (USE_FAKE_DATA) {
+            await delay()
+            // Generate mock records based on event existing
+            // This is simplified; in a real fake implementation we'd store these
+            debug.perf.end('attendanceService.getEventAttendance')
+            debug.data('AttendanceService.getEventAttendance', 'Response (fake)', { eventId, recordCount: 0 })
+            console.groupEnd()
+            return { data: [], error: null }
+        }
+
         // Fetch existing records joined with children
         const { data: records, error } = await supabase
             .from('event_attendance')
@@ -126,8 +165,15 @@ export async function getEventAttendance(
             .eq('event_id', eventId)
 
         if (error) throw error
+
+        debug.perf.end('attendanceService.getEventAttendance')
+        debug.data('AttendanceService.getEventAttendance', 'Response', { eventId, recordCount: records?.length || 0 })
+        console.groupEnd()
         return { data: records as unknown as AttendanceRecord[], error: null }
     } catch (e: any) {
+        debug.perf.end('attendanceService.getEventAttendance')
+        debug.error('AttendanceService.getEventAttendance', 'Failed to get event attendance', { error: e, eventId })
+        console.groupEnd()
         return { data: [], error: e }
     }
 }
@@ -139,12 +185,18 @@ export async function updateAttendance(
     status: AttendanceStatus,
     notes?: string
 ): Promise<{ error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await delay()
-        return { error: null }
-    }
+    console.groupCollapsed(`%cupdateAttendance: ${eventId} - ${childId} - ${status}`, 'color: #666; font-weight: bold;');
+    debug.flow('AttendanceService.updateAttendance', 'Updating attendance', { eventId, childId, status, hasNotes: !!notes })
+    debug.perf.start('attendanceService.updateAttendance')
 
     try {
+        if (USE_FAKE_DATA) {
+            await delay()
+            debug.perf.end('attendanceService.updateAttendance')
+            debug.flow('AttendanceService.updateAttendance', 'Attendance updated (fake)', { eventId, childId, status })
+            console.groupEnd()
+            return { error: null }
+        }
         type EventAttendanceUpsert = Database['public']['Tables']['event_attendance']['Insert']
         const upsertData2 = {
             event_id: eventId,
@@ -158,8 +210,82 @@ export async function updateAttendance(
             .from('event_attendance')
             .upsert(upsertData2, { onConflict: 'event_id,child_id' })
 
-        return { error: error ? new Error(error.message) : null }
+        debug.perf.end('attendanceService.updateAttendance')
+        if (error) {
+            debug.error('AttendanceService.updateAttendance', 'Failed to update attendance', { error: error.message, eventId, childId, status })
+            console.groupEnd()
+            return { error: error ? new Error(error.message) : null }
+        } else {
+            // Notify coaches/admins about attendance update
+            try {
+                const { notifyUsers } = await import('./notificationServiceCore')
+                
+                // Get event and team info
+                const { data: eventData } = await supabase
+                    .from('events')
+                    .select('id, title, team_id, org_id')
+                    .eq('id', eventId)
+                    .single()
+
+                if (eventData && eventData.org_id) {
+                    // Get coaches and org admins for the team
+                    const { data: orgMembers } = await supabase
+                        .from('organization_members')
+                        .select('user_id, role')
+                        .eq('org_id', eventData.org_id)
+                        .in('role', ['coach', 'org_admin'])
+
+                    if (orgMembers) {
+                        const coachUserIds = orgMembers
+                            .filter(m => m.role === 'coach' || m.role === 'org_admin')
+                            .map(m => m.user_id)
+                            .filter((id): id is string => id !== null && id !== context.userId) // Don't notify the person who updated
+
+                        if (coachUserIds.length > 0) {
+                            // Get athlete name for notification
+                            const { data: athlete } = await supabase
+                                .from('athletes')
+                                .select('first_name, last_name')
+                                .eq('id', childId)
+                                .single()
+
+                            const athleteName = athlete 
+                                ? `${athlete.first_name} ${athlete.last_name}`.trim()
+                                : 'Athlete'
+
+                            await notifyUsers({
+                                userIds: coachUserIds,
+                                orgId: eventData.org_id,
+                                teamId: eventData.team_id || null,
+                                action: 'event_attendance_updated',
+                                roleContext: 'coach',
+                                title: 'Attendance Updated',
+                                body: `${athleteName} attendance marked as ${status} for ${eventData.title || 'event'}`,
+                                linkUrl: `/portal/calendar/events/${eventId}`,
+                                entityType: 'event',
+                                entityId: eventId,
+                                metadata: {
+                                    child_id: childId,
+                                    status,
+                                    notes,
+                                },
+                            }).catch(err => console.error('Failed to notify about attendance update:', err))
+                        }
+                    }
+                }
+            } catch (notifErr) {
+                // Don't fail attendance update if notification fails
+                console.error('Error sending attendance notification:', notifErr)
+            }
+
+            debug.flow('AttendanceService.updateAttendance', 'Attendance updated successfully', { eventId, childId, status })
+            console.groupEnd()
+            return { error: null }
+        }
     } catch (e: any) {
+        debug.perf.end('attendanceService.updateAttendance')
+        debug.error('AttendanceService.updateAttendance', 'Exception updating attendance', { error: e, eventId, childId, status })
+        console.groupEnd()
         return { error: e }
     }
 }
@@ -172,9 +298,14 @@ export async function getAttendanceEvents(
     _context: UserContext,
     filters: { startDate: Date; endDate: Date; teamId?: string }
 ): Promise<{ data: AttendanceEventSummary[]; error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await delay()
-        const mockEvents: AttendanceEventSummary[] = [
+    console.groupCollapsed(`%cgetAttendanceEvents: ${filters.startDate.toISOString()} to ${filters.endDate.toISOString()}`, 'color: #666; font-weight: bold;');
+    debug.data('AttendanceService.getAttendanceEvents', 'Request', { startDate: filters.startDate.toISOString(), endDate: filters.endDate.toISOString(), teamId: filters.teamId })
+    debug.perf.start('attendanceService.getAttendanceEvents')
+
+    try {
+        if (USE_FAKE_DATA) {
+            await delay()
+            const mockEvents: AttendanceEventSummary[] = [
             {
                 event_id: 'evt-1',
                 team_name: 'U12 Boys',
@@ -190,10 +321,11 @@ export async function getAttendanceEvents(
                 status: 'complete'
             }
         ]
+        debug.perf.end('attendanceService.getAttendanceEvents')
+        debug.data('AttendanceService.getAttendanceEvents', 'Response (fake)', { eventCount: mockEvents.length })
+        console.groupEnd()
         return { data: mockEvents, error: null }
     }
-
-    try {
         // query events + rsvps + attendance
         // Logic:
         // 1. Get events in range
@@ -261,9 +393,15 @@ export async function getAttendanceEvents(
             }
         })
 
+        debug.perf.end('attendanceService.getAttendanceEvents')
+        debug.data('AttendanceService.getAttendanceEvents', 'Response', { eventCount: summaries.length })
+        console.groupEnd()
         return { data: summaries, error: null }
 
     } catch (e: any) {
+        debug.perf.end('attendanceService.getAttendanceEvents')
+        debug.error('AttendanceService.getAttendanceEvents', 'Failed to get attendance events', { error: e, filters })
+        console.groupEnd()
         return { data: [], error: e }
     }
 }
@@ -352,8 +490,14 @@ export async function getAttendancePeople(
             return s
         })
 
+        debug.perf.end('attendanceService.getAttendancePeople')
+        debug.data('AttendanceService.getAttendancePeople', 'Response', { personCount: result.length })
+        console.groupEnd()
         return { data: result, error: null }
     } catch (e: any) {
+        debug.perf.end('attendanceService.getAttendancePeople')
+        debug.error('AttendanceService.getAttendancePeople', 'Failed to get attendance people', { error: e, filters: _filters })
+        console.groupEnd()
         return { data: [], error: e }
     }
 }

@@ -18,6 +18,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { UserContext, PermissionSet } from '../fake/userContext'
+import { debug } from '../../lib/debug'
 import { calculatePermissions } from '../fake/userContext'
 import {
     type TravelEvent,
@@ -51,6 +52,7 @@ import {
     TRAVEL_CONTACT_CATEGORY_LABELS,
 } from '../../types/travelContacts'
 import { getErrorMessage } from '../../utils/errorUtils'
+import { getOrganizationTravelContacts } from './organizationTravelContactsService'
 
 // ============================================================================
 // Re-exports for convenience
@@ -107,6 +109,64 @@ function toError(err: unknown, fallbackMessage: string): Error {
     if (err instanceof Error) return err
     const message = getErrorMessage(err)
     return new Error(message || fallbackMessage)
+}
+
+const fakeTravelPlanContactsStore = new Map<
+    string,
+    Record<TravelContactCategory, TravelPlanContactRow | null>
+>()
+
+function isSupportedFakeTravelPlanId(planId: string | null | undefined): planId is string {
+    return typeof planId === 'string' && planId.trim().length > 0
+}
+
+function createFakeTravelPlanContactRow(
+    planId: string,
+    category: TravelContactCategory,
+    overrides: Partial<TravelPlanContactRow> = {},
+): TravelPlanContactRow {
+    return {
+        id: overrides.id ?? `tpc-${planId}-${category}`,
+        travel_plan_id: planId,
+        category,
+        is_custom: overrides.is_custom ?? false,
+        first_name: overrides.first_name ?? null,
+        last_name: overrides.last_name ?? null,
+        email: overrides.email ?? null,
+        phone: overrides.phone ?? null,
+        updated_at: overrides.updated_at ?? new Date().toISOString(),
+    }
+}
+
+function emptyTravelPlanContactResult(): Record<TravelContactCategory, TravelPlanContactRow | null> {
+    return TRAVEL_CONTACT_CATEGORIES.reduce((acc, category) => {
+        acc[category] = null
+        return acc
+    }, {} as Record<TravelContactCategory, TravelPlanContactRow | null>)
+}
+
+function ensureFakeTravelPlanContacts(planId: string): Record<TravelContactCategory, TravelPlanContactRow | null> {
+    const existing = fakeTravelPlanContactsStore.get(planId)
+    if (existing) return existing
+
+    const seeded = TRAVEL_CONTACT_CATEGORIES.reduce((acc, category) => {
+        // Default fake behavior: plan inherits org contacts unless explicitly customized.
+        acc[category] = createFakeTravelPlanContactRow(planId, category, { is_custom: false })
+        return acc
+    }, {} as Record<TravelContactCategory, TravelPlanContactRow | null>)
+
+    fakeTravelPlanContactsStore.set(planId, seeded)
+    return seeded
+}
+
+function hasContactData(row: TravelPlanContactRow | null | undefined): boolean {
+    if (!row) return false
+    return Boolean(
+        (row.first_name && row.first_name.trim()) ||
+        (row.last_name && row.last_name.trim()) ||
+        (row.email && row.email.trim()) ||
+        (row.phone && row.phone.trim()),
+    )
 }
 
 /**
@@ -485,9 +545,13 @@ export async function getTravelEvents(
     context: UserContext,
     params: TravelEventsQueryParams = {}
 ): Promise<{ data: TravelEvent[]; error: Error | null }> {
+    console.groupCollapsed(`%cgetTravelEvents: ${JSON.stringify(params)}`, 'color: #666; font-weight: bold;');
+    debug.data('TravelService.getTravelEvents', 'Request', { context: { userId: context.userId, orgId: context.orgId }, params })
+    debug.perf.start('travelService.getTravelEvents')
+
     if (USE_FAKE_DATA) {
-        // Fake data mode - use fake travel plans converted to events
-        try {
+            // Fake data mode - use fake travel plans converted to events
+            try {
             await simulateDelay()
 
             const permissions = buildPermissions(context)
@@ -552,10 +616,10 @@ export async function getTravelEvents(
             console.error('getTravelEvents error:', err)
             return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
         }
-    }
+        }
 
-    // Real Supabase implementation - NO FALLBACK
-    try {
+        // Real Supabase implementation - NO FALLBACK
+        try {
         // Query events where travel indicators are present
         let query: any = supabase
             .from('events')
@@ -595,8 +659,14 @@ export async function getTravelEvents(
             .map((e: any) => e as unknown as TravelEvent)
             .filter((e: TravelEvent) => detectTravelEvent(e).isTravel)
 
+        debug.perf.end('travelService.getTravelEvents')
+        debug.data('TravelService.getTravelEvents', 'Response', { eventCount: travelEvents.length })
+        console.groupEnd()
         return { data: travelEvents, error: null }
     } catch (err) {
+        debug.perf.end('travelService.getTravelEvents')
+        debug.error('TravelService.getTravelEvents', 'Failed to fetch travel events', { error: err, context: { userId: context.userId, orgId: context.orgId }, params })
+        console.groupEnd()
         console.error('getTravelEvents error:', err)
         return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -613,16 +683,33 @@ export async function getTravelTrips(
     context: UserContext,
     params: TravelEventsQueryParams = {}
 ): Promise<{ data: TravelTrip[]; error: Error | null }> {
-    const { data: events, error } = await getTravelEvents(context, params)
+    console.groupCollapsed(`%cgetTravelTrips: ${JSON.stringify(params)}`, 'color: #666; font-weight: bold;');
+    debug.data('TravelService.getTravelTrips', 'Request', { context: { userId: context.userId, orgId: context.orgId }, params })
+    debug.perf.start('travelService.getTravelTrips')
 
-    if (error) {
-        return { data: [], error }
+    try {
+        const { data: events, error } = await getTravelEvents(context, params)
+
+        if (error) {
+            debug.perf.end('travelService.getTravelTrips')
+            debug.error('TravelService.getTravelTrips', 'Failed to get travel events', { error, params })
+            console.groupEnd()
+            return { data: [], error }
+        }
+
+        // Group events into trips
+        const trips = groupEventsIntoTrips(events)
+
+        debug.perf.end('travelService.getTravelTrips')
+        debug.data('TravelService.getTravelTrips', 'Response', { tripCount: trips.length, eventCount: events.length })
+        console.groupEnd()
+        return { data: trips, error: null }
+    } catch (err) {
+        debug.perf.end('travelService.getTravelTrips')
+        debug.error('TravelService.getTravelTrips', 'Exception getting travel trips', { error: err, params })
+        console.groupEnd()
+        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
     }
-
-    // Group events into trips
-    const trips = groupEventsIntoTrips(events)
-
-    return { data: trips, error: null }
 }
 
 /**
@@ -632,6 +719,10 @@ export async function getTravelEventDetails(
     context: UserContext,
     eventId: string
 ): Promise<{ data: TravelEvent | null; error: Error | null }> {
+    console.groupCollapsed(`%cgetTravelEventDetails: ${eventId}`, 'color: #666; font-weight: bold;');
+    debug.data('TravelService.getTravelEventDetails', 'Request', { eventId, orgId: context.orgId })
+    debug.perf.start('travelService.getTravelEventDetails')
+
     if (!USE_FAKE_DATA) {
         try {
             const { data, error } = await supabase
@@ -667,8 +758,14 @@ export async function getTravelEventDetails(
         const plan = fakeTravelPlans.find(p => p.id === eventId)
         if (plan) {
             if (plan.org_id !== context.orgId) {
+                debug.perf.end('travelService.getTravelEventDetails')
+                debug.error('TravelService.getTravelEventDetails', 'Access denied (fake)', { eventId, planOrgId: plan.org_id, contextOrgId: context.orgId })
+                console.groupEnd()
                 return { data: null, error: new Error('Access denied') }
             }
+            debug.perf.end('travelService.getTravelEventDetails')
+            debug.data('TravelService.getTravelEventDetails', 'Response (fake, from plan)', { eventId, hasData: true })
+            console.groupEnd()
             return { data: convertTravelPlanToEvent(plan), error: null }
         }
 
@@ -677,13 +774,25 @@ export async function getTravelEventDetails(
         if (event) {
             const travelEvent = event as unknown as TravelEvent
             if (!detectTravelEvent(travelEvent).isTravel) {
+                debug.perf.end('travelService.getTravelEventDetails')
+                debug.error('TravelService.getTravelEventDetails', 'Event is not a travel event (fake)', { eventId })
+                console.groupEnd()
                 return { data: null, error: new Error('Event is not a travel event') }
             }
+            debug.perf.end('travelService.getTravelEventDetails')
+            debug.data('TravelService.getTravelEventDetails', 'Response (fake, from event)', { eventId, hasData: true })
+            console.groupEnd()
             return { data: travelEvent, error: null }
         }
 
+        debug.perf.end('travelService.getTravelEventDetails')
+        debug.data('TravelService.getTravelEventDetails', 'Response (not found, fake)', { eventId })
+        console.groupEnd()
         return { data: null, error: null }
     } catch (err) {
+        debug.perf.end('travelService.getTravelEventDetails')
+        debug.error('TravelService.getTravelEventDetails', 'Failed to get travel event details (fake)', { error: err, eventId })
+        console.groupEnd()
         console.error('getTravelEventDetails error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -730,6 +839,10 @@ export async function setTravelOverride(
     isTravel: boolean,
     reason?: string
 ): Promise<{ error: Error | null }> {
+    console.groupCollapsed(`%csetTravelOverride: ${eventId}`, 'color: #666; font-weight: bold;');
+    debug.flow('TravelService.setTravelOverride', 'Setting travel override', { eventId, isTravel, reason })
+    debug.perf.start('travelService.setTravelOverride')
+
     if (!USE_FAKE_DATA) {
         try {
             const { error } = await supabase.rpc('set_travel_override', {
@@ -740,8 +853,14 @@ export async function setTravelOverride(
 
             if (error) throw error
 
+            debug.perf.end('travelService.setTravelOverride')
+            debug.flow('TravelService.setTravelOverride', 'Travel override set successfully', { eventId, isTravel })
+            console.groupEnd()
             return { error: null }
         } catch (err) {
+            debug.perf.end('travelService.setTravelOverride')
+            debug.error('TravelService.setTravelOverride', 'Failed to set travel override', { error: err, eventId, isTravel })
+            console.groupEnd()
             console.error('setTravelOverride error:', err)
             return { error: err instanceof Error ? err : new Error('Unknown error') }
         }
@@ -749,6 +868,9 @@ export async function setTravelOverride(
 
     // Fake data mode - just simulate success
     await simulateDelay()
+    debug.perf.end('travelService.setTravelOverride')
+    debug.flow('TravelService.setTravelOverride', 'Travel override set (fake)', { eventId, isTravel })
+    console.groupEnd()
     return { error: null }
 }
 
@@ -759,9 +881,16 @@ export async function clearTravelOverride(
     _context: UserContext,
     eventId: string
 ): Promise<{ error: Error | null }> {
+    console.groupCollapsed(`%cclearTravelOverride: ${eventId}`, 'color: #666; font-weight: bold;');
+    debug.flow('TravelService.clearTravelOverride', 'Clearing travel override', { eventId })
+    debug.perf.start('travelService.clearTravelOverride')
+
     if (USE_FAKE_DATA) {
         // Fake data mode
         await simulateDelay()
+        debug.perf.end('travelService.clearTravelOverride')
+        debug.flow('TravelService.clearTravelOverride', 'Travel override cleared (fake)', { eventId })
+        console.groupEnd()
         return { error: null }
     }
 
@@ -773,8 +902,14 @@ export async function clearTravelOverride(
 
         if (error) throw error
 
+        debug.perf.end('travelService.clearTravelOverride')
+        debug.flow('TravelService.clearTravelOverride', 'Travel override cleared successfully', { eventId })
+        console.groupEnd()
         return { error: null }
     } catch (err) {
+        debug.perf.end('travelService.clearTravelOverride')
+        debug.error('TravelService.clearTravelOverride', 'Failed to clear travel override', { error: err, eventId })
+        console.groupEnd()
         console.error('clearTravelOverride error:', err)
         return { error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -791,14 +926,24 @@ export async function createTravelPlan(
     context: UserContext,
     data: CreateTravelPlanDTO
 ): Promise<{ data: FakeTravelPlan | null; error: Error | null }> {
+    console.groupCollapsed(`%ccreateTravelPlan: ${data.title}`, 'color: #666; font-weight: bold;');
+    debug.flow('TravelService.createTravelPlan', 'Creating travel plan', { title: data.title, teamId: data.team_id, seasonId: data.season_id })
+    debug.perf.start('travelService.createTravelPlan')
+
     try {
         // Validate required fields
         if (!data.team_id || !data.season_id || !data.title || !data.location || !data.start_date || !data.end_date) {
+            debug.perf.end('travelService.createTravelPlan')
+            debug.error('TravelService.createTravelPlan', 'Missing required fields', { title: data.title })
+            console.groupEnd()
             return { data: null, error: new Error('Missing required fields') }
         }
 
         // Validate UUIDs
         if (!isValidUUID(data.team_id) || !isValidUUID(data.season_id)) {
+            debug.perf.end('travelService.createTravelPlan')
+            debug.error('TravelService.createTravelPlan', 'Invalid UUID format', { teamId: data.team_id, seasonId: data.season_id })
+            console.groupEnd()
             return { data: null, error: new Error('Invalid team or season ID format') }
         }
 
@@ -806,6 +951,9 @@ export async function createTravelPlan(
         const normalizedStart = normalizeToISODate(data.start_date)
         const normalizedEnd = normalizeToISODate(data.end_date)
         if (normalizedEnd < normalizedStart) {
+            debug.perf.end('travelService.createTravelPlan')
+            debug.error('TravelService.createTravelPlan', 'Invalid date range', { startDate: normalizedStart, endDate: normalizedEnd })
+            console.groupEnd()
             return { data: null, error: new Error('End date must be on or after start date') }
         }
 
@@ -863,6 +1011,9 @@ export async function createTravelPlan(
             }
 
             fakeTravelPlans.push(newPlan)
+            debug.perf.end('travelService.createTravelPlan')
+            debug.flow('TravelService.createTravelPlan', 'Travel plan created (fake)', { planId: newPlan.id, title: data.title })
+            console.groupEnd()
             return { data: newPlan, error: null }
         }
 
@@ -957,6 +1108,9 @@ export async function createTravelPlan(
                     .remove([`travel-itineraries/${filePath}`])
                     .catch(err => console.error('Failed to cleanup uploaded file:', err))
             }
+            debug.perf.end('travelService.createTravelPlan')
+            debug.error('TravelService.createTravelPlan', 'Failed to insert travel plan', { error: insertError, title: data.title })
+            console.groupEnd()
             return { data: null, error: new Error(`Failed to create travel plan: ${insertError.message}`) }
         }
 
@@ -993,8 +1147,14 @@ export async function createTravelPlan(
             }).catch(err => console.error('Failed to distribute travel notifications:', err))
         }
 
+        debug.perf.end('travelService.createTravelPlan')
+        debug.flow('TravelService.createTravelPlan', 'Travel plan created successfully', { planId: plan?.id, title: data.title })
+        console.groupEnd()
         return { data: plan, error: null }
     } catch (err) {
+        debug.perf.end('travelService.createTravelPlan')
+        debug.error('TravelService.createTravelPlan', 'Exception creating travel plan', { error: err, title: data.title })
+        console.groupEnd()
         console.error('createTravelPlan error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error creating travel plan') }
     }
@@ -1008,9 +1168,16 @@ export async function updateTravelPlan(
     planId: string,
     data: UpdateTravelPlanDTO
 ): Promise<{ data: FakeTravelPlan | null; error: Error | null }> {
+    console.groupCollapsed(`%cupdateTravelPlan: ${planId}`, 'color: #666; font-weight: bold;');
+    debug.flow('TravelService.updateTravelPlan', 'Updating travel plan', { planId, updates: Object.keys(data) })
+    debug.perf.start('travelService.updateTravelPlan')
+
     try {
         // Validate UUID
         if (!isValidUUID(planId)) {
+            debug.perf.end('travelService.updateTravelPlan')
+            debug.error('TravelService.updateTravelPlan', 'Invalid plan ID format', { planId })
+            console.groupEnd()
             return { data: null, error: new Error('Invalid plan ID format') }
         }
 
@@ -1019,6 +1186,9 @@ export async function updateTravelPlan(
             const normalizedStart = normalizeToISODate(data.start_date)
             const normalizedEnd = normalizeToISODate(data.end_date)
             if (normalizedEnd < normalizedStart) {
+                debug.perf.end('travelService.updateTravelPlan')
+                debug.error('TravelService.updateTravelPlan', 'Invalid date range', { planId, startDate: normalizedStart, endDate: normalizedEnd })
+                console.groupEnd()
                 return { data: null, error: new Error('End date must be on or after start date') }
             }
         }
@@ -1028,11 +1198,17 @@ export async function updateTravelPlan(
 
             const planIndex = fakeTravelPlans.findIndex(p => p.id === planId)
             if (planIndex === -1) {
+                debug.perf.end('travelService.updateTravelPlan')
+                debug.error('TravelService.updateTravelPlan', 'Travel plan not found (fake)', { planId })
+                console.groupEnd()
                 return { data: null, error: new Error('Travel plan not found') }
             }
 
             const existingPlan = fakeTravelPlans[planIndex]
             if (existingPlan.org_id !== (context.orgId ?? '')) {
+                debug.perf.end('travelService.updateTravelPlan')
+                debug.error('TravelService.updateTravelPlan', 'Travel plan does not belong to org (fake)', { planId, planOrgId: existingPlan.org_id, contextOrgId: context.orgId })
+                console.groupEnd()
                 return { data: null, error: new Error('Travel plan does not belong to your organization') }
             }
 
@@ -1091,7 +1267,7 @@ export async function updateTravelPlan(
         }
 
         let newFilePath: string | null = null
-        let oldFilePath: string | null = existingPlanTyped.itinerary_file_path ?? null
+        const oldFilePath: string | null = existingPlanTyped.itinerary_file_path ?? null
 
         // Handle file upload/replace
         if (data.itinerary_file && isValidFile(data.itinerary_file)) {
@@ -1153,10 +1329,16 @@ export async function updateTravelPlan(
                     .remove([`travel-itineraries/${newFilePath}`])
                     .catch(err => console.error('Failed to cleanup uploaded file:', err))
             }
+            debug.perf.end('travelService.updateTravelPlan')
+            debug.error('TravelService.updateTravelPlan', 'Failed to update travel plan', { error: updateError, planId })
+            console.groupEnd()
             return { data: null, error: new Error(`Failed to update travel plan: ${updateError.message}`) }
         }
 
         if (!updated) {
+            debug.perf.end('travelService.updateTravelPlan')
+            debug.error('TravelService.updateTravelPlan', 'Optimistic locking failure', { planId })
+            console.groupEnd()
             return { data: null, error: new Error('Travel plan was modified by another user. Please refresh and try again.') }
         }
 
@@ -1169,8 +1351,14 @@ export async function updateTravelPlan(
         }
 
         const plan = mapSupabaseTravelPlan(updated as TravelPlanRow)
+        debug.perf.end('travelService.updateTravelPlan')
+        debug.flow('TravelService.updateTravelPlan', 'Travel plan updated successfully', { planId })
+        console.groupEnd()
         return { data: plan, error: null }
     } catch (err) {
+        debug.perf.end('travelService.updateTravelPlan')
+        debug.error('TravelService.updateTravelPlan', 'Exception updating travel plan', { error: err, planId })
+        console.groupEnd()
         console.error('updateTravelPlan error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error updating travel plan') }
     }
@@ -1184,31 +1372,50 @@ export async function uploadTravelItinerary(
     planId: string,
     file: File
 ): Promise<{ data: string | null; error: Error | null }> {
+    console.groupCollapsed(`%cuploadTravelItinerary: ${planId}`, 'color: #666; font-weight: bold;');
+    debug.flow('TravelService.uploadTravelItinerary', 'Uploading travel itinerary', { planId, fileName: file.name, fileSize: file.size })
+    debug.perf.start('travelService.uploadTravelItinerary')
+
     try {
         // Validate UUID
         if (!isValidUUID(planId)) {
+            debug.perf.end('travelService.uploadTravelItinerary')
+            debug.error('TravelService.uploadTravelItinerary', 'Invalid plan ID format', { planId })
+            console.groupEnd()
             return { data: null, error: new Error('Invalid plan ID format') }
         }
 
         // Validate file
         if (!isValidFile(file)) {
+            debug.perf.end('travelService.uploadTravelItinerary')
+            debug.error('TravelService.uploadTravelItinerary', 'Invalid file object', { planId })
+            console.groupEnd()
             return { data: null, error: new Error('Invalid file object') }
         }
 
         // Validate file type and size
         const isValidType = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
         if (!isValidType) {
+            debug.perf.end('travelService.uploadTravelItinerary')
+            debug.error('TravelService.uploadTravelItinerary', 'Invalid file type', { planId, fileType: file.type })
+            console.groupEnd()
             return { data: null, error: new Error('File must be a PDF') }
         }
 
         const maxSize = 10 * 1024 * 1024 // 10MB
         if (file.size > maxSize) {
+            debug.perf.end('travelService.uploadTravelItinerary')
+            debug.error('TravelService.uploadTravelItinerary', 'File size exceeds limit', { planId, fileSize: file.size })
+            console.groupEnd()
             return { data: null, error: new Error('File size exceeds 10MB limit') }
         }
 
         if (USE_FAKE_DATA) {
             await simulateDelay()
             const filePath = `${context.orgId ?? 'org'}/${planId}/${Date.now()}-${sanitizeFilename(file.name)}`
+            debug.perf.end('travelService.uploadTravelItinerary')
+            debug.flow('TravelService.uploadTravelItinerary', 'Itinerary uploaded (fake)', { planId, filePath })
+            console.groupEnd()
             return { data: filePath, error: null }
         }
 
@@ -1234,6 +1441,9 @@ export async function uploadTravelItinerary(
             })
 
         if (uploadError) {
+            debug.perf.end('travelService.uploadTravelItinerary')
+            debug.error('TravelService.uploadTravelItinerary', 'File upload failed', { error: uploadError, planId })
+            console.groupEnd()
             return { data: null, error: new Error(`File upload failed: ${uploadError.message}`) }
         }
 
@@ -1250,11 +1460,20 @@ export async function uploadTravelItinerary(
                 .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
                 .remove([`travel-itineraries/${objectPath}`])
                 .catch(err => console.error('Failed to cleanup uploaded file:', err))
+            debug.perf.end('travelService.uploadTravelItinerary')
+            debug.error('TravelService.uploadTravelItinerary', 'Failed to update travel plan', { error: updateError, planId })
+            console.groupEnd()
             return { data: null, error: new Error(`Failed to update travel plan: ${updateError.message}`) }
         }
 
+        debug.perf.end('travelService.uploadTravelItinerary')
+        debug.flow('TravelService.uploadTravelItinerary', 'Itinerary uploaded successfully', { planId, filePath: objectPath })
+        console.groupEnd()
         return { data: objectPath, error: null }
     } catch (err) {
+        debug.perf.end('travelService.uploadTravelItinerary')
+        debug.error('TravelService.uploadTravelItinerary', 'Exception uploading itinerary', { error: err, planId })
+        console.groupEnd()
         console.error('uploadTravelItinerary error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error uploading file') }
     }
@@ -1286,11 +1505,17 @@ export async function getTravelItinerarySignedUrl(
             .single()
 
         if (planError || !plan) {
+            debug.perf.end('travelService.getTravelItinerarySignedUrl')
+            debug.error('TravelService.getTravelItinerarySignedUrl', 'Travel plan not found', { planId, error: planError })
+            console.groupEnd()
             return { data: null, error: new Error('Travel plan not found') }
         }
 
         const filePath = (plan as unknown as { itinerary_file_path: string | null }).itinerary_file_path
         if (!filePath) {
+            debug.perf.end('travelService.getTravelItinerarySignedUrl')
+            debug.error('TravelService.getTravelItinerarySignedUrl', 'No itinerary file found', { planId })
+            console.groupEnd()
             return { data: null, error: new Error('No itinerary file found for this travel plan') }
         }
 
@@ -1300,11 +1525,20 @@ export async function getTravelItinerarySignedUrl(
             .createSignedUrl(`travel-itineraries/${filePath}`, 60 * 10)
 
         if (urlError || !signedUrlData) {
+            debug.perf.end('travelService.getTravelItinerarySignedUrl')
+            debug.error('TravelService.getTravelItinerarySignedUrl', 'Failed to generate signed URL', { error: urlError, planId })
+            console.groupEnd()
             return { data: null, error: new Error(`Failed to generate download URL: ${urlError?.message ?? 'Unknown error'}`) }
         }
 
+        debug.perf.end('travelService.getTravelItinerarySignedUrl')
+        debug.data('TravelService.getTravelItinerarySignedUrl', 'Response', { planId, hasUrl: !!signedUrlData.signedUrl })
+        console.groupEnd()
         return { data: signedUrlData.signedUrl, error: null }
     } catch (err) {
+        debug.perf.end('travelService.getTravelItinerarySignedUrl')
+        debug.error('TravelService.getTravelItinerarySignedUrl', 'Exception generating signed URL', { error: err, planId })
+        console.groupEnd()
         console.error('getTravelItinerarySignedUrl error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error generating download URL') }
     }
@@ -1330,6 +1564,10 @@ export async function getTravelPlans(
     context: UserContext,
     params: TravelPlansQueryParams = {}
 ): Promise<{ data: FakeTravelPlan[]; error: Error | null }> {
+    console.groupCollapsed(`%cgetTravelPlans: ${JSON.stringify(params)}`, 'color: #666; font-weight: bold;');
+    debug.data('TravelService.getTravelPlans', 'Request', { context: { userId: context.userId, orgId: context.orgId }, params })
+    debug.perf.start('travelService.getTravelPlans')
+
     const isGuardianViewer = context.roles.includes('parent')
 
     if (USE_FAKE_DATA) {
@@ -1341,6 +1579,9 @@ export async function getTravelPlans(
         })
 
         if (error) {
+            debug.perf.end('travelService.getTravelPlans')
+            debug.error('TravelService.getTravelPlans', 'Failed to get travel events (fake)', { error, params })
+            console.groupEnd()
             return { data: [], error }
         }
 
@@ -1370,9 +1611,16 @@ export async function getTravelPlans(
 
         // Filter by status if specified
         if (params.status && params.status !== 'cancelled') {
-            return { data: visibilityFilteredPlans.filter(p => p.status === params.status), error: null }
+            const filtered = visibilityFilteredPlans.filter(p => p.status === params.status)
+            debug.perf.end('travelService.getTravelPlans')
+            debug.data('TravelService.getTravelPlans', 'Response (fake)', { planCount: filtered.length, params })
+            console.groupEnd()
+            return { data: filtered, error: null }
         }
 
+        debug.perf.end('travelService.getTravelPlans')
+        debug.data('TravelService.getTravelPlans', 'Response (fake)', { planCount: visibilityFilteredPlans.length, params })
+        console.groupEnd()
         return { data: visibilityFilteredPlans, error: null }
     }
 
@@ -1382,6 +1630,9 @@ export async function getTravelPlans(
         let accessibleTeamIds: string[] | null = null
         if (isGuardianViewer && !context.roles.includes('org_admin')) {
             if (!context.orgId) {
+                debug.perf.end('travelService.getTravelPlans')
+                debug.error('TravelService.getTravelPlans', 'Missing organization context', { params })
+                console.groupEnd()
                 return { data: [], error: new Error('Missing organization context') }
             }
 
@@ -1392,6 +1643,9 @@ export async function getTravelPlans(
             )
 
             if (guardianAthletesError) {
+                debug.perf.end('travelService.getTravelPlans')
+                debug.error('TravelService.getTravelPlans', 'Failed to fetch guardian athletes', { error: guardianAthletesError, params })
+                console.groupEnd()
                 console.error('Error fetching guardian athletes:', guardianAthletesError)
                 return { data: [], error: new Error(guardianAthletesError.message) }
             }
@@ -1402,6 +1656,9 @@ export async function getTravelPlans(
                 .filter(Boolean)
 
             if (athleteIds.length === 0) {
+                debug.perf.end('travelService.getTravelPlans')
+                debug.data('TravelService.getTravelPlans', 'Response (no accessible athletes)', { params })
+                console.groupEnd()
                 return { data: [], error: null }
             }
 
@@ -1412,6 +1669,9 @@ export async function getTravelPlans(
                 .in('athlete_id', athleteIds)
 
             if (membershipError) {
+                debug.perf.end('travelService.getTravelPlans')
+                debug.error('TravelService.getTravelPlans', 'Failed to fetch team memberships', { error: membershipError, params })
+                console.groupEnd()
                 console.error('Error fetching team memberships:', membershipError)
                 return { data: [], error: new Error(membershipError.message) }
             }
@@ -1477,8 +1737,14 @@ export async function getTravelPlans(
             ? plans.filter(p => p.status !== 'draft')
             : plans
 
+        debug.perf.end('travelService.getTravelPlans')
+        debug.data('TravelService.getTravelPlans', 'Response', { planCount: visibilityFilteredPlans.length, params })
+        console.groupEnd()
         return { data: visibilityFilteredPlans, error: null }
     } catch (err) {
+        debug.perf.end('travelService.getTravelPlans')
+        debug.error('TravelService.getTravelPlans', 'Failed to get travel plans', { error: err, params })
+        console.groupEnd()
         console.error('getTravelPlans error:', err)
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
         const supabaseError = err as any
@@ -1541,19 +1807,32 @@ export async function getTravelPlanDetails(
     context: UserContext,
     planId: string
 ): Promise<{ data: FakeTravelPlan | null; error: Error | null }> {
+    console.groupCollapsed(`%cgetTravelPlanDetails: ${planId}`, 'color: #666; font-weight: bold;');
+    debug.data('TravelService.getTravelPlanDetails', 'Request', { planId, orgId: context.orgId })
+    debug.perf.start('travelService.getTravelPlanDetails')
+
     const isGuardianViewer = context.roles.includes('parent')
 
     if (USE_FAKE_DATA) {
         const { data: event, error } = await getTravelEventDetails(context, planId)
 
         if (error || !event) {
+            debug.perf.end('travelService.getTravelPlanDetails')
+            debug.error('TravelService.getTravelPlanDetails', 'Failed to get travel event details (fake)', { planId, error })
+            console.groupEnd()
             return { data: null, error }
         }
 
         const plan = convertEventToTravelPlan(event)
         if (isGuardianViewer && plan.status === 'draft') {
+            debug.perf.end('travelService.getTravelPlanDetails')
+            debug.error('TravelService.getTravelPlanDetails', 'Draft plan not accessible to guardian (fake)', { planId })
+            console.groupEnd()
             return { data: null, error: new Error('Travel plan not found') }
         }
+        debug.perf.end('travelService.getTravelPlanDetails')
+        debug.data('TravelService.getTravelPlanDetails', 'Response (fake)', { planId, hasData: true })
+        console.groupEnd()
         return { data: plan, error: null }
     }
 
@@ -1611,12 +1890,18 @@ export async function getTravelPlanDetails(
 
         // Guardians can't see draft plans
         if (isGuardianViewer && plan.status === 'draft') {
+            debug.perf.end('travelService.getTravelPlanDetails')
+            debug.error('TravelService.getTravelPlanDetails', 'Draft plan not accessible to guardian', { planId })
+            console.groupEnd()
             return { data: null, error: new Error('Travel plan not found') }
         }
 
         // Guardians can only see plans for teams their athletes are on
         if (isGuardianViewer && !context.roles.includes('org_admin')) {
             if (!context.orgId) {
+                debug.perf.end('travelService.getTravelPlanDetails')
+                debug.error('TravelService.getTravelPlanDetails', 'Missing org context for guardian', { planId })
+                console.groupEnd()
                 return { data: null, error: new Error('Travel plan not found') }
             }
 
@@ -1626,6 +1911,9 @@ export async function getTravelPlanDetails(
             )
 
             if (guardianAthletesError) {
+                debug.perf.end('travelService.getTravelPlanDetails')
+                debug.error('TravelService.getTravelPlanDetails', 'Failed to fetch guardian athletes', { error: guardianAthletesError, planId })
+                console.groupEnd()
                 return { data: null, error: new Error('Travel plan not found') }
             }
 
@@ -1635,6 +1923,9 @@ export async function getTravelPlanDetails(
                 .filter(Boolean)
 
             if (athleteIds.length === 0) {
+                debug.perf.end('travelService.getTravelPlanDetails')
+                debug.error('TravelService.getTravelPlanDetails', 'No accessible athletes for guardian', { planId })
+                console.groupEnd()
                 return { data: null, error: new Error('Travel plan not found') }
             }
 
@@ -1646,12 +1937,21 @@ export async function getTravelPlanDetails(
                 .limit(1)
 
             if (membershipError || !memberships || memberships.length === 0) {
+                debug.perf.end('travelService.getTravelPlanDetails')
+                debug.error('TravelService.getTravelPlanDetails', 'Guardian has no access to team', { planId, teamId: plan.team_id, error: membershipError })
+                console.groupEnd()
                 return { data: null, error: new Error('Travel plan not found') }
             }
         }
 
+        debug.perf.end('travelService.getTravelPlanDetails')
+        debug.data('TravelService.getTravelPlanDetails', 'Response', { planId, hasData: true })
+        console.groupEnd()
         return { data: plan, error: null }
     } catch (err) {
+        debug.perf.end('travelService.getTravelPlanDetails')
+        debug.error('TravelService.getTravelPlanDetails', 'Failed to get travel plan details', { error: err, planId })
+        console.groupEnd()
         console.error('getTravelPlanDetails error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -1669,18 +1969,32 @@ export async function getTravelPlanContacts(
     _context: UserContext,
     planId: string
 ): Promise<{ data: Record<TravelContactCategory, TravelPlanContactRow | null>; error: Error | null }> {
-    if (!isValidUUID(planId)) {
-        return { data: {} as any, error: new Error('Invalid plan ID') }
-    }
+    console.groupCollapsed(`%cgetTravelPlanContacts: ${planId}`, 'color: #666; font-weight: bold;');
+    debug.data('TravelService.getTravelPlanContacts', 'Request', { planId })
+    debug.perf.start('travelService.getTravelPlanContacts')
 
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        // Return empty structure for fake mode until fake store is implemented
-        const result = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
-            acc[cat] = null
-            return acc
-        }, {} as Record<TravelContactCategory, TravelPlanContactRow | null>)
+
+        if (!isSupportedFakeTravelPlanId(planId)) {
+            debug.perf.end('travelService.getTravelPlanContacts')
+            debug.error('TravelService.getTravelPlanContacts', 'Invalid plan ID (fake)', { planId })
+            console.groupEnd()
+            return { data: emptyTravelPlanContactResult(), error: new Error('Invalid plan ID') }
+        }
+
+        const result = ensureFakeTravelPlanContacts(planId)
+        debug.perf.end('travelService.getTravelPlanContacts')
+        debug.data('TravelService.getTravelPlanContacts', 'Response (fake)', { planId })
+        console.groupEnd()
         return { data: result, error: null }
+    }
+
+    if (!isValidUUID(planId)) {
+        debug.perf.end('travelService.getTravelPlanContacts')
+        debug.error('TravelService.getTravelPlanContacts', 'Invalid plan ID', { planId })
+        console.groupEnd()
+        return { data: {} as any, error: new Error('Invalid plan ID') }
     }
 
     const baseResult = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
@@ -1706,12 +2020,21 @@ export async function getTravelPlanContacts(
             }
         })
 
+        debug.perf.end('travelService.getTravelPlanContacts')
+        debug.data('TravelService.getTravelPlanContacts', 'Response', { planId, contactCount: Object.values(result).filter(Boolean).length })
+        console.groupEnd()
         return { data: result, error: null }
     } catch (err: any) {
         if (err?.code === '42703') {
+            debug.perf.end('travelService.getTravelPlanContacts')
+            debug.error('TravelService.getTravelPlanContacts', 'Column alias mismatch', { error: err, planId })
+            console.groupEnd()
             console.warn('getTravelPlanContacts: column alias mismatch (organization_id); returning empty contacts', err)
             return { data: baseResult, error: null }
         }
+        debug.perf.end('travelService.getTravelPlanContacts')
+        debug.error('TravelService.getTravelPlanContacts', 'Failed to get travel plan contacts', { error: err, planId })
+        console.groupEnd()
         console.error('getTravelPlanContacts error:', err)
         return { data: {} as any, error: toError(err, 'Unknown error fetching contacts') }
     }
@@ -1724,13 +2047,32 @@ export async function deleteTravelPlanContactsForPlan(
     _context: UserContext,
     planId: string
 ): Promise<{ error: Error | null }> {
-    if (!isValidUUID(planId)) {
-        return { error: new Error('Invalid plan ID') }
-    }
+    console.groupCollapsed(`%cdeleteTravelPlanContactsForPlan: ${planId}`, 'color: #666; font-weight: bold;');
+    debug.flow('TravelService.deleteTravelPlanContactsForPlan', 'Deleting travel plan contacts', { planId })
+    debug.perf.start('travelService.deleteTravelPlanContactsForPlan')
 
     if (USE_FAKE_DATA) {
         await simulateDelay()
+
+        if (!isSupportedFakeTravelPlanId(planId)) {
+            debug.perf.end('travelService.deleteTravelPlanContactsForPlan')
+            debug.error('TravelService.deleteTravelPlanContactsForPlan', 'Invalid plan ID (fake)', { planId })
+            console.groupEnd()
+            return { error: new Error('Invalid plan ID') }
+        }
+
+        fakeTravelPlanContactsStore.delete(planId)
+        debug.perf.end('travelService.deleteTravelPlanContactsForPlan')
+        debug.flow('TravelService.deleteTravelPlanContactsForPlan', 'Contacts deleted (fake)', { planId })
+        console.groupEnd()
         return { error: null }
+    }
+
+    if (!isValidUUID(planId)) {
+        debug.perf.end('travelService.deleteTravelPlanContactsForPlan')
+        debug.error('TravelService.deleteTravelPlanContactsForPlan', 'Invalid plan ID', { planId })
+        console.groupEnd()
+        return { error: new Error('Invalid plan ID') }
     }
 
     try {
@@ -1740,8 +2082,14 @@ export async function deleteTravelPlanContactsForPlan(
             .eq('travel_plan_id', planId)
 
         if (error) throw error
+        debug.perf.end('travelService.deleteTravelPlanContactsForPlan')
+        debug.flow('TravelService.deleteTravelPlanContactsForPlan', 'Contacts deleted successfully', { planId })
+        console.groupEnd()
         return { error: null }
     } catch (err) {
+        debug.perf.end('travelService.deleteTravelPlanContactsForPlan')
+        debug.error('TravelService.deleteTravelPlanContactsForPlan', 'Failed to delete contacts', { error: err, planId })
+        console.groupEnd()
         console.error('deleteTravelPlanContactsForPlan error:', err)
         return { error: toError(err, 'Unknown error deleting travel plan contacts') }
     }
@@ -1762,17 +2110,40 @@ export async function insertTravelPlanContacts(
         phone?: string | null;
     }[]
 ): Promise<{ error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        if (!isSupportedFakeTravelPlanId(planId)) {
+            return { error: new Error('Invalid plan ID') }
+        }
+
+        const existing = ensureFakeTravelPlanContacts(planId)
+        const updated: Record<TravelContactCategory, TravelPlanContactRow | null> = { ...existing }
+
+        contacts.forEach((contact) => {
+            updated[contact.category] = createFakeTravelPlanContactRow(planId, contact.category, {
+                is_custom: true,
+                first_name: contact.first_name,
+                last_name: contact.last_name,
+                email: contact.email,
+                phone: contact.phone ?? null,
+            })
+        })
+
+        fakeTravelPlanContactsStore.set(planId, updated)
+        return { error: null }
+    }
+
     if (!isValidUUID(planId)) {
         return { error: new Error('Invalid plan ID') }
     }
 
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        return { error: null }
-    }
-
     try {
-        if (contacts.length === 0) return { error: null }
+        if (contacts.length === 0) {
+            debug.perf.end('travelService.insertTravelPlanContacts')
+            debug.data('TravelService.insertTravelPlanContacts', 'No contacts to insert', { planId })
+            console.groupEnd()
+            return { error: null }
+        }
 
         const rows = contacts.map(c => ({
             travel_plan_id: planId,
@@ -1789,8 +2160,14 @@ export async function insertTravelPlanContacts(
             .insert(rows)
 
         if (error) throw error
+        debug.perf.end('travelService.insertTravelPlanContacts')
+        debug.flow('TravelService.insertTravelPlanContacts', 'Contacts inserted successfully', { planId, contactCount: contacts.length })
+        console.groupEnd()
         return { error: null }
     } catch (err) {
+        debug.perf.end('travelService.insertTravelPlanContacts')
+        debug.error('TravelService.insertTravelPlanContacts', 'Failed to insert contacts', { error: err, planId })
+        console.groupEnd()
         console.error('insertTravelPlanContacts error:', err)
         return { error: toError(err, 'Unknown error saving travel plan contacts') }
     }
@@ -1812,17 +2189,53 @@ export async function upsertTravelPlanContacts(
         phone?: string | null
     }[]
 ): Promise<{ error: Error | null }> {
-    if (!isValidUUID(planId)) {
-        return { error: new Error('Invalid plan ID') }
-    }
+    console.groupCollapsed(`%cupsertTravelPlanContacts: ${planId}`, 'color: #666; font-weight: bold;');
+    debug.flow('TravelService.upsertTravelPlanContacts', 'Upserting travel plan contacts', { planId, contactCount: contacts.length })
+    debug.perf.start('travelService.upsertTravelPlanContacts')
 
     if (USE_FAKE_DATA) {
         await simulateDelay()
+
+        if (!isSupportedFakeTravelPlanId(planId)) {
+            debug.perf.end('travelService.upsertTravelPlanContacts')
+            debug.error('TravelService.upsertTravelPlanContacts', 'Invalid plan ID (fake)', { planId })
+            console.groupEnd()
+            return { error: new Error('Invalid plan ID') }
+        }
+
+        const existing = ensureFakeTravelPlanContacts(planId)
+        const updated: Record<TravelContactCategory, TravelPlanContactRow | null> = { ...existing }
+        contacts.forEach((contact) => {
+            updated[contact.category] = createFakeTravelPlanContactRow(planId, contact.category, {
+                is_custom: contact.is_custom,
+                first_name: contact.first_name ?? null,
+                last_name: contact.last_name ?? null,
+                email: contact.email ?? null,
+                phone: contact.phone ?? null,
+            })
+        })
+        fakeTravelPlanContactsStore.set(planId, updated)
+
+        debug.perf.end('travelService.upsertTravelPlanContacts')
+        debug.flow('TravelService.upsertTravelPlanContacts', 'Contacts upserted (fake)', { planId })
+        console.groupEnd()
         return { error: null }
     }
 
+    if (!isValidUUID(planId)) {
+        debug.perf.end('travelService.upsertTravelPlanContacts')
+        debug.error('TravelService.upsertTravelPlanContacts', 'Invalid plan ID', { planId })
+        console.groupEnd()
+        return { error: new Error('Invalid plan ID') }
+    }
+
     try {
-        if (contacts.length === 0) return { error: null }
+        if (contacts.length === 0) {
+            debug.perf.end('travelService.upsertTravelPlanContacts')
+            debug.data('TravelService.upsertTravelPlanContacts', 'No contacts to upsert', { planId })
+            console.groupEnd()
+            return { error: null }
+        }
 
         const rows = contacts.map(c => ({
             travel_plan_id: planId,
@@ -1843,8 +2256,14 @@ export async function upsertTravelPlanContacts(
 
         if (error) throw error
 
+        debug.perf.end('travelService.upsertTravelPlanContacts')
+        debug.flow('TravelService.upsertTravelPlanContacts', 'Contacts upserted successfully', { planId, contactCount: contacts.length })
+        console.groupEnd()
         return { error: null }
     } catch (err) {
+        debug.perf.end('travelService.upsertTravelPlanContacts')
+        debug.error('TravelService.upsertTravelPlanContacts', 'Failed to upsert contacts', { error: err, planId })
+        console.groupEnd()
         console.error('upsertTravelPlanContacts error:', err)
         return { error: toError(err, 'Unknown error saving contacts') }
     }
@@ -1857,18 +2276,60 @@ export async function resolveAllTravelContactsForPlan(
     _context: UserContext,
     planId: string
 ): Promise<{ data: ResolvedTravelContacts; error: Error | null }> {
-    if (!isValidUUID(planId)) {
-        return { data: {} as any, error: new Error('Invalid plan ID') }
-    }
+    console.groupCollapsed(`%cresolveAllTravelContactsForPlan: ${planId}`, 'color: #666; font-weight: bold;');
+    debug.data('TravelService.resolveAllTravelContactsForPlan', 'Request', { planId })
+    debug.perf.start('travelService.resolveAllTravelContactsForPlan')
 
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        // Return nulls/empties
+
+        if (!isSupportedFakeTravelPlanId(planId)) {
+            debug.perf.end('travelService.resolveAllTravelContactsForPlan')
+            debug.error('TravelService.resolveAllTravelContactsForPlan', 'Invalid plan ID (fake)', { planId })
+            console.groupEnd()
+            return { data: {} as any, error: new Error('Invalid plan ID') }
+        }
+
+        const planContacts = ensureFakeTravelPlanContacts(planId)
+        const { data: orgContacts, error: orgContactsError } = await getOrganizationTravelContacts(_context)
+        if (orgContactsError) {
+            debug.perf.end('travelService.resolveAllTravelContactsForPlan')
+            debug.error('TravelService.resolveAllTravelContactsForPlan', 'Failed to load org contacts (fake)', {
+                planId,
+                error: orgContactsError,
+            })
+            console.groupEnd()
+            return { data: {} as any, error: orgContactsError }
+        }
+
+        const defaultOrgContact = orgContacts.default
         const result = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
-            acc[cat] = { first_name: '', last_name: '', email: '', phone: null }
+            const planRow = planContacts[cat]
+            const categoryOrgContact = orgContacts[cat]
+            const resolvedSource =
+                planRow?.is_custom && hasContactData(planRow)
+                    ? planRow
+                    : (categoryOrgContact ?? defaultOrgContact)
+
+            acc[cat] = {
+                first_name: resolvedSource?.first_name ?? '',
+                last_name: resolvedSource?.last_name ?? '',
+                email: resolvedSource?.email ?? '',
+                phone: resolvedSource?.phone ?? null,
+            }
             return acc
         }, {} as ResolvedTravelContacts)
+        debug.perf.end('travelService.resolveAllTravelContactsForPlan')
+        debug.data('TravelService.resolveAllTravelContactsForPlan', 'Response (fake)', { planId })
+        console.groupEnd()
         return { data: result, error: null }
+    }
+
+    if (!isValidUUID(planId)) {
+        debug.perf.end('travelService.resolveAllTravelContactsForPlan')
+        debug.error('TravelService.resolveAllTravelContactsForPlan', 'Invalid plan ID', { planId })
+        console.groupEnd()
+        return { data: {} as any, error: new Error('Invalid plan ID') }
     }
 
     try {
@@ -1894,8 +2355,14 @@ export async function resolveAllTravelContactsForPlan(
             return acc
         }, {} as ResolvedTravelContacts)
 
+        debug.perf.end('travelService.resolveAllTravelContactsForPlan')
+        debug.data('TravelService.resolveAllTravelContactsForPlan', 'Response', { planId, categoryCount: Object.keys(result).length })
+        console.groupEnd()
         return { data: result, error: null }
     } catch (err) {
+        debug.perf.end('travelService.resolveAllTravelContactsForPlan')
+        debug.error('TravelService.resolveAllTravelContactsForPlan', 'Failed to resolve contacts', { error: err, planId })
+        console.groupEnd()
         console.error('resolveAllTravelContactsForPlan error:', err)
         return { data: {} as any, error: toError(err, 'Unknown error resolving contacts') }
     }
@@ -2008,9 +2475,16 @@ export async function publishTravelPlan(
     context: UserContext,
     planId: string
 ): Promise<{ data: FakeTravelPlan | null; error: Error | null }> {
+    console.groupCollapsed(`%cpublishTravelPlan: ${planId}`, 'color: #666; font-weight: bold;');
+    debug.flow('TravelService.publishTravelPlan', 'Publishing travel plan', { planId })
+    debug.perf.start('travelService.publishTravelPlan')
+
     try {
         // Validate UUID
         if (!isValidUUID(planId)) {
+            debug.perf.end('travelService.publishTravelPlan')
+            debug.error('TravelService.publishTravelPlan', 'Invalid plan ID format', { planId })
+            console.groupEnd()
             return { data: null, error: new Error('Invalid plan ID format') }
         }
 
@@ -2019,6 +2493,9 @@ export async function publishTravelPlan(
 
             const planIndex = fakeTravelPlans.findIndex(p => p.id === planId)
             if (planIndex === -1) {
+                debug.perf.end('travelService.publishTravelPlan')
+                debug.error('TravelService.publishTravelPlan', 'Travel plan not found (fake)', { planId })
+                console.groupEnd()
                 return { data: null, error: new Error('Travel plan not found') }
             }
 
@@ -2026,11 +2503,17 @@ export async function publishTravelPlan(
 
             // Validate status transition
             if (plan.status === 'cancelled') {
+                debug.perf.end('travelService.publishTravelPlan')
+                debug.error('TravelService.publishTravelPlan', 'Cannot publish cancelled plan (fake)', { planId })
+                console.groupEnd()
                 return { data: null, error: new Error('Cannot publish a cancelled plan. Please create a new plan.') }
             }
 
             if (plan.status === 'published') {
                 // Already published, return as-is
+                debug.perf.end('travelService.publishTravelPlan')
+                debug.flow('TravelService.publishTravelPlan', 'Plan already published (fake)', { planId })
+                console.groupEnd()
                 return { data: plan, error: null }
             }
 
@@ -2059,22 +2542,34 @@ export async function publishTravelPlan(
             .single()
 
         if (fetchError || !existingPlan) {
+            debug.perf.end('travelService.publishTravelPlan')
+            debug.error('TravelService.publishTravelPlan', 'Travel plan not found', { planId, error: fetchError })
+            console.groupEnd()
             return { data: null, error: new Error('Travel plan not found') }
         }
 
         // Validate plan belongs to org
         const existingPlanTyped = existingPlan as TravelPlanRow
         if (existingPlanTyped.team?.org_id !== context.orgId) {
+            debug.perf.end('travelService.publishTravelPlan')
+            debug.error('TravelService.publishTravelPlan', 'Plan does not belong to org', { planId, planOrgId: existingPlanTyped.team?.org_id, contextOrgId: context.orgId })
+            console.groupEnd()
             return { data: null, error: new Error('Travel plan does not belong to your organization') }
         }
 
         // Validate status transition
         if (existingPlanTyped.status === 'cancelled') {
+            debug.perf.end('travelService.publishTravelPlan')
+            debug.error('TravelService.publishTravelPlan', 'Cannot publish cancelled plan', { planId })
+            console.groupEnd()
             return { data: null, error: new Error('Cannot publish a cancelled plan. Please create a new plan.') }
         }
 
         if (existingPlanTyped.status === 'published') {
             // Already published, return as-is
+            debug.perf.end('travelService.publishTravelPlan')
+            debug.flow('TravelService.publishTravelPlan', 'Plan already published', { planId })
+            console.groupEnd()
             return { data: mapSupabaseTravelPlan(existingPlanTyped), error: null }
         }
 
@@ -2102,6 +2597,9 @@ export async function publishTravelPlan(
             .single()
 
         if (updateError) {
+            debug.perf.end('travelService.publishTravelPlan')
+            debug.error('TravelService.publishTravelPlan', 'Failed to update plan', { error: updateError, planId })
+            console.groupEnd()
             return { data: null, error: new Error(`Failed to publish travel plan: ${updateError.message}`) }
         }
 
@@ -2110,8 +2608,14 @@ export async function publishTravelPlan(
         // Send notification (fire and forget - but wait for simple errors)
         await notifyTravelPlanPublished(context, updated as TravelPlanRow)
 
+        debug.perf.end('travelService.publishTravelPlan')
+        debug.flow('TravelService.publishTravelPlan', 'Plan published successfully', { planId })
+        console.groupEnd()
         return { data: finalPlan, error: null }
     } catch (err) {
+        debug.perf.end('travelService.publishTravelPlan')
+        debug.error('TravelService.publishTravelPlan', 'Exception publishing plan', { error: err, planId })
+        console.groupEnd()
         console.error('publishTravelPlan error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error publishing travel plan') }
     }
@@ -2124,9 +2628,16 @@ export async function cancelTravelPlan(
     context: UserContext,
     planId: string
 ): Promise<{ data: FakeTravelPlan | null; error: Error | null }> {
+    console.groupCollapsed(`%ccancelTravelPlan: ${planId}`, 'color: #666; font-weight: bold;');
+    debug.flow('TravelService.cancelTravelPlan', 'Cancelling travel plan', { planId })
+    debug.perf.start('travelService.cancelTravelPlan')
+
     try {
         // Validate UUID
         if (!isValidUUID(planId)) {
+            debug.perf.end('travelService.cancelTravelPlan')
+            debug.error('TravelService.cancelTravelPlan', 'Invalid plan ID format', { planId })
+            console.groupEnd()
             return { data: null, error: new Error('Invalid plan ID format') }
         }
 
@@ -2135,6 +2646,9 @@ export async function cancelTravelPlan(
 
             const planIndex = fakeTravelPlans.findIndex(p => p.id === planId)
             if (planIndex === -1) {
+                debug.perf.end('travelService.cancelTravelPlan')
+                debug.error('TravelService.cancelTravelPlan', 'Travel plan not found (fake)', { planId })
+                console.groupEnd()
                 return { data: null, error: new Error('Travel plan not found') }
             }
 
@@ -2142,6 +2656,9 @@ export async function cancelTravelPlan(
 
             // Validate status transition
             if (plan.status === 'cancelled') {
+                debug.perf.end('travelService.cancelTravelPlan')
+                debug.error('TravelService.cancelTravelPlan', 'Plan already cancelled (fake)', { planId })
+                console.groupEnd()
                 return { data: null, error: new Error('Plan is already cancelled') }
             }
 
@@ -2170,17 +2687,26 @@ export async function cancelTravelPlan(
             .single()
 
         if (fetchError || !existingPlan) {
+            debug.perf.end('travelService.cancelTravelPlan')
+            debug.error('TravelService.cancelTravelPlan', 'Travel plan not found', { planId, error: fetchError })
+            console.groupEnd()
             return { data: null, error: new Error('Travel plan not found') }
         }
 
         // Validate plan belongs to org
         const existingPlanTyped = existingPlan as TravelPlanRow
         if (existingPlanTyped.team?.org_id !== context.orgId) {
+            debug.perf.end('travelService.cancelTravelPlan')
+            debug.error('TravelService.cancelTravelPlan', 'Plan does not belong to org', { planId, planOrgId: existingPlanTyped.team?.org_id, contextOrgId: context.orgId })
+            console.groupEnd()
             return { data: null, error: new Error('Travel plan does not belong to your organization') }
         }
 
         // Validate status transition
         if (existingPlanTyped.status === 'cancelled') {
+            debug.perf.end('travelService.cancelTravelPlan')
+            debug.error('TravelService.cancelTravelPlan', 'Plan already cancelled', { planId })
+            console.groupEnd()
             return { data: null, error: new Error('Plan is already cancelled') }
         }
 
@@ -2202,11 +2728,20 @@ export async function cancelTravelPlan(
             .single()
 
         if (updateError) {
+            debug.perf.end('travelService.cancelTravelPlan')
+            debug.error('TravelService.cancelTravelPlan', 'Failed to update plan', { error: updateError, planId })
+            console.groupEnd()
             return { data: null, error: new Error(`Failed to cancel travel plan: ${updateError.message}`) }
         }
 
+        debug.perf.end('travelService.cancelTravelPlan')
+        debug.flow('TravelService.cancelTravelPlan', 'Plan cancelled successfully', { planId })
+        console.groupEnd()
         return { data: mapSupabaseTravelPlan(updated as TravelPlanRow), error: null }
     } catch (err) {
+        debug.perf.end('travelService.cancelTravelPlan')
+        debug.error('TravelService.cancelTravelPlan', 'Exception cancelling plan', { error: err, planId })
+        console.groupEnd()
         console.error('cancelTravelPlan error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error cancelling travel plan') }
     }

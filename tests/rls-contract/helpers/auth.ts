@@ -6,6 +6,16 @@
  * in the remote TEST Supabase Auth table (do NOT delete them).
  *
  * Includes retry/backoff for sign-in only (network flakiness).
+ *
+ * Role Mapping (per RLS_MATRIX.md):
+ *   orgAdmin       → org_admin in test org
+ *   coach          → coach in test org
+ *   parent         → parent in test org (guardian of test athlete)
+ *   staff          → staff in test org (created via seed)
+ *   fan            → authenticated user with NO membership in test org
+ *   platformAdmin  → platform_admins table (no org membership)
+ *   orgAdmin2      → org_admin in a DIFFERENT org (cross-org/cross-tenant)
+ *   anon           → unauthenticated (getAnonClient, no JWT)
  */
 
 import { ENV } from './env';
@@ -18,7 +28,7 @@ export interface TestUser {
     email: string;
     password: string;
     /** Expected role from organization_members (null = fan/anon) */
-    expectedRole: 'org_admin' | 'coach' | 'parent' | 'staff' | 'fan' | 'platform_admin';
+    expectedRole: 'org_admin' | 'coach' | 'parent' | 'staff' | 'fan' | 'platform_admin' | 'athlete';
 }
 
 export const TEST_USERS: Record<string, TestUser> = {
@@ -40,25 +50,48 @@ export const TEST_USERS: Record<string, TestUser> = {
         password: ENV.TEST_PASSWORD,
         expectedRole: 'parent',
     },
+    /**
+     * Staff user – uses coach-multi@test.com which has no membership in the
+     * test org until we create one during seed. This gives us a clean staff role.
+     */
+    staff: {
+        label: 'Staff 1',
+        email: 'coach-multi@test.com',
+        password: ENV.TEST_PASSWORD,
+        expectedRole: 'staff',
+    },
+    /**
+     * Fan user – uses parent-org2@test.com who is authenticated but has
+     * NO membership in our test org. Simulates an external fan/visitor.
+     */
+    fan: {
+        label: 'Fan 1 (no test-org membership)',
+        email: 'parent-org2@test.com',
+        password: ENV.TEST_PASSWORD,
+        expectedRole: 'fan',
+    },
+    /**
+     * Athlete user – uses athlete-org1@test.com which will be linked to
+     * an athlete record in the test org during seed.
+     */
+    athlete: {
+        label: 'Athlete 1',
+        email: 'athlete-org1@test.com',
+        password: ENV.TEST_PASSWORD,
+        expectedRole: 'athlete',
+    },
     platformAdmin: {
         label: 'Platform Admin',
         email: 'platform-admin@test.com',
         password: ENV.TEST_PASSWORD,
         expectedRole: 'platform_admin',
     },
-    // Org Admin 2 (Riverside) – useful for cross-org isolation tests
+    // Cross-org admin (Riverside) – for cross-tenant isolation tests
     orgAdmin2: {
-        label: 'Org Admin 2',
+        label: 'Org Admin 2 (cross-org)',
         email: 'admin-org2@test.com',
         password: ENV.TEST_PASSWORD,
         expectedRole: 'org_admin',
-    },
-    // Guardian 2 (Riverside) – cross-org isolation
-    parent2: {
-        label: 'Guardian 2',
-        email: 'parent-org2@test.com',
-        password: ENV.TEST_PASSWORD,
-        expectedRole: 'parent',
     },
 };
 

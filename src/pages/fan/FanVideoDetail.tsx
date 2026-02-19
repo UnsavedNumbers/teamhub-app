@@ -17,7 +17,11 @@ import Button from '@/components/portal/Button'
 import '@/styles/fan.css'
 import '@/styles/fan-layouts.css'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function FanVideoDetail() {
+  useDebugLifecycle('FanVideoDetail')
+  
   const { id: videoId } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [_currentTime, setCurrentTime] = useState(0)

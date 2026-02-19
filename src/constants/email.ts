@@ -59,6 +59,18 @@ export const EMAIL_TEMPLATES = {
     subject: 'Guardian Invitation - {{org_name}}',
     preview: 'You have been invited as a guardian',
   },
+  athlete_invite: {
+    subject: 'Athlete Invitation - {{org_name}}',
+    preview: 'You have been invited to create your athlete account',
+  },
+  athlete_account_created_confirmation: {
+    subject: 'Welcome to {{org_name}}',
+    preview: 'Your athlete account has been created',
+  },
+  athlete_linked_confirmation: {
+    subject: 'Account Linked - {{org_name}}',
+    preview: 'Your account has been linked to your athlete profile',
+  },
   coach_invite: {
     subject: 'Coach Invitation - {{org_name}}',
     preview: 'You have been invited as a coach',

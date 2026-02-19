@@ -306,7 +306,7 @@ serve(async (req) => {
   }
 
   // Track the result of processing for the final response
-  let webhookResult: {
+  const webhookResult: {
     payment_type?: PaymentType
     message?: string
     order_id?: string | null
@@ -353,7 +353,6 @@ serve(async (req) => {
 
           // Order status guard: skip if already processed
           if (order.status !== "pending_payment") {
-            console.log(`Order ${orderId} already processed (status: ${order.status})`)
             await supabase.from("stripe_webhook_receipts").insert({
               stripe_event_id: event.id,
               outcome: "skipped",
@@ -429,6 +428,10 @@ serve(async (req) => {
             .from("ticket_holds")
             .select("id, ticket_type_id, qty, expires_at")
             .eq("order_id", orderId)
+          const { data: seatHolds } = await supabase
+            .from("seat_holds")
+            .select("id, seat_map_section_id, expires_at")
+            .eq("order_id", orderId)
 
           const now = new Date()
           for (const hold of holds || []) {
@@ -440,6 +443,14 @@ serve(async (req) => {
               })
               await supabase.from("ticket_orders").update({ status: "cancelled" }).eq("id", orderId)
               throw new Error("Hold expired, order cancelled")
+            }
+          }
+          for (const hold of seatHolds || []) {
+            if (new Date(hold.expires_at) < now) {
+              await supabase.from("seat_holds").delete().eq("order_id", orderId)
+              await supabase.from("ticket_holds").delete().eq("order_id", orderId)
+              await supabase.from("ticket_orders").update({ status: "cancelled" }).eq("id", orderId)
+              throw new Error("Seat hold expired, order cancelled")
             }
           }
 
@@ -489,6 +500,58 @@ serve(async (req) => {
             throw new Error(`Failed to create tickets: ${ticketsError?.message || "Unknown error"}`)
           }
 
+          const ticketTypeIds = Array.from(new Set(orderItems.map((item) => item.ticket_type_id)))
+          const { data: orderItemTicketTypes, error: orderItemTicketTypesError } = await supabase
+            .from("ticket_types")
+            .select("id, seating_mode")
+            .in("id", ticketTypeIds)
+
+          if (orderItemTicketTypesError) {
+            throw new Error("Failed to load ticket type seating modes")
+          }
+
+          const reservedTypeIds = new Set(
+            (orderItemTicketTypes ?? [])
+              .filter((ticketType: any) => ticketType.seating_mode === "reserved_seating")
+              .map((ticketType: any) => ticketType.id as string),
+          )
+
+          const reservedTickets = insertedTickets.filter((ticket) => reservedTypeIds.has(ticket.ticket_type_id))
+          if (reservedTickets.length > 0) {
+            const orderedSeatHolds = [...(seatHolds ?? [])].sort(
+              (left, right) => new Date(left.expires_at).getTime() - new Date(right.expires_at).getTime(),
+            )
+
+            if (orderedSeatHolds.length !== reservedTickets.length) {
+              throw new Error("Reserved seat hold count mismatch")
+            }
+
+            const seatAssignmentsPayload = reservedTickets.map((ticket, index) => ({
+              ticket_id: ticket.id,
+              seat_map_section_id: orderedSeatHolds[index].seat_map_section_id,
+            }))
+
+            const { data: insertedAssignments, error: assignmentError } = await supabase
+              .from("seat_assignments")
+              .insert(seatAssignmentsPayload)
+              .select("id, ticket_id")
+
+            if (assignmentError || !insertedAssignments) {
+              throw new Error("Failed to create seat assignments")
+            }
+
+            for (const assignment of insertedAssignments) {
+              const { error: ticketUpdateError } = await supabase
+                .from("tickets")
+                .update({ seat_assignment_id: assignment.id })
+                .eq("id", assignment.ticket_id)
+
+              if (ticketUpdateError) {
+                throw new Error("Failed to link ticket seat assignment")
+              }
+            }
+          }
+
           // Update order status and Connect fields
           const orderUpdateData: any = {
             status: "paid",
@@ -532,9 +595,7 @@ serve(async (req) => {
 
               if (transactionError) {
                 // Check for unique violation (23505)
-                if (transactionError.code === "23505") {
-                  console.log(`Transaction already recorded for order ${orderId}`)
-                } else {
+                if (transactionError.code !== "23505") {
                   console.error("Failed to insert Connect transaction:", transactionError)
                   // Log but don't fail webhook - order is already marked paid
                 }
@@ -547,21 +608,22 @@ serve(async (req) => {
 
           // Delete holds (they're finalized)
           await supabase.from("ticket_holds").delete().eq("order_id", orderId)
+          await supabase.from("seat_holds").delete().eq("order_id", orderId)
 
           // Send receipt (call tickets-send-receipt Edge Function)
           // Pass raw tokens for QR code generation and access links
           const baseUrl = Deno.env.get("SUPABASE_URL")?.replace("/rest/v1", "") || ""
           try {
-            // Map inserted tickets to include raw tokens for email
+            // Map inserted tickets with their raw tokens for email payload
             const ticketsForEmail = insertedTickets.map((insertedTicket) => {
-              const matched = ticketsWithRawTokens.find(
+              const match = ticketsWithRawTokens.find(
                 ({ ticket }) =>
                   ticket.entry_code === insertedTicket.entry_code &&
                   ticket.ticket_type_id === insertedTicket.ticket_type_id,
               )
               return {
                 id: insertedTicket.id,
-                qr_token_raw: matched?.qr_token_raw || "",
+                qr_token_raw: match?.qr_token_raw || "",
                 entry_code: insertedTicket.entry_code,
                 ticket_type_id: insertedTicket.ticket_type_id,
               }
@@ -972,6 +1034,80 @@ serve(async (req) => {
         webhookResult.amount_cents = amountReceived
         webhookResult.message = `Guardian fee payment succeeded: $${(amountReceived / 100).toFixed(2)} (${paymentType}) for checkout ${checkout.id.slice(-8).toUpperCase()}`
 
+        // Send payment completion notification
+        if (checkout.parent_id) {
+          try {
+            // Get fee assignment details from checkout items
+            const { data: items } = await supabase
+              .from("checkout_session_items")
+              .select("fee_assignment_id, fee_assignment:fee_assignments(fee:fees(id, description))")
+              .eq("checkout_session_id", checkout.id)
+              .limit(1)
+
+            const feeAssignmentId = items?.[0]?.fee_assignment_id as string | undefined
+            const fee = (items?.[0]?.fee_assignment as any)?.fee as { id?: string; description?: string } | undefined
+            const feeDescription = fee?.description || "Fee"
+            const amountDollars = (amountReceived / 100).toFixed(2)
+
+            // Create in-app notification
+            await supabase.from("user_notifications").insert({
+              user_id: checkout.parent_id,
+              org_id: checkout.org_id,
+              team_id: null,
+              action: "fee_payment_completed",
+              role_context: "guardian",
+              presentation_type: "info",
+              entity_type: "fee",
+              entity_id: fee?.id || feeAssignmentId || null,
+              title: "Payment Completed",
+              body: `Your payment of $${amountDollars} for ${feeDescription} has been successfully processed.`,
+              link_url: "/portal/payments",
+              dedupe_key: `fee_payment_completed:${checkout.parent_id}:${payment.id}`,
+              type: "fee_payment_completed",
+              metadata: {
+                payment_id: payment.id,
+                fee_assignment_id: feeAssignmentId,
+                amount_cents: amountReceived,
+                currency: currency,
+              },
+            })
+
+            // Enqueue email notification
+            const { data: user } = await supabase
+              .from("users")
+              .select("email")
+              .eq("id", checkout.parent_id)
+              .single()
+
+            if (user?.email) {
+              await supabase.from("notification_jobs").insert({
+                org_id: checkout.org_id,
+                user_id: checkout.parent_id,
+                email: user.email,
+                type: "payment_receipt",
+                payload: {
+                  action: "fee_payment_completed",
+                  title: "Payment Completed",
+                  body: `Your payment of $${amountDollars} for ${feeDescription} has been successfully processed.`,
+                  link_url: "/portal/payments",
+                  entity_type: "fee",
+                  entity_id: fee?.id || feeAssignmentId || null,
+                  payment_id: payment.id,
+                  fee_assignment_id: feeAssignmentId,
+                  amount_cents: amountReceived,
+                  currency: currency,
+                },
+                status: "queued",
+                retry_count: 0,
+                next_retry_at: null,
+              })
+            }
+          } catch (notifErr) {
+            // Don't fail the webhook if notification fails
+            console.error("Failed to send payment completion notification:", notifErr)
+          }
+        }
+
         break
       }
 
@@ -985,8 +1121,6 @@ serve(async (req) => {
 
         const session = sessions.data[0] ?? null
         if (!session) break
-
-        console.log(session);
 
         const checkoutSessionId = session.metadata?.checkout_session_id as string | null
 
@@ -1023,6 +1157,83 @@ serve(async (req) => {
           .update({ status: "failed", stripe_payment_intent_id: paymentIntentId })
           .eq("id", checkout.id)
         if (updCheckoutErr) throw updCheckoutErr
+
+        // Send payment failure notification
+        if (checkout.parent_id) {
+          try {
+            // Get fee assignment details from checkout items
+            const { data: items } = await supabase
+              .from("checkout_session_items")
+              .select("fee_assignment_id, fee_assignment:fee_assignments(fee:fees(id, description))")
+              .eq("checkout_session_id", checkout.id)
+              .limit(1)
+
+            const feeAssignmentId = items?.[0]?.fee_assignment_id as string | undefined
+            const fee = (items?.[0]?.fee_assignment as any)?.fee as { id?: string; description?: string } | undefined
+            const feeDescription = fee?.description || "Fee"
+            const amountDollars = ((pi.amount ?? 0) / 100).toFixed(2)
+            const errorMessage = pi.last_payment_error?.message || "Payment could not be processed"
+
+            // Create in-app notification
+            await supabase.from("user_notifications").insert({
+              user_id: checkout.parent_id,
+              org_id: checkout.org_id,
+              team_id: null,
+              action: "fee_payment_failed",
+              role_context: "guardian",
+              presentation_type: "warning",
+              entity_type: "fee",
+              entity_id: fee?.id || feeAssignmentId || null,
+              title: "Payment Failed",
+              body: `Your payment of $${amountDollars} for ${feeDescription} could not be processed. ${errorMessage}. Please try again or contact support.`,
+              link_url: "/portal/payments",
+              dedupe_key: `fee_payment_failed:${checkout.parent_id}:${paymentIntentId}`,
+              type: "fee_payment_failed",
+              metadata: {
+                payment_intent_id: paymentIntentId,
+                fee_assignment_id: feeAssignmentId,
+                amount_cents: pi.amount ?? 0,
+                currency: currency,
+                error_message: errorMessage,
+              },
+            })
+
+            // Enqueue email notification
+            const { data: user } = await supabase
+              .from("users")
+              .select("email")
+              .eq("id", checkout.parent_id)
+              .single()
+
+            if (user?.email) {
+              await supabase.from("notification_jobs").insert({
+                org_id: checkout.org_id,
+                user_id: checkout.parent_id,
+                email: user.email,
+                type: "event_reminder", // Use event_reminder for payment failures
+                payload: {
+                  action: "fee_payment_failed",
+                  title: "Payment Failed",
+                  body: `Your payment of $${amountDollars} for ${feeDescription} could not be processed. ${errorMessage}. Please try again or contact support.`,
+                  link_url: "/portal/payments",
+                  entity_type: "fee",
+                  entity_id: fee?.id || feeAssignmentId || null,
+                  payment_intent_id: paymentIntentId,
+                  fee_assignment_id: feeAssignmentId,
+                  amount_cents: pi.amount ?? 0,
+                  currency: currency,
+                  error_message: errorMessage,
+                },
+                status: "queued",
+                retry_count: 0,
+                next_retry_at: null,
+              })
+            }
+          } catch (notifErr) {
+            // Don't fail the webhook if notification fails
+            console.error("Failed to send payment failure notification:", notifErr)
+          }
+        }
 
         break
       }
@@ -1086,7 +1297,7 @@ serve(async (req) => {
 
         if (error) throw error
 
-        // Log state changes for debugging/audit
+        // Record state changes for audit and send notifications
         if (existingOrg) {
           const prevDueRaw: any = existingOrg.stripe_requirements_due
           const prevCurrentlyDue = Array.isArray(prevDueRaw?.currently_due)
@@ -1114,6 +1325,68 @@ serve(async (req) => {
                 deadline,
               },
             })
+
+            // Send notification based on status change
+            if (!existingOrg.stripe_payouts_enabled && payoutsEnabled) {
+              // Payout account connected/enabled - notify all org admins
+              const { data: orgAdmins } = await supabase
+                .from("organization_members")
+                .select("user_id")
+                .eq("org_id", existingOrg.id)
+                .eq("role", "org_admin")
+
+              if (orgAdmins && orgAdmins.length > 0) {
+                const notifications = orgAdmins
+                  .filter(m => m.user_id)
+                  .map(m => ({
+                    user_id: m.user_id!,
+                    org_id: existingOrg.id,
+                    action: "payout_account_connected" as const,
+                    role_context: "org_admin" as const,
+                    presentation_type: "info" as const,
+                    title: "Payout Account Connected",
+                    body: "Your Stripe payout account has been successfully connected and enabled.",
+                    link_url: "/admin/settings/payments",
+                    dedupe_key: `payout_account_connected:${existingOrg.id}:${m.user_id}:${acct.id}`,
+                    type: "payout_account_connected" as const,
+                  }))
+
+                await supabase.from("user_notifications").insert(notifications)
+                  .catch((err) => console.error("Failed to create payout connected notifications:", err))
+              }
+            } else if (existingOrg.stripe_payouts_enabled && !payoutsEnabled) {
+              // Payout account issue/disabled - notify all org admins
+              const { data: orgAdmins } = await supabase
+                .from("organization_members")
+                .select("user_id")
+                .eq("org_id", existingOrg.id)
+                .eq("role", "org_admin")
+
+              if (orgAdmins && orgAdmins.length > 0) {
+                const notifications = orgAdmins
+                  .filter(m => m.user_id)
+                  .map(m => ({
+                    user_id: m.user_id!,
+                    org_id: existingOrg.id,
+                    action: "payout_account_issue" as const,
+                    role_context: "org_admin" as const,
+                    presentation_type: "warning" as const,
+                    title: "Payout Account Issue",
+                    body: `Your payout account has been disabled: ${disabledReason || "Unknown reason"}. Please check your Stripe account settings.`,
+                    link_url: "/admin/settings/payments",
+                    dedupe_key: `payout_account_issue:${existingOrg.id}:${m.user_id}:${acct.id}`,
+                    type: "payout_account_issue" as const,
+                    metadata: {
+                      disabled_reason: disabledReason,
+                      currently_due: currentlyDue,
+                      past_due: pastDue,
+                    },
+                  }))
+
+                await supabase.from("user_notifications").insert(notifications)
+                  .catch((err) => console.error("Failed to create payout issue notifications:", err))
+              }
+            }
           }
 
           if (prevCurrentlyDue === 0 && currentlyDue.length > 0) {
@@ -1190,15 +1463,12 @@ serve(async (req) => {
           webhookResult.message = `Ticket sale refunded: ${ticketCount} ticket(s) for order ${order.id.slice(-8).toUpperCase()}`
         } else {
           // Not a ticket order refund - log for observability but don't process
-          console.log(`charge.refunded event ${event.id} has no matching ticket order`)
           webhookResult.message = `Refund received but no matching ticket order found`
         }
 
         break
       }
       default:
-        // Log unhandled event types for visibility
-        console.log(`Unhandled event type: ${event.type}`)
         webhookResult.message = `Unhandled event type: ${event.type}`
         break
     }

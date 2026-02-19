@@ -48,6 +48,13 @@ export function hasCoachRole(organizations: Organization[]): boolean {
 }
 
 /**
+ * Check if user has athlete role in any organization
+ */
+export function hasAthleteRole(organizations: Organization[]): boolean {
+  return organizations.some(org => org.roles?.includes('athlete'))
+}
+
+/**
  * Determine redirect destination after login
  * 
  * Rules:
@@ -90,7 +97,12 @@ export function getLoginRedirect(
     return getLink(RouteKeys.ADMIN_DASHBOARD)
   }
 
-  // Priority 5: Explicitly identified fans -> fan home
+  // Priority 5: Athlete role -> portal dashboard
+  if (hasAthleteRole(organizations)) {
+    return getLink(RouteKeys.PORTAL_DASHBOARD)
+  }
+
+  // Priority 6: Explicitly identified fans -> fan home
   // This is determined by signup_mode='fan' or having fan_org_follows entries
   if (isFan) {
     return getLink(RouteKeys.FAN_HOME)

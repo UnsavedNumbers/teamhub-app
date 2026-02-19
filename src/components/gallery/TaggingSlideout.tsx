@@ -27,9 +27,11 @@ import {
   type TaggedPerson,
   type SuggestedPerson,
 } from '../../data/services/taggingService'
+import AthleteAvatar from '../portal/AthleteAvatar'
 import Button from '../portal/Button'
 import Icon from '../portal/Icon'
 import { showError, showSuccess } from '../../utils/toast'
+import type { Athlete } from '../../types/family'
 
 // ============================================================================
 // Props Interface
@@ -513,19 +515,12 @@ export function TaggingSlideout({
                       })}
                     >
                       {/* Avatar */}
-                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-slate-600 font-bold text-white">
-                        {person.photo_url ? (
-                          <img
-                            src={person.photo_url}
-                            alt={displayName}
-                            className="h-full w-full rounded-full object-cover"
-                          />
-                        ) : (
-                          <span>
-                            {person.first_name[0]}
-                            {person.last_name[0]}
-                          </span>
-                        )}
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-slate-600 font-bold text-white">
+                        <AthleteAvatar
+                          athlete={{ id: person.id, first_name: person.first_name, last_name: person.last_name, org_id: context?.orgId, has_profile_photo: !!person.photo_url, profile_photo_updated_at: null } as unknown as Athlete}
+                          photoSize="256"
+                          className="h-full w-full rounded-full object-cover"
+                        />
                       </div>
 
                       {/* Name */}

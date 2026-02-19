@@ -13,6 +13,11 @@ import { getDefaultTheme } from '../config/themes'
  * Token interface defining all theme-derived CSS custom properties
  */
 export interface ThemeTokens {
+  // Explicit color-role tokens
+  '--org-color-primary': string
+  '--org-color-secondary': string
+  '--org-color-tertiary': string
+
   // Existing action tokens (platform admin compatibility)
   '--pa-theme-action-primary': string
   '--pa-theme-action-hover': string
@@ -48,6 +53,9 @@ export interface ThemeTokens {
   '--org-text-secondary': string
   '--org-text-muted': string
   '--org-text-inverse': string
+  '--org-surface-primary': string
+  '--org-surface-secondary': string
+  '--org-surface-tertiary': string
   '--org-surface-page': string
   '--org-surface-section': string
   '--org-surface-card': string
@@ -66,6 +74,9 @@ export interface ThemeTokens {
 }
 
 export const THEME_TOKEN_NAMES = [
+  '--org-color-primary',
+  '--org-color-secondary',
+  '--org-color-tertiary',
   '--pa-theme-action-primary',
   '--pa-theme-action-hover',
   '--pa-theme-action-active',
@@ -96,6 +107,9 @@ export const THEME_TOKEN_NAMES = [
   '--org-text-secondary',
   '--org-text-muted',
   '--org-text-inverse',
+  '--org-surface-primary',
+  '--org-surface-secondary',
+  '--org-surface-tertiary',
   '--org-surface-page',
   '--org-surface-section',
   '--org-surface-card',
@@ -150,6 +164,10 @@ export function getPlatformAdminFixedTokens(): ThemeTokens {
   const disabledText = '#9AA4B2'
 
   return {
+    '--org-color-primary': primary,
+    '--org-color-secondary': primaryHover,
+    '--org-color-tertiary': '#6B7280',
+
     '--pa-theme-action-primary': primary,
     '--pa-theme-action-hover': primaryHover,
     '--pa-theme-action-active': primaryActive,
@@ -182,6 +200,9 @@ export function getPlatformAdminFixedTokens(): ThemeTokens {
     '--org-text-secondary': textSecondary,
     '--org-text-muted': textMuted,
     '--org-text-inverse': '#FFFFFF',
+    '--org-surface-primary': surfaceCard,
+    '--org-surface-secondary': surfaceSection,
+    '--org-surface-tertiary': surfaceHover,
     '--org-surface-page': surfacePage,
     '--org-surface-section': surfaceSection,
     '--org-surface-card': surfaceCard,
@@ -267,6 +288,10 @@ function generateDefaultTokens(isDark: boolean): ThemeTokens {
     const fallbackBorder = isDark ? '#334155' : '#E2E8F0'
     
     return {
+      '--org-color-primary': fallbackColor,
+      '--org-color-secondary': '#0d6bc2',
+      '--org-color-tertiary': isDark ? '#94A3B8' : '#64748B',
+
       '--pa-theme-action-primary': fallbackColor,
       '--pa-theme-action-hover': '#0d6bc2',
       '--pa-theme-action-active': '#0b5ba0',
@@ -301,6 +326,9 @@ function generateDefaultTokens(isDark: boolean): ThemeTokens {
       '--org-text-secondary': isDark ? '#9CA3AF' : '#6B7280',
       '--org-text-muted': isDark ? '#6B7280' : '#9CA3AF',
       '--org-text-inverse': isDark ? '#0F172A' : '#FFFFFF',
+      '--org-surface-primary': isDark ? '#1F2937' : '#FFFFFF',
+      '--org-surface-secondary': isDark ? '#111827' : '#EEF2F7',
+      '--org-surface-tertiary': isDark ? '#374151' : '#F9FAFB',
       '--org-surface-page': isDark ? '#0B0F14' : '#F7F9FC',
       '--org-surface-section': isDark ? '#111827' : '#EEF2F7',
       '--org-surface-card': isDark ? '#1F2937' : '#FFFFFF',
@@ -360,10 +388,13 @@ export function generateTokens(theme: Theme, isDark: boolean): ThemeTokens {
     // Safely parse primary color for derived tokens
     const primary = safeParseColor(theme.colors.primary, defaultTheme.colors.primary)
     const secondary = safeParseColor(theme.colors.secondary, defaultTheme.colors.secondary)
+    const tertiary = safeParseColor(theme.colors.accent, defaultTheme.colors.accent)
 
     // For dark mode, adjust primary/secondary if no dark mode overrides exist
     const shouldAdjust = isDark && !theme.darkModeOverrides
     const adjustedPrimary = shouldAdjust ? adjustForDarkMode(primary) : primary
+    const adjustedSecondary = shouldAdjust ? adjustForDarkMode(secondary) : secondary
+    const adjustedTertiary = shouldAdjust ? adjustForDarkMode(tertiary) : tertiary
     
     // Generate derived colors for compatibility tokens
     const actionActive = adjustedPrimary.darken(0.1)
@@ -373,6 +404,11 @@ export function generateTokens(theme: Theme, isDark: boolean): ThemeTokens {
     const focusRing = adjustedPrimary.alpha(0.5)
 
     const tokens: ThemeTokens = {
+      // -- Explicit Color Roles --
+      '--org-color-primary': adjustedPrimary.toHex(),
+      '--org-color-secondary': adjustedSecondary.toHex(),
+      '--org-color-tertiary': adjustedTertiary.toHex(),
+
       // -- Platform Admin Legacy / Core Tokens (for backward compatibility) --
       '--pa-theme-action-primary': button.primary.bg,
       '--pa-theme-action-hover': button.primary.hover,
@@ -421,6 +457,9 @@ export function generateTokens(theme: Theme, isDark: boolean): ThemeTokens {
       '--org-text-muted': isDark ? colors.text.secondary : ui.text.muted,
       '--org-text-inverse': ui.text.inverse,
 
+      '--org-surface-primary': colors.surface.card,
+      '--org-surface-secondary': colors.surface.section,
+      '--org-surface-tertiary': colors.surface.hover,
       '--org-surface-page': colors.surface.page,
       '--org-surface-section': colors.surface.section,
       '--org-surface-card': colors.surface.card,

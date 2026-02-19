@@ -7,6 +7,7 @@
 
 import { USE_FAKE_DATA } from '../config'
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import type { SupabaseExtended as Database, Json } from '../../lib/supabase.extended.types'
 import { getFakeUserPreferences } from '../fake/fakeSettings'
 import type { NotificationPreferencesByOrg } from '../../types/notificationPreferences'
@@ -56,13 +57,16 @@ export interface UserPreferences {
 export async function getUserPreferences(
   userId: string
 ): Promise<{ data: UserPreferences | null; error: Error | null }> {
-  if (USE_FAKE_DATA) {
-    // Demo mode: return fake preferences
-    const fakePrefs = getFakeUserPreferences(userId)
-    return { data: fakePrefs || {}, error: null }
-  }
+  debug.data('PreferencesService.getUserPreferences', 'Request', { userId })
+  debug.perf.start('preferencesService.getUserPreferences')
 
   try {
+  if (USE_FAKE_DATA) {
+      const fakePrefs = getFakeUserPreferences(userId)
+      debug.perf.end('preferencesService.getUserPreferences')
+      debug.data('PreferencesService.getUserPreferences', 'Response (fake)', { userId })
+      return { data: fakePrefs || {}, error: null }
+    }
     const { data, error } = await supabase
       .from('users')
       .select('preferences')
@@ -102,6 +106,7 @@ export async function updateUserPreference(
     return { data: null, error: null }
   }
 
+  debug.perf.start('preferencesService.updateUserPreference')
   try {
     // First, get current preferences
     const { data: currentData, error: fetchError } = await getUserPreferences(userId)
@@ -130,8 +135,14 @@ export async function updateUserPreference(
     type UserData = { preferences?: UserPreferences }
     const userData = data as UserData
     const preferences = userData?.preferences || {}
+    debug.perf.end('preferencesService.updateUserPreference')
+    debug.flow('PreferencesService.updateUserPreference', 'Preference updated successfully', { userId, key })
+    console.groupEnd()
     return { data: preferences, error: null }
   } catch (err) {
+    debug.perf.end('preferencesService.updateUserPreference')
+    debug.error('PreferencesService.updateUserPreference', 'Failed to update preference', { error: err, userId, key })
+    console.groupEnd()
     return {
       data: null,
       error: err instanceof Error ? err : new Error('Unknown error'),
@@ -146,8 +157,14 @@ export async function updateUserPreferences(
   userId: string,
   preferences: Partial<UserPreferences>
 ): Promise<{ data: UserPreferences | null; error: Error | null }> {
+  console.groupCollapsed(`%cupdateUserPreferences: ${userId}`, 'color: #666; font-weight: bold;');
+  debug.flow('PreferencesService.updateUserPreferences', 'Updating preferences', { userId, keys: Object.keys(preferences) })
+  debug.perf.start('preferencesService.updateUserPreferences')
+
   if (USE_FAKE_DATA) {
-    // Demo mode: no-op
+    debug.perf.end('preferencesService.updateUserPreferences')
+    debug.flow('PreferencesService.updateUserPreferences', 'Preferences updated (fake)', { userId, keys: Object.keys(preferences) })
+    console.groupEnd()
     return { data: null, error: null }
   }
 
@@ -179,8 +196,14 @@ export async function updateUserPreferences(
     type UserData = { preferences?: UserPreferences }
     const userData = data as UserData
     const prefs = userData?.preferences || {}
+    debug.perf.end('preferencesService.updateUserPreferences')
+    debug.flow('PreferencesService.updateUserPreferences', 'Preferences updated successfully', { userId, keys: Object.keys(preferences) })
+    console.groupEnd()
     return { data: prefs, error: null }
   } catch (err) {
+    debug.perf.end('preferencesService.updateUserPreferences')
+    debug.error('PreferencesService.updateUserPreferences', 'Failed to update preferences', { error: err, userId, keys: Object.keys(preferences) })
+    console.groupEnd()
     return {
       data: null,
       error: err instanceof Error ? err : new Error('Unknown error'),
@@ -195,11 +218,17 @@ export async function clearUserPreference(
   userId: string,
   key: string
 ): Promise<{ data: UserPreferences | null; error: Error | null }> {
-  if (USE_FAKE_DATA) {
-    return { data: null, error: null }
-  }
+  console.groupCollapsed(`%cclearUserPreference: ${key}`, 'color: #666; font-weight: bold;');
+  debug.flow('PreferencesService.clearUserPreference', 'Clearing preference', { userId, key })
+  debug.perf.start('preferencesService.clearUserPreference')
 
   try {
+    if (USE_FAKE_DATA) {
+      debug.perf.end('preferencesService.clearUserPreference')
+      debug.flow('PreferencesService.clearUserPreference', 'Preference cleared (fake)', { userId, key })
+      console.groupEnd()
+      return { data: null, error: null }
+    }
     const { data: currentData, error: fetchError } = await getUserPreferences(userId)
     
     if (fetchError) {
@@ -224,8 +253,14 @@ export async function clearUserPreference(
     type UserData = { preferences?: UserPreferences }
     const userData = data as UserData
     const prefs = userData?.preferences || {}
+    debug.perf.end('preferencesService.clearUserPreference')
+    debug.flow('PreferencesService.clearUserPreference', 'Preference cleared successfully', { userId, key })
+    console.groupEnd()
     return { data: prefs, error: null }
   } catch (err) {
+    debug.perf.end('preferencesService.clearUserPreference')
+    debug.error('PreferencesService.clearUserPreference', 'Failed to clear preference', { error: err, userId, key })
+    console.groupEnd()
     return {
       data: null,
       error: err instanceof Error ? err : new Error('Unknown error'),

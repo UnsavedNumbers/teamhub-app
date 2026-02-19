@@ -7,7 +7,7 @@ import { getLink } from '../../utils/routes'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
 import { showSuccess, showError } from '../../utils/toast'
-import { ConfirmDialog, AdminPageHeader, EmptyState } from '../../components/admin'
+import { Card, ConfirmDialog, AdminPageHeader } from '../../components/admin'
 import TravelHeader from '../../components/admin/TravelHeader'
 import TravelFilters from '../../components/admin/TravelFilters'
 import TravelList from '../../components/admin/TravelList'
@@ -30,7 +30,10 @@ const DEFAULT_FILTERS: TravelFiltersType = {
     status: [],
 }
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function TravelPlans() {
+  useDebugLifecycle('TravelPlans')
     const [searchParams, setSearchParams] = useSearchParams()
 
     const [timeContext, setTimeContext] = useState<TravelTimeContext>('upcoming')
@@ -246,15 +249,20 @@ export default function TravelPlans() {
             />
 
             {filteredPlans.length === 0 && !loading ? (
-                <EmptyState
-                    icon="flight_takeoff"
-                    title={t('travelPlans.noPlans')}
-                    description={t('travelPlans.noPlansDesc')}
-                >
-                    <button className="oa-btn oa-btn--primary" onClick={() => navigate('/admin/travel/new')}>
-                        {t('travelPlans.createPlan')}
-                    </button>
-                </EmptyState>
+                <Card className="oa-border-2 oa-border-dashed">
+                    <div className="oa-flex oa-flex-col oa-gap-4">
+                        <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+                            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>flight_takeoff</span>
+                            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0">
+                                <h3 className="oa-h3 oa-mb-0">{t('travelPlans.noPlans')}</h3>
+                                <p className="oa-body-m oa-text-muted oa-mb-0">{t('travelPlans.noPlansDesc')}</p>
+                            </div>
+                        </div>
+                        <button className="oa-btn oa-btn--primary" onClick={() => navigate('/admin/travel/new')}>
+                            {t('travelPlans.createPlan')}
+                        </button>
+                    </div>
+                </Card>
             ) : (
                 <>
                     {viewMode === 'list' && (

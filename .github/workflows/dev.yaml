@@ -1,22 +1,17 @@
-name: Release (Test)
+name: Release (Dev)
 
 on:
   push:
     branches: [dev]
-    paths:
-      - "supabase/migrations/**"
-      - "supabase/functions/**"
-      - "supabase/config.toml"
   workflow_dispatch:
 
 concurrency:
-  group: release-test
+  group: release-dev
   cancel-in-progress: true
 
 jobs:
   migrate:
     runs-on: ubuntu-latest
-    environment: test
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.DEV_DB_PASSWORD }}
@@ -31,9 +26,6 @@ jobs:
 
       - name: Link project
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
-
-      - name: Verify migration history before deploy
-        run: supabase migration list --linked
 
       - name: Migration dry-run
         run: supabase db push --linked --dry-run

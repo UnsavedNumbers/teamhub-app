@@ -17,7 +17,11 @@ import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function SeasonsManagement() {
+  useDebugLifecycle('SeasonsManagement')
+  
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)

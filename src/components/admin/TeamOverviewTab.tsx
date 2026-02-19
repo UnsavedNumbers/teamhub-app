@@ -70,7 +70,7 @@ export function TeamOverviewTab({
               <span className="material-symbols-outlined" style={{ fontSize: '24px', color: 'var(--pa-n400)' }}>
                 sports_soccer
               </span>
-              <span className="pa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
+              <span className="oa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
                 Sport
               </span>
             </div>
@@ -87,7 +87,7 @@ export function TeamOverviewTab({
               <span className="material-symbols-outlined" style={{ fontSize: '24px', color: 'var(--pa-n400)' }}>
                 calendar_today
               </span>
-              <span className="pa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
+              <span className="oa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
                 Season
               </span>
             </div>
@@ -103,7 +103,7 @@ export function TeamOverviewTab({
             <span className="material-symbols-outlined" style={{ fontSize: '24px', color: 'var(--pa-n400)' }}>
               people
             </span>
-            <span className="pa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
+            <span className="oa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
               Total Athletes
             </span>
           </div>
@@ -118,7 +118,7 @@ export function TeamOverviewTab({
             <span className="material-symbols-outlined" style={{ fontSize: '24px', color: 'var(--pa-n400)' }}>
               check_circle
             </span>
-            <span className="pa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
+            <span className="oa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
               Active Athletes
             </span>
           </div>
@@ -130,3 +130,4 @@ export function TeamOverviewTab({
     </div>
   )
 }
+

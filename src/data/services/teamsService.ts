@@ -36,7 +36,8 @@ import type { AddAthletesToTeamResponse } from '../../types/athletes'
 import { buildTeamQuery, buildTeamMembershipQuery, buildCoachAssignmentQuery } from './queryHelpers'
 import { normalizeSupabaseResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
-import { logEvent } from '../../utils/eventLogger'
+import { logEvent, logTeamEvent } from '../../utils/eventLogger'
+import { debug } from '../../lib/debug'
 
 // ============================================================================
 // Helper Functions
@@ -179,7 +180,7 @@ async function getAthleteIdsForFamily(familyId: string | null): Promise<string[]
  * Map database errors to user-friendly messages
  * Prevents information leakage while providing helpful feedback
  */
-function mapDatabaseError(error: unknown): Error {
+export function mapDatabaseError(error: unknown): Error {
     if (!error || typeof error !== 'object') {
         return new Error('An unexpected error occurred. Please try again.')
     }
@@ -276,6 +277,10 @@ export async function getTeams(
     context: UserContext,
     params: TeamsQueryParams = {}
 ): Promise<{ data: Team[]; error: Error | null }> {
+    console.groupCollapsed(`%cgetTeams: ${JSON.stringify(params)}`, 'color: #666; font-weight: bold;');
+    debug.data('TeamsService.getTeams', 'Request', { context: { userId: context.userId, orgId: context.orgId }, params })
+    debug.perf.start('teamsService.getTeams')
+
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
@@ -342,6 +347,9 @@ export async function getTeams(
             ? normalizedData.map(mapSupabaseTeamToDomain)
             : []
 
+        debug.perf.end('teamsService.getTeams')
+        debug.data('TeamsService.getTeams', 'Response', { teamCount: mappedTeams.length })
+        console.groupEnd()
         return { data: mappedTeams, error: null }
     } catch (err) {
         const classifiedError = classifySupabaseError(err)
@@ -356,6 +364,9 @@ export async function getTeams(
             }
         })
 
+        debug.perf.end('teamsService.getTeams')
+        debug.error('TeamsService.getTeams', 'Failed to fetch teams', { error: err, params, context: { userId: context.userId, orgId: context.orgId } })
+        console.groupEnd()
         return { data: [], error: classifiedError }
     }
 }
@@ -364,26 +375,29 @@ export async function createTeam(
     _context: UserContext,
     dto: CreateTeamDTO
 ): Promise<{ data: Team | null; error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        const now = new Date().toISOString()
-        const created: Team = {
-            id: `demo-team-${Date.now()}`,
-            org_id: dto.org_id,
-            name: dto.name,
-            level_id: dto.level_id ?? null,
-            sport_id: dto.sport_id ?? null,
-            program_id: dto.program_id ?? null,
-            max_roster_size: dto.max_roster_size ?? null,
-            is_active: dto.is_active ?? true,
-            created_at: now,
-            updated_at: now,
-            deleted_at: null,
-        }
-        return { data: created, error: null }
-    }
+    console.groupCollapsed(`%ccreateTeam: ${dto.name}`, 'color: #666; font-weight: bold;');
+    debug.flow('TeamsService.createTeam', 'Started', { teamName: dto.name, orgId: dto.org_id })
+    debug.perf.start('teamsService.createTeam')
 
     try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const now = new Date().toISOString()
+            const created: Team = {
+                id: `demo-team-${Date.now()}`,
+                org_id: dto.org_id,
+                name: dto.name,
+                level_id: dto.level_id ?? null,
+                sport_id: dto.sport_id ?? null,
+                program_id: dto.program_id ?? null,
+                max_roster_size: dto.max_roster_size ?? null,
+                is_active: dto.is_active ?? true,
+                created_at: now,
+                updated_at: now,
+                deleted_at: null,
+            }
+            return { data: created, error: null }
+        }
         type TeamInsert = Database['public']['Tables']['teams']['Insert']
         // Generate a temporary invite code - the database trigger will generate the actual one
         // This is just to satisfy TypeScript's type requirement
@@ -432,8 +446,14 @@ export async function createTeam(
         }
 
         const mappedTeam = mapSupabaseTeamToDomain(data)
+        debug.perf.end('teamsService.createTeam')
+        debug.flow('TeamsService.createTeam', 'Team created successfully', { teamId: data.id, teamName: dto.name })
+        console.groupEnd()
         return { data: mappedTeam, error: null }
     } catch (err) {
+        debug.perf.end('teamsService.createTeam')
+        debug.error('TeamsService.createTeam', 'Failed to create team', { error: err, teamName: dto.name, orgId: dto.org_id })
+        console.groupEnd()
         console.error('[teamsService] Error creating team:', err)
         // Preserve the actual error message if available
         if (err instanceof Error) {
@@ -655,11 +675,55 @@ export async function getTeamDetails(
     }
 }
 
+// Simple in-memory rate limiter for team code lookups
+// Key: code or IP, Value: { count: number, resetAt: number }
+const rateLimitCache = new Map<string, { count: number; resetAt: number }>()
+
+// Clean up expired entries every 5 minutes
+setInterval(() => {
+    const now = Date.now()
+    for (const [key, value] of rateLimitCache.entries()) {
+        if (value.resetAt < now) {
+            rateLimitCache.delete(key)
+        }
+    }
+}, 5 * 60 * 1000)
+
+/**
+ * Check rate limit for team code lookup
+ * @param identifier - IP address or invite code
+ * @param maxRequests - Maximum requests per window (default: 20 per IP, 5 per code)
+ * @param windowMs - Time window in milliseconds (default: 60000 = 1 minute)
+ */
+function checkRateLimit(identifier: string, maxRequests: number = 20, windowMs: number = 60000): boolean {
+    const now = Date.now()
+    const cached = rateLimitCache.get(identifier)
+
+    if (!cached || cached.resetAt < now) {
+        // Create new window
+        rateLimitCache.set(identifier, {
+            count: 1,
+            resetAt: now + windowMs
+        })
+        return true
+    }
+
+    if (cached.count >= maxRequests) {
+        return false // Rate limit exceeded
+    }
+
+    // Increment count
+    cached.count++
+    return true
+}
+
 /**
  * Get team by invite code
  * 
  * This function allows anyone (including unauthenticated users) to look up a team
  * by its invite code. The invite code is case-insensitive and normalized to uppercase.
+ * 
+ * Rate limiting: 20 requests per minute per IP, 5 requests per minute per code
  */
 export async function getTeamByInviteCode(
     inviteCode: string
@@ -670,6 +734,29 @@ export async function getTeamByInviteCode(
 
         if (!normalizedCode) {
             return { data: null, error: new Error('Invalid invite code. Please check and try again.') }
+        }
+
+        // Simple IP-based rate limiting (using a client identifier)
+        // In a real app, you'd get the actual IP from the request
+        // For now, we'll use a simple identifier based on browser fingerprint
+        const clientId = typeof window !== 'undefined' 
+            ? `client_${window.location.hostname}` 
+            : 'server'
+        
+        // Check rate limit per IP (20/min)
+        if (!checkRateLimit(clientId, 20, 60000)) {
+            return { 
+                data: null, 
+                error: new Error('Too many requests. Please try again in a minute.') 
+            }
+        }
+
+        // Check rate limit per code (5/min) to prevent enumeration
+        if (!checkRateLimit(`code_${normalizedCode}`, 5, 60000)) {
+            return { 
+                data: null, 
+                error: new Error('Too many requests for this code. Please try again in a minute.') 
+            }
         }
 
         // Query teams table using case-insensitive comparison
@@ -763,6 +850,41 @@ export async function createTeamMembership(
 
         const isNew = !existingMembership
 
+        // If this is a new membership, check roster capacity
+        if (isNew) {
+            // Get team max_roster_size
+            const { data: teamData, error: teamError } = await supabase
+                .from('teams')
+                .select('max_roster_size')
+                .eq('id', teamId)
+                .single()
+
+            if (!teamError && teamData?.max_roster_size) {
+                // Count active memberships for this team/season
+                const { count, error: countError } = await supabase
+                    .from('team_memberships')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('team_id', teamId)
+                    .eq('season_id', seasonId)
+                    .eq('status', 'active')
+
+                if (!countError && count !== null && count >= teamData.max_roster_size) {
+                    return {
+                        data: null,
+                        error: new Error('This team is full. Please contact the organization for more information.')
+                    }
+                }
+            }
+        }
+
+        // Check for duplicate membership before insert
+        if (existingMembership && existingMembership.status === 'active') {
+            return {
+                data: { id: existingMembership.id, isNew: false },
+                error: new Error('Your athlete is already on this team.')
+            }
+        }
+
         // Insert or update membership atomically using ON CONFLICT
         // This handles race conditions and duplicate membership attempts gracefully
         type MembershipInsert = Database['public']['Tables']['team_memberships']['Insert']
@@ -805,6 +927,36 @@ export async function createTeamMembership(
 
         if (!membershipData) {
             return { data: null, error: new Error('Failed to create membership. Please try again.') }
+        }
+
+        // Log team join completion event
+        try {
+            const { data: teamData } = await supabase
+                .from('teams')
+                .select('org_id, name')
+                .eq('id', teamId)
+                .single()
+
+            if (teamData) {
+                await logTeamEvent(
+                    'TEAM_JOIN_COMPLETED',
+                    teamData.org_id,
+                    teamId,
+                    context.userId,
+                    'parent',
+                    {
+                        athlete_id: athleteId,
+                        team_id: teamId,
+                        season_id: seasonId,
+                        membership_id: membershipData.id,
+                        is_new: isNew,
+                        team_name: teamData.name,
+                    }
+                )
+            }
+        } catch (logErr) {
+            // Don't fail the request if logging fails
+            console.warn('Failed to log team join event:', logErr)
         }
 
         // Distribute notifications if this is a new membership

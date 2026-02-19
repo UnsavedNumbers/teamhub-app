@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
 import type { OrganizationContact, ContactCategory, OrganizationContactFormData } from '../../types/organizationContacts'
 import {
@@ -17,12 +18,23 @@ function isRlsError(error: Error): boolean {
 }
 
 export async function getOrganizationContacts(orgId: string): Promise<{ data: OrganizationContact[] | null; error: Error | null }> {
+    console.groupCollapsed(`%cgetOrganizationContacts: ${orgId}`, 'color: #666; font-weight: bold;');
+    debug.data('OrganizationContactsService.getOrganizationContacts', 'Request', { orgId })
+    debug.perf.start('organizationContactsService.getOrganizationContacts')
+
     try {
         if (USE_FAKE_DATA) {
-            return getFakeOrganizationContacts(orgId)
+            const result = await getFakeOrganizationContacts(orgId)
+            debug.perf.end('organizationContactsService.getOrganizationContacts')
+            debug.data('OrganizationContactsService.getOrganizationContacts', 'Response (fake)', { orgId, contactCount: result.data?.length || 0 })
+            console.groupEnd()
+            return result
         }
 
         if (!orgId) {
+            debug.perf.end('organizationContactsService.getOrganizationContacts')
+            debug.error('OrganizationContactsService.getOrganizationContacts', 'orgId is required', { orgId })
+            console.groupEnd()
             return { data: null, error: new Error(t('common.error.notFound' as any)) }
         }
 
@@ -44,10 +56,19 @@ export async function getOrganizationContacts(orgId: string): Promise<{ data: Or
 }
 
 export async function getContactForCategory(orgId: string, category: ContactCategory): Promise<{ data: OrganizationContact | null; error: Error | null }> {
+    console.groupCollapsed(`%cgetContactForCategory: ${orgId} - ${category}`, 'color: #666; font-weight: bold;');
+    debug.data('OrganizationContactsService.getContactForCategory', 'Request', { orgId, category })
+    debug.perf.start('organizationContactsService.getContactForCategory')
+
     try {
         const { data: contacts, error } = await getOrganizationContacts(orgId)
         if (error) throw error
-        if (!contacts) return { data: null, error: new Error('No contacts found') }
+        if (!contacts) {
+            debug.perf.end('organizationContactsService.getContactForCategory')
+            debug.error('OrganizationContactsService.getContactForCategory', 'No contacts found', { orgId, category })
+            console.groupEnd()
+            return { data: null, error: new Error('No contacts found') }
+        }
 
         const defaultContact = contacts.find(c => c.category === 'default')
         const categoryContact = contacts.find(c => c.category === category)
@@ -60,17 +81,29 @@ export async function getContactForCategory(orgId: string, category: ContactCate
             categoryContact.last_name &&
             categoryContact.email
         ) {
+            debug.perf.end('organizationContactsService.getContactForCategory')
+            debug.data('OrganizationContactsService.getContactForCategory', 'Response (category contact)', { orgId, category })
+            console.groupEnd()
             return { data: categoryContact, error: null }
         }
 
         // Fallback to default
         if (defaultContact) {
+            debug.perf.end('organizationContactsService.getContactForCategory')
+            debug.data('OrganizationContactsService.getContactForCategory', 'Response (default contact)', { orgId, category })
+            console.groupEnd()
             return { data: defaultContact, error: null }
         }
 
         // Only if backfill failed or something else is wrong
+        debug.perf.end('organizationContactsService.getContactForCategory')
+        debug.error('OrganizationContactsService.getContactForCategory', 'Default contact missing', { orgId, category })
+        console.groupEnd()
         return { data: null, error: new Error('Default contact missing') }
     } catch (err) {
+        debug.perf.end('organizationContactsService.getContactForCategory')
+        debug.error('OrganizationContactsService.getContactForCategory', 'Failed to resolve contact', { error: err, orgId, category })
+        console.groupEnd()
         console.error(`Error resolving contact for category ${category}:`, err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -80,12 +113,23 @@ export async function upsertDefaultContact(
     orgId: string,
     payload: OrganizationContactFormData
 ): Promise<{ data: OrganizationContact | null; error: Error | null }> {
+    console.groupCollapsed(`%cupsertDefaultContact: ${orgId}`, 'color: #666; font-weight: bold;');
+    debug.flow('OrganizationContactsService.upsertDefaultContact', 'Upserting default contact', { orgId, hasFirstName: !!payload.first_name, hasLastName: !!payload.last_name, hasEmail: !!payload.email })
+    debug.perf.start('organizationContactsService.upsertDefaultContact')
+
     try {
         if (USE_FAKE_DATA) {
-            return upsertFakeDefaultContact(orgId, payload)
+            const result = upsertFakeDefaultContact(orgId, payload)
+            debug.perf.end('organizationContactsService.upsertDefaultContact')
+            debug.flow('OrganizationContactsService.upsertDefaultContact', 'Default contact upserted (fake)', { orgId })
+            console.groupEnd()
+            return result
         }
 
         if (!orgId) {
+            debug.perf.end('organizationContactsService.upsertDefaultContact')
+            debug.error('OrganizationContactsService.upsertDefaultContact', 'orgId is required', { orgId })
+            console.groupEnd()
             return { data: null, error: new Error(t('common.error.notFound' as any)) }
         }
 
@@ -114,9 +158,15 @@ export async function upsertDefaultContact(
 
         if (error) throw error
 
+        debug.perf.end('organizationContactsService.upsertDefaultContact')
+        debug.flow('OrganizationContactsService.upsertDefaultContact', 'Default contact upserted successfully', { orgId })
+        console.groupEnd()
         return { data: data as OrganizationContact, error: null }
 
     } catch (err) {
+        debug.perf.end('organizationContactsService.upsertDefaultContact')
+        debug.error('OrganizationContactsService.upsertDefaultContact', 'Failed to upsert default contact', { error: err, orgId })
+        console.groupEnd()
         console.error('Error updating default contact:', err)
         if (err instanceof Error && isRlsError(err)) {
             return { data: null, error: new Error(t('common.error.permissionDenied' as any)) }
@@ -130,12 +180,23 @@ export async function upsertCategoryContact(
     category: ContactCategory,
     payload: OrganizationContactFormData
 ): Promise<{ data: OrganizationContact | null; error: Error | null }> {
+    console.groupCollapsed(`%cupsertCategoryContact: ${orgId} - ${category}`, 'color: #666; font-weight: bold;');
+    debug.flow('OrganizationContactsService.upsertCategoryContact', 'Upserting category contact', { orgId, category, hasFirstName: !!payload.first_name, hasLastName: !!payload.last_name, hasEmail: !!payload.email })
+    debug.perf.start('organizationContactsService.upsertCategoryContact')
+
     try {
         if (USE_FAKE_DATA) {
-            return upsertFakeCategoryContact(orgId, category, payload)
+            const result = upsertFakeCategoryContact(orgId, category, payload)
+            debug.perf.end('organizationContactsService.upsertCategoryContact')
+            debug.flow('OrganizationContactsService.upsertCategoryContact', 'Category contact upserted (fake)', { orgId, category })
+            console.groupEnd()
+            return result
         }
 
         if (!orgId) {
+            debug.perf.end('organizationContactsService.upsertCategoryContact')
+            debug.error('OrganizationContactsService.upsertCategoryContact', 'orgId is required', { orgId, category })
+            console.groupEnd()
             return { data: null, error: new Error(t('common.error.notFound' as any)) }
         }
 
@@ -173,9 +234,15 @@ export async function upsertCategoryContact(
 
         if (error) throw error
 
+        debug.perf.end('organizationContactsService.upsertCategoryContact')
+        debug.flow('OrganizationContactsService.upsertCategoryContact', 'Category contact upserted successfully', { orgId, category })
+        console.groupEnd()
         return { data: data as OrganizationContact, error: null }
 
     } catch (err) {
+        debug.perf.end('organizationContactsService.upsertCategoryContact')
+        debug.error('OrganizationContactsService.upsertCategoryContact', 'Failed to upsert category contact', { error: err, orgId, category })
+        console.groupEnd()
         console.error(`Error updating contact for ${category}:`, err)
         if (err instanceof Error && isRlsError(err)) {
             return { data: null, error: new Error(t('common.error.permissionDenied' as any)) }

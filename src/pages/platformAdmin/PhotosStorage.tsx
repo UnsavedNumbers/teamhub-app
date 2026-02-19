@@ -33,7 +33,10 @@ interface UserUsageRow {
 const PAGE_SIZE = 100
 const TOP_ROWS = 10
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function PhotosStorage() {
+  useDebugLifecycle('PhotosStorage')
   const t = useT()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

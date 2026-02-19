@@ -122,14 +122,14 @@ export default function OrganizationUsers() {
       label: 'Actions', 
       align: 'right',
       render: (row) => (
-        <Button 
-          variant="ghost" 
-          size="compact"
-          onClick={(e: React.MouseEvent<HTMLElement>) => { 
-            e.stopPropagation()
-            navigate(`/admin/organization/users/${row.id}/edit`)
-          }}
-        >
+            <Button 
+              variant="ghost" 
+              size="compact"
+              onClick={(e: React.MouseEvent<HTMLElement>) => { 
+                e.stopPropagation()
+                navigate(`/admin/users/${row.id}`)
+              }}
+            >
           <span className="material-symbols-outlined">edit</span>
         </Button>
       )

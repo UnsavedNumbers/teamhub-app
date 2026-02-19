@@ -11,7 +11,7 @@ import {
   copyStripeIdToClipboard,
 } from '../../utils/platformAdminMasking'
 import type { AdminPayment, PlatformAdminRole } from '../../types/platformAdmin.types'
-import { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { showSuccess, showInfo } from '../../utils/toast'
 
 // Status filter options
@@ -227,7 +227,7 @@ export default function PlatformPayments() {
       />
 
       {/* Stats */}
-      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-3 pa-gap-4 pa-mb-4">
+      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-3 pa-gap-4 pa-mb-4">
         <StatCard
           label="Total Volume"
           value={formatCurrency(stats.totalVolume)}

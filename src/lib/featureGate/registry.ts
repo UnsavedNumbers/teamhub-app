@@ -114,7 +114,6 @@ export const ROUTE_TO_FEATURE: Record<string, FeatureKey> = {
     'admin.ticketingEvents': 'ticketing',
     'admin.ticketingEvents.list': 'ticketing',
     'admin.ticketingEvents.create': 'ticketing',
-    'admin.ticketingEvents.detail': 'ticketing',
     'admin.ticketingEvents.ticketTypes.create': 'ticketing',
     'admin.ticketingOrders': 'ticketing',
     'admin.ticketingScanner': 'ticketing',

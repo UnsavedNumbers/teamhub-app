@@ -14,7 +14,9 @@ export async function scanFeatureFlags(): Promise<Partial<DiscoveredFeature>[]> 
         if (error) return [];
 
         for (const flag of (flags || [])) {
-            const normalizedKey = normalizeFeatureKey(flag.key || flag.feature_key); // Adjust based on actual schema
+            const rawKey = flag.key || flag.feature_key;
+            if (!rawKey) continue;
+            const normalizedKey = normalizeFeatureKey(rawKey); // Adjust based on actual schema
 
             discovered.push({
                 featureKey: normalizedKey,
@@ -23,9 +25,9 @@ export async function scanFeatureFlags(): Promise<Partial<DiscoveredFeature>[]> 
                 featureType: 'module',
                 description: flag.description || 'Feature Flag',
                 discoveredFrom: ['flags'],
-                discoveredKeys: [{ source: 'flags', key: flag.key || flag.feature_key }],
+                discoveredKeys: [{ source: 'flags', key: rawKey }],
 
-                featureFlag: flag.key || flag.feature_key,
+                featureFlag: rawKey,
                 confidenceScore: 90,
                 needsReview: false,
 

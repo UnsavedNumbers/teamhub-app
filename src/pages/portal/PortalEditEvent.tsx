@@ -9,7 +9,11 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { EventFormData } from '../../types/calendar'
 import { getLink, RouteKeys } from '../../utils/routes'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function PortalEditEvent() {
+  useDebugLifecycle('PortalEditEvent')
+  
   const { eventId } = useParams<{ eventId: string }>()
   const navigate = useNavigate()
   const { context, isReady } = useUserContext()

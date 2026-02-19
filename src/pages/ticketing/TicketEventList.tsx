@@ -12,10 +12,13 @@ import { useRouteLink } from '@/utils/routes'
 import type { TicketedEvent, TicketType } from '@/types/ticketing'
 import { formatCurrency } from '@/types/ticketing'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketEventList() {
+  useDebugLifecycle('TicketEventList')
   const { data: eventsResponse } = useQuery({
-    queryKey: ['ticketed-events', 'published'],
-    queryFn: () => getTicketedEvents({ status: 'published', upcoming_only: true }),
+    queryKey: ['ticketed-events', 'published', 'fan-visible', 'upcoming'],
+    queryFn: () => getTicketedEvents({ status: 'published', upcoming_only: true, fan_visible_only: true }),
   })
 
   const eventsResponseAny = eventsResponse as any
@@ -62,41 +65,75 @@ export default function TicketEventList() {
 function EventCard({ event }: { event: TicketedEvent }) {
   const eventDate = new Date(event.starts_at)
   const eventUrl = useRouteLink('portal.ticketEventDetail', { eventId: event.id })
-  
-  // Get minimum price
-  const { data: ticketTypesResponse } = useQuery({
+
+  const { data: availability } = useQuery({
     queryKey: ['ticket-types', event.id, 'min-price'],
     queryFn: () => getTicketTypesForEvent(event.id, event.org_id),
-    select: (data: any) => {
+    select: (data: any): {
+      minPriceCents: number | null
+      hasActiveTypes: boolean
+      hasAvailableCapacity: boolean
+    } => {
       const types = Array.isArray(data) ? data : data?.data || []
-      if (types.length === 0) return null
-      return Math.min(...types.map((t: TicketType) => t.price_cents))
+      const hasActiveTypes = types.length > 0
+      const hasAvailableCapacity = types.some((t: TicketType) => t.capacity_remaining === null || t.capacity_remaining > 0)
+      const priceSource = hasAvailableCapacity
+        ? types.filter((t: TicketType) => t.capacity_remaining === null || t.capacity_remaining > 0)
+        : types
+
+      return {
+        minPriceCents: priceSource.length > 0 ? Math.min(...priceSource.map((t: TicketType) => t.price_cents)) : null,
+        hasActiveTypes,
+        hasAvailableCapacity,
+      }
     },
   })
 
-  const minPrice = ticketTypesResponse || null
+  const minPrice = availability?.minPriceCents ?? null
   const dayName = eventDate.toLocaleDateString('en-US', { weekday: 'short' })
   const dateStr = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   const timeStr = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  const now = Date.now()
+  const eventEnded = new Date(event.ends_at).getTime() < now
+  const soldOut = (availability?.hasActiveTypes ?? false) && !(availability?.hasAvailableCapacity ?? false)
+  const noActiveTicketTypes = !availability?.hasActiveTypes
+  const ticketsComingSoon = Boolean(event.sales_start_at) && new Date(event.sales_start_at as string).getTime() > now
+  const ctaDisabled = eventEnded || soldOut || noActiveTicketTypes
+
+  const ticketStateLabel = eventEnded
+    ? 'This event has ended'
+    : soldOut
+      ? 'This event is sold out'
+      : noActiveTicketTypes && ticketsComingSoon
+        ? 'Tickets coming soon'
+        : noActiveTicketTypes
+          ? 'No tickets currently available'
+          : null
 
   return (
     <Link
       to={eventUrl}
-      className="flex flex-col bg-white dark:bg-[#1c2630] rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group"
+      className={`flex flex-col rounded-xl overflow-hidden shadow-sm transition-shadow group ${
+        ctaDisabled
+          ? 'bg-white/95 dark:bg-[#1c2630] border border-gray-200 dark:border-gray-700'
+          : 'bg-white dark:bg-[#1c2630] hover:shadow-md'
+      }`}
     >
-      {/* Image */}
-      <div className="w-full aspect-[16/10] bg-center bg-no-repeat bg-cover relative">
-        {event.cover_image_path ? (
-          <img
-            src={event.cover_image_path}
-            alt={event.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-[#137fec] to-blue-600" />
-        )}
+      {/* Image — 4:3 ratio enforced via padding-bottom */}
+      <div className="relative w-full flex-shrink-0" style={{ paddingBottom: '75%' }}>
+        <div className="absolute inset-0 bg-center bg-no-repeat bg-cover">
+          {event.cover_image_path ? (
+            <img
+              src={event.cover_image_path}
+              alt={event.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[#137fec] to-blue-600" />
+          )}
+        </div>
         {event.event_type && (
-          <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase text-[#137fec]">
+          <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase text-[#137fec] z-10">
             {event.event_type}
           </div>
         )}
@@ -112,15 +149,23 @@ function EventCard({ event }: { event: TicketedEvent }) {
           <p>{dayName}, {dateStr} • {timeStr}</p>
         </div>
         <div className="mt-auto flex items-center justify-between gap-4 border-t border-gray-100 dark:border-gray-800 pt-5">
-          {minPrice !== null ? (
+          {minPrice !== null && !ticketStateLabel ? (
             <p className="text-[#111418] dark:text-gray-200 text-sm font-semibold leading-normal whitespace-nowrap">
               Starting from <span className="text-lg font-bold text-[#137fec]">{formatCurrency(minPrice)}</span>
             </p>
           ) : (
-            <p className="text-[#111418] dark:text-gray-200 text-sm font-semibold">Tickets Available</p>
+            <p className="text-[#111418] dark:text-gray-200 text-sm font-semibold">{ticketStateLabel || 'Tickets Available'}</p>
           )}
-          <button className="flex-1 flex min-w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-4 bg-[#137fec] text-white text-sm font-black leading-normal tracking-[0.05em] shadow-[0_8px_15px_-3px_rgba(19,127,236,0.3),0_4px_6px_-2px_rgba(19,127,236,0.05)] hover:brightness-110 active:scale-[0.98] transition-all uppercase">
-            Buy Tickets
+          <button
+            className={`flex-1 flex min-w-[120px] items-center justify-center overflow-hidden rounded-lg h-12 px-4 text-sm font-black leading-normal tracking-[0.05em] transition-all uppercase ${
+              ctaDisabled
+                ? 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed'
+                : 'cursor-pointer bg-[#137fec] text-white shadow-[0_8px_15px_-3px_rgba(19,127,236,0.3),0_4px_6px_-2px_rgba(19,127,236,0.05)] hover:brightness-110 active:scale-[0.98]'
+            }`}
+            type="button"
+            disabled={ctaDisabled}
+          >
+            {eventEnded ? 'Ended' : soldOut ? 'Sold Out' : noActiveTicketTypes ? 'Unavailable' : 'Buy Tickets'}
           </button>
         </div>
       </div>

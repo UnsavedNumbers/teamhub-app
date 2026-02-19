@@ -2,7 +2,7 @@
  * Ticket Access Page (QR Token Link)
  * 
  * Displays a single ticket with QR code from an encrypted access link.
- * Route: /tickets/access?t={encrypted_payload}
+ * Route: /portal/tickets/access?t={encrypted_payload}
  */
 
 import { useState, useEffect } from 'react'
@@ -14,7 +14,10 @@ import { formatEntryCode } from '@/types/ticketing'
 import { useT } from '@/i18n/useI18n'
 import { Sun, AlertCircle, Loader2 } from 'lucide-react'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketAccessPage() {
+  useDebugLifecycle('TicketAccessPage')
   const [searchParams] = useSearchParams()
   const t = useT()
   const encryptedPayload = searchParams.get('t')

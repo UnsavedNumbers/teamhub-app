@@ -50,6 +50,8 @@ interface VisibilitySectionProps {
   onDirtyChange: (dirty: boolean) => void
 }
 
+import { useDebugLifecycle } from '../../../lib/debug/integrations/useDebugLifecycle'
+
 export default function VisibilitySection({
   settings,
   isSaving,
@@ -58,6 +60,8 @@ export default function VisibilitySection({
   onSettingsUpdated,
   onDirtyChange,
 }: VisibilitySectionProps) {
+  useDebugLifecycle('VisibilitySection')
+  
   const { context } = useUserContext()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)

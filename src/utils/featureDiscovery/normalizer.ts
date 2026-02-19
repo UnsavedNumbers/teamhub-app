@@ -5,7 +5,7 @@
 export function normalizeFeatureKey(key: string): string {
     if (!key || typeof key !== 'string') return 'unknown_feature';
 
-    let normalized = key
+    const normalized = key
         .toLowerCase()
         .trim()
         .replace(/[^a-z0-9_]/g, '_')   // Replace non-alphanumeric with underscore

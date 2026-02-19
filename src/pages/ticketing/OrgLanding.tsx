@@ -12,13 +12,17 @@ import type { OrgContext } from '@/utils/orgResolution'
 import { OrgScopedRoute } from '@/components/OrgScopedRoute'
 import { getLink, RouteKeys } from '@/utils/routes'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 function OrgLandingContent({ org }: { org: OrgContext }) {
+  useDebugLifecycle('OrgLandingContent')
+  
   const orgSlug = org.slug
 
   // Check if ticketing is enabled and has events
   const { data: eventsResponse } = useQuery({
-    queryKey: ['ticketed-events', 'published', org.id, 'preview'],
-    queryFn: () => getTicketedEvents({ org_id: org.id, status: 'published', upcoming_only: true }),
+    queryKey: ['ticketed-events', 'published', org.id, 'fan-visible', 'upcoming', 'preview'],
+    queryFn: () => getTicketedEvents({ org_id: org.id, status: 'published', upcoming_only: true, fan_visible_only: true }),
     select: (data: any) => {
       const events = Array.isArray(data) ? data : data?.data || []
       return events.slice(0, 3) // Preview first 3 events
@@ -112,7 +116,12 @@ function OrgLandingContent({ org }: { org: OrgContext }) {
                     className="flex flex-col bg-white dark:bg-[#1c2630] rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group"
                   >
                   {event.cover_image_path && (
-                    <div className="w-full aspect-video bg-cover bg-center" style={{ backgroundImage: `url(${event.cover_image_path})` }} />
+                    <div className="relative w-full flex-shrink-0" style={{ paddingBottom: '75%' }}>
+                      <div
+                        className="absolute inset-0 bg-cover bg-center"
+                        style={{ backgroundImage: `url(${event.cover_image_path})` }}
+                      />
+                    </div>
                   )}
                   <div className="p-5">
                     <h3 className="text-lg font-bold mb-2 group-hover:text-[#137fec] transition-colors">

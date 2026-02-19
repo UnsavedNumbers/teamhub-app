@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useState, useRef, useEffect, useCallback, useMemo, useContext } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { useOrganization } from '../../contexts/OrganizationContext'
+import { OrganizationContext } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
-import { getLink, RouteKeys } from '@/utils/routes'
+import { getLink, RouteKeys, useCurrentRouteKey } from '@/utils/routes'
 import { formatRoleName, hasRole } from '@/utils/roleHelpers'
 import { USE_FAKE_DATA } from '@/data/config'
 import { useOffline } from '@/hooks/useOffline'
@@ -13,20 +13,12 @@ import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 
 export default function UserContextDropdown() {
   const { user, profile, signOut } = useAuth()
-  let currentOrganization, organizations, setCurrentOrganization
-  try {
-    const orgContext = useOrganization()
-    currentOrganization = orgContext.currentOrganization
-    organizations = orgContext.organizations
-    setCurrentOrganization = orgContext.setCurrentOrganization
-  } catch (err) {
-    // If useOrganization fails, render nothing (context not available)
-    return null
-  }
-  
+  const orgContext = useContext(OrganizationContext)
+  const currentOrganization = orgContext?.currentOrganization ?? null
+  const organizations = orgContext?.organizations ?? []
+  const setCurrentOrganization = orgContext?.setCurrentOrganization ?? (() => {})
   const { isOffline } = useOffline()
   const navigate = useNavigate()
-  const location = useLocation()
   const t = useT()
   const [isOpen, setIsOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
@@ -36,9 +28,10 @@ export default function UserContextDropdown() {
   // Infer active role from current route
   // Admin routes (starting with /admin) indicate org_admin or coach role
   // Portal routes indicate parent role
+  const currentRouteKey = useCurrentRouteKey()
   const inferredActiveRole = useMemo((): OrgMemberRole | null => {
     if (!currentOrganization) return null
-    const isAdminRoute = location.pathname.startsWith('/admin')
+    const isAdminRoute = currentRouteKey != null && currentRouteKey.startsWith('admin.')
     if (isAdminRoute) {
       // Prefer org_admin if available, otherwise coach
       if (hasRole(currentOrganization, 'org_admin')) return 'org_admin'
@@ -49,7 +42,7 @@ export default function UserContextDropdown() {
     }
     // Fallback to first available role
     return currentOrganization.roles?.[0] || null
-  }, [location.pathname, currentOrganization])
+  }, [currentRouteKey, currentOrganization])
 
   // Close on outside click
   useEffect(() => {
@@ -98,7 +91,7 @@ export default function UserContextDropdown() {
     }
 
     // Find the organization
-    const org = profile.organizations.find(o => o.id === orgId)
+    const org = profile.organizations?.find(o => o.id === orgId)
     
     if (!org) {
       console.error('Organization not found:', orgId)
@@ -134,6 +127,14 @@ export default function UserContextDropdown() {
     }
   }, [switching, profile, isOffline, navigate, setCurrentOrganization])
 
+  // Close handler
+  const handleClose = useCallback(() => {
+    setIsOpen(false)
+  }, [])
+
+  // Early return after all hooks are called
+  if (orgContext === undefined) return null
+
   const initials = profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'
   const displayName = profile?.display_name || user?.email || 'User'
   const email = user?.email || ''
@@ -154,10 +155,17 @@ export default function UserContextDropdown() {
 
   const hasAnyOrgs = organizations.length > 0
 
-  // Close handler
-  const handleClose = useCallback(() => {
-    setIsOpen(false)
-  }, [])
+  const isPlatformAdminContext =
+    currentRouteKey != null && currentRouteKey.startsWith('platformAdmin.')
+  const isOrgAdminContext =
+    (currentRouteKey != null && currentRouteKey.startsWith('admin.')) ||
+    inferredActiveRole === 'org_admin' ||
+    inferredActiveRole === 'coach'
+  const settingsPath = isPlatformAdminContext
+    ? getLink(RouteKeys.PLATFORM_SETTINGS)
+    : isOrgAdminContext
+      ? getLink(RouteKeys.ADMIN_SETTINGS)
+      : getLink(RouteKeys.PORTAL_SETTINGS)
 
   // Menu content component (reused for both desktop dropdown and mobile sheet)
   const menuContent = (
@@ -167,7 +175,13 @@ export default function UserContextDropdown() {
         <p className="text-sm font-medium text-slate-900 dark:text-white truncate" title={displayName}>{displayName}</p>
         <p className="text-xs text-slate-500 dark:text-slate-400 truncate" title={email}>{email}</p>
         {currentOrganization && (
-          <span className="mt-1 inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
+          <span 
+            className="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+            style={{
+              backgroundColor: 'var(--org-badge-primary-bg, rgba(19, 127, 236, 0.1))',
+              color: 'var(--org-badge-primary-text, var(--org-btn-primary-bg, #137fec))'
+            }}
+          >
             {currentOrganization.name}
           </span>
         )}
@@ -189,9 +203,13 @@ export default function UserContextDropdown() {
                   disabled={switching}
                   className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between group transition-colors min-h-[44px] ${
                     isActive 
-                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' 
+                      ? 'font-medium' 
                       : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                   } ${switching ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  style={isActive ? {
+                    backgroundColor: 'var(--org-highlight-bg, var(--org-surface-accent, rgba(19, 127, 236, 0.15)))',
+                    color: 'var(--org-btn-primary-bg, #137fec)'
+                  } : undefined}
                 >
                   <div className="flex flex-col">
                     <span>{org.name}</span>
@@ -200,7 +218,12 @@ export default function UserContextDropdown() {
                     </span>
                   </div>
                   {isActive && (
-                    <span className="material-symbols-outlined text-lg text-blue-600 dark:text-blue-400">check</span>
+                    <span 
+                      className="material-symbols-outlined text-lg"
+                      style={{ color: 'var(--org-btn-primary-bg, #137fec)' }}
+                    >
+                      check
+                    </span>
                   )}
                 </button>
               )
@@ -216,7 +239,7 @@ export default function UserContextDropdown() {
       {/* 3. Personal Settings */}
       <div className="py-1 border-b border-slate-100 dark:border-slate-700">
         <Link 
-          to={getLink(RouteKeys.PORTAL_SETTINGS)}
+          to={settingsPath}
           onClick={handleClose}
           className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px] no-underline hover:no-underline"
         >
@@ -245,7 +268,7 @@ export default function UserContextDropdown() {
       {/* 5. Support */}
       <div className="py-1 border-b border-slate-100 dark:border-slate-700">
         <Link 
-          to={getLink(RouteKeys.PORTAL_SETTINGS)} 
+          to={getLink(RouteKeys.PORTAL_HELP)} 
           onClick={handleClose} 
           className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px] no-underline hover:no-underline"
         >
@@ -273,7 +296,11 @@ export default function UserContextDropdown() {
         {/* Trigger */}
         <button 
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center justify-center p-0 border-none bg-transparent cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full"
+          className="flex items-center justify-center p-0 border-none bg-transparent cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
+          style={{
+            '--tw-ring-color': 'var(--org-focus-ring, rgba(19, 127, 236, 0.5))',
+            outlineColor: 'var(--org-focus-ring, rgba(19, 127, 236, 0.5))'
+          } as React.CSSProperties}
           aria-expanded={isOpen}
           aria-haspopup="true"
         >

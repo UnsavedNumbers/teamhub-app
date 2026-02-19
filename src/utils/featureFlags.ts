@@ -18,23 +18,17 @@ import { getFallbackValue, hasFallback } from './featureFlagFallbacks'
 // ============================================================================
 
 /**
- * Get current environment from Supabase URL
- * 
- * Pattern: 'dev' if URL contains '-dev', 'staging' if contains '-staging', 'prod' otherwise
- * Defaults to 'dev' if pattern doesn't match (safe default)
+ * Get current environment from VITE_APP_ENV
+ *
+ * Only 'prod' is treated as production; anything else (including missing/empty) is 'dev'.
+ * Explicit 'staging' is supported when VITE_APP_ENV=staging.
  */
 export function getEnvironment(): FeatureFlagEnvironment {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-  
-  if (supabaseUrl.includes('-dev') || supabaseUrl.includes('localhost') || supabaseUrl.includes('127.0.0.1')) {
-    return 'dev'
-  }
-  
-  if (supabaseUrl.includes('-staging')) {
-    return 'staging'
-  }
-  
-  return 'prod'
+  const appEnv = (import.meta.env.VITE_APP_ENV || '').toLowerCase().trim()
+
+  if (appEnv === 'prod') return 'prod'
+  if (appEnv === 'staging') return 'staging'
+  return 'dev'
 }
 
 // ============================================================================

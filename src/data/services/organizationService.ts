@@ -13,6 +13,7 @@ import {
 } from '../fake/organizationFakeService'
 import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
 import type { EventActorRole } from '../../types/eventLog.types'
+import { debug } from '../../lib/debug'
 
 
 export interface OrganizationUpdateDTO {
@@ -89,8 +90,13 @@ async function getCurrentActorContext(orgId: string): Promise<{ userId: string |
 }
 
 export async function getOrganizationDetails(orgId: string): Promise<{ data: Organization | null; error: Error | null }> {
+    console.groupCollapsed(`%cgetOrganizationDetails: ${orgId}`, 'color: #666; font-weight: bold;');
+    debug.data('OrganizationService.getOrganizationDetails', 'Request', { orgId })
+    debug.perf.start('organizationService.getOrganizationDetails')
+
     try {
         if (USE_FAKE_DATA) {
+            debug.flow('OrganizationService.getOrganizationDetails', 'Using fake data')
             return getFakeOrganizationDetails(orgId)
         }
 
@@ -156,8 +162,14 @@ export async function getOrganizationDetails(orgId: string): Promise<{ data: Org
             profile_visible_to_fans: data.profile_visible_to_fans ?? undefined,
         }
 
+        debug.perf.end('organizationService.getOrganizationDetails')
+        debug.data('OrganizationService.getOrganizationDetails', 'Response', { orgId, orgName: org.name })
+        console.groupEnd()
         return { data: org, error: null }
     } catch (err) {
+        debug.perf.end('organizationService.getOrganizationDetails')
+        debug.error('OrganizationService.getOrganizationDetails', 'Failed to fetch organization', { error: err, orgId })
+        console.groupEnd()
         console.error('[organizationService] Error fetching organization:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -335,8 +347,13 @@ export async function updateOrganizationDetails(
     orgId: string,
     updates: OrganizationUpdateDTO
 ): Promise<{ data: Organization | null; error: Error | null }> {
+    console.groupCollapsed(`%cupdateOrganizationDetails: ${orgId}`, 'color: #666; font-weight: bold;');
+    debug.flow('OrganizationService.updateOrganizationDetails', 'Started', { orgId, fieldCount: Object.keys(updates).length })
+    debug.perf.start('organizationService.updateOrganizationDetails')
+
     try {
         if (USE_FAKE_DATA) {
+            debug.flow('OrganizationService.updateOrganizationDetails', 'Using fake data')
             return updateFakeOrganizationDetails(orgId, updates)
         }
 
@@ -399,8 +416,14 @@ export async function updateOrganizationDetails(
             profile_visible_to_fans: data.profile_visible_to_fans ?? undefined,
         }
 
+        debug.perf.end('organizationService.updateOrganizationDetails')
+        debug.flow('OrganizationService.updateOrganizationDetails', 'Updated successfully', { orgId, fieldCount: Object.keys(updates).length })
+        console.groupEnd()
         return { data: org, error: null }
     } catch (err) {
+        debug.perf.end('organizationService.updateOrganizationDetails')
+        debug.error('OrganizationService.updateOrganizationDetails', 'Failed to update organization', { error: err, orgId, updates: Object.keys(updates) })
+        console.groupEnd()
         console.error('[organizationService] Error updating organization:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -474,15 +497,33 @@ export async function uploadTicketBanner(
 
         const fileExt = file.name.split('.').pop() || 'png'
         const fileName = `banner-${Date.now()}.${fileExt}`
-        const filePath = `event-banners/${orgId}/ticket-banners/${eventId}/${fileName}`
+        const preferredPath = `event-banners/${orgId}/ticket-banners/${eventId}/${fileName}`
+        const fallbackPath = `orgs/${orgId}/ticket-banners/${eventId}/${fileName}`
+        const bucket = import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET
 
-        const { error: uploadError } = await supabase.storage
-            .from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET)
-            .upload(filePath, file, { upsert: true })
+        let uploadedPath = preferredPath
+        let { error: uploadError } = await supabase.storage
+            .from(bucket)
+            .upload(preferredPath, file, { upsert: true })
+
+        if (uploadError) {
+            const shouldFallbackToOrgPath = String((uploadError as { message?: string } | null)?.message || '')
+                .toLowerCase()
+                .includes('row-level security')
+            if (shouldFallbackToOrgPath) {
+                const retry = await supabase.storage
+                    .from(bucket)
+                    .upload(fallbackPath, file, { upsert: true })
+                uploadError = retry.error
+                if (!uploadError) {
+                    uploadedPath = fallbackPath
+                }
+            }
+        }
 
         if (uploadError) throw uploadError
 
-        const { data } = supabase.storage.from(import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET).getPublicUrl(filePath)
+        const { data } = supabase.storage.from(bucket).getPublicUrl(uploadedPath)
 
         const actor = await getCurrentActorContext(orgId)
         const logResult = await logEvent({
@@ -494,7 +535,7 @@ export async function uploadTicketBanner(
             targetEntityType: 'event',
             targetEntityId: eventId,
             metadata: {
-                storage_path: filePath,
+                storage_path: uploadedPath,
                 file_name: file.name,
                 file_size: file.size,
                 file_type: file.type,
@@ -509,5 +550,74 @@ export async function uploadTicketBanner(
     } catch (err) {
         console.error('[organizationService] Error uploading ticket banner:', err)
         return { path: null, error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
+function normalizeStoragePath(value: string, bucket: string): string {
+    const trimmed = value.trim().replace(/^\/+/, '')
+    if (trimmed.startsWith(`${bucket}/`)) {
+        return trimmed.slice(bucket.length + 1)
+    }
+    return trimmed
+}
+
+function extractStoragePathFromPublicUrl(url: string, bucket: string): string | null {
+    try {
+        const parsed = new URL(url)
+        const marker = `/storage/v1/object/public/${bucket}/`
+        const markerIndex = parsed.pathname.indexOf(marker)
+        if (markerIndex >= 0) {
+            const rawPath = parsed.pathname.slice(markerIndex + marker.length)
+            return decodeURIComponent(rawPath).replace(/^\/+/, '')
+        }
+    } catch {
+        return null
+    }
+    return null
+}
+
+export function getTicketBannerPublicUrl(pathOrUrl: string | null | undefined): string | null {
+    const rawValue = pathOrUrl?.trim()
+    if (!rawValue) return null
+
+    if (/^(https?:\/\/|data:)/i.test(rawValue)) {
+        return rawValue
+    }
+
+    const bucket = import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET
+    const storagePath = normalizeStoragePath(rawValue, bucket)
+    if (!storagePath) return null
+
+    const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath)
+    return data.publicUrl
+}
+
+export async function deleteTicketBanner(pathOrUrl: string | null | undefined): Promise<{ error: Error | null }> {
+    try {
+        if (USE_FAKE_DATA) {
+            return { error: null }
+        }
+
+        const rawValue = pathOrUrl?.trim()
+        if (!rawValue) return { error: null }
+
+        const bucket = import.meta.env.VITE_SUPABASE_PUBLIC_MEDIA_BUCKET
+        const isUrlValue = /^(https?:\/\/|data:)/i.test(rawValue)
+        const storagePath = isUrlValue
+            ? extractStoragePathFromPublicUrl(rawValue, bucket)
+            : normalizeStoragePath(rawValue, bucket)
+
+        // External URLs are not managed by this storage bucket.
+        if (!storagePath) return { error: null }
+
+        const { error } = await supabase.storage
+            .from(bucket)
+            .remove([storagePath])
+
+        if (error) throw error
+        return { error: null }
+    } catch (err) {
+        console.error('[organizationService] Error deleting ticket banner:', err)
+        return { error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }

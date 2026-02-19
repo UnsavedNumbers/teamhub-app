@@ -8,6 +8,7 @@
 import { supabase } from '../supabase';
 import type { FeatureGateResult, FeatureGateContext, ReasonCode, GateAction } from './types';
 import { CACHE_TTL } from '../../constants/api';
+import { USE_FAKE_DATA } from '../../data/config';
 
 /**
  * Cache for feature gate results to reduce RPC calls
@@ -83,6 +84,16 @@ export async function fetchFeatureGate(
     context: FeatureGateContext,
     signal?: AbortSignal
 ): Promise<FeatureGateResult> {
+    // Demo environments should expose full fake feature surfaces without entitlement blocking.
+    if (USE_FAKE_DATA) {
+        return {
+            allowed: true,
+            gate_action: null,
+            reason_code: 'system_feature',
+            feature_key: featureKey,
+        };
+    }
+
     // Skip RPC if we recently had a failure (CORS / network)
     if (isGateInNegativeCooldown()) {
         return { allowed: true, gate_action: null as any, reason_code: null as any, feature_key: featureKey };
@@ -159,6 +170,20 @@ export async function fetchFeatureGates(
 ): Promise<Record<string, FeatureGateResult>> {
     if (featureKeys.length === 0) {
         return {};
+    }
+
+    // Demo environments should expose full fake feature surfaces without entitlement blocking.
+    if (USE_FAKE_DATA) {
+        const demoResults: Record<string, FeatureGateResult> = {};
+        for (const key of featureKeys) {
+            demoResults[key] = {
+                allowed: true,
+                gate_action: null,
+                reason_code: 'system_feature',
+                feature_key: key,
+            };
+        }
+        return demoResults;
     }
 
     // Skip RPC if we recently had a failure (CORS / network)

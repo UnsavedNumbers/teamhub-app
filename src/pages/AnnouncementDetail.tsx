@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { getAnnouncementById, type Announcement } from '../data/services/messagesService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
@@ -12,6 +13,9 @@ import { getAnnouncementEmoji } from '../utils/announcementTypes'
 export default function AnnouncementDetail() {
   const { announcementId } = useParams<{ announcementId: string }>()
   const [searchParams] = useSearchParams()
+
+  // Add lifecycle logging
+  useDebugLifecycle('AnnouncementDetail', { announcementId })
   const [loading, setLoading] = useState(true)
   const [announcement, setAnnouncement] = useState<Announcement | null>(null)
   const { context, isReady } = useUserContext()

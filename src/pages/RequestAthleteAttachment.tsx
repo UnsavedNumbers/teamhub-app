@@ -13,12 +13,14 @@ import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import { useUserContext } from '../hooks/useUserContext'
 import { useOrganization } from '../contexts/OrganizationContext'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { searchAthletesForAttachment, submitGuardianAttachmentRequest, getGuardianAttachmentRequests } from '../data/services/guardianService'
 import type { AthleteSearchResult, GuardianAttachmentRequest } from '../data/services/guardianService'
 import { hasRole } from '../utils/roleHelpers'
 import { calculateAge } from '../utils/athleteHelpers'
 
 export default function RequestAthleteAttachment() {
+  useDebugLifecycle('RequestAthleteAttachment')
     const { isReady } = useUserContext()
     const { organizations } = useOrganization()
     

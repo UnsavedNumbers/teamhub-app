@@ -14,6 +14,7 @@ import {
 } from '../utils/licenseUtils'
 import { t } from '../i18n'
 import { getErrorMessage } from '../utils/errorUtils'
+import { USE_FAKE_DATA } from '../data/config'
 
 interface UseLicenseResult {
   licenseStatus: LicenseStatus | null
@@ -49,6 +50,32 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
       }
       setSummary(null)
       setLoading(false)
+      return
+    }
+
+    // In demo mode, provide fake license data to avoid redirecting to trial-expired
+    if (USE_FAKE_DATA) {
+      // Create a fake active license for demo organizations
+      const fakeSummary: LicenseSummary = {
+        status: 'active',
+        plan: 'pro',
+        currentPeriodStart: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        trialEndsAt: null,
+        graceEndsAt: null,
+        cancelAtPeriodEnd: false,
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+        stripePriceId: null,
+        tierName: 'Pro (Demo)',
+        isTrial: false,
+        isGracePeriod: false,
+        isValid: true,
+        daysRemaining: 365,
+      }
+      setSummary(fakeSummary)
+      setLoading(false)
+      setError(null)
       return
     }
 
@@ -178,11 +205,12 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
       }
     }
 
-    return {
+    const result = {
       isActive: isLicenseActive(summary),
       isReadOnlyAllowed: isLicenseReadOnlyAllowed(summary),
       isPastGracePeriod: isPastGrace(summary),
     }
+    return result
   }, [isPlatformAdmin, summary])
 
   const daysUntilExpiration = summary ? getDaysUntil(summary.currentPeriodEnd) : null

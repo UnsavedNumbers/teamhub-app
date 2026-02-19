@@ -3,10 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { cn } from '../../utils/cn'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
-import {
-  getNotifications,
-  markNotificationRead,
-} from '../../data/services/messagesService'
+import { notificationService } from '../../data/services/notificationService'
 import type { NotificationRecord, NotificationPresentation } from '../../types/notifications'
 import { showError } from '../../utils/toast'
 
@@ -15,16 +12,11 @@ interface NotificationBellProps {
 }
 
 export default function NotificationBell({ viewAllPath = '/dashboard' }: NotificationBellProps) {
-  let context, isReady
-  try {
-    const result = useUserContext()
-    context = result.context
-    isReady = result.isReady
-  } catch (err) {
-    // If useUserContext fails, disable the bell
-    return null
-  }
-  
+  // All hooks must be called unconditionally at the top
+  const userContextResult = useUserContext()
+  const context = userContextResult.context
+  const isReady = userContextResult.isReady
+  const hasReadyContext = Boolean(isReady && context?.userId && context?.orgId)
   const t = useT()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -36,10 +28,10 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read_at).length, [notifications])
 
   const fetchNotifications = async () => {
-    if (!context || !isReady) return
+    if (!hasReadyContext) return
     setLoading(true)
     setError(null)
-    const { data, error: fetchError } = await getNotifications(context, 10)
+    const { data, error: fetchError } = await notificationService.getNotifications(context, 10)
     if (fetchError) {
       const message = fetchError.message || t('common.error.label')
       setError(message)
@@ -47,17 +39,17 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
       setLoading(false)
       return
     }
-    setNotifications(data)
+    setNotifications(data || [])
     setLoading(false)
   }
 
   useEffect(() => {
     fetchNotifications()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isReady])
+  }, [hasReadyContext])
 
   useEffect(() => {
-    if (!context?.userId || !isReady) return
+    if (!hasReadyContext) return
 
     import('../../lib/supabase').then(({ supabase }) => {
       supabase
@@ -80,9 +72,9 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
     return () => {
       import('../../lib/supabase').then(({ supabase }) => {
          supabase.channel('notifications').unsubscribe()
-      })
+        })
     }
-  }, [context?.userId, isReady])
+  }, [context.userId, hasReadyContext])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -106,13 +98,20 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
     if (notification.link_url) {
       navigate(notification.link_url)
     }
-    if (!notification.read_at && context) {
-      await markNotificationRead(context, notification.id)
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, read_at: new Date().toISOString() } : n))
-      )
+    if (!notification.read_at && hasReadyContext) {
+      const { error } = await notificationService.markAsRead(context, notification.id)
+      if (!error) {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notification.id ? { ...n, read_at: new Date().toISOString() } : n))
+        )
+      }
     }
     setOpen(false)
+  }
+
+  // Early return after all hooks are called
+  if (!hasReadyContext) {
+    return null
   }
 
   const presentationTone = (presentation: NotificationPresentation) => {

@@ -22,6 +22,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
 import { useT } from '../i18n/useI18n'
 import { getStreamToken } from '../data/services/huddlesService'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import {
   getStreamClient,
   connectUser,
@@ -52,6 +53,7 @@ interface Team {
 type Tab = 'announcements' | 'huddles'
 
 export default function Huddles() {
+  useDebugLifecycle('Huddles')
   const { user, profile } = useAuth()
   const { context, isReady } = useUserContext()
   const t = useT()

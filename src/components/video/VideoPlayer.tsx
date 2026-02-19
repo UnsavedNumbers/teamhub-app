@@ -5,11 +5,18 @@
  * Wraps the Mux Player web component with React integration.
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react'
 import { usePlaybackToken } from '@/hooks/useVideos'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import Icon from '@/components/portal/Icon'
 import { cn } from '@/utils/cn'
+
+export interface VideoPlayerRef {
+  seekTo: (seconds: number) => void
+  getCurrentTime: () => number
+  play: () => void
+  pause: () => void
+}
 
 interface VideoPlayerProps {
   videoId: string
@@ -21,6 +28,12 @@ interface VideoPlayerProps {
   controls?: boolean
   startTime?: number
   poster?: string
+  title?: string
+  chapters?: Array<{
+    startTime: number
+    endTime?: number
+    value: string
+  }>
   onReady?: () => void
   onPlay?: () => void
   onPause?: () => void
@@ -28,17 +41,11 @@ interface VideoPlayerProps {
   onEnded?: () => void
   onError?: (error: Error) => void
   className?: string
-  /**
-   * Markers to display on the timeline (for notes/bookmarks)
-   */
   markers?: Array<{
     time: number
     label?: string
     color?: string
   }>
-  /**
-   * Called when a marker is clicked
-   */
   onMarkerClick?: (marker: { time: number; label?: string }) => void
 }
 
@@ -58,13 +65,25 @@ declare global {
           muted?: boolean
           loop?: boolean
           poster?: string
+          title?: string
           'primary-color'?: string
           'secondary-color'?: string
+          'accent-color'?: string
         },
         HTMLElement
       >
     }
   }
+}
+
+/** Map our chapter shape to Mux Player API. Pass both title and value so any player version works; never pass undefined. */
+function toMuxChapters(
+  ch: Array<{ startTime: number; endTime?: number; value: string }>
+): Array<{ startTime: number; endTime?: number; title: string; value: string }> {
+  return ch.map((c) => {
+    const label = c.value ?? ''
+    return { startTime: c.startTime, endTime: c.endTime, title: label, value: label }
+  })
 }
 
 // Load Mux Player script
@@ -84,7 +103,7 @@ function loadMuxPlayerScript(): Promise<void> {
   })
 }
 
-export default function VideoPlayer({
+const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
   videoId,
   status,
   autoPlay = false,
@@ -93,6 +112,8 @@ export default function VideoPlayer({
   controls: _controls = true,
   startTime,
   poster,
+  title,
+  chapters = [],
   onReady,
   onPlay,
   onPause,
@@ -102,13 +123,18 @@ export default function VideoPlayer({
   className,
   markers = [],
   onMarkerClick
-}: VideoPlayerProps) {
+}, ref) => {
   const playerRef = useRef<HTMLElement>(null)
+  const nativeVideoRef = useRef<HTMLVideoElement>(null)
   const [isScriptLoaded, setIsScriptLoaded] = useState(false)
   const [playerError, setPlayerError] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [_isPlaying, setIsPlaying] = useState(false)
+  
+  // Track the latest chapters in a ref so the loadedmetadata callback always sees them
+  const chaptersRef = useRef(chapters)
+  chaptersRef.current = chapters
   
   // Get organization theme color
   const { currentOrganization } = useOrganization()
@@ -121,8 +147,168 @@ export default function VideoPlayer({
     type: 'video',
     enabled: !!videoId && isReady
   })
+  const directStreamUrl = playbackData?.stream_url || ''
+  const isDirectVideoSource =
+    directStreamUrl.startsWith('/demo-assets/videos/') || /\.mp4($|\?)/i.test(directStreamUrl)
   
-  // Show status message for non-ready videos
+  // Load Mux Player script on mount
+  useEffect(() => {
+    if (isDirectVideoSource) {
+      setPlayerError(null)
+      return
+    }
+
+    loadMuxPlayerScript()
+      .then(() => setIsScriptLoaded(true))
+      .catch((err) => {
+        setPlayerError(err.message)
+        onError?.(err)
+      })
+  }, [onError, isDirectVideoSource])
+  
+  // Set up player event listeners and chapters
+  useEffect(() => {
+    if (isDirectVideoSource) return
+    const player = playerRef.current as any
+    if (!player || !isScriptLoaded) return
+    
+    const handleLoadedMetadata = () => {
+      setDuration(player.duration || 0)
+      onReady?.()
+      
+      // Add chapters once metadata is loaded (per Mux docs; API expects title, not value)
+      const ch = chaptersRef.current
+      if (ch.length > 0 && typeof player.addChapters === 'function') {
+        try {
+          player.addChapters(toMuxChapters(ch))
+        } catch (err) {
+          console.warn('Failed to add chapters on loadedmetadata:', err)
+        }
+      }
+    }
+    
+    const handlePlay = () => {
+      setIsPlaying(true)
+      onPlay?.()
+    }
+    
+    const handlePause = () => {
+      setIsPlaying(false)
+      onPause?.()
+      if (player?.currentTime !== undefined) {
+        onTimeUpdate?.(player.currentTime)
+      }
+    }
+    
+    const handleTimeUpdate = () => {
+      const time = player.currentTime || 0
+      setCurrentTime(time)
+      onTimeUpdate?.(time)
+    }
+    
+    const handleEnded = () => {
+      setIsPlaying(false)
+      onEnded?.()
+    }
+    
+    const handleError = () => {
+      const err = new Error('Video playback error')
+      setPlayerError(err.message)
+      onError?.(err)
+    }
+    
+    // mux-player dispatches standard media events on itself, so listen directly
+    player.addEventListener('loadedmetadata', handleLoadedMetadata)
+    player.addEventListener('play', handlePlay)
+    player.addEventListener('pause', handlePause)
+    player.addEventListener('timeupdate', handleTimeUpdate)
+    player.addEventListener('ended', handleEnded)
+    player.addEventListener('error', handleError)
+    
+    // If metadata was already loaded before this effect ran, handle immediately
+    if (player.readyState >= 1) {
+      handleLoadedMetadata()
+    }
+    
+    return () => {
+      player.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      player.removeEventListener('play', handlePlay)
+      player.removeEventListener('pause', handlePause)
+      player.removeEventListener('timeupdate', handleTimeUpdate)
+      player.removeEventListener('ended', handleEnded)
+      player.removeEventListener('error', handleError)
+    }
+  }, [isScriptLoaded, onReady, onPlay, onPause, onTimeUpdate, onEnded, onError, isDirectVideoSource])
+  
+  // Re-add chapters when the chapters prop changes after initial load (e.g. bookmarks loaded late)
+  useEffect(() => {
+    if (isDirectVideoSource) return
+    const player = playerRef.current as any
+    if (!player || !isScriptLoaded || chapters.length === 0) return
+
+    const applyChapters = () => {
+      if (typeof player.addChapters !== 'function') return
+      try {
+        player.addChapters(toMuxChapters(chapters))
+      } catch (err) {
+        console.warn('Failed to update chapters:', err)
+      }
+    }
+
+    if (player.readyState >= 1) {
+      applyChapters()
+    } else {
+      // Chapters arrived before metadata; apply once the player is ready
+      player.addEventListener('loadedmetadata', applyChapters, { once: true })
+      return () => player.removeEventListener('loadedmetadata', applyChapters)
+    }
+  }, [isScriptLoaded, chapters, isDirectVideoSource])
+
+  // Seek to a specific time
+  const seekTo = useCallback((time: number) => {
+    const player = (nativeVideoRef.current as any) || (playerRef.current as any)
+    if (player) {
+      player.currentTime = time
+    }
+  }, [])
+
+  // Get current time
+  const getCurrentTime = useCallback((): number => {
+    const player = (nativeVideoRef.current as any) || (playerRef.current as any)
+    return player?.currentTime ?? currentTime
+  }, [currentTime])
+
+  // Play
+  const play = useCallback(() => {
+    const player = (nativeVideoRef.current as any) || (playerRef.current as any)
+    if (player && typeof player.play === 'function') {
+      player.play()
+    }
+  }, [])
+
+  // Pause
+  const pause = useCallback(() => {
+    const player = (nativeVideoRef.current as any) || (playerRef.current as any)
+    if (player && typeof player.pause === 'function') {
+      player.pause()
+    }
+  }, [])
+
+  // Expose API via ref
+  useImperativeHandle(ref, () => ({
+    seekTo,
+    getCurrentTime,
+    play,
+    pause
+  }), [seekTo, getCurrentTime, play, pause])
+  
+  // Handle marker click
+  const handleMarkerClick = useCallback((marker: { time: number; label?: string }) => {
+    seekTo(marker.time)
+    onMarkerClick?.(marker)
+  }, [seekTo, onMarkerClick])
+  
+  // Show status message for non-ready videos (after all hooks)
   if (!isReady) {
     const statusMessages: Record<string, { icon: string; title: string; subtitle: string }> = {
       pending_upload: {
@@ -163,90 +349,8 @@ export default function VideoPlayer({
     )
   }
   
-  // Load Mux Player script on mount
-  useEffect(() => {
-    loadMuxPlayerScript()
-      .then(() => setIsScriptLoaded(true))
-      .catch((err) => {
-        setPlayerError(err.message)
-        onError?.(err)
-      })
-  }, [onError])
-  
-  // Set up player event listeners
-  useEffect(() => {
-    const player = playerRef.current as HTMLMediaElement | null
-    if (!player || !isScriptLoaded) return
-    
-    const handleLoadedData = () => {
-      setDuration(player.duration || 0)
-      onReady?.()
-    }
-    
-    const handlePlay = () => {
-      setIsPlaying(true)
-      onPlay?.()
-    }
-    
-    const handlePause = () => {
-      setIsPlaying(false)
-      onPause?.()
-      // Sync current time on pause (browsers don't guarantee timeupdate at exact pause moment)
-      if (player?.currentTime !== undefined) {
-        onTimeUpdate?.(player.currentTime)
-      }
-    }
-    
-    const handleTimeUpdate = () => {
-      const time = player.currentTime || 0
-      setCurrentTime(time)
-      onTimeUpdate?.(time)
-    }
-    
-    const handleEnded = () => {
-      setIsPlaying(false)
-      onEnded?.()
-    }
-    
-    const handleError = () => {
-      const err = new Error('Video playback error')
-      setPlayerError(err.message)
-      onError?.(err)
-    }
-    
-    player.addEventListener('loadeddata', handleLoadedData)
-    player.addEventListener('play', handlePlay)
-    player.addEventListener('pause', handlePause)
-    player.addEventListener('timeupdate', handleTimeUpdate)
-    player.addEventListener('ended', handleEnded)
-    player.addEventListener('error', handleError)
-    
-    return () => {
-      player.removeEventListener('loadeddata', handleLoadedData)
-      player.removeEventListener('play', handlePlay)
-      player.removeEventListener('pause', handlePause)
-      player.removeEventListener('timeupdate', handleTimeUpdate)
-      player.removeEventListener('ended', handleEnded)
-      player.removeEventListener('error', handleError)
-    }
-  }, [isScriptLoaded, onReady, onPlay, onPause, onTimeUpdate, onEnded, onError])
-  
-  // Seek to a specific time
-  const seekTo = useCallback((time: number) => {
-    const player = playerRef.current as HTMLMediaElement | null
-    if (player) {
-      player.currentTime = time
-    }
-  }, [])
-  
-  // Handle marker click
-  const handleMarkerClick = useCallback((marker: { time: number; label?: string }) => {
-    seekTo(marker.time)
-    onMarkerClick?.(marker)
-  }, [seekTo, onMarkerClick])
-  
-  // Loading state
-  if (isLoading || !isScriptLoaded) {
+  // Loading state (after all hooks)
+  if (isLoading || (!isDirectVideoSource && !isScriptLoaded)) {
     return (
       <div className={cn(
         "relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center",
@@ -290,6 +394,87 @@ export default function VideoPlayer({
       </div>
     )
   }
+
+  if (isDirectVideoSource) {
+    return (
+      <div className={cn("relative w-full", className)}>
+        <video
+          ref={nativeVideoRef}
+          src={directStreamUrl}
+          poster={poster || playbackData.thumbnail_url}
+          autoPlay={autoPlay}
+          muted={muted}
+          loop={loop}
+          controls={_controls}
+          playsInline
+          className="w-full"
+          style={{
+            aspectRatio: '16/9',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            background: 'black',
+          }}
+          onLoadedMetadata={(event) => {
+            const element = event.currentTarget
+            setDuration(element.duration || 0)
+            onReady?.()
+          }}
+          onPlay={() => {
+            setIsPlaying(true)
+            onPlay?.()
+          }}
+          onPause={(event) => {
+            setIsPlaying(false)
+            onPause?.()
+            onTimeUpdate?.(event.currentTarget.currentTime)
+          }}
+          onTimeUpdate={(event) => {
+            const time = event.currentTarget.currentTime || 0
+            setCurrentTime(time)
+            onTimeUpdate?.(time)
+          }}
+          onEnded={() => {
+            setIsPlaying(false)
+            onEnded?.()
+          }}
+          onError={() => {
+            const err = new Error('Video playback error')
+            setPlayerError(err.message)
+            onError?.(err)
+          }}
+        />
+
+        {markers.length > 0 && duration > 0 && (
+          <div className="relative w-full h-6 mt-2">
+            <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-1 bg-slate-200 dark:bg-slate-700 rounded-full">
+              <div
+                className="absolute top-0 left-0 h-full bg-[var(--org-btn-primary-bg)] rounded-full transition-all"
+                style={{ width: `${(currentTime / duration) * 100}%` }}
+              />
+
+              {markers.map((marker, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleMarkerClick(marker)}
+                  className={cn(
+                    "absolute top-1/2 -translate-y-1/2 size-3 rounded-full cursor-pointer hover:scale-150 transition-transform border-2 border-white shadow-md",
+                    marker.time <= currentTime
+                      ? "bg-[var(--org-btn-primary-bg)]"
+                      : "bg-slate-400"
+                  )}
+                  style={{
+                    left: `${(marker.time / duration) * 100}%`,
+                    backgroundColor: marker.color
+                  }}
+                  title={marker.label || `${Math.floor(marker.time / 60)}:${String(Math.floor(marker.time % 60)).padStart(2, '0')}`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
   
   return (
     <div className={cn("relative w-full", className)}>
@@ -306,6 +491,7 @@ export default function VideoPlayer({
         muted={muted}
         loop={loop}
         poster={poster || playbackData.thumbnail_url}
+        title={title}
         accent-color={accentColor}
         style={{
           aspectRatio: '16/9',
@@ -348,7 +534,11 @@ export default function VideoPlayer({
       )}
     </div>
   )
-}
+})
+
+VideoPlayer.displayName = 'VideoPlayer'
+
+export default VideoPlayer
 
 // Export a simple function to format time
 export function formatTime(seconds: number): string {

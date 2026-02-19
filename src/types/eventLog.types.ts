@@ -93,6 +93,8 @@ export type TeamEventType =
   | 'TEAM_MEMBER_REMOVED'
   | 'TEAM_INVITE_SENT'
   | 'TEAM_INVITE_ACCEPTED'
+  | 'TEAM_CODE_LOOKUP'
+  | 'TEAM_JOIN_COMPLETED'
 
 export type SeasonEventType =
   | 'SEASON_CREATED'

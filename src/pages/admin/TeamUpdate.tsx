@@ -11,7 +11,11 @@ import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function TeamUpdate() {
+  useDebugLifecycle('TeamUpdate')
+  
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const returnUrl = searchParams.get('returnUrl')

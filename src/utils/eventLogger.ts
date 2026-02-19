@@ -84,6 +84,10 @@ function extractUserAgent(headers: Headers | Record<string, string>): string | n
 export async function logEvent<C extends EventCategory>(
   params: EventLogParams<C>
 ): Promise<EventLogResponse> {
+  if (String(params.eventType).includes('__rls__')) {
+    return { id: null }
+  }
+
   // Prevent circular logging
   if (isLoggingContext) {
     console.warn('Event logging skipped: already in logging context (circular prevention)')
@@ -298,6 +302,53 @@ export async function logSportEvent(
     actorRole,
     orgId,
     targetEntityType: 'sport',
+    targetEntityId,
+    metadata,
+  })
+}
+
+/**
+ * Helper: Log team events
+ */
+export async function logTeamEvent(
+  eventType: 'TEAM_CREATED' | 'TEAM_UPDATED' | 'TEAM_DELETED' | 'TEAM_MEMBER_ADDED' | 'TEAM_MEMBER_REMOVED' | 'TEAM_INVITE_SENT' | 'TEAM_INVITE_ACCEPTED' | 'TEAM_CODE_LOOKUP' | 'TEAM_JOIN_COMPLETED',
+  orgId: string,
+  targetEntityId: string,
+  actorUserId?: string,
+  actorRole: EventActorRole = 'parent',
+  metadata?: Record<string, unknown>
+): Promise<EventLogResponse> {
+  return logEvent({
+    category: 'TEAM',
+    eventType,
+    actorUserId,
+    actorRole,
+    orgId,
+    targetEntityType: 'team',
+    targetEntityId,
+    metadata,
+  })
+}
+
+/**
+ * Helper: Log organization join/invite events
+ */
+export async function logOrganizationJoinEvent(
+  eventType: 'JOIN_LINK_CREATED' | 'JOIN_REQUEST_SUBMITTED' | 'JOIN_REQUEST_APPROVED' | 'JOIN_REQUEST_DENIED' | 'PARENT_INVITED' | 'PARENT_ATTACHED',
+  orgId: string,
+  targetEntityType: 'join_link' | 'join_request' | 'parent_invite' | 'athlete',
+  targetEntityId: string,
+  actorUserId?: string,
+  actorRole: EventActorRole = 'parent',
+  metadata?: Record<string, unknown>
+): Promise<EventLogResponse> {
+  return logEvent({
+    category: 'ORGANIZATION',
+    eventType,
+    actorUserId,
+    actorRole,
+    orgId,
+    targetEntityType,
     targetEntityId,
     metadata,
   })

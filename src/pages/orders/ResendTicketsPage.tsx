@@ -9,7 +9,11 @@ import { useT } from '@/i18n/useI18n'
 import { resendTickets } from '@/data/services/ticketingService'
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function ResendTicketsPage() {
+  useDebugLifecycle('ResendTicketsPage')
+  
   const t = useT()
   const [email, setEmail] = useState('')
   const [orderId, setOrderId] = useState('')

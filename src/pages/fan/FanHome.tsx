@@ -39,7 +39,11 @@ interface OrgData {
   slug?: string
 }
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FanHome() {
+  useDebugLifecycle('FanHome')
+  
   const navigate = useNavigate()
   
   // Search state

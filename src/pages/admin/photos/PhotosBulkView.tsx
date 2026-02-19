@@ -15,7 +15,11 @@ import { getMockGalleriesForOrg } from '@/data/fake/mockGalleries'
 import { showSuccess, showError } from '@/utils/toast'
 import './PhotosBulkView.css'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export function PhotosBulkView() {
+  useDebugLifecycle('PhotosBulkView')
+  
   const { context } = useUserContext()
   const { t } = useI18n()
 

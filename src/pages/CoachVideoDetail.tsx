@@ -19,12 +19,14 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { 
-  VideoPlayer, 
+  VideoPlayer,
+  type VideoPlayerRef,
   VideoCommentsPanel,
   VideoFavoriteButton,
   VideoShareModal,
   VideoDownloadButton,
   VideoThumbnailSelector,
+  VideoTagPicker,
   NotesPanel,
 } from '@/components/video'
 import { AccordionItem } from '@/components/video/Accordion'
@@ -33,6 +35,7 @@ import {
   useVideoNotes,
   useVideoMutations,
   useVideoTags,
+  useVideoComments,
   useVideoBookmarks,
 } from '@/hooks/useVideos'
 import { useVideoFavorites } from '@/hooks/useVideosExtended'
@@ -41,8 +44,10 @@ import type {
   VideoAthleteLink,
   VideoVisibility,
   VideoLinkType,
+  VideoComment,
 } from '@/types/video'
 import { AdminPageHeader, Card } from '@/components/platformAdmin'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import Button from '@/components/portal/Button'
 import Icon from '@/components/portal/Icon'
 import { t } from '@/i18n'
@@ -113,7 +118,7 @@ function AthleteSelectorModal({
   onClose: () => void
   teamId: string | null
   currentLinks: VideoAthleteLink[]
-  onSave: (athleteIds: string[], linkType: VideoLinkType) => Promise<boolean>
+  onSave: (athleteIds: string[], linkType: VideoLinkType) => Promise<void>
 }) {
   const [athletes, setAthletes] = useState<Athlete[]>([])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -139,13 +144,11 @@ function AthleteSelectorModal({
       const { data, error } = await supabase
         .from('athletes')
         .select('id, first_name, last_name, jersey_number, has_profile_photo, profile_photo_updated_at')
-        .eq('team_id', teamId)
         .order('last_name')
       if (error) throw error
       setAthletes(data || [])
     } catch (err) {
       console.error('Failed to load athletes:', err)
-      showError(t('videoLibrary.athletes.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -154,10 +157,8 @@ function AthleteSelectorModal({
   const handleSave = async () => {
     setSaving(true)
     try {
-      const success = await onSave(selectedIds, linkType)
-      if (success) {
-        onClose()
-      }
+      await onSave(selectedIds, linkType)
+      onClose()
     } finally {
       setSaving(false)
     }
@@ -259,7 +260,7 @@ function AthleteSelectorModal({
                       )}
                       {isCurrentlyLinked && (
                         <span className="ml-2 text-xs text-[var(--org-btn-secondary-bg)] uppercase font-bold">
-                          {t('videoLibrary.athletes.alreadyLinked')}
+                          Already Linked
                         </span>
                       )}
                     </div>
@@ -277,7 +278,7 @@ function AthleteSelectorModal({
             <Button
               variant="primary"
               onClick={handleSave}
-              disabled={saving || selectedIds.length === 0}
+              disabled={saving && selectedIds.length === 0}
             >
               {saving ? t('common.saving') : t('videoLibrary.athletes.saveLinks')}
             </Button>
@@ -300,7 +301,7 @@ function TagManagerModal({
   onClose: () => void
   orgId: string
   currentTagIds: string[]
-  onSave: (tagIds: string[]) => Promise<boolean>
+  onSave: (tagIds: string[]) => Promise<void>
 }) {
   const { tags, isLoading, createTag } = useVideoTags({ orgId, enabled: isOpen })
   const [selectedIds, setSelectedIds] = useState<string[]>(currentTagIds)
@@ -317,10 +318,8 @@ function TagManagerModal({
   const handleSave = async () => {
     setSaving(true)
     try {
-      const success = await onSave(selectedIds)
-      if (success) {
-        onClose()
-      }
+      await onSave(selectedIds)
+      onClose()
     } finally {
       setSaving(false)
     }
@@ -342,8 +341,6 @@ function TagManagerModal({
         setSelectedIds([...selectedIds, newTag.id])
         setNewTagName('')
         setShowCreateForm(false)
-      } else {
-        showError(t('videoLibrary.tags.createFailed'))
       }
     } finally {
       setCreating(false)
@@ -374,7 +371,7 @@ function TagManagerModal({
                   type="text"
                   value={newTagName}
                   onChange={(e) => setNewTagName(e.target.value)}
-                  placeholder={t('videoLibrary.tags.tagNamePlaceholder')}
+                  placeholder="e.g., Zone Defense"
                   className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                   autoFocus
                 />
@@ -385,7 +382,7 @@ function TagManagerModal({
                 </label>
                 <select
                   value={newTagType}
-                  onChange={(e) => setNewTagType(e.target.value as 'skill' | 'drill' | 'play' | 'custom')}
+                  onChange={(e) => setNewTagType(e.target.value as any)}
                   className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-[var(--org-btn-secondary-bg)] focus:border-transparent"
                 >
                   <option value="custom">{t('videoLibrary.tags.tagTypes.custom')}</option>
@@ -474,7 +471,7 @@ function TagManagerModal({
                       </span>
                       {tag.usage_count > 0 && (
                         <span className="ml-2 text-xs text-gray-400">
-                          ({t('videoLibrary.tags.videoCount', { count: tag.usage_count })})
+                          ({tag.usage_count} videos)
                         </span>
                       )}
                     </div>
@@ -509,45 +506,28 @@ function BookmarksPanel({
   currentTime,
   onSeek,
   disabled = false,
+  activeBookmarkId,
 }: {
   videoId: string
   currentTime: number
   onSeek: (time: number) => void
   disabled?: boolean
+  activeBookmarkId?: string | null
 }) {
   const { bookmarks, isLoading, createBookmark, deleteBookmark } = useVideoBookmarks({ videoId, enabled: true })
   const [showAddForm, setShowAddForm] = useState(false)
   const [label, setLabel] = useState('')
   const [adding, setAdding] = useState(false)
-  const [deletingBookmarkId, setDeletingBookmarkId] = useState<string | null>(null)
+  const [bookmarkToDeleteId, setBookmarkToDeleteId] = useState<string | null>(null)
 
   const handleAdd = async () => {
     setAdding(true)
     try {
-      const created = await createBookmark(currentTime, label || undefined)
-      if (created) {
-        setLabel('')
-        setShowAddForm(false)
-      } else {
-        showError(t('videoLibrary.bookmarks.createFailed'))
-      }
+      await createBookmark(currentTime, label || undefined)
+      setLabel('')
+      setShowAddForm(false)
     } finally {
       setAdding(false)
-    }
-  }
-
-  const handleDelete = async (bookmarkId: string) => {
-    if (!window.confirm(t('videoLibrary.bookmarks.deleteConfirm'))) {
-      return
-    }
-    setDeletingBookmarkId(bookmarkId)
-    try {
-      const success = await deleteBookmark(bookmarkId)
-      if (!success) {
-        showError(t('videoLibrary.bookmarks.deleteFailed'))
-      }
-    } finally {
-      setDeletingBookmarkId(null)
     }
   }
 
@@ -590,7 +570,7 @@ function BookmarksPanel({
             />
           </div>
           <div className="text-xs text-gray-500">
-            {t('videoLibrary.bookmarks.atTimestamp', { timestamp: formatTimestamp(currentTime) })}
+            At {formatTimestamp(currentTime)}
           </div>
           <div className="flex gap-2">
             <Button
@@ -630,31 +610,56 @@ function BookmarksPanel({
         </div>
       ) : (
         <div className="space-y-2">
-          {bookmarks.map(bookmark => (
-            <div
-              key={bookmark.id}
-              className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-secondary-bg)] transition-colors group"
-            >
-              <button
-                onClick={() => onSeek(bookmark.timestamp_seconds)}
-                className="px-3 py-1 bg-[var(--org-btn-secondary-bg)] text-white rounded text-xs font-black hover:bg-opacity-90"
+          {bookmarks.map(bookmark => {
+            const isActive = activeBookmarkId === bookmark.id
+            return (
+              <div
+                key={bookmark.id}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border transition-colors group",
+                  isActive
+                    ? "border-[var(--org-btn-primary-bg)] bg-[var(--org-btn-primary-bg)]/5"
+                    : "border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-secondary-bg)]"
+                )}
               >
-                {formatTimestamp(bookmark.timestamp_seconds)}
-              </button>
-              <span className="flex-1 text-sm font-medium text-gray-900 dark:text-white">
-                {bookmark.label || t('videoLibrary.bookmarks.jumpTo')}
-              </span>
-              <button
-                onClick={() => void handleDelete(bookmark.id)}
-                disabled={deletingBookmarkId === bookmark.id}
-                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
-              >
-                <Icon name="delete" size="text-sm" />
-              </button>
-            </div>
-          ))}
+                <button
+                  onClick={() => onSeek(bookmark.timestamp_seconds)}
+                  className={cn(
+                    "px-3 py-1 text-white rounded text-xs font-black hover:bg-opacity-90 transition-colors",
+                    isActive
+                      ? "bg-[var(--org-btn-primary-bg)]"
+                      : "bg-[var(--org-btn-secondary-bg)]"
+                  )}
+                >
+                  {formatTimestamp(bookmark.timestamp_seconds)}
+                </button>
+                <span className="flex-1 text-sm font-medium text-gray-900 dark:text-white">
+                  {bookmark.label || t('videoLibrary.bookmarks.jumpTo')}
+                </span>
+                <button
+                  onClick={() => setBookmarkToDeleteId(bookmark.id)}
+                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+                >
+                  <Icon name="delete" size="text-sm" />
+                </button>
+              </div>
+            )
+          })}
         </div>
       )}
+      <ConfirmDialog
+        open={bookmarkToDeleteId !== null}
+        title={t('videoLibrary.bookmarks.deleteConfirmTitle')}
+        description={t('videoLibrary.bookmarks.deleteConfirm')}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={() => {
+          if (bookmarkToDeleteId) deleteBookmark(bookmarkToDeleteId)
+          setBookmarkToDeleteId(null)
+        }}
+        onCancel={() => setBookmarkToDeleteId(null)}
+      />
     </div>
   )
 }
@@ -686,18 +691,26 @@ export default function CoachVideoDetail() {
   const { id: videoId } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { currentOrganization } = useOrganization()
+  void VideoTagPicker
+  void useVideoComments
+  type _VideoCommentRef = VideoComment
+  const _videoCommentRef: _VideoCommentRef | null = null
+  void _videoCommentRef
   
   // State
   const [currentTime, setCurrentTime] = useState(0)
   const [_isPlaying, setIsPlaying] = useState(false)
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
+  const [activeBookmarkId, setActiveBookmarkId] = useState<string | null>(null)
   const [notesPanelOpen, setNotesPanelOpen] = useState(false)
-  const videoPlayerRef = useRef<HTMLElement | null>(null)
-  
+  const videoPlayerRef = useRef<VideoPlayerRef>(null)
+  const videoCardRef = useRef<HTMLDivElement>(null)
+
   // Modals
   const [isEditingDetails, setIsEditingDetails] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [athleteToUnlinkId, setAthleteToUnlinkId] = useState<string | null>(null)
   const [showAthletesModal, setShowAthletesModal] = useState(false)
   const [showTagsModal, setShowTagsModal] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
@@ -740,7 +753,9 @@ export default function CoachVideoDetail() {
     enabled: !!videoId
   })
   
-  const { deleteVideo, updateVideo, linkAthletes, unlinkAthlete, linkTags, unlinkTag } = useVideoMutations()
+  const { bookmarks } = useVideoBookmarks({ videoId, enabled: !!videoId })
+  
+  const { deleteVideo, updateVideo, linkAthletes, unlinkAthlete, linkTags } = useVideoMutations()
   
   // Load dropdown data when edit modal opens
   useEffect(() => {
@@ -761,10 +776,6 @@ export default function CoachVideoDetail() {
         supabase.from('sports').select('id, name').order('name'),
         supabase.from('events').select('id, title, type').eq('org_id', currentOrganization.id).order('created_at', { ascending: false }).limit(50),
       ])
-
-      if (teamsRes.error || seasonsRes.error || programsRes.error || levelsRes.error || sportsRes.error || eventsRes.error) {
-        throw teamsRes.error || seasonsRes.error || programsRes.error || levelsRes.error || sportsRes.error || eventsRes.error
-      }
       
       setTeams(teamsRes.data || [])
       setSeasons(seasonsRes.data || [])
@@ -774,7 +785,6 @@ export default function CoachVideoDetail() {
       setEvents(eventsRes.data || [])
     } catch (err) {
       console.error('Failed to load dropdown data:', err)
-      showError(t('videoLibrary.edit.loadFailed'))
     }
   }
   
@@ -788,25 +798,47 @@ export default function CoachVideoDetail() {
         color: 'var(--org-btn-secondary-bg)'
       }))
   }, [notes])
+
+  // Convert bookmarks to chapters for Mux Player
+  const chapters = useMemo(() => {
+    if (!bookmarks || bookmarks.length === 0) return []
+    
+    // Sort bookmarks by timestamp (already sorted by hook, but ensure)
+    const sortedBookmarks = [...bookmarks].sort((a, b) => a.timestamp_seconds - b.timestamp_seconds)
+    
+    // Convert to chapters format: { startTime, endTime?, value }
+    // Per Mux docs: if endTime is omitted, chapters automatically join end-to-end
+    return sortedBookmarks.map((bookmark, index) => ({
+      startTime: bookmark.timestamp_seconds,
+      // Don't set endTime - let Mux automatically join chapters; ensure label is never undefined
+      value: (bookmark.label?.trim() || `Chapter ${index + 1}`) as string
+    }))
+  }, [bookmarks])
   
-  // Handle seeking to timestamp
+  // Handle seeking to timestamp (from notes, comments, bookmarks, or timestamp links)
   const handleSeekToNote = useCallback((timestamp: number) => {
-    setCurrentTime(timestamp)
-    // Seek the video player
-    const player = videoPlayerRef.current as HTMLMediaElement | null
-    if (player) {
-      player.currentTime = timestamp
-    }
-    const note = notes.find(n => n.timestamp_start === timestamp)
+    // Start at t-1 to account for scroll time so the moment is visible when user arrives
+    const seekTime = Math.max(0, timestamp - 1)
+    setCurrentTime(seekTime)
+    videoPlayerRef.current?.seekTo(seekTime)
+    videoCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // Find and highlight matching note if any (match on original timestamp)
+    const note = notes.find(n => n.timestamp_start !== null && Math.abs((n.timestamp_start || 0) - timestamp) < 1)
     if (note) {
       setActiveNoteId(note.id)
     }
-  }, [notes])
+    // Find and highlight matching bookmark if any
+    const bookmark = bookmarks?.find(b => Math.abs(b.timestamp_seconds - timestamp) < 1)
+    if (bookmark) {
+      setActiveBookmarkId(bookmark.id)
+    } else {
+      setActiveBookmarkId(null)
+    }
+  }, [notes, bookmarks])
   
   // Capture current video playhead time (for NotesPanel)
   const handleCaptureTime = useCallback((): number => {
-    const player = videoPlayerRef.current as HTMLMediaElement | null
-    return player?.currentTime ?? currentTime
+    return videoPlayerRef.current?.getCurrentTime() ?? currentTime
   }, [currentTime])
   
   // Handle time update from player
@@ -836,7 +868,7 @@ export default function CoachVideoDetail() {
     } else {
       showError(t('common.error.clipboardFailed'))
     }
-  }, [videoId, copyToClipboard, t])
+  }, [videoId, copyToClipboard])
   void handleCopyLink
   
   // Handle visibility change with team reset logic
@@ -896,19 +928,15 @@ export default function CoachVideoDetail() {
 
     setIsSaving(true)
     try {
+      // Only pass fields that exist on the videos table (no season_id, program_id, level_id, sport_id, recording_location)
       const ok = await updateVideo(videoId, {
         title: editTitle,
         description: editDescription,
         category: editCategory,
         visibility: editVisibility,
         team_id: editTeamId,
-        season_id: editSeasonId,
         event_id: editEventId,
-        program_id: editProgramId,
-        level_id: editLevelId,
-        sport_id: editSportId,
         recorded_at: editRecordedAt || null,
-        recording_location: editRecordedLocation.trim() || null,
       })
       if (ok) {
         setIsEditingDetails(false)
@@ -924,25 +952,7 @@ export default function CoachVideoDetail() {
     } finally {
       setIsSaving(false)
     }
-  }, [
-    videoId,
-    video,
-    editTitle,
-    editDescription,
-    editCategory,
-    editVisibility,
-    editTeamId,
-    editSeasonId,
-    editEventId,
-    editProgramId,
-    editLevelId,
-    editSportId,
-    editRecordedAt,
-    editRecordedLocation,
-    updateVideo,
-    refreshVideo,
-    t,
-  ])
+  }, [videoId, video, editTitle, editDescription, editCategory, editVisibility, editTeamId, editEventId, editRecordedAt, updateVideo, refreshVideo, t])
   
   // Open delete confirmation modal
   const handleOpenDeleteModal = useCallback(() => setShowDeleteModal(true), [])
@@ -966,87 +976,22 @@ export default function CoachVideoDetail() {
   }, [videoId, deleteVideo, navigate, t])
   
   // Handle athlete links
-  const handleSaveAthleteLinks = useCallback(async (athleteIds: string[], linkType: VideoLinkType): Promise<boolean> => {
-    if (!videoId || !video) return false
-    try {
-      const uniqueAthleteIds = Array.from(new Set(athleteIds))
-      const currentlyLinkedIds = new Set((video.athlete_links || []).map(link => link.athlete_id))
-      const nextLinkedIds = new Set(uniqueAthleteIds)
-      const toUnlink = [...currentlyLinkedIds].filter(id => !nextLinkedIds.has(id))
-
-      if (toUnlink.length > 0) {
-        const unlinkResults = await Promise.all(toUnlink.map((athleteId) => unlinkAthlete(videoId, athleteId)))
-        if (unlinkResults.some(result => !result)) {
-          showError(t('videoLibrary.athletes.updateFailed'))
-          return false
-        }
-      }
-
-      if (uniqueAthleteIds.length > 0) {
-        const linked = await linkAthletes(videoId, uniqueAthleteIds, linkType)
-        if (!linked) {
-          showError(t('videoLibrary.athletes.updateFailed'))
-          return false
-        }
-      }
-
-      await refreshVideo()
-      showSuccess(t('videoLibrary.athletes.updated'))
-      return true
-    } catch (error) {
-      console.error('Failed to save athlete links:', error)
-      showError(t('videoLibrary.athletes.updateFailed'))
-      return false
-    }
-  }, [videoId, video, linkAthletes, unlinkAthlete, refreshVideo, t])
-  
-  const handleUnlinkAthlete = useCallback(async (athleteId: string) => {
+  const handleSaveAthleteLinks = useCallback(async (athleteIds: string[], linkType: VideoLinkType) => {
     if (!videoId) return
-    if (window.confirm(t('videoLibrary.athletes.removeConfirm'))) {
-      const unlinked = await unlinkAthlete(videoId, athleteId)
-      if (unlinked) {
-        refreshVideo()
-        showSuccess(t('videoLibrary.athletes.removed'))
-      } else {
-        showError(t('videoLibrary.athletes.updateFailed'))
-      }
-    }
-  }, [videoId, unlinkAthlete, refreshVideo, t])
+    await linkAthletes(videoId, athleteIds, linkType)
+    refreshVideo()
+  }, [videoId, linkAthletes, refreshVideo])
+  
+  const handleUnlinkAthlete = useCallback((athleteId: string) => {
+    setAthleteToUnlinkId(athleteId)
+  }, [])
   
   // Handle tags
-  const handleSaveTags = useCallback(async (tagIds: string[]): Promise<boolean> => {
-    if (!videoId || !video) return false
-    try {
-      const uniqueTagIds = Array.from(new Set(tagIds))
-      const currentlyLinkedIds = new Set((video.tags || []).map(link => link.tag_id))
-      const nextLinkedIds = new Set(uniqueTagIds)
-      const toUnlink = [...currentlyLinkedIds].filter(id => !nextLinkedIds.has(id))
-
-      if (toUnlink.length > 0) {
-        const unlinkResults = await Promise.all(toUnlink.map((tagId) => unlinkTag(videoId, tagId)))
-        if (unlinkResults.some(result => !result)) {
-          showError(t('videoLibrary.tags.updateFailed'))
-          return false
-        }
-      }
-
-      if (uniqueTagIds.length > 0) {
-        const linked = await linkTags(videoId, uniqueTagIds)
-        if (!linked) {
-          showError(t('videoLibrary.tags.updateFailed'))
-          return false
-        }
-      }
-
-      await refreshVideo()
-      showSuccess(t('videoLibrary.tags.updated'))
-      return true
-    } catch (error) {
-      console.error('Failed to save tags:', error)
-      showError(t('videoLibrary.tags.updateFailed'))
-      return false
-    }
-  }, [videoId, video, linkTags, unlinkTag, refreshVideo, t])
+  const handleSaveTags = useCallback(async (tagIds: string[]) => {
+    if (!videoId) return
+    await linkTags(videoId, tagIds)
+    refreshVideo()
+  }, [videoId, linkTags, refreshVideo])
   
   // Loading state
   if (videoLoading) {
@@ -1055,7 +1000,7 @@ export default function CoachVideoDetail() {
         <AdminPageHeader
           title={t('common.loading')}
           breadcrumbs={[
-            { label: t('admin.navigation.dashboard'), path: getLink('admin.dashboard') },
+            { label: 'Admin', path: getLink('admin.dashboard') },
             { label: t('videoLibrary.title'), path: getLink('admin.videos.list') },
             { label: t('common.loading') }
           ]}
@@ -1075,7 +1020,7 @@ export default function CoachVideoDetail() {
         <AdminPageHeader
           title={t('videoLibrary.errors.notFound')}
           breadcrumbs={[
-            { label: t('admin.navigation.dashboard'), path: getLink('admin.dashboard') },
+            { label: 'Admin', path: getLink('admin.dashboard') },
             { label: t('videoLibrary.title'), path: getLink('admin.videos.list') },
             { label: t('common.error.label') }
           ]}
@@ -1121,9 +1066,9 @@ export default function CoachVideoDetail() {
       {/* Page Header */}
       <AdminPageHeader
         title={video.title}
-        subtitle={`${video.category ? categoryLabels[video.category] : t('videoLibrary.title')} • ${video.team?.name || t('videoLibrary.allTeams')}`}
+        subtitle={`${video.category ? categoryLabels[video.category] : t('videoLibrary.title')} • ${video.team?.name || 'All Teams'}`}
         breadcrumbs={[
-          { label: t('admin.navigation.dashboard'), path: getLink('admin.dashboard') },
+          { label: 'Admin', path: getLink('admin.dashboard') },
           { label: t('videoLibrary.title'), path: getLink('admin.videos.list') },
           { label: video.title }
         ]}
@@ -1164,16 +1109,22 @@ export default function CoachVideoDetail() {
       />
       
       {/* Video Player + Notes Panel Layout */}
-      <div className={cn(
-        "relative mb-8 flex transition-all duration-300 ease-out gap-0",
-        notesPanelOpen ? "md:pr-[40vw] md:max-w-none" : ""
-      )}>
+      <div
+        ref={videoCardRef}
+        className={cn(
+          "relative mb-8 flex transition-all duration-300 ease-out gap-0",
+          notesPanelOpen ? "md:pr-[40vw] md:max-w-none" : ""
+        )}
+      >
         <Card className="flex-1 min-w-0 overflow-hidden">
           {video.status === 'ready' ? (
             <VideoPlayer
+              ref={videoPlayerRef}
               videoId={video.id}
               status={video.status}
               poster={video.thumbnail_url || undefined}
+              title={video.title}
+              chapters={chapters}
               onTimeUpdate={handleTimeUpdate}
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
@@ -1211,8 +1162,8 @@ export default function CoachVideoDetail() {
             onClick={() => setNotesPanelOpen(true)}
             className="absolute right-3 top-3 z-10 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--org-btn-secondary-bg)] text-white text-sm font-bold shadow-lg hover:opacity-90 transition-opacity"
           >
-            <Icon name="speaker_notes" size="text-sm" />
-            {t('videoLibrary.notes.title')}
+            <span>📝</span>
+            Notes
             {notes.length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 rounded-full bg-white/20 text-[11px] font-black">
                 {notes.length}
@@ -1230,19 +1181,14 @@ export default function CoachVideoDetail() {
         onSeekToTimestamp={handleSeekToNote}
         onAddNote={async (note) => {
           if (!videoId) return
-          const created = await createNote({
+          await createNote({
             content: note.content,
             title: note.title,
             timestamp_start: note.timestamp_start,
             scope: note.scope,
             target_athlete_ids: note.target_athlete_ids,
           })
-          if (created) {
-            await refreshNotes()
-            showSuccess(t('videoLibrary.notes.created'))
-          } else {
-            showError(t('videoLibrary.notes.createFailed'))
-          }
+          refreshNotes()
         }}
         notes={notes}
         notesLoading={notesLoading}
@@ -1254,26 +1200,50 @@ export default function CoachVideoDetail() {
         disabled={USE_FAKE_DATA}
       />
 
+      {/* Tags (directly under video) */}
+      {video.tags && video.tags.length > 0 && (
+        <Card className="mb-8">
+          <div>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+              Tags
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {video.tags.map((tagLink, i) => (
+                <div
+                  key={i}
+                  className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-500 flex items-center gap-1.5"
+                >
+                  <Icon name="label" size="text-sm" />
+                  {tagLink.tag?.name?.toUpperCase() || 'TAG'}
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Accordion Sections (below video) */}
       <div className="space-y-3">
         {/* Video Details */}
-        <AccordionItem title={t('videoLibrary.details.title')}>
+        <AccordionItem title="Video Details">
           <div className="space-y-4">
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                {t('videoLibrary.details.description')}
-              </label>
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                {video.description || t('videoLibrary.details.noDescription')}
-              </p>
-            </div>
             <div className="pt-4 border-t border-gray-100 dark:border-gray-800 grid grid-cols-2 gap-4">
+              {video.description && (
+                <div className="col-span-2 pb-4 mb-1 border-b border-gray-100 dark:border-gray-800">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                    {t('videoLibrary.details.description')}
+                  </label>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                    {video.description}
+                  </p>
+                </div>
+              )}
               <div>
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
                   {t('videoLibrary.details.uploadedBy')}
                 </label>
                 <span className="text-sm font-bold">
-                  {video.uploader?.full_name || t('common.unknown')}
+                  {video.uploader?.display_name || `${video.uploader?.first_name || ''} ${video.uploader?.last_name || ''}`.trim() || 'Unknown'}
                 </span>
               </div>
               <div>
@@ -1324,7 +1294,7 @@ export default function CoachVideoDetail() {
 
         {/* Linked Athletes */}
         <AccordionItem
-          title={t('videoLibrary.athletes.title')}
+          title="Linked Athletes"
           badge={video.athlete_links?.length || 0}
           headerAction={
             <button
@@ -1337,7 +1307,7 @@ export default function CoachVideoDetail() {
               title={USE_FAKE_DATA ? t('videoLibrary.demoMode.message') : undefined}
             >
               <Icon name="add" size="text-sm" />
-              {t('common.add')}
+              Add
             </button>
           }
         >
@@ -1383,66 +1353,35 @@ export default function CoachVideoDetail() {
           )}
         </AccordionItem>
 
-        {/* Tags */}
-        <AccordionItem
-          title={t('videoLibrary.tags.title')}
-          badge={video.tags?.length || 0}
-          headerAction={
-            <button
-              onClick={() => setShowTagsModal(true)}
-              disabled={USE_FAKE_DATA}
-              className={cn(
-                "text-xs font-bold text-[var(--org-btn-secondary-bg)] hover:underline flex items-center gap-1",
-                USE_FAKE_DATA && "opacity-50 cursor-not-allowed"
-              )}
-              title={USE_FAKE_DATA ? t('videoLibrary.demoMode.message') : undefined}
-            >
-              <Icon name="add" size="text-sm" />
-              {t('common.add')}
-            </button>
-          }
-        >
-          {video.tags && video.tags.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {video.tags.map((tagLink, i) => (
-                <div
-                  key={i}
-                  className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-500 flex items-center gap-1.5"
-                >
-                  <Icon name="label" size="text-sm" />
-                  {tagLink.tag?.name?.toUpperCase() || t('videoLibrary.tags.tagFallback')}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6 text-gray-500 text-sm">
-              <Icon name="label" size="text-3xl" className="mx-auto mb-2" />
-              <p>{t('videoLibrary.tags.noTags')}</p>
-            </div>
-          )}
-        </AccordionItem>
 
         {/* Bookmarks */}
         <AccordionItem
-          title={t('videoLibrary.bookmarks.title')}
-          badge={undefined}
+          title="Bookmarks"
+          badge={bookmarks?.length ?? 0}
         >
           <BookmarksPanel
             videoId={videoId!}
             currentTime={currentTime}
             onSeek={handleSeekToNote}
             disabled={USE_FAKE_DATA}
+            activeBookmarkId={activeBookmarkId}
           />
         </AccordionItem>
 
         {/* Comments */}
         <AccordionItem
-          title={t('videoLibrary.comments.title')}
+          title="Comments"
           badge={undefined}
         >
           <VideoCommentsPanel
             videoId={videoId!}
             disabled={USE_FAKE_DATA}
+            onSeek={handleSeekToNote}
+            onCaptureTime={handleCaptureTime}
+            deleteConfirmDialog={{
+              title: t('videoLibrary.comments.deleteConfirmTitle'),
+              description: t('videoLibrary.comments.deleteConfirm'),
+            }}
           />
         </AccordionItem>
       </div>
@@ -1709,46 +1648,32 @@ export default function CoachVideoDetail() {
         </div>
       )}
 
-      {/* Delete Video Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full shadow-xl">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-              <h3 className="text-xl font-bold">{t('videoLibrary.actions.delete')}</h3>
-              <button
-                onClick={() => !isDeleting && setShowDeleteModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50"
-                disabled={isDeleting}
-                aria-label={t('common.close')}
-              >
-                <Icon name="close" size="text-xl" />
-              </button>
-            </div>
-            <div className="p-6">
-              <p className="text-gray-600 dark:text-gray-400">
-                {t('videoLibrary.delete.messageWithTitle', { title: video.title })}
-              </p>
-            </div>
-            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-end gap-3">
-              <Button
-                variant="secondary"
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-              >
-                {t('common.cancel')}
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-                className="bg-red-500 hover:bg-red-600 text-white border-red-500"
-              >
-                {isDeleting ? t('common.loading') : t('common.delete')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showDeleteModal}
+        title={t('videoLibrary.actions.delete')}
+        description={t('videoLibrary.delete.message')}
+        confirmLabel={isDeleting ? t('common.loading') : t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => !isDeleting && setShowDeleteModal(false)}
+      />
+      <ConfirmDialog
+        open={athleteToUnlinkId !== null}
+        title={t('videoLibrary.athletes.unlinkConfirmTitle')}
+        description={t('videoLibrary.athletes.unlinkConfirm')}
+        confirmLabel={t('common.remove')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={async () => {
+          if (athleteToUnlinkId && videoId) {
+            await unlinkAthlete(videoId, athleteToUnlinkId)
+            refreshVideo()
+          }
+          setAthleteToUnlinkId(null)
+        }}
+        onCancel={() => setAthleteToUnlinkId(null)}
+      />
       
       {/* Athlete Selector Modal */}
       <AthleteSelectorModal
@@ -1789,14 +1714,9 @@ export default function CoachVideoDetail() {
           duration={video.duration_seconds || 0}
           onClose={() => setShowThumbnailSelector(false)}
           onThumbnailSelect={async (timestamp: number) => {
-            const updated = await updateVideo(videoId, { thumbnail_time_offset: timestamp })
-            if (updated) {
-              await refreshVideo()
-              setShowThumbnailSelector(false)
-              showSuccess(t('videoLibrary.thumbnail.updated'))
-            } else {
-              showError(t('videoLibrary.thumbnail.failed'))
-            }
+            await updateVideo(videoId, { thumbnail_timestamp: timestamp } as any)
+            refreshVideo()
+            setShowThumbnailSelector(false)
           }}
         />
       )}
@@ -1814,4 +1734,3 @@ export default function CoachVideoDetail() {
     </div>
   )
 }
-

@@ -5,7 +5,7 @@
  * Implements strict namespace restrictions as defined in the audit requirements.
  */
 
-type UserRole = 'parent' | 'org_admin' | 'coach' | 'platform_admin' | 'fan';
+type UserRole = 'parent' | 'org_admin' | 'coach' | 'platform_admin' | 'fan' | 'athlete';
 
 interface RouteNamespaceConfig {
   namespace: string;
@@ -16,9 +16,10 @@ interface RouteNamespaceConfig {
 const ROUTE_NAMESPACE_CONFIG: RouteNamespaceConfig[] = [
   {
     namespace: '/portal',
-    allowedRoles: ['parent'],
+    allowedRoles: ['parent', 'athlete'],
     redirectTo: {
       parent: '/portal',
+      athlete: '/portal',
       org_admin: '/admin',
       coach: '/admin',
       platform_admin: '/platform-admin',
@@ -30,6 +31,7 @@ const ROUTE_NAMESPACE_CONFIG: RouteNamespaceConfig[] = [
     allowedRoles: ['org_admin', 'coach'],
     redirectTo: {
       parent: '/portal',
+      athlete: '/portal',
       org_admin: '/admin',
       coach: '/admin',
       platform_admin: '/platform-admin',
@@ -41,6 +43,7 @@ const ROUTE_NAMESPACE_CONFIG: RouteNamespaceConfig[] = [
     allowedRoles: ['platform_admin'],
     redirectTo: {
       parent: '/portal',
+      athlete: '/portal',
       org_admin: '/admin',
       coach: '/admin',
       platform_admin: '/platform-admin',
@@ -52,9 +55,22 @@ const ROUTE_NAMESPACE_CONFIG: RouteNamespaceConfig[] = [
     allowedRoles: ['fan'],
     redirectTo: {
       parent: '/portal',
+      athlete: '/portal',
       org_admin: '/admin',
       coach: '/admin',
       platform_admin: '/platform-admin',
+      fan: '/fan',
+    },
+  },
+  {
+    namespace: '/help',
+    allowedRoles: ['parent', 'org_admin', 'coach', 'athlete', 'platform_admin'],
+    redirectTo: {
+      parent: '/help',
+      athlete: '/help',
+      org_admin: '/help',
+      coach: '/help',
+      platform_admin: '/help',
       fan: '/fan',
     },
   },
@@ -81,10 +97,12 @@ export function mapAuthRoleToStandardRole(
   const hasOrgAdmin = organizations.some(org => org.roles?.includes('org_admin'));
   const hasCoach = organizations.some(org => org.roles?.includes('coach'));
   const hasParent = organizations.some(org => org.roles?.includes('parent'));
+  const hasAthlete = organizations.some(org => org.roles?.includes('athlete'));
 
   if (hasOrgAdmin) return 'org_admin';
   if (hasCoach) return 'coach';
   if (hasParent) return 'parent';
+  if (hasAthlete) return 'athlete';
 
   // Check legacy role field
   if (authRole === 'admin') return 'org_admin';

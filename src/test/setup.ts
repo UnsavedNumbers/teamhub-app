@@ -8,6 +8,7 @@ import { vi, afterEach } from 'vitest'
 // Restore all mocks after each test to prevent leakage between tests
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 // Mock i18n - returns translation keys as-is so tests can assert which key was selected

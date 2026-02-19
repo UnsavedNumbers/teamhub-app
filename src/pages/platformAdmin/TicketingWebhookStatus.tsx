@@ -3,7 +3,11 @@
  * Monitoring for payment processing and delivery issues.
  */
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketingWebhookStatus() {
+  useDebugLifecycle('TicketingWebhookStatus')
+  
   return (
     <div className="pa-page-container">
       <h1 className="pa-page-title">Ticketing – Webhook Status</h1>

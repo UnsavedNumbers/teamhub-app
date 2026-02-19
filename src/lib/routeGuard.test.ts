@@ -81,7 +81,7 @@ describe('Route Access Control', () => {
     test('allows access to unprotected routes for all roles', () => {
       expect(isRouteAllowedForRole('/', 'parent')).toBe(true)
       expect(isRouteAllowedForRole('/public', 'parent')).toBe(true)
-      expect(isRouteAllowedForRole('/tickets', 'parent')).toBe(true)
+      expect(isRouteAllowedForRole('/portal/tickets', 'parent')).toBe(true)
     })
   })
 

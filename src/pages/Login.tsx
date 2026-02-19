@@ -4,31 +4,44 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { useI18n } from '../i18n/useI18n'
-
+import { useDemoSession } from '../contexts/DemoSessionContext'
 import { getHostAppContext } from '../utils/host'
 import {
   setSetupOrganizationFlag,
   cleanupStaleFlags,
 } from '../utils/setupOrganization'
 import { getLoginRedirect } from '../utils/loginRedirect'
-import { AUTH_HERO_IMAGES } from '../utils/authImages'
+import { getLink, RouteKeys } from '../utils/routes'
+import { AUTH_PAGE_HERO_IMAGES } from '../utils/authImages'
 import { mapAuthError } from '../utils/authErrorMapper'
 import type { OrgMemberRole } from '../contexts/OrganizationContext'
+import { USE_FAKE_DATA } from '../data/config'
+import { getDemoUserContext } from '../data/fake/userContext'
+import { getOrganizationById } from '../data/fake/fakeOrganizations'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+import { debug } from '../lib/debug'
 
 export default function Login() {
+  const { t } = useI18n()
+  const { setPendingDemoCode } = useDemoSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [demoCode, setDemoCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [heroImage, setHeroImage] = useState<string>('')
+  const heroImage = AUTH_PAGE_HERO_IMAGES.login
 
   const { signInWithEmail, user } = useAuth()
   const { resolvedTheme } = useTheme()
   const navigate = useNavigate()
-  const { t } = useI18n()
   const [logoVersion, setLogoVersion] = useState(0)
+  const appContext = getHostAppContext()
+  const showDemoCodeInput = USE_FAKE_DATA && appContext !== 'platform-admin'
+
+  // Add lifecycle logging
+  useDebugLifecycle('Login')
 
   // Clean up stale localStorage flags on mount
   useEffect(() => {
@@ -40,28 +53,36 @@ export default function Login() {
     setLogoVersion(prev => prev + 1)
   }, [resolvedTheme])
 
-  // Select random hero image on mount
-  useEffect(() => {
-    if (AUTH_HERO_IMAGES.length > 0) {
-      const randomImage = AUTH_HERO_IMAGES[Math.floor(Math.random() * AUTH_HERO_IMAGES.length)]
-      setHeroImage(randomImage)
-    }
-  }, [])
-
   async function handleEmailLogin(e: FormEvent) {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
-    const { error } = await signInWithEmail(email, password)
+    debug.flow('Login', 'Form submission started', { email, rememberMe })
+    debug.perf.start('login.formSubmission')
+
+    if (showDemoCodeInput && demoCode.trim()) {
+      setPendingDemoCode(demoCode)
+    }
+
+    const { error } = await signInWithEmail(email, password, demoCode)
     
     if (error) {
+      debug.perf.end('login.formSubmission')
+      debug.error('Login', 'Authentication failed', { email, error: error.message, errorCode: error.status })
+      const lowerMessage = error.message?.toLowerCase() ?? ''
       const errorMessage = mapAuthError(error, t)
-      
+
       // Check if it's an email confirmation issue
-      if (error.message?.toLowerCase().includes('email') && 
+      if (error.message?.toLowerCase().includes('email') &&
           (error.message?.toLowerCase().includes('confirm') || error.message?.toLowerCase().includes('verif'))) {
         setError(`${errorMessage} Please check your email inbox for the confirmation link.`)
+      } else if (lowerMessage.includes('demo code is required')) {
+        setError(t('errors.auth.demoCodeRequired'))
+      } else if (lowerMessage.includes('expired')) {
+        setError(t('errors.auth.demoCodeExpired'))
+      } else if (lowerMessage.includes('revoked') || lowerMessage.includes('invalid demo code') || lowerMessage.includes('inactive')) {
+        setError(t('errors.auth.demoCodeInvalid'))
       } else if (error.message === 'Invalid login credentials') {
         setError('Invalid email or password. If you just signed up, please check your email to confirm your account first.')
       } else {
@@ -69,6 +90,29 @@ export default function Login() {
       }
       setLoading(false)
     } else {
+      if (USE_FAKE_DATA) {
+        const demoContext = getDemoUserContext(email)
+        if (demoContext) {
+          const roles: OrgMemberRole[] = demoContext.roles
+          const orgName = getOrganizationById(demoContext.orgId)?.name ?? 'Demo Organization'
+          const organizations = [
+            {
+              id: demoContext.orgId,
+              name: orgName,
+              roles,
+              get role(): OrgMemberRole {
+                return roles[0] ?? 'parent'
+              },
+            },
+          ]
+          const redirectTo = getLoginRedirect(false, organizations, false)
+          debug.perf.end('login.formSubmission')
+          debug.flow('Login', 'Login successful (demo)', { email, redirectTo, roles: demoContext.roles })
+          navigate(redirectTo)
+          return
+        }
+      }
+
       // Wait for profile to load to get organizations
       // We need to check roles to determine redirect
       const { data: { user } } = await supabase.auth.getUser()
@@ -81,7 +125,9 @@ export default function Login() {
           .maybeSingle()
         
         if (adminData) {
-          navigate('/platform-admin')
+          debug.perf.end('login.formSubmission')
+          debug.flow('Login', 'Login successful (platform admin)', { email, redirectTo: getLink(RouteKeys.PLATFORM_DASHBOARD) })
+          navigate(getLink(RouteKeys.PLATFORM_DASHBOARD))
           return
         }
 
@@ -92,10 +138,10 @@ export default function Login() {
           } as any)
 
           if (orgError) {
-            console.error('Error fetching user organizations:', orgError)
+            debug.perf.end('login.formSubmission')
+            debug.error('Login', 'Organization fetch failed, using fallback redirect', { email, error: orgError })
             // Fallback to default redirect if org fetch fails
-            const appContext = getHostAppContext()
-            navigate(appContext === 'platform-admin' ? '/platform-admin' : '/portal/dashboard')
+            navigate(appContext === 'platform-admin' ? getLink(RouteKeys.PLATFORM_DASHBOARD) : getLink(RouteKeys.PORTAL_DASHBOARD))
             return
           }
 
@@ -142,16 +188,20 @@ export default function Login() {
 
           // Determine redirect based on roles and fan status
           const redirectTo = getLoginRedirect(false, organizations, isFan)
+          debug.perf.end('login.formSubmission')
+          debug.flow('Login', 'Login successful', { email, redirectTo, orgCount: organizations.length, isFan })
           navigate(redirectTo)
         } catch (err) {
+          debug.perf.end('login.formSubmission')
+          debug.error('Login', 'Exception during organization fetch', { email, error: err })
           // Fallback to default redirect if org fetch fails
-          console.error('Exception fetching organizations:', err)
-          const appContext = getHostAppContext()
-          navigate(appContext === 'platform-admin' ? '/platform-admin' : '/portal/dashboard')
+          navigate(appContext === 'platform-admin' ? getLink(RouteKeys.PLATFORM_DASHBOARD) : getLink(RouteKeys.PORTAL_DASHBOARD))
         }
       } else {
+        debug.perf.end('login.formSubmission')
+        debug.error('Login', 'No user after successful auth, using fallback', { email })
         // No user, should not happen but fallback
-        navigate('/portal/dashboard')
+        navigate(getLink(RouteKeys.PORTAL_DASHBOARD))
       }
     }
   }
@@ -164,14 +214,14 @@ export default function Login() {
   function handleSetupOrganization() {
     if (user) {
       // User is already authenticated, go directly to onboarding
-      navigate('/admin/onboarding')
+      navigate(getLink(RouteKeys.ADMIN_ONBOARDING))
     } else {
       // Store flag in localStorage for the signup/OAuth flow
       setSetupOrganizationFlag()
-      navigate('/portal/signup', {
+      navigate(getLink(RouteKeys.AUTH_SIGNUP), {
         state: {
           setupOrganization: true,
-          returnTo: '/admin/onboarding',
+          returnTo: getLink(RouteKeys.ADMIN_ONBOARDING),
         },
       })
     }
@@ -219,6 +269,12 @@ export default function Login() {
       {/* Right side - Login Form */}
       <div className="flex-1 flex flex-col px-6 py-8 lg:px-20 xl:px-24 bg-white dark:bg-slate-900/50 overflow-y-auto">
         <div className="mx-auto w-full max-w-sm lg:w-96 flex flex-col">
+          {showDemoCodeInput && (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+              {t('errors.auth.demoBanner')}
+            </div>
+          )}
+
           {/* Logo */}
           <div className="mb-8 pt-4">
             <img 
@@ -248,6 +304,30 @@ export default function Login() {
 
           {/* Email Form */}
           <form onSubmit={handleEmailLogin} className="space-y-6">
+            {showDemoCodeInput && (
+              <div>
+                <label 
+                  htmlFor="demo-code" 
+                  className="block text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-2 font-impact"
+                >
+                  {t('formFields.demoCode')}
+                </label>
+                <div className="mt-2">
+                  <input
+                    id="demo-code"
+                    name="demo-code"
+                    type="text"
+                    autoComplete="off"
+                    tabIndex={0}
+                    value={demoCode}
+                    onChange={(e) => setDemoCode(e.target.value)}
+                    placeholder={t('formFields.demoCodePlaceholder')}
+                    className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm text-base min-h-[44px]"
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <label 
                 htmlFor="email" 
@@ -280,7 +360,7 @@ export default function Login() {
                   PASSWORD
                 </label>
                 <Link 
-                  to="/portal/forgot-password" 
+                  to={getLink(RouteKeys.AUTH_FORGOT_PASSWORD)}
                   tabIndex={4}
                   className="text-xs font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors"
                 >
@@ -349,7 +429,7 @@ export default function Login() {
                 NEW PARENT TO YOUTHSPORTS?
               </p>
               <Link 
-                to="/portal/signup" 
+                to={getLink(RouteKeys.AUTH_SIGNUP)}
                 tabIndex={6}
                 className="block text-center font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors"
               >
@@ -361,7 +441,7 @@ export default function Login() {
                 JUST A FAN?
               </p>
               <Link 
-                to="/portal/signup" 
+                to={getLink(RouteKeys.AUTH_SIGNUP)}
                 state={{ signupAs: 'fan' } as { signupAs: 'fan' }}
                 tabIndex={8}
                 className="block text-center font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors"

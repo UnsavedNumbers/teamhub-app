@@ -17,7 +17,11 @@ const VIEWS = [
   { key: 'settings', path: '/admin/photos/settings', labelKey: 'photos.settings.title', icon: 'settings' },
 ] as const
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export function AdminPhotosLayout() {
+  useDebugLifecycle('AdminPhotosLayout')
+  
   const { t } = useI18n()
   const navigate = useNavigate()
   const location = useLocation()

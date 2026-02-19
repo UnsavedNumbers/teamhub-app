@@ -24,12 +24,19 @@ import {
     getChildRSVPForEvent as getFakeChildRSVPForEvent,
     getAllEvents as getFakeAllEvents,
 } from '../fake/fakeEvents'
+import { getTeamById } from '../fake/fakeTeams'
+import {
+    getFakeTicketedEventByCalendarEventId,
+    getFakeTicketedEventById,
+    getFakeTicketingEvents,
+} from '../fake/fakeTicketingEvents'
 import { getChildrenForUserId, getAssignedTeamsForCoach, getChildTeamMemberships } from '../fake/relationships'
 import { t } from '@/i18n'
 import { buildEventQuery, buildCalendarEventQuery } from './queryHelpers'
 import { normalizeSupabaseResponse, createServiceResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
 import { validateDeleteEvent, EVENT_ERRORS } from '../../utils/eventValidation'
+import { debug } from '../../lib/debug'
 
 // ============================================================================
 // Helper Functions
@@ -102,6 +109,7 @@ function mapSupabaseEventToCalendarEvent(event: any): CalendarEvent {
                     sales_start_at: ticketedData.sales_start_at,
                     sales_end_at: ticketedData.sales_end_at,
                     status: ticketedData.status,
+                    visibility: ticketedData.visibility ?? null,
                     ticket_banner_url: ticketedData.ticket_banner_url || null,
                     ticket_types: Array.isArray(ticketedData.ticket_types)
                         ? ticketedData.ticket_types.map((tt: any) => ({
@@ -180,6 +188,7 @@ export interface EventsQueryParams {
     sportIds?: string[]
     eventTypes?: EventType[]
     status?: ('scheduled' | 'cancelled' | 'completed' | 'postponed')[]
+    visibleToFans?: boolean
     locationSearch?: string
 
     // Time context
@@ -222,10 +231,367 @@ export interface CalendarEventSummary {
  * 
  * For full event details, use getEvents() or getEventById() instead
  */
+function calendarEventToSummary(e: CalendarEvent): CalendarEventSummary {
+    return {
+        id: e.id,
+        team_id: e.team_id,
+        season_id: e.season_id,
+        title: e.title,
+        type: e.type,
+        start_time: e.start_time,
+        end_time: e.end_time,
+        location: e.location,
+        arrival_time: e.arrival_time,
+        timezone: e.timezone,
+        is_cancelled: e.is_cancelled,
+        requires_travel: e.requires_travel ?? false,
+        rsvp_enabled: e.rsvp_config?.enabled ?? false,
+        rsvp_type: e.rsvp_config?.type ?? null,
+        visibility: (e as { visibility?: string }).visibility ?? 'internal',
+        team: e.team ?? null,
+        season: e.season ?? null,
+    }
+}
+
+function getBaseFakeEvents(params: EventsQueryParams): CalendarEvent[] {
+    if (params.startDate && params.endDate) {
+        return getFakeEventsInDateRange(params.startDate, params.endDate)
+    }
+    if (params.teamId) {
+        return getFakeEventsForTeam(params.teamId)
+    }
+    if (params.seasonId) {
+        return getFakeEventsForSeason(params.seasonId)
+    }
+    return getFakeAllEvents()
+}
+
+function deriveFakeEventStatus(event: CalendarEvent, now: Date): 'scheduled' | 'cancelled' | 'completed' {
+    if (event.is_cancelled) return 'cancelled'
+    if (new Date(event.end_time).getTime() < now.getTime()) return 'completed'
+    return 'scheduled'
+}
+
+function normalizeTicketedEventSummary(ticketedEvent: any): NonNullable<CalendarEvent['ticketed_event']> {
+    return {
+        id: ticketedEvent.id,
+        org_id: ticketedEvent.org_id,
+        team_id: ticketedEvent.team_id ?? null,
+        event_type: ticketedEvent.event_type ?? null,
+        title: ticketedEvent.title,
+        description: ticketedEvent.description ?? null,
+        starts_at: ticketedEvent.starts_at,
+        ends_at: ticketedEvent.ends_at,
+        timezone: ticketedEvent.timezone ?? null,
+        venue_name: ticketedEvent.venue_name ?? null,
+        venue_city: ticketedEvent.venue_city ?? null,
+        venue_state: ticketedEvent.venue_state ?? null,
+        venue_postal_code: ticketedEvent.venue_postal_code ?? null,
+        sales_start_at: ticketedEvent.sales_start_at ?? null,
+        sales_end_at: ticketedEvent.sales_end_at ?? null,
+        status: ticketedEvent.status,
+        visibility: ticketedEvent.visibility ?? null,
+        event_description: ticketedEvent.event_description ?? null,
+        ticket_banner_url: ticketedEvent.ticket_banner_url ?? null,
+        ticket_types: (ticketedEvent.ticket_types ?? []).map((ticketType: any) => ({
+            id: ticketType.id,
+            name: ticketType.name,
+            description: ticketType.description ?? null,
+            price_cents: ticketType.price_cents ?? 0,
+            currency: ticketType.currency ?? 'USD',
+            capacity_total: ticketType.capacity_total ?? null,
+            capacity_remaining: ticketType.capacity_remaining ?? null,
+            sort_order: ticketType.sort_order ?? null,
+            is_active: ticketType.is_active ?? null,
+        })),
+    }
+}
+
+function toSyntheticEventLocation(eventId: string, ticketedEvent: any): EventLocation {
+    return {
+        id: `loc-ticketing-${eventId}`,
+        event_id: eventId,
+        venue_name: ticketedEvent.venue_name ?? null,
+        address_line1: ticketedEvent.venue_address_line1 ?? null,
+        address_line2: ticketedEvent.venue_address_line2 ?? null,
+        city: ticketedEvent.venue_city ?? null,
+        state: ticketedEvent.venue_state ?? null,
+        postal_code: ticketedEvent.venue_postal_code ?? null,
+        place_id: null,
+        country: ticketedEvent.venue_country ?? 'US',
+        latitude: null,
+        longitude: null,
+        is_tbd: false,
+        is_virtual: Boolean(ticketedEvent.venue_is_virtual),
+        virtual_link: ticketedEvent.venue_virtual_link ?? null,
+        created_at: ticketedEvent.created_at,
+        updated_at: ticketedEvent.updated_at,
+    }
+}
+
+function toFallbackEventLocation(event: CalendarEvent): EventLocation | null {
+    if (!event.location?.trim()) return null
+    return {
+        id: `loc-fallback-${event.id}`,
+        event_id: event.id,
+        venue_name: event.location.trim(),
+        address_line1: null,
+        address_line2: null,
+        city: null,
+        state: null,
+        postal_code: null,
+        place_id: null,
+        country: 'US',
+        latitude: null,
+        longitude: null,
+        is_tbd: false,
+        is_virtual: false,
+        virtual_link: null,
+        created_at: event.created_at,
+        updated_at: event.updated_at,
+    }
+}
+
+function withFakeEventRelations(event: CalendarEvent, orgId: string): CalendarEvent {
+    const ticketedEvent = getFakeTicketedEventByCalendarEventId(event.id, orgId)
+    const persistedLocation = getFakeEventLocation(event.id)
+    const syntheticLocation = ticketedEvent ? toSyntheticEventLocation(event.id, ticketedEvent) : null
+    const fallbackLocation = toFallbackEventLocation(event)
+
+    return {
+        ...event,
+        event_location: persistedLocation ?? syntheticLocation ?? fallbackLocation,
+        ticketed_event: ticketedEvent ? normalizeTicketedEventSummary(ticketedEvent) : null,
+    }
+}
+
+function createSyntheticCalendarEventFromTicketing(calendarEventId: string, ticketedEvent: any): CalendarEvent {
+    const start = new Date(ticketedEvent.starts_at)
+    const arrival = new Date(start.getTime() - 45 * 60 * 1000).toISOString()
+    const locationParts = [ticketedEvent.venue_name, ticketedEvent.venue_city, ticketedEvent.venue_state]
+        .filter(Boolean)
+        .join(', ')
+
+    const mappedType: EventType =
+        ticketedEvent.event_type === 'game'
+            ? 'game'
+            : ticketedEvent.event_type === 'tournament'
+                ? 'tournament'
+                : ticketedEvent.event_type === 'fundraiser' || ticketedEvent.event_type === 'social_event'
+                    ? 'social'
+                    : ticketedEvent.event_type === 'travel'
+                        ? 'travel'
+                        : 'meeting'
+
+    const isCancelled = ticketedEvent.status === 'cancelled'
+
+    return {
+        id: calendarEventId,
+        team_id: ticketedEvent.team_id ?? null,
+        season_id: ticketedEvent.season_id ?? null,
+        title: ticketedEvent.title,
+        type: mappedType,
+        start_time: ticketedEvent.starts_at,
+        end_time: ticketedEvent.ends_at,
+        arrival_time: arrival,
+        timezone: ticketedEvent.timezone ?? 'America/Chicago',
+        location: locationParts || ticketedEvent.venue_name || null,
+        notes: ticketedEvent.description ?? ticketedEvent.event_description ?? null,
+        uniform_notes: null,
+        equipment_notes: null,
+        weather_dependent: false,
+        external_link: null,
+        is_cancelled: isCancelled,
+        cancellation_reason: isCancelled ? 'Event cancelled' : null,
+        cancelled_at: isCancelled ? ticketedEvent.updated_at : null,
+        cancelled_by_user_id: null,
+        created_by_user_id: null,
+        created_at: ticketedEvent.created_at,
+        updated_at: ticketedEvent.updated_at,
+        event_location: toSyntheticEventLocation(calendarEventId, ticketedEvent),
+        ticketed_event: normalizeTicketedEventSummary(ticketedEvent),
+        team: ticketedEvent.team_id
+            ? {
+                id: ticketedEvent.team_id,
+                name: 'Ticketed Team Event',
+                org_id: ticketedEvent.org_id,
+            }
+            : undefined,
+    }
+}
+
+function applyFakeEventFilters(
+    events: CalendarEvent[],
+    params: EventsQueryParams,
+    applyPagination: boolean,
+): CalendarEvent[] {
+    const now = new Date()
+    let filtered = [...events]
+
+    if (!params.includeCancelled) {
+        filtered = filtered.filter((event) => !event.is_cancelled)
+    }
+
+    if (params.timeContext === 'upcoming') {
+        filtered = filtered.filter((event) => new Date(event.start_time).getTime() >= now.getTime())
+    } else if (params.timeContext === 'past') {
+        filtered = filtered.filter((event) => new Date(event.start_time).getTime() < now.getTime())
+    }
+
+    if (params.startDate) {
+        const startMs = params.startDate.getTime()
+        filtered = filtered.filter((event) => new Date(event.start_time).getTime() >= startMs)
+    }
+
+    if (params.endDate) {
+        const endMs = params.endDate.getTime()
+        filtered = filtered.filter((event) => new Date(event.start_time).getTime() <= endMs)
+    }
+
+    if (params.teamIds && params.teamIds.length > 0) {
+        const allowed = new Set(params.teamIds)
+        filtered = filtered.filter((event) => !!event.team_id && allowed.has(event.team_id))
+    }
+
+    if (params.seasonIds && params.seasonIds.length > 0) {
+        const allowed = new Set(params.seasonIds)
+        filtered = filtered.filter((event) => !!event.season_id && allowed.has(event.season_id))
+    }
+
+    if (params.sportIds && params.sportIds.length > 0) {
+        const allowed = new Set(params.sportIds)
+        filtered = filtered.filter((event) => {
+            const team = event.team_id ? getTeamById(event.team_id) : null
+            return !!team?.sport_id && allowed.has(team.sport_id)
+        })
+    }
+
+    if (params.eventTypes && params.eventTypes.length > 0) {
+        const allowed = new Set(params.eventTypes)
+        filtered = filtered.filter((event) => allowed.has(event.type))
+    }
+
+    if (params.status && params.status.length > 0) {
+        const allowed = new Set(params.status)
+        filtered = filtered.filter((event) => allowed.has(deriveFakeEventStatus(event, now)))
+    }
+
+    if (params.visibleToFans) {
+        filtered = filtered.filter((event) => ((event as { visibility?: string | null }).visibility ?? 'public') === 'public')
+    }
+
+    if (params.search && params.search.trim() !== '') {
+        const query = params.search.trim().toLowerCase()
+        filtered = filtered.filter((event) => {
+            const haystack = [
+                event.title,
+                event.notes,
+                event.location,
+                event.uniform_notes,
+                event.equipment_notes,
+                event.team?.name,
+                event.season?.name,
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase()
+            return haystack.includes(query)
+        })
+    }
+
+    if (params.locationSearch && params.locationSearch.trim() !== '') {
+        const query = params.locationSearch.trim().toLowerCase()
+        filtered = filtered.filter((event) => {
+            const locationText = [
+                event.location,
+                event.event_location?.venue_name,
+                event.event_location?.address_line1,
+                event.event_location?.city,
+                event.event_location?.state,
+                event.event_location?.postal_code,
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase()
+            return locationText.includes(query)
+        })
+    }
+
+    const orderBy = params.orderBy || 'start_time'
+    const sortDirection = params.order === 'desc' ? -1 : 1
+    filtered.sort((a, b) => {
+        const timeValue = (value: string | null | undefined) => (value ? new Date(value).getTime() : 0)
+
+        let comparison = 0
+        switch (orderBy) {
+            case 'title':
+                comparison = a.title.localeCompare(b.title)
+                break
+            case 'type':
+                comparison = a.type.localeCompare(b.type)
+                break
+            case 'created_at':
+                comparison = timeValue(a.created_at) - timeValue(b.created_at)
+                break
+            case 'updated_at':
+                comparison = timeValue(a.updated_at) - timeValue(b.updated_at)
+                break
+            case 'end_time':
+                comparison = timeValue(a.end_time) - timeValue(b.end_time)
+                break
+            case 'arrival_time':
+                comparison = timeValue(a.arrival_time) - timeValue(b.arrival_time)
+                break
+            case 'start_time':
+            default:
+                comparison = timeValue(a.start_time) - timeValue(b.start_time)
+                break
+        }
+        return comparison * sortDirection
+    })
+
+    if (!applyPagination) {
+        return filtered
+    }
+
+    if (params.offset !== undefined && params.limit !== undefined) {
+        return filtered.slice(params.offset, params.offset + params.limit)
+    }
+    if (params.limit !== undefined) {
+        return filtered.slice(0, params.limit)
+    }
+    return filtered
+}
+
 export async function getCalendarEvents(
-    _context: UserContext,
+    context: UserContext,
     params: Omit<EventsQueryParams, 'lightweight'> = {}
 ): Promise<{ data: CalendarEventSummary[]; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const permissions = buildPermissions(context)
+            const childTeamMemberships = getChildTeamMemberships()
+            let events: CalendarEvent[]
+            if (params.startDate && params.endDate) {
+                events = getFakeEventsInDateRange(params.startDate, params.endDate)
+            } else {
+                events = getFakeAllEvents()
+            }
+            if (!params.includeCancelled) {
+                events = events.filter((e) => !e.is_cancelled)
+            }
+            events = filterEventsByRole(events, permissions, childTeamMemberships, context.orgId)
+            events.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+            const data = events.map(calendarEventToSummary)
+            return { data, error: null }
+        } catch (err) {
+            console.error('getCalendarEvents (fake) error:', err)
+            const classifiedError = classifySupabaseError(err instanceof Error ? err : new Error(String(err)))
+            return { data: [], error: classifiedError }
+        }
+    }
+
     // Real Supabase implementation with lightweight query
     try {
         let query = buildCalendarEventQuery(supabase)
@@ -283,6 +649,10 @@ export async function getCalendarEvents(
             query = query.eq('is_cancelled', false)
         }
 
+        if (params.visibleToFans) {
+            query = query.eq('visibility', 'public')
+        }
+
         // Apply sorting - use index-friendly ordering
         const sortColumn = params.orderBy || 'start_time'
         const sortOrder = params.order === 'desc' ? { ascending: false } : { ascending: true }
@@ -314,75 +684,24 @@ export async function getEvents(
     context: UserContext,
     params: EventsQueryParams = {}
 ): Promise<{ data: CalendarEvent[]; error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        try {
+    console.groupCollapsed(`%cgetEvents: ${JSON.stringify(params)}`, 'color: #666; font-weight: bold;');
+    debug.data('EventsService.getEvents', 'Request', { context: { userId: context.userId, orgId: context.orgId }, params })
+    debug.perf.start('eventsService.getEvents')
+
+    try {
+        if (USE_FAKE_DATA) {
             await simulateDelay()
 
             const permissions = buildPermissions(context)
             const childTeamMemberships = getChildTeamMemberships()
+            const baseEvents = getBaseFakeEvents(params).map((event) => withFakeEventRelations(event, context.orgId))
+            const visibleEvents = filterEventsByRole(baseEvents, permissions, childTeamMemberships, context.orgId)
+            const filteredEvents = applyFakeEventFilters(visibleEvents, params, true)
 
-            // Get all fake events
-            let events: CalendarEvent[]
-
-            if (params.startDate && params.endDate) {
-                events = getFakeEventsInDateRange(params.startDate, params.endDate)
-            } else if (params.teamId) {
-                events = getFakeEventsForTeam(params.teamId)
-            } else if (params.seasonId) {
-                events = getFakeEventsForSeason(params.seasonId)
-            } else {
-                events = getFakeAllEvents()
-            }
-
-            // Apply filters
-            if (!params.includeCancelled) {
-                events = events.filter((e) => !e.is_cancelled)
-            }
-
-            // Debug logging in development
-            if (import.meta.env?.DEV) {
-                console.log('[eventsService] Before role filtering:', {
-                    totalEvents: events.length,
-                    permissions: {
-                        canViewAllOrgData: permissions.canViewAllOrgData,
-                        canViewAssignedTeams: permissions.canViewAssignedTeams,
-                        canViewOwnChildrenData: permissions.canViewOwnChildrenData,
-                        assignedTeamIds: permissions.assignedTeamIds,
-                        ownedChildIds: permissions.ownedChildIds,
-                    },
-                    childTeamMemberships: childTeamMemberships.length,
-                    orgId: context.orgId,
-                })
-            }
-
-            // Filter by role-based permissions
-            events = filterEventsByRole(events, permissions, childTeamMemberships, context.orgId)
-
-            // Debug logging in development
-            if (import.meta.env?.DEV) {
-                console.log('[eventsService] After role filtering:', {
-                    filteredEvents: events.length,
-                    eventIds: events.map((e) => e.id),
-                })
-            }
-
-            // Sort by start time
-            events.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
-
-            // Apply limit
-            if (params.limit) {
-                events = events.slice(0, params.limit)
-            }
-
-            return { data: events, error: null }
-        } catch (err) {
-            console.error('getEvents error:', err)
-            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+            return { data: filteredEvents, error: null }
         }
-    }
 
-    // Real Supabase implementation - NO FALLBACK
-    try {
+        // Real Supabase implementation - NO FALLBACK
         let query = buildEventQuery(supabase)
 
         // Apply time context
@@ -439,6 +758,10 @@ export async function getEvents(
             query = query.eq('is_cancelled', false)
         }
 
+        if (params.visibleToFans) {
+            query = query.eq('visibility', 'public')
+        }
+
         // Apply search (title, notes, venue_name)
         if (params.search && params.search.trim() !== '') {
             const searchTerm = `%${params.search.trim()}%`
@@ -467,12 +790,17 @@ export async function getEvents(
             ? normalizedData.map(mapSupabaseEventToCalendarEvent)
             : []
 
-        return { data: mappedEvents, error: null }
-    } catch (err) {
-        console.error('getEvents error:', err)
-        const classifiedError = classifySupabaseError(err)
-        return { data: [], error: classifiedError }
-    }
+            debug.perf.end('eventsService.getEvents')
+            debug.data('EventsService.getEvents', 'Response', { eventCount: mappedEvents.length })
+            console.groupEnd()
+            return { data: mappedEvents, error: null }
+        } catch (err) {
+            debug.perf.end('eventsService.getEvents')
+            debug.error('EventsService.getEvents', 'Error', { error: err, params, context: { userId: context.userId, orgId: context.orgId } })
+            const classifiedError = classifySupabaseError(err)
+            console.groupEnd()
+            return { data: [], error: classifiedError }
+        }
 }
 
 /**
@@ -487,25 +815,11 @@ export async function getEventsCount(
             await simulateDelay()
             const permissions = buildPermissions(context)
             const childTeamMemberships = getChildTeamMemberships()
+            const baseEvents = getBaseFakeEvents(params).map((event) => withFakeEventRelations(event, context.orgId))
+            const visibleEvents = filterEventsByRole(baseEvents, permissions, childTeamMemberships, context.orgId)
+            const filteredEvents = applyFakeEventFilters(visibleEvents, params, false)
 
-            let events: CalendarEvent[]
-            if (params.startDate && params.endDate) {
-                events = getFakeEventsInDateRange(params.startDate, params.endDate)
-            } else if (params.teamId) {
-                events = getFakeEventsForTeam(params.teamId)
-            } else if (params.seasonId) {
-                events = getFakeEventsForSeason(params.seasonId)
-            } else {
-                events = getFakeAllEvents()
-            }
-
-            if (!params.includeCancelled) {
-                events = events.filter((e) => !e.is_cancelled)
-            }
-
-            events = filterEventsByRole(events, permissions, childTeamMemberships, context.orgId)
-
-            return { data: events.length, error: null }
+            return { data: filteredEvents.length, error: null }
         } catch (err) {
             console.error('getEventsCount error:', err)
             return { data: 0, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -558,6 +872,9 @@ export async function getEventsCount(
         } else if (!params.includeCancelled) {
             query = query.eq('is_cancelled', false)
         }
+        if (params.visibleToFans) {
+            query = query.eq('visibility', 'public')
+        }
         if (params.search && params.search.trim() !== '') {
             const searchTerm = `%${params.search.trim()}%`
             query = query.or(`title.ilike.${searchTerm},notes.ilike.${searchTerm}`)
@@ -588,15 +905,33 @@ export async function getEventDetails(
             await simulateDelay()
 
             const permissions = buildPermissions(context)
+            const childTeamMemberships = getChildTeamMemberships()
             const event = getFakeEventById(eventId)
 
-            if (!event) {
+            if (event) {
+                const enrichedEvent = withFakeEventRelations(event, context.orgId)
+                const filtered = filterEventsByRole([enrichedEvent], permissions, childTeamMemberships, context.orgId)
+                return { data: filtered[0] ?? null, error: null }
+            }
+
+            const ticketedDirect = getFakeTicketedEventById(eventId, context.orgId)
+            const ticketedByCalendarId = getFakeTicketedEventByCalendarEventId(eventId, context.orgId)
+            const ticketedFallback =
+                ticketedDirect ??
+                ticketedByCalendarId ??
+                getFakeTicketingEvents(context.orgId, { page: 1, perPage: 300 }).data.find((candidate) => candidate.event_id === eventId) ??
+                null
+
+            if (!ticketedFallback) {
                 return { data: null, error: null }
             }
 
-            // Check permissions
-            const childTeamMemberships = getChildTeamMemberships()
-            const filtered = filterEventsByRole([event], permissions, childTeamMemberships, context.orgId)
+            const syntheticEventId =
+                ticketedDirect && eventId === ticketedDirect.id
+                    ? eventId
+                    : ticketedFallback.event_id || eventId || `event-${ticketedFallback.id}`
+            const syntheticEvent = createSyntheticCalendarEventFromTicketing(syntheticEventId, ticketedFallback)
+            const filtered = filterEventsByRole([syntheticEvent], permissions, childTeamMemberships, context.orgId)
 
             if (filtered.length === 0) {
                 return { data: null, error: null }
@@ -923,7 +1258,13 @@ export async function createEvent(
     context: UserContext,
     formData: EventFormData
 ): Promise<{ data: CalendarEvent | null; error: Error | null }> {
+    console.groupCollapsed(`%ccreateEvent: ${formData.title}`, 'color: #666; font-weight: bold;');
+    debug.flow('EventsService.createEvent', 'Started', { eventTitle: formData.title, context: { userId: context.userId, orgId: context.orgId } })
+    debug.perf.start('eventsService.createEvent')
+
     if (USE_FAKE_DATA) {
+        debug.flow('EventsService.createEvent', 'Skipped - demo mode')
+        console.groupEnd()
         return { data: null, error: new Error('Cannot create events in demo mode') }
     }
 
@@ -943,8 +1284,9 @@ export async function createEvent(
         const eventInsertData: EventInsert = {
             title: formData.title,
             type: formData.type,
-            team_id: formData.team_id!,
-            season_id: formData.season_id!,
+            org_id: context.orgId,
+            team_id: (formData.team_id || null) as unknown as EventInsert['team_id'],
+            season_id: (formData.season_id || null) as unknown as EventInsert['season_id'],
             start_time: start.toISOString(),
             end_time: end.toISOString(),
             arrival_time: arrival ? arrival.toISOString() : null,
@@ -1007,24 +1349,18 @@ export async function createEvent(
 
         // 4. Handle Ticketing
         if (formData.ticketing?.is_ticketed) {
-            // Get org_id from team if team_id is provided
-            let orgId: string | null = null
-            if (formData.team_id) {
-                const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', formData.team_id).single()
-                if (!teamData?.org_id) throw new Error('Failed to get organization ID from team')
-                orgId = teamData.org_id
-            }
-
-            if (!orgId) throw new Error('Organization ID is required for ticketed events. Please select a team.')
+            // Use org_id from context (required for all events)
+            const orgId = context.orgId
+            if (!orgId) throw new Error('Organization ID is required for ticketed events.')
 
             type TicketedEventInsert = Database['public']['Tables']['ticketed_events']['Insert']
             const ticketedEventData: TicketedEventInsert = {
                 event_id: eventData.id,
                 org_id: orgId,
-                team_id: formData.team_id!,
+                team_id: formData.team_id || null,
                 event_type: formData.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
                 title: formData.title,
-                description: formData.notes || null,
+                description: formData.ticketing.internal_description?.trim() || formData.notes || null,
                 starts_at: start.toISOString(),
                 ends_at: end.toISOString(),
                 timezone: formData.timezone,
@@ -1039,6 +1375,8 @@ export async function createEvent(
                 sales_start_at: formData.ticketing.sales_start_at ? new Date(formData.ticketing.sales_start_at).toISOString() : null,
                 sales_end_at: formData.ticketing.sales_end_at ? new Date(formData.ticketing.sales_end_at).toISOString() : (end.toISOString()),
                 status: formData.ticketing.status as Database['public']['Enums']['ticketed_event_status'],
+                event_description: formData.ticketing.event_description?.trim() || null,
+                ticket_banner_url: formData.ticketing.ticket_banner_url?.trim() || null,
             }
 
             const { data: ticketedEvent, error: ticketedEventError } = await supabase
@@ -1073,14 +1411,19 @@ export async function createEvent(
             }
         }
 
-        // Return the full event
-        return getEventDetails(context, eventData.id)
+            // Return the full event
+            debug.perf.end('eventsService.createEvent')
+            debug.flow('EventsService.createEvent', 'Created successfully', { eventId: eventData.id })
+            console.groupEnd()
+            return getEventDetails(context, eventData.id)
 
-    } catch (err) {
-        console.error('createEvent error:', err)
-        const classifiedError = classifySupabaseError(err)
-        return { data: null, error: classifiedError }
-    }
+        } catch (err) {
+            debug.perf.end('eventsService.createEvent')
+            debug.error('EventsService.createEvent', 'Creation failed', { error: err, formData: { title: formData.title, type: formData.type }, context: { userId: context.userId, orgId: context.orgId } })
+            const classifiedError = classifySupabaseError(err)
+            console.groupEnd()
+            return { data: null, error: classifiedError }
+        }
 }
 
 /**
@@ -1091,7 +1434,13 @@ export async function updateEvent(
     eventId: string,
     formData: EventFormData
 ): Promise<{ data: CalendarEvent | null; error: Error | null }> {
+    console.groupCollapsed(`%cupdateEvent: ${eventId} - ${formData.title}`, 'color: #666; font-weight: bold;');
+    debug.flow('EventsService.updateEvent', 'Started', { eventId, eventTitle: formData.title, context: { userId: context.userId, orgId: context.orgId } })
+    debug.perf.start('eventsService.updateEvent')
+
     if (USE_FAKE_DATA) {
+        debug.flow('EventsService.updateEvent', 'Skipped - demo mode')
+        console.groupEnd()
         return { data: null, error: new Error('Cannot update events in demo mode') }
     }
 
@@ -1110,8 +1459,8 @@ export async function updateEvent(
         const eventUpdateData: EventUpdate = {
             title: formData.title,
             type: formData.type,
-            team_id: formData.team_id ?? undefined,
-            season_id: formData.season_id ?? undefined,
+            team_id: (formData.team_id || null) as unknown as EventUpdate['team_id'],
+            season_id: (formData.season_id || null) as unknown as EventUpdate['season_id'],
             start_time: start.toISOString(),
             end_time: end.toISOString(),
             arrival_time: arrival ? arrival.toISOString() : null,
@@ -1180,7 +1529,7 @@ export async function updateEvent(
                     team_id: formData.team_id ?? undefined,
                     event_type: formData.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
                     title: formData.title,
-                    description: formData.notes || null,
+                    description: formData.ticketing.internal_description?.trim() || formData.notes || null,
                     starts_at: start.toISOString(),
                     ends_at: end.toISOString(),
                     timezone: formData.timezone,
@@ -1189,6 +1538,8 @@ export async function updateEvent(
                     // ... other fields
                     sales_start_at: formData.ticketing.sales_start_at ? new Date(formData.ticketing.sales_start_at).toISOString() : null,
                     sales_end_at: formData.ticketing.sales_end_at ? new Date(formData.ticketing.sales_end_at).toISOString() : (end.toISOString()),
+                    event_description: formData.ticketing.event_description?.trim() || null,
+                    ticket_banner_url: formData.ticketing.ticket_banner_url?.trim() || null,
 
                 }
 
@@ -1200,13 +1551,18 @@ export async function updateEvent(
             }
         }
 
-        return getEventDetails(context, eventId)
+            debug.perf.end('eventsService.updateEvent')
+            debug.flow('EventsService.updateEvent', 'Updated successfully', { eventId })
+            console.groupEnd()
+            return getEventDetails(context, eventId)
 
-    } catch (err) {
-        console.error('updateEvent error:', err)
-        const classifiedError = classifySupabaseError(err)
-        return { data: null, error: classifiedError }
-    }
+        } catch (err) {
+            debug.perf.end('eventsService.updateEvent')
+            debug.error('EventsService.updateEvent', 'Update failed', { error: err, eventId, formData: { title: formData.title }, context: { userId: context.userId, orgId: context.orgId } })
+            const classifiedError = classifySupabaseError(err)
+            console.groupEnd()
+            return { data: null, error: classifiedError }
+        }
 }
 
 /**
@@ -1217,7 +1573,13 @@ export async function deleteEvent(
     eventId: string,
     organization: { id: string; roles: string[] } | null
 ): Promise<{ error: Error | null }> {
+    console.groupCollapsed(`%cdeleteEvent: ${eventId}`, 'color: #666; font-weight: bold;');
+    debug.flow('EventsService.deleteEvent', 'Started', { eventId, context: { userId: context.userId, orgId: context.orgId } })
+    debug.perf.start('eventsService.deleteEvent')
+
     if (USE_FAKE_DATA) {
+        debug.flow('EventsService.deleteEvent', 'Skipped - demo mode')
+        console.groupEnd()
         return { error: new Error('Cannot delete events in demo mode') }
     }
 
@@ -1242,13 +1604,19 @@ export async function deleteEvent(
             .delete()
             .eq('id', eventId)
 
-        if (error) throw error
-        return { error: null }
-    } catch (err) {
-        console.error('deleteEvent error:', err)
-        const classifiedError = classifySupabaseError(err)
-        return { error: classifiedError }
-    }
+            if (error) throw error
+
+            debug.perf.end('eventsService.deleteEvent')
+            debug.flow('EventsService.deleteEvent', 'Deleted successfully', { eventId })
+            console.groupEnd()
+            return { error: null }
+        } catch (err) {
+            debug.perf.end('eventsService.deleteEvent')
+            debug.error('EventsService.deleteEvent', 'Deletion failed', { error: err, eventId, context: { userId: context.userId, orgId: context.orgId } })
+            const classifiedError = classifySupabaseError(err)
+            console.groupEnd()
+            return { error: classifiedError }
+        }
 }
 
 // ----------------------------------------------------------------------------

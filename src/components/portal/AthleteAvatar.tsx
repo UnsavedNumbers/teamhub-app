@@ -5,9 +5,10 @@
  * Uses public URLs from public-media bucket (no signed URLs needed).
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getAthleteInitials } from '../../utils/athleteHelpers'
-import { getAthletePhotoUrlWithCacheBust, hasAthletePhoto, type PhotoSize } from '../../data/services/athletePhotoService'
+import { resizeImageUrl } from '../../utils/resizeImageUrl'
+import { getAthletePhotoUrl, getAthletePhotoUrlWithCacheBust, hasAthletePhoto, type PhotoSize } from '../../data/services/athletePhotoService'
 import type { Athlete } from '../../types/family'
 import { useUserContext } from '../../hooks/useUserContext'
 
@@ -21,43 +22,87 @@ interface AthleteAvatarProps {
 export default function AthleteAvatar({ athlete, photoSize = '256', className = '' }: AthleteAvatarProps) {
     const [imageLoaded, setImageLoaded] = useState(false)
     const [imageError, setImageError] = useState(false)
+    const [resizedBlobUrl, setResizedBlobUrl] = useState<string | null>(null)
+    const [fallbackResizing, setFallbackResizing] = useState(false)
+    const resizingRef = useRef(false)
+    const blobUrlRef = useRef<string | null>(null)
     const { context } = useUserContext()
     
     const initials = getAthleteInitials(athlete.first_name, athlete.last_name)
     
-    // Determine photo size based on component size prop
     const getPhotoSize = (): PhotoSize => {
         if (photoSize) return photoSize
-        // Default based on component size
-        return '256' // Default to 256px for avatars
+        return '256'
     }
 
-    // Get org_id from athlete or context
     const orgId = athlete.org_id || context.orgId
+    const size = getPhotoSize()
+    // Fallback resize uses hi-res size so images stay sharp on retina (resizeImageUrl caps at source size)
+    const fallbackResizePx = size === '512' ? 1024 : 768
 
-    // Get photo URL (public, no signed URL needed)
+    // Prefer size-specific URL (256/512) so large demo images don't look dotty when scaled down
     const photoUrl = orgId && athlete.id && hasAthletePhoto({ has_profile_photo: athlete.has_profile_photo ?? undefined })
         ? getAthletePhotoUrlWithCacheBust(
             orgId,
             athlete.id,
             athlete.profile_photo_updated_at || null,
-            getPhotoSize()
+            size
           )
         : null
+    const fallbackUrl = photoUrl && size !== 'original' && orgId && athlete.id
+        ? getAthletePhotoUrl(orgId, athlete.id, 'original')
+        : null
 
-    // Reset loading state when photo URL changes
     useEffect(() => {
         if (photoUrl) {
             setImageError(false)
+            setFallbackResizing(false)
+            setResizedBlobUrl((prev) => {
+                if (prev) {
+                    URL.revokeObjectURL(prev)
+                    blobUrlRef.current = null
+                }
+                return null
+            })
             setImageLoaded(false)
         }
     }, [photoUrl])
 
-    // If no photo URL or error loading, show avatar with initials
-    if (!photoUrl || imageError) {
+    const displayUrl = resizedBlobUrl ?? photoUrl
+
+    const handleError = () => {
+        if (fallbackUrl && !resizingRef.current && !resizedBlobUrl) {
+            resizingRef.current = true
+            setFallbackResizing(true)
+            resizeImageUrl(fallbackUrl, fallbackResizePx)
+                .then((blobUrl) => {
+                    blobUrlRef.current = blobUrl
+                    setResizedBlobUrl(blobUrl)
+                    setImageLoaded(true)
+                })
+                .catch(() => setImageError(true))
+                .finally(() => {
+                    resizingRef.current = false
+                    setFallbackResizing(false)
+                })
+        } else {
+            setImageError(true)
+        }
+    }
+
+    useEffect(() => {
+        return () => {
+            if (blobUrlRef.current) {
+                URL.revokeObjectURL(blobUrlRef.current)
+                blobUrlRef.current = null
+            }
+        }
+    }, [])
+
+    if (!displayUrl || imageError || fallbackResizing) {
         return (
             <div
-                className={`w-full h-full bg-[var(--org-btn-primary-bg)]/20 flex items-center justify-center text-[var(--org-link-color)] font-black ${className}`}
+                className={`w-full h-full bg-slate-400 dark:bg-slate-600 flex items-center justify-center text-white font-black ${className}`}
                 aria-label={`${athlete.first_name} ${athlete.last_name}`}
             >
                 <span className="text-4xl">{initials}</span>
@@ -69,10 +114,10 @@ export default function AthleteAvatar({ athlete, photoSize = '256', className = 
     return (
         <div className={`w-full h-full overflow-hidden relative ${className}`}>
             <img
-                src={photoUrl}
+                src={displayUrl}
                 alt={`${athlete.first_name} ${athlete.last_name}`}
                 onLoad={() => setImageLoaded(true)}
-                onError={() => setImageError(true)}
+                onError={handleError}
                 loading="lazy"
                 decoding="async"
                 className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
@@ -81,14 +126,13 @@ export default function AthleteAvatar({ athlete, photoSize = '256', className = 
             />
             {!imageLoaded && !imageError && (
                 <div className="absolute inset-0 bg-slate-200 dark:bg-slate-700 animate-pulse flex items-center justify-center">
-                    <div className="w-full h-full bg-[var(--org-btn-primary-bg)]/20 flex items-center justify-center">
-                        <span className="text-[var(--org-link-color)] font-black text-4xl">{initials}</span>
+                    <div className="w-full h-full bg-slate-400 dark:bg-slate-600 flex items-center justify-center">
+                        <span className="text-white font-black text-4xl">{initials}</span>
                     </div>
                 </div>
             )}
-            {/* Fallback avatar (hidden but ready) */}
             {imageError && (
-                <div className="absolute inset-0 bg-[var(--org-btn-primary-bg)]/20 flex items-center justify-center text-[var(--org-link-color)] font-black">
+                <div className="absolute inset-0 bg-slate-400 dark:bg-slate-600 flex items-center justify-center text-white font-black">
                     <span className="text-4xl">{initials}</span>
                 </div>
             )}

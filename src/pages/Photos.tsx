@@ -27,7 +27,11 @@ import { PhotoFilterBar } from '../components/gallery/PhotoFilterBar'
 import { getLink } from '../utils/routes'
 import type { Athlete } from '../types/family'
 
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+
 export default function Photos() {
+  useDebugLifecycle('Photos')
+  
   const { context, isReady } = useUserContext()
   const { t } = useI18n()
   const [galleries, setGalleries] = useState<Record<GalleryType, Gallery[]>>({
@@ -97,7 +101,8 @@ export default function Photos() {
     }
 
     loadGalleries()
-  }, [context, isReady])
+    // Use stable deps so the effect doesn't re-run every render (context is often a new object reference)
+  }, [isReady, context.userId, context.orgId])
 
   const sortOptions = useMemo(
     () => [

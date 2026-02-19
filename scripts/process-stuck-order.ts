@@ -74,7 +74,7 @@ async function processStuckOrder(orderId: string) {
 
   // 5. Get Stripe Connect charge info if applicable
   let stripeChargeId: string | null = null
-  let stripeApplicationFeeId: string | null = null
+  const stripeApplicationFeeId: string | null = null
 
   if (paymentIntentId && order.stripe_connect_account_id) {
     try {

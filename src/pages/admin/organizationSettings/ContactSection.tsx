@@ -68,7 +68,10 @@ const TRAVEL_SUBCATEGORY_LABEL_KEYS: Record<(typeof TRAVEL_SUBCATEGORY_KEYS)[num
   emergency: 'admin.organizationSettings.contacts.travelCategories.emergency',
 }
 
+import { useDebugLifecycle } from '../../../lib/debug/integrations/useDebugLifecycle'
+
 export default function ContactSection({ orgId }: { orgId: string }) {
+  useDebugLifecycle('ContactSection')
   const { t } = useI18n()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

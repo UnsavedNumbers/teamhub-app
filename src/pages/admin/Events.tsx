@@ -1,22 +1,24 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { getEvents, getEventsCount } from '../../data/services/eventsService'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getSeasonsForOrg, getSportsForOrg, getTeamsForOrg } from '../../data/fake/fakeTeams'
 import { getLink } from '../../utils/routes'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
 import { showSuccess, showError } from '../../utils/toast'
 import { validateCancelEvent, EVENT_ERRORS } from '../../utils/eventValidation'
 import { useOrganization } from '../../contexts/OrganizationContext'
-import { ConfirmDialog, AdminPageHeader, EmptyState } from '../../components/admin'
+import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
+import { Card, ConfirmDialog, AdminPageHeader } from '../../components/admin'
 import EventsHeader from '../../components/admin/EventsHeader'
 import EventsFilters from '../../components/admin/EventsFilters'
 import EventsList from '../../components/admin/EventsList'
 import EventsCalendar from '../../components/admin/EventsCalendar'
 import EventsAgenda from '../../components/admin/EventsAgenda'
 import BulkActionsBar from '../../components/admin/BulkActionsBar'
-import EventDetailSlideOver from '../../components/admin/EventDetailSlideOver'
 import type { CalendarEvent } from '../../types/calendar'
 import type { EventTimeContext, EventViewMode, EventsFilters as EventsFiltersType } from '../../types/eventsManagement'
 
@@ -46,11 +48,10 @@ const DEFAULT_FILTERS: EventsFiltersType = {
     seasonIds: [],
     status: [],
     locationSearch: '',
+    visibleToFans: false,
 }
 
 export default function Events() {
-    const { id: eventIdParam } = useParams<{ id: string }>()
-    
     // View state
     const [timeContext, setTimeContext] = useState<EventTimeContext>('upcoming')
     const [viewMode, setViewMode] = useState<EventViewMode>('list')
@@ -69,9 +70,6 @@ export default function Events() {
     
     // Selection and bulk actions
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-    
-    // Detail slide-over
-    const [detailEventId, setDetailEventId] = useState<string | null>(null)
     
     // Calendar state
     const [calendarDate, setCalendarDate] = useState(new Date())
@@ -102,6 +100,17 @@ export default function Events() {
 
         const loadFilterData = async () => {
             try {
+                if (USE_FAKE_DATA) {
+                    const fakeTeams = getTeamsForOrg(context.orgId).map((team) => ({ id: team.id, name: team.name }))
+                    const fakeSports = getSportsForOrg(context.orgId).map((sport) => ({ id: sport.id, name: sport.name }))
+                    const fakeSeasons = getSeasonsForOrg(context.orgId).map((season) => ({ id: season.id, name: season.name }))
+
+                    setTeams(fakeTeams)
+                    setSports(fakeSports)
+                    setSeasons(fakeSeasons)
+                    return
+                }
+
                 // Load teams
                 const { data: teamsData } = await supabase
                     .from('teams')
@@ -145,11 +154,6 @@ export default function Events() {
         if (savedTimeContext) setTimeContext(savedTimeContext)
     }, [])
 
-    // Sync detail event ID with route param (events/:id)
-    useEffect(() => {
-        setDetailEventId(eventIdParam ?? null)
-    }, [eventIdParam])
-
     const fetchEvents = useCallback(async () => {
         if (!isReady) return
 
@@ -158,12 +162,15 @@ export default function Events() {
             const queryParams = {
                 timeContext,
                 search: filters.search || undefined,
-                dateFrom: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
-                dateTo: filters.dateTo ? new Date(filters.dateTo) : undefined,
+                startDate: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
+                endDate: filters.dateTo ? new Date(filters.dateTo) : undefined,
                 eventTypes: filters.eventTypes.length > 0 ? filters.eventTypes : undefined,
                 teamIds: filters.teamIds.length > 0 ? filters.teamIds : undefined,
+                sportIds: filters.sportIds.length > 0 ? filters.sportIds : undefined,
                 seasonIds: filters.seasonIds.length > 0 ? filters.seasonIds : undefined,
                 status: filters.status.length > 0 ? filters.status : undefined,
+                locationSearch: filters.locationSearch || undefined,
+                visibleToFans: filters.visibleToFans || undefined,
                 orderBy,
                 order,
                 offset: page * rowsPerPage,
@@ -175,8 +182,8 @@ export default function Events() {
             if (viewMode === 'calendar') {
                 const year = calendarDate.getFullYear()
                 const month = calendarDate.getMonth()
-                queryParams.dateFrom = new Date(year, month, 1)
-                queryParams.dateTo = new Date(year, month + 1, 0, 23, 59, 59)
+                queryParams.startDate = new Date(year, month, 1)
+                queryParams.endDate = new Date(year, month + 1, 0, 23, 59, 59)
                 delete (queryParams as any).offset
                 delete (queryParams as any).limit
             }
@@ -231,6 +238,26 @@ export default function Events() {
             fetchEvents()
         } catch (err) {
             const errorMessage = getErrorMessage(err) || 'Failed to delete event'
+
+            const logResult = await logEvent({
+                category: 'SYSTEM',
+                eventType: 'SYSTEM_ALERT',
+                actorUserId: context.userId,
+                actorRole: deriveActorRoleFromRoles(context.roles),
+                orgId: context.orgId,
+                targetEntityType: 'event',
+                targetEntityId: deleteDialog.event.id,
+                metadata: {
+                    source: 'Events.handleDelete',
+                    operation: 'delete',
+                    status: 'failed',
+                    error_message: errorMessage,
+                },
+            })
+            if (logResult.error) {
+                console.error('[Events] Failed to log delete failure:', logResult.error)
+            }
+
             setActionError(errorMessage)
             showError(errorMessage)
         } finally {
@@ -247,7 +274,7 @@ export default function Events() {
         try {
             const { data: eventData } = await supabaseAny
                 .from('events')
-                .select('id, start_time, is_cancelled, status, type, org_id, team_id')
+                .select('id, start_time, is_cancelled, type, org_id, team_id')
                 .eq('id', cancelDialog.event.id)
                 .single()
 
@@ -266,7 +293,7 @@ export default function Events() {
                     is_cancelled: true,
                     cancellation_reason: reason || null,
                     cancelled_at: new Date().toISOString(),
-                    cancelled_by_user_id: context.userId,
+                    cancelled_by_user_id: context.userId || null,
                 })
                 .eq('id', cancelDialog.event.id)
 
@@ -277,6 +304,26 @@ export default function Events() {
             fetchEvents()
         } catch (err) {
             const errorMessage = getErrorMessage(err) || 'Failed to cancel event'
+
+            const logResult = await logEvent({
+                category: 'SYSTEM',
+                eventType: 'SYSTEM_ALERT',
+                actorUserId: context.userId,
+                actorRole: deriveActorRoleFromRoles(context.roles),
+                orgId: context.orgId,
+                targetEntityType: 'event',
+                targetEntityId: cancelDialog.event.id,
+                metadata: {
+                    source: 'Events.handleCancel',
+                    operation: 'cancel',
+                    status: 'failed',
+                    error_message: errorMessage,
+                },
+            })
+            if (logResult.error) {
+                console.error('[Events] Failed to log cancel failure:', logResult.error)
+            }
+
             setActionError(errorMessage)
             showError(errorMessage)
         } finally {
@@ -302,6 +349,7 @@ export default function Events() {
             const { data: newEvent, error: insertError } = await supabase
                 .from('events')
                 .insert({
+                    org_id: fullEvent.org_id,
                     title: `${fullEvent.title} (Copy)`,
                     type: fullEvent.type,
                     team_id: fullEvent.team_id,
@@ -344,6 +392,26 @@ export default function Events() {
             navigate(getLink('admin.events.edit', { id: (newEvent as any).id }))
         } catch (err) {
             const errorMessage = getErrorMessage(err) || 'Failed to duplicate event'
+
+            const logResult = await logEvent({
+                category: 'SYSTEM',
+                eventType: 'SYSTEM_ALERT',
+                actorUserId: context.userId,
+                actorRole: deriveActorRoleFromRoles(context.roles),
+                orgId: context.orgId,
+                targetEntityType: 'event',
+                targetEntityId: event.id,
+                metadata: {
+                    source: 'Events.handleDuplicate',
+                    operation: 'create',
+                    status: 'failed',
+                    error_message: errorMessage,
+                },
+            })
+            if (logResult.error) {
+                console.error('[Events] Failed to log duplicate failure:', logResult.error)
+            }
+
             showError(errorMessage)
         }
     }
@@ -372,6 +440,26 @@ export default function Events() {
             fetchEvents()
         } catch (err) {
             const errorMessage = getErrorMessage(err) || 'Failed to cancel events'
+
+            const logResult = await logEvent({
+                category: 'SYSTEM',
+                eventType: 'SYSTEM_ALERT',
+                actorUserId: context.userId,
+                actorRole: deriveActorRoleFromRoles(context.roles),
+                orgId: context.orgId,
+                targetEntityType: 'event',
+                metadata: {
+                    source: 'Events.handleBulkCancel',
+                    operation: 'cancel',
+                    status: 'failed',
+                    selected_ids: Array.from(selectedIds),
+                    error_message: errorMessage,
+                },
+            })
+            if (logResult.error) {
+                console.error('[Events] Failed to log bulk cancel failure:', logResult.error)
+            }
+
             setActionError(errorMessage)
             showError(errorMessage)
         } finally {
@@ -395,6 +483,26 @@ export default function Events() {
             fetchEvents()
         } catch (err) {
             const errorMessage = getErrorMessage(err) || 'Failed to delete events'
+
+            const logResult = await logEvent({
+                category: 'SYSTEM',
+                eventType: 'SYSTEM_ALERT',
+                actorUserId: context.userId,
+                actorRole: deriveActorRoleFromRoles(context.roles),
+                orgId: context.orgId,
+                targetEntityType: 'event',
+                metadata: {
+                    source: 'Events.handleBulkDelete',
+                    operation: 'delete',
+                    status: 'failed',
+                    selected_ids: Array.from(selectedIds),
+                    error_message: errorMessage,
+                },
+            })
+            if (logResult.error) {
+                console.error('[Events] Failed to log bulk delete failure:', logResult.error)
+            }
+
             setActionError(errorMessage)
             showError(errorMessage)
         } finally {
@@ -409,10 +517,6 @@ export default function Events() {
 
     const handleEventClick = (event: CalendarEvent) => {
         navigate(getLink('admin.events.detail', { id: event.id }))
-    }
-
-    const handleCloseDetail = () => {
-        navigate(getLink('admin.events.list'))
     }
 
     if (!isReady) {
@@ -440,7 +544,7 @@ export default function Events() {
                     setViewMode(mode)
                     setPage(0)
                 }}
-                onCreateClick={() => navigate('/admin/events/new')}
+                onCreateClick={() => navigate(getLink('admin.events.create'))}
             />
 
             <EventsFilters
@@ -456,15 +560,20 @@ export default function Events() {
             />
 
             {events.length === 0 && !loading ? (
-                <EmptyState
-                    icon="event"
-                    title="NO EVENTS"
-                    description="No events match your current filters."
-                >
-                    <button className="oa-btn oa-btn--primary" onClick={() => navigate('/admin/events/new')}>
-                        {t('admin.events.create')}
-                    </button>
-                </EmptyState>
+                <Card className="oa-border-2 oa-border-dashed">
+                    <div className="oa-flex oa-flex-col oa-gap-4">
+                        <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+                            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>event</span>
+                            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0">
+                                <h3 className="oa-h3 oa-mb-0">NO EVENTS</h3>
+                                <p className="oa-body-m oa-text-muted oa-mb-0">No events match your current filters.</p>
+                            </div>
+                        </div>
+                        <button className="oa-btn oa-btn--primary" onClick={() => navigate(getLink('admin.events.create'))}>
+                            {t('admin.events.create')}
+                        </button>
+                    </div>
+                </Card>
             ) : (
                 <>
                     {viewMode === 'list' && (
@@ -519,27 +628,8 @@ export default function Events() {
             <BulkActionsBar
                 selectedCount={selectedIds.size}
                 onCancel={() => setBulkCancelDialog(true)}
-                onReschedule={() => showError('Reschedule feature coming soon')}
                 onDelete={() => setBulkDeleteDialog(true)}
                 onClearSelection={() => setSelectedIds(new Set())}
-            />
-
-            <EventDetailSlideOver
-                eventId={detailEventId}
-                onClose={handleCloseDetail}
-                onEdit={(eventId) => navigate(getLink('admin.events.edit', { id: eventId }))}
-                onDuplicate={(eventId) => {
-                    const event = events.find((e) => e.id === eventId)
-                    if (event) handleDuplicate(event)
-                }}
-                onCancel={(eventId) => {
-                    const event = events.find((e) => e.id === eventId)
-                    if (event) setCancelDialog({ open: true, event })
-                }}
-                onDelete={(eventId) => {
-                    const event = events.find((e) => e.id === eventId)
-                    if (event) setDeleteDialog({ open: true, event })
-                }}
             />
 
             {/* Delete Confirmation Dialog */}

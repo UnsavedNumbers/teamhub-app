@@ -666,7 +666,7 @@ export default function Payments() {
         />
       </div>
 
-      <div className={cn('oa-flex', 'oa-gap-2', 'oa-mb-6', 'oa-mt-2')}>
+      <div className={cn('oa-flex', 'oa-gap-2', 'oa-mb-6', 'oa-mt-2', 'oa-chip-scroll-row')}>
         {(['all', 'unpaid', 'partial', 'paid'] as const).map((f) => (
           <Button
             key={f}

@@ -5,24 +5,30 @@
  * Shows video player, timestamped notes, and feedback summary.
  */
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import PortalLayout from '@/components/portal/PortalLayout'
 import Card from '@/components/portal/Card'
 import Button from '@/components/portal/Button'
 import Icon from '@/components/portal/Icon'
-import { VideoPlayer, VideoNoteCard, VideoFavoriteButton } from '@/components/video'
-import { useVideo, useVideoNotes } from '@/hooks/useVideos'
+import { VideoPlayer, type VideoPlayerRef, VideoNoteCard, VideoFavoriteButton } from '@/components/video'
+import { useVideo, useVideoNotes, useVideoBookmarks } from '@/hooks/useVideos'
 import { useVideoFavorites } from '@/hooks/useVideosExtended'
 import { cn } from '@/utils/cn'
 import type { VideoNote } from '@/types/video'
+import { AccordionItem } from '@/components/video/Accordion'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
+import { t } from '@/i18n'
 
 export default function GuardianVideoDetail() {
   const { id: videoId } = useParams<{ id: string }>()
   const [currentTime, setCurrentTime] = useState(0)
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
+  const [activeBookmarkId, setActiveBookmarkId] = useState<string | null>(null)
   const [starredNotes, setStarredNotes] = useState<Set<string>>(new Set())
-  
+  const videoPlayerRef = useRef<VideoPlayerRef>(null)
+  const videoCardRef = useRef<HTMLDivElement>(null)
+
   // Fetch video and notes
   const { video, isLoading: videoLoading, error: videoError } = useVideo({
     videoId,
@@ -35,6 +41,8 @@ export default function GuardianVideoDetail() {
     videoId,
     enabled: !!videoId
   })
+  
+  const { bookmarks } = useVideoBookmarks({ videoId, enabled: !!videoId })
   
   // Separate notes by type (for athlete vs team)
   const { athleteNotes, teamNotes } = useMemo(() => {
@@ -66,15 +74,31 @@ export default function GuardianVideoDetail() {
       }))
   }, [notes])
   
-  // Handle seeking to a note's timestamp
+  // Handle seeking to a note's timestamp (or bookmark or timestamp link)
   const handleSeekToNote = useCallback((timestamp: number) => {
-    setCurrentTime(timestamp)
-    // Find the note at this timestamp
-    const note = notes.find(n => n.timestamp_start === timestamp)
+    // Start at t-1 to account for scroll time so the moment is visible when user arrives
+    const seekTime = Math.max(0, timestamp - 1)
+    setCurrentTime(seekTime)
+    videoPlayerRef.current?.seekTo(seekTime)
+    videoCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // Find and highlight matching note if any (match on original timestamp)
+    const note = notes.find(n => n.timestamp_start !== null && Math.abs((n.timestamp_start || 0) - timestamp) < 1)
     if (note) {
       setActiveNoteId(note.id)
     }
-  }, [notes])
+    // Find and highlight matching bookmark if any
+    const bookmark = bookmarks?.find(b => Math.abs(b.timestamp_seconds - timestamp) < 1)
+    if (bookmark) {
+      setActiveBookmarkId(bookmark.id)
+    } else {
+      setActiveBookmarkId(null)
+    }
+  }, [notes, bookmarks])
+  
+  // Capture current video playhead time (for bookmark creation)
+  const handleCaptureTime = useCallback((): number => {
+    return videoPlayerRef.current?.getCurrentTime() ?? currentTime
+  }, [currentTime])
   
   // Handle time update from player
   const handleTimeUpdate = useCallback((time: number) => {
@@ -199,9 +223,11 @@ export default function GuardianVideoDetail() {
       </div>
       
       {/* Video Player Section */}
+      <div ref={videoCardRef}>
       <Card noPadding className="overflow-hidden mb-8">
         {/* Player */}
         <VideoPlayer
+          ref={videoPlayerRef}
           videoId={video.id}
           status={video.status}
           poster={video.thumbnail_url || undefined}
@@ -210,6 +236,31 @@ export default function GuardianVideoDetail() {
           onMarkerClick={(marker) => handleSeekToNote(marker.time)}
           className="rounded-none"
         />
+        
+        {/* Description */}
+        {(video.description || (video.tags && video.tags.length > 0)) && (
+          <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+            {video.description && (
+              <p className="text-sm text-slate-700 dark:text-slate-300 mb-4">
+                {video.description}
+              </p>
+            )}
+            {video.tags && video.tags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Icon name="label" size="text-sm" className="text-slate-400 shrink-0" />
+                {video.tags.map((link) => (
+                  <span
+                    key={link.id}
+                    className="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                    style={link.tag?.color ? { borderColor: link.tag.color, color: link.tag.color } : undefined}
+                  >
+                    {link.tag?.name ?? 'Tag'}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Interactive Timeline Bar */}
         <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-t border-slate-100 dark:border-slate-800">
@@ -244,14 +295,15 @@ export default function GuardianVideoDetail() {
           </div>
         </div>
       </Card>
-      
+      </div>
+
       {/* Notes Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        {/* Athlete Feedback */}
+        {/* Feedback */}
         <div>
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold tracking-tight uppercase text-slate-900 dark:text-white">
-              Feedback for Athlete
+              Feedback
             </h3>
             <span className="bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-btn-primary-bg)] px-3 py-1 rounded-full text-xs font-bold">
               {athleteNotes.length} {athleteNotes.length === 1 ? 'NOTE' : 'NOTES'}
@@ -265,17 +317,23 @@ export default function GuardianVideoDetail() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {athleteNotes.map((note) => (
-                <VideoNoteCard
-                  key={note.id}
-                  note={note}
-                  isActive={activeNoteId === note.id}
-                  isGuardianView
-                  onSeek={handleSeekToNote}
-                  onStar={handleToggleStar}
-                  isStarred={starredNotes.has(note.id)}
-                />
-              ))}
+              {athleteNotes.map((note) => {
+                const isPersonalFeedback = (note.targets?.length && video.athlete_links?.length)
+                  ? note.targets.some(t => video.athlete_links!.some(l => l.athlete_id === t.athlete_id))
+                  : false
+                return (
+                  <VideoNoteCard
+                    key={note.id}
+                    note={note}
+                    isActive={activeNoteId === note.id}
+                    isGuardianView
+                    isPersonalFeedback={isPersonalFeedback}
+                    onSeek={handleSeekToNote}
+                    onStar={handleToggleStar}
+                    isStarred={starredNotes.has(note.id)}
+                  />
+                )
+              })}
             </div>
           )}
         </div>
@@ -304,26 +362,189 @@ export default function GuardianVideoDetail() {
                     note={note}
                     isActive={activeNoteId === note.id}
                     isGuardianView
+                    isPersonalFeedback={false}
                     onSeek={handleSeekToNote}
                   />
                 </div>
               ))}
             </div>
           )}
-          
-          {/* Coaches' Summary */}
-          <div className="mt-10 p-6 bg-[var(--org-btn-primary-bg)]/5 dark:bg-[var(--org-btn-primary-bg)]/10 rounded-xl border border-[var(--org-btn-primary-bg)]/20">
-            <h4 className="font-bold text-sm mb-2 text-[var(--org-btn-primary-bg)] uppercase">
-              Coaches' Summary
-            </h4>
-            <p className="text-sm text-slate-700 dark:text-slate-300 italic">
-              {video.description || 
-                "Overall, great effort shown in this session. Review the timestamped notes for specific areas to focus on during practice."}
-            </p>
-          </div>
         </div>
       </div>
+      
+      {/* Bookmarks Section */}
+      <Card className="mt-8">
+        <AccordionItem
+          title="My Bookmarks"
+          badge={bookmarks?.length ?? 0}
+        >
+          <BookmarksPanel
+            videoId={videoId!}
+            onSeek={handleSeekToNote}
+            onCaptureTime={handleCaptureTime}
+            activeBookmarkId={activeBookmarkId}
+          />
+        </AccordionItem>
+      </Card>
     </PortalLayout>
+  )
+}
+
+// Bookmarks Panel Component (for guardian/athlete personal bookmarks)
+function BookmarksPanel({
+  videoId,
+  onSeek,
+  onCaptureTime,
+  activeBookmarkId,
+}: {
+  videoId: string
+  onSeek: (time: number) => void
+  onCaptureTime: () => number
+  activeBookmarkId?: string | null
+}) {
+  const { bookmarks, isLoading, createBookmark, deleteBookmark } = useVideoBookmarks({ videoId, enabled: true })
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [label, setLabel] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [bookmarkToDeleteId, setBookmarkToDeleteId] = useState<string | null>(null)
+
+  const handleAdd = async () => {
+    setAdding(true)
+    try {
+      const timestamp = onCaptureTime()
+      await createBookmark(timestamp, label || undefined)
+      setLabel('')
+      setShowAddForm(false)
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-black uppercase tracking-widest">
+          {t('videoLibrary.bookmarks.title')}
+        </h3>
+        {!showAddForm && (
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="text-sm font-bold text-[var(--org-btn-primary-bg)] hover:underline flex items-center gap-1"
+          >
+            <Icon name="add" size="text-sm" />
+            {t('videoLibrary.bookmarks.addBookmark')}
+          </button>
+        )}
+      </div>
+
+      {/* Add Form */}
+      {showAddForm && (
+        <div className="mb-4 p-4 border border-[var(--org-btn-primary-bg)] rounded-lg space-y-3">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1">
+              {t('videoLibrary.bookmarks.bookmarkLabel')}
+            </label>
+            <input
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder={t('videoLibrary.bookmarks.bookmarkLabelPlaceholder')}
+              className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
+              autoFocus
+            />
+          </div>
+          <div className="text-xs text-gray-500">
+            At {formatTimestamp(onCaptureTime())}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              className="!px-4 !py-2 text-sm"
+              onClick={() => {
+                setShowAddForm(false)
+                setLabel('')
+              }}
+              disabled={adding}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              className="!px-4 !py-2 text-sm"
+              onClick={handleAdd}
+              disabled={adding}
+            >
+              {adding ? t('common.adding') : t('common.add')}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Bookmarks List */}
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-12 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+          ))}
+        </div>
+      ) : bookmarks.length === 0 ? (
+        <div className="text-center py-6 text-gray-500 text-sm">
+          <Icon name="bookmark" size="text-3xl" className="mx-auto mb-2" />
+          <p>{t('videoLibrary.bookmarks.noBookmarksMessage')}</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {bookmarks.map(bookmark => {
+            const isActive = activeBookmarkId === bookmark.id
+            return (
+              <div
+                key={bookmark.id}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border transition-colors group",
+                  isActive
+                    ? "border-[var(--org-btn-primary-bg)] bg-[var(--org-btn-primary-bg)]/5"
+                    : "border-gray-200 dark:border-gray-700 hover:border-[var(--org-btn-primary-bg)]"
+                )}
+              >
+                <button
+                  onClick={() => onSeek(bookmark.timestamp_seconds)}
+                  className={cn(
+                    "px-3 py-1 text-white rounded text-xs font-black hover:bg-opacity-90 transition-colors",
+                    isActive
+                      ? "bg-[var(--org-btn-primary-bg)]"
+                      : "bg-[var(--org-btn-primary-bg)]"
+                  )}
+                >
+                  {formatTimestamp(bookmark.timestamp_seconds)}
+                </button>
+                <span className="flex-1 text-sm font-medium text-gray-900 dark:text-white">
+                  {bookmark.label || t('videoLibrary.bookmarks.jumpTo')}
+                </span>
+                <button
+                  onClick={() => setBookmarkToDeleteId(bookmark.id)}
+                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+                >
+                  <Icon name="delete" size="text-sm" />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      <ConfirmDialog
+        open={bookmarkToDeleteId !== null}
+        title={t('videoLibrary.bookmarks.deleteConfirmTitle')}
+        description={t('videoLibrary.bookmarks.deleteConfirm')}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={() => {
+          if (bookmarkToDeleteId) deleteBookmark(bookmarkToDeleteId)
+          setBookmarkToDeleteId(null)
+        }}
+        onCancel={() => setBookmarkToDeleteId(null)}
+      />
+    </div>
   )
 }
 

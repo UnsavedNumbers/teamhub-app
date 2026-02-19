@@ -1,7 +1,7 @@
 ﻿import { useState, useCallback, useEffect } from 'react'
 import { Control, FieldErrors, Controller } from 'react-hook-form'
 import { supabase } from '../../../lib/supabase'
-import { AUTH_HERO_IMAGES } from '../../../utils/authImages'
+import { AUTH_PAGE_HERO_IMAGES } from '../../../utils/authImages'
 
 interface OrganizationFormData {
   name: string
@@ -34,14 +34,7 @@ export default function OrganizationIdentityStep({
 }: OrganizationIdentityStepProps) {
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
   const [slugError, setSlugError] = useState<string | null>(null)
-  const [heroImage, setHeroImage] = useState<string>('')
-
-  useEffect(() => {
-    if (AUTH_HERO_IMAGES.length > 0) {
-      const randomImage = AUTH_HERO_IMAGES[Math.floor(Math.random() * AUTH_HERO_IMAGES.length)]
-      setHeroImage(randomImage)
-    }
-  }, [])
+  const heroImage = AUTH_PAGE_HERO_IMAGES.organizationOnboarding
 
   const checkSlugAvailability = useCallback(async (slug: string) => {
     if (!slug || slug.length < 3) { setSlugStatus('idle'); setSlugError(null); return }

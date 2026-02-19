@@ -1,7 +1,10 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useDemoSession } from './DemoSessionContext'
+import { readDemoManagementStore } from '@/data/services/demoOrgService'
+import { getOrganizationById } from '@/data/fake/fakeOrganizations'
 
-export type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff'
+export type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff' | 'athlete'
 
 export interface Organization {
   id: string
@@ -32,7 +35,7 @@ interface OrganizationContextType {
   isLoading: boolean
 }
 
-const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined)
+export const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined)
 
 const STORAGE_KEY = 'teamhub_current_org'
 
@@ -41,9 +44,37 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [currentOrganization, setCurrentOrganizationState] = useState<Organization | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
+  const { session: demoSession } = useDemoSession()
+
+  const isDemoSessionActive = demoSession.is_demo_session && Boolean(demoSession.demo_org_id)
+
+  const buildDemoOrganization = useCallback((orgId: string): Organization => {
+    const store = readDemoManagementStore()
+    const demoOrg = store.organizations.find((org) => org.id === orgId)
+    const fallback = getOrganizationById(orgId)
+
+    const name = demoOrg?.name ?? fallback?.name ?? 'Demo Organization'
+    return {
+      id: orgId,
+      name,
+      roles: ['org_admin'],
+      get role(): OrgMemberRole {
+        return this.roles[0] ?? 'parent'
+      },
+    }
+  }, [])
 
   // Auto-select current org when organizations change
   useEffect(() => {
+    if (isDemoSessionActive && demoSession.demo_org_id) {
+      const demoOrganization = buildDemoOrganization(demoSession.demo_org_id)
+      setOrganizationsState([demoOrganization])
+      setCurrentOrganizationState(demoOrganization)
+      sessionStorage.setItem(STORAGE_KEY, demoOrganization.id)
+      setIsLoading(false)
+      return
+    }
+
     if (organizations.length === 0) {
       // No organizations - clear current org but don't stay in loading
       setCurrentOrganizationState(null)
@@ -62,13 +93,21 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     
     setCurrentOrganizationState(selectedOrg)
     sessionStorage.setItem(STORAGE_KEY, selectedOrg.id)
-  }, [organizations, currentOrganization])
+  }, [organizations, currentOrganization, isDemoSessionActive, demoSession.demo_org_id, buildDemoOrganization])
 
   const setOrganizations = useCallback((orgs: Organization[]) => {
+    if (isDemoSessionActive && demoSession.demo_org_id) {
+      const demoOrganization = buildDemoOrganization(demoSession.demo_org_id)
+      setOrganizationsState([demoOrganization])
+      setCurrentOrganizationState(demoOrganization)
+      setIsLoading(false)
+      return
+    }
+
     setOrganizationsState(orgs)
     // Mark as loaded once organizations are set (even if empty array)
     setIsLoading(false)
-  }, [])
+  }, [isDemoSessionActive, demoSession.demo_org_id, buildDemoOrganization])
 
   const setCurrentOrganization = useCallback((org: Organization | null) => {
     setCurrentOrganizationState(org)
@@ -80,14 +119,16 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const switchOrganization = useCallback((orgId: string) => {
+    if (isDemoSessionActive) return
     const org = organizations.find(o => o.id === orgId)
     if (org) {
       setCurrentOrganization(org)
     }
-  }, [organizations, setCurrentOrganization])
+  }, [organizations, setCurrentOrganization, isDemoSessionActive])
 
   // Set up realtime subscription for organization_members changes
   useEffect(() => {
+    if (isDemoSessionActive) return
     if (!userId) return
 
     let refreshTimeout: NodeJS.Timeout | null = null
@@ -133,10 +174,15 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       if (refreshTimeout) clearTimeout(refreshTimeout)
       supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [userId, isDemoSessionActive])
 
   // Get user ID from auth session
   useEffect(() => {
+    if (isDemoSessionActive) {
+      setUserId(null)
+      return
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserId(session?.user?.id ?? null)
     })
@@ -146,7 +192,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [isDemoSessionActive])
 
   const value: OrganizationContextType = {
     currentOrganization,

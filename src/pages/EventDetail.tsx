@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { useAuth } from '../hooks/useAuth'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { supabase } from '../lib/supabase'
 import { getEventDetails, updateRSVP, getAthletes, deleteEvent } from '../data/services'
 import { useOrganization } from '../contexts/OrganizationContext'
@@ -16,12 +17,14 @@ import Icon from '../components/portal/Icon'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
 import { PhotoSection } from '../components/galleries/PhotoSection'
+import { ConfirmDialog } from '../components/admin/ConfirmDialog'
 import { useT } from '../i18n/useI18n'
 import { getLink, RouteKeys } from '@/utils/routes'
 import BookmarkButton from '../components/fan/BookmarkButton'
 import { useQuery } from '@tanstack/react-query'
 import { getBookmarkedEvents } from '../data/services/fanService'
 import type { FanEventBookmark } from '../types/staffAndFan'
+import { USE_FAKE_DATA } from '../data/config'
 
 interface Event {
   id: string
@@ -29,6 +32,7 @@ interface Event {
   type: string
   start_time: string
   end_time: string
+  timezone?: string | null
   arrival_time: string | null
   location: string | null
   notes: string | null
@@ -176,6 +180,32 @@ END:VCALENDAR`
   }
 }
 
+function formatTimezoneDisplay(timeZone: string | null | undefined, referenceDate: string): string {
+  if (!timeZone) return ''
+
+  const parsedDate = new Date(referenceDate)
+  if (Number.isNaN(parsedDate.getTime())) return timeZone
+
+  try {
+    const longParts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      timeZoneName: 'long',
+    }).formatToParts(parsedDate)
+    const shortParts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      timeZoneName: 'short',
+    }).formatToParts(parsedDate)
+
+    const longName = longParts.find(part => part.type === 'timeZoneName')?.value
+    const shortName = shortParts.find(part => part.type === 'timeZoneName')?.value
+
+    if (longName && shortName) return `${longName} (${shortName})`
+    return longName || shortName || timeZone
+  } catch {
+    return timeZone
+  }
+}
+
 async function copyToClipboard(text: string): Promise<{ success: boolean; error?: Error }> {
   try {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
@@ -207,6 +237,9 @@ export default function EventDetail() {
   const t = useT()
   const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
+
+  // Add lifecycle logging
+  useDebugLifecycle('EventDetail', { eventId })
   const [event, setEvent] = useState<Event | null>(null)
   const [children, setChildren] = useState<Child[]>([])
   const [attendance, setAttendance] = useState<Record<string, Attendance>>({})
@@ -237,6 +270,7 @@ export default function EventDetail() {
     precipitation: number
   } | null>(null)
   const [loadingWeather, setLoadingWeather] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const { data: bookmarkedEventsData } = useQuery({
     queryKey: ['bookmarked-events'],
@@ -333,33 +367,57 @@ export default function EventDetail() {
         setWeatherData(null)
         return
       }
-      
+
       setLoadingWeather(true)
       setWeatherData(null)
-      
+
       try {
+        if (USE_FAKE_DATA) {
+          const dayOfYear = new Date(event.start_time).getDate()
+          const conditionIndex = dayOfYear % 5
+          const popularConditions = [
+            { condition: 'sunny', description: 'Mostly Sunny', temp: 72, feelsLike: 70, humidity: 45, wind: 8, precip: 10 },
+            { condition: 'partly_cloudy', description: 'Partly Cloudy', temp: 68, feelsLike: 66, humidity: 55, wind: 10, precip: 20 },
+            { condition: 'cloudy', description: 'Chance of Rain', temp: 62, feelsLike: 60, humidity: 70, wind: 12, precip: 45 },
+            { condition: 'rainy', description: 'Rain Expected', temp: 58, feelsLike: 56, humidity: 85, wind: 15, precip: 80 },
+            { condition: 'sunny', description: 'Clear', temp: 75, feelsLike: 73, humidity: 40, wind: 6, precip: 5 },
+          ]
+          const c = popularConditions[conditionIndex]
+          setWeatherData({
+            temperature: c.temp,
+            feelsLike: c.feelsLike,
+            condition: c.condition,
+            description: c.description,
+            humidity: c.humidity,
+            windSpeed: c.wind,
+            precipitation: c.precip,
+          })
+          setLoadingWeather(false)
+          return
+        }
+
         const location = encodeURIComponent(event.location)
         const date = encodeURIComponent(event.start_time)
-        
+
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/weather?location=${location}&date=${date}`
         const { data } = await supabase.auth.getSession()
-        
+
         const response = await fetch(url, {
           headers: {
             'Authorization': `Bearer ${data.session?.access_token}`,
           },
         })
-        
+
         if (!response.ok) {
           const errorText = await response.text()
           console.error('Weather API error:', response.status, response.statusText, errorText)
           setLoadingWeather(false)
           return
         }
-        
+
         const result = await response.json()
         console.log('Weather response:', result)
-        
+
         if (result.temperature !== undefined) {
           setWeatherData({
             temperature: result.temperature,
@@ -379,7 +437,7 @@ export default function EventDetail() {
         setLoadingWeather(false)
       }
     }
-    
+
     fetchWeather()
   }, [event?.location, event?.start_time])
 
@@ -424,6 +482,7 @@ export default function EventDetail() {
         type: eventData.type,
         start_time: eventData.start_time,
         end_time: eventData.end_time,
+        timezone: eventData.timezone,
         arrival_time: eventData.arrival_time,
         location: buildVenueAddress(eventData.event_location || null),
         notes: eventData.notes,
@@ -535,18 +594,28 @@ export default function EventDetail() {
     setSaving(null)
   }
 
-  function formatDate(dateStr: string) {
+  function formatDate(dateStr: string, timezone?: string | null) {
     return new Date(dateStr).toLocaleDateString('en-US', {
-      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+      ...(timezone ? { timeZone: timezone } : {}),
     })
   }
 
-  function formatTime(dateStr: string) {
-    return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  function formatTime(dateStr: string, timezone?: string | null) {
+    return new Date(dateStr).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      ...(timezone ? { timeZone: timezone } : {}),
+    })
   }
 
-  const handleDelete = async () => {
-    if (!eventId || !window.confirm('Are you sure you want to delete this event? This cannot be undone.')) return
+  const handleDelete = () => {
+    if (!eventId) return
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!eventId) return
     
     setLoading(true)
     const { error } = await deleteEvent(context, eventId, currentOrganization)
@@ -635,6 +704,7 @@ export default function EventDetail() {
 
   // Check if we have a banner image
   const bannerUrl = event.ticketed_event?.ticket_banner_url
+  const timezoneLabel = formatTimezoneDisplay(event.timezone, event.start_time)
   
   return (
     <PortalLayout
@@ -670,7 +740,10 @@ export default function EventDetail() {
             
             <h1 className="event-hero-title">{event.title}</h1>
             <p className="event-hero-meta">
-              {formatDate(event.start_time)}<span className="meta-separator"> • </span><span className="meta-time">{formatTime(event.start_time)} - {formatTime(event.end_time)}</span>
+              {formatDate(event.start_time, event.timezone)}
+              <span className="meta-separator"> • </span>
+              <span className="meta-time">{formatTime(event.start_time, event.timezone)} - {formatTime(event.end_time, event.timezone)}</span>
+              {timezoneLabel && <><span className="meta-separator"> • </span><span className="meta-time">{timezoneLabel}</span></>}
             </p>
             <p className="event-hero-team">{event.team.name}</p>
             
@@ -683,8 +756,8 @@ export default function EventDetail() {
                 </div>
                 {event.arrival_time && (
                   <div>
-                    <p className="quick-info-label">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time) })}</p>
-                    <p className="quick-info-value">{formatTime(event.arrival_time)}</p>
+                    <p className="quick-info-label">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time, event.timezone) })}</p>
+                    <p className="quick-info-value">{formatTime(event.arrival_time, event.timezone)}</p>
                   </div>
                 )}
                 {venueAddress && (
@@ -722,7 +795,7 @@ export default function EventDetail() {
                           }
                         }}
                         disabled={!orgSlug || !event.ticketed_event?.id}
-                        className="mt-1"
+                        className="mt-1 whitespace-nowrap"
                       >
                         {t('calendar.event.getTickets')}
                       </Button>
@@ -765,7 +838,8 @@ export default function EventDetail() {
             <div>
               <PageTitle>{event.title}</PageTitle>
               <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
-                {formatDate(event.start_time)} • {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                {formatDate(event.start_time, event.timezone)} • {formatTime(event.start_time, event.timezone)} - {formatTime(event.end_time, event.timezone)}
+                {timezoneLabel ? ` • ${timezoneLabel}` : ''}
               </p>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-2">
                 {event.team.name}
@@ -804,8 +878,8 @@ export default function EventDetail() {
             </div>
             {event.arrival_time && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time) })}</p>
-                <p className="text-lg font-black text-slate-900 dark:text-white">{formatTime(event.arrival_time)}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time, event.timezone) })}</p>
+                <p className="text-lg font-black text-slate-900 dark:text-white">{formatTime(event.arrival_time, event.timezone)}</p>
               </div>
             )}
             {venueAddress && (
@@ -843,7 +917,7 @@ export default function EventDetail() {
                     }
                     }}
                     disabled={!orgSlug || !event.ticketed_event?.id}
-                    className="w-full"
+                    className="w-full whitespace-nowrap"
                   >
                     {t('calendar.event.getTickets')}
                   </Button>
@@ -1317,6 +1391,20 @@ export default function EventDetail() {
             eventType={event.type}
             eventStartTime={event.start_time}
             variant="event"
+          />
+
+          <ConfirmDialog
+            open={showDeleteConfirm}
+            title="Are you sure you want to delete this event? This cannot be undone."
+            description="Are you sure you want to delete this event? This cannot be undone."
+            confirmLabel={t('common.delete')}
+            cancelLabel={t('common.cancel')}
+            variant="danger"
+            onConfirm={() => {
+              setShowDeleteConfirm(false)
+              void confirmDelete()
+            }}
+            onCancel={() => setShowDeleteConfirm(false)}
           />
 
 

@@ -243,7 +243,7 @@ export default function CreateAnnouncementModal({
               />
 
               <div className="pa-form-group">
-                <label className="pa-label pa-label--required">
+                <label className="oa-label oa-label--required">
                   Content
                 </label>
                 <textarea
@@ -267,7 +267,7 @@ export default function CreateAnnouncementModal({
 
               {/* Priority */}
               <div className="pa-form-group">
-                <label className="pa-label">
+                <label className="oa-label">
                   {t('admin.announcements.priority')}
                 </label>
                 <div className="oa-toggle-group pa-mt-2">
@@ -333,3 +333,4 @@ export default function CreateAnnouncementModal({
     </div>
   )
 }
+

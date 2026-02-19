@@ -6,10 +6,12 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import type { SportFieldDefinition } from '../../types/athleteSportProfiles'
 import type { SportCode, FieldGroup } from '../../types/sports'
 import { getSportFieldCatalog, SPORT_FIELD_CATALOG, type FieldCatalogEntry } from '../../constants/sportFieldCatalog'
 import { CACHE_TTL } from '../../constants/api'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 
 const isMissingTableError = (err: any) =>
     err?.code === 'PGRST205' ||
@@ -25,6 +27,12 @@ interface ServiceResponse<T> {
 
 const supabaseAny = supabase as any
 
+async function simulateDelay(): Promise<void> {
+    if (FAKE_DATA_DELAY_MS > 0) {
+        await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+    }
+}
+
 /**
  * In-memory cache for field definitions
  * Cache is cleared on page reload, which is acceptable for this use case
@@ -39,16 +47,37 @@ const cacheTimestamps = new Map<string, number>()
 export async function getSportFieldDefinitions(
     sportCode: SportCode
 ): Promise<ServiceResponse<SportFieldDefinition[]>> {
+    console.groupCollapsed(`%cgetSportFieldDefinitions: ${sportCode}`, 'color: #666; font-weight: bold;');
+    debug.data('SportFieldDefinitionsService.getSportFieldDefinitions', 'Request', { sportCode })
+    debug.perf.start('sportFieldDefinitionsService.getSportFieldDefinitions')
+
     try {
         // Validate input
         if (!sportCode) {
+            debug.perf.end('sportFieldDefinitionsService.getSportFieldDefinitions')
+            debug.error('SportFieldDefinitionsService.getSportFieldDefinitions', 'sportCode is required', { sportCode })
+            console.groupEnd()
             throw new Error('sportCode is required')
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const demoResolved = maybeFallbackFromCatalog(sportCode) || []
+            const cacheKey = `sport:${sportCode}`
+            setCachedDefinitions(cacheKey, demoResolved)
+            debug.perf.end('sportFieldDefinitionsService.getSportFieldDefinitions')
+            debug.data('SportFieldDefinitionsService.getSportFieldDefinitions', 'Response (fake)', { sportCode, count: demoResolved.length })
+            console.groupEnd()
+            return { data: demoResolved, error: null }
         }
 
         // Check cache
         const cacheKey = `sport:${sportCode}`
         const cachedData = getCachedDefinitions(cacheKey)
         if (cachedData) {
+            debug.perf.end('sportFieldDefinitionsService.getSportFieldDefinitions')
+            debug.data('SportFieldDefinitionsService.getSportFieldDefinitions', 'Response (cached)', { sportCode, count: cachedData.length })
+            console.groupEnd()
             console.log(`[SportFieldDefinitionsService] Cache hit for ${sportCode}`)
             return { data: cachedData, error: null }
         }
@@ -96,10 +125,16 @@ export async function getSportFieldDefinitions(
         // Cache the results
         setCachedDefinitions(cacheKey, resolved)
 
+        debug.perf.end('sportFieldDefinitionsService.getSportFieldDefinitions')
+        debug.data('SportFieldDefinitionsService.getSportFieldDefinitions', 'Response', { sportCode, count: resolved.length })
+        console.groupEnd()
         console.log(`[SportFieldDefinitionsService] Fetched ${resolved.length} field definitions for ${sportCode}`)
 
         return { data: resolved, error: null }
     } catch (err) {
+        debug.perf.end('sportFieldDefinitionsService.getSportFieldDefinitions')
+        debug.error('SportFieldDefinitionsService.getSportFieldDefinitions', 'Failed to get field definitions', { error: err, sportCode })
+        console.groupEnd()
         console.error('[SportFieldDefinitionsService] Error getting sport field definitions:', err)
         return { data: null, error: err as Error }
     }
@@ -112,19 +147,43 @@ export async function getSportFieldDefinitionsByGroup(
     sportCode: SportCode,
     fieldGroup: FieldGroup
 ): Promise<ServiceResponse<SportFieldDefinition[]>> {
+    console.groupCollapsed(`%cgetSportFieldDefinitionsByGroup: ${sportCode} - ${fieldGroup}`, 'color: #666; font-weight: bold;');
+    debug.data('SportFieldDefinitionsService.getSportFieldDefinitionsByGroup', 'Request', { sportCode, fieldGroup })
+    debug.perf.start('sportFieldDefinitionsService.getSportFieldDefinitionsByGroup')
+
     try {
         // Validate inputs
         if (!sportCode) {
+            debug.perf.end('sportFieldDefinitionsService.getSportFieldDefinitionsByGroup')
+            debug.error('SportFieldDefinitionsService.getSportFieldDefinitionsByGroup', 'sportCode is required', { sportCode, fieldGroup })
+            console.groupEnd()
             throw new Error('sportCode is required')
         }
         if (!fieldGroup) {
+            debug.perf.end('sportFieldDefinitionsService.getSportFieldDefinitionsByGroup')
+            debug.error('SportFieldDefinitionsService.getSportFieldDefinitionsByGroup', 'fieldGroup is required', { sportCode, fieldGroup })
+            console.groupEnd()
             throw new Error('fieldGroup is required')
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const demoResolved = maybeFallbackFromCatalog(sportCode, fieldGroup) || []
+            const cacheKey = `sport:${sportCode}:group:${fieldGroup}`
+            setCachedDefinitions(cacheKey, demoResolved)
+            debug.perf.end('sportFieldDefinitionsService.getSportFieldDefinitionsByGroup')
+            debug.data('SportFieldDefinitionsService.getSportFieldDefinitionsByGroup', 'Response (fake)', { sportCode, fieldGroup, count: demoResolved.length })
+            console.groupEnd()
+            return { data: demoResolved, error: null }
         }
 
         // Check cache
         const cacheKey = `sport:${sportCode}:group:${fieldGroup}`
         const cachedData = getCachedDefinitions(cacheKey)
         if (cachedData) {
+            debug.perf.end('sportFieldDefinitionsService.getSportFieldDefinitionsByGroup')
+            debug.data('SportFieldDefinitionsService.getSportFieldDefinitionsByGroup', 'Response (cached)', { sportCode, fieldGroup, count: cachedData.length })
+            console.groupEnd()
             console.log(`[SportFieldDefinitionsService] Cache hit for ${sportCode} ${fieldGroup}`)
             return { data: cachedData, error: null }
         }
@@ -141,6 +200,9 @@ export async function getSportFieldDefinitionsByGroup(
         if (error) {
             const fallback = maybeFallbackFromCatalog(sportCode, fieldGroup)
             if (fallback && isMissingTableError(error)) {
+                debug.perf.end('sportFieldDefinitionsService.getSportFieldDefinitionsByGroup')
+                debug.data('SportFieldDefinitionsService.getSportFieldDefinitionsByGroup', 'Response (fallback catalog)', { sportCode, fieldGroup, count: fallback.length })
+                console.groupEnd()
                 console.warn('[SportFieldDefinitionsService] Falling back to catalog definitions by group because table is missing in schema cache')
                 return { data: fallback, error: null }
             }
@@ -174,10 +236,16 @@ export async function getSportFieldDefinitionsByGroup(
         // Cache the results
         setCachedDefinitions(cacheKey, resolved)
 
+        debug.perf.end('sportFieldDefinitionsService.getSportFieldDefinitionsByGroup')
+        debug.data('SportFieldDefinitionsService.getSportFieldDefinitionsByGroup', 'Response', { sportCode, fieldGroup, count: resolved.length })
+        console.groupEnd()
         console.log(`[SportFieldDefinitionsService] Fetched ${resolved.length} ${fieldGroup} field definitions for ${sportCode}`)
 
         return { data: resolved, error: null }
     } catch (err) {
+        debug.perf.end('sportFieldDefinitionsService.getSportFieldDefinitionsByGroup')
+        debug.error('SportFieldDefinitionsService.getSportFieldDefinitionsByGroup', 'Failed to get field definitions by group', { error: err, sportCode, fieldGroup })
+        console.groupEnd()
         console.error('[SportFieldDefinitionsService] Error getting sport field definitions by group:', err)
         return { data: null, error: err as Error }
     }
@@ -189,6 +257,14 @@ export async function getSportFieldDefinitionsByGroup(
  */
 export async function getAllSportFieldDefinitions(): Promise<ServiceResponse<SportFieldDefinition[]>> {
     try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const demoResolved = allCatalogAsDefinitions()
+            const cacheKey = 'all_sports'
+            setCachedDefinitions(cacheKey, demoResolved)
+            return { data: demoResolved, error: null }
+        }
+
         // Check cache
         const cacheKey = 'all_sports'
         const cachedData = getCachedDefinitions(cacheKey)
@@ -208,6 +284,9 @@ export async function getAllSportFieldDefinitions(): Promise<ServiceResponse<Spo
         if (error) {
             const fallback = allCatalogAsDefinitions()
             if (fallback.length && isMissingTableError(error)) {
+                debug.perf.end('sportFieldDefinitionsService.getAllSportFieldDefinitions')
+                debug.data('SportFieldDefinitionsService.getAllSportFieldDefinitions', 'Response (fallback catalog)', { count: fallback.length })
+                console.groupEnd()
                 console.warn('[SportFieldDefinitionsService] Falling back to catalog definitions for all sports because table is missing in schema cache')
                 return { data: fallback, error: null }
             }
@@ -256,12 +335,22 @@ export async function getFieldDefinitionByKey(
     sportCode: SportCode,
     fieldKey: string
 ): Promise<ServiceResponse<SportFieldDefinition>> {
+    console.groupCollapsed(`%cgetFieldDefinitionByKey: ${sportCode} - ${fieldKey}`, 'color: #666; font-weight: bold;');
+    debug.data('SportFieldDefinitionsService.getFieldDefinitionByKey', 'Request', { sportCode, fieldKey })
+    debug.perf.start('sportFieldDefinitionsService.getFieldDefinitionByKey')
+
     try {
         // Validate inputs
         if (!sportCode) {
+            debug.perf.end('sportFieldDefinitionsService.getFieldDefinitionByKey')
+            debug.error('SportFieldDefinitionsService.getFieldDefinitionByKey', 'sportCode is required', { sportCode, fieldKey })
+            console.groupEnd()
             throw new Error('sportCode is required')
         }
         if (!fieldKey) {
+            debug.perf.end('sportFieldDefinitionsService.getFieldDefinitionByKey')
+            debug.error('SportFieldDefinitionsService.getFieldDefinitionByKey', 'fieldKey is required', { sportCode, fieldKey })
+            console.groupEnd()
             throw new Error('fieldKey is required')
         }
 
@@ -270,6 +359,9 @@ export async function getFieldDefinitionByKey(
         if (allFields) {
             const field = allFields.find(f => f.field_key === fieldKey)
             if (field) {
+                debug.perf.end('sportFieldDefinitionsService.getFieldDefinitionByKey')
+                debug.data('SportFieldDefinitionsService.getFieldDefinitionByKey', 'Response (from cache)', { sportCode, fieldKey })
+                console.groupEnd()
                 return { data: field, error: null }
             }
         }
@@ -285,17 +377,29 @@ export async function getFieldDefinitionByKey(
         if (error) {
             // Not found is not an error - return null data
             if (error.code === 'PGRST116') {
+                debug.perf.end('sportFieldDefinitionsService.getFieldDefinitionByKey')
+                debug.data('SportFieldDefinitionsService.getFieldDefinitionByKey', 'Response (not found)', { sportCode, fieldKey })
+                console.groupEnd()
                 return { data: null, error: null }
             }
             const fallback = maybeFallbackFromCatalog(sportCode)?.find(f => f.field_key === fieldKey)
             if (fallback) {
+                debug.perf.end('sportFieldDefinitionsService.getFieldDefinitionByKey')
+                debug.data('SportFieldDefinitionsService.getFieldDefinitionByKey', 'Response (fallback catalog)', { sportCode, fieldKey })
+                console.groupEnd()
                 return { data: fallback, error: null }
             }
             throw error
         }
 
+        debug.perf.end('sportFieldDefinitionsService.getFieldDefinitionByKey')
+        debug.data('SportFieldDefinitionsService.getFieldDefinitionByKey', 'Response', { sportCode, fieldKey, hasData: !!data })
+        console.groupEnd()
         return { data: data as SportFieldDefinition | null, error: null }
     } catch (err) {
+        debug.perf.end('sportFieldDefinitionsService.getFieldDefinitionByKey')
+        debug.error('SportFieldDefinitionsService.getFieldDefinitionByKey', 'Failed to get field definition by key', { error: err, sportCode, fieldKey })
+        console.groupEnd()
         console.error('[SportFieldDefinitionsService] Error getting field definition by key:', err)
         return { data: null, error: err as Error }
     }

@@ -3,7 +3,11 @@
  * Global order search by email, order ID, or transaction reference.
  */
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketingOrderLookup() {
+  useDebugLifecycle('TicketingOrderLookup')
+  
   return (
     <div className="pa-page-container">
       <h1 className="pa-page-title">Ticketing – Order Lookup</h1>

@@ -1,6 +1,9 @@
 import '../../styles/ios-events.css'
 import { cn } from '../../utils/cn'
 import type { AthleteViewMode } from './AthletesHeader'
+import AthleteAvatar from '../portal/AthleteAvatar'
+import { useUserContext } from '../../hooks/useUserContext'
+import type { Athlete } from '../../types/family'
 
 export interface AthleteCardData {
     id: string
@@ -11,6 +14,7 @@ export interface AthleteCardData {
     gender?: string | null
     photo_url?: string | null
     has_profile_photo?: boolean | null
+    org_id?: string | null
     primary_sport?: { id?: string; name: string } | null
     primary_team?: { id?: string; name: string } | null
 }
@@ -47,6 +51,7 @@ export default function AthletesGrid({
     selectedIds,
     onSelectionChange,
 }: AthletesGridProps) {
+    const { context } = useUserContext()
     const calculateAge = (birthdate?: string | null) => {
         if (!birthdate) return null
         const today = new Date()
@@ -185,19 +190,11 @@ export default function AthletesGrid({
 
                                 {/* Image/Avatar Section */}
                                 <div className="aspect-square relative bg-slate-100 dark:bg-slate-800">
-                                    {athlete.photo_url || athlete.has_profile_photo ? (
-                                        <img
-                                            src={athlete.photo_url || `/api/athletes/${athlete.id}/photo`}
-                                            alt={displayName}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-slate-400" style={{ fontSize: '64px' }}>
-                                                account_circle
-                                            </span>
-                                        </div>
-                                    )}
+                                    <AthleteAvatar
+                                        athlete={{ ...athlete, org_id: athlete.org_id ?? context?.orgId ?? undefined, has_profile_photo: athlete.has_profile_photo ?? !!athlete.photo_url } as unknown as Athlete}
+                                        photoSize="256"
+                                        className="w-full h-full object-cover"
+                                    />
                                     {/* Gradient overlay */}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                                 </div>
@@ -317,19 +314,11 @@ export default function AthletesGrid({
 
                                 {/* Avatar */}
                                 <div className="shrink-0 w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                                    {athlete.photo_url || athlete.has_profile_photo ? (
-                                        <img
-                                            src={athlete.photo_url || `/api/athletes/${athlete.id}/photo`}
-                                            alt={displayName}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-slate-400" style={{ fontSize: '28px' }}>
-                                                account_circle
-                                            </span>
-                                        </div>
-                                    )}
+                                    <AthleteAvatar
+                                        athlete={{ ...athlete, org_id: athlete.org_id ?? context?.orgId ?? undefined, has_profile_photo: athlete.has_profile_photo ?? !!athlete.photo_url } as unknown as Athlete}
+                                        photoSize="256"
+                                        className="w-full h-full object-cover"
+                                    />
                                 </div>
 
                                 {/* Info */}

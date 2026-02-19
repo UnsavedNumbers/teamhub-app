@@ -9,7 +9,11 @@ import { useEffect, useState } from 'react'
 import { getGalleriesForUser } from '../../data/services/galleryService'
 import type { Gallery } from '../../data/services/galleryService'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function OrgPhotos() {
+  useDebugLifecycle('OrgPhotos')
+  
   const { id: orgId } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [galleries, setGalleries] = useState<Gallery[]>([])

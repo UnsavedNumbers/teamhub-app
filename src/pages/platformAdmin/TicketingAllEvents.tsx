@@ -3,7 +3,11 @@
  * Searchable cross-org ticketed events for support and oversight.
  */
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketingAllEvents() {
+  useDebugLifecycle('TicketingAllEvents')
+  
   return (
     <div className="pa-page-container">
       <h1 className="pa-page-title">Ticketing – All Events</h1>

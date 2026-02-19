@@ -6,6 +6,7 @@ import { PageTitle, SectionHeader } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import { USE_FAKE_DATA } from '../data/config'
 
 interface SessionItem {
   amount_cents: number
@@ -37,11 +38,13 @@ export default function PaymentSuccess() {
   }, [navigate])
 
   useEffect(() => {
+    if (USE_FAKE_DATA) return
     if (sessionId) fetchSession(sessionId)
   }, [sessionId])
 
   // Refetch session on window focus to get updated balance
   useEffect(() => {
+    if (USE_FAKE_DATA) return
     const handleFocus = () => {
       if (sessionId) {
         fetchSession(sessionId)
@@ -53,27 +56,33 @@ export default function PaymentSuccess() {
 
   async function fetchSession(id: string) {
     setLoading(true)
-    const { data } = await supabase
-      .from('checkout_sessions')
-      .select(`
-        id,
-        status,
-        total_cents,
-        created_at,
-        payments:payments ( id, status, amount_cents, paid_at ),
-        items:checkout_session_items (
-          amount_cents,
-          fee_assignment:fee_assignments (
-            fee:fees ( title ),
-            athlete:athletes ( first_name, last_name )
+    try {
+      const { data } = await supabase
+        .from('checkout_sessions')
+        .select(`
+          id,
+          status,
+          total_cents,
+          created_at,
+          payments:payments ( id, status, amount_cents, paid_at ),
+          items:checkout_session_items (
+            amount_cents,
+            fee_assignment:fee_assignments (
+              fee:fees ( title ),
+              athlete:athletes ( first_name, last_name )
+            )
           )
-        )
-      `)
-      .eq('stripe_checkout_session_id', id)
-      .maybeSingle()
+        `)
+        .eq('stripe_checkout_session_id', id)
+        .maybeSingle()
 
-    setSession((data as CheckoutSession | null) ?? null)
-    setLoading(false)
+      setSession((data as CheckoutSession | null) ?? null)
+    } catch (err) {
+      console.error('Failed to load checkout session', err)
+      setSession(null)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

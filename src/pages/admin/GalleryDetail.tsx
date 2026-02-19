@@ -4,6 +4,7 @@ import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import { Button, Card, InlineNotice } from '@/components/platformAdmin'
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import {
   deleteGallery,
   deletePhotos,
@@ -19,6 +20,7 @@ import {
   type KeysetCursor,
 } from '@/data/services/galleryService'
 import { getMockGalleryById, getMockPhotosForGallery } from '@/data/fake/mockGalleries'
+import { FAKE_DATA_DELAY_MS } from '@/data/config'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
 import { usePhotoFilters } from '@/hooks/usePhotoFilters'
@@ -83,6 +85,8 @@ export default function GalleryDetail() {
   const [lightboxIndex, setLightboxIndex] = useState(-1)
   const [bulkTaggingPhotos, setBulkTaggingPhotos] = useState<GalleryPhoto[]>([])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [showDeleteGalleryConfirm, setShowDeleteGalleryConfirm] = useState(false)
+  const [showApproveAllConfirm, setShowApproveAllConfirm] = useState(false)
   const mountedRef = useRef(true)
   const loadingMoreRef = useRef(false)
   const photoFeedRef = useRef<HTMLDivElement>(null)
@@ -197,6 +201,9 @@ export default function GalleryDetail() {
     }
 
     if (USE_FAKE_DATA) {
+      if (FAKE_DATA_DELAY_MS > 0) {
+        await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+      }
       const mockPhotosDb = getMockPhotosForGallery(id)
       const mockPhotos = mockPhotosDb.map(
         (p) => ({ ...p, can_download: p.can_download ?? undefined }) as unknown as GalleryPhoto,
@@ -258,6 +265,7 @@ export default function GalleryDetail() {
   useEffect(() => {
     loadGallery()
     loadAlbums()
+    // Use stable deps so effect doesn't re-run on every render (context reference changes frequently)
   }, [loadGallery, loadAlbums])
 
   useEffect(() => {
@@ -269,7 +277,7 @@ export default function GalleryDetail() {
   useEffect(() => {
     loadPhotos(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, context, viewMode, filters.q, filters.album, filters.athlete, filters.sort, filters.status, filters.from, filters.to, gridPageSize, rowsPerPage, page])
+  }, [id, context?.userId, context?.orgId, viewMode, filters.q, filters.album, filters.athlete, filters.sort, filters.status, filters.from, filters.to, gridPageSize, rowsPerPage, page])
 
   useInfinitePhotos({
     hasMore: viewMode === 'grid' ? hasMore : false,
@@ -284,7 +292,7 @@ export default function GalleryDetail() {
         // Update local state immediately for instant UI feedback
         setLocalSearchQuery(updates.q || '')
         // Remove 'q' from updates as it will be handled by debounce effect
-        const { q, ...otherUpdates } = updates
+        const { q: _q, ...otherUpdates } = updates
         if (Object.keys(otherUpdates).length > 0) {
           setFilters(otherUpdates)
         }
@@ -342,15 +350,51 @@ export default function GalleryDetail() {
     return Array.from(map.values()).map((athlete) => ({ value: athlete.id, label: athlete.name }))
   }, [photos])
 
-  const handleDeleteGallery = async () => {
+  
+  
+
+  
+
+  const entityMeta = useMemo(() => {
+    if (!gallery) return null
+    const label = gallery.entity_name || t(`photos.galleryType.${gallery.gallery_type}`)
+    if (!gallery.entity_id) {
+      if (gallery.gallery_type === 'org') {
+        return { label: gallery.org_name || label, link: getLink('admin.organization.base') }
+      }
+      return { label }
+    }
+
+    switch (gallery.gallery_type) {
+      case 'team':
+        return { label, link: getLink('admin.teams.detail', { id: gallery.entity_id }) }
+      case 'event':
+        return { label, link: getLink('admin.events.detail', { id: gallery.entity_id }) }
+      case 'season':
+        return { label, link: getLink('admin.seasons.detail', { id: gallery.entity_id }) }
+      case 'program':
+        return { label, link: getLink('admin.programs.detail', { id: gallery.entity_id }) }
+      case 'athlete':
+        return { label, link: getLink('admin.athletes.detail', { id: gallery.entity_id }) }
+      case 'travel':
+        return { label, link: getLink('admin.travel.edit', { id: gallery.entity_id }) }
+      default:
+        return { label }
+    }
+  }, [gallery, t])
+
+  const handleDeleteGallery = () => {
     if (USE_FAKE_DATA) {
       showError(t('photos.demoMode.deleteBlocked'))
       return
     }
 
     if (!context || !gallery) return
-    const confirm = window.confirm(t('photos.confirmDeletePhotos', { count: photos.length }))
-    if (!confirm) return
+    setShowDeleteGalleryConfirm(true)
+  }
+
+  const confirmDeleteGallery = async () => {
+    if (!context || !gallery) return
     const { error } = await deleteGallery(context, gallery.id)
     if (error) {
       showError(error.message)
@@ -385,9 +429,12 @@ export default function GalleryDetail() {
     setEditOpen(true)
   }
 
+  
+  
+
   if (!id) return null
 
-  const handleApproveAll = async () => {
+  const handleApproveAll = () => {
     if (USE_FAKE_DATA) {
       showError(t('photos.demoMode.deleteBlocked'))
       return
@@ -396,8 +443,10 @@ export default function GalleryDetail() {
       showError(t('photos.noPendingPhotos'))
       return
     }
-    const confirm = window.confirm(t('photos.approveAllConfirm'))
-    if (!confirm) return
+    setShowApproveAllConfirm(true)
+  }
+
+  const confirmApproveAll = async () => {
     if (!id || !context) return
     const { data: pendingPhotos } = await getPhotosForGallery(context, {
       gallery_id: id,
@@ -421,33 +470,7 @@ export default function GalleryDetail() {
     }
   }
 
-  const entityMeta = useMemo(() => {
-    if (!gallery) return null
-    const label = gallery.entity_name || t(`photos.galleryType.${gallery.gallery_type}`)
-    if (!gallery.entity_id) {
-      if (gallery.gallery_type === 'org') {
-        return { label: gallery.org_name || label, link: getLink('admin.organization.base') }
-      }
-      return { label }
-    }
-
-    switch (gallery.gallery_type) {
-      case 'team':
-        return { label, link: getLink('admin.teams.detail', { id: gallery.entity_id }) }
-      case 'event':
-        return { label, link: getLink('admin.events.detail', { id: gallery.entity_id }) }
-      case 'season':
-        return { label, link: getLink('admin.seasons.detail', { id: gallery.entity_id }) }
-      case 'program':
-        return { label, link: getLink('admin.programs.detail', { id: gallery.entity_id }) }
-      case 'athlete':
-        return { label, link: getLink('admin.athletes.detail', { id: gallery.entity_id }) }
-      case 'travel':
-        return { label, link: getLink('admin.travel.edit', { id: gallery.entity_id }) }
-      default:
-        return { label }
-    }
-  }, [gallery, t])
+  
 
   // Show loading skeleton while gallery is still being fetched or photos are loading
   if (!galleryFetched || loading) {
@@ -495,6 +518,34 @@ export default function GalleryDetail() {
 
   return (
     <div className="org-structure-page">
+      <ConfirmDialog
+        open={showDeleteGalleryConfirm}
+        title={t('common.delete')}
+        description={t('photos.confirmDeletePhotos', { count: photos.length })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={() => {
+          setShowDeleteGalleryConfirm(false)
+          void confirmDeleteGallery()
+        }}
+        onCancel={() => setShowDeleteGalleryConfirm(false)}
+      />
+
+      <ConfirmDialog
+        open={showApproveAllConfirm}
+        title={t('photos.approveAll')}
+        description={t('photos.approveAllConfirm')}
+        confirmLabel={t('photos.approveAll')}
+        cancelLabel={t('common.cancel')}
+        variant="primary"
+        onConfirm={() => {
+          setShowApproveAllConfirm(false)
+          void confirmApproveAll()
+        }}
+        onCancel={() => setShowApproveAllConfirm(false)}
+      />
+
       <AdminPageHeader
         title={gallery?.name || t('photos.allGalleries')}
         subtitle={entityMeta?.label}

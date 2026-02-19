@@ -59,6 +59,7 @@ export type PlatformAdminAction =
     // Email system
     | 'view_email_preview'
     | 'send_test_emails'
+    | 'manage_email_templates'
     // Photos / Media (cross-org support, moderation, storage)
     | 'view_photo_overview'
     | 'view_content_review'
@@ -118,6 +119,7 @@ export const PERMISSION_MATRIX: Record<PlatformAdminAction, PlatformAdminRole[]>
     // Email system - ops/super (development/testing only)
     view_email_preview: ['super_admin', 'ops_admin'],
     send_test_emails: ['super_admin', 'ops_admin'],
+    manage_email_templates: ['super_admin', 'ops_admin'],
 
     // Photos / Media - all platform admins for overview; ops/super for review and storage
     view_photo_overview: ['super_admin', 'support_admin', 'finance_admin', 'ops_admin'],

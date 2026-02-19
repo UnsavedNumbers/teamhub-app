@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -35,6 +36,9 @@ function MinimalLayout({ children }: { children: React.ReactNode }) {
 }
 
 export default function AcceptInvite() {
+  // Add lifecycle logging
+  useDebugLifecycle('AcceptInvite')
+
   const [searchParams] = useSearchParams()
   const hash = window.location.hash
   const hashParams = new URLSearchParams(
@@ -56,6 +60,7 @@ export default function AcceptInvite() {
   const inviteType =
     searchParams.get('type') ||
     hashParams.get('type') ||
+    sessionStorage.getItem('pending_invite_type') ||
     'guardian'
     
   console.log('[AcceptInvite] Final token:', token)
@@ -127,6 +132,44 @@ export default function AcceptInvite() {
         }
       } catch (err) {
         console.error('Error fetching invite details:', err)
+        // Fall through to default navigation
+      }
+    }
+    
+    // For athlete invites, fetch details to pre-fill email
+    if (inviteTypeValue === 'athlete') {
+      try {
+        const { data, error } = await (supabase as any)
+          .rpc('get_athlete_invite_details', { p_token: inviteToken })
+
+        if (!error && data && Array.isArray(data) && data.length > 0) {
+          const inviteDetails = data[0] as unknown as {
+            valid: boolean
+            email: string | null
+            athlete_id: string | null
+            org_id: string | null
+            expired: boolean
+            already_accepted: boolean
+            message: string
+          }
+
+          if (inviteDetails.valid && inviteDetails.email && inviteDetails.athlete_id) {
+            // Store athlete_id for persistence
+            sessionStorage.setItem('pending_invite_athlete_id', inviteDetails.athlete_id)
+            
+            navigate('/portal/signup', { 
+              state: { 
+                returnTo: acceptInviteUrl,
+                inviteEmail: inviteDetails.email,
+                athleteId: inviteDetails.athlete_id
+              },
+              replace: true 
+            })
+            return
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching athlete invite details:', err)
         // Fall through to default navigation
       }
     }
@@ -227,6 +270,40 @@ export default function AcceptInvite() {
               setMessage('Successfully accepted invitation!')
             }
             showSuccess('You have been successfully linked as a guardian.')
+            // Clear the pending token from both storages
+            sessionStorage.removeItem('pending_invite_token')
+            localStorage.removeItem('pending_invite_token')
+            // Redirect to dashboard after a short delay
+            timeoutRef.current = window.setTimeout(() => {
+              if (isMountedRef.current) {
+                navigate('/portal/dashboard', { replace: true })
+              }
+              timeoutRef.current = null
+            }, 2000)
+          } else {
+            // Display specific error message from RPC
+            throw new Error(result.message || 'Failed to accept invitation')
+          }
+        } else {
+          throw new Error('Invalid response from server')
+        }
+      } else if (inviteType === 'athlete') {
+        const { data, error: rpcError } = await (supabase as any)
+          .rpc('accept_athlete_invite', {
+            p_token: token
+          })
+
+        if (rpcError) {
+          throw rpcError
+        }
+
+        if (data && Array.isArray(data) && data.length > 0) {
+          const result = data[0] as unknown as { success: boolean; message?: string; organization_id?: string; athlete_id?: string }
+          if (result?.success) {
+            if (isMountedRef.current) {
+              setMessage('Successfully accepted invitation!')
+            }
+            showSuccess('You have been successfully linked as an athlete.')
             // Clear the pending token from both storages
             sessionStorage.removeItem('pending_invite_token')
             localStorage.removeItem('pending_invite_token')

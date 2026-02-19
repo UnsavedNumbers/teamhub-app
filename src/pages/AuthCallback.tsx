@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { useI18n } from '../i18n/useI18n'
 import { useLoadingState } from '../contexts/LoadingStateContext'
 import FullScreenLoader from '../components/common/FullScreenLoader'
@@ -16,6 +17,7 @@ import type { SupabaseExtended as Database } from '../lib/supabase.extended.type
 import type { OrgMemberRole } from '../contexts/OrganizationContext'
 
 export default function AuthCallback() {
+  useDebugLifecycle('AuthCallback')
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { t } = useI18n()
@@ -188,7 +190,9 @@ export default function AuthCallback() {
             // Email not yet confirmed, redirect to accept-invite which will handle the flow
             const pendingAthleteId = sessionStorage.getItem('pending_invite_athlete_id')
             
-            let acceptInviteUrl = `/portal/accept-invite?token=${pendingInviteToken}`
+            // Check invite type from sessionStorage
+            const inviteType = sessionStorage.getItem('pending_invite_type') || 'guardian'
+            let acceptInviteUrl = `/portal/accept-invite?token=${pendingInviteToken}&type=${inviteType}`
             if (pendingAthleteId) {
               acceptInviteUrl += `&athlete_id=${pendingAthleteId}`
             }
@@ -199,7 +203,40 @@ export default function AuthCallback() {
           }
         }
 
-        // Priority 3: Check for redirect param in URL
+        // Priority 3: Check for pending join team code
+        const pendingJoinTeamCode = sessionStorage.getItem('pending_join_team_code')
+        if (pendingJoinTeamCode) {
+          // Email must be confirmed before joining team
+          const emailConfirmed = data.session.user.email_confirmed_at !== null
+          
+          if (emailConfirmed) {
+            // Redirect to join page with code
+            const joinUrl = `/portal/join?code=${encodeURIComponent(pendingJoinTeamCode)}`
+            // Navigation will unmount and cleanup will handle loading state
+            navigate(joinUrl, { replace: true })
+            return
+          } else {
+            // Email not confirmed yet, will redirect after confirmation
+            // Keep the code in sessionStorage for later
+          }
+        }
+
+        // Priority 3b: Check for pending join link token
+        const pendingJoinLinkToken = sessionStorage.getItem('pending_join_link_token')
+        if (pendingJoinLinkToken) {
+          // Email must be confirmed before joining via link
+          const emailConfirmed = data.session.user.email_confirmed_at !== null
+          
+          if (emailConfirmed) {
+            // Redirect to join link page with token
+            const joinLinkUrl = `/portal/join/link?token=${encodeURIComponent(pendingJoinLinkToken)}`
+            // Navigation will unmount and cleanup will handle loading state
+            navigate(joinLinkUrl, { replace: true })
+            return
+          }
+        }
+
+        // Priority 4: Check for redirect param in URL
         const redirectTo = searchParams.get('redirect')
         if (redirectTo) {
           // Validate the redirect URL is internal to prevent open redirect attacks

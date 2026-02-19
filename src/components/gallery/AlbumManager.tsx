@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../../i18n/useI18n'
 import { showError, showSuccess } from '../../utils/toast'
+import { ConfirmDialog } from '../admin/ConfirmDialog'
 import {
   createGalleryAlbum,
   deleteGalleryAlbum,
@@ -26,6 +27,7 @@ export function AlbumManager({ galleryId, onAlbumsUpdated }: AlbumManagerProps) 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const [editingDescription, setEditingDescription] = useState('')
+  const [albumToDeleteId, setAlbumToDeleteId] = useState<string | null>(null)
 
   const loadAlbums = async () => {
     if (!context) return
@@ -90,10 +92,12 @@ export function AlbumManager({ galleryId, onAlbumsUpdated }: AlbumManagerProps) 
     await loadAlbums()
   }
 
-  const handleDelete = async (albumId: string) => {
+  const handleDelete = (albumId: string) => {
+    setAlbumToDeleteId(albumId)
+  }
+
+  const confirmDelete = async (albumId: string) => {
     if (!context) return
-    const confirm = window.confirm(t('photos.albums.deleteConfirm'))
-    if (!confirm) return
     const { error } = await deleteGalleryAlbum(context, albumId)
     if (error) {
       showError(error.message)
@@ -211,6 +215,23 @@ export function AlbumManager({ galleryId, onAlbumsUpdated }: AlbumManagerProps) 
           ))
         )}
       </div>
+
+      <ConfirmDialog
+        open={albumToDeleteId !== null}
+        title={t('common.delete')}
+        description={t('photos.albums.deleteConfirm')}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={() => {
+          const albumId = albumToDeleteId
+          setAlbumToDeleteId(null)
+          if (albumId) {
+            void confirmDelete(albumId)
+          }
+        }}
+        onCancel={() => setAlbumToDeleteId(null)}
+      />
     </div>
   )
 }

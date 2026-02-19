@@ -11,7 +11,11 @@ import {
 } from '../../../utils/attendanceReports'
 import { showError } from '../../../utils/toast'
 
+import { useDebugLifecycle } from '../../../lib/debug/integrations/useDebugLifecycle'
+
 export default function AttendanceReports() {
+  useDebugLifecycle('AttendanceReports')
+  
   const { context, isReady } = useUserContext()
   const [loading, setLoading] = useState(false)
   const [events, setEvents] = useState<Array<any>>([])

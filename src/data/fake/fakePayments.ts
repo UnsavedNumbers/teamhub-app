@@ -104,6 +104,8 @@ export const FEE_SPRING_BB_REG_ID = 'fee-spring-bb-reg-002'
 export const FEE_TOURNAMENT_U12_ID = 'fee-tournament-u12-003'
 export const FEE_UNIFORM_SOCCER_ID = 'fee-uniform-soccer-004'
 export const FEE_EQUIPMENT_BB_ID = 'fee-equipment-bb-005'
+export const FEE_TRAVEL_DEPOSIT_ID = 'fee-summer-travel-deposit-006'
+export const FEE_SKILLS_CLINIC_ID = 'fee-goalkeeper-skills-clinic-007'
 
 // ============================================================================
 // Fake Fees Data
@@ -185,6 +187,36 @@ export const fakeFees: FakeFee[] = [
         created_at: getDateInCurrentYear(1, 25),
         updated_at: getDateInCurrentYear(1, 25),
     },
+    {
+        id: FEE_TRAVEL_DEPOSIT_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U12_SOCCER_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
+        title: 'Regional Showcase Travel Deposit',
+        description: 'Initial travel deposit for transportation and hotel block.',
+        amount_cents: 22000, // $220.00
+        currency: 'usd',
+        due_date: getDateString(3, 20),
+        status: 'active',
+        allow_partial: true,
+        created_at: getDateInCurrentYear(2, 10),
+        updated_at: getDateInCurrentYear(2, 10),
+    },
+    {
+        id: FEE_SKILLS_CLINIC_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: null,
+        season_id: null,
+        title: 'Goalkeeper Skills Clinic',
+        description: 'Weekend clinic focused on positioning, handling, and distribution.',
+        amount_cents: 8500, // $85.00
+        currency: 'usd',
+        due_date: getDateString(4, 5),
+        status: 'active',
+        allow_partial: true,
+        created_at: getDateInCurrentYear(2, 12),
+        updated_at: getDateInCurrentYear(2, 12),
+    },
 ]
 
 // ============================================================================
@@ -217,6 +249,10 @@ export const fakeFeeAssignments: FakeFeeAssignment[] = [
 
     // Equipment Fee - Basketball
     { id: 'fa-016', fee_id: FEE_EQUIPMENT_BB_ID, athlete_id: CHILD_LIAM_JOHNSON_ID, status: 'paid', amount_due_cents: 2500, amount_paid_cents: 2500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-01-28T00:00:00Z', updated_at: getDateInCurrentYear(2, 15) },
+
+    // Additional guardian-visible unpaid/partial demo fees
+    { id: 'fa-017', fee_id: FEE_TRAVEL_DEPOSIT_ID, athlete_id: CHILD_EMMA_JOHNSON_ID, status: 'partial', amount_due_cents: 22000, amount_paid_cents: 9000, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: getDateInCurrentYear(2, 14), updated_at: getDateInCurrentYear(2, 17) },
+    { id: 'fa-018', fee_id: FEE_SKILLS_CLINIC_ID, athlete_id: CHILD_LIAM_JOHNSON_ID, status: 'unpaid', amount_due_cents: 8500, amount_paid_cents: 0, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: getDateInCurrentYear(2, 14), updated_at: getDateInCurrentYear(2, 14) },
 ]
 
 // ============================================================================
@@ -251,6 +287,9 @@ export const fakePayments: FakePayment[] = [
 
     // Failed payment example
     { id: 'pay-012', org_id: DEMO_ORG_A_ID, fee_assignment_id: 'fa-009', amount_cents: 12500, currency: 'usd', status: 'failed', stripe_payment_intent_id: 'pi_demo_012_failed', payment_method: 'card', paid_at: null, refunded_at: null, notes: 'Card declined - insufficient funds', created_at: getDateInCurrentYear(2, 28, 9), updated_at: getDateInCurrentYear(2, 28, 9) },
+
+    // Travel deposit installment for guardian flow
+    { id: 'pay-013', org_id: DEMO_ORG_A_ID, fee_assignment_id: 'fa-017', amount_cents: 9000, currency: 'usd', status: 'succeeded', stripe_payment_intent_id: 'pi_demo_013', payment_method: 'card', paid_at: getDateInCurrentYear(2, 17, 18, 15), refunded_at: null, notes: 'Initial deposit installment', created_at: getDateInCurrentYear(2, 17, 18, 15), updated_at: getDateInCurrentYear(2, 17, 18, 15) },
 ]
 
 // ============================================================================

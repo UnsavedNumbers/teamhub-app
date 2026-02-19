@@ -9,7 +9,7 @@ import { useState, useRef, useEffect } from 'react'
 import type { VideoNote } from '@/types/video'
 import Icon from '@/components/portal/Icon'
 import { cn } from '@/utils/cn'
-import { t } from '@/i18n'
+import TimestampedText from './TimestampedText'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -85,14 +85,14 @@ export default function NotesFeed({
       {/* Sort toggle */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-800">
         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-          {t('videoLibrary.notes.count', { count: notes.length })}
+          {notes.length} note{notes.length !== 1 ? 's' : ''}
         </span>
         <button
           type="button"
           onClick={() => setSortMode(sortMode === 'timestamp' ? 'newest' : 'timestamp')}
           className="text-[10px] font-bold text-[var(--org-btn-secondary-bg)] hover:underline uppercase tracking-wider"
         >
-          {sortMode === 'timestamp' ? t('videoLibrary.notes.sortByTime') : t('videoLibrary.notes.sortNewest')}
+          {sortMode === 'timestamp' ? '↕ By Time' : '↕ Newest'}
         </button>
       </div>
 
@@ -101,7 +101,7 @@ export default function NotesFeed({
         {sorted.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
             <Icon name="speaker_notes_off" size="text-3xl" className="mb-2" />
-            <p className="text-sm">{t('videoLibrary.notes.noNotes')}</p>
+            <p className="text-sm">No notes yet</p>
           </div>
         ) : (
           sorted.map((note) => {
@@ -137,7 +137,7 @@ export default function NotesFeed({
                     {/* Author & date */}
                     <div className="flex items-center gap-1.5 mb-0.5">
                       <span className="text-[11px] font-bold text-gray-900 dark:text-white truncate">
-                        {note.author?.full_name || t('videoLibrary.notes.authorFallback')}
+                        {note.author?.display_name || `${note.author?.first_name || ''} ${note.author?.last_name || ''}`.trim() || 'Coach'}
                       </span>
                       <span className="text-[10px] text-gray-400">
                         {new Date(note.created_at).toLocaleDateString()}
@@ -153,8 +153,37 @@ export default function NotesFeed({
 
                     {/* Content */}
                     <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3">
-                      {note.content}
+                      <TimestampedText
+                        text={note.content}
+                        onSeek={onSeekToTimestamp}
+                      />
                     </p>
+
+                    {/* Scope/Audience Badge */}
+                    {note.scope && (
+                      <div className="mt-1.5 flex items-center gap-1">
+                        {note.scope === 'private' && (
+                          <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-[9px] font-bold text-gray-500 uppercase">
+                            Private
+                          </span>
+                        )}
+                        {note.scope === 'coaches' && (
+                          <span className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase">
+                            Coaches
+                          </span>
+                        )}
+                        {note.scope === 'guardians' && (
+                          <span className="px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">
+                            Guardians
+                          </span>
+                        )}
+                        {note.scope === 'all' && (
+                          <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase">
+                            Everyone
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     {/* Athlete targets */}
                     {note.targets && note.targets.length > 0 && (

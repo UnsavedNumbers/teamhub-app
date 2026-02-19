@@ -4,7 +4,11 @@ import { PageHeader, PlatformDataTable, FilterBar, Button, Badge, type ColumnCon
 import { JsonViewer } from '../../components/platformAdmin'
 import type { EntitlementAuditLog } from '../../types/licenseTiers.types'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function LicensesAudit() {
+  useDebugLifecycle('LicensesAudit')
+  
   const db = supabase as any
   const [logs, setLogs] = useState<EntitlementAuditLog[]>([])
   const [loading, setLoading] = useState(true)

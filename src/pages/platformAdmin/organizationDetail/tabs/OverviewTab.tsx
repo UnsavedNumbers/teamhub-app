@@ -17,6 +17,7 @@ import { getStatusVariant, formatDate, isInTrial, isInGracePeriod, getDaysUntilT
 import { useRolePermissions } from '../../../../hooks/useRolePermissions'
 import type { AdminOrganization } from '../../../../types/platformAdmin.types'
 import type { PlatformAdminRole } from '../../../../types/platformAdmin.types'
+import { useDebugLifecycle } from '../../../../lib/debug/integrations/useDebugLifecycle'
 
 interface OverviewTabProps {
   organization: AdminOrganization
@@ -25,6 +26,8 @@ interface OverviewTabProps {
 }
 
 export function OverviewTab({ organization, adminRole, onViewActivity }: OverviewTabProps) {
+  useDebugLifecycle('OverviewTab')
+  
   const [showStripeDetails, setShowStripeDetails] = useState(false)
   const permissions = useRolePermissions()
 

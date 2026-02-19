@@ -97,14 +97,105 @@ export const parentNavSections: NavigationSection[] = [
             },
         ],
     },
+        {
+            label: 'More',
+            groups: [
+                {
+                    label: 'Media & Programs',
+                    items: [
+                        { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', description: 'Team galleries' },
+                        { routeKey: 'portal.videos', text: 'Video Library', icon: 'smart_display', description: 'Watch team and athlete videos' },
+                        { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
+                    ],
+                },
+                {
+                    label: 'Account',
+                    items: [
+                        { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', description: 'Account preferences' },
+                        { routeKey: 'portal.help', text: 'Help & Support', icon: 'help', description: 'Get assistance' },
+                        { routeKey: 'portal.contact', text: 'Contact Support', icon: 'mail', description: 'Contact support' },
+                    ],
+                },
+            ],
+        },
+]
+
+/**
+ * Athlete navigation sections for portal mega menu
+ * Athletes can see their own profile, team, schedule, announcements, and media
+ * They CANNOT see: org settings, team management, role management, financial reports, ticket admin, request athlete attachment
+ */
+export const athleteNavSections: NavigationSection[] = [
+    {
+        label: 'Dashboard',
+        route: '/portal/dashboard',
+        groups: [
+            {
+                label: '',
+                items: [
+                    { routeKey: 'portal.dashboard', text: 'Dashboard', icon: 'dashboard', description: 'Daily overview' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'My Schedule',
+        route: '/portal/calendar',
+        groups: [
+            {
+                label: 'My Schedule',
+                items: [
+                    { routeKey: 'portal.calendar', text: 'My Events', icon: 'calendar_month', description: 'View upcoming events' },
+                    { routeKey: 'portal.bookmarkedEvents', text: 'My Bookmarks', icon: 'bookmark', description: 'Saved events' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'My Team',
+        route: '/portal/athletes',
+        groups: [
+            {
+                label: 'My Team',
+                items: [
+                    { routeKey: 'portal.athletes', text: 'My Team', icon: 'groups', description: 'View my team information' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'Tickets & Payments',
+        route: '/portal/payments',
+        groups: [
+            {
+                label: 'Tickets & Payments',
+                items: [
+                    { routeKey: 'portal.myTickets', text: 'My Tickets', icon: 'confirmation_number', description: 'Event tickets' },
+                    { routeKey: 'portal.payments', text: 'Payment History', icon: 'receipt_long', description: 'Payment history' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'Announcements',
+        route: '/portal/messages',
+        groups: [
+            {
+                label: 'Announcements',
+                items: [
+                    { routeKey: 'portal.messages', text: 'Announcements', icon: 'forum', description: 'Team announcements' },
+                ],
+            },
+        ],
+    },
     {
         label: 'More',
         groups: [
             {
-                label: 'Media & Programs',
+                label: 'Media',
                 items: [
-                    { routeKey: 'portal.photos', text: 'Photos & Videos', icon: 'photo_library', description: 'Team galleries' },
-                    { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
+                    { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', description: 'Team galleries' },
+                    { routeKey: 'portal.videos', text: 'Video Library', icon: 'smart_display', description: 'Watch team and athlete videos' },
                 ],
             },
             {
@@ -112,6 +203,7 @@ export const parentNavSections: NavigationSection[] = [
                 items: [
                     { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', description: 'Account preferences' },
                     { routeKey: 'portal.help', text: 'Help & Support', icon: 'help', description: 'Get assistance' },
+                    { routeKey: 'portal.contact', text: 'Contact Support', icon: 'mail', description: 'Contact support' },
                 ],
             },
         ],
@@ -313,6 +405,7 @@ export const adminMenuItems: MenuItemDefinition[] = [
         requiresOrg: true,
         children: [
             { text: 'Events', icon: 'event', routeKey: 'admin.ticketingEvents', requiresOrg: true },
+            { text: 'Seat Maps', icon: 'event_seat', routeKey: 'admin.ticketingEvents.seatMaps.list', requiresOrg: true },
             { text: 'Orders', icon: 'receipt_long', routeKey: 'admin.ticketingOrders', requiresOrg: true },
             { text: 'Gate Entry', icon: 'qr_code_scanner', routeKey: 'admin.ticketingScanner', requiresOrg: true },
         ],
@@ -352,6 +445,8 @@ export const adminMenuItems: MenuItemDefinition[] = [
         requiresOrg: false,
         children: [
             { text: 'Settings', icon: 'settings', routeKey: 'admin.settings', requiresOrg: false },
+            { text: 'Help & Support', icon: 'help', routeKey: 'admin.help', requiresOrg: false },
+            { text: 'Contact Support', icon: 'mail', routeKey: 'admin.contact', requiresOrg: false },
         ],
     },
 ]
@@ -377,6 +472,7 @@ export const platformAdminNavSections: {
             label: 'Organizations',
             items: [
                 { routeKey: 'platformAdmin.organizations.list', text: 'Organizations', icon: 'apartment', requiredAction: 'view_organizations' },
+                { routeKey: 'platformAdmin.demoManagement.list', text: 'Demo Management', icon: 'bolt', requiredAction: 'view_organizations' },
             ],
         },
         {
@@ -467,6 +563,7 @@ export const adminGlobalNavSections: NavigationSection[] = [
                 label: '',
                 items: [
                     { routeKey: 'admin.ticketingEvents', text: 'Events', icon: 'event', description: 'Create and manage ticketed events' },
+                    { routeKey: 'admin.ticketingEvents.seatMaps.list', text: 'Seat Maps', icon: 'event_seat', description: 'Build and manage seat maps' },
                     { routeKey: 'admin.ticketingOrders', text: 'Orders', icon: 'receipt_long', description: 'Search purchases and process refunds' },
                     { routeKey: 'admin.ticketingScanner', text: 'Gate Entry', icon: 'qr_code_scanner', description: 'Ticket validation' },
                 ],
@@ -518,6 +615,7 @@ export const platformAdminGlobalNavSections: NavigationSection[] = [
                 label: '',
                 items: [
                     { routeKey: 'platformAdmin.organizations.list', text: 'Organizations', icon: 'apartment', description: 'All organizations' },
+                    { routeKey: 'platformAdmin.demoManagement.list', text: 'Demo Management', icon: 'bolt', description: 'Demo organizations and access codes' },
                 ],
             },
         ],

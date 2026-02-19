@@ -59,6 +59,9 @@ export function getUseFakeData(): boolean {
 // Simulate network delay for realistic loading states (milliseconds)
 export const FAKE_DATA_DELAY_MS = 300
 
+/** Delay for demo transaction flows (payment, refund, transfer) to show realistic loading UX (ms). Range 800–1200. */
+export const DEMO_TRANSACTION_DELAY_MS = 1000
+
 // Toggle to show empty states instead of populated data (for testing)
 export const SHOW_EMPTY_STATES = false
 

@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { getLink, getRoute, isValidRouteKey } from './helpers'
+import { getLink, getRoute, isValidRouteKey, findRouteKeyByPath } from './helpers'
 import type { RouteDefinition, RouteParams } from './types'
 
 /**
@@ -121,11 +121,7 @@ export function useRouteActive(routeKey: string): boolean {
 export function useCurrentRouteKey(): string | undefined {
     const location = useLocation()
 
-    return useMemo(() => {
-        // This is a simple implementation - could be optimized with a path-to-key map
-        const { findRouteKeyByPath } = require('./helpers')
-        return findRouteKeyByPath(location.pathname)
-    }, [location.pathname])
+    return useMemo(() => findRouteKeyByPath(location.pathname), [location.pathname])
 }
 
 /**

@@ -14,6 +14,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
 import { t } from '../../i18n'
 import type {
@@ -43,9 +44,18 @@ export async function followOrg(
   orgId: string,
   source: 'manual' | 'post_purchase' | 'import' = 'manual'
 ): Promise<{ data: boolean; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.followOrg(orgId, source)
+  console.groupCollapsed(`%cfollowOrg: ${orgId}`, 'color: #666; font-weight: bold;');
+  debug.flow('FanService.followOrg', 'Following organization', { orgId, source })
+  debug.perf.start('fanService.followOrg')
 
   try {
+    if (USE_FAKE_DATA) {
+      const result = await fakeService.followOrg(orgId, source)
+      debug.perf.end('fanService.followOrg')
+      debug.flow('FanService.followOrg', 'Organization followed (fake)', { orgId, source })
+      console.groupEnd()
+      return result
+    }
     const { error } = await supabaseAny.rpc('follow_org', {
       p_org_id: orgId,
       p_source: source,
@@ -53,8 +63,14 @@ export async function followOrg(
 
     if (error) throw error
 
+    debug.perf.end('fanService.followOrg')
+    debug.flow('FanService.followOrg', 'Organization followed successfully', { orgId, source })
+    console.groupEnd()
     return { data: true, error: null }
   } catch (err) {
+    debug.perf.end('fanService.followOrg')
+    debug.error('FanService.followOrg', 'Failed to follow organization', { error: err, orgId, source })
+    console.groupEnd()
     return {
       data: false,
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.followOrgFailed')),
@@ -66,17 +82,32 @@ export async function followOrg(
  * Unfollow an organization
  */
 export async function unfollowOrg(orgId: string): Promise<{ data: boolean; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.unfollowOrg(orgId)
+  console.groupCollapsed(`%cunfollowOrg: ${orgId}`, 'color: #666; font-weight: bold;');
+  debug.flow('FanService.unfollowOrg', 'Unfollowing organization', { orgId })
+  debug.perf.start('fanService.unfollowOrg')
 
   try {
+    if (USE_FAKE_DATA) {
+      const result = await fakeService.unfollowOrg(orgId)
+      debug.perf.end('fanService.unfollowOrg')
+      debug.flow('FanService.unfollowOrg', 'Organization unfollowed (fake)', { orgId })
+      console.groupEnd()
+      return result
+    }
     const { error } = await supabaseAny.rpc('unfollow_org', {
       p_org_id: orgId,
     })
 
     if (error) throw error
 
+    debug.perf.end('fanService.unfollowOrg')
+    debug.flow('FanService.unfollowOrg', 'Organization unfollowed successfully', { orgId })
+    console.groupEnd()
     return { data: true, error: null }
   } catch (err) {
+    debug.perf.end('fanService.unfollowOrg')
+    debug.error('FanService.unfollowOrg', 'Failed to unfollow organization', { error: err, orgId })
+    console.groupEnd()
     return {
       data: false,
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.unfollowOrgFailed')),
@@ -88,9 +119,17 @@ export async function unfollowOrg(orgId: string): Promise<{ data: boolean; error
  * Get followed organizations
  */
 export async function getFollowedOrgs(): Promise<{ data: FanOrgFollow[]; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.getFollowedOrgs()
+  debug.data('FanService.getFollowedOrgs', 'Request')
+  debug.perf.start('fanService.getFollowedOrgs')
 
   try {
+    if (USE_FAKE_DATA) {
+      const result = await fakeService.getFollowedOrgs()
+      debug.perf.end('fanService.getFollowedOrgs')
+      debug.data('FanService.getFollowedOrgs', 'Response (fake)', { orgCount: result.data.length })
+      return result
+    }
+
     const { data, error } = await supabaseAny.from('fan_org_follows')
       .select(`
         id,
@@ -104,11 +143,15 @@ export async function getFollowedOrgs(): Promise<{ data: FanOrgFollow[]; error: 
 
     if (error) throw error
 
+    debug.perf.end('fanService.getFollowedOrgs')
+    debug.data('FanService.getFollowedOrgs', 'Response', { orgCount: data?.length || 0 })
     return {
       data: (data || []) as FanOrgFollow[],
       error: null,
     }
   } catch (err) {
+    debug.perf.end('fanService.getFollowedOrgs')
+    debug.error('FanService.getFollowedOrgs', 'Failed to get followed orgs', { error: err })
     return {
       data: [],
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.getFollowedOrgsFailed')),
@@ -124,17 +167,32 @@ export async function getFollowedOrgs(): Promise<{ data: FanOrgFollow[]; error: 
  * Bookmark an event
  */
 export async function bookmarkEvent(eventId: string): Promise<{ data: boolean; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.bookmarkEvent(eventId)
+  console.groupCollapsed(`%cbookmarkEvent: ${eventId}`, 'color: #666; font-weight: bold;');
+  debug.flow('FanService.bookmarkEvent', 'Bookmarking event', { eventId })
+  debug.perf.start('fanService.bookmarkEvent')
 
   try {
+    if (USE_FAKE_DATA) {
+      const result = await fakeService.bookmarkEvent(eventId)
+      debug.perf.end('fanService.bookmarkEvent')
+      debug.flow('FanService.bookmarkEvent', 'Event bookmarked (fake)', { eventId })
+      console.groupEnd()
+      return result
+    }
     const { error } = await supabaseAny.rpc('bookmark_event', {
       p_event_id: eventId,
     })
 
     if (error) throw error
 
+    debug.perf.end('fanService.bookmarkEvent')
+    debug.flow('FanService.bookmarkEvent', 'Event bookmarked successfully', { eventId })
+    console.groupEnd()
     return { data: true, error: null }
   } catch (err) {
+    debug.perf.end('fanService.bookmarkEvent')
+    debug.error('FanService.bookmarkEvent', 'Failed to bookmark event', { error: err, eventId })
+    console.groupEnd()
     return {
       data: false,
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.bookmarkEventFailed')),
@@ -146,17 +204,32 @@ export async function bookmarkEvent(eventId: string): Promise<{ data: boolean; e
  * Remove bookmark
  */
 export async function removeBookmark(eventId: string): Promise<{ data: boolean; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.removeBookmark(eventId)
+  console.groupCollapsed(`%cremoveBookmark: ${eventId}`, 'color: #666; font-weight: bold;');
+  debug.flow('FanService.removeBookmark', 'Removing bookmark', { eventId })
+  debug.perf.start('fanService.removeBookmark')
 
   try {
+    if (USE_FAKE_DATA) {
+      const result = await fakeService.removeBookmark(eventId)
+      debug.perf.end('fanService.removeBookmark')
+      debug.flow('FanService.removeBookmark', 'Bookmark removed (fake)', { eventId })
+      console.groupEnd()
+      return result
+    }
     const { error } = await supabaseAny.rpc('remove_bookmark', {
       p_event_id: eventId,
     })
 
     if (error) throw error
 
+    debug.perf.end('fanService.removeBookmark')
+    debug.flow('FanService.removeBookmark', 'Bookmark removed successfully', { eventId })
+    console.groupEnd()
     return { data: true, error: null }
   } catch (err) {
+    debug.perf.end('fanService.removeBookmark')
+    debug.error('FanService.removeBookmark', 'Failed to remove bookmark', { error: err, eventId })
+    console.groupEnd()
     return {
       data: false,
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.removeBookmarkFailed')),
@@ -168,9 +241,16 @@ export async function removeBookmark(eventId: string): Promise<{ data: boolean; 
  * Get bookmarked events
  */
 export async function getBookmarkedEvents(): Promise<{ data: FanEventBookmark[]; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.getBookmarkedEvents()
+  debug.data('FanService.getBookmarkedEvents', 'Request')
+  debug.perf.start('fanService.getBookmarkedEvents')
 
   try {
+    if (USE_FAKE_DATA) {
+      const result = await fakeService.getBookmarkedEvents()
+      debug.perf.end('fanService.getBookmarkedEvents')
+      debug.data('FanService.getBookmarkedEvents', 'Response (fake)', { bookmarkCount: result.data.length })
+      return result
+    }
     const { data, error } = await supabaseAny.from('fan_event_bookmarks')
       .select(`
         id,
@@ -183,11 +263,15 @@ export async function getBookmarkedEvents(): Promise<{ data: FanEventBookmark[];
 
     if (error) throw error
 
+    debug.perf.end('fanService.getBookmarkedEvents')
+    debug.data('FanService.getBookmarkedEvents', 'Response', { bookmarkCount: data?.length || 0 })
     return {
       data: (data || []) as FanEventBookmark[],
       error: null,
     }
   } catch (err) {
+    debug.perf.end('fanService.getBookmarkedEvents')
+    debug.error('FanService.getBookmarkedEvents', 'Failed to get bookmarked events', { error: err })
     return {
       data: [],
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.getBookmarkedEventsFailed')),
@@ -205,9 +289,16 @@ export async function getBookmarkedEvents(): Promise<{ data: FanEventBookmark[];
 export async function getFanCalendar(
   request: GetCalendarRequest = {}
 ): Promise<{ data: GetCalendarResponse | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.getFanCalendar(request)
+  debug.data('FanService.getFanCalendar', 'Request', { request })
+  debug.perf.start('fanService.getFanCalendar')
 
   try {
+    if (USE_FAKE_DATA) {
+      const result = await fakeService.getFanCalendar(request)
+      debug.perf.end('fanService.getFanCalendar')
+      debug.data('FanService.getFanCalendar', 'Response (fake)', { eventCount: result.data?.events?.length || 0 })
+      return result
+    }
     const { data: userData } = await supabase.auth.getUser()
     const userId = userData.user?.id
 
@@ -226,6 +317,8 @@ export async function getFanCalendar(
       .maybeSingle()
 
     if (cacheData) {
+      debug.perf.end('fanService.getFanCalendar')
+      debug.data('FanService.getFanCalendar', 'Response (cached)', { eventCount: cacheData.calendar_data.events?.length || 0 })
       return {
         data: {
           events: cacheData.calendar_data.events as CalendarEvent[],
@@ -250,6 +343,8 @@ export async function getFanCalendar(
     const rpcResult = data as { events?: unknown[]; generated_at?: string } | null
     const events = Array.isArray(rpcResult?.events) ? rpcResult.events : []
 
+    debug.perf.end('fanService.getFanCalendar')
+    debug.data('FanService.getFanCalendar', 'Response', { eventCount: events.length })
     return {
       data: {
         events: events as CalendarEvent[],
@@ -259,6 +354,8 @@ export async function getFanCalendar(
       error: null,
     }
   } catch (err) {
+    debug.perf.end('fanService.getFanCalendar')
+    debug.error('FanService.getFanCalendar', 'Failed to get fan calendar', { error: err, request })
     return {
       data: null,
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.getFanCalendarFailed')),
@@ -276,9 +373,18 @@ export async function getFanCalendar(
 export async function transferTicket(
   request: TicketTransferRequest
 ): Promise<{ data: TransferableTicket | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.transferTicket(request)
+  console.groupCollapsed(`%ctransferTicket: ${request.ticket_id}`, 'color: #666; font-weight: bold;');
+  debug.flow('FanService.transferTicket', 'Transferring ticket', { ticketId: request.ticket_id, holderEmail: request.holder_email })
+  debug.perf.start('fanService.transferTicket')
 
   try {
+    if (USE_FAKE_DATA) {
+      const result = await fakeService.transferTicket(request)
+      debug.perf.end('fanService.transferTicket')
+      debug.flow('FanService.transferTicket', 'Ticket transferred (fake)', { ticketId: request.ticket_id })
+      console.groupEnd()
+      return result
+    }
     const { error } = await supabaseAny.rpc('transfer_ticket', {
       p_ticket_id: request.ticket_id,
       p_holder_email: request.holder_email,
@@ -336,6 +442,9 @@ export async function reserveTickets(
 
     if (error) throw error
 
+    debug.perf.end('fanService.reserveTickets')
+    debug.flow('FanService.reserveTickets', 'Tickets reserved successfully', { eventId: request.event_id, reservationId: data.id })
+    console.groupEnd()
     return {
       data: {
         reservation_id: data.id,
@@ -345,6 +454,9 @@ export async function reserveTickets(
       error: null,
     }
   } catch (err) {
+    debug.perf.end('fanService.reserveTickets')
+    debug.error('FanService.reserveTickets', 'Failed to reserve tickets', { error: err, request })
+    console.groupEnd()
     return {
       data: null,
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.reserveTicketsFailed')),
@@ -356,9 +468,16 @@ export async function reserveTickets(
  * Get user's purchases
  */
 export async function getUserPurchases(): Promise<{ data: Purchase[]; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.getUserPurchases()
+  debug.data('FanService.getUserPurchases', 'Request')
+  debug.perf.start('fanService.getUserPurchases')
 
   try {
+    if (USE_FAKE_DATA) {
+      const result = await fakeService.getUserPurchases()
+      debug.perf.end('fanService.getUserPurchases')
+      debug.data('FanService.getUserPurchases', 'Response (fake)', { purchaseCount: result.data.length })
+      return result
+    }
     const { data, error } = await supabaseAny.from('purchases')
       .select(`
         id,
@@ -378,11 +497,15 @@ export async function getUserPurchases(): Promise<{ data: Purchase[]; error: Err
 
     if (error) throw error
 
+    debug.perf.end('fanService.getUserPurchases')
+    debug.data('FanService.getUserPurchases', 'Response', { purchaseCount: data?.length || 0 })
     return {
       data: (data || []) as Purchase[],
       error: null,
     }
   } catch (err) {
+    debug.perf.end('fanService.getUserPurchases')
+    debug.error('FanService.getUserPurchases', 'Failed to get purchases', { error: err })
     return {
       data: [],
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.getPurchasesFailed')),
@@ -409,9 +532,15 @@ export interface FanFeedItem {
  * Get fan feed (personalized home page content)
  */
 export async function getFanFeed(): Promise<{ data: FanFeedItem[]; error: Error | null }> {
-  if (USE_FAKE_DATA) return { data: [], error: null }
+  debug.data('FanService.getFanFeed', 'Request')
+  debug.perf.start('fanService.getFanFeed')
 
   try {
+    if (USE_FAKE_DATA) {
+      debug.perf.end('fanService.getFanFeed')
+      debug.data('FanService.getFanFeed', 'Response (fake)', { itemCount: 0 })
+      return { data: [], error: null }
+    }
     const { data, error } = await supabaseAny.from('fan_feed')
       .select(`
         id,
@@ -453,8 +582,12 @@ export async function markFeedItemRead(feedItemId: string): Promise<{ data: bool
 
     if (error) throw error
 
+    debug.perf.end('fanService.markFeedItemRead')
+    debug.flow('FanService.markFeedItemRead', 'Feed item marked as read successfully', { feedItemId })
     return { data: true, error: null }
   } catch (err) {
+    debug.perf.end('fanService.markFeedItemRead')
+    debug.error('FanService.markFeedItemRead', 'Failed to mark feed item as read', { error: err, feedItemId })
     return {
       data: false,
       error: err instanceof Error ? err : new Error('Failed to mark feed item as read'),
@@ -488,9 +621,17 @@ export async function searchEntities(
   entityTypes: ('org' | 'team' | 'athlete')[] = ['org', 'team', 'athlete'],
   limit: number = 20
 ): Promise<{ data: SearchEntityResult[]; error: Error | null }> {
-  if (USE_FAKE_DATA) return { data: [], error: null }
+  console.groupCollapsed(`%csearchEntities: ${query}`, 'color: #666; font-weight: bold;');
+  debug.data('FanService.searchEntities', 'Request', { query, entityTypes, limit })
+  debug.perf.start('fanService.searchEntities')
 
   try {
+    if (USE_FAKE_DATA) {
+      debug.perf.end('fanService.searchEntities')
+      debug.data('FanService.searchEntities', 'Response (fake)', { query, resultCount: 0 })
+      console.groupEnd()
+      return { data: [], error: null }
+    }
     const { data, error } = await supabaseAny.rpc('search_entities', {
       p_query: query,
       p_entity_types: entityTypes,
@@ -501,11 +642,17 @@ export async function searchEntities(
 
     const results = data?.results || []
 
+    debug.perf.end('fanService.searchEntities')
+    debug.data('FanService.searchEntities', 'Response', { query, resultCount: results.length })
+    console.groupEnd()
     return {
       data: results,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('fanService.searchEntities')
+    debug.error('FanService.searchEntities', 'Failed to search entities', { error: err, query })
+    console.groupEnd()
     return {
       data: [],
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.searchFailed')),
@@ -549,20 +696,31 @@ export interface EntityProfile {
  * Get organization profile
  */
 export async function getOrgProfile(orgId: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.getOrgProfile(orgId)
+  debug.data('FanService.getOrgProfile', 'Request', { orgId })
+  debug.perf.start('fanService.getOrgProfile')
 
   try {
+    if (USE_FAKE_DATA) {
+      const result = await fakeService.getOrgProfile(orgId)
+      debug.perf.end('fanService.getOrgProfile')
+      debug.data('FanService.getOrgProfile', 'Response (fake)', { orgId, found: !!result.data })
+      return result
+    }
     const { data, error } = await supabaseAny.rpc('get_org_profile', {
       p_org_id: orgId,
     })
 
     if (error) throw error
 
+    debug.perf.end('fanService.getOrgProfile')
+    debug.data('FanService.getOrgProfile', 'Response', { orgId, orgName: data?.name })
     return {
       data: data as EntityProfile,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('fanService.getOrgProfile')
+    debug.error('FanService.getOrgProfile', 'Failed to get org profile', { error: err, orgId })
     return {
       data: null,
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.getEntityProfileFailed')),
@@ -574,9 +732,16 @@ export async function getOrgProfile(orgId: string): Promise<{ data: EntityProfil
  * Get organization profile by slug (lookup id then call getOrgProfile)
  */
 export async function getOrgProfileBySlug(slug: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.getOrgProfile(slug)
+  debug.data('FanService.getOrgProfileBySlug', 'Request', { slug })
+  debug.perf.start('fanService.getOrgProfileBySlug')
 
   try {
+    if (USE_FAKE_DATA) {
+      const result = await fakeService.getOrgProfileBySlug(slug)
+      debug.perf.end('fanService.getOrgProfileBySlug')
+      debug.data('FanService.getOrgProfileBySlug', 'Response (fake)', { slug, found: !!result.data })
+      return result
+    }
     const { data: orgRow, error: orgError } = await supabaseAny
       .from('organizations')
       .select('id')
@@ -610,11 +775,15 @@ export async function getTeamProfile(teamId: string): Promise<{ data: EntityProf
 
     if (error) throw error
 
+    debug.perf.end('fanService.getTeamProfile')
+    debug.data('FanService.getTeamProfile', 'Response', { teamId, teamName: data?.name })
     return {
       data: data as EntityProfile,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('fanService.getTeamProfile')
+    debug.error('FanService.getTeamProfile', 'Failed to get team profile', { error: err, teamId })
     return {
       data: null,
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.getEntityProfileFailed')),
@@ -626,9 +795,16 @@ export async function getTeamProfile(teamId: string): Promise<{ data: EntityProf
  * Get athlete profile
  */
 export async function getAthleteProfile(athleteId: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.getAthleteProfile(athleteId)
+  debug.data('FanService.getAthleteProfile', 'Request', { athleteId })
+  debug.perf.start('fanService.getAthleteProfile')
 
   try {
+    if (USE_FAKE_DATA) {
+      const result = await fakeService.getAthleteProfile(athleteId)
+      debug.perf.end('fanService.getAthleteProfile')
+      debug.data('FanService.getAthleteProfile', 'Response (fake)', { athleteId, found: !!result.data })
+      return result
+    }
     const { data, error } = await supabaseAny.rpc('get_athlete_profile', {
       p_athlete_id: athleteId,
     })
@@ -680,11 +856,15 @@ export async function getNotificationPreferences(): Promise<{ data: Notification
 
     if (error && error.code !== 'PGRST116') throw error // PGRST116 = not found
 
+    debug.perf.end('fanService.getNotificationPreferences')
+    debug.data('FanService.getNotificationPreferences', 'Response', { found: !!data })
     return {
       data: data || null,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('fanService.getNotificationPreferences')
+    debug.error('FanService.getNotificationPreferences', 'Failed to get preferences', { error: err })
     return {
       data: null,
       error: err instanceof Error ? err : new Error('Failed to get notification preferences'),
@@ -698,9 +878,17 @@ export async function getNotificationPreferences(): Promise<{ data: Notification
 export async function updateNotificationPreferences(
   preferences: Partial<NotificationPreferences>
 ): Promise<{ data: NotificationPreferences | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return { data: null, error: null }
+  console.groupCollapsed(`%cupdateNotificationPreferences`, 'color: #666; font-weight: bold;');
+  debug.flow('FanService.updateNotificationPreferences', 'Updating notification preferences', { preferences })
+  debug.perf.start('fanService.updateNotificationPreferences')
 
   try {
+    if (USE_FAKE_DATA) {
+      debug.perf.end('fanService.updateNotificationPreferences')
+      debug.flow('FanService.updateNotificationPreferences', 'Preferences updated (fake)')
+      console.groupEnd()
+      return { data: null, error: null }
+    }
     const { data: userData } = await supabase.auth.getUser()
     const userId = userData.user?.id
 
@@ -722,11 +910,17 @@ export async function updateNotificationPreferences(
 
     if (error) throw error
 
+    debug.perf.end('fanService.updateNotificationPreferences')
+    debug.flow('FanService.updateNotificationPreferences', 'Preferences updated successfully')
+    console.groupEnd()
     return {
       data: data,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('fanService.updateNotificationPreferences')
+    debug.error('FanService.updateNotificationPreferences', 'Failed to update preferences', { error: err })
+    console.groupEnd()
     return {
       data: null,
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.updateNotificationPreferencesFailed')),

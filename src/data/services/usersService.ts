@@ -19,6 +19,8 @@ import type {
 } from '../../types/staffAndFan'
 import { DEFAULT_STAFF_PERMISSIONS } from '../../constants/permissions'
 import { getUserByEmail, getUserById, fakeUsers } from '../fake/fakeUsers'
+import { listFakeOrganizationUsers } from '../fake/fakeOrgUsers'
+import { debug } from '../../lib/debug'
 
 
 // ============================================================================
@@ -160,21 +162,14 @@ function addFakeAuditEntry(
 export async function getOrganizationUsers(
     context: UserContext
 ): Promise<{ data: OrgUser[]; error: Error | null }> {
+    console.groupCollapsed(`%cgetOrganizationUsers: ${context.orgId}`, 'color: #666; font-weight: bold;');
+    debug.data('UsersService.getOrganizationUsers', 'Request', { context: { userId: context.userId, orgId: context.orgId } })
+    debug.perf.start('usersService.getOrganizationUsers')
+
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
-
-            const demoUsers: OrgUser[] = [
-                {
-                    id: context.userId,
-                    email: 'admin@example.com',
-                    display_name: 'Admin User',
-                    phone: null,
-                    roles: ['admin'],
-                    created_at: new Date().toISOString(),
-                },
-            ]
-
+            const demoUsers = listFakeOrganizationUsers(context.orgId, context.userId)
             return { data: demoUsers, error: null }
         } catch (err) {
             return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
@@ -222,9 +217,14 @@ export async function getOrganizationUsers(
             })
         }
 
+        debug.perf.end('usersService.getOrganizationUsers')
+        debug.data('UsersService.getOrganizationUsers', 'Response', { userCount: Array.from(byUser.values()).length })
+        console.groupEnd()
         return { data: Array.from(byUser.values()), error: null }
     } catch (err) {
-        console.error('[usersService] Exception in getOrganizationUsers:', err)
+        debug.perf.end('usersService.getOrganizationUsers')
+        debug.error('UsersService.getOrganizationUsers', 'Failed to fetch organization users', { error: err, context: { userId: context.userId, orgId: context.orgId } })
+        console.groupEnd()
         return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch organization users') }
     }
 }
@@ -288,8 +288,12 @@ export async function addStaffMember(
   context: UserContext,
   input: StaffMemberInput
 ): Promise<{ data: StaffMember | null; error: Error | null }> {
+  console.groupCollapsed(`%caddStaffMember: ${input.user_id}`, 'color: #666; font-weight: bold;');
+  debug.flow('UsersService.addStaffMember', 'Started', { input: { user_id: input.user_id }, context: { userId: context.userId, orgId: context.orgId } })
+  debug.perf.start('usersService.addStaffMember')
+
   if (USE_FAKE_DATA) {
-    try {
+      try {
       await simulateDelay()
 
       if (!input.org_id || !input.user_id) {
@@ -370,8 +374,14 @@ export async function addStaffMember(
     if (error) throw error
 
     // Fetch the created staff member
+    debug.perf.end('usersService.addStaffMember')
+    debug.flow('UsersService.addStaffMember', 'Staff member added successfully', { userId: input.user_id })
+    console.groupEnd()
     return getStaffMember(context, input.org_id, input.user_id)
   } catch (err) {
+    debug.perf.end('usersService.addStaffMember')
+    debug.error('UsersService.addStaffMember', 'Failed to add staff member', { error: err, input: { userId: input.user_id }, context: { userId: context.userId, orgId: context.orgId } })
+    console.groupEnd()
     return {
       data: null,
       error: err instanceof Error ? err : new Error(t('admin.staff.errors.addStaffMemberFailed' as any)),

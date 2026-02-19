@@ -2,11 +2,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle } from '../components/portal/Typography'
-
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 
 export default function PaymentCancel() {
+  useDebugLifecycle('PaymentCancel')
   const navigate = useNavigate()
 
   useEffect(() => {

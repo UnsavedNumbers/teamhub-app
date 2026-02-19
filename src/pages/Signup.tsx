@@ -7,9 +7,11 @@ import {
   getSetupOrganizationFlag,
   cleanupStaleFlags,
 } from '../utils/setupOrganization'
-import { AUTH_HERO_IMAGES } from '../utils/authImages'
+import { AUTH_PAGE_HERO_IMAGES } from '../utils/authImages'
 import { mapAuthError } from '../utils/authErrorMapper'
 import { supabase } from '../lib/supabase'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+import { debug } from '../lib/debug'
 
 export default function Signup() {
   const [email, setEmail] = useState('')
@@ -23,9 +25,11 @@ export default function Signup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [heroImage, setHeroImage] = useState<string>('')
+  const heroImage = AUTH_PAGE_HERO_IMAGES.signup
   const [inviteEmail, setInviteEmail] = useState<string | null>(null)
   const [isFromInvite, setIsFromInvite] = useState(false)
+  const [tosAccepted, setTosAccepted] = useState(false)
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
 
   const { signUp } = useAuth()
   const { resolvedTheme } = useTheme()
@@ -33,6 +37,9 @@ export default function Signup() {
   const location = useLocation()
   const { t } = useI18n()
   const [logoVersion, setLogoVersion] = useState(0)
+
+  // Add lifecycle logging
+  useDebugLifecycle('Signup')
 
   // Check for setupOrganization flag from both location state and localStorage
   const locationState = location.state as {
@@ -68,14 +75,6 @@ export default function Signup() {
     setLogoVersion(prev => prev + 1)
   }, [resolvedTheme])
 
-  // Select random hero image on mount
-  useEffect(() => {
-    if (AUTH_HERO_IMAGES.length > 0) {
-      const randomImage = AUTH_HERO_IMAGES[Math.floor(Math.random() * AUTH_HERO_IMAGES.length)]
-      setHeroImage(randomImage)
-    }
-  }, [])
-
   // Handle invite details from location state or sessionStorage
   useEffect(() => {
     const fetchInviteDetails = async () => {
@@ -102,8 +101,25 @@ export default function Signup() {
         
         try {
           console.log('[Signup] Fetching invite details for token:', pendingToken)
-          const { data, error: rpcError } = await supabase
-            .rpc('get_parent_invite_details', { p_token: pendingToken })
+          
+          // Check URL params or sessionStorage for invite type
+          const urlParams = new URLSearchParams(window.location.search)
+          const inviteType = urlParams.get('type') || sessionStorage.getItem('pending_invite_type') || 'guardian'
+          sessionStorage.setItem('pending_invite_type', inviteType)
+          
+          // Call appropriate RPC based on invite type
+          let data: any = null
+          let rpcError: any = null
+          
+          if (inviteType === 'athlete') {
+            const result = await (supabase as any).rpc('get_athlete_invite_details', { p_token: pendingToken })
+            data = result.data
+            rpcError = result.error
+          } else {
+            const result = await supabase.rpc('get_parent_invite_details', { p_token: pendingToken })
+            data = result.data
+            rpcError = result.error
+          }
 
           console.log('[Signup] RPC response - data:', data, 'error:', rpcError)
 
@@ -125,8 +141,9 @@ export default function Signup() {
               setEmail(inviteDetails.email)
               setInviteEmail(inviteDetails.email)
               
-              // Store athlete_id in sessionStorage
+              // Store athlete_id and invite type in sessionStorage
               sessionStorage.setItem('pending_invite_athlete_id', inviteDetails.athlete_id)
+              sessionStorage.setItem('pending_invite_type', inviteType)
             } else {
               // Invalid invite - allow editing email
               console.warn('[Signup] Invalid invite details:', inviteDetails.message)
@@ -152,22 +169,35 @@ export default function Signup() {
     e.preventDefault()
     setError(null)
 
+    debug.flow('Signup', 'Form submission started', {
+      email,
+      signupMode,
+      hasFirstName: !!firstName.trim(),
+      hasLastName: !!lastName.trim(),
+      hasPhone: !!phone.trim(),
+      hasZipcode: !!homeZipcode.trim()
+    })
+    debug.perf.start('signup.formSubmission')
+
     // Validation - Bug 3 prevention: trim and check length
     const trimmedFirstName = firstName.trim()
     const trimmedLastName = lastName.trim()
     const trimmedPhone = phone.trim()
 
     if (trimmedFirstName.length === 0) {
+      debug.error('Signup', 'Validation failed', { field: 'firstName', error: 'required' })
       setError('First name is required')
       return
     }
 
     if (trimmedLastName.length === 0) {
+      debug.error('Signup', 'Validation failed', { field: 'lastName', error: 'required' })
       setError('Last name is required')
       return
     }
 
     if (trimmedPhone.length === 0) {
+      debug.error('Signup', 'Validation failed', { field: 'phone', error: 'required' })
       setError('Phone number is required')
       return
     }
@@ -179,31 +209,45 @@ export default function Signup() {
     const trimmedZipcode = homeZipcode.trim()
 
     if (password !== confirmPassword) {
+      debug.error('Signup', 'Validation failed', { field: 'password', error: 'mismatch' })
       setError('Passwords do not match')
       return
     }
 
     if (password.length < 8) {
+      debug.error('Signup', 'Validation failed', { field: 'password', error: 'too_short' })
       setError('Password must be at least 8 characters')
+      return
+    }
+
+    if (!tosAccepted || !privacyAccepted) {
+      debug.error('Signup', 'Validation failed', { field: 'consent', error: 'not_accepted' })
+      setError('You must accept the Terms of Service and Privacy Policy to continue')
       return
     }
 
     setLoading(true)
 
     const { error } = await signUp(
-      email, 
-      password, 
-      trimmedFirstName, 
-      trimmedLastName, 
-      trimmedPhone, 
+      email,
+      password,
+      trimmedFirstName,
+      trimmedLastName,
+      trimmedPhone,
       trimmedZipcode,
-      isOrgSetupFlow
+      isOrgSetupFlow,
+      signupMode
     )
-    
+
     if (error) {
+      debug.perf.end('signup.formSubmission')
+      debug.error('Signup', 'Signup failed', { email, error: error.message })
       setError(mapAuthError(error, t))
       setLoading(false)
     } else {
+      debug.perf.end('signup.formSubmission')
+      debug.flow('Signup', 'Signup successful', { email, signupMode, isOrgSetupFlow })
+      setLoading(false)
       // Get athlete_id from sessionStorage if available (from invite flow)
       const athleteId = sessionStorage.getItem('pending_invite_athlete_id')
       
@@ -584,19 +628,51 @@ export default function Signup() {
               )}
             </div>
 
-            {/* Terms */}
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              By creating an account, you agree to our{' '}
-              <a href="#" tabIndex={9} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Terms of Service</a>
-              {' '}and{' '}
-              <a href="#" tabIndex={10} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Privacy Policy</a>
-            </p>
+            {/* Terms and Privacy Consent */}
+            <div className="space-y-3">
+              <div className="flex items-start">
+                <input
+                  id="tos"
+                  name="tos"
+                  type="checkbox"
+                  required
+                  checked={tosAccepted}
+                  onChange={(e) => setTosAccepted(e.target.checked)}
+                  tabIndex={9}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-[var(--org-btn-primary-bg, #137fec)] focus:ring-[var(--org-btn-primary-bg, #137fec)]"
+                />
+                <label htmlFor="tos" className="ml-2 text-xs text-slate-600 dark:text-slate-400">
+                  I agree to the{' '}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors underline">
+                    Terms of Service
+                  </a>
+                </label>
+              </div>
+              <div className="flex items-start">
+                <input
+                  id="privacy"
+                  name="privacy"
+                  type="checkbox"
+                  required
+                  checked={privacyAccepted}
+                  onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                  tabIndex={10}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-[var(--org-btn-primary-bg, #137fec)] focus:ring-[var(--org-btn-primary-bg, #137fec)]"
+                />
+                <label htmlFor="privacy" className="ml-2 text-xs text-slate-600 dark:text-slate-400">
+                  I agree to the{' '}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors underline">
+                    Privacy Policy
+                  </a>
+                </label>
+              </div>
+            </div>
 
             {/* Submit */}
             <div>
               <button
                 type="submit"
-                disabled={loading || (password !== confirmPassword && confirmPassword.length > 0)}
+                disabled={loading || (password !== confirmPassword && confirmPassword.length > 0) || !tosAccepted || !privacyAccepted}
                 tabIndex={8}
                 className="bg-slate-900 dark:bg-white text-white dark:text-black px-8 py-3 font-black text-sm tracking-widest uppercase w-full hover:bg-[#5468FF] dark:hover:bg-[#5468FF] dark:hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
               >

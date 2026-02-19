@@ -10,6 +10,7 @@
 
 import { DEMO_USER_IDS, DEMO_ORG_A_ID, USER_CONTEXT_TIMEOUT_MS } from '../config'
 import type { OrgMemberRole } from '../../contexts/OrganizationContext'
+import { getUserByEmail, getUserOrganizations } from './fakeUsers'
 
 // ============================================================================
 // Types
@@ -317,7 +318,7 @@ const VALID_EVENT_TYPES = [
 
 const VALID_RSVP_STATUSES = ['going', 'late', 'not_going', 'unknown'] as const
 
-const VALID_ORG_MEMBER_ROLES = ['parent', 'coach', 'org_admin', 'staff'] as const
+const VALID_ORG_MEMBER_ROLES = ['parent', 'coach', 'org_admin', 'staff', 'athlete'] as const
 
 const VALID_ORG_TYPES = ['school', 'club', 'league', 'academy', 'aau'] as const
 
@@ -423,30 +424,45 @@ export async function waitForUserContext(
  * Returns fully populated context for specified demo user email
  */
 export function getDemoUserContext(email: string): UserContext | null {
-    const userId = resolveDemoUserId(email)
-    if (!userId) return null
+    const normalizedEmail = email.toLowerCase().trim()
+    const userId = resolveDemoUserId(normalizedEmail)
 
-    // Define roles based on email pattern
-    let roles: OrgMemberRole[] = []
-    let isPlatformAdmin = false
+    if (userId) {
+        let roles: OrgMemberRole[] = []
+        if (normalizedEmail.includes('parent-only')) {
+            roles = ['parent']
+        } else if (normalizedEmail.includes('coach-only')) {
+            roles = ['coach']
+        } else if (normalizedEmail.includes('admin-only')) {
+            roles = ['org_admin']
+        } else if (normalizedEmail.includes('parent-admin')) {
+            roles = ['parent', 'org_admin']
+        } else if (normalizedEmail.includes('parent-coach')) {
+            roles = ['parent', 'coach']
+        } else if (normalizedEmail.includes('athlete')) {
+            roles = ['athlete']
+        }
 
-    if (email.includes('parent-only')) {
-        roles = ['parent']
-    } else if (email.includes('coach-only')) {
-        roles = ['coach']
-    } else if (email.includes('admin-only')) {
-        roles = ['org_admin']
-    } else if (email.includes('parent-admin')) {
-        roles = ['parent', 'org_admin']
-    } else if (email.includes('parent-coach')) {
-        roles = ['parent', 'coach']
+        return {
+            userId,
+            email: normalizedEmail,
+            orgId: DEMO_ORG_A_ID,
+            roles,
+            isPlatformAdmin: false,
+        }
     }
 
+    const fakeUser = getUserByEmail(normalizedEmail)
+    if (!fakeUser) return null
+
+    const memberships = getUserOrganizations(fakeUser.id)
+    const primaryMembership = memberships[0]
+
     return {
-        userId,
-        email,
-        orgId: DEMO_ORG_A_ID,
-        roles,
-        isPlatformAdmin,
+        userId: fakeUser.id,
+        email: normalizedEmail,
+        orgId: primaryMembership?.org_id ?? DEMO_ORG_A_ID,
+        roles: primaryMembership?.roles ?? ['parent'],
+        isPlatformAdmin: false,
     }
 }

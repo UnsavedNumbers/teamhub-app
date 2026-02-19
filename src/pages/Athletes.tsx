@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
+import { useOrganization } from '../contexts/OrganizationContext'
 import { getAthletes } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
@@ -12,8 +13,14 @@ import AthleteAvatar from '../components/portal/AthleteAvatar'
 import type { Athlete } from '../types/family'
 import { getDisplayName, calculateAge, getGenderLabel, formatSports } from '../utils/athleteHelpers'
 import { showError } from '../utils/toast'
+import { supabase } from '../lib/supabase'
+import { USE_FAKE_DATA } from '../data/config'
+
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 
 export default function Athletes() {
+  useDebugLifecycle('Athletes')
+  
   const t = useT()
   const navigate = useNavigate()
   const [athletes, setAthletes] = useState<Athlete[]>([])
@@ -21,6 +28,10 @@ export default function Athletes() {
   const [error, setError] = useState<string | null>(null)
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
+  
+  // Check if user is an athlete
+  const isAthlete = currentOrganization?.roles?.includes('athlete') ?? false
 
   // Race condition and memory leak prevention
   const requestIdRef = useRef(0)
@@ -28,7 +39,7 @@ export default function Athletes() {
 
   // Fetch athletes when ready - using useEffect directly to avoid callback re-creation issues
   useEffect(() => {
-    console.log('[Athletes] Effect running, isReady:', isReady, 'mounted:', isMountedRef.current)
+    console.log('[Athletes] Effect running, isReady:', isReady, 'mounted:', isMountedRef.current, 'isAthlete:', isAthlete)
     if (!isReady) {
       setLoading(false)
       return
@@ -42,50 +53,175 @@ export default function Athletes() {
     setLoading(true)
     setError(null)
     
-    getAthletes(context)
-      .then(({ data, error: fetchError }) => {
-        console.log('[Athletes] Promise resolved, requestId:', currentRequestId, 'current:', requestIdRef.current, 'mounted:', isMountedRef.current)
-        // Only update state if this is the latest request and component is still mounted
-        if (currentRequestId === requestIdRef.current && isMountedRef.current) {
-          console.log('[Athletes] Updating state with data:', data?.length)
-          if (fetchError) {
-            const errorMessage = fetchError.message || 'Failed to load athletes. Please try again.'
-            console.error('[Athletes] Error fetching athletes:', fetchError)
+    // For athletes, fetch team roster instead of all athletes
+    // In fake data mode, use getAthletes() which returns appropriate fake data
+    if (isAthlete && !USE_FAKE_DATA) {
+      // Real Supabase: Get athlete's own athlete_id
+      supabase
+        .from('athletes')
+        .select('id')
+        .eq('user_id', context.userId)
+        .eq('org_id', context.orgId)
+        .single()
+        .then(({ data: athleteData, error: athleteError }) => {
+          if (athleteError || !athleteData) {
+            if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+              setError('Unable to find your athlete profile.')
+              setAthletes([])
+              setLoading(false)
+            }
+            return
+          }
+          
+          const athleteId = athleteData.id
+          
+          // Get athlete's team memberships
+          supabase
+            .from('team_memberships')
+            .select('team_id')
+            .eq('athlete_id', athleteId)
+            .eq('status', 'active')
+            .then(({ data: memberships, error: memError }) => {
+              if (memError || !memberships || memberships.length === 0) {
+                if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+                  setAthletes([])
+                  setLoading(false)
+                }
+                return
+              }
+              
+              const teamIds = [...new Set(memberships.map(m => m.team_id))]
+              
+              // Get all athletes in those teams
+              supabase
+                .from('team_memberships')
+                .select(`
+                  athlete_id,
+                  athletes!inner(
+                    id,
+                    first_name,
+                    last_name,
+                    birthdate,
+                    gender,
+                    preferred_name,
+                    jersey_number,
+                    medical_notes,
+                    allergies,
+                    emergency_contact_name,
+                    emergency_contact_phone,
+                    phone,
+                    email,
+                    profile_photo_updated_at,
+                    has_profile_photo,
+                    org_id,
+                    created_at,
+                    updated_at,
+                    deleted_at
+                  )
+                `)
+                .in('team_id', teamIds)
+                .eq('status', 'active')
+                .eq('athletes.org_id', context.orgId)
+                .is('athletes.deleted_at', null)
+                .then(({ data: rosterData, error: rosterError }) => {
+                  if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+                    if (rosterError) {
+                      const errorMessage = rosterError.message || t('portal.athletes.errors.teamRosterLoadFailed')
+                      setError(errorMessage)
+                      setAthletes([])
+                      showError(errorMessage)
+                    } else if (rosterData) {
+                      // Transform to Athlete[] format
+                      const uniqueAthletes = new Map<string, Athlete>()
+                      rosterData.forEach((row: any) => {
+                        const athlete = row.athletes
+                        if (athlete && !uniqueAthletes.has(athlete.id)) {
+                          uniqueAthletes.set(athlete.id, {
+                            id: athlete.id,
+                            family_id: null,
+                            first_name: athlete.first_name,
+                            last_name: athlete.last_name,
+                            date_of_birth: athlete.birthdate ? new Date(athlete.birthdate).toISOString().split('T')[0] : '',
+                            gender: athlete.gender,
+                            preferred_name: athlete.preferred_name ?? null,
+                            jersey_number: athlete.jersey_number ?? null,
+                            medical_notes: athlete.medical_notes ?? null,
+                            allergies: athlete.allergies ?? null,
+                            emergency_contact_name: athlete.emergency_contact_name ?? null,
+                            emergency_contact_phone: athlete.emergency_contact_phone ?? null,
+                            phone: athlete.phone ?? null,
+                            email: athlete.email ?? null,
+                            photo_url: null,
+                            profile_photo_updated_at: athlete.profile_photo_updated_at ?? null,
+                            has_profile_photo: athlete.has_profile_photo ?? false,
+                            org_id: athlete.org_id,
+                            created_at: athlete.created_at ?? new Date().toISOString(),
+                            updated_at: athlete.updated_at ?? new Date().toISOString(),
+                            deleted_at: athlete.deleted_at,
+                            sports: [],
+                            has_active_guardian: false,
+                          } as unknown as Athlete)
+                        }
+                      })
+                      setAthletes(Array.from(uniqueAthletes.values()))
+                      setError(null)
+                    } else {
+                      setAthletes([])
+                      setError(null)
+                    }
+                    setLoading(false)
+                  }
+                })
+            })
+        })
+    } else {
+      // For parents/coaches, or athletes in fake data mode, use existing logic
+      // Note: In fake data mode, athletes will see fake athlete data (realistic team view)
+      getAthletes(context)
+        .then(({ data, error: fetchError }) => {
+          console.log('[Athletes] Promise resolved, requestId:', currentRequestId, 'current:', requestIdRef.current, 'mounted:', isMountedRef.current)
+          // Only update state if this is the latest request and component is still mounted
+          if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+            console.log('[Athletes] Updating state with data:', data?.length)
+            if (fetchError) {
+              const errorMessage = fetchError.message || 'Failed to load athletes. Please try again.'
+              console.error('[Athletes] Error fetching athletes:', fetchError)
+              setError(errorMessage)
+              setAthletes([])
+              showError(errorMessage)
+            } else if (data) {
+              console.log('[Athletes] Setting athletes:', data.length)
+              setAthletes(data)
+              setError(null)
+            } else {
+              console.log('[Athletes] No data, setting empty')
+              setAthletes([])
+              setError(null)
+            }
+            console.log('[Athletes] Setting loading to false')
+            setLoading(false)
+          } else {
+            console.log('[Athletes] Skipping update - stale or unmounted')
+          }
+        })
+        .catch((err) => {
+          console.error('[Athletes] Exception fetching athletes:', err)
+          if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to load athletes. Please try again.'
             setError(errorMessage)
             setAthletes([])
+            setLoading(false)
             showError(errorMessage)
-          } else if (data) {
-            console.log('[Athletes] Setting athletes:', data.length)
-            setAthletes(data)
-            setError(null)
-          } else {
-            console.log('[Athletes] No data, setting empty')
-            setAthletes([])
-            setError(null)
           }
-          console.log('[Athletes] Setting loading to false')
-          setLoading(false)
-        } else {
-          console.log('[Athletes] Skipping update - stale or unmounted')
-        }
-      })
-      .catch((err) => {
-        console.error('[Athletes] Exception fetching athletes:', err)
-        if (currentRequestId === requestIdRef.current && isMountedRef.current) {
-          const errorMessage = err instanceof Error ? err.message : 'Failed to load athletes. Please try again.'
-          setError(errorMessage)
-          setAthletes([])
-          setLoading(false)
-          showError(errorMessage)
-        }
-      })
+        })
+    }
     
     // Cleanup function to mark as unmounted when effect re-runs or component unmounts
     return () => {
       console.log('[Athletes] Effect cleanup, setting mounted to false')
       isMountedRef.current = false
     }
-  }, [context.userId, context.orgId, isReady])
+  }, [context.userId, context.orgId, isReady, isAthlete])
 
   const fetchAthletes = () => {
     if (!isReady) return
@@ -127,7 +263,12 @@ export default function Athletes() {
 
   const handleCardClick = (athleteId: string) => {
     if (loading) return
-    navigate(`/portal/athletes/${athleteId}/edit`)
+    // For athletes, navigate to profile page; for parents, navigate to edit page
+    if (isAthlete) {
+      navigate(`/portal/athletes/${athleteId}/profile`)
+    } else {
+      navigate(`/portal/athletes/${athleteId}/edit`)
+    }
   }
 
   const handleAddAthlete = () => {
@@ -143,19 +284,21 @@ export default function Athletes() {
     <PortalLayout
       breadcrumbs={[
         { label: 'Home', path: '/portal/dashboard' },
-        { label: 'My Athletes' },
+        { label: isAthlete ? 'My Team' : 'My Athletes' },
       ]}
     >
       <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 sm:gap-6">
         <div className="flex-1">
-          <PageTitle>My Athletes</PageTitle>
+          <PageTitle>{isAthlete ? 'My Team' : 'My Athletes'}</PageTitle>
           <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
-            Manage your children's profiles and information.
+            {isAthlete ? 'View your team members and their profiles.' : 'Manage your children\'s profiles and information.'}
           </p>
         </div>
-        <Button variant="primary" onClick={handleAddAthlete} disabled={loading} className="w-full sm:w-auto">
-          Add Athlete
-        </Button>
+        {!isAthlete && (
+          <Button variant="primary" onClick={handleAddAthlete} disabled={loading} className="w-full sm:w-auto">
+            Add Athlete
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -173,9 +316,11 @@ export default function Athletes() {
             <Button variant="primary" onClick={handleRetry} disabled={loading} className="w-full sm:w-auto">
               Retry
             </Button>
-            <Button variant="secondary" onClick={handleAddAthlete} disabled={loading} className="w-full sm:w-auto">
-              Add Athlete
-            </Button>
+            {!isAthlete && (
+              <Button variant="secondary" onClick={handleAddAthlete} disabled={loading} className="w-full sm:w-auto">
+                Add Athlete
+              </Button>
+            )}
           </div>
         </Card>
       ) : athletes.length === 0 ? (
@@ -183,11 +328,13 @@ export default function Athletes() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
             <Icon name="group" size="text-4xl" className="text-slate-400" />
           </div>
-          <CardTitle className="mb-2">{t('portal.children.noChildren')}</CardTitle>
-          <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.children.addChildren')}</p>
-          <Button variant="primary" onClick={handleAddAthlete} disabled={loading}>
-            {t('portal.children.add')}
-          </Button>
+          <CardTitle className="mb-2">{isAthlete ? t('portal.athletes.noTeamMembers') : t('portal.children.noChildren')}</CardTitle>
+          <p className="text-slate-500 dark:text-slate-400 mb-6">{isAthlete ? t('portal.athletes.noTeamMembersDescription') : t('portal.children.addChildren')}</p>
+          {!isAthlete && (
+            <Button variant="primary" onClick={handleAddAthlete} disabled={loading}>
+              {t('portal.children.add')}
+            </Button>
+          )}
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -200,20 +347,21 @@ export default function Athletes() {
             return (
               <Card
                 key={athlete.id}
+                noPadding
                 className="relative overflow-hidden rounded-xl hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/20 transition-all duration-300 cursor-pointer group"
                 onClick={() => handleCardClick(athlete.id)}
               >
-                {/* Image/Avatar Section */}
+                {/* Image spans full card */}
                 <div className="w-full aspect-square relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
                   <AthleteAvatar athlete={athlete} size="xl" className="w-full h-full rounded-none object-cover" />
                   {/* Gradient overlay for better text readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
                 </div>
 
-                {/* Content Overlay */}
-                <div className="absolute inset-0 flex flex-col justify-end p-4">
+                {/* Content Overlay - enough bottom padding so full name is visible */}
+                <div className="absolute inset-0 flex flex-col justify-end pb-6 pt-4 px-4">
                   <div className="text-white">
-                    <CardTitle className="text-xl font-bold mb-1 text-white drop-shadow-lg">{displayName}</CardTitle>
+                    <CardTitle className="text-xl font-bold mb-1 text-white drop-shadow-lg break-words">{displayName}</CardTitle>
                     
                     <div className="flex flex-wrap gap-2 text-sm font-medium text-white/95 mb-3 drop-shadow">
                       {age !== null && (
@@ -223,12 +371,6 @@ export default function Athletes() {
                         <>
                           {age !== null && <span>•</span>}
                           <span>{genderLabel}</span>
-                        </>
-                      )}
-                      {athlete.jersey_number && (
-                        <>
-                          {(age !== null || genderLabel !== 'Not specified') && <span>•</span>}
-                          <span>#{athlete.jersey_number}</span>
                         </>
                       )}
                     </div>
@@ -251,7 +393,7 @@ export default function Athletes() {
                       </div>
                     )}
 
-                    {/* Edit Button */}
+                    {/* Action Button */}
                     <Button
                       variant="secondary"
                       className="w-full text-sm px-4 py-2 bg-white/95 hover:bg-white text-slate-900 font-semibold border-0 shadow-lg opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-200"
@@ -261,7 +403,7 @@ export default function Athletes() {
                       }}
                       disabled={loading}
                     >
-                      Edit Profile
+                      {isAthlete ? 'View Profile' : 'Edit Profile'}
                     </Button>
                   </div>
                 </div>

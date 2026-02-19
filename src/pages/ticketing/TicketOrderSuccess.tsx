@@ -13,7 +13,11 @@ import { getPublicOrderWithTickets, resendTickets, type PublicOrderResponse } fr
 import { useRouteLink } from '@/utils/routes'
 import TicketCard from '@/components/ticketing/TicketCard'
 
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketOrderSuccess() {
+  useDebugLifecycle('TicketOrderSuccess')
+  
   const { orderId } = useParams<{ orderId: string }>()
   const myTicketsLink = useRouteLink('portal.myTickets')
   const [isResending, setIsResending] = useState(false)

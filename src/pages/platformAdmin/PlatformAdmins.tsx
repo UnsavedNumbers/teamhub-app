@@ -40,7 +40,10 @@ function validateAddAdminParams(email: string, role: PlatformAdminRole, reason: 
   return null // Valid
 }
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function PlatformAdmins() {
+  useDebugLifecycle('PlatformAdmins')
   const { profile, refreshProfile } = useAuth()
   const t = useT()
   const adminRole = profile?.platformAdminRole ?? null // Bug Prevention #1, Technical Bug #4

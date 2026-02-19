@@ -117,6 +117,7 @@ export interface TicketedEventSummary {
     sales_start_at: string | null
     sales_end_at: string | null
     status: 'draft' | 'published' | 'archived' | string
+    visibility?: 'visible' | 'hidden' | null
     event_description: string | null
     ticket_banner_url: string | null
     ticket_types?: TicketTypeSummary[]
@@ -301,6 +302,7 @@ export interface TicketingFormData {
     sales_start_at: string
     sales_end_at: string
     status: string
+    internal_description: string
     event_description: string
     ticket_banner_url: string
     ticket_types: TicketTypeFormData[]
@@ -309,8 +311,10 @@ export interface TicketingFormData {
 export interface TicketTypeFormData {
     /** Present when editing an existing ticket type */
     id?: string
+    seat_map_id?: string | null
     /** Sold count for display/validation; from DB (capacity_total - capacity_remaining) */
     soldCount?: number
+    seating_mode?: 'general_admission' | 'reserved_seating'
     name: string
     description: string
     price_dollars: string

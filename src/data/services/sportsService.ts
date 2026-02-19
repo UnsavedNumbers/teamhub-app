@@ -13,6 +13,7 @@ import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext } from '../fake/userContext'
 import { logSportEvent } from '../../utils/eventLogger'
+import { debug } from '../../lib/debug'
 import {
     getSportById,
     getSportsForOrg,
@@ -59,6 +60,10 @@ function isSystemSport(sport: { org_id: string | null } | null | undefined): boo
  * System sports are identified by org_id IS NULL and is_system = true
  */
 export async function getSystemSports(): Promise<{ data: Sport[]; error: Error | null }> {
+    console.groupCollapsed(`%cgetSystemSports`, 'color: #666; font-weight: bold;');
+    debug.data('SportsService.getSystemSports', 'Request')
+    debug.perf.start('sportsService.getSystemSports')
+
     try {
         // System sports are identified by org_id IS NULL and is_system = true
         const { data, error } = await supabase
@@ -95,8 +100,14 @@ export async function getSystemSports(): Promise<{ data: Sport[]; error: Error |
             is_system: sport.is_system ?? true,
         }))
 
+        debug.perf.end('sportsService.getSystemSports')
+        debug.data('SportsService.getSystemSports', 'Response', { sportCount: normalizedSports.length })
+        console.groupEnd()
         return { data: normalizedSports, error: null }
     } catch (err) {
+        debug.perf.end('sportsService.getSystemSports')
+        debug.error('SportsService.getSystemSports', 'Failed to get system sports', { error: err })
+        console.groupEnd()
         console.error('[sportsService] Error getting system sports:', err)
         // Handle network errors in catch block
         if (err instanceof Error) {
@@ -116,13 +127,19 @@ export async function getSystemSports(): Promise<{ data: Sport[]; error: Error |
 export async function getSports(
     context: UserContext
 ): Promise<{ data: Sport[] | FakeSport[]; error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        const sports = getSportsForOrg(context.orgId)
-        return { data: sports, error: null }
-    }
+    console.groupCollapsed(`%cgetSports: ${context.orgId}`, 'color: #666; font-weight: bold;');
+    debug.data('SportsService.getSports', 'Request', { context: { userId: context.userId, orgId: context.orgId } })
+    debug.perf.start('sportsService.getSports')
 
     try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const sports = getSportsForOrg(context.orgId)
+            debug.perf.end('sportsService.getSports')
+            debug.data('SportsService.getSports', 'Response (fake)', { sportCount: sports.length })
+            console.groupEnd()
+            return { data: sports, error: null }
+        }
         // Validate context
         if (!context.orgId) {
             return { data: [], error: new Error('Organization ID is required') }
@@ -204,8 +221,14 @@ export async function getSports(
         })
         const sports = Array.from(sportsMap.values()).sort((a: Sport, b: Sport) => a.name.localeCompare(b.name))
 
+        debug.perf.end('sportsService.getSports')
+        debug.data('SportsService.getSports', 'Response', { sportCount: sports.length })
+        console.groupEnd()
         return { data: sports as Sport[], error: null }
     } catch (err) {
+        debug.perf.end('sportsService.getSports')
+        debug.error('SportsService.getSports', 'Failed to fetch sports', { error: err, context: { userId: context.userId, orgId: context.orgId } })
+        console.groupEnd()
         console.error('[sportsService] Error getting sports:', err)
         // Handle network errors in catch block
         if (err instanceof Error) {
@@ -254,8 +277,14 @@ export async function getSport(
             is_system: data.is_system ?? (data.org_id === null),
         }
         
+        debug.perf.end('sportsService.getSport')
+        debug.data('SportsService.getSport', 'Response', { sportId, hasData: !!normalizedSport })
+        console.groupEnd()
         return { data: normalizedSport, error: null }
     } catch (err) {
+        debug.perf.end('sportsService.getSport')
+        debug.error('SportsService.getSport', 'Failed to get sport', { error: err, sportId })
+        console.groupEnd()
         console.error('[sportsService] Error getting sport:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -288,6 +317,9 @@ export async function getSportBySlug(
         if (error) {
             if (error.code === 'PGRST116') {
                 // No rows returned
+                debug.perf.end('sportsService.getSportBySlug')
+                debug.data('SportsService.getSportBySlug', 'Response (not found)', { sportSlug })
+                console.groupEnd()
                 return { data: null, error: null }
             }
             throw error
@@ -295,6 +327,9 @@ export async function getSportBySlug(
         
         // Verify the sport is accessible to this org (either system sport or org sport)
         if (data.org_id && data.org_id !== context.orgId) {
+            debug.perf.end('sportsService.getSportBySlug')
+            debug.error('SportsService.getSportBySlug', 'Sport not accessible to org', { sportSlug, orgId: context.orgId, sportOrgId: data.org_id })
+            console.groupEnd()
             return { data: null, error: new Error('Sport not found') }
         }
         
@@ -311,8 +346,14 @@ export async function getSportBySlug(
             is_system: data.is_system ?? (data.org_id === null),
         }
         
+        debug.perf.end('sportsService.getSportBySlug')
+        debug.data('SportsService.getSportBySlug', 'Response', { sportSlug, hasData: !!normalizedSport })
+        console.groupEnd()
         return { data: normalizedSport, error: null }
     } catch (err) {
+        debug.perf.end('sportsService.getSportBySlug')
+        debug.error('SportsService.getSportBySlug', 'Failed to get sport by slug', { error: err, sportSlug })
+        console.groupEnd()
         console.error('[sportsService] Error getting sport by slug:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -325,8 +366,15 @@ export async function getSportBySlug(
 export async function createSport(
     dto: CreateSportDTO
 ): Promise<{ data: Sport | null; error: Error | null }> {
+    console.groupCollapsed(`%ccreateSport: ${dto.name}`, 'color: #666; font-weight: bold;');
+    debug.flow('SportsService.createSport', 'Creating sport', { orgId: dto.org_id, name: dto.name })
+    debug.perf.start('sportsService.createSport')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
+        debug.perf.end('sportsService.createSport')
+        debug.error('SportsService.createSport', 'Not available in demo mode', { name: dto.name })
+        console.groupEnd()
         return {
             data: null,
             error: new Error('Create operations are not available in demo mode. Please sign in to add sports to your organization.')
@@ -336,18 +384,27 @@ export async function createSport(
     try {
         // Validate input
         if (!dto.org_id || !dto.org_id.trim()) {
+            debug.perf.end('sportsService.createSport')
+            debug.error('SportsService.createSport', 'Organization ID is required', { name: dto.name })
+            console.groupEnd()
             return { data: null, error: new Error('Organization ID is required') }
         }
 
         // Validate UUID format for org_id
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
         if (!uuidRegex.test(dto.org_id)) {
+            debug.perf.end('sportsService.createSport')
+            debug.error('SportsService.createSport', 'Invalid organization ID format', { orgId: dto.org_id, name: dto.name })
+            console.groupEnd()
             return { data: null, error: new Error('Invalid organization ID format') }
         }
 
         // Find the system sport by name (case-insensitive)
         const normalizedName = dto.name.trim()
         if (!normalizedName || normalizedName.length > 100) {
+            debug.perf.end('sportsService.createSport')
+            debug.error('SportsService.createSport', 'Invalid sport name', { name: dto.name })
+            console.groupEnd()
             return { data: null, error: new Error('Invalid sport name: must be between 1 and 100 characters') }
         }
 
@@ -364,17 +421,29 @@ export async function createSport(
         if (findError) {
             // Check for network errors
             if (findError.message?.includes('network') || findError.message?.includes('fetch') || findError.message?.includes('timeout')) {
+                debug.perf.end('sportsService.createSport')
+                debug.error('SportsService.createSport', 'Network error finding system sport', { error: findError, name: dto.name })
+                console.groupEnd()
                 return { data: null, error: new Error('Network error. Please check your internet connection and try again.') }
             }
             // Check for RLS/permission errors
             if (findError.message?.includes('row-level security') || findError.message?.includes('RLS') || findError.code === '42501') {
+                debug.perf.end('sportsService.createSport')
+                debug.error('SportsService.createSport', 'Permission denied', { error: findError, name: dto.name })
+                console.groupEnd()
                 return { data: null, error: new Error('Permission denied. You do not have access to view system sports.') }
             }
+            debug.perf.end('sportsService.createSport')
+            debug.error('SportsService.createSport', 'Failed to find system sport', { error: findError, name: dto.name })
+            console.groupEnd()
             console.error('[sportsService] Error finding system sport:', findError)
             return { data: null, error: new Error(`Failed to find sport: ${findError.message || 'Unknown error'}`) }
         }
 
         if (!systemSports) {
+            debug.perf.end('sportsService.createSport')
+            debug.error('SportsService.createSport', 'Sport not found', { name: dto.name })
+            console.groupEnd()
             return { data: null, error: new Error('Sport not found. Please select from the available system sports.') }
         }
 
@@ -413,26 +482,44 @@ export async function createSport(
         if (linkError) {
             // Check for network errors
             if (linkError.message?.includes('network') || linkError.message?.includes('fetch') || linkError.message?.includes('timeout')) {
+                debug.perf.end('sportsService.createSport')
+                debug.error('SportsService.createSport', 'Network error linking sport', { error: linkError, name: dto.name })
+                console.groupEnd()
                 return { data: null, error: new Error('Network error. Please check your internet connection and try again.') }
             }
             // Check for RLS/permission errors
             if (linkError.message?.includes('row-level security') || linkError.message?.includes('RLS') || linkError.code === '42501') {
+                debug.perf.end('sportsService.createSport')
+                debug.error('SportsService.createSport', 'Permission denied linking sport', { error: linkError, name: dto.name })
+                console.groupEnd()
                 return { data: null, error: new Error('Permission denied. You do not have permission to add sports to this organization.') }
             }
             // Check for constraint violations (duplicate key)
             if (linkError.code === '23505' || linkError.message?.includes('duplicate key') || linkError.message?.includes('unique constraint')) {
                 // This shouldn't happen since we checked above, but handle gracefully
+                debug.perf.end('sportsService.createSport')
+                debug.flow('SportsService.createSport', 'Sport already linked (constraint)', { orgId: dto.org_id, sportId: systemSports.id, name: dto.name })
+                console.groupEnd()
                 return { data: systemSports as Sport, error: null }
             }
             // Check for foreign key violations
             if (linkError.code === '23503' || linkError.message?.includes('foreign key')) {
+                debug.perf.end('sportsService.createSport')
+                debug.error('SportsService.createSport', 'Foreign key violation', { error: linkError, name: dto.name })
+                console.groupEnd()
                 return { data: null, error: new Error('Invalid organization or sport. Please refresh the page and try again.') }
             }
+            debug.perf.end('sportsService.createSport')
+            debug.error('SportsService.createSport', 'Failed to link sport', { error: linkError, name: dto.name })
+            console.groupEnd()
             console.error('[sportsService] Error linking sport:', linkError)
             return { data: null, error: new Error(`Failed to add sport: ${linkError.message || 'Unknown error'}`) }
         }
 
         if (!linkData) {
+            debug.perf.end('sportsService.createSport')
+            debug.error('SportsService.createSport', 'No link data returned', { name: dto.name })
+            console.groupEnd()
             return { data: null, error: new Error('Failed to create sport link. Please try again.') }
         }
 
@@ -455,8 +542,14 @@ export async function createSport(
             // Continue - audit logging failure shouldn't break the operation
         }
 
+        debug.perf.end('sportsService.createSport')
+        debug.flow('SportsService.createSport', 'Sport linked successfully', { orgId: dto.org_id, sportId: systemSports.id, name: dto.name })
+        console.groupEnd()
         return { data: systemSports as Sport, error: null }
     } catch (err) {
+        debug.perf.end('sportsService.createSport')
+        debug.error('SportsService.createSport', 'Exception linking sport', { error: err, name: dto.name })
+        console.groupEnd()
         console.error('[sportsService] Error linking sport:', err)
         // Handle network errors in catch block
         if (err instanceof Error) {
@@ -498,6 +591,9 @@ export async function updateSport(
 
         // System sports cannot be updated (system sports have org_id = NULL)
         if (isSystemSport(sport)) {
+            debug.perf.end('sportsService.updateSport')
+            debug.error('SportsService.updateSport', 'Cannot update system sport', { sportId })
+            console.groupEnd()
             return { data: null, error: new Error('System sports cannot be modified. They are predefined for consistency.') }
         }
 
@@ -522,8 +618,14 @@ export async function updateSport(
             .single()
 
         if (error) throw error
+        debug.perf.end('sportsService.updateSport')
+        debug.flow('SportsService.updateSport', 'Sport updated successfully', { sportId })
+        console.groupEnd()
         return { data: data as Sport, error: null }
     } catch (err) {
+        debug.perf.end('sportsService.updateSport')
+        debug.error('SportsService.updateSport', 'Failed to update sport', { error: err, sportId })
+        console.groupEnd()
         console.error('[sportsService] Error updating sport:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -538,24 +640,40 @@ export async function deleteSport(
     context: UserContext,
     sportId: string
 ): Promise<{ error: Error | null }> {
+    console.groupCollapsed(`%cdeleteSport: ${sportId}`, 'color: #666; font-weight: bold;');
+    debug.flow('SportsService.deleteSport', 'Deleting sport', { sportId, orgId: context.orgId })
+    debug.perf.start('sportsService.deleteSport')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
+        debug.perf.end('sportsService.deleteSport')
+        debug.error('SportsService.deleteSport', 'Not available in demo mode', { sportId })
+        console.groupEnd()
         return { error: new Error('Delete operations are not available in demo mode. Please sign in to remove sports from your organization.') }
     }
 
     try {
         // Validate input
         if (!sportId || !sportId.trim()) {
+            debug.perf.end('sportsService.deleteSport')
+            debug.error('SportsService.deleteSport', 'Sport ID is required', { orgId: context.orgId })
+            console.groupEnd()
             return { error: new Error('Sport ID is required') }
         }
 
         // Validate UUID format
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
         if (!uuidRegex.test(sportId)) {
+            debug.perf.end('sportsService.deleteSport')
+            debug.error('SportsService.deleteSport', 'Invalid sport ID format', { sportId, orgId: context.orgId })
+            console.groupEnd()
             return { error: new Error('Invalid sport ID format') }
         }
 
         if (!context.orgId) {
+            debug.perf.end('sportsService.deleteSport')
+            debug.error('SportsService.deleteSport', 'Organization ID is required', { sportId })
+            console.groupEnd()
             return { error: new Error('Organization ID is required') }
         }
 
@@ -569,20 +687,35 @@ export async function deleteSport(
         if (fetchError) {
             // Check for network errors
             if (fetchError.message?.includes('network') || fetchError.message?.includes('fetch') || fetchError.message?.includes('timeout')) {
+                debug.perf.end('sportsService.deleteSport')
+                debug.error('SportsService.deleteSport', 'Network error fetching sport', { error: fetchError, sportId })
+                console.groupEnd()
                 return { error: new Error('Network error. Please check your internet connection and try again.') }
             }
             // Check for RLS/permission errors
             if (fetchError.message?.includes('row-level security') || fetchError.message?.includes('RLS') || fetchError.code === '42501') {
+                debug.perf.end('sportsService.deleteSport')
+                debug.error('SportsService.deleteSport', 'Permission denied fetching sport', { error: fetchError, sportId })
+                console.groupEnd()
                 return { error: new Error('Permission denied. You do not have access to view this sport.') }
             }
             if (fetchError.code === 'PGRST116') {
+                debug.perf.end('sportsService.deleteSport')
+                debug.error('SportsService.deleteSport', 'Sport not found', { sportId })
+                console.groupEnd()
                 return { error: new Error('Sport not found.') }
             }
+            debug.perf.end('sportsService.deleteSport')
+            debug.error('SportsService.deleteSport', 'Failed to fetch sport', { error: fetchError, sportId })
+            console.groupEnd()
             console.error('[sportsService] Error fetching sport:', fetchError)
             return { error: new Error(`Failed to find sport: ${fetchError.message || 'Unknown error'}`) }
         }
 
         if (!sport) {
+            debug.perf.end('sportsService.deleteSport')
+            debug.error('SportsService.deleteSport', 'Sport not found', { sportId })
+            console.groupEnd()
             return { error: new Error('Sport not found.') }
         }
 
@@ -642,26 +775,47 @@ export async function deleteSport(
         if (error) {
             // Check for network errors
             if (error.message?.includes('network') || error.message?.includes('fetch') || error.message?.includes('timeout')) {
+                debug.perf.end('sportsService.deleteSport')
+                debug.error('SportsService.deleteSport', 'Network error deleting sport', { error, sportId })
+                console.groupEnd()
                 return { error: new Error('Network error. Please check your internet connection and try again.') }
             }
             // Check for RLS/permission errors
             if (error.message?.includes('row-level security') || error.message?.includes('RLS') || error.code === '42501') {
+                debug.perf.end('sportsService.deleteSport')
+                debug.error('SportsService.deleteSport', 'Permission denied deleting sport', { error, sportId })
+                console.groupEnd()
                 return { error: new Error('Permission denied. You do not have permission to delete this sport.') }
             }
             // Check for trigger errors (deletion blocked due to children)
             if (error.code === 'P0001' || error.message?.includes('Cannot delete sport')) {
                 // Database trigger error - sport has programs
+                debug.perf.end('sportsService.deleteSport')
+                debug.error('SportsService.deleteSport', 'Cannot delete sport (has children)', { error, sportId })
+                console.groupEnd()
                 return { error: new Error(error.message || 'Cannot delete sport: It contains programs and cannot be removed.') }
             }
             // Check for foreign key violations
             if (error.code === '23503' || error.message?.includes('foreign key')) {
+                debug.perf.end('sportsService.deleteSport')
+                debug.error('SportsService.deleteSport', 'Foreign key violation', { error, sportId })
+                console.groupEnd()
                 return { error: new Error('Cannot delete sport: It is currently in use by programs, teams, or other entities.') }
             }
+            debug.perf.end('sportsService.deleteSport')
+            debug.error('SportsService.deleteSport', 'Failed to delete sport', { error, sportId })
+            console.groupEnd()
             console.error('[sportsService] Error deleting sport:', error)
             return { error: new Error(`Failed to delete sport: ${error.message || 'Unknown error'}`) }
         }
+        debug.perf.end('sportsService.deleteSport')
+        debug.flow('SportsService.deleteSport', 'Sport deleted successfully', { sportId })
+        console.groupEnd()
         return { error: null }
     } catch (err) {
+        debug.perf.end('sportsService.deleteSport')
+        debug.error('SportsService.deleteSport', 'Exception deleting sport', { error: err, sportId })
+        console.groupEnd()
         console.error('[sportsService] Error deleting sport:', err)
         // Handle network errors in catch block
         if (err instanceof Error) {
@@ -687,8 +841,15 @@ export async function uploadSportIcon(
     sportId: string,
     file: File
 ): Promise<{ path: string | null; error: Error | null }> {
+    console.groupCollapsed(`%cuploadSportIcon: ${sportId}`, 'color: #666; font-weight: bold;');
+    debug.flow('SportsService.uploadSportIcon', 'Uploading sport icon', { sportId, orgId: context.orgId, fileName: file.name, fileSize: file.size })
+    debug.perf.start('sportsService.uploadSportIcon')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
+        debug.perf.end('sportsService.uploadSportIcon')
+        debug.error('SportsService.uploadSportIcon', 'Not available in demo mode', { sportId })
+        console.groupEnd()
         return {
             path: null,
             error: new Error('Icon upload is not available in demo mode')
@@ -697,22 +858,34 @@ export async function uploadSportIcon(
 
     try {
         if (!context.orgId) {
+            debug.perf.end('sportsService.uploadSportIcon')
+            debug.error('SportsService.uploadSportIcon', 'Organization ID is required', { sportId })
+            console.groupEnd()
             return { path: null, error: new Error('Organization ID is required') }
         }
 
         if (!sportId) {
+            debug.perf.end('sportsService.uploadSportIcon')
+            debug.error('SportsService.uploadSportIcon', 'Sport ID is required', { orgId: context.orgId })
+            console.groupEnd()
             return { path: null, error: new Error('Sport ID is required') }
         }
 
         // Validate file type
         const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml']
         if (!allowedTypes.includes(file.type)) {
+            debug.perf.end('sportsService.uploadSportIcon')
+            debug.error('SportsService.uploadSportIcon', 'Invalid file type', { sportId, fileType: file.type })
+            console.groupEnd()
             return { path: null, error: new Error('Invalid file type. Please upload a PNG, JPEG, WebP, or SVG image.') }
         }
 
         // Validate file size (max 5MB)
         const maxSize = 5 * 1024 * 1024 // 5MB
         if (file.size > maxSize) {
+            debug.perf.end('sportsService.uploadSportIcon')
+            debug.error('SportsService.uploadSportIcon', 'File size exceeds limit', { sportId, fileSize: file.size })
+            console.groupEnd()
             return { path: null, error: new Error('File size exceeds 5MB limit. Please upload a smaller image.') }
         }
 
@@ -770,8 +943,14 @@ export async function uploadSportIcon(
             console.error('[sportsService] Failed to log SPORT_ICON_UPLOADED event:', logError)
         }
 
+        debug.perf.end('sportsService.uploadSportIcon')
+        debug.flow('SportsService.uploadSportIcon', 'Icon uploaded successfully', { sportId, filePath })
+        console.groupEnd()
         return { path: filePath, error: null }
     } catch (err) {
+        debug.perf.end('sportsService.uploadSportIcon')
+        debug.error('SportsService.uploadSportIcon', 'Exception uploading icon', { error: err, sportId })
+        console.groupEnd()
         console.error('[sportsService] Error uploading sport icon:', err)
         return { path: null, error: err instanceof Error ? err : new Error('Unknown error uploading icon') }
     }
@@ -805,8 +984,15 @@ export async function deleteSportIcon(
     context: UserContext,
     sportId: string
 ): Promise<{ error: Error | null }> {
+    console.groupCollapsed(`%cdeleteSportIcon: ${sportId}`, 'color: #666; font-weight: bold;');
+    debug.flow('SportsService.deleteSportIcon', 'Deleting sport icon', { sportId, orgId: context.orgId })
+    debug.perf.start('sportsService.deleteSportIcon')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
+        debug.perf.end('sportsService.deleteSportIcon')
+        debug.error('SportsService.deleteSportIcon', 'Not available in demo mode', { sportId })
+        console.groupEnd()
         return { error: new Error('Icon deletion is not available in demo mode') }
     }
 
@@ -872,8 +1058,14 @@ export async function deleteSportIcon(
             console.error('[sportsService] Failed to log SPORT_ICON_DELETED event:', logError)
         }
 
+        debug.perf.end('sportsService.deleteSportIcon')
+        debug.flow('SportsService.deleteSportIcon', 'Icon deleted successfully', { sportId })
+        console.groupEnd()
         return { error: null }
     } catch (err) {
+        debug.perf.end('sportsService.deleteSportIcon')
+        debug.error('SportsService.deleteSportIcon', 'Exception deleting icon', { error: err, sportId })
+        console.groupEnd()
         console.error('[sportsService] Error deleting sport icon:', err)
         return { error: err instanceof Error ? err : new Error('Unknown error deleting icon') }
     }
@@ -894,11 +1086,17 @@ export async function updateSportCustomization(
 
     try {
         if (!context.orgId) {
+            debug.perf.end('sportsService.updateSportCustomization')
+            debug.error('SportsService.updateSportCustomization', 'Organization ID is required', { sportId })
+            console.groupEnd()
             return { error: new Error('Organization ID is required') }
         }
 
         // Validate color format if provided
         if (updates.color && !/^#[0-9A-Fa-f]{6}$/.test(updates.color)) {
+            debug.perf.end('sportsService.updateSportCustomization')
+            debug.error('SportsService.updateSportCustomization', 'Invalid color format', { sportId, color: updates.color })
+            console.groupEnd()
             return { error: new Error('Invalid color format. Please use hex format (e.g., var(--org-btn-primary-bg, #137fec))') }
         }
 
@@ -920,10 +1118,16 @@ export async function updateSportCustomization(
         if (upsertError) {
             // Check for network errors
             if (upsertError.message?.includes('network') || upsertError.message?.includes('fetch') || upsertError.message?.includes('timeout')) {
+                debug.perf.end('sportsService.updateSportCustomization')
+                debug.error('SportsService.updateSportCustomization', 'Network error', { error: upsertError, sportId })
+                console.groupEnd()
                 return { error: new Error('Network error. Please check your internet connection and try again.') }
             }
             // Check for RLS/permission errors
             if (upsertError.message?.includes('row-level security') || upsertError.message?.includes('RLS') || upsertError.code === '42501') {
+                debug.perf.end('sportsService.updateSportCustomization')
+                debug.error('SportsService.updateSportCustomization', 'Permission denied', { error: upsertError, sportId })
+                console.groupEnd()
                 return { error: new Error('Permission denied. You do not have permission to customize sports.') }
             }
             throw upsertError
@@ -971,12 +1175,19 @@ export async function getPrograms(
     context: UserContext,
     sportId?: string
 ): Promise<{ data: Program[] | FakeProgram[]; error: Error | null }> {
+    console.groupCollapsed(`%cgetPrograms: ${sportId || 'all'}`, 'color: #666; font-weight: bold;');
+    debug.data('SportsService.getPrograms', 'Request', { orgId: context.orgId, sportId })
+    debug.perf.start('sportsService.getPrograms')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
         let programs = getProgramsForOrg(context.orgId)
         if (sportId) {
             programs = programs.filter(p => p.sport_id === sportId)
         }
+        debug.perf.end('sportsService.getPrograms')
+        debug.data('SportsService.getPrograms', 'Response (fake)', { programCount: programs.length, sportId })
+        console.groupEnd()
         return { data: programs, error: null }
     }
 
@@ -1008,9 +1219,16 @@ export async function getProgram(
     context: UserContext,
     programId: string
 ): Promise<{ data: Program | FakeProgram | null; error: Error | null }> {
+    console.groupCollapsed(`%cgetProgram: ${programId}`, 'color: #666; font-weight: bold;');
+    debug.data('SportsService.getProgram', 'Request', { programId, orgId: context.orgId })
+    debug.perf.start('sportsService.getProgram')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
         const program = getProgramById(programId)
+        debug.perf.end('sportsService.getProgram')
+        debug.data('SportsService.getProgram', 'Response (fake)', { programId, hasData: !!program })
+        console.groupEnd()
         return { data: program || null, error: null }
     }
 
@@ -1023,8 +1241,14 @@ export async function getProgram(
             .single()
 
         if (error) throw error
+        debug.perf.end('sportsService.getProgram')
+        debug.data('SportsService.getProgram', 'Response', { programId, hasData: !!data })
+        console.groupEnd()
         return { data: data as unknown as Program, error: null }
     } catch (err) {
+        debug.perf.end('sportsService.getProgram')
+        debug.error('SportsService.getProgram', 'Failed to get program', { error: err, programId })
+        console.groupEnd()
         console.error('[sportsService] Error getting program:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -1037,8 +1261,15 @@ export async function createProgram(
     _context: UserContext,
     dto: CreateProgramDTO
 ): Promise<{ data: Program | null; error: Error | null }> {
+    console.groupCollapsed(`%ccreateProgram: ${dto.name}`, 'color: #666; font-weight: bold;');
+    debug.flow('SportsService.createProgram', 'Creating program', { orgId: dto.org_id, sportId: dto.sport_id, name: dto.name })
+    debug.perf.start('sportsService.createProgram')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
+        debug.perf.end('sportsService.createProgram')
+        debug.error('SportsService.createProgram', 'Not available in demo mode', { name: dto.name })
+        console.groupEnd()
         return {
             data: null,
             error: new Error('Create operations are not available in demo mode')
@@ -1063,8 +1294,14 @@ export async function createProgram(
             .single()
 
         if (error) throw error
+        debug.perf.end('sportsService.createProgram')
+        debug.flow('SportsService.createProgram', 'Program created successfully', { programId: data?.id, name: dto.name })
+        console.groupEnd()
         return { data: data as unknown as Program, error: null }
     } catch (err) {
+        debug.perf.end('sportsService.createProgram')
+        debug.error('SportsService.createProgram', 'Failed to create program', { error: err, name: dto.name })
+        console.groupEnd()
         console.error('[sportsService] Error creating program:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -1078,8 +1315,15 @@ export async function updateProgram(
     programId: string,
     dto: UpdateProgramDTO
 ): Promise<{ data: Program | null; error: Error | null }> {
+    console.groupCollapsed(`%cupdateProgram: ${programId}`, 'color: #666; font-weight: bold;');
+    debug.flow('SportsService.updateProgram', 'Updating program', { programId, orgId: context.orgId, updates: Object.keys(dto) })
+    debug.perf.start('sportsService.updateProgram')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
+        debug.perf.end('sportsService.updateProgram')
+        debug.error('SportsService.updateProgram', 'Not available in demo mode', { programId })
+        console.groupEnd()
         return {
             data: null,
             error: new Error('Update operations are not available in demo mode')
@@ -1136,24 +1380,42 @@ export async function deleteProgram(
             // Check for trigger errors (deletion blocked due to children)
             if (error.code === 'P0001' || error.message?.includes('Cannot delete program')) {
                 // Database trigger error - program has levels
+                debug.perf.end('sportsService.deleteProgram')
+                debug.error('SportsService.deleteProgram', 'Cannot delete program (has children)', { error, programId })
+                console.groupEnd()
                 return { error: new Error(error.message || 'Cannot delete program: It contains levels and cannot be removed.') }
             }
             // Check for network errors
             if (error.message?.includes('network') || error.message?.includes('fetch') || error.message?.includes('timeout')) {
+                debug.perf.end('sportsService.deleteProgram')
+                debug.error('SportsService.deleteProgram', 'Network error', { error, programId })
+                console.groupEnd()
                 return { error: new Error('Network error. Please check your internet connection and try again.') }
             }
             // Check for RLS/permission errors
             if (error.message?.includes('row-level security') || error.message?.includes('RLS') || error.code === '42501') {
+                debug.perf.end('sportsService.deleteProgram')
+                debug.error('SportsService.deleteProgram', 'Permission denied', { error, programId })
+                console.groupEnd()
                 return { error: new Error('Permission denied. You do not have permission to delete this program.') }
             }
             // Check for foreign key violations
             if (error.code === '23503' || error.message?.includes('foreign key')) {
+                debug.perf.end('sportsService.deleteProgram')
+                debug.error('SportsService.deleteProgram', 'Foreign key violation', { error, programId })
+                console.groupEnd()
                 return { error: new Error('Cannot delete program: It is currently in use.') }
             }
             throw error
         }
+        debug.perf.end('sportsService.deleteProgram')
+        debug.flow('SportsService.deleteProgram', 'Program deleted successfully', { programId })
+        console.groupEnd()
         return { error: null }
     } catch (err) {
+        debug.perf.end('sportsService.deleteProgram')
+        debug.error('SportsService.deleteProgram', 'Exception deleting program', { error: err, programId })
+        console.groupEnd()
         console.error('[sportsService] Error deleting program:', err)
         return { error: err instanceof Error ? err : new Error('Unknown error') }
     }

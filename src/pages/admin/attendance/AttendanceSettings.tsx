@@ -6,7 +6,11 @@ import { getAttendanceSettings, updateAttendanceSettings } from '../../../data/s
 import type { AttendanceSettings } from '../../../types/attendance'
 import { showSuccess, showError } from '../../../utils/toast'
 
+import { useDebugLifecycle } from '../../../lib/debug/integrations/useDebugLifecycle'
+
 export default function AttendanceSettingsTab() {
+  useDebugLifecycle('AttendanceSettingsTab')
+  
   const [settings, setSettings] = useState<AttendanceSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

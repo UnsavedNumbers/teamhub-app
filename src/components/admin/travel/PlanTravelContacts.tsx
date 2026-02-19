@@ -14,6 +14,54 @@ interface PlanTravelContactsProps {
     orgEmail?: string
 }
 
+// Individual contact row component to properly use hooks
+function ContactRow({ 
+    field, 
+    index, 
+    control, 
+    name 
+}: { 
+    field: Record<string, unknown>; 
+    index: number; 
+    control: Control<any>; 
+    name: string 
+}) {
+    const category = (field as { category?: TravelContactCategory }).category ?? 'general'
+    const label = TRAVEL_CONTACT_CATEGORY_LABELS[category] || category
+    const isCustom = useWatch({ control, name: `${name}.${index}.is_custom` })
+
+    return (
+        <div className="oa-category-row">
+            <div className="oa-category-header">
+                <h4 className="oa-category-title">{label}</h4>
+                <div className="oa-category-toggle">
+                    <Controller
+                        control={control}
+                        name={`${name}.${index}.is_custom`}
+                        render={({ field: switchField }) => (
+                            <Switch
+                                label="Custom contact"
+                                checked={!!switchField.value}
+                                onCheckedChange={switchField.onChange}
+                            />
+                        )}
+                    />
+                </div>
+            </div>
+            {isCustom ? (
+                <CustomContactFields control={control} index={index} name={name} />
+            ) : (
+                <div className="oa-default-preview">
+                    <div className="oa-default-badge">
+                        <span className="material-symbols-outlined" aria-hidden>settings</span>
+                        Using default contact
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
 export default function PlanTravelContacts({ control, name }: PlanTravelContactsProps) {
     const { fields } = useFieldArray({
         control,
@@ -26,42 +74,15 @@ export default function PlanTravelContacts({ control, name }: PlanTravelContacts
                 Define contacts for this specific trip. If not set, the organization default for the category will be used.
             </p>
             <div className="oa-category-list">
-                {fields.map((field, index) => {
-                    const category = (field as { category?: TravelContactCategory }).category ?? 'general'
-                    const label = TRAVEL_CONTACT_CATEGORY_LABELS[category] || category
-                    const isCustom = useWatch({ control, name: `${name}.${index}.is_custom` })
-
-                    return (
-                        <div key={field.id} className="oa-category-row">
-                            <div className="oa-category-header">
-                                <h4 className="oa-category-title">{label}</h4>
-                                <div className="oa-category-toggle">
-                                    <Controller
-                                        control={control}
-                                        name={`${name}.${index}.is_custom`}
-                                        render={({ field: switchField }) => (
-                                            <Switch
-                                                label="Custom contact"
-                                                checked={!!switchField.value}
-                                                onCheckedChange={switchField.onChange}
-                                            />
-                                        )}
-                                    />
-                                </div>
-                            </div>
-                            {isCustom ? (
-                                <CustomContactFields control={control} index={index} name={name} />
-                            ) : (
-                                <div className="oa-default-preview">
-                                    <div className="oa-default-badge">
-                                        <span className="material-symbols-outlined" aria-hidden>settings</span>
-                                        Using default contact
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )
-                })}
+                {fields.map((field, index) => (
+                    <ContactRow 
+                        key={field.id} 
+                        field={field as Record<string, unknown>} 
+                        index={index} 
+                        control={control} 
+                        name={name} 
+                    />
+                ))}
             </div>
         </Card>
     )

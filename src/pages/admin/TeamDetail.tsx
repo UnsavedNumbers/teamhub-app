@@ -50,7 +50,10 @@ interface RosterMember {
   status: 'active' | 'inactive' | 'pending'
 }
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function TeamDetail() {
+  useDebugLifecycle('TeamDetail')
   const { teamId } = useTeamParams()
   const [team, setTeam] = useState<Team | null>(null)
   const [activeSeason, setActiveSeason] = useState<Season | null>(null)

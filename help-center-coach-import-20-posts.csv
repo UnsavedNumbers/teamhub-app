@@ -1,0 +1,686 @@
+﻿"ID","Title","Content","Excerpt","Slug","Status","Parent","Order","Author","Date","Allow Comments","Allow Pingbacks","Categories","Tags","Section","Role Category"
+"","Set Up Your Team","<h1>Set Up Your Team</h1>
+<p>Strong team setup prevents downstream problems in events, attendance, travel, and communication.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm you are in the right organization and season.</li>
+<li>Verify your team assignment and active athletes.</li>
+<li>Check required feature access for your workflow.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Open your team in admin routes.</li>
+<li>Review current season and active roster context.</li>
+<li>Confirm event, attendance, and communication surfaces load correctly.</li>
+<li>Run one test flow before publishing to families.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Wrong team selected before edits.</li>
+<li>Outdated season context.</li>
+<li>Missing feature entitlement for key pages.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Team context is correct and stable.</li>
+<li>Core workflows open without blockers.</li>
+<li>No unexpected role or access errors appear.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Prepare your team context before real operations start.","set-up-your-team","publish","","1","admin","2026-02-19 08:51:30","closed","closed","Getting Started","coaches,teams,seasons,setup,roster","Getting Started","Coaches"
+"","Add Athletes to a Roster","<h1>Add Athletes to a Roster</h1>
+<p>Roster quality starts with using existing athlete records and clean team membership updates.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm target team and season are correct.</li>
+<li>Search for existing athlete profile first.</li>
+<li>Keep source roster list ready for reconciliation.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Open team roster tools.</li>
+<li>Search and select existing athletes.</li>
+<li>Add athlete memberships for the right season.</li>
+<li>Review final roster count and names.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Creating duplicate athlete profiles.</li>
+<li>Adding athletes to wrong season.</li>
+<li>Skipping final roster count check.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Roster has correct athletes once.</li>
+<li>Memberships are tied to correct season.</li>
+<li>Team count matches planning list.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Add athletes fast without creating duplicate records.","add-athletes-to-a-roster","publish","","2","admin","2026-02-19 08:51:30","closed","closed","Rosters","coaches,roster,athletes,teams,memberships","Rosters","Coaches"
+"","Review Guardian Requests","<h1>Review Guardian Requests</h1>
+<p>Guardian request review protects athlete data while linking the right adults to the right profiles.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Open guardian requests queue.</li>
+<li>Confirm athlete identity details.</li>
+<li>Check request age and current status.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Open /admin/guardian-requests.</li>
+<li>Review each pending request and athlete match.</li>
+<li>Approve valid requests and deny invalid ones with reason.</li>
+<li>Recheck queue for remaining pending items.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Approving request without identity check.</li>
+<li>Leaving old requests unresolved.</li>
+<li>No denial reason on rejected requests.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Valid guardians are linked quickly.</li>
+<li>Invalid requests are clearly denied.</li>
+<li>Queue stays current and manageable.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Handle guardian attachment requests with confidence.","review-guardian-requests","publish","","3","admin","2026-02-19 08:51:30","closed","closed","Rosters","coaches,guardians,requests,approval,athletes","Rosters","Coaches"
+"","Create an Event","<h1>Create an Event</h1>
+<p>Event quality is operations quality. A clear event record reduces message noise and day-of confusion.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm date, time, and location.</li>
+<li>Decide audience and event type.</li>
+<li>Prepare notes families need to execute.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Open event create route.</li>
+<li>Enter title, date, time, and location.</li>
+<li>Set event type and audience fields.</li>
+<li>Enable RSVP if needed and publish.</li>
+<li>Verify event appears in calendar views.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Publishing with placeholder details.</li>
+<li>Wrong timezone or time fields.</li>
+<li>Forgetting RSVP configuration.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Event is complete and actionable.</li>
+<li>Families see it in calendar quickly.</li>
+<li>Follow-up questions drop.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Publish clear events that families can act on immediately.","create-an-event","publish","","4","admin","2026-02-19 08:51:30","closed","closed","Events","coaches,events,schedule,calendar,publish","Events","Coaches"
+"","Edit Event Details","<h1>Edit Event Details</h1>
+<p>Schedule changes happen. Fast and precise updates keep families aligned and reduce missed arrivals.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm what changed and who is affected.</li>
+<li>Check if event is already close to start.</li>
+<li>Prepare one clear update message.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Open event detail and choose edit.</li>
+<li>Update only fields that changed.</li>
+<li>Save and verify event renders correctly.</li>
+<li>Post announcement if change is high impact.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Editing wrong event.</li>
+<li>Changing too many fields without reason.</li>
+<li>No communication for major schedule changes.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Only intended details changed.</li>
+<li>Calendar reflects final version.</li>
+<li>Families know exactly what changed.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Update event details without creating confusion.","edit-event-details","publish","","5","admin","2026-02-19 08:51:30","closed","closed","Events","coaches,events,updates,schedule,changes","Events","Coaches"
+"","Choose an RSVP Type","<h1>Choose an RSVP Type</h1>
+<p>RSVP type controls attendance signal quality. Choose the mode that matches the operational decision you need.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Know whether response is family-level or athlete-level.</li>
+<li>Set clear response deadline.</li>
+<li>Confirm event audience.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Open event configuration.</li>
+<li>Set RSVP mode to general or athlete-specific.</li>
+<li>Publish event and monitor incoming responses.</li>
+<li>Follow up with non-responders before deadline.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Using general RSVP for athlete-specific events.</li>
+<li>No RSVP deadline buffer.</li>
+<li>Ignoring missing responses.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Response data matches planning needs.</li>
+<li>Attendance prediction is more accurate.</li>
+<li>Coaches can make faster decisions.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Pick general or athlete RSVP based on real planning needs.","choose-an-rsvp-type","publish","","6","admin","2026-02-19 08:51:30","closed","closed","Events","coaches,rsvp,attendance,events,planning","Events","Coaches"
+"","Take Attendance Fast","<h1>Take Attendance Fast</h1>
+<p>Attendance logs are more than compliance. They drive follow-up and reveal reliability trends over time.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Open the correct event roster.</li>
+<li>Confirm athlete list is current.</li>
+<li>Assign one person to record attendance.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Open attendance for the event.</li>
+<li>Mark each athlete present, absent, or late.</li>
+<li>Resolve missing names before final save.</li>
+<li>Submit attendance and confirm persistence.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Recording from memory after event.</li>
+<li>Leaving blank statuses.</li>
+<li>Saving before roster is complete.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Every athlete has a status.</li>
+<li>Record is saved and reviewable.</li>
+<li>Follow-up data is trustworthy.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Capture attendance quickly with fewer errors.","take-attendance-fast","publish","","7","admin","2026-02-19 08:51:30","closed","closed","Attendance","coaches,attendance,events,status,tracking","Attendance","Coaches"
+"","Post Team Announcements","<h1>Post Team Announcements</h1>
+<p>Announcements should be clear, scoped, and actionable. Good announcement hygiene reduces chat chaos.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Decide team-specific or org-wide scope.</li>
+<li>Write one headline and one next action.</li>
+<li>Set urgent flag only when truly needed.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Open announcements in Huddles.</li>
+<li>Select team and create announcement.</li>
+<li>Add title and clear body copy.</li>
+<li>Publish and verify it appears in list.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Org-wide post for team-only issue.</li>
+<li>Long post with no clear action.</li>
+<li>Overuse of urgent priority.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Right audience sees right message.</li>
+<li>Action is obvious in one read.</li>
+<li>Fewer clarifying replies are needed.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Send high-signal updates to the right audience.","post-team-announcements","publish","","8","admin","2026-02-19 08:51:30","closed","closed","Communication","coaches,announcements,messaging,teams,updates","Communication","Coaches"
+"","Use Team Chat Channels","<h1>Use Team Chat Channels</h1>
+<p>Chat should accelerate decisions, not scatter information. Channel discipline keeps teams responsive and clear.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm team channels are available.</li>
+<li>Choose proper channel before posting.</li>
+<li>Keep announcements separate from chat when needed.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Open /portal/huddles/chat.</li>
+<li>Select team, org, or DM channel.</li>
+<li>Post concise message with clear ask.</li>
+<li>Use thread replies for follow-up context.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Posting in wrong channel.</li>
+<li>Mixing official announcements into chat stream.</li>
+<li>No follow-up in thread for active topic.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Messages stay in the right channel.</li>
+<li>Replies stay contextual.</li>
+<li>Team response time improves.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Use channels for fast discussion while keeping context organized.","use-team-chat-channels","publish","","9","admin","2026-02-19 08:51:30","closed","closed","Communication","coaches,huddles,chat,channels,team-communication","Communication","Coaches"
+"","Build a Travel Plan","<h1>Build a Travel Plan</h1>
+<p>Travel planning works when schedule, meeting points, and contacts are accurate before publish.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm event dates and locations.</li>
+<li>Prepare itinerary checkpoints.</li>
+<li>Identify support contacts.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Open travel plan creation route.</li>
+<li>Set dates, destination, and meeting location info.</li>
+<li>Add key notes and itinerary context.</li>
+<li>Publish and verify travel detail page quality.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Publishing before event details are final.</li>
+<li>Missing meeting location information.</li>
+<li>No clear contact for issues.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Travel page is actionable and complete.</li>
+<li>Families can navigate without extra messages.</li>
+<li>Staff corrections are minimal.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Create travel plans families can execute from one page.","build-a-travel-plan","publish","","10","admin","2026-02-19 08:51:30","closed","closed","Travel","coaches,travel,events,itinerary,logistics","Travel","Coaches"
+"","Update Travel Contacts","<h1>Update Travel Contacts</h1>
+<p>Families move faster when travel contacts are obvious and current.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Review current contact assignments.</li>
+<li>Know which categories need custom overrides.</li>
+<li>Verify phone and email accuracy.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Open travel detail or plan contact settings.</li>
+<li>Update category contacts where needed.</li>
+<li>Save and verify contact card output.</li>
+<li>Test call and email links in UI.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Old contact left active after staff change.</li>
+<li>Missing contact category coverage.</li>
+<li>Invalid phone or email values.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Contact card shows correct people.</li>
+<li>Families can reach support instantly.</li>
+<li>Travel disruptions are resolved faster.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Keep travel support contacts accurate across plans.","update-travel-contacts","publish","","11","admin","2026-02-19 08:51:30","closed","closed","Travel","coaches,travel,contacts,support,communication","Travel","Coaches"
+"","Open Tryout Registration","<h1>Open Tryout Registration</h1>
+<p>Tryout registration is a first impression. Clean setup improves completion and reduces check-in friction.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Finalize tryout date, age group, and location.</li>
+<li>Confirm registration path is visible to families.</li>
+<li>Set support contact for registration questions.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Create or update tryout details.</li>
+<li>Publish tryout and verify listing appears.</li>
+<li>Test registration flow with one athlete profile.</li>
+<li>Monitor early registrations for errors.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Incomplete tryout details at publish.</li>
+<li>Broken registration path not tested.</li>
+<li>No support contact for families.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Families can register without confusion.</li>
+<li>Registrations appear correctly in progress state.</li>
+<li>Check-in prep is easier.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Publish tryouts with clean registration flow.","open-tryout-registration","publish","","12","admin","2026-02-19 08:51:30","closed","closed","Tryouts","coaches,tryouts,registration,athletes,events","Tryouts","Coaches"
+"","Update Tryout Results","<h1>Update Tryout Results</h1>
+<p>Clear status updates keep families informed and reduce repetitive outreach after evaluations.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Finalize evaluation decisions.</li>
+<li>Prepare notes for offer or decline state.</li>
+<li>Review current registration statuses.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Open tryout registrations list.</li>
+<li>Update registration to offered, accepted, or declined as needed.</li>
+<li>Add notes when relevant.</li>
+<li>Verify status changes in progress view.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Incorrect status applied to athlete.</li>
+<li>No note for sensitive decision states.</li>
+<li>Leaving records in stale registered state.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Statuses reflect final decisions.</li>
+<li>Families see clear next state.</li>
+<li>No unresolved records remain.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Move registrations through decision statuses cleanly.","update-tryout-results","publish","","13","admin","2026-02-19 08:51:30","closed","closed","Tryouts","coaches,tryouts,status,offers,decisions","Tryouts","Coaches"
+"","Launch Uniform Orders","<h1>Launch Uniform Orders</h1>
+<p>Uniform operations run smoother when kit setup is complete before families start ordering.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm required items and size options.</li>
+<li>Set deadline and lock policy.</li>
+<li>Assign support contact.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Create or edit uniform kit.</li>
+<li>Add items, required flags, and size options.</li>
+<li>Set status and deadline.</li>
+<li>Publish and verify portal kit visibility.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Missing required item setup.</li>
+<li>No deadline set.</li>
+<li>Incomplete size options for key items.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Kit is clear and complete.</li>
+<li>Families can submit without guesswork.</li>
+<li>Exceptions are reduced before deadline.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Set up uniform kits with clear size and deadline rules.","launch-uniform-orders","publish","","14","admin","2026-02-19 08:51:30","closed","closed","Uniforms","coaches,uniforms,kits,sizes,deadlines","Uniforms","Coaches"
+"","Review Uniform Submissions","<h1>Review Uniform Submissions</h1>
+<p>Exception review before lock date is the fastest way to avoid vendor delays.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Open current uniform submission list.</li>
+<li>Sort by missing or incomplete records.</li>
+<li>Set outreach owner for fixes.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Filter for incomplete submissions.</li>
+<li>Contact families with exact missing fields.</li>
+<li>Track corrections daily.</li>
+<li>Re-run filter before lock date.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Waiting until deadline day to review.</li>
+<li>Vague correction requests.</li>
+<li>Submitting final batch with known gaps.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Incomplete queue is near zero at lock.</li>
+<li>Final order data is vendor-ready.</li>
+<li>No rush-day correction scramble.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Catch missing sizes early and clean up submissions fast.","review-uniform-submissions","publish","","15","admin","2026-02-19 08:51:30","closed","closed","Uniforms","coaches,uniforms,orders,exceptions,deadlines","Uniforms","Coaches"
+"","Publish a Ticketed Event","<h1>Publish a Ticketed Event</h1>
+<p>Ticketed events need precise setup to protect fan experience and gate operations.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm event details and capacity assumptions.</li>
+<li>Set sales window timing.</li>
+<li>Prepare first-hour monitoring owner.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Create ticketed event record.</li>
+<li>Set fan visibility and event assets.</li>
+<li>Publish and verify public event listing.</li>
+<li>Run one internal checkout smoke test.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Publishing without checkout test.</li>
+<li>Wrong sales window timing.</li>
+<li>Event details not final at launch.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Public listing is accurate.</li>
+<li>Checkout is working from launch.</li>
+<li>Support volume stays low.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Launch event ticket sales with fewer avoidable issues.","publish-a-ticketed-event","publish","","16","admin","2026-02-19 08:51:30","closed","closed","Ticketing","coaches,ticketing,events,sales,publish","Ticketing","Coaches"
+"","Set Ticket Types and Limits","<h1>Set Ticket Types and Limits</h1>
+<p>Ticket type clarity drives conversion and protects inventory under demand.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Define ticket audiences and price points.</li>
+<li>Set per-order limits where needed.</li>
+<li>Verify total capacity model.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Create ticket types with clear labels.</li>
+<li>Set prices and sales windows per type.</li>
+<li>Set quantity limits if needed.</li>
+<li>Validate capacity and save.</li>
+<li>Preview in event detail page.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Confusing ticket names.</li>
+<li>Inventory beyond venue capacity.</li>
+<li>Overlapping windows with unclear behavior.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Ticket choices are easy to understand.</li>
+<li>Capacity control is stable.</li>
+<li>Sales flow remains predictable.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Configure ticket options, inventory, and order limits clearly.","set-ticket-types-and-limits","publish","","17","admin","2026-02-19 08:51:30","closed","closed","Ticketing","coaches,ticketing,pricing,capacity,limits","Ticketing","Coaches"
+"","Build a Seat Map","<h1>Build a Seat Map</h1>
+<p>Reserved seating only works when section, row, and seat data are accurate before sales start.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm final venue layout.</li>
+<li>Define section and row conventions.</li>
+<li>Plan seat attributes and pricing zones.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Open seat map builder.</li>
+<li>Create sections and seat ranges.</li>
+<li>Apply attributes and save map.</li>
+<li>Attach map to ticketed event.</li>
+<li>Test seat selection behavior in checkout.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Wrong map attached to event.</li>
+<li>Seat inventory errors in a section.</li>
+<li>No seat selection test before launch.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Seats are selectable and accurate.</li>
+<li>Capacity matches real layout.</li>
+<li>Gate team trusts ticket seat data.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Configure reserved seating maps that work on game day.","build-a-seat-map","publish","","18","admin","2026-02-19 08:51:30","closed","closed","Ticketing","coaches,ticketing,seats,seat-map,reserved-seating","Ticketing","Coaches"
+"","Run Ticket Scanner Day","<h1>Run Ticket Scanner Day</h1>
+<p>Game-day scanning is where ticket operations succeed or fail in public view.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Test scanner setup before gates open.</li>
+<li>Assign one owner for scanner alerts.</li>
+<li>Prepare fallback manual entry code process.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Open scanner route for target event.</li>
+<li>Run test scan with known valid ticket.</li>
+<li>Start live scanning and monitor duplicate alerts.</li>
+<li>Resolve invalid scans using order lookup when needed.</li>
+<li>Keep entry line moving with clear fallback path.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>No pre-open scanner test.</li>
+<li>Unassigned ownership for scan issues.</li>
+<li>Ignoring duplicate or invalid scan alerts.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Entry lines move steadily.</li>
+<li>Valid tickets scan quickly.</li>
+<li>Exceptions are handled without escalation chaos.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Operate scanner flow smoothly during live entry windows.","run-ticket-scanner-day","publish","","19","admin","2026-02-19 08:51:30","closed","closed","Ticketing","coaches,ticketing,scanner,entry,game-day","Ticketing","Coaches"
+"","Share Team Videos and Notes","<h1>Share Team Videos and Notes</h1>
+<p>Video feedback is high value when notes are clear, scoped, and easy for families to navigate.</p>
+<p>YouthSports keeps the workflow fast, but the details matter. Use this guide to avoid rework.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li>Open /admin/videos library.</li>
+<li>Confirm team and athlete links for target video.</li>
+<li>Decide note visibility scope before posting.</li>
+</ul>
+
+<h2>Step-by-step</h2>
+<ol>
+<li>Upload or open a video record.</li>
+<li>Link athletes and add tags as needed.</li>
+<li>Add timestamped notes with clear titles.</li>
+<li>Set note scope for coaches, all, or guardians where supported.</li>
+<li>Publish and verify guardian view behavior.</li>
+</ol>
+
+<h2>Why this can fail</h2>
+<ul>
+<li>Notes posted with wrong scope.</li>
+<li>Missing athlete links on targeted feedback.</li>
+<li>No timestamps for key coaching moments.</li>
+</ul>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Families can find relevant feedback fast.</li>
+<li>Coach notes are contextual and actionable.</li>
+<li>Video review becomes a repeatable workflow.</li>
+</ul>
+
+<p>When this flow is clean, families get clearer updates, and staff spend less time fixing avoidable issues.</p>","Upload, tag, and share video feedback with the right audience.","share-team-videos-and-notes","publish","","20","admin","2026-02-19 08:51:30","closed","closed","Media","coaches,videos,feedback,notes,athletes","Media","Coaches"

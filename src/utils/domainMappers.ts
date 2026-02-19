@@ -56,7 +56,7 @@ export function mapEvent(row: EventRow): Event {
     createdByUserId: row.created_by_user_id ?? '',
     createdAt: row.created_at ?? new Date().toISOString(),
     updatedAt: row.updated_at ?? new Date().toISOString(),
-    teamId: row.team_id,
+    teamId: row.team_id ?? '',
     teamName: row.team?.name ?? '',
     seasonId: row.season_id,
     seasonName: row.season?.name ?? null,

@@ -23,6 +23,11 @@ export interface NotificationGroup {
   actions: NotificationActionToggle[]
   allEnabled: boolean
   digestEnabled: boolean
+  digestWindow?: 'daily' | 'weekly' // Default: 'daily'
+  quietHoursEnabled?: boolean
+  quietHoursStart?: string // HH:mm format (e.g., "22:00")
+  quietHoursEnd?: string // HH:mm format (e.g., "08:00")
+  timezone?: string // IANA timezone (e.g., "America/New_York"), defaults to user's profile timezone or org timezone
   channels: DeliveryChannel[]
 }
 

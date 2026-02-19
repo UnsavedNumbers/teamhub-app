@@ -98,31 +98,31 @@ const portal = {
 
     // Tickets
     tickets: {
-        path: '/tickets',
+        path: '/portal/tickets',
         label: 'Tickets',
         icon: 'confirmation_number',
         description: 'Buy event tickets',
     },
     ticketEventDetail: {
-        path: '/tickets/events/:eventId',
+        path: '/portal/tickets/events/:eventId',
         params: ['eventId'] as const,
         label: 'Event Tickets',
         icon: 'confirmation_number',
     },
     ticketOrderSuccess: {
-        path: '/tickets/order/:orderId',
+        path: '/portal/tickets/order/:orderId',
         params: ['orderId'] as const,
         label: 'Order Confirmation',
         icon: 'check_circle',
     },
     ticketAccess: {
-        path: '/tickets/access/:token',
+        path: '/portal/tickets/access/:token',
         params: ['token'] as const,
         label: 'My Tickets',
         icon: 'confirmation_number',
     },
     ticketValidate: {
-        path: '/tickets/validate/:token',
+        path: '/portal/tickets/validate/:token',
         params: ['token'] as const,
         label: 'Validate Tickets',
         icon: 'qr_code_scanner',
@@ -218,10 +218,40 @@ const portal = {
 
     // Help & Support
     help: {
-        path: '/portal/help',
+        path: '/help',
         label: 'Help & Support',
         icon: 'help',
         description: 'Get assistance',
+    },
+    helpContact: {
+        path: '/help/contact',
+        label: 'Contact Support',
+        icon: 'mail',
+        description: 'Contact support',
+    },
+    helpCategory: {
+        path: '/help/:categorySlug',
+        params: ['categorySlug'] as const,
+        label: 'Help Category',
+        icon: 'help',
+    },
+    helpArticle: {
+        path: '/help/:categorySlug/:articleSlug',
+        params: ['categorySlug', 'articleSlug'] as const,
+        label: 'Help Article',
+        icon: 'help',
+    },
+    helpArticleNested: {
+        path: '/help/:parentCategorySlug/:categorySlug/:articleSlug',
+        params: ['parentCategorySlug', 'categorySlug', 'articleSlug'] as const,
+        label: 'Help Article (Nested)',
+        icon: 'help',
+    },
+    contact: {
+        path: '/portal/contact',
+        label: 'Contact Support',
+        icon: 'mail',
+        description: 'Contact support',
     },
 
     // Photos
@@ -861,19 +891,41 @@ const admin = {
             icon: 'add',
             requiresOrg: true,
         },
-        detail: {
-            path: '/admin/ticketing/events/:id',
-            params: ['id'] as const,
-            label: 'Event Details',
-            icon: 'event',
-            requiresOrg: true,
-        },
         ticketTypes: {
             create: {
                 path: '/admin/ticketing/events/:id/ticket-types/new',
                 params: ['id'] as const,
                 label: 'Add Ticket Type',
                 icon: 'confirmation_number',
+                requiresOrg: true,
+            },
+            edit: {
+                path: '/admin/ticketing/events/:id/ticket-types/edit',
+                params: ['id'] as const,
+                label: 'Edit Ticket Type',
+                icon: 'edit',
+                requiresOrg: true,
+            },
+        },
+        seatMaps: {
+            list: {
+                path: '/admin/ticketing/seat-maps',
+                label: 'Seat Maps',
+                icon: 'event_seat',
+                requiresOrg: true,
+            },
+            edit: {
+                path: '/admin/ticketing/seat-maps/:seatMapId/edit',
+                params: ['seatMapId'] as const,
+                label: 'Seat Map Builder',
+                icon: 'event_seat',
+                requiresOrg: true,
+            },
+            builder: {
+                path: '/admin/ticketing/events/:eventId/seat-maps/:seatMapId',
+                params: ['eventId', 'seatMapId'] as const,
+                label: 'Seat Map Builder',
+                icon: 'event_seat',
                 requiresOrg: true,
             },
         },
@@ -887,6 +939,13 @@ const admin = {
     ticketingScanner: {
         path: '/admin/ticketing/scanner',
         label: 'Ticket Scanner',
+        icon: 'qr_code_scanner',
+        requiresOrg: true,
+    },
+    ticketingScannerEvent: {
+        path: '/admin/ticketing/scanner/:eventId',
+        params: ['eventId'] as const,
+        label: 'Ticket Scanner (Event)',
         icon: 'qr_code_scanner',
         requiresOrg: true,
     },
@@ -998,6 +1057,20 @@ const admin = {
         description: 'Personal settings',
         requiresOrg: false,
     },
+    contact: {
+        path: '/admin/contact',
+        label: 'Contact Support',
+        icon: 'mail',
+        description: 'Contact support',
+        requiresOrg: false,
+    },
+    help: {
+        path: '/help',
+        label: 'Help & Support',
+        icon: 'help',
+        description: 'Knowledge base and help center',
+        requiresOrg: false,
+    },
 
     // Photos
     photos: {
@@ -1106,6 +1179,21 @@ const platformAdmin = {
         },
     },
 
+    demoManagement: {
+        list: {
+            path: '/platform-admin/demo-management',
+            label: 'Demo Management',
+            icon: 'bolt',
+            description: 'Demo organizations and access codes',
+        },
+        detail: {
+            path: '/platform-admin/demo-management/:id',
+            params: ['id'] as const,
+            label: 'Demo Organization',
+            icon: 'bolt',
+        },
+    },
+
     // Users
     users: {
         list: {
@@ -1128,6 +1216,13 @@ const platformAdmin = {
         label: 'Platform Admins',
         icon: 'admin_panel_settings',
         description: 'Admin management',
+    },
+
+    settings: {
+        path: '/platform-admin/settings',
+        label: 'Personal Settings',
+        icon: 'settings',
+        description: 'Account and preferences',
     },
 
     // Structure
@@ -1205,6 +1300,27 @@ const platformAdmin = {
         label: 'Email Preview',
         icon: 'email',
         description: 'Email template testing',
+    },
+
+    // Email Templates
+    emails: {
+        list: {
+            path: '/platform-admin/emails',
+            label: 'Email Templates',
+            icon: 'email',
+            description: 'Manage email templates',
+        },
+        create: {
+            path: '/platform-admin/emails/new',
+            label: 'Create Template',
+            icon: 'add',
+        },
+        edit: {
+            path: '/platform-admin/emails/:slug/edit',
+            params: ['slug'] as const,
+            label: 'Edit Template',
+            icon: 'edit',
+        },
     },
 
     // Photos (cross-org overview, content review, storage)
@@ -1285,6 +1401,48 @@ const platformAdmin = {
             path: '/platform-admin/licenses/audit',
             label: 'Audit & History',
             icon: 'history',
+        },
+    },
+
+    // Contact Submissions
+    contactSubmissions: {
+        path: '/platform-admin/contact-submissions',
+        label: 'Contact Submissions',
+        icon: 'mail',
+        description: 'View contact form submissions',
+    },
+
+    // Help Center
+    helpCenter: {
+        settings: {
+            path: '/platform-admin/help-center/settings',
+            label: 'WordPress Settings',
+            icon: 'help',
+            description: 'WordPress connection and sync',
+        },
+        roleMappings: {
+            path: '/platform-admin/help-center/role-mappings',
+            label: 'Role Mappings',
+            icon: 'link',
+            description: 'Map roles to categories',
+        },
+        categoryPages: {
+            path: '/platform-admin/help-center/category-pages',
+            label: 'Category Pages',
+            icon: 'description',
+            description: 'Map categories to pages',
+        },
+        sections: {
+            path: '/platform-admin/help-center/sections',
+            label: 'Sections',
+            icon: 'folder',
+            description: 'Configure display sections',
+        },
+        thumbnails: {
+            path: '/platform-admin/help-center/thumbnails',
+            label: 'Category Thumbnails',
+            icon: 'image',
+            description: 'Upload category thumbnails',
         },
     },
 } as const satisfies Record<string, RouteDefinition | Record<string, RouteDefinition>>

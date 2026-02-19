@@ -2,7 +2,13 @@ import { useState, useEffect, useCallback } from 'react'
 
 import { useUserContext } from '../hooks/useUserContext'
 import { useOrganization } from '../contexts/OrganizationContext'
-import { getTryouts, getTryoutRegistrations, registerAthleteForTryout } from '../data/services/tryoutsService'
+import { USE_FAKE_DATA } from '../data/config'
+import {
+  getTryouts,
+  getTryoutRegistrations,
+  registerAthleteForTryout,
+  updateTryoutRegistrationStatus,
+} from '../data/services/tryoutsService'
 import { getContactForCategory } from '../data/services/organizationContactsService'
 import { getAthletes } from '../data/services/familyService'
 import type { Tryout, TryoutRegistration } from '../data/services/tryoutsService'
@@ -11,8 +17,13 @@ import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typogr
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import { showError, showSuccess } from '../utils/toast'
+
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 
 export default function Tryouts() {
+  useDebugLifecycle('Tryouts')
+  
   const [tryouts, setTryouts] = useState<Tryout[]>([])
   const [registrations, setRegistrations] = useState<TryoutRegistration[]>([])
   const [children, setChildren] = useState<{ id: string; first_name: string; last_name: string }[]>([])
@@ -20,6 +31,7 @@ export default function Tryouts() {
   const [selectedTryout, setSelectedTryout] = useState<Tryout | null>(null)
   const [selectedChild, setSelectedChild] = useState('')
   const [registrationContact, setRegistrationContact] = useState<{ name: string; email: string; phone?: string | null } | null>(null)
+  const [statusActioningId, setStatusActioningId] = useState<string | null>(null)
 
 
   const { context, isReady } = useUserContext()
@@ -62,9 +74,40 @@ export default function Tryouts() {
 
   async function handleRegister() {
     if (!selectedTryout || !selectedChild) return
-    await registerAthleteForTryout(context, selectedTryout.id, selectedChild)
+    const { error } = await registerAthleteForTryout(context, selectedTryout.id, selectedChild)
+    if (error) {
+      showError(error.message || 'Registration failed')
+      return
+    }
+    showSuccess(
+      USE_FAKE_DATA
+        ? 'Registration confirmed. Continue in "My Tryout Progress" to complete the demo flow.'
+        : 'Registration confirmed.',
+    )
     setSelectedTryout(null)
     setSelectedChild('')
+    await fetchData()
+  }
+
+  async function handleRegistrationStatusUpdate(
+    registration: TryoutRegistration,
+    nextStatus: TryoutRegistration['status'],
+    notes?: string,
+  ) {
+    setStatusActioningId(registration.id)
+    const { error } = await updateTryoutRegistrationStatus(context, registration.id, nextStatus, notes)
+    setStatusActioningId(null)
+
+    if (error) {
+      showError(error.message || 'Could not update tryout status')
+      return
+    }
+
+    if (nextStatus === 'offered') showSuccess('Demo result posted: athlete made the team.')
+    else if (nextStatus === 'declined') showSuccess('Demo result posted: athlete did not make the team.')
+    else if (nextStatus === 'accepted') showSuccess('Spot accepted. Athlete is confirmed on the team.')
+    else showSuccess('Tryout status updated.')
+
     await fetchData()
   }
 
@@ -80,6 +123,14 @@ export default function Tryouts() {
 
   function isRegistered(tryoutId: string) {
     return registrations.some(r => r.tryout_id === tryoutId)
+  }
+
+  function getStatusMeta(status: TryoutRegistration['status']) {
+    if (status === 'registered') return { label: 'Registered', tone: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' }
+    if (status === 'offered') return { label: 'Made Team - Offer Sent', tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' }
+    if (status === 'accepted') return { label: 'Offer Accepted', tone: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' }
+    if (status === 'declined') return { label: 'Not Selected / Declined', tone: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' }
+    return { label: status, tone: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400' }
   }
 
   return (
@@ -102,6 +153,90 @@ export default function Tryouts() {
           </div>
         ) : (
           <>
+            {registrations.length > 0 && (
+              <div className="mb-8 sm:mb-10">
+                <SectionHeader className="mb-4">My Tryout Progress</SectionHeader>
+                <div className="space-y-3">
+                  {registrations.map((registration) => {
+                    const tryout = tryouts.find((entry) => entry.id === registration.tryout_id)
+                    const athleteName = registration.child
+                      ? `${registration.child.first_name} ${registration.child.last_name}`
+                      : 'Athlete'
+                    const statusMeta = getStatusMeta(registration.status)
+                    const isBusy = statusActioningId === registration.id
+
+                    return (
+                      <Card key={registration.id} className="p-4 sm:p-5">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="font-black text-slate-900 dark:text-white">{tryout?.title || 'Tryout Registration'}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{athleteName}</p>
+                          </div>
+                          <span className={`inline-flex items-center self-start px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${statusMeta.tone}`}>
+                            {statusMeta.label}
+                          </span>
+                        </div>
+
+                        {registration.notes && (
+                          <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{registration.notes}</p>
+                        )}
+
+                        {registration.status === 'offered' && (
+                          <div className="mt-4 flex flex-col sm:flex-row gap-2">
+                            <Button
+                              variant="primary"
+                              disabled={isBusy}
+                              onClick={() => handleRegistrationStatusUpdate(registration, 'accepted', 'Accepted in demo flow.')}
+                            >
+                              Accept Spot
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              disabled={isBusy}
+                              onClick={() => handleRegistrationStatusUpdate(registration, 'declined', 'Family declined the offer.')}
+                            >
+                              Decline Spot
+                            </Button>
+                          </div>
+                        )}
+
+                        {USE_FAKE_DATA && registration.status === 'registered' && (
+                          <div className="mt-4 flex flex-col sm:flex-row gap-2">
+                            <Button
+                              variant="primary"
+                              disabled={isBusy}
+                              onClick={() =>
+                                handleRegistrationStatusUpdate(
+                                  registration,
+                                  'offered',
+                                  'Coaches selected this athlete and sent an offer.',
+                                )
+                              }
+                            >
+                              Demo: Made Team
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              disabled={isBusy}
+                              onClick={() =>
+                                handleRegistrationStatusUpdate(
+                                  registration,
+                                  'declined',
+                                  'Coaches completed evaluation and did not extend an offer.',
+                                )
+                              }
+                            >
+                              Demo: Not Selected
+                            </Button>
+                          </div>
+                        )}
+                      </Card>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             <SectionHeader className="mb-4 sm:mb-6">Upcoming Tryouts</SectionHeader>
             {tryouts.length === 0 ? (
               <Card className="text-center py-8 sm:py-12">

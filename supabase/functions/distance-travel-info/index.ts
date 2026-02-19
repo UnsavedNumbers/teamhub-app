@@ -296,7 +296,7 @@ serve(async (req) => {
             // "distance: { value: number; unit: 'miles' | 'kilometers' }"
 
             let finalDist = distVal
-            let finalUnit = units
+            const finalUnit = units
             if (units === 'miles') {
                 finalDist = distVal * 0.000621371 // meters to miles
             } else {
@@ -304,7 +304,7 @@ serve(async (req) => {
             }
             finalDist = Math.round(finalDist * 10) / 10 // Round to 1 decimal
 
-            let finalDur = Math.round(durVal / 60) // seconds to minutes
+            const finalDur = Math.round(durVal / 60) // seconds to minutes
 
             let durTrafficVal = undefined
             if (element.duration_in_traffic) {

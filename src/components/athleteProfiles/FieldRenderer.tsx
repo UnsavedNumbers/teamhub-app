@@ -175,7 +175,7 @@ function TextFieldInput({
         value={value || ''}
         onChange={(e) => onChange(e.target.value || null)}
         disabled={disabled}
-        className={`form-input ${error ? 'border-red-500 focus:ring-red-500' : ''}`}
+        className={`form-input ${error ? 'form-input-error' : ''}`}
         placeholder={`Enter ${field.field_label.toLowerCase()}`}
       />
       
@@ -235,7 +235,7 @@ function NumberFieldInput({
         onChange={handleChange}
         disabled={disabled}
         step={isInteger ? '1' : '0.01'}
-        className={`form-input ${error ? 'border-red-500 focus:ring-red-500' : ''}`}
+        className={`form-input ${error ? 'form-input-error' : ''}`}
         placeholder={`Enter ${field.field_label.toLowerCase()}`}
       />
       
@@ -264,25 +264,22 @@ function BooleanFieldInput({
   error?: string
 }) {
   return (
-    <div className="field-group">
-      <div className="field-toggle-wrapper">
-        <label htmlFor={field.field_key} className="field-toggle-label">
+      <div className="field-group">
+        <label htmlFor={field.field_key} className="form-checkbox-label">
           <input
             id={field.field_key}
             type="checkbox"
+            className="form-checkbox"
             checked={value ?? false}
             onChange={(e) => onChange(e.target.checked)}
             disabled={disabled}
-            className="field-toggle-input"
           />
-          <span className="field-toggle-slider"></span>
-          <span className="field-toggle-text">{field.field_label}</span>
+          <span>{field.field_label}</span>
         </label>
+        
+        {helpText && <p className="field-help">{helpText}</p>}
+        {error && <p className="field-error">{error}</p>}
       </div>
-      
-      {helpText && <p className="field-help">{helpText}</p>}
-      {error && <p className="field-error">{error}</p>}
-    </div>
   )
 }
 
@@ -320,7 +317,7 @@ function EnumFieldInput({
         value={value || ''}
         onChange={(e) => onChange(e.target.value || null)}
         disabled={disabled}
-        className={`form-select ${error ? 'border-red-500 focus:ring-red-500' : ''}`}
+        className={`form-select ${error ? 'form-input-error' : ''}`}
       >
         <option value="">Select {field.field_label.toLowerCase()}</option>
         {enumValues.map((option) => (
@@ -376,13 +373,13 @@ function MultiEnumFieldInput({
       
       <div className="checkbox-row">
         {enumValues.map((option) => (
-          <label key={option} className="form-radio-label">
+          <label key={option} className="form-checkbox-label">
             <input
               type="checkbox"
+              className="form-checkbox"
               checked={selectedValues.includes(option)}
               onChange={() => handleToggle(option)}
               disabled={disabled}
-              className="form-radio"
             />
             <span>{formatEnumValue(option)}</span>
           </label>
@@ -428,7 +425,7 @@ function TimeFieldInput({
         value={value || ''}
         onChange={(e) => onChange(e.target.value || null)}
         disabled={disabled}
-        className={`form-input ${error ? 'border-red-500 focus:ring-red-500' : ''}`}
+        className={`form-input ${error ? 'form-input-error' : ''}`}
       />
       
       {helpText && <p className="field-help">{helpText}</p>}
@@ -489,7 +486,7 @@ function ObjectFieldInput({
         onChange={handleChange}
         disabled={disabled}
         rows={4}
-        className={`form-textarea ${error || jsonError ? 'border-red-500 focus:ring-red-500' : ''}`}
+        className={`form-textarea ${error || jsonError ? 'form-input-error' : ''}`}
         placeholder={`Enter ${field.field_label.toLowerCase()} as JSON`}
       />
       

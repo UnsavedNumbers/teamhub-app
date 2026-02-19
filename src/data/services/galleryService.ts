@@ -9,10 +9,17 @@
  * - Path: orgs/{org_id}/galleries/{gallery_id}/{photo_id}.jpg
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
+import { debug } from '../../lib/debug'
+import {
+  getMockGalleriesForOrg,
+  getMockGalleryById,
+  getMockPhotosForGallery,
+  getAllMockPhotos,
+} from '../fake/mockGalleries'
 const supabaseAny = supabase as any
 
 // ============================================================================
@@ -156,6 +163,311 @@ async function simulateDelay(): Promise<void> {
   }
 }
 
+type FakeAutoGalleryType = Extract<GalleryType, 'athlete' | 'team' | 'event' | 'travel' | 'program' | 'season' | 'org'>
+
+const FAKE_GALLERY_BASE_PATH = '/demo-assets/photos'
+const FAKE_GALLERY_BASE_TIME = Date.UTC(2026, 0, 15, 12, 0, 0)
+
+const DEMO_LOCAL_GALLERY_FILENAMES: readonly string[] = [
+  'baseball-pitcher-and-ball-in-hand-player-ready-t-2026-01-09-09-18-02-utc.jpg',
+  'baseball-support-and-team-together-in-a-match-ga-2026-01-09-09-38-16-utc.jpg',
+  'basketball-kid-is-dribbling-and-guarding-a-ball-du-2026-01-09-10-26-50-utc.jpg',
+  'boy-sitting-on-bench-with-little-league-baseball-t-2026-01-11-08-01-42-utc.jpg',
+  'cheerleader-exercise-line-and-students-in-cheerle-2026-01-09-09-35-49-utc.jpg',
+  'cheerleader-sports-and-women-with-hands-raised-on-2026-01-09-10-10-05-utc.jpg',
+  'cheerleader-team-sports-and-hands-with-pompom-for-2026-01-09-10-22-08-utc.jpg',
+  'cheerleader-woman-jump-and-sports-outdoor-on-blue-2026-01-09-11-05-25-utc.jpg',
+  'close-up-of-kids-with-blurred-faces-playing-basket-2026-01-09-10-26-46-utc.jpg',
+  'close-up-view-of-dollar-banknotes-in-baseball-glov-2026-01-06-00-43-18-utc.jpg',
+  'cropped-view-of-little-children-in-sportswear-hold-2026-01-09-12-15-40-utc.jpg',
+  'equipment-room.jpg',
+  'facility-exterior.jpg',
+  'female-basketball-coach-motivating-her-team-during-2026-01-08-08-10-44-utc.jpg',
+  'female-football-sports-and-team-playing-match-on-2026-01-09-11-06-38-utc.jpg',
+  'female-players-playing-volleyball-in-the-court-2026-01-09-08-34-05-utc.jpg',
+  'players-action.jpg',
+  'soccer-action.jpg',
+  'team-celebration.jpg',
+  'team-warmup.jpg',
+  'tournament-field.jpg',
+  'tournament-trophy.jpg',
+] as const
+
+const FAKE_AUTO_GALLERY_FILES: Record<FakeAutoGalleryType, readonly string[]> = {
+  athlete: ['players-action.jpg', 'soccer-action.jpg', 'team-celebration.jpg'],
+  team: ['team-warmup.jpg', 'players-action.jpg', 'team-celebration.jpg'],
+  event: ['tournament-field.jpg', 'tournament-trophy.jpg', 'team-celebration.jpg'],
+  travel: ['tournament-field.jpg', 'team-warmup.jpg', 'facility-exterior.jpg'],
+  program: ['soccer-action.jpg', 'team-warmup.jpg', 'players-action.jpg'],
+  season: ['team-celebration.jpg', 'soccer-action.jpg', 'team-warmup.jpg'],
+  org: ['facility-exterior.jpg', 'equipment-room.jpg', 'team-celebration.jpg'],
+}
+
+const FAKE_GALLERY_NAME_BY_TYPE: Record<FakeAutoGalleryType, string> = {
+  athlete: 'Athlete Photos',
+  team: 'Team Photos',
+  event: 'Event Photos',
+  travel: 'Travel Photos',
+  program: 'Program Photos',
+  season: 'Season Photos',
+  org: 'Organization Photos',
+}
+
+/**
+ * In fake mode, entity galleries should resolve to real mock galleries that already exist.
+ * This prevents links to synthetic IDs that can drift from curated gallery pages.
+ */
+const FAKE_CANONICAL_GALLERY_ID_BY_TYPE: Record<FakeAutoGalleryType, string> = {
+  athlete: 'mock-gallery-3',
+  team: 'mock-gallery-1',
+  event: 'mock-gallery-1',
+  travel: 'mock-gallery-1',
+  program: 'mock-gallery-1',
+  season: 'mock-gallery-1',
+  org: 'mock-gallery-5',
+}
+
+function parseGeneratedFakeGalleryId(galleryId: string): { galleryType: FakeAutoGalleryType; entityId: string } | null {
+  const match = /^mock-gallery-(athlete|team|event|travel|program|season|org)-(.+)$/.exec(galleryId)
+  if (!match) return null
+  return {
+    galleryType: match[1] as FakeAutoGalleryType,
+    entityId: match[2],
+  }
+}
+
+function hashGallerySeed(seed: string): number {
+  let hash = 0
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
+  }
+  return hash
+}
+
+function rotateFilenames(seed: string): string[] {
+  const source = [...DEMO_LOCAL_GALLERY_FILENAMES]
+  if (source.length === 0) return source
+  const offset = hashGallerySeed(seed) % source.length
+  return source.slice(offset).concat(source.slice(0, offset))
+}
+
+function buildStockedFakePhotos(
+  galleryId: string,
+  preferredFiles: readonly string[] = [],
+): GalleryPhoto[] {
+  const preferred = preferredFiles.filter((file) => DEMO_LOCAL_GALLERY_FILENAMES.includes(file))
+  const preferredUnique = Array.from(new Set(preferred))
+  const rotated = rotateFilenames(galleryId).filter((file) => !preferredUnique.includes(file))
+  const files = [...preferredUnique, ...rotated]
+
+  return files.map((filename, i) => {
+    const id = `mock-photo-${galleryId}-${i}`
+    const created = new Date(FAKE_GALLERY_BASE_TIME - (files.length - i) * 24 * 60 * 60 * 1000).toISOString()
+    const path = `${FAKE_GALLERY_BASE_PATH}/${filename}`
+    return {
+      id,
+      gallery_id: galleryId,
+      album_id: null,
+      storage_path: path,
+      thumbnail_path: null,
+      thumbnail_sm_path: null,
+      thumbnail_md_path: null,
+      thumbnail_lg_path: null,
+      filename,
+      size_bytes: 200000,
+      sort_order: i + 1,
+      status: 'approved' as PhotoStatus,
+      approval_status: 'approved' as PhotoStatus,
+      blurhash: null,
+      can_download: undefined,
+      uploaded_by_user_id: 'demo',
+      taken_at: null,
+      created_at: created,
+      updated_at: created,
+      thumbnail_url: path,
+      url: path,
+    } as GalleryPhoto
+  })
+}
+
+function getFakeAutoGalleryPhotos(galleryId: string, galleryType: FakeAutoGalleryType): GalleryPhoto[] {
+  const files = FAKE_AUTO_GALLERY_FILES[galleryType] || FAKE_AUTO_GALLERY_FILES.org
+  return buildStockedFakePhotos(galleryId, files)
+}
+
+function mapGalleryTypeToFakeAutoType(galleryType: GalleryType): FakeAutoGalleryType {
+  if (galleryType === 'travel') return 'travel'
+  if (galleryType === 'athlete') return 'athlete'
+  if (galleryType === 'team') return 'team'
+  if (galleryType === 'event') return 'event'
+  if (galleryType === 'program') return 'program'
+  if (galleryType === 'season') return 'season'
+  return 'org'
+}
+
+function resolveFakeEntityGallery(
+  orgId: string,
+  galleryType: FakeAutoGalleryType,
+  entityId: string,
+): Gallery | null {
+  const mockGalleries = getMockGalleriesForOrg(orgId).map(buildFakeGallery)
+  const exact = mockGalleries.find(
+    (gallery) => gallery.gallery_type === galleryType && gallery.entity_id === entityId,
+  )
+  if (exact) return exact
+
+  const canonicalId = FAKE_CANONICAL_GALLERY_ID_BY_TYPE[galleryType]
+  const canonical =
+    mockGalleries.find((gallery) => gallery.id === canonicalId) ||
+    (() => {
+      const fallback = getMockGalleryById(canonicalId)
+      return fallback ? buildFakeGallery(fallback) : null
+    })()
+
+  if (!canonical) return null
+
+  return {
+    ...canonical,
+    gallery_type: galleryType,
+    entity_id: entityId,
+    name: FAKE_GALLERY_NAME_BY_TYPE[galleryType],
+  }
+}
+
+function mapMockPhotoToGalleryPhoto(photo: any): GalleryPhoto {
+  const thumbnailPath = photo.thumbnail_md_path || photo.thumbnail_path || null
+  return {
+    ...photo,
+    status: photo.status as PhotoStatus,
+    approval_status: (photo.approval_status || photo.status) as PhotoStatus,
+    can_download: photo.can_download ?? undefined,
+    url: getGalleryPhotoUrl(photo.storage_path),
+    thumbnail_url: getGalleryPhotoThumbnailUrl(thumbnailPath, photo.storage_path),
+    thumbnail_path: thumbnailPath,
+  } as GalleryPhoto
+}
+
+function getFakePhotosForGalleryId(galleryId: string): GalleryPhoto[] {
+  const generated = parseGeneratedFakeGalleryId(galleryId)
+  if (generated) {
+    const canonicalId = FAKE_CANONICAL_GALLERY_ID_BY_TYPE[generated.galleryType]
+    if (canonicalId && canonicalId !== galleryId) return getFakePhotosForGalleryId(canonicalId)
+    return getFakeAutoGalleryPhotos(galleryId, generated.galleryType)
+  }
+
+  const basePhotos = getMockPhotosForGallery(galleryId).map(mapMockPhotoToGalleryPhoto)
+  const preferredFiles = basePhotos
+    .map((photo) => photo.filename || photo.storage_path.split('/').pop() || '')
+    .filter((filename) => filename !== '')
+  const stockedPhotos = buildStockedFakePhotos(galleryId, preferredFiles)
+
+  if (basePhotos.length === 0) return stockedPhotos
+
+  const baseByFilename = new Map<string, GalleryPhoto>()
+  basePhotos.forEach((photo) => {
+    const filename = photo.filename || photo.storage_path.split('/').pop() || ''
+    if (!filename || baseByFilename.has(filename)) return
+    baseByFilename.set(filename, photo)
+  })
+
+  return stockedPhotos.map((photo) => {
+    const filename = photo.filename || ''
+    const base = filename ? baseByFilename.get(filename) : undefined
+    if (!base) return photo
+
+    return {
+      ...photo,
+      id: base.id,
+      status: base.status,
+      approval_status: (base.approval_status || base.status) as PhotoStatus,
+      can_download: base.can_download,
+      uploaded_by_user_id: base.uploaded_by_user_id || photo.uploaded_by_user_id,
+      caption: base.caption ?? photo.caption,
+      taken_at: base.taken_at ?? photo.taken_at,
+      created_at: base.created_at ?? photo.created_at,
+      updated_at: base.updated_at ?? photo.updated_at,
+      sort_order: base.sort_order ?? photo.sort_order,
+    } as GalleryPhoto
+  })
+}
+
+function buildFakeGallery(mockGallery: any): Gallery {
+  const photos = getFakePhotosForGalleryId(mockGallery.id)
+  const coverPhoto =
+    photos.find((photo) => photo.id === mockGallery.cover_photo_id) ??
+    photos[0] ??
+    null
+  const pendingCount = photos.filter((photo) => photo.status === 'pending').length
+
+  return {
+    ...(mockGallery as Gallery),
+    can_download: mockGallery.can_download ?? undefined,
+    cover_url: coverPhoto ? getGalleryPhotoThumbnailUrl(coverPhoto.thumbnail_path || null, coverPhoto.storage_path) : null,
+    photo_count: photos.length,
+    pending_count: pendingCount,
+  } as Gallery
+}
+
+function getFakeGalleriesForParams(context: UserContext, params: GetGalleriesParams): Gallery[] {
+  const effectiveOrgId = params.org_id || context.orgId || DEMO_ORG_A_ID
+
+  if (params.org_ids && params.org_ids.length > 0 && !params.org_ids.includes(effectiveOrgId)) {
+    return []
+  }
+
+  let galleries = getMockGalleriesForOrg(effectiveOrgId).map(buildFakeGallery)
+
+  if (params.gallery_type) {
+    galleries = galleries.filter((gallery) => gallery.gallery_type === params.gallery_type)
+  }
+
+  if (params.entity_id && params.entity_id !== '') {
+    galleries = galleries.filter((gallery) => gallery.entity_id === params.entity_id)
+  }
+
+  if (params.search && params.search.trim() !== '') {
+    const term = params.search.trim().toLowerCase()
+    galleries = galleries.filter((gallery) => {
+      const name = gallery.name.toLowerCase()
+      const description = (gallery.description || '').toLowerCase()
+      const entityName = (gallery.entity_name || '').toLowerCase()
+      return name.includes(term) || description.includes(term) || entityName.includes(term)
+    })
+  }
+
+  const orderDirection = params.order_direction || 'desc'
+  const ascending = orderDirection === 'asc'
+  galleries = [...galleries].sort((a, b) => {
+    const timeA = new Date(a.created_at).getTime()
+    const timeB = new Date(b.created_at).getTime()
+    if (timeA !== timeB) return ascending ? timeA - timeB : timeB - timeA
+    return ascending ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)
+  })
+
+  if (params.cursor) {
+    const cursorTime = new Date(params.cursor.created_at).getTime()
+    const cursorId = params.cursor.id
+    galleries = galleries.filter((gallery) => {
+      const galleryTime = new Date(gallery.created_at).getTime()
+      if (ascending) {
+        return galleryTime > cursorTime || (galleryTime === cursorTime && gallery.id > cursorId)
+      }
+      return galleryTime < cursorTime || (galleryTime === cursorTime && gallery.id < cursorId)
+    })
+  }
+
+  const offset = params.offset ?? 0
+  if (offset > 0) {
+    galleries = galleries.slice(offset)
+  }
+
+  if (params.limit) {
+    galleries = galleries.slice(0, params.limit)
+  }
+
+  return galleries
+}
+
 /**
  * Validate UUID format
  */
@@ -172,17 +484,31 @@ export async function generateGalleryCover(
   sourcePhotoId?: string,
   forceRegenerate: boolean = false
 ): Promise<{ error: Error | null }> {
+  console.groupCollapsed(`%cgenerateGalleryCover: ${galleryId}`, 'color: #666; font-weight: bold;');
+  debug.flow('GalleryService.generateGalleryCover', 'Generating gallery cover', { galleryId, sourcePhotoId, forceRegenerate })
+  debug.perf.start('galleryService.generateGalleryCover')
+
   try {
     const { error } = await supabase.functions.invoke('generate-gallery-cover', {
       body: { gallery_id: galleryId, source_photo_id: sourcePhotoId, force_regenerate: forceRegenerate }
     })
 
     if (error) {
+      debug.perf.end('galleryService.generateGalleryCover')
+      debug.error('GalleryService.generateGalleryCover', 'Triggered generation failed', { error, galleryId })
+      console.groupEnd()
       console.error('[galleryService] Triggered generation failed:', error);
       // We don't throw here to avoid failing the parent operation (like upload)
+      return { error: null }
     }
+    debug.perf.end('galleryService.generateGalleryCover')
+    debug.flow('GalleryService.generateGalleryCover', 'Gallery cover generation triggered', { galleryId })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('galleryService.generateGalleryCover')
+    debug.error('GalleryService.generateGalleryCover', 'Exception invoking generate-gallery-cover', { error: err, galleryId })
+    console.groupEnd()
     console.error('[galleryService] Error invoking generate-gallery-cover:', err)
     return { error: err as Error }
   }
@@ -193,6 +519,7 @@ export async function generateGalleryCover(
  */
 export function getGalleryPhotoUrl(storagePath: string): string {
   if (!storagePath) return ''
+  if (storagePath.startsWith('/')) return storagePath
 
   const { data } = supabase.storage
     .from('public-media')
@@ -338,12 +665,19 @@ export async function getGalleriesForUser(
   context: UserContext,
   params: GetGalleriesParams = {}
 ): Promise<{ data: Gallery[]; error: Error | null }> {
-  if (USE_FAKE_DATA) {
-    await simulateDelay()
-    return { data: [], error: null }
-  }
+  console.groupCollapsed(`%cgetGalleriesForUser: ${context.userId}`, 'color: #666; font-weight: bold;');
+  debug.data('GalleryService.getGalleriesForUser', 'Request', { context: { userId: context.userId, orgId: context.orgId }, params })
+  debug.perf.start('galleryService.getGalleriesForUser')
 
   try {
+    if (USE_FAKE_DATA) {
+      await simulateDelay()
+      const fakeGalleries = getFakeGalleriesForParams(context, params)
+      debug.perf.end('galleryService.getGalleriesForUser')
+      debug.data('GalleryService.getGalleriesForUser', 'Response (fake)', { galleryCount: fakeGalleries.length })
+      console.groupEnd()
+      return { data: fakeGalleries, error: null }
+    }
     const orderDirection = params.order_direction || 'desc'
     const ascending = orderDirection === 'asc'
 
@@ -491,11 +825,17 @@ export async function getGalleriesForUser(
 
     const withEntities = await attachEntityNames(galleryList)
 
+    debug.perf.end('galleryService.getGalleriesForUser')
+    debug.data('GalleryService.getGalleriesForUser', 'Response', { galleryCount: withEntities.length })
+    console.groupEnd()
     return {
       data: withEntities,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('galleryService.getGalleriesForUser')
+    debug.error('GalleryService.getGalleriesForUser', 'Failed to fetch galleries', { error: err, context: { userId: context.userId, orgId: context.orgId }, params })
+    console.groupEnd()
     console.error('[galleryService] Error getting galleries:', err)
     return {
       data: [],
@@ -533,6 +873,9 @@ export async function getRecentGalleryActivity(
 
   try {
     if (!context.orgId) {
+      debug.perf.end('galleryService.getRecentGalleryActivity')
+      debug.error('GalleryService.getRecentGalleryActivity', 'Organization context required', { limit })
+      console.groupEnd()
       return { data: [], error: new Error('Organization context required') }
     }
 
@@ -620,9 +963,30 @@ export async function getGalleryById(
   _context: UserContext,
   galleryId: string
 ): Promise<{ data: Gallery | null; error: Error | null }> {
+  console.groupCollapsed(`%cgetGalleryById: ${galleryId}`, 'color: #666; font-weight: bold;');
+  debug.data('GalleryService.getGalleryById', 'Request', { galleryId })
+  debug.perf.start('galleryService.getGalleryById')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
-    return { data: null, error: null }
+    const generated = parseGeneratedFakeGalleryId(galleryId)
+    if (generated) {
+      const fakeAthleteGallery = resolveFakeEntityGallery(
+        _context.orgId || DEMO_ORG_A_ID,
+        generated.galleryType,
+        generated.entityId,
+      )
+      debug.perf.end('galleryService.getGalleryById')
+      debug.data('GalleryService.getGalleryById', 'Response (fake)', { galleryId, hasData: !!fakeAthleteGallery })
+      console.groupEnd()
+      return { data: fakeAthleteGallery, error: null }
+    }
+
+    const mockGallery = getMockGalleryById(galleryId)
+    debug.perf.end('galleryService.getGalleryById')
+    debug.data('GalleryService.getGalleryById', 'Response (fake)', { galleryId, hasData: !!mockGallery })
+    console.groupEnd()
+    return { data: mockGallery ? buildFakeGallery(mockGallery) : null, error: null }
   }
 
   try {
@@ -651,11 +1015,17 @@ export async function getGalleryById(
 
     const [withEntity] = await attachEntityNames([gallery])
 
+    debug.perf.end('galleryService.getGalleryById')
+    debug.data('GalleryService.getGalleryById', 'Response', { galleryId, hasData: true })
+    console.groupEnd()
     return {
       data: withEntity || gallery,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('galleryService.getGalleryById')
+    debug.error('GalleryService.getGalleryById', 'Failed to get gallery', { error: err, galleryId })
+    console.groupEnd()
     console.error('[galleryService] Error getting gallery:', err)
     return {
       data: null,
@@ -673,9 +1043,22 @@ export async function getGalleryByEntity(
   galleryType: GalleryType,
   entityId: string
 ): Promise<{ data: Gallery | null; error: Error | null }> {
+  console.groupCollapsed(`%cgetGalleryByEntity: ${galleryType}/${entityId}`, 'color: #666; font-weight: bold;');
+  debug.data('GalleryService.getGalleryByEntity', 'Request', { galleryType, entityId })
+  debug.perf.start('galleryService.getGalleryByEntity')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
-    return { data: null, error: null }
+    const effectiveOrgId = _context.orgId || DEMO_ORG_A_ID
+    const fakeGallery = resolveFakeEntityGallery(
+      effectiveOrgId,
+      mapGalleryTypeToFakeAutoType(galleryType),
+      entityId,
+    )
+    debug.perf.end('galleryService.getGalleryByEntity')
+    debug.data('GalleryService.getGalleryByEntity', 'Response (fake)', { galleryType, entityId, hasData: !!fakeGallery })
+    console.groupEnd()
+    return { data: fakeGallery, error: null }
   }
 
   try {
@@ -692,11 +1075,17 @@ export async function getGalleryByEntity(
 
     if (error) throw error
 
+    debug.perf.end('galleryService.getGalleryByEntity')
+    debug.data('GalleryService.getGalleryByEntity', 'Response', { galleryType, entityId, hasData: !!data })
+    console.groupEnd()
     return {
       data: data as Gallery | null,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('galleryService.getGalleryByEntity')
+    debug.error('GalleryService.getGalleryByEntity', 'Failed to get gallery by entity', { error: err, galleryType, entityId })
+    console.groupEnd()
     console.error('[galleryService] Error getting gallery by entity:', err)
     return {
       data: null,
@@ -718,9 +1107,20 @@ export async function getEntityGallery(
   entityType: GalleryEntityType,
   entityId: string
 ): Promise<{ data: Gallery | null; error: Error | null }> {
+  console.groupCollapsed(`%cgetEntityGallery: ${entityType}/${entityId}`, 'color: #666; font-weight: bold;');
+  debug.data('GalleryService.getEntityGallery', 'Request', { entityType, entityId })
+  debug.perf.start('galleryService.getEntityGallery')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
-    return { data: null, error: null }
+    const effectiveOrgId = _context.orgId || DEMO_ORG_A_ID
+    const galleryType = mapEntityToGalleryType(entityType) as FakeAutoGalleryType
+    const fakeGallery = resolveFakeEntityGallery(effectiveOrgId, galleryType, entityId)
+
+    debug.perf.end('galleryService.getEntityGallery')
+    debug.data('GalleryService.getEntityGallery', 'Response (fake)', { entityType, entityId, hasData: !!fakeGallery })
+    console.groupEnd()
+    return { data: fakeGallery, error: null }
   }
 
   try {
@@ -749,11 +1149,17 @@ export async function getEntityGallery(
 
     if (error) throw error
 
+    debug.perf.end('galleryService.getEntityGallery')
+    debug.data('GalleryService.getEntityGallery', 'Response', { entityType, entityId, hasData: !!data })
+    console.groupEnd()
     return {
       data: data ? { ...(data as any), cover_url: data.cover ? getGalleryPhotoThumbnailUrl(data.cover.thumbnail_path, data.cover.storage_path) : null } as Gallery : null,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('galleryService.getEntityGallery')
+    debug.error('GalleryService.getEntityGallery', 'Failed to get entity gallery', { error: err, entityType, entityId })
+    console.groupEnd()
     console.error('[galleryService] Error getting entity gallery:', err)
     return {
       data: null,
@@ -782,13 +1188,23 @@ export async function getRelatedGalleries(
   entityType: GalleryEntityType,
   entityId: string
 ): Promise<{ data: RelatedGallery[]; error: Error | null }> {
+  console.groupCollapsed(`%cgetRelatedGalleries: ${entityType}/${entityId}`, 'color: #666; font-weight: bold;');
+  debug.data('GalleryService.getRelatedGalleries', 'Request', { entityType, entityId })
+  debug.perf.start('galleryService.getRelatedGalleries')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.getRelatedGalleries')
+    debug.data('GalleryService.getRelatedGalleries', 'Response (fake)', { entityType, entityId, count: 0 })
+    console.groupEnd()
     return { data: [], error: null }
   }
 
   try {
     if (!isValidUUID(entityId)) {
+      debug.perf.end('galleryService.getRelatedGalleries')
+      debug.error('GalleryService.getRelatedGalleries', 'Invalid entity ID', { entityType, entityId })
+      console.groupEnd()
       return { data: [], error: new Error('Invalid entity ID') }
     }
 
@@ -807,11 +1223,17 @@ export async function getRelatedGalleries(
       photoCount: Number(item.photo_count || 0),
     }))
 
+    debug.perf.end('galleryService.getRelatedGalleries')
+    debug.data('GalleryService.getRelatedGalleries', 'Response', { entityType, entityId, count: relatedGalleries.length })
+    console.groupEnd()
     return {
       data: relatedGalleries,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('galleryService.getRelatedGalleries')
+    debug.error('GalleryService.getRelatedGalleries', 'Failed to get related galleries', { error: err, entityType, entityId })
+    console.groupEnd()
     console.error('[galleryService] Error getting related galleries:', err)
     return {
       data: [],
@@ -839,9 +1261,20 @@ export async function ensureEntityGallery(
   name?: string | null,
   orgId?: string | null
 ): Promise<{ data: Gallery | null; error: Error | null }> {
+  console.groupCollapsed(`%censureEntityGallery: ${entityType}/${entityId}`, 'color: #666; font-weight: bold;');
+  debug.flow('GalleryService.ensureEntityGallery', 'Ensuring entity gallery exists', { entityType, entityId, name })
+  debug.perf.start('galleryService.ensureEntityGallery')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
-    return { data: null, error: null }
+    const effectiveOrgId = orgId ?? context.orgId ?? DEMO_ORG_A_ID
+    const galleryType = mapEntityToGalleryType(entityType) as FakeAutoGalleryType
+    const gallery = resolveFakeEntityGallery(effectiveOrgId, galleryType, entityId)
+
+    debug.perf.end('galleryService.ensureEntityGallery')
+    debug.flow('GalleryService.ensureEntityGallery', 'Entity gallery ensured (fake)', { entityType, entityId })
+    console.groupEnd()
+    return { data: gallery, error: null }
   }
 
   try {
@@ -875,6 +1308,9 @@ export async function ensureEntityGallery(
     if (rpcError) throw rpcError
 
     if (!galleryId) {
+      debug.perf.end('galleryService.ensureEntityGallery')
+      debug.error('GalleryService.ensureEntityGallery', 'RPC returned no gallery ID', { entityType, entityId })
+      console.groupEnd()
       return {
         data: null,
         error: new Error('Failed to ensure gallery exists'),
@@ -916,8 +1352,15 @@ export async function uploadPhotoToEntityGallery(
   albumId?: string | null,
   status: PhotoStatus = 'approved'
 ): Promise<{ data: GalleryPhoto | null; error: Error | null }> {
+  console.groupCollapsed(`%cuploadPhotoToEntityGallery: ${entityType}/${entityId}`, 'color: #666; font-weight: bold;');
+  debug.flow('GalleryService.uploadPhotoToEntityGallery', 'Uploading photo to entity gallery', { entityType, entityId, fileName: file.name, albumId, status })
+  debug.perf.start('galleryService.uploadPhotoToEntityGallery')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.uploadPhotoToEntityGallery')
+    debug.flow('GalleryService.uploadPhotoToEntityGallery', 'Photo uploaded (fake)', { entityType, entityId })
+    console.groupEnd()
     return { data: null, error: null }
   }
 
@@ -948,8 +1391,20 @@ export async function uploadPhotoToEntityGallery(
       status
     )
 
+    if (uploadResult.error) {
+      debug.perf.end('galleryService.uploadPhotoToEntityGallery')
+      debug.error('GalleryService.uploadPhotoToEntityGallery', 'Upload failed', { error: uploadResult.error, entityType, entityId })
+      console.groupEnd()
+    } else {
+      debug.perf.end('galleryService.uploadPhotoToEntityGallery')
+      debug.flow('GalleryService.uploadPhotoToEntityGallery', 'Photo uploaded successfully', { entityType, entityId, photoId: uploadResult.data?.id })
+      console.groupEnd()
+    }
     return uploadResult
   } catch (err) {
+    debug.perf.end('galleryService.uploadPhotoToEntityGallery')
+    debug.error('GalleryService.uploadPhotoToEntityGallery', 'Exception uploading photo', { error: err, entityType, entityId })
+    console.groupEnd()
     console.error('[galleryService] Error uploading photo to entity gallery:', err)
     return {
       data: null,
@@ -972,11 +1427,88 @@ export async function getPhotosForGallery(
 ): Promise<{ data: GalleryPhoto[]; error: Error | null }> {
   if (USE_FAKE_DATA) {
     await simulateDelay()
-    return { data: [], error: null }
+    let photos = getFakePhotosForGalleryId(params.gallery_id)
+
+    if (params.album_id !== undefined) {
+      if (params.album_id === null) {
+        photos = photos.filter((photo) => photo.album_id === null)
+      } else {
+        photos = photos.filter((photo) => photo.album_id === params.album_id)
+      }
+    }
+
+    if (params.status) {
+      photos = photos.filter((photo) => photo.status === params.status)
+    }
+
+    if (params.search && params.search.trim() !== '') {
+      const term = params.search.trim().toLowerCase()
+      photos = photos.filter((photo) => {
+        const caption = (photo.caption || '').toLowerCase()
+        const filename = (photo.filename || '').toLowerCase()
+        return caption.includes(term) || filename.includes(term)
+      })
+    }
+
+    if (params.from) {
+      const fromDate = new Date(params.from).getTime()
+      photos = photos.filter((photo) => new Date(photo.created_at).getTime() >= fromDate)
+    }
+
+    if (params.to) {
+      const toDate = new Date(params.to).getTime()
+      photos = photos.filter((photo) => new Date(photo.created_at).getTime() <= toDate)
+    }
+
+    const orderBy = params.order_by || 'sort_order'
+    const orderDirection = params.order_direction || (orderBy === 'sort_order' ? 'asc' : 'desc')
+    const ascending = orderDirection === 'asc'
+    photos = [...photos].sort((a, b) => {
+      if (orderBy === 'sort_order') {
+        const sortA = a.sort_order ?? 0
+        const sortB = b.sort_order ?? 0
+        if (sortA !== sortB) return ascending ? sortA - sortB : sortB - sortA
+      } else if (orderBy === 'taken_at') {
+        const takenA = new Date(a.taken_at || a.created_at).getTime()
+        const takenB = new Date(b.taken_at || b.created_at).getTime()
+        if (takenA !== takenB) return ascending ? takenA - takenB : takenB - takenA
+      } else {
+        const createdA = new Date(a.created_at).getTime()
+        const createdB = new Date(b.created_at).getTime()
+        if (createdA !== createdB) return ascending ? createdA - createdB : createdB - createdA
+      }
+      return ascending ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)
+    })
+
+    if (params.cursor) {
+      const cursorTime = new Date(params.cursor.created_at).getTime()
+      const cursorId = params.cursor.id
+      photos = photos.filter((photo) => {
+        const photoTime = new Date(photo.created_at).getTime()
+        if (ascending) {
+          return photoTime > cursorTime || (photoTime === cursorTime && photo.id > cursorId)
+        }
+        return photoTime < cursorTime || (photoTime === cursorTime && photo.id < cursorId)
+      })
+    }
+
+    const offset = params.offset ?? 0
+    if (offset > 0) {
+      photos = photos.slice(offset)
+    }
+
+    if (params.limit) {
+      photos = photos.slice(0, params.limit)
+    }
+
+    return { data: photos, error: null }
   }
 
   try {
     if (!isValidUUID(params.gallery_id)) {
+      debug.perf.end('galleryService.getPhotosForGallery')
+      debug.error('GalleryService.getPhotosForGallery', 'Invalid gallery ID', { params })
+      console.groupEnd()
       return { data: [], error: new Error('Invalid gallery ID') }
     }
 
@@ -1068,11 +1600,17 @@ export async function getPhotosForGallery(
       )
     }
 
+    debug.perf.end('galleryService.getPhotosForGallery')
+    debug.data('GalleryService.getPhotosForGallery', 'Response', { galleryId: params.gallery_id, photoCount: photos.length })
+    console.groupEnd()
     return {
       data: photos,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('galleryService.getPhotosForGallery')
+    debug.error('GalleryService.getPhotosForGallery', 'Failed to get photos', { error: err, params })
+    console.groupEnd()
     console.error('[galleryService] Error getting photos:', err)
     return {
       data: [],
@@ -1088,9 +1626,17 @@ export async function getPhotoById(
   _context: UserContext,
   photoId: string
 ): Promise<{ data: GalleryPhoto | null; error: Error | null }> {
+  console.groupCollapsed(`%cgetPhotoById: ${photoId}`, 'color: #666; font-weight: bold;');
+  debug.data('GalleryService.getPhotoById', 'Request', { photoId })
+  debug.perf.start('galleryService.getPhotoById')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
-    return { data: null, error: null }
+    const mockPhoto = getAllMockPhotos().find((photo) => photo.id === photoId)
+    debug.perf.end('galleryService.getPhotoById')
+    debug.data('GalleryService.getPhotoById', 'Response (fake)', { photoId, hasData: !!mockPhoto })
+    console.groupEnd()
+    return { data: mockPhoto ? mapMockPhotoToGalleryPhoto(mockPhoto) : null, error: null }
   }
 
   try {
@@ -1116,6 +1662,9 @@ export async function getPhotoById(
     if (error) throw error
 
     if (!data) {
+      debug.perf.end('galleryService.getPhotoById')
+      debug.data('GalleryService.getPhotoById', 'Response (not found)', { photoId })
+      console.groupEnd()
       return { data: null, error: null }
     }
 
@@ -1129,11 +1678,17 @@ export async function getPhotoById(
       tagged_athletes: taggedAthletes,
     } as GalleryPhoto
 
+    debug.perf.end('galleryService.getPhotoById')
+    debug.data('GalleryService.getPhotoById', 'Response', { photoId, hasData: true, taggedAthleteCount: taggedAthletes.length })
+    console.groupEnd()
     return {
       data: photo,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('galleryService.getPhotoById')
+    debug.error('GalleryService.getPhotoById', 'Failed to get photo', { error: err, photoId })
+    console.groupEnd()
     console.error('[galleryService] Error getting photo:', err)
     return {
       data: null,
@@ -1160,10 +1715,24 @@ export async function getGalleryPhotoCounts(
   _context: UserContext,
   galleryId: string
 ): Promise<{ data: GalleryPhotoCounts; error: Error | null }> {
+  console.groupCollapsed(`%cgetGalleryPhotoCounts: ${galleryId}`, 'color: #666; font-weight: bold;');
+  debug.data('GalleryService.getGalleryPhotoCounts', 'Request', { galleryId })
+  debug.perf.start('galleryService.getGalleryPhotoCounts')
+
   const empty: GalleryPhotoCounts = { total: 0, pending: 0, approved: 0, rejected: 0 }
   if (USE_FAKE_DATA) {
     await simulateDelay()
-    return { data: empty, error: null }
+    const photos = getFakePhotosForGalleryId(galleryId)
+    const counts: GalleryPhotoCounts = {
+      total: photos.length,
+      pending: photos.filter((photo) => photo.status === 'pending').length,
+      approved: photos.filter((photo) => photo.status === 'approved').length,
+      rejected: photos.filter((photo) => photo.status === 'rejected').length,
+    }
+    debug.perf.end('galleryService.getGalleryPhotoCounts')
+    debug.data('GalleryService.getGalleryPhotoCounts', 'Response (fake)', { galleryId, counts })
+    console.groupEnd()
+    return { data: counts, error: null }
   }
 
   try {
@@ -1310,8 +1879,15 @@ export async function updateGalleryAlbum(
   albumId: string,
   updates: { name?: string; description?: string | null }
 ): Promise<{ data: GalleryAlbum | null; error: Error | null }> {
+  console.groupCollapsed(`%cupdateGalleryAlbum: ${albumId}`, 'color: #666; font-weight: bold;');
+  debug.flow('GalleryService.updateGalleryAlbum', 'Updating gallery album', { albumId, updates: Object.keys(updates) })
+  debug.perf.start('galleryService.updateGalleryAlbum')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.updateGalleryAlbum')
+    debug.flow('GalleryService.updateGalleryAlbum', 'Album updated (fake)', { albumId })
+    console.groupEnd()
     return { data: null, error: null }
   }
 
@@ -1341,8 +1917,14 @@ export async function updateGalleryAlbum(
 
     if (error) throw error
 
+    debug.perf.end('galleryService.updateGalleryAlbum')
+    debug.flow('GalleryService.updateGalleryAlbum', 'Album updated successfully', { albumId })
+    console.groupEnd()
     return { data: data as GalleryAlbum, error: null }
   } catch (err) {
+    debug.perf.end('galleryService.updateGalleryAlbum')
+    debug.error('GalleryService.updateGalleryAlbum', 'Failed to update album', { error: err, albumId })
+    console.groupEnd()
     console.error('[galleryService] Error updating album:', err)
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
   }
@@ -1352,13 +1934,23 @@ export async function deleteGalleryAlbum(
   _context: UserContext,
   albumId: string
 ): Promise<{ error: Error | null }> {
+  console.groupCollapsed(`%cdeleteGalleryAlbum: ${albumId}`, 'color: #666; font-weight: bold;');
+  debug.flow('GalleryService.deleteGalleryAlbum', 'Deleting gallery album', { albumId })
+  debug.perf.start('galleryService.deleteGalleryAlbum')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.deleteGalleryAlbum')
+    debug.flow('GalleryService.deleteGalleryAlbum', 'Album deleted (fake)', { albumId })
+    console.groupEnd()
     return { error: null }
   }
 
   try {
     if (!isValidUUID(albumId)) {
+      debug.perf.end('galleryService.deleteGalleryAlbum')
+      debug.error('GalleryService.deleteGalleryAlbum', 'Invalid album ID', { albumId })
+      console.groupEnd()
       return { error: new Error('Invalid album ID') }
     }
 
@@ -1369,8 +1961,14 @@ export async function deleteGalleryAlbum(
 
     if (error) throw error
 
+    debug.perf.end('galleryService.deleteGalleryAlbum')
+    debug.flow('GalleryService.deleteGalleryAlbum', 'Album deleted successfully', { albumId })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('galleryService.deleteGalleryAlbum')
+    debug.error('GalleryService.deleteGalleryAlbum', 'Failed to delete album', { error: err, albumId })
+    console.groupEnd()
     console.error('[galleryService] Error deleting album:', err)
     return { error: err instanceof Error ? err : new Error('Unknown error') }
   }
@@ -1380,8 +1978,15 @@ export async function getPhotoBookmarks(
   context: UserContext,
   photoIds: string[]
 ): Promise<{ data: string[]; error: Error | null }> {
+  console.groupCollapsed(`%cgetPhotoBookmarks: ${photoIds.length} photos`, 'color: #666; font-weight: bold;');
+  debug.data('GalleryService.getPhotoBookmarks', 'Request', { userId: context.userId, photoCount: photoIds.length })
+  debug.perf.start('galleryService.getPhotoBookmarks')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.getPhotoBookmarks')
+    debug.data('GalleryService.getPhotoBookmarks', 'Response (fake)', { bookmarkCount: 0 })
+    console.groupEnd()
     return { data: [], error: null }
   }
 
@@ -1401,11 +2006,18 @@ export async function getPhotoBookmarks(
 
     if (error) throw error
 
+    const bookmarks = (data || []).map((row: any) => row.photo_id as string)
+    debug.perf.end('galleryService.getPhotoBookmarks')
+    debug.data('GalleryService.getPhotoBookmarks', 'Response', { bookmarkCount: bookmarks.length })
+    console.groupEnd()
     return {
-      data: (data || []).map((row: any) => row.photo_id as string),
+      data: bookmarks,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('galleryService.getPhotoBookmarks')
+    debug.error('GalleryService.getPhotoBookmarks', 'Failed to get photo bookmarks', { error: err })
+    console.groupEnd()
     console.error('[galleryService] Error fetching photo bookmarks:', err)
     return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
   }
@@ -1415,8 +2027,15 @@ export async function addPhotoBookmark(
   context: UserContext,
   photoId: string
 ): Promise<{ error: Error | null }> {
+  console.groupCollapsed(`%caddPhotoBookmark: ${photoId}`, 'color: #666; font-weight: bold;');
+  debug.flow('GalleryService.addPhotoBookmark', 'Adding photo bookmark', { photoId, userId: context.userId })
+  debug.perf.start('galleryService.addPhotoBookmark')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.addPhotoBookmark')
+    debug.flow('GalleryService.addPhotoBookmark', 'Bookmark added (fake)', { photoId })
+    console.groupEnd()
     return { error: null }
   }
 
@@ -1434,8 +2053,14 @@ export async function addPhotoBookmark(
 
     if (error) throw error
 
+    debug.perf.end('galleryService.addPhotoBookmark')
+    debug.flow('GalleryService.addPhotoBookmark', 'Bookmark added successfully', { photoId })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('galleryService.addPhotoBookmark')
+    debug.error('GalleryService.addPhotoBookmark', 'Failed to add bookmark', { error: err, photoId })
+    console.groupEnd()
     console.error('[galleryService] Error adding photo bookmark:', err)
     return { error: err instanceof Error ? err : new Error('Unknown error') }
   }
@@ -1445,8 +2070,15 @@ export async function removePhotoBookmark(
   context: UserContext,
   photoId: string
 ): Promise<{ error: Error | null }> {
+  console.groupCollapsed(`%cremovePhotoBookmark: ${photoId}`, 'color: #666; font-weight: bold;');
+  debug.flow('GalleryService.removePhotoBookmark', 'Removing photo bookmark', { photoId, userId: context.userId })
+  debug.perf.start('galleryService.removePhotoBookmark')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.removePhotoBookmark')
+    debug.flow('GalleryService.removePhotoBookmark', 'Bookmark removed (fake)', { photoId })
+    console.groupEnd()
     return { error: null }
   }
 
@@ -1466,8 +2098,14 @@ export async function removePhotoBookmark(
 
     if (error) throw error
 
+    debug.perf.end('galleryService.removePhotoBookmark')
+    debug.flow('GalleryService.removePhotoBookmark', 'Bookmark removed successfully', { photoId })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('galleryService.removePhotoBookmark')
+    debug.error('GalleryService.removePhotoBookmark', 'Failed to remove bookmark', { error: err, photoId })
+    console.groupEnd()
     console.error('[galleryService] Error removing photo bookmark:', err)
     return { error: err instanceof Error ? err : new Error('Unknown error') }
   }
@@ -1488,8 +2126,15 @@ export async function createGalleryForEntity(
   visibility: 'public' | 'team' | 'private' = 'team',
   isSystemGenerated: boolean = false
 ): Promise<{ data: Gallery | null; error: Error | null }> {
+  console.groupCollapsed(`%ccreateGalleryForEntity: ${galleryType}/${entityId}`, 'color: #666; font-weight: bold;');
+  debug.flow('GalleryService.createGalleryForEntity', 'Creating gallery for entity', { galleryType, entityId, name })
+  debug.perf.start('galleryService.createGalleryForEntity')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.createGalleryForEntity')
+    debug.flow('GalleryService.createGalleryForEntity', 'Gallery created (fake)', { galleryType, entityId })
+    console.groupEnd()
     return { data: null, error: null }
   }
 
@@ -1529,11 +2174,17 @@ export async function createGalleryForEntity(
 
     if (error) throw error
 
+    debug.perf.end('galleryService.createGalleryForEntity')
+    debug.flow('GalleryService.createGalleryForEntity', 'Gallery created successfully', { galleryType, entityId, galleryId: data?.id })
+    console.groupEnd()
     return {
       data: data as Gallery,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('galleryService.createGalleryForEntity')
+    debug.error('GalleryService.createGalleryForEntity', 'Failed to create gallery', { error: err, galleryType, entityId })
+    console.groupEnd()
     console.error('[galleryService] Error creating gallery:', err)
     return {
       data: null,
@@ -1554,11 +2205,22 @@ export async function getOrCreateStaticGallery(
 ): Promise<{ id: string | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
     await simulateDelay()
-    return { id: null, error: null }
+    const effectiveOrgId = context.orgId || DEMO_ORG_A_ID
+    const fakeGallery = resolveFakeEntityGallery(
+      effectiveOrgId,
+      mapGalleryTypeToFakeAutoType(galleryType),
+      entityId,
+    )
+    return { id: fakeGallery?.id ?? null, error: null }
   }
 
   try {
-    if (!context.orgId) return { id: null, error: new Error('Organization context required') }
+    if (!context.orgId) {
+      debug.perf.end('galleryService.getOrCreateStaticGallery')
+      debug.error('GalleryService.getOrCreateStaticGallery', 'Organization context required', { galleryType, entityId })
+      console.groupEnd()
+      return { id: null, error: new Error('Organization context required') }
+    }
     const { data, error } = await supabase.rpc('get_or_create_static_gallery', {
       p_org_id: context.orgId,
       p_entity_type: galleryType,
@@ -1566,8 +2228,14 @@ export async function getOrCreateStaticGallery(
       p_user_id: context.userId,
     })
     if (error) throw error
+    debug.perf.end('galleryService.getOrCreateStaticGallery')
+    debug.flow('GalleryService.getOrCreateStaticGallery', 'Static gallery retrieved successfully', { galleryType, entityId, galleryId: data })
+    console.groupEnd()
     return { id: data as string, error: null }
   } catch (err) {
+    debug.perf.end('galleryService.getOrCreateStaticGallery')
+    debug.error('GalleryService.getOrCreateStaticGallery', 'Failed to get or create static gallery', { error: err, galleryType, entityId })
+    console.groupEnd()
     console.error('[galleryService] Error get_or_create_static_gallery:', err)
     return { id: null, error: err as Error }
   }
@@ -1580,8 +2248,15 @@ export async function checkCanUploadToGallery(
   context: UserContext,
   galleryId: string
 ): Promise<{ allowed: boolean; error: Error | null }> {
+  console.groupCollapsed(`%ccheckCanUploadToGallery: ${galleryId}`, 'color: #666; font-weight: bold;');
+  debug.data('GalleryService.checkCanUploadToGallery', 'Request', { galleryId, userId: context.userId })
+  debug.perf.start('galleryService.checkCanUploadToGallery')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.checkCanUploadToGallery')
+    debug.data('GalleryService.checkCanUploadToGallery', 'Response (fake)', { galleryId, allowed: true })
+    console.groupEnd()
     return { allowed: true, error: null }
   }
 
@@ -1593,11 +2268,17 @@ export async function checkCanUploadToGallery(
 
     if (error) throw error
 
+    debug.perf.end('galleryService.checkCanUploadToGallery')
+    debug.data('GalleryService.checkCanUploadToGallery', 'Response', { galleryId, allowed: data === true })
+    console.groupEnd()
     return {
       allowed: data === true,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('galleryService.checkCanUploadToGallery')
+    debug.error('GalleryService.checkCanUploadToGallery', 'Failed to check upload permission', { error: err, galleryId })
+    console.groupEnd()
     console.error('[galleryService] Error checking upload permission:', err)
     return {
       allowed: false,
@@ -1613,8 +2294,15 @@ export async function checkCanModerateGallery(
   context: UserContext,
   galleryId: string
 ): Promise<{ allowed: boolean; error: Error | null }> {
+  console.groupCollapsed(`%ccheckCanModerateGallery: ${galleryId}`, 'color: #666; font-weight: bold;');
+  debug.data('GalleryService.checkCanModerateGallery', 'Request', { galleryId, userId: context.userId })
+  debug.perf.start('galleryService.checkCanModerateGallery')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.checkCanModerateGallery')
+    debug.data('GalleryService.checkCanModerateGallery', 'Response (fake)', { galleryId, allowed: true })
+    console.groupEnd()
     return { allowed: true, error: null }
   }
 
@@ -1626,11 +2314,17 @@ export async function checkCanModerateGallery(
 
     if (error) throw error
 
+    debug.perf.end('galleryService.checkCanModerateGallery')
+    debug.data('GalleryService.checkCanModerateGallery', 'Response', { galleryId, allowed: data === true })
+    console.groupEnd()
     return {
       allowed: data === true,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('galleryService.checkCanModerateGallery')
+    debug.error('GalleryService.checkCanModerateGallery', 'Failed to check moderate permission', { error: err, galleryId })
+    console.groupEnd()
     console.error('[galleryService] Error checking moderate permission:', err)
     return {
       allowed: false,
@@ -1647,8 +2341,15 @@ export async function checkCanModerateGallery(
 export async function checkStorageCap(
   context: UserContext
 ): Promise<{ allowed: boolean; error: Error | null; currentUsage?: number; limit?: number }> {
+  console.groupCollapsed(`%ccheckStorageCap: ${context.orgId}`, 'color: #666; font-weight: bold;');
+  debug.data('GalleryService.checkStorageCap', 'Request', { orgId: context.orgId })
+  debug.perf.start('galleryService.checkStorageCap')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.checkStorageCap')
+    debug.data('GalleryService.checkStorageCap', 'Response (fake)', { allowed: true })
+    console.groupEnd()
     return { allowed: true, error: null }
   }
 
@@ -1680,6 +2381,9 @@ export async function checkStorageCap(
         : Number(limitResult.data ?? 0)
 
     if (limitResult.error) {
+      debug.perf.end('galleryService.checkStorageCap')
+      debug.error('GalleryService.checkStorageCap', 'Failed to get storage limit, allowing upload', { error: limitResult.error, orgId: context.orgId })
+      console.groupEnd()
       console.warn('[galleryService] get_org_photo_storage_limit_bytes failed, allowing upload', limitResult.error)
       return {
         allowed: true,
@@ -1690,6 +2394,9 @@ export async function checkStorageCap(
 
     const allowed = limitBytes <= 0 || currentBytes < limitBytes
 
+    debug.perf.end('galleryService.checkStorageCap')
+    debug.data('GalleryService.checkStorageCap', 'Response', { allowed, currentUsage: currentBytes, limit: limitBytes > 0 ? limitBytes : undefined })
+    console.groupEnd()
     return {
       allowed,
       error: allowed
@@ -1701,6 +2408,9 @@ export async function checkStorageCap(
       limit: limitBytes > 0 ? limitBytes : undefined,
     }
   } catch (err) {
+    debug.perf.end('galleryService.checkStorageCap')
+    debug.error('GalleryService.checkStorageCap', 'Failed to check storage cap', { error: err, orgId: context.orgId })
+    console.groupEnd()
     console.error('[galleryService] Error checking storage cap:', err)
     return {
       allowed: false,
@@ -1739,6 +2449,9 @@ export async function updateStorageUsage(
 
   try {
     if (!context.orgId) {
+      debug.perf.end('galleryService.updateStorageUsage')
+      debug.error('GalleryService.updateStorageUsage', 'Organization context required', { bytesDelta })
+      console.groupEnd()
       return { error: new Error('Organization context required') }
     }
 
@@ -1778,8 +2491,14 @@ export async function updateStorageUsage(
       throw error
     }
 
+    debug.perf.end('galleryService.updateStorageUsage')
+    debug.flow('GalleryService.updateStorageUsage', 'Storage usage updated successfully', { orgId: context.orgId, bytesDelta })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('galleryService.updateStorageUsage')
+    debug.error('GalleryService.updateStorageUsage', 'Failed to update storage usage', { error: err, orgId: context.orgId, bytesDelta })
+    console.groupEnd()
     console.error('[galleryService] Error updating storage usage:', err)
     return {
       error: err instanceof Error ? err : new Error('Unknown error'),
@@ -1797,8 +2516,15 @@ export async function uploadPhotoToGallery(
   albumId?: string | null,
   status: PhotoStatus = 'approved'
 ): Promise<{ data: GalleryPhoto | null; error: Error | null }> {
+  console.groupCollapsed(`%cuploadPhotoToGallery: ${galleryId}`, 'color: #666; font-weight: bold;');
+  debug.flow('GalleryService.uploadPhotoToGallery', 'Uploading photo to gallery', { galleryId, fileName: file.name, fileSize: file.size, albumId, status })
+  debug.perf.start('galleryService.uploadPhotoToGallery')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.uploadPhotoToGallery')
+    debug.flow('GalleryService.uploadPhotoToGallery', 'Photo uploaded (fake)', { galleryId })
+    console.groupEnd()
     return { data: null, error: null }
   }
 
@@ -1832,6 +2558,9 @@ export async function uploadPhotoToGallery(
       })
 
     if (uploadError) {
+      debug.perf.end('galleryService.uploadPhotoToGallery')
+      debug.error('GalleryService.uploadPhotoToGallery', 'Storage upload failed', { error: uploadError, galleryId, storagePath })
+      console.groupEnd()
       throw uploadError
     }
 
@@ -1905,11 +2634,17 @@ export async function uploadPhotoToGallery(
       console.warn('Failed to check/trigger cover generation', e);
     }
 
+    debug.perf.end('galleryService.uploadPhotoToGallery')
+    debug.flow('GalleryService.uploadPhotoToGallery', 'Photo uploaded successfully', { galleryId, photoId: uploadedPhoto.id })
+    console.groupEnd()
     return {
       data: data as GalleryPhoto,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('galleryService.uploadPhotoToGallery')
+    debug.error('GalleryService.uploadPhotoToGallery', 'Exception uploading photo', { error: err, galleryId })
+    console.groupEnd()
     console.error('[galleryService] Error uploading photo:', err)
     return {
       data: null,
@@ -1941,8 +2676,14 @@ export async function moderatePhotos(
 
     if (error) throw error
 
+    debug.perf.end('galleryService.moderatePhotos')
+    debug.flow('GalleryService.moderatePhotos', 'Photos moderated successfully', { action, photoCount: photoIds.length })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('galleryService.moderatePhotos')
+    debug.error('GalleryService.moderatePhotos', 'Failed to moderate photos', { error: err, action, photoCount: photoIds.length })
+    console.groupEnd()
     console.error('[galleryService] Error moderating photos:', err)
     return {
       error: err instanceof Error ? err : new Error('Unknown error'),
@@ -1966,8 +2707,15 @@ export async function updateGallery(
   galleryId: string,
   payload: UpdateGalleryInput
 ): Promise<{ data: Gallery | null; error: Error | null }> {
+  console.groupCollapsed(`%cupdateGallery: ${galleryId}`, 'color: #666; font-weight: bold;');
+  debug.flow('GalleryService.updateGallery', 'Updating gallery', { galleryId, updates: Object.keys(payload) })
+  debug.perf.start('galleryService.updateGallery')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.updateGallery')
+    debug.flow('GalleryService.updateGallery', 'Gallery updated (fake)', { galleryId })
+    console.groupEnd()
     return { data: null, error: null }
   }
 
@@ -1985,11 +2733,17 @@ export async function updateGallery(
 
     if (error) throw error
 
+    debug.perf.end('galleryService.updateGallery')
+    debug.flow('GalleryService.updateGallery', 'Gallery updated successfully', { galleryId })
+    console.groupEnd()
     return {
       data: data ? ({ ...(data as any), cover_url: data.cover ? getGalleryPhotoThumbnailUrl(data.cover.thumbnail_path, data.cover.storage_path) : null } as Gallery) : null,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('galleryService.updateGallery')
+    debug.error('GalleryService.updateGallery', 'Failed to update gallery', { error: err, galleryId })
+    console.groupEnd()
     console.error('[galleryService] Error updating gallery:', err)
     return { data: null, error: err as Error }
   }
@@ -2000,11 +2754,22 @@ export async function setGalleryCover(
   galleryId: string,
   photoId: string | null
 ): Promise<{ error: Error | null }> {
+  console.groupCollapsed(`%csetGalleryCover: ${galleryId}`, 'color: #666; font-weight: bold;');
+  debug.flow('GalleryService.setGalleryCover', 'Setting gallery cover', { galleryId, photoId })
+  debug.perf.start('galleryService.setGalleryCover')
+
   const { error } = await updateGallery(context, galleryId, { cover_photo_id: photoId })
 
   if (!error) {
     // Trigger generation
     generateGalleryCover(galleryId, photoId || undefined, true).catch(console.error)
+    debug.perf.end('galleryService.setGalleryCover')
+    debug.flow('GalleryService.setGalleryCover', 'Gallery cover set successfully', { galleryId, photoId })
+    console.groupEnd()
+  } else {
+    debug.perf.end('galleryService.setGalleryCover')
+    debug.error('GalleryService.setGalleryCover', 'Failed to set cover', { error, galleryId, photoId })
+    console.groupEnd()
   }
 
   return { error }
@@ -2015,8 +2780,15 @@ export async function deletePhotos(
   galleryId: string,
   photoIds: string[]
 ): Promise<{ error: Error | null }> {
+  console.groupCollapsed(`%cdeletePhotos: ${galleryId}`, 'color: #666; font-weight: bold;');
+  debug.flow('GalleryService.deletePhotos', 'Deleting photos', { galleryId, photoCount: photoIds.length })
+  debug.perf.start('galleryService.deletePhotos')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.deletePhotos')
+    debug.flow('GalleryService.deletePhotos', 'Photos deleted (fake)', { galleryId, photoCount: photoIds.length })
+    console.groupEnd()
     return { error: null }
   }
 
@@ -2081,8 +2853,14 @@ export async function deletePhotos(
       console.warn('Failed to check/trigger cover regeneration after delete', e);
     }
 
+    debug.perf.end('galleryService.deletePhotos')
+    debug.flow('GalleryService.deletePhotos', 'Photos deleted successfully', { galleryId, photoCount: photoIds.length, reclaimedBytes })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('galleryService.deletePhotos')
+    debug.error('GalleryService.deletePhotos', 'Failed to delete photos', { error: err, galleryId, photoCount: photoIds.length })
+    console.groupEnd()
     console.error('[galleryService] Error deleting photos:', err)
     return { error: err as Error }
   }
@@ -2108,6 +2886,9 @@ export async function deleteGallery(
     if (galleryError) throw galleryError
 
     if (gallery?.is_system_generated) {
+      debug.perf.end('galleryService.deleteGallery')
+      debug.error('GalleryService.deleteGallery', 'Cannot delete system-generated gallery', { galleryId })
+      console.groupEnd()
       return {
         error: new Error('Cannot delete system-generated gallery. Galleries are automatically managed for athletes, teams, events, travel plans, and programs.'),
       }
@@ -2152,8 +2933,14 @@ export async function deleteGallery(
       await updateStorageUsage(context, -reclaimedBytes)
     }
 
+    debug.perf.end('galleryService.deleteGallery')
+    debug.flow('GalleryService.deleteGallery', 'Gallery deleted successfully', { galleryId, reclaimedBytes })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('galleryService.deleteGallery')
+    debug.error('GalleryService.deleteGallery', 'Failed to delete gallery', { error: err, galleryId })
+    console.groupEnd()
     console.error('[galleryService] Error deleting gallery:', err)
     return { error: err as Error }
   }
@@ -2164,8 +2951,15 @@ export async function reorderGalleryPhotos(
   galleryId: string,
   photoIds: string[]
 ): Promise<{ error: Error | null }> {
+  console.groupCollapsed(`%creorderGalleryPhotos: ${galleryId}`, 'color: #666; font-weight: bold;');
+  debug.flow('GalleryService.reorderGalleryPhotos', 'Reordering gallery photos', { galleryId, photoCount: photoIds.length })
+  debug.perf.start('galleryService.reorderGalleryPhotos')
+
   if (USE_FAKE_DATA) {
     await simulateDelay()
+    debug.perf.end('galleryService.reorderGalleryPhotos')
+    debug.flow('GalleryService.reorderGalleryPhotos', 'Photos reordered (fake)', { galleryId })
+    console.groupEnd()
     return { error: null }
   }
 

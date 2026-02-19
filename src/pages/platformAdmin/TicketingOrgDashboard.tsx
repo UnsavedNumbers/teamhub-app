@@ -6,7 +6,11 @@
 import { useParams, Link } from 'react-router-dom'
 import { getLink } from '@/utils/routes'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function TicketingOrgDashboard() {
+  useDebugLifecycle('TicketingOrgDashboard')
+  
   const { id } = useParams<{ id: string }>()
 
   return (

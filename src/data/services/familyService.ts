@@ -9,6 +9,7 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { calculatePermissions } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { normalizeSupabaseResponse } from './responseHelpers'
 import { getAthleteSports } from './athleteSportsService'
@@ -23,7 +24,8 @@ import {
     type FakeChild,
     type FakeFamilyMember,
 } from '../fake/fakeUsers'
-import { getChildrenForUserId, getFamiliesForUserId } from '../fake/relationships'
+import { getChildrenForUserId, getFamiliesForUserId, getAssignedTeamsForCoach } from '../fake/relationships'
+import { getTeamMembersForSeason, SEASON_SPRING_CURRENT_ID } from '../fake/fakeTeams'
 import type {
     Family,
     Child,
@@ -57,7 +59,8 @@ async function simulateDelay(): Promise<void> {
 function buildPermissions(context: UserContext): PermissionSet {
     const ownedChildIds = getChildrenForUserId(context.userId)
     const ownedFamilyIds = getFamiliesForUserId(context.userId)
-    return calculatePermissions(context, [], ownedChildIds, ownedFamilyIds)
+    const assignedTeamIds = getAssignedTeamsForCoach(context.userId)
+    return calculatePermissions(context, assignedTeamIds, ownedChildIds, ownedFamilyIds)
 }
 
 // Convert Fake types to App types (casting where safely compatible for this demo)
@@ -68,7 +71,7 @@ function mapFakeFamily(f: FakeFamily): Family {
     } as Family
 }
 
-function mapFakeChild(c: FakeChild): Child {
+function mapFakeChild(c: FakeChild, orgId?: string | null): Child {
     return {
         id: c.id,
         family_id: c.family_id,
@@ -84,13 +87,23 @@ function mapFakeChild(c: FakeChild): Child {
         emergency_contact_phone: c.emergency_contact_phone,
         phone: null,
         email: null,
-        photo_url: null,
-        profile_photo_updated_at: null,
-        has_profile_photo: false,
+        photo_url: c.photo_url || null, // Use photo_url from fake data if available
+        profile_photo_updated_at: c.photo_url ? new Date().toISOString() : null,
+        has_profile_photo: !!c.photo_url,
+        org_id: orgId ?? undefined,
+        // Universal fields
+        height_cm: c.height_cm ?? null,
+        weight_kg: c.weight_kg ?? null,
+        shoe_size_value: c.shoe_size_value ?? null,
+        shoe_size_system: c.shoe_size_system ?? null,
+        shoe_width: c.shoe_width ?? null,
+        tshirt_size: c.tshirt_size ?? null,
+        shorts_size: c.shorts_size ?? null,
+        dominant_hand: c.dominant_hand ?? null,
         created_at: c.created_at,
         updated_at: c.updated_at,
         deleted_at: null,
-        sports: [] // Fake data doesn't have sports
+        sports: [] // Sports loaded separately via getAthleteSports
     } as unknown as Child
 }
 
@@ -113,6 +126,10 @@ export async function getFamilies(
     context: UserContext,
     options: { limit?: number; offset?: number } = {}
 ): Promise<{ data: Family[]; count: number; error: Error | null }> {
+    console.groupCollapsed(`%cgetFamilies: ${context.orgId}`, 'color: #666; font-weight: bold;');
+    debug.data('FamilyService.getFamilies', 'Request', { context: { userId: context.userId, orgId: context.orgId }, options })
+    debug.perf.start('familyService.getFamilies')
+
     try {
         if (USE_FAKE_DATA) {
             await simulateDelay()
@@ -158,6 +175,9 @@ export async function getFamilies(
 
         if (error) throw error
 
+        debug.perf.end('familyService.getFamilies')
+        debug.data('FamilyService.getFamilies', 'Response', { familyCount: (data || []).length, totalCount: count })
+        console.groupEnd()
         return {
             data: (data || []) as Family[],
             count: count || 0,
@@ -165,6 +185,9 @@ export async function getFamilies(
         }
 
     } catch (err) {
+        debug.perf.end('familyService.getFamilies')
+        debug.error('FamilyService.getFamilies', 'Failed to fetch families', { error: err, context: { userId: context.userId, orgId: context.orgId }, options })
+        console.groupEnd()
         return { data: [], count: 0, error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }
@@ -176,6 +199,10 @@ export async function getFamilyDetails(
     context: UserContext,
     familyId: string
 ): Promise<{ data: FamilyWithDetails | null; error: Error | null }> {
+    console.groupCollapsed(`%cgetFamilyDetails: ${familyId}`, 'color: #666; font-weight: bold;');
+    debug.data('FamilyService.getFamilyDetails', 'Request', { familyId, orgId: context.orgId })
+    debug.perf.start('familyService.getFamilyDetails')
+
     try {
         if (USE_FAKE_DATA) {
             await simulateDelay()
@@ -191,8 +218,11 @@ export async function getFamilyDetails(
             const members = getFamilyMembersForFamily(familyId).map(mapFakeMember)
             const children = fakeChildren
                 .filter((c) => c.family_id === familyId)
-                .map(mapFakeChild)
+                .map((c) => mapFakeChild(c, context.orgId))
 
+            debug.perf.end('familyService.getFamilyDetails')
+            debug.data('FamilyService.getFamilyDetails', 'Response (fake)', { familyId, hasData: true, memberCount: members.length, childCount: children.length })
+            console.groupEnd()
             return {
                 data: { ...mapFakeFamily(family), members, children },
                 error: null,
@@ -208,7 +238,12 @@ export async function getFamilyDetails(
             .single()
 
         if (familyError) throw familyError
-        if (!family) return { data: null, error: null }
+        if (!family) {
+            debug.perf.end('familyService.getFamilyDetails')
+            debug.data('FamilyService.getFamilyDetails', 'Response (not found)', { familyId })
+            console.groupEnd()
+            return { data: null, error: null }
+        }
 
         // Fetch children
         const { data: children, error: childrenError } = await supabase
@@ -248,10 +283,14 @@ export async function createFamily(
     context: UserContext,
     dto: CreateFamilyDTO
 ): Promise<{ data: Family | null; error: Error | null }> {
+    console.groupCollapsed(`%ccreateFamily: ${dto.name}`, 'color: #666; font-weight: bold;');
+    debug.flow('FamilyService.createFamily', 'Creating family', { orgId: dto.org_id, name: dto.name })
+    debug.perf.start('familyService.createFamily')
+
     if (USE_FAKE_DATA) {
         // Demo mode: prevent write
         await simulateDelay()
-        return {
+        const result = {
             data: {
                 id: `demo-family-${Date.now()}`,
                 ...dto,
@@ -262,6 +301,10 @@ export async function createFamily(
             },
             error: null
         }
+        debug.perf.end('familyService.createFamily')
+        debug.flow('FamilyService.createFamily', 'Family created (fake)', { familyId: result.data.id, name: dto.name })
+        console.groupEnd()
+        return result
     }
 
     try {
@@ -277,8 +320,14 @@ export async function createFamily(
             .single()
 
         if (error) throw error
+        debug.perf.end('familyService.createFamily')
+        debug.flow('FamilyService.createFamily', 'Family created successfully', { familyId: data?.id, name: dto.name })
+        console.groupEnd()
         return { data: data as unknown as Family, error: null }
     } catch (err) {
+        debug.perf.end('familyService.createFamily')
+        debug.error('FamilyService.createFamily', 'Failed to create family', { error: err, name: dto.name })
+        console.groupEnd()
         return { data: null, error: err instanceof Error ? err : new Error('Create failed') }
     }
 }
@@ -291,8 +340,15 @@ export async function updateFamily(
     familyId: string,
     dto: UpdateFamilyDTO
 ): Promise<{ data: Family | null; error: Error | null }> {
+    console.groupCollapsed(`%cupdateFamily: ${familyId}`, 'color: #666; font-weight: bold;');
+    debug.flow('FamilyService.updateFamily', 'Updating family', { familyId, updates: Object.keys(dto) })
+    debug.perf.start('familyService.updateFamily')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
+        debug.perf.end('familyService.updateFamily')
+        debug.flow('FamilyService.updateFamily', 'Family updated (fake)', { familyId })
+        console.groupEnd()
         return { data: null, error: null } // Mock success
     }
 
@@ -310,8 +366,14 @@ export async function updateFamily(
             .single()
 
         if (error) throw error
+        debug.perf.end('familyService.updateFamily')
+        debug.flow('FamilyService.updateFamily', 'Family updated successfully', { familyId })
+        console.groupEnd()
         return { data: data as unknown as Family, error: null }
     } catch (err) {
+        debug.perf.end('familyService.updateFamily')
+        debug.error('FamilyService.updateFamily', 'Failed to update family', { error: err, familyId })
+        console.groupEnd()
         return { data: null, error: err instanceof Error ? err : new Error('Update failed') }
     }
 }
@@ -323,8 +385,15 @@ export async function deleteFamily(
     _context: UserContext,
     familyId: string
 ): Promise<{ error: Error | null }> {
+    console.groupCollapsed(`%cdeleteFamily: ${familyId}`, 'color: #666; font-weight: bold;');
+    debug.flow('FamilyService.deleteFamily', 'Deleting family', { familyId })
+    debug.perf.start('familyService.deleteFamily')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
+        debug.perf.end('familyService.deleteFamily')
+        debug.flow('FamilyService.deleteFamily', 'Family deleted (fake)', { familyId })
+        console.groupEnd()
         return { error: null }
     }
 
@@ -335,8 +404,14 @@ export async function deleteFamily(
             .eq('id', familyId)
 
         if (error) throw error
+        debug.perf.end('familyService.deleteFamily')
+        debug.flow('FamilyService.deleteFamily', 'Family deleted successfully', { familyId })
+        console.groupEnd()
         return { error: null }
     } catch (err) {
+        debug.perf.end('familyService.deleteFamily')
+        debug.error('FamilyService.deleteFamily', 'Failed to delete family', { error: err, familyId })
+        console.groupEnd()
         return { error: err instanceof Error ? err : new Error('Delete failed') }
     }
 }
@@ -353,6 +428,10 @@ export async function createAthleteBasic(
     _context: UserContext,
     dto: CreateChildDTO
 ): Promise<{ data: Child | null; error: Error | null }> {
+    console.groupCollapsed(`%ccreateAthleteBasic: ${dto.first_name} ${dto.last_name}`, 'color: #666; font-weight: bold;');
+    debug.flow('FamilyService.createAthleteBasic', 'Creating athlete', { athleteName: `${dto.first_name} ${dto.last_name}`, familyId: dto.family_id })
+    debug.perf.start('familyService.createAthleteBasic')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
         return {
@@ -392,8 +471,15 @@ export async function createAthleteBasic(
             .single()
 
         if (error) throw error
+
+        debug.perf.end('familyService.createAthleteBasic')
+        debug.flow('FamilyService.createAthleteBasic', 'Athlete created successfully', { athleteId: data.id, athleteName: `${dto.first_name} ${dto.last_name}` })
+        console.groupEnd()
         return { data: data as unknown as Child, error: null }
     } catch (err) {
+        debug.perf.end('familyService.createAthleteBasic')
+        debug.error('FamilyService.createAthleteBasic', 'Failed to create athlete', { error: err, athleteName: `${dto.first_name} ${dto.last_name}`, familyId: dto.family_id })
+        console.groupEnd()
         return { data: null, error: err instanceof Error ? err : new Error('Create athlete failed') }
     }
 }
@@ -406,6 +492,10 @@ export async function updateAthlete(
     athleteId: string,
     dto: UpdateAthleteDTO
 ): Promise<{ data: Child | null; error: Error | null }> {
+    console.groupCollapsed(`%cupdateAthlete: ${athleteId}`, 'color: #666; font-weight: bold;');
+    debug.flow('FamilyService.updateAthlete', 'Updating athlete', { athleteId, orgId: context.orgId, updates: Object.keys(dto) })
+    debug.perf.start('familyService.updateAthlete')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
         const permissions = buildPermissions(context)
@@ -426,7 +516,10 @@ export async function updateAthlete(
         // Update fake data
         Object.assign(child, dto)
         
-        return { data: mapFakeChild(child), error: null }
+        debug.perf.end('familyService.updateAthlete')
+        debug.flow('FamilyService.updateAthlete', 'Athlete updated (fake)', { athleteId })
+        console.groupEnd()
+        return { data: mapFakeChild(child, context.orgId), error: null }
     }
 
     try {
@@ -487,8 +580,14 @@ export async function updateAthlete(
             has_active_guardian: false // Will be checked separately if needed
         } as unknown as Child
         
+        debug.perf.end('familyService.updateAthlete')
+        debug.flow('FamilyService.updateAthlete', 'Athlete updated successfully', { athleteId })
+        console.groupEnd()
         return { data: athlete, error: null }
     } catch (err) {
+        debug.perf.end('familyService.updateAthlete')
+        debug.error('FamilyService.updateAthlete', 'Failed to update athlete', { error: err, athleteId })
+        console.groupEnd()
         console.error('[updateAthlete] Exception:', err)
         const errorMessage = err instanceof Error ? err.message : 'Update athlete failed'
         return { data: null, error: new Error(errorMessage) }
@@ -502,8 +601,15 @@ export async function deleteAthlete(
     _context: UserContext,
     athleteId: string
 ): Promise<{ error: Error | null }> {
+    console.groupCollapsed(`%cdeleteAthlete: ${athleteId}`, 'color: #666; font-weight: bold;');
+    debug.flow('FamilyService.deleteAthlete', 'Deleting athlete', { athleteId })
+    debug.perf.start('familyService.deleteAthlete')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
+        debug.perf.end('familyService.deleteAthlete')
+        debug.flow('FamilyService.deleteAthlete', 'Athlete deleted (fake)', { athleteId })
+        console.groupEnd()
         return { error: null }
     }
 
@@ -520,8 +626,14 @@ export async function deleteAthlete(
         // Photo cleanup skipped - photo_url column doesn't exist in database yet
         // TODO: Re-enable when photo_url column is added
 
+        debug.perf.end('familyService.deleteAthlete')
+        debug.flow('FamilyService.deleteAthlete', 'Athlete deleted successfully', { athleteId })
+        console.groupEnd()
         return { error: null }
     } catch (err) {
+        debug.perf.end('familyService.deleteAthlete')
+        debug.error('FamilyService.deleteAthlete', 'Failed to delete athlete', { error: err, athleteId })
+        console.groupEnd()
         return { error: err instanceof Error ? err : new Error('Delete athlete failed') }
     }
 }
@@ -532,6 +644,10 @@ export async function deleteAthlete(
 export async function getAthletes(
     context: UserContext
 ): Promise<{ data: Child[]; error: Error | null }> {
+    console.groupCollapsed(`%cgetAthletes: ${context.orgId}`, 'color: #666; font-weight: bold;');
+    debug.data('FamilyService.getAthletes', 'Request', { orgId: context.orgId, userId: context.userId })
+    debug.perf.start('familyService.getAthletes')
+
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
@@ -539,39 +655,104 @@ export async function getAthletes(
             if (permissions.canViewAllOrgData) {
                 const results = fakeChildren
                     .filter(c => fakeFamilies.find(f => f.id === c.family_id)?.org_id === context.orgId)
-                    .map(mapFakeChild)
+                    .map((c) => mapFakeChild(c, context.orgId))
                 return { data: results, error: null }
             }
-            const results = getChildrenForUser(context.userId).map(mapFakeChild)
+            if (permissions.canViewAssignedTeams && permissions.assignedTeamIds.length > 0) {
+                const athleteIds = new Set<string>()
+                for (const teamId of permissions.assignedTeamIds) {
+                    const members = getTeamMembersForSeason(teamId, SEASON_SPRING_CURRENT_ID)
+                    members.forEach((m) => athleteIds.add(m.athlete_id))
+                }
+                const results = fakeChildren
+                    .filter((c) => athleteIds.has(c.id))
+                    .map((c) => mapFakeChild(c, context.orgId))
+                debug.perf.end('familyService.getAthletes')
+                debug.data('FamilyService.getAthletes', 'Response (fake coach roster)', { athleteCount: results.length })
+                console.groupEnd()
+                return { data: results, error: null }
+            }
+            const results = getChildrenForUser(context.userId).map((c) => mapFakeChild(c, context.orgId))
+            debug.perf.end('familyService.getAthletes')
+            debug.data('FamilyService.getAthletes', 'Response (fake)', { athleteCount: results.length })
+            console.groupEnd()
             return { data: results, error: null }
         } catch (err) {
+            debug.perf.end('familyService.getAthletes')
+            debug.error('FamilyService.getAthletes', 'Failed to get athletes (fake)', { error: err })
+            console.groupEnd()
             return { data: [], error: err instanceof Error ? err : new Error('Unknown') }
         }
     }
 
     // Real Data
     try {
-        // Query athletes with guardian status using the batch RPC function
-        // This is more efficient than checking each athlete individually
-        console.log('[getAthletes] Fetching athletes with guardian status for org:', context.orgId)
+        // Check if user is org admin - if so, get all athletes in org; otherwise, get only guardian athletes
+        const isOrgAdmin = context.roles.includes('org_admin') || context.isPlatformAdmin
         
-        const { data, error } = await supabase
-            .rpc('get_athletes_with_guardian_status', {
-                p_org_id: context.orgId,
-                p_limit: 10000, // Large limit to get all athletes (pagination handled client-side)
-                p_offset: 0
-            })
-
-        console.log('[getAthletes] Query result:', { data, error, count: data?.length })
-
-        if (error) {
-            console.error('[getAthletes] Query error:', error)
-            throw error
+        let data: any[] = []
+        
+        if (isOrgAdmin) {
+            // Org admins see all athletes in the org
+            console.log('[getAthletes] Fetching all athletes with guardian status for org:', context.orgId)
+            const { data: allAthletes, error: allError } = await supabase
+                .rpc('get_athletes_with_guardian_status', {
+                    p_org_id: context.orgId,
+                    p_limit: 10000, // Large limit to get all athletes (pagination handled client-side)
+                    p_offset: 0
+                })
+            
+            if (allError) {
+                console.error('[getAthletes] Query error:', allError)
+                throw allError
+            }
+            data = allAthletes || []
+        } else {
+            // Regular users/guardians only see their own children
+            console.log('[getAthletes] Fetching guardian athletes for user:', context.userId)
+            const { data: guardianAthletes, error: guardianError } = await supabase
+                .rpc('get_guardian_athletes', {
+                    p_user_id: context.userId,
+                    p_org_id: context.orgId
+                })
+            
+            if (guardianError) {
+                console.error('[getAthletes] Query error:', guardianError)
+                throw guardianError
+            }
+            // Transform guardian_athletes format to match get_athletes_with_guardian_status format
+            data = (guardianAthletes || []).map((a: any) => ({
+                athlete_id: a.athlete_id,
+                first_name: a.first_name,
+                last_name: a.last_name,
+                birthdate: a.birthdate,
+                gender: a.gender,
+                preferred_name: null,
+                jersey_number: null,
+                medical_notes: null,
+                allergies: null,
+                emergency_contact_name: null,
+                emergency_contact_phone: null,
+                created_at: null,
+                updated_at: null,
+                deleted_at: null,
+                family_id: null,
+                has_active_guardian: a.status === 'active'
+            }))
         }
-        
+
+        console.log('[getAthletes] Query result:', { data, count: data?.length, isOrgAdmin })
+
+        // Never show RLS contract test data (prefix from tests/rls-contract/helpers/seed.ts)
+        const TEST_DATA_PREFIX = '__rls_test__'
+        const filtered = (data || []).filter(
+            (d: { first_name?: string | null }) =>
+                d.first_name == null || !d.first_name.startsWith(TEST_DATA_PREFIX)
+        )
+
         // Transform the data to match Athlete type with empty sports array
         // Sports can be fetched separately if needed
-        const transformed = (data || []).map((d: any) => ({
+        const transformed = filtered.map((d: any) => ({
             id: d.athlete_id,
             family_id: d.family_id,
             first_name: d.first_name,
@@ -597,9 +778,15 @@ export async function getAthletes(
             has_active_guardian: d.has_active_guardian ?? false // Include guardian status
         } as unknown as Child))
         
+        debug.perf.end('familyService.getAthletes')
+        debug.data('FamilyService.getAthletes', 'Response', { athleteCount: transformed.length })
+        console.groupEnd()
         console.log('[getAthletes] Returning athletes:', transformed.length)
         return { data: transformed, error: null }
     } catch (err) {
+        debug.perf.end('familyService.getAthletes')
+        debug.error('FamilyService.getAthletes', 'Failed to get athletes', { error: err, orgId: context.orgId })
+        console.groupEnd()
         console.error('[getAthletes] Error fetching athletes:', err)
         return { data: [], error: err instanceof Error ? err : new Error('Fetch failed') }
     }
@@ -630,13 +817,17 @@ export async function searchAthletes(
     context: UserContext,
     params: SearchAthletesParams
 ): Promise<SearchAthletesResponse> {
+    console.groupCollapsed(`%csearchAthletes: ${params.search || 'all'}`, 'color: #666; font-weight: bold;');
+    debug.data('FamilyService.searchAthletes', 'Request', { orgId: context.orgId, params })
+    debug.perf.start('familyService.searchAthletes')
+
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
             
             let results = fakeChildren
                 .filter(c => fakeFamilies.find(f => f.id === c.family_id)?.org_id === context.orgId)
-                .map(mapFakeChild)
+                .map((c) => mapFakeChild(c, context.orgId))
             
             // Apply search filter
             if (params.search && params.search.length >= 2) {
@@ -680,8 +871,14 @@ export async function searchAthletes(
                 } as unknown as AthleteWithTeams
             })
             
+            debug.perf.end('familyService.searchAthletes')
+            debug.data('FamilyService.searchAthletes', 'Response (fake)', { resultCount: mapped.length })
+            console.groupEnd()
             return { data: mapped, error: null }
         } catch (err) {
+            debug.perf.end('familyService.searchAthletes')
+            debug.error('FamilyService.searchAthletes', 'Failed to search athletes (fake)', { error: err })
+            console.groupEnd()
             return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
         }
     }
@@ -766,7 +963,7 @@ export async function searchAthletes(
         
         // Fetch current teams for each athlete (Issue #7 solution - always fresh)
         const athleteIds = (normalized || []).map((a: any) => a.id)
-        let currentTeamsMap: Map<string, CurrentTeam[]> = new Map()
+        const currentTeamsMap: Map<string, CurrentTeam[]> = new Map()
         
         if (athleteIds.length > 0) {
             const { data: teamsData } = await supabase
@@ -877,19 +1074,20 @@ export async function searchAthletes(
             } as unknown as AthleteWithTeams
         }).filter((a): a is AthleteWithTeams => a !== null)
         
-        return { data: mapped, error: null }
+        debug.perf.end('familyService.searchAthletes')
+        debug.data('FamilyService.searchAthletes', 'Response (fake)', { resultCount: mapped.length })
+        console.groupEnd()
+        return { data: mapped, error: null         }
     } catch (err) {
-        console.error('[searchAthletes] Error:', err)
+        debug.perf.end('familyService.searchAthletes')
+        debug.error('FamilyService.searchAthletes', 'Failed to search athletes (fake)', { error: err })
+        console.groupEnd()
         return {
             data: [],
             error: err instanceof Error ? err : new Error('Search failed')
         }
     }
 }
-
-// ============================================================================
-// Athlete Service Functions (Guardian-Aware Operations)
-// ============================================================================
 
 /**
  * Get a single athlete by ID with sports data
@@ -898,6 +1096,10 @@ export async function getAthleteById(
     context: UserContext,
     athleteId: string
 ): Promise<{ data: Child | null; error: Error | null }> {
+    console.groupCollapsed(`%cgetAthleteById: ${athleteId}`, 'color: #666; font-weight: bold;');
+    debug.data('FamilyService.getAthleteById', 'Request', { athleteId, orgId: context.orgId })
+    debug.perf.start('familyService.getAthleteById')
+
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
@@ -905,6 +1107,9 @@ export async function getAthleteById(
             const child = fakeChildren.find(c => c.id === athleteId)
             
             if (!child) {
+                debug.perf.end('familyService.getAthleteById')
+                debug.data('FamilyService.getAthleteById', 'Response (not found, fake)', { athleteId })
+                console.groupEnd()
                 return { data: null, error: null }
             }
             
@@ -912,12 +1117,40 @@ export async function getAthleteById(
             if (!permissions.canViewAllOrgData) {
                 const ownedChildIds = getChildrenForUserId(context.userId)
                 if (!ownedChildIds.includes(athleteId)) {
+                    debug.perf.end('familyService.getAthleteById')
+                    debug.error('FamilyService.getAthleteById', 'Access denied (fake)', { athleteId })
+                    console.groupEnd()
                     return { data: null, error: new Error('Access denied') }
                 }
             }
             
-            return { data: mapFakeChild(child), error: null }
+            // Load athlete sports (same as real data path)
+            let sports: Array<{ sport_id: string; sport_name: string; sport_type: 'plays' | 'interested' }> = []
+            try {
+                const { data: sportsData, error: sportsError } = await getAthleteSports(athleteId, context.orgId)
+                if (!sportsError && sportsData) {
+                    sports = sportsData.map(s => ({
+                        sport_id: s.sport_id,
+                        sport_name: s.sport_name,
+                        sport_type: s.sport_type
+                    }))
+                }
+            } catch (err) {
+                console.warn('[getAthleteById] Error loading athlete sports (fake):', err)
+                // Continue without sports data
+            }
+            
+            const mappedChild = mapFakeChild(child, context.orgId)
+            mappedChild.sports = sports
+            
+            debug.perf.end('familyService.getAthleteById')
+            debug.data('FamilyService.getAthleteById', 'Response (fake)', { athleteId, hasData: true, sportCount: sports.length })
+            console.groupEnd()
+            return { data: mappedChild, error: null }
         } catch (err) {
+            debug.perf.end('familyService.getAthleteById')
+            debug.error('FamilyService.getAthleteById', 'Failed to get athlete (fake)', { error: err, athleteId })
+            console.groupEnd()
             return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
         }
     }
@@ -1009,8 +1242,14 @@ export async function getAthleteById(
             has_active_guardian: hasActiveGuardian
         } as unknown as Child
 
+        debug.perf.end('familyService.getAthleteById')
+        debug.data('FamilyService.getAthleteById', 'Response', { athleteId, hasData: true, sportCount: sports.length, hasActiveGuardian })
+        console.groupEnd()
         return { data: athlete, error: null }
     } catch (err) {
+        debug.perf.end('familyService.getAthleteById')
+        debug.error('FamilyService.getAthleteById', 'Failed to get athlete', { error: err, athleteId })
+        console.groupEnd()
         console.error('[getAthleteById] Error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Fetch failed') }
     }
@@ -1024,9 +1263,13 @@ export async function createAthleteWithGuardians(
     context: UserContext,
     dto: CreateAthleteDTO
 ): Promise<{ data: { athlete_id: string; guardians: any[] } | null; error: Error | null }> {
+    console.groupCollapsed(`%ccreateAthleteWithGuardians: ${dto.first_name} ${dto.last_name}`, 'color: #666; font-weight: bold;');
+    debug.flow('FamilyService.createAthleteWithGuardians', 'Creating athlete with guardians', { athleteName: `${dto.first_name} ${dto.last_name}`, guardianCount: (dto.guardians || []).length })
+    debug.perf.start('familyService.createAthleteWithGuardians')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        return {
+        const result = {
             data: {
                 athlete_id: `demo-athlete-${Date.now()}`,
                 guardians: (dto.guardians || []).map((g, idx) => ({
@@ -1038,6 +1281,10 @@ export async function createAthleteWithGuardians(
             },
             error: null
         }
+        debug.perf.end('familyService.createAthleteWithGuardians')
+        debug.flow('FamilyService.createAthleteWithGuardians', 'Athlete created with guardians (fake)', { athleteId: result.data.athlete_id })
+        console.groupEnd()
+        return result
     }
 
     try {
@@ -1092,8 +1339,14 @@ export async function createAthleteWithGuardians(
 
         if (error) throw error
 
+        debug.perf.end('familyService.createAthleteWithGuardians')
+        debug.flow('FamilyService.createAthleteWithGuardians', 'Athlete created with guardians successfully', { athleteId: (data as any)?.athlete_id })
+        console.groupEnd()
         return { data: data as any, error: null }
     } catch (err) {
+        debug.perf.end('familyService.createAthleteWithGuardians')
+        debug.error('FamilyService.createAthleteWithGuardians', 'Failed to create athlete with guardians', { error: err, athleteName: `${dto.first_name} ${dto.last_name}` })
+        console.groupEnd()
         console.error('Error creating athlete with guardians:', err)
         return {
             data: null,
@@ -1110,9 +1363,13 @@ export async function getDerivedFamilyForAthlete(
     athleteId: string,
     orgId: string
 ): Promise<{ data: any | null; error: Error | null }> {
+    console.groupCollapsed(`%cgetDerivedFamilyForAthlete: ${athleteId}`, 'color: #666; font-weight: bold;');
+    debug.data('FamilyService.getDerivedFamilyForAthlete', 'Request', { athleteId, orgId })
+    debug.perf.start('familyService.getDerivedFamilyForAthlete')
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        return {
+        const result = {
             data: {
                 athlete_ids: [athleteId],
                 guardian_ids: [],
@@ -1123,6 +1380,10 @@ export async function getDerivedFamilyForAthlete(
             },
             error: null
         }
+        debug.perf.end('familyService.getDerivedFamilyForAthlete')
+        debug.data('FamilyService.getDerivedFamilyForAthlete', 'Response (fake)', { athleteId, hasData: !!result.data })
+        console.groupEnd()
+        return result
     }
 
     try {
@@ -1163,8 +1424,14 @@ export async function getOrphanedAthletes(
 
         if (error) throw error
 
+        debug.perf.end('familyService.getOrphanedAthletes')
+        debug.data('FamilyService.getOrphanedAthletes', 'Response', { orgId, count: (data || []).length })
+        console.groupEnd()
         return { data: data || [], error: null }
     } catch (err) {
+        debug.perf.end('familyService.getOrphanedAthletes')
+        debug.error('FamilyService.getOrphanedAthletes', 'Failed to get orphaned athletes', { error: err, orgId })
+        console.groupEnd()
         console.error('Error getting orphaned athletes:', err)
         return {
             data: [],

@@ -29,7 +29,7 @@ interface UserFormData {
 }
 
 export default function EditUser() {
-  const { userId } = useParams<{ userId: string }>()
+  const { id: userId } = useParams<{ id: string }>()
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

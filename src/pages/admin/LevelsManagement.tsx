@@ -8,6 +8,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import { USE_FAKE_DATA } from '../../data/config'
 import { getLevels, deleteLevel } from '../../data/services/levelsService'
 import { getPrograms } from '../../data/services/sportsService'
@@ -22,6 +23,9 @@ import { cn } from '../../utils/cn'
 import '../../styles/orgAdmin.css'
 
 export default function LevelsManagement() {
+  // Add lifecycle logging
+  useDebugLifecycle('LevelsManagement')
+
   const { context, isReady } = useUserContext()
   const { isOffline } = useOffline()
   const location = useLocation()

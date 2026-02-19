@@ -8,11 +8,14 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
+import { useOrganization } from '../contexts/OrganizationContext'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+import { debug } from '../lib/debug'
 import { getAthleteById } from '../data/services/familyService'
 import { getAthleteTeamHistory } from '../data/services/teamsService'
-import { getAthletePhotoUrl } from '../data/services/athletePhotoService'
-import { getDisplayName, getAthleteInitials } from '../utils/athleteHelpers'
+import { getDisplayName } from '../utils/athleteHelpers'
 import PortalLayout from '../components/portal/PortalLayout'
+import AthleteAvatar from '../components/portal/AthleteAvatar'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
@@ -26,15 +29,26 @@ import { SportsInterestsForm } from '../components/athleteProfiles/SportsInteres
 import type { Athlete } from '../types/family'
 import { SPORT_CODES, SPORT_NAMES, type SportCode } from '../types/sports'
 import { getSystemSports } from '../data/services/sportsService'
+import { supabase } from '../lib/supabase'
+import { useT } from '../i18n/useI18n'
+import { showError } from '../utils/toast'
 
 export default function AthleteProfilePage() {
   const { id: athleteId } = useParams<{ id: string }>()
+
+  // Add lifecycle logging
+  useDebugLifecycle('AthleteProfilePage', { athleteId })
+
   const navigate = useNavigate()
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
+  const t = useT()
   const isMountedRef = useRef(true)
+  
+  // Check if user is an athlete
+  const isAthlete = currentOrganization?.roles?.includes('athlete') ?? false
 
   const [athlete, setAthlete] = useState<Athlete | null>(null)
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const [activeTab, setActiveTab] = useState<'universal' | 'physical' | 'sports' | 'medical'>('universal')
@@ -45,21 +59,25 @@ export default function AthleteProfilePage() {
 
   const refreshAthlete = async () => {
     if (!athleteId || !isReady) return
+
+    debug.flow('AthleteProfile', 'Refreshing athlete data', { athleteId })
+    debug.perf.start('athleteProfile.refreshAthlete')
+
     try {
       const { data, error } = await getAthleteById(context, athleteId)
+      debug.perf.end('athleteProfile.refreshAthlete')
+
       if (data && !error) {
+        debug.data('AthleteProfile', 'Athlete data loaded', { athleteId, athleteName: `${data.first_name} ${data.last_name}` })
         setAthlete(data)
-        // Also update photo if needed, but photoUrl is separate state?
-        // Actually photoUrl state update logic is inside the initial fetch.
-        // BasicInfoForm handles its own visual update or we reload everything.
-        // Let's reload photo url too just in case.
-         if (data.has_profile_photo && data.org_id && data.id) {
-            const url = getAthletePhotoUrl(data.org_id, data.id, '512')
-            if (url) setPhotoUrl(url)
-         }
+      } else if (error) {
+        debug.error('AthleteProfile', 'Failed to load athlete data', { athleteId, error: error.message })
+        setError(error)
       }
     } catch (err) {
+      debug.error('AthleteProfile', 'Exception loading athlete data', { athleteId, error: err })
       console.error('Error refreshing athlete:', err)
+      setError(err instanceof Error ? err : new Error('Unknown error'))
     }
   }
 
@@ -115,6 +133,30 @@ export default function AthleteProfilePage() {
         setLoading(true)
         setError(null)
 
+        // For athletes, verify they can only view their own profile
+        if (isAthlete) {
+          const { data: athleteCheck, error: checkError } = await supabase
+            .from('athletes')
+            .select('id')
+            .eq('user_id', context.userId)
+            .eq('id', athleteId!)
+            .eq('org_id', context.orgId)
+            .single()
+
+          if (checkError || !athleteCheck) {
+            if (!isMountedRef.current) return
+            const errorMsg = t('portal.athletes.errors.cannotViewOtherProfile')
+            setError(new Error(errorMsg))
+            showError(errorMsg)
+            setLoading(false)
+            // Redirect to athletes list (team roster)
+            setTimeout(() => {
+              navigate('/portal/athletes')
+            }, 2000)
+            return
+          }
+        }
+
         const { data, error: fetchError } = await getAthleteById(context, athleteId!)
 
         if (!isMountedRef.current) return
@@ -127,14 +169,6 @@ export default function AthleteProfilePage() {
 
         setAthlete(data)
 
-        // Load photo
-        if (data.has_profile_photo && data.org_id && data.id) {
-          const url = getAthletePhotoUrl(data.org_id, data.id, '512')
-          if (isMountedRef.current && url) {
-            setPhotoUrl(url)
-          }
-        }
-
         setLoading(false)
       } catch (err) {
         if (!isMountedRef.current) return
@@ -144,7 +178,7 @@ export default function AthleteProfilePage() {
     }
 
     fetchAthlete()
-  }, [athleteId, context, isReady])
+  }, [athleteId, context, isReady, isAthlete, navigate, t])
 
   // Load enrolled sports (team history)
   useEffect(() => {
@@ -256,12 +290,6 @@ export default function AthleteProfilePage() {
   }
 
   const displayName = getDisplayName(athlete)
-  const initials = getAthleteInitials(athlete.first_name, athlete.last_name)
-
-
-
-
-
   return (
     <PortalLayout
       breadcrumbs={[
@@ -271,21 +299,11 @@ export default function AthleteProfilePage() {
       ]}
     >
       {/* Page Header */}
-      <div className="mb-8">
-        <div className="flex items-start gap-6 mb-6">
+      <div className="mb-8 space-y-4">
+        <div className="flex items-start gap-6">
           {/* Athlete Photo */}
-          <div className="flex-shrink-0">
-            {photoUrl ? (
-              <img
-                src={photoUrl}
-                alt={displayName}
-                className="w-24 h-24 rounded-full object-cover border-4 border-[var(--org-btn-primary-bg, #137fec)]"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[var(--org-btn-primary-bg, #137fec)] to-slate-600 flex items-center justify-center text-white text-3xl font-black">
-                {initials}
-              </div>
-            )}
+          <div className="flex-shrink-0 w-24 h-24 rounded-full overflow-hidden border-4 border-[var(--org-btn-primary-bg, #137fec)]">
+            <AthleteAvatar athlete={athlete} photoSize="512" className="w-full h-full rounded-full object-cover" />
           </div>
 
           {/* Title */}
@@ -294,19 +312,17 @@ export default function AthleteProfilePage() {
             <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
               Athlete Profile
             </p>
-            {athleteId && (
-              <div className="mt-4">
-                <PhotoSection
-                  entityType="athlete"
-                  entityId={athleteId}
-                  orgId={athlete?.org_id}
-                  title="Athlete Photos"
-                  canUpload
-                />
-              </div>
-            )}
           </div>
         </div>
+        {athleteId && (
+          <PhotoSection
+            entityType="athlete"
+            entityId={athleteId}
+            orgId={athlete?.org_id}
+            title="Athlete Photos"
+            canUpload
+          />
+        )}
       </div>
 
       {/* Tabs */}

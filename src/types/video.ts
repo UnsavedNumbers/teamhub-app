@@ -86,6 +86,7 @@ export interface Video {
   max_stored_frame_rate: number | null
   thumbnail_url: string | null
   thumbnail_time_offset: number | null
+  video_url?: string | null
   duration?: number | null
   view_count?: number | null
   
@@ -146,8 +147,9 @@ export interface Video {
   }
   uploader?: {
     id: string
-    full_name: string
-    avatar_url: string | null
+    display_name: string | null
+    first_name: string
+    last_name: string
   }
   
   // Aggregated relations
@@ -231,8 +233,9 @@ export interface VideoNote {
   // Relations
   author?: {
     id: string
-    full_name: string
-    avatar_url: string | null
+    display_name: string | null
+    first_name: string
+    last_name: string
   }
   targets?: VideoNoteTarget[]
 }
@@ -278,14 +281,16 @@ export interface VideoComment {
   content: string
   timestamp_seconds: number | null
   is_edited: boolean
+  deleted_at?: string | null
   created_at: string
   updated_at: string
   
   // Relations
   author?: {
     id: string
-    full_name: string
-    avatar_url: string | null
+    display_name: string | null
+    first_name: string
+    last_name: string
   }
   replies?: VideoComment[]
   reply_count?: number
@@ -318,11 +323,15 @@ export interface VideoReview {
   }
   requester?: {
     id: string
-    full_name: string
+    display_name: string | null
+    first_name: string
+    last_name: string
   }
   reviewer?: {
     id: string
-    full_name: string
+    display_name: string | null
+    first_name: string
+    last_name: string
   }
 }
 

@@ -3,28 +3,22 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { useI18n } from '../i18n/useI18n'
-import { AUTH_HERO_IMAGES } from '../utils/authImages'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+import { AUTH_PAGE_HERO_IMAGES } from '../utils/authImages'
 import { mapAuthError } from '../utils/authErrorMapper'
 
 export default function ForgotPassword() {
+  useDebugLifecycle('ForgotPassword')
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [heroImage, setHeroImage] = useState<string>('')
+  const heroImage = AUTH_PAGE_HERO_IMAGES.forgotPassword
 
   const { resetPassword } = useAuth()
   const { resolvedTheme } = useTheme()
   const { t } = useI18n()
   const [logoVersion, setLogoVersion] = useState(0)
-
-  // Select random hero image on mount
-  useEffect(() => {
-    if (AUTH_HERO_IMAGES.length > 0) {
-      const randomImage = AUTH_HERO_IMAGES[Math.floor(Math.random() * AUTH_HERO_IMAGES.length)]
-      setHeroImage(randomImage)
-    }
-  }, [])
 
   // Update logo version when theme changes to force reload
   useEffect(() => {

@@ -40,12 +40,16 @@ export * from './fanService'
 // Organization Settings Services
 export * from './organizationSettingsService'
 export * from './organizationService'
+export * from './demoOrgService'
+export * from './demoCodeService'
+export * from './demoSessionService'
 
 // License Tiers Services
 export * from './licenseTiersService'
 
 // Ticketing Services
 export * from './ticketingService'
+export * from './venueService'
 
 // Re-export types from fake data that services use
 export type { UserContext, PermissionSet } from '../fake/userContext'

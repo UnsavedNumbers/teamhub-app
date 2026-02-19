@@ -8,6 +8,8 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useSearchParams, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../../data/config'
 import { getSports, getPrograms, deleteProgram, getSportBySlug } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
@@ -20,6 +22,9 @@ import './Programs.css'
 import '../../styles/orgAdmin.css'
 
 export default function Programs() {
+  // Add lifecycle logging
+  useDebugLifecycle('Programs')
+
   const { context, isReady } = useUserContext()
   const { isOffline } = useOffline()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -267,18 +272,24 @@ export default function Programs() {
 
   const handleDeleteProgram = useCallback(
     (programId: string, programName: string) => {
+      debug.flow('Programs', 'Delete program initiated', { programId, programName })
+
       if (!programId || !programId.trim()) {
+        debug.error('Programs', 'Delete program validation failed', { programId, error: 'missing_id' })
         setActionError('Program ID is required to remove program.')
         return
       }
       if (isOffline) {
+        debug.error('Programs', 'Delete program blocked', { reason: 'offline' })
         setActionError('You appear to be offline. Please reconnect and try again.')
         return
       }
       if (USE_FAKE_DATA) {
+        debug.error('Programs', 'Delete program blocked', { reason: 'demo_mode' })
         setActionError('This action is not available in demo mode. Please sign in to remove programs.')
         return
       }
+      debug.flow('Programs', 'Delete program confirmed by user', { programId, programName })
       setProgramToDelete({ id: programId.trim(), name: programName })
     },
     [isOffline]
@@ -287,10 +298,14 @@ export default function Programs() {
   const confirmDeleteProgram = useCallback(
     async () => {
       if (!programToDelete || !programToDelete.id) {
+        debug.error('Programs', 'Delete confirmation failed', { error: 'missing_program_data' })
         setActionError('Program information is missing.')
         setProgramToDelete(null)
         return
       }
+
+      debug.flow('Programs', 'Delete program executing', { programId: programToDelete.id, programName: programToDelete.name })
+      debug.perf.start('programs.deleteProgram')
 
       setDeletingProgramId(programToDelete.id)
       setActionError(null)
@@ -298,14 +313,20 @@ export default function Programs() {
 
       try {
         const result = await deleteProgram(context, programToDelete.id)
+        debug.perf.end('programs.deleteProgram')
+
         if (result.error) {
+          debug.error('Programs', 'Delete program failed', { programId: programToDelete.id, error: result.error.message })
           setActionError(result.error.message || 'Failed to remove program.')
         } else {
+          debug.flow('Programs', 'Delete program successful', { programId: programToDelete.id, programName: programToDelete.name })
           setPrograms((prev) => prev.filter((p) => p.id !== programToDelete.id))
           setSuccessMessage(`"${programToDelete.name}" has been removed.`)
           setTimeout(() => setSuccessMessage(null), 5000)
         }
       } catch (err) {
+        debug.perf.end('programs.deleteProgram')
+        debug.error('Programs', 'Delete program exception', { programId: programToDelete.id, error: err })
         setActionError(err instanceof Error ? err.message : 'An unexpected error occurred.')
       } finally {
         setDeletingProgramId(null)

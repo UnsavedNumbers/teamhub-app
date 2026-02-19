@@ -13,6 +13,8 @@ import {
 } from '../../utils/billingHelpers'
 import { useIsMounted } from '../../hooks/useIsMounted'
 import { supabase } from '../../lib/supabase'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getFakeTicketOrdersWithRelations } from '../../data/fake/ticketingFakeService'
 import { formatCurrency } from '../../types/ticketing'
 import { useTicketRevenueByEvent, useMonthlyTicketRevenue } from '../../hooks/useTicketRevenue'
 import {
@@ -23,7 +25,11 @@ import {
 } from '../../components/admin'
 import '../../styles/orgAdmin.css'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function OrganizationBilling() {
+  useDebugLifecycle('OrganizationBilling')
+  
   const navigate = useNavigate()
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
@@ -45,6 +51,43 @@ export default function OrganizationBilling() {
       const now = new Date()
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+
+      if (USE_FAKE_DATA) {
+        const orders = getFakeTicketOrdersWithRelations(orgId)
+          .filter((order) => order.status === 'paid')
+          .filter((order) => {
+            const date = new Date(order.processed_at ?? order.created_at)
+            return date >= startOfMonth && date <= endOfMonth
+          })
+
+        if (orders.length === 0) {
+          return {
+            grossCents: 0,
+            platformFeeCents: 0,
+            orgRevenueCents: 0,
+            totalTickets: 0,
+          }
+        }
+
+        const grossCents = orders.reduce((sum, order) => sum + (order.total_cents || 0), 0)
+        const platformFeeCents = orders.reduce((sum, order) => {
+          const gross = order.total_cents || 0
+          return sum + (order.platform_fee_cents ?? Math.round(gross * 0.08))
+        }, 0)
+        const orgRevenueCents = orders.reduce((sum, order) => {
+          const gross = order.total_cents || 0
+          const platform = order.platform_fee_cents ?? Math.round(gross * 0.08)
+          return sum + (order.org_revenue_cents ?? (gross - platform))
+        }, 0)
+        const totalTickets = orders.reduce((sum, order) => sum + (order.ticket_count || 0), 0)
+
+        return {
+          grossCents,
+          platformFeeCents,
+          orgRevenueCents,
+          totalTickets,
+        }
+      }
 
       // Query ticket_orders for current org and month (using processed_at for Connect orders)
       // Prefer stripe_connect_transactions as source of truth, but fallback to ticket_orders if needed

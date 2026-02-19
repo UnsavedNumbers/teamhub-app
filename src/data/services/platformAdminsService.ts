@@ -8,6 +8,7 @@
 import { supabase } from '@/lib/supabase'
 import type { PlatformAdmin } from '@/types/platformAdmin.types'
 import { normalizeSupabaseError } from '@/utils/errorUtils'
+import { debug } from '../../lib/debug'
 
 // Technical Bug #5: Mapper function validates and transforms query results
 function mapPlatformAdminFromQuery(row: any): PlatformAdmin {
@@ -30,7 +31,12 @@ export async function getPlatformAdmins(
   page: number = 0,
   rowsPerPage: number = 50
 ): Promise<{ admins: PlatformAdmin[]; totalCount: number }> {
-  const { data, error, count } = await supabase
+  console.groupCollapsed(`%cgetPlatformAdmins: page ${page}, rowsPerPage ${rowsPerPage}`, 'color: #666; font-weight: bold;');
+  debug.data('PlatformAdminsService.getPlatformAdmins', 'Request', { page, rowsPerPage })
+  debug.perf.start('platformAdminsService.getPlatformAdmins')
+
+  try {
+    const { data, error, count } = await supabase
     .from('platform_admins')
     .select(`
       user_id,
@@ -41,18 +47,36 @@ export async function getPlatformAdmins(
     .order('created_at', { ascending: false })
     .range(page * rowsPerPage, (page + 1) * rowsPerPage - 1)
   
-  if (error) {
-    // Technical Bug #9: Normalize Supabase errors
-    if (error.code === 'PGRST116') {
-      return { admins: [], totalCount: 0 } // No results, not an error
+    if (error) {
+      // Technical Bug #9: Normalize Supabase errors
+      if (error.code === 'PGRST116') {
+        debug.perf.end('platformAdminsService.getPlatformAdmins')
+        debug.data('PlatformAdminsService.getPlatformAdmins', 'Response (no results)', { page, rowsPerPage, adminCount: 0, totalCount: 0 })
+        console.groupEnd()
+        return { admins: [], totalCount: 0 } // No results, not an error
+      }
+      if (error.code === '42501') {
+        debug.perf.end('platformAdminsService.getPlatformAdmins')
+        debug.error('PlatformAdminsService.getPlatformAdmins', 'Permission denied', { error, page, rowsPerPage })
+        console.groupEnd()
+        throw new Error('Permission denied: You do not have access to view platform admins')
+      }
+      debug.perf.end('platformAdminsService.getPlatformAdmins')
+      debug.error('PlatformAdminsService.getPlatformAdmins', 'Failed to get platform admins', { error, page, rowsPerPage })
+      console.groupEnd()
+      throw new Error(normalizeSupabaseError(error))
     }
-    if (error.code === '42501') {
-      throw new Error('Permission denied: You do not have access to view platform admins')
-    }
-    throw new Error(normalizeSupabaseError(error))
+    
+    // Technical Bug #5: Map and validate each result
+    const admins = (data || []).map(mapPlatformAdminFromQuery)
+    debug.perf.end('platformAdminsService.getPlatformAdmins')
+    debug.data('PlatformAdminsService.getPlatformAdmins', 'Response', { page, rowsPerPage, adminCount: admins.length, totalCount: count || 0 })
+    console.groupEnd()
+    return { admins, totalCount: count || 0 }
+  } catch (err) {
+    debug.perf.end('platformAdminsService.getPlatformAdmins')
+    debug.error('PlatformAdminsService.getPlatformAdmins', 'Exception getting platform admins', { error: err, page, rowsPerPage })
+    console.groupEnd()
+    throw err
   }
-  
-  // Technical Bug #5: Map and validate each result
-  const admins = (data || []).map(mapPlatformAdminFromQuery)
-  return { admins, totalCount: count || 0 }
 }

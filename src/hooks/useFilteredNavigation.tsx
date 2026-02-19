@@ -28,6 +28,7 @@ import {
     type GateAction,
     type ReasonCode,
 } from '@/lib/featureGate';
+import { USE_FAKE_DATA } from '@/data/config';
 
 /**
  * Extended navigation item with gate information
@@ -129,6 +130,12 @@ export function useFilteredNavigation(
 
                     // Feature is allowed - show normally
                     if (gate.allowed) {
+                        filteredItems.push({ ...item });
+                        continue;
+                    }
+
+                    // In demo mode, allow calendar, athletes, and payments to go to role-specific pages with fake data
+                    if (USE_FAKE_DATA && (item.routeKey === 'portal.calendar' || item.routeKey === 'portal.athletes' || item.routeKey === 'portal.payments')) {
                         filteredItems.push({ ...item });
                         continue;
                     }

@@ -1,0 +1,881 @@
+﻿"ID","Title","Content","Excerpt","Slug","Status","Parent","Order","Author","Date","Allow Comments","Allow Pingbacks","Categories","Tags","Section","Role Category"
+"","Import Athletes in Minutes: CSV Playbook for Clean Rosters","<h1>Import Athletes in Minutes: CSV Playbook for Clean Rosters</h1>
+<p>Great seasons start with clean data. This playbook helps you import athletes quickly, catch errors early, and keep one reliable profile per athlete.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Import large athlete lists without duplicate profiles.</li>
+<li>Map required fields correctly on first pass.</li>
+<li>Reduce manual cleanup after import.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Use one athlete per CSV row.</li>
+<li>Normalize names, dates, and emails before upload.</li>
+<li>Confirm target teams and seasons already exist.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Open Import Athletes and upload your CSV.</li>
+<li>Map columns to athlete fields and verify required indicators.</li>
+<li>Run preview and resolve failed rows before import.</li>
+<li>Complete import and compare total imported vs source total.</li>
+<li>Spot-check athlete profiles and team assignment readiness.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Mixed date formats in one file.</li>
+<li>Creating new athletes when profile already exists.</li>
+<li>Skipping post-import quality check.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Keep one locked master CSV template with validated columns and a change log.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Athletes appear once with complete data.</li>
+<li>Roster assignment can start immediately.</li>
+<li>Support requests drop after launch.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Move from spreadsheet to roster with less cleanup and fewer duplicates.","import-athletes-csv-playbook-clean-rosters","publish","","1","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Getting Started","athletes,rosters,import,csv,data-quality,organization-admins","Getting Started","Organization Admins"
+"","Audit Your Organization Structure Before Registration Opens","<h1>Audit Your Organization Structure Before Registration Opens</h1>
+<p>Most registration issues start with structure mistakes. A short hierarchy audit keeps teams, seasons, and downstream workflows aligned before families enter the system.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Catch structure issues before they reach families.</li>
+<li>Align sports, programs, levels, teams, and seasons.</li>
+<li>Prevent payment and roster assignment errors.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Finalize naming conventions.</li>
+<li>Archive old test structure.</li>
+<li>Assign one owner for final sign-off.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Review active sports and remove placeholders.</li>
+<li>Verify program and level naming consistency.</li>
+<li>Confirm every team is attached to the right level and season.</li>
+<li>Validate season date ranges and active state.</li>
+<li>Run one parent-path test before registration opens.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Leaving old test teams active.</li>
+<li>Using duplicate or unclear level names.</li>
+<li>Launching before team-season verification.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Use a two-admin pre-launch checklist with explicit sign-off fields.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Families see the correct options immediately.</li>
+<li>Athletes flow to correct teams.</li>
+<li>Admin cleanup after launch is minimal.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Validate your structure before launch to avoid downstream setup failures.","audit-organization-structure-before-registration","publish","","2","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Getting Started","organization,setup,sports,programs,levels,teams,seasons","Getting Started","Organization Admins"
+"","Attach Existing Athletes to Teams Without Duplicates","<h1>Attach Existing Athletes to Teams Without Duplicates</h1>
+<p>Team moves should be operationally simple. This workflow keeps athlete records clean while assigning athletes to the right teams fast.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Assign athletes to teams using existing profiles.</li>
+<li>Protect athlete history and reporting consistency.</li>
+<li>Avoid duplicate records during bulk roster work.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm destination teams are active.</li>
+<li>Filter out archived athletes.</li>
+<li>Decide single-team vs multi-team assignment rules.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Open roster management and filter to target group.</li>
+<li>Search for existing athlete records and verify identity.</li>
+<li>Attach athlete to correct team using existing record.</li>
+<li>Use bulk actions for volume changes in controlled batches.</li>
+<li>Reconcile final team counts vs planning sheet.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Creating new athlete profiles for existing athletes.</li>
+<li>Bulk actions without identity checks.</li>
+<li>Ignoring roster count mismatches.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Run assignment in level-based batches and reconcile after each batch.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>One athlete profile per athlete.</li>
+<li>Team rosters match approved plans.</li>
+<li>Attendance and communications stay accurate.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Assign athletes to teams while preserving one source of truth.","attach-existing-athletes-to-teams-without-duplicates","publish","","3","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Getting Started","athletes,teams,rosters,assignment,organization-admins","Getting Started","Organization Admins"
+"","Link Guardians and Keep Family Records Accurate","<h1>Link Guardians and Keep Family Records Accurate</h1>
+<p>Family records power communication and approvals. Clean guardian linking ensures alerts, payment reminders, and updates go to the right contacts every time.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Attach guardians to athletes correctly.</li>
+<li>Reduce duplicate guardian records.</li>
+<li>Improve communication delivery rates.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Verify guardian emails before linking.</li>
+<li>Confirm athlete profiles are complete.</li>
+<li>Define dispute and correction policy.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Search for existing guardian before creating a new one.</li>
+<li>Link existing guardian records to athlete profiles.</li>
+<li>Create new guardian record only when no match exists.</li>
+<li>Validate primary contact and relationship fields.</li>
+<li>Send a test communication to verify visibility and delivery.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Duplicate guardian profiles for one email.</li>
+<li>Linking without athlete identity verification.</li>
+<li>Skipping communication test.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Use one canonical guardian email per household and enforce it in staff process.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Guardian relationships are accurate.</li>
+<li>Messages reach intended recipients.</li>
+<li>Family support friction drops.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Build reliable guardian links so updates and approvals reach the right adults.","link-guardians-and-keep-family-records-accurate","publish","","4","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Getting Started","guardians,families,athletes,contacts,data-quality","Getting Started","Organization Admins"
+"","Invite Staff and Assign the Right Admin Permissions","<h1>Invite Staff and Assign the Right Admin Permissions</h1>
+<p>Access should be fast and safe. Role-based onboarding gives each staff member what they need without exposing settings they should not control.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Invite staff with correct role scope.</li>
+<li>Reduce access errors across admin workflows.</li>
+<li>Improve accountability and auditability.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Define role capabilities by responsibility.</li>
+<li>Prepare invite list with official emails.</li>
+<li>Set permission grant and revoke owners.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Open Organization Users and start invites.</li>
+<li>Assign minimum required role for each invite.</li>
+<li>Verify access after invite acceptance.</li>
+<li>Test role boundaries with non-admin account.</li>
+<li>Review and remove stale access regularly.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Giving full admin rights by default.</li>
+<li>Leaving old permissions active after role change.</li>
+<li>Shared logins between staff members.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Run a monthly permission audit with one owner and one reviewer.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Staff can do work without blockers.</li>
+<li>Sensitive areas remain controlled.</li>
+<li>Role changes happen cleanly and quickly.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Onboard staff quickly with role-based access that stays secure.","invite-staff-and-assign-admin-permissions","publish","","5","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Getting Started","users,roles,permissions,staff,security","Getting Started","Organization Admins"
+"","Configure Fees for Teams vs Individual Athletes","<h1>Configure Fees for Teams vs Individual Athletes</h1>
+<p>Billing clarity starts at setup. Choosing team scope vs athlete scope the right way prevents charge confusion and support churn.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Match fee scope to program structure.</li>
+<li>Prevent incorrect charge assignments.</li>
+<li>Launch billing with predictable outcomes.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm billing target model.</li>
+<li>Set due dates and installment policy.</li>
+<li>Verify payment configuration is active.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Create a fee in Payments.</li>
+<li>Set amount, due date, and installment behavior.</li>
+<li>Choose assignment scope: team or individual athlete.</li>
+<li>Review assignment preview count before publish.</li>
+<li>Publish and monitor first-day payment activity.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Combining multiple scopes in one unclear fee.</li>
+<li>Publishing without count validation.</li>
+<li>Changing core fee rules after payments start.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Use fee names that include season, scope, and due month.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Correct people see correct charges.</li>
+<li>Collection timelines stay clear.</li>
+<li>Finance reconciliation is faster.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Choose the right fee scope and prevent billing confusion before invoices go out.","configure-fees-for-teams-vs-individual-athletes","publish","","6","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Getting Started","payments,fees,billing,teams,athletes","Getting Started","Organization Admins"
+"","Track Partial Payments and Close Outstanding Balances","<h1>Track Partial Payments and Close Outstanding Balances</h1>
+<p>Partial payments are normal. Confusion is optional. This workflow keeps balances visible and follow-up targeted so open amounts close faster.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Monitor partial and overdue balances clearly.</li>
+<li>Target follow-up where it matters most.</li>
+<li>Reduce aging balances over time.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm fee due dates are accurate.</li>
+<li>Set weekly review cadence.</li>
+<li>Prepare standard follow-up language.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Filter Payments by partial and overdue states.</li>
+<li>Review balance details by athlete or team.</li>
+<li>Confirm recent transactions are posted.</li>
+<li>Send targeted reminders with exact amount due.</li>
+<li>Track outcomes and escalate unresolved cases.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Treating partial as fully resolved.</li>
+<li>Sending generic reminders without amounts.</li>
+<li>Failing to reconcile after manual adjustments.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Hold a weekly 15-minute balance huddle with one accountable owner.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Balance visibility is real-time.</li>
+<li>Collections improve without chaos.</li>
+<li>Families get clear and respectful communication.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Use a repeatable follow-up rhythm to convert partials into paid balances.","track-partial-payments-and-close-outstanding-balances","publish","","7","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Getting Started","payments,partial-payments,balances,collections","Getting Started","Organization Admins"
+"","Configure Uniform Catalogs, Sizes, and Deadlines","<h1>Configure Uniform Catalogs, Sizes, and Deadlines</h1>
+<p>Uniform ordering should feel smooth. Clean catalog setup with clear sizing and deadlines removes confusion and speeds completion rates.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Publish complete uniform options by team.</li>
+<li>Collect clean sizing data.</li>
+<li>Reduce incomplete submissions before lock date.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm product and size matrix with vendor.</li>
+<li>Set final submission deadline.</li>
+<li>Decide required fields for each item.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Create or edit uniforms in admin tools.</li>
+<li>Define available sizes and guidance notes.</li>
+<li>Set clear deadlines with timezone context.</li>
+<li>Assign uniforms to appropriate teams or groups.</li>
+<li>Preview user flow and publish.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Missing size options on live items.</li>
+<li>Unclear deadline messaging.</li>
+<li>Changing required fields after launch.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Send launch and midpoint reminders with direct action links.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Families complete selections faster.</li>
+<li>Staff sees fewer exceptions.</li>
+<li>Vendor handoff is cleaner.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Set uniform options clearly so ordering is simple for families and staff.","configure-uniform-catalogs-sizes-and-deadlines","publish","","8","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Getting Started","uniforms,sizes,deadlines,operations,orders","Getting Started","Organization Admins"
+"","Fix Uniform Order Exceptions Before Order Lock","<h1>Fix Uniform Order Exceptions Before Order Lock</h1>
+<p>Deadline day should be execution, not repair. Proactive exception management keeps final uniform submission clean and on schedule.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Identify exceptions early.</li>
+<li>Resolve missing fields before lock.</li>
+<li>Submit complete and accurate final orders.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Know vendor cutoffs.</li>
+<li>Define exception categories.</li>
+<li>Prepare correction templates.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Filter Uniform Orders for incomplete or invalid records.</li>
+<li>Prioritize exceptions by urgency and team.</li>
+<li>Contact families with exact corrections required.</li>
+<li>Track corrections daily until closure.</li>
+<li>Re-run exception filter 24 hours before lock.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Waiting until final day to review exceptions.</li>
+<li>Sending vague requests without specifics.</li>
+<li>Submitting final order before zero-check.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Assign one uniform operations owner for the season.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Exception queue reaches zero or documented approval.</li>
+<li>Final export is vendor-ready.</li>
+<li>Teams receive uniforms on time.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Catch missing sizes and invalid entries early so final orders ship on time.","fix-uniform-order-exceptions-before-order-lock","publish","","9","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Getting Started","uniforms,exceptions,orders,deadlines,operations","Getting Started","Organization Admins"
+"","Send Organization-Wide vs Team-Targeted Announcements","<h1>Send Organization-Wide vs Team-Targeted Announcements</h1>
+<p>When every message goes to everyone, engagement drops. Audience targeting keeps communication relevant and improves response speed on important updates.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Choose the right audience each time.</li>
+<li>Increase response on critical updates.</li>
+<li>Reduce notification fatigue.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Define target audience clearly.</li>
+<li>Set urgency level and send timing.</li>
+<li>Draft one clear call to action.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Create announcement with concise headline.</li>
+<li>Choose organization-wide or team-targeted audience.</li>
+<li>Add what changed, who is affected, and what to do next.</li>
+<li>Preview mobile readability.</li>
+<li>Publish and monitor replies for follow-up needs.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Global posts for team-specific updates.</li>
+<li>Long copy without clear action.</li>
+<li>Overusing urgent labels.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Use a four-part message pattern: change, impact, action, deadline.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Members get relevant updates.</li>
+<li>Critical actions happen faster.</li>
+<li>Admin clarifications decrease.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Use audience targeting to improve message clarity and response.","send-organization-wide-vs-team-targeted-announcements","publish","","10","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Getting Started","announcements,communication,teams,notifications","Getting Started","Organization Admins"
+"","Create, Publish, and Update Events Without Confusing Families","<h1>Create, Publish, and Update Events Without Confusing Families</h1>
+<p>Families can adapt to schedule changes when details are clear. This event workflow helps you publish confidently and update quickly without trust erosion.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Create events with complete actionable details.</li>
+<li>Publish updates with clear impact statements.</li>
+<li>Keep calendars accurate across teams.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Collect confirmed time and location details.</li>
+<li>Define event audience and RSVP expectations.</li>
+<li>Set day-of change communication owner.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Create event with clear title, date, and location.</li>
+<li>Configure audience and RSVP options.</li>
+<li>Review details before publish.</li>
+<li>When details change, edit immediately and summarize change.</li>
+<li>Notify affected members and verify calendar sync.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Publishing placeholders as final details.</li>
+<li>Editing time without communication.</li>
+<li>Overlong event descriptions with no key action.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Use event record as single source of truth, never side-channel threads.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Families trust event details.</li>
+<li>Staff spends less time clarifying.</li>
+<li>Attendance planning is more accurate.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Publish clear event details and manage changes with confidence.","create-publish-update-events-without-confusing-families","publish","","11","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Events","events,scheduling,communication,calendar","Events","Organization Admins"
+"","Choose the Right RSVP Mode for Each Event","<h1>Choose the Right RSVP Mode for Each Event</h1>
+<p>RSVP settings define the quality of your attendance data. Choosing the right mode gives coaches cleaner counts and families clear expectations.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Pick RSVP mode that matches event purpose.</li>
+<li>Improve response quality before event day.</li>
+<li>Reduce late attendance uncertainty.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Know if response should be family-level or athlete-level.</li>
+<li>Set response deadline with planning buffer.</li>
+<li>Align RSVP policy with coaching operations.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Open event RSVP settings.</li>
+<li>Select general RSVP for simple confirmation flows.</li>
+<li>Select athlete-specific RSVP when each athlete needs status.</li>
+<li>Set deadline and optional notes.</li>
+<li>Monitor response rates and follow up with non-responders.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>General RSVP for athlete-specific decisions.</li>
+<li>Late deadlines that block planning.</li>
+<li>No follow-up on missing responses.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Default to athlete-specific RSVP for travel and capacity-sensitive events.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Coaches receive actionable response data.</li>
+<li>Families understand response expectations.</li>
+<li>Event readiness improves.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Use general vs athlete-specific RSVP intentionally for better planning data.","choose-the-right-rsvp-mode-for-each-event","publish","","12","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Events","events,rsvp,athletes,attendance,planning","Events","Organization Admins"
+"","Run Attendance Workflow from Check-In to Follow-Up","<h1>Run Attendance Workflow from Check-In to Follow-Up</h1>
+<p>Attendance is an operational signal, not just a checkbox. This workflow gives your team reliable records and better follow-up decisions.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Record attendance quickly and accurately.</li>
+<li>Submit complete status logs every event.</li>
+<li>Use attendance data for proactive follow-up.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm roster is up to date.</li>
+<li>Assign primary and backup attendance owner.</li>
+<li>Define follow-up threshold for repeated absences.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Open event attendance view before start.</li>
+<li>Record present, absent, and late statuses in real time.</li>
+<li>Resolve missing roster entries before final submit.</li>
+<li>Submit attendance and confirm save state.</li>
+<li>Review attendance reports and trigger follow-up where needed.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Backfilling attendance from memory.</li>
+<li>Leaving blank statuses.</li>
+<li>Skipping repeated absence follow-up.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Always assign a backup attendance owner for every event.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Attendance logs are complete.</li>
+<li>Reports reflect real participation trends.</li>
+<li>Interventions happen earlier.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Capture attendance consistently and turn records into useful follow-up.","run-attendance-workflow-from-check-in-to-follow-up","publish","","13","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Events","attendance,events,reports,operations","Events","Organization Admins"
+"","Edit Recurring Events Without Breaking the Series","<h1>Edit Recurring Events Without Breaking the Series</h1>
+<p>Recurring events save time until one wrong edit rewrites your season. This guide helps you make targeted changes with confidence.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Apply changes at the right scope.</li>
+<li>Avoid accidental series-wide edits.</li>
+<li>Keep future schedule integrity.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Determine one-time vs permanent change.</li>
+<li>Check downstream impact on travel and attendance.</li>
+<li>Set approver for recurring pattern edits.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Open recurring event and choose scope.</li>
+<li>Apply only required changes.</li>
+<li>Review impacted dates before save.</li>
+<li>Publish update and communicate scope clearly.</li>
+<li>Verify future event list for unintended changes.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Series-wide edit for one-time change.</li>
+<li>No review of future dates.</li>
+<li>No communication of change scope.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Name recurring patterns clearly so staff can identify them instantly.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Only intended events change.</li>
+<li>Families see accurate updates.</li>
+<li>Long-range schedule stays stable.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Update one occurrence or all occurrences intentionally to avoid calendar drift.","edit-recurring-events-without-breaking-the-series","publish","","14","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Events","events,recurring-events,calendar,scheduling","Events","Organization Admins"
+"","Turn Events into Travel Plans with Less Manual Work","<h1>Turn Events into Travel Plans with Less Manual Work</h1>
+<p>Travel planning scales when it starts from clean event data. This process helps you move from event schedule to travel plans with less manual work and fewer mistakes.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Create travel plans aligned with event details.</li>
+<li>Reduce logistics re-entry.</li>
+<li>Publish clearer travel communication.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm event timing and location are final.</li>
+<li>Identify travel-required teams and athletes.</li>
+<li>Collect lodging and transportation decisions.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Review upcoming events requiring travel support.</li>
+<li>Create travel plan using event context.</li>
+<li>Add itinerary checkpoints and responsibilities.</li>
+<li>Assign participants and validate eligibility.</li>
+<li>Publish and monitor for updates.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Building travel before event details are final.</li>
+<li>Publishing without participant verification.</li>
+<li>Forgetting to update travel after event changes.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Batch-create travel plans weekly to stay ahead of schedule pressure.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Travel plans mirror event reality.</li>
+<li>Families get one clear source of trip info.</li>
+<li>Staff reconciliation work decreases.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Use event details to accelerate travel setup and reduce re-entry errors.","turn-events-into-travel-plans-with-less-manual-work","publish","","15","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Events","travel,events,logistics,planning","Events","Organization Admins"
+"","Resolve Overlapping Travel Plans Across Teams","<h1>Resolve Overlapping Travel Plans Across Teams</h1>
+<p>Overlapping travel creates confusion fast. A proactive conflict workflow keeps athlete assignment, family communication, and team expectations aligned.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Find overlap risks early.</li>
+<li>Coordinate final athlete assignment across teams.</li>
+<li>Reduce day-of travel confusion.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Define conflict priority policy.</li>
+<li>Verify eligibility rules for affected athletes.</li>
+<li>Set escalation owner for unresolved cases.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Filter travel plans by date range to find overlaps.</li>
+<li>Identify affected athletes and conflict details.</li>
+<li>Coordinate final decisions with coaches.</li>
+<li>Update plans and event notes with approved outcomes.</li>
+<li>Communicate final assignments to families.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Resolving conflicts too late.</li>
+<li>Changing assignments without communication.</li>
+<li>Leaving stale overlapping plans active.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Run overlap review twice weekly during peak competition windows.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Athletes have clear assignments.</li>
+<li>Families know exactly where to be.</li>
+<li>Travel operations run smoothly.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Detect and resolve travel conflicts before they become day-of problems.","resolve-overlapping-travel-plans-across-teams","publish","","16","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Events","travel,conflicts,teams,eligibility,operations","Events","Organization Admins"
+"","Launch a Ticketed Event End-to-End","<h1>Launch a Ticketed Event End-to-End</h1>
+<p>Ticketed events are high-visibility moments. A structured launch process protects fan experience and revenue operations from preventable mistakes.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Configure ticketed events correctly before launch.</li>
+<li>Reduce support issues after go-live.</li>
+<li>Improve confidence during launch windows.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm event details and capacity assumptions.</li>
+<li>Set sales timeline and release strategy.</li>
+<li>Assign launch support owners.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Create ticketed event with complete public details.</li>
+<li>Add ticket types and sales windows.</li>
+<li>Validate capacity rules and order limits.</li>
+<li>Run internal checkout test before publish.</li>
+<li>Launch and monitor first-hour performance.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Launching without checkout QA.</li>
+<li>Unclear buyer-facing event details.</li>
+<li>Capacity settings that do not match venue reality.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Use a launch checklist with owner initials for every critical step.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Fans purchase without confusion.</li>
+<li>Sales data starts clean.</li>
+<li>Staff focuses on execution, not rework.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Go from setup to live sales with a repeatable ticketing launch workflow.","launch-a-ticketed-event-end-to-end","publish","","17","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Events","ticketing,events,sales,revenue,operations","Events","Organization Admins"
+"","Configure Ticket Types, Limits, and Sales Windows","<h1>Configure Ticket Types, Limits, and Sales Windows</h1>
+<p>Ticket configuration is product design. Smart ticket types and sales windows improve conversion while protecting operations under demand spikes.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Create clear ticket options for buyers.</li>
+<li>Apply inventory and order limits safely.</li>
+<li>Control sales timing with fewer surprises.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Define buyer segments and price strategy.</li>
+<li>Set per-order limits as needed.</li>
+<li>Confirm sales start and end windows.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Create ticket types with clear naming.</li>
+<li>Set price and active sales windows per type.</li>
+<li>Configure quantity limits where needed.</li>
+<li>Validate combined inventory vs venue capacity.</li>
+<li>Test each ticket type in preview checkout.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Overlapping windows with unclear logic.</li>
+<li>Inventory totals beyond real capacity.</li>
+<li>Internal jargon in ticket names.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Name ticket types by audience and value, not internal shorthand.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Buyers choose quickly.</li>
+<li>Capacity controls hold in peak demand.</li>
+<li>Revenue and attendance stay aligned.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Design ticket options and constraints that protect both access and revenue.","configure-ticket-types-limits-and-sales-windows","publish","","18","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Events","ticketing,ticket-types,capacity,sales-windows,pricing","Events","Organization Admins"
+"","Apply Seat Maps to Reserved-Seating Events","<h1>Apply Seat Maps to Reserved-Seating Events</h1>
+<p>Reserved seating can elevate fan experience when setup is precise. This guide helps you map inventory, pricing zones, and event assignment correctly.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Attach the right map to the right event.</li>
+<li>Keep seat inventory and pricing synchronized.</li>
+<li>Reduce checkout and gate issues.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm final venue layout.</li>
+<li>Verify sections, rows, and seat metadata.</li>
+<li>Set reserved inventory go-live timing.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Open seat map tools and select target map.</li>
+<li>Validate zone and price mapping.</li>
+<li>Attach map to ticketed event.</li>
+<li>Run seat selection preview test.</li>
+<li>Publish and monitor early transactions.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Wrong map assigned to event.</li>
+<li>Map structure changes after sales start.</li>
+<li>Skipping preview test.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Run two-device launch rehearsal before opening public sales.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Fans choose seats smoothly.</li>
+<li>Inventory remains accurate.</li>
+<li>Entry flow matches purchased seats.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Use seat maps correctly so fans can select seats without friction.","apply-seat-maps-to-reserved-seating-events","publish","","19","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Events","ticketing,seat-maps,reserved-seating,venue","Events","Organization Admins"
+"","Handle Orders, Comp Tickets, and Scanner Validation","<h1>Handle Orders, Comp Tickets, and Scanner Validation</h1>
+<p>Ticket operations are where fan experience meets control. This workflow gives your team a clean path from order review to fast, reliable gate validation.</p>
+
+<h2>What you will achieve</h2>
+<ul>
+<li>Process ticket orders with clear status awareness.</li>
+<li>Issue comp tickets with audit discipline.</li>
+<li>Run scanner operations with minimal entry delays.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+<li>Confirm staff access for order and scanner tools.</li>
+<li>Define comp approval policy.</li>
+<li>Test scanner hardware and connectivity.</li>
+</ul>
+
+<h2>Step-by-step workflow</h2>
+<ol>
+<li>Review orders and verify completion states.</li>
+<li>Issue comp tickets based on approved policy.</li>
+<li>Resend ticket access when requested.</li>
+<li>Start scanner with a known-valid test ticket.</li>
+<li>Monitor duplicate scan alerts and resolve quickly.</li>
+</ol>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+<li>Comp issuance without approval trail.</li>
+<li>No pre-open scanner test.</li>
+<li>Ignoring duplicate scan alerts.</li>
+</ul>
+
+<h2>Power move</h2>
+<p>Use a gate-day command structure with separate owners for scanner, order support, and comp approvals.</p>
+
+<h2>Done right looks like</h2>
+<ul>
+<li>Entry lines move faster.</li>
+<li>Comp inventory is controlled.</li>
+<li>Post-event reconciliation is clean.</li>
+</ul>
+
+<p>Run this workflow consistently and your organization gets faster, clearer, and more reliable for families, staff, and athletes.</p>","Manage order support, comp access, and gate validation with confidence.","handle-orders-comp-tickets-and-scanner-validation","publish","","20","admin","2026-02-19 05:24:35","closed","closed","Help, Organization Admins, Events","ticketing,orders,comp-tickets,scanner,event-ops","Events","Organization Admins"

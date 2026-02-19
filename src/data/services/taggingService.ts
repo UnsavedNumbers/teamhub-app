@@ -6,7 +6,9 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import type { UserContext } from '../fake/userContext'
+import { USE_FAKE_DATA } from '../config'
 
 // ============================================================================
 // Type Definitions
@@ -51,6 +53,22 @@ function isValidUUID(uuid: string): boolean {
   return uuidRegex.test(uuid)
 }
 
+const FAKE_SUGGESTED_PEOPLE: SuggestedPerson[] = [
+  { id: 'mock-athlete-1', first_name: 'Emma', last_name: 'Johnson', source: 'athlete' },
+  { id: 'mock-athlete-2', first_name: 'Liam', last_name: 'Parker', source: 'athlete' },
+  { id: 'mock-athlete-3', first_name: 'Sofia', last_name: 'Martinez', source: 'athlete' },
+  { id: 'mock-athlete-4', first_name: 'Noah', last_name: 'Campbell', source: 'athlete' },
+  { id: 'mock-athlete-5', first_name: 'Ava', last_name: 'Robinson', source: 'athlete' },
+  { id: 'mock-athlete-6', first_name: 'Mason', last_name: 'Lee', source: 'athlete' },
+]
+
+const fakePhotoTags = new Map<string, Set<string>>()
+
+function getFakeSuggestedPeople(excludeIds: string[], limit: number): SuggestedPerson[] {
+  const excluded = new Set(excludeIds)
+  return FAKE_SUGGESTED_PEOPLE.filter((person) => !excluded.has(person.id)).slice(0, limit)
+}
+
 // ============================================================================
 // Public API
 // ============================================================================
@@ -71,12 +89,30 @@ export async function getSuggestedPeopleForGallery(
   excludeTaggedIds: string[] = [],
   limit: number = 20
 ): Promise<TaggingServiceResponse<SuggestedPerson[]>> {
+  console.groupCollapsed(`%cgetSuggestedPeopleForGallery: ${galleryContext.galleryType}`, 'color: #666; font-weight: bold;');
+  debug.data('TaggingService.getSuggestedPeopleForGallery', 'Request', { galleryType: galleryContext.galleryType, galleryId: galleryContext.galleryId, excludeCount: excludeTaggedIds.length, limit })
+  debug.perf.start('taggingService.getSuggestedPeopleForGallery')
+
   try {
+    if (USE_FAKE_DATA) {
+      const fakeResults = getFakeSuggestedPeople(excludeTaggedIds, limit)
+      debug.perf.end('taggingService.getSuggestedPeopleForGallery')
+      debug.data('TaggingService.getSuggestedPeopleForGallery', 'Response (fake)', { count: fakeResults.length })
+      console.groupEnd()
+      return { data: fakeResults, error: null }
+    }
+
     if (!isValidUUID(galleryContext.galleryId)) {
+      debug.perf.end('taggingService.getSuggestedPeopleForGallery')
+      debug.error('TaggingService.getSuggestedPeopleForGallery', 'Invalid gallery ID', { galleryId: galleryContext.galleryId })
+      console.groupEnd()
       throw new Error('Invalid gallery ID')
     }
 
     if (!context.orgId) {
+      debug.perf.end('taggingService.getSuggestedPeopleForGallery')
+      debug.error('TaggingService.getSuggestedPeopleForGallery', 'Organization context required', { galleryId: galleryContext.galleryId })
+      console.groupEnd()
       throw new Error('Organization context required')
     }
 
@@ -152,11 +188,18 @@ export async function getSuggestedPeopleForGallery(
       }
     }
 
+    const finalResults = results.slice(0, limit)
+    debug.perf.end('taggingService.getSuggestedPeopleForGallery')
+    debug.data('TaggingService.getSuggestedPeopleForGallery', 'Response', { galleryType: galleryContext.galleryType, count: finalResults.length })
+    console.groupEnd()
     return {
-      data: results.slice(0, limit),
+      data: finalResults,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('taggingService.getSuggestedPeopleForGallery')
+    debug.error('TaggingService.getSuggestedPeopleForGallery', 'Failed to get suggested people', { error: err, galleryType: galleryContext.galleryType })
+    console.groupEnd()
     console.error('[taggingService] Error getting suggested people:', err)
     return {
       data: [],
@@ -180,16 +223,41 @@ export async function searchPeopleForGallery(
   query: string,
   limit: number = 20
 ): Promise<TaggingServiceResponse<SuggestedPerson[]>> {
+  console.groupCollapsed(`%csearchPeopleForGallery: ${galleryContext.galleryType} - "${query}"`, 'color: #666; font-weight: bold;');
+  debug.data('TaggingService.searchPeopleForGallery', 'Request', { galleryType: galleryContext.galleryType, query, limit })
+  debug.perf.start('taggingService.searchPeopleForGallery')
+
   try {
     if (!query || query.trim().length === 0) {
+      debug.perf.end('taggingService.searchPeopleForGallery')
+      debug.data('TaggingService.searchPeopleForGallery', 'Response (empty query)', { query })
+      console.groupEnd()
       return { data: [], error: null }
     }
 
+    if (USE_FAKE_DATA) {
+      const searchTerm = query.trim().toLowerCase()
+      const fakeResults = FAKE_SUGGESTED_PEOPLE.filter((person) => {
+        const fullName = `${person.first_name} ${person.last_name}`.toLowerCase()
+        return fullName.includes(searchTerm)
+      }).slice(0, limit)
+      debug.perf.end('taggingService.searchPeopleForGallery')
+      debug.data('TaggingService.searchPeopleForGallery', 'Response (fake)', { query, count: fakeResults.length })
+      console.groupEnd()
+      return { data: fakeResults, error: null }
+    }
+
     if (!isValidUUID(galleryContext.galleryId)) {
+      debug.perf.end('taggingService.searchPeopleForGallery')
+      debug.error('TaggingService.searchPeopleForGallery', 'Invalid gallery ID', { galleryId: galleryContext.galleryId, query })
+      console.groupEnd()
       throw new Error('Invalid gallery ID')
     }
 
     if (!context.orgId) {
+      debug.perf.end('taggingService.searchPeopleForGallery')
+      debug.error('TaggingService.searchPeopleForGallery', 'Organization context required', { query })
+      console.groupEnd()
       throw new Error('Organization context required')
     }
 
@@ -208,11 +276,18 @@ export async function searchPeopleForGallery(
       return fullName.includes(searchTerm)
     })
 
+    const finalResults = filtered.slice(0, limit)
+    debug.perf.end('taggingService.searchPeopleForGallery')
+    debug.data('TaggingService.searchPeopleForGallery', 'Response', { query, count: finalResults.length })
+    console.groupEnd()
     return {
-      data: filtered.slice(0, limit),
+      data: finalResults,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('taggingService.searchPeopleForGallery')
+    debug.error('TaggingService.searchPeopleForGallery', 'Failed to search people', { error: err, query })
+    console.groupEnd()
     console.error('[taggingService] Error searching people:', err)
     return {
       data: [],
@@ -231,12 +306,31 @@ export async function addTag(
   photoId: string,
   athleteId: string
 ): Promise<TaggingServiceResponse<void>> {
+  console.groupCollapsed(`%caddTag: ${photoId} - ${athleteId}`, 'color: #666; font-weight: bold;');
+  debug.flow('TaggingService.addTag', 'Adding tag', { photoId, athleteId })
+  debug.perf.start('taggingService.addTag')
+
   try {
+    if (USE_FAKE_DATA) {
+      const current = fakePhotoTags.get(photoId) || new Set<string>()
+      current.add(athleteId)
+      fakePhotoTags.set(photoId, current)
+      debug.perf.end('taggingService.addTag')
+      console.groupEnd()
+      return { data: undefined, error: null }
+    }
+
     if (!isValidUUID(photoId)) {
+      debug.perf.end('taggingService.addTag')
+      debug.error('TaggingService.addTag', 'Invalid photo ID', { photoId, athleteId })
+      console.groupEnd()
       throw new Error('Invalid photo ID')
     }
 
     if (!isValidUUID(athleteId)) {
+      debug.perf.end('taggingService.addTag')
+      debug.error('TaggingService.addTag', 'Invalid athlete ID', { photoId, athleteId })
+      console.groupEnd()
       throw new Error('Invalid athlete ID')
     }
 
@@ -251,13 +345,22 @@ export async function addTag(
     if (error) {
       // Ignore unique constraint violations (already tagged)
       if (error.code === '23505') {
+        debug.perf.end('taggingService.addTag')
+        debug.data('TaggingService.addTag', 'Response (already tagged)', { photoId, athleteId })
+        console.groupEnd()
         return { data: undefined, error: null }
       }
       throw error
     }
 
+    debug.perf.end('taggingService.addTag')
+    debug.flow('TaggingService.addTag', 'Tag added successfully', { photoId, athleteId })
+    console.groupEnd()
     return { data: undefined, error: null }
   } catch (err) {
+    debug.perf.end('taggingService.addTag')
+    debug.error('TaggingService.addTag', 'Failed to add tag', { error: err, photoId, athleteId })
+    console.groupEnd()
     console.error('[taggingService] Error adding tag:', err)
     return {
       data: null,
@@ -277,6 +380,17 @@ export async function removeTag(
   athleteId: string
 ): Promise<TaggingServiceResponse<void>> {
   try {
+    if (USE_FAKE_DATA) {
+      const current = fakePhotoTags.get(photoId)
+      if (current) {
+        current.delete(athleteId)
+        fakePhotoTags.set(photoId, current)
+      }
+      debug.perf.end('taggingService.removeTag')
+      console.groupEnd()
+      return { data: undefined, error: null }
+    }
+
     if (!isValidUUID(photoId)) {
       throw new Error('Invalid photo ID')
     }
@@ -293,8 +407,14 @@ export async function removeTag(
 
     if (error) throw error
 
+    debug.perf.end('taggingService.removeTag')
+    debug.flow('TaggingService.removeTag', 'Tag removed successfully', { photoId, athleteId })
+    console.groupEnd()
     return { data: undefined, error: null }
   } catch (err) {
+    debug.perf.end('taggingService.removeTag')
+    debug.error('TaggingService.removeTag', 'Failed to remove tag', { error: err, photoId, athleteId })
+    console.groupEnd()
     console.error('[taggingService] Error removing tag:', err)
     return {
       data: null,
@@ -314,14 +434,32 @@ export async function setTagsForPhoto(
   photoId: string,
   athleteIds: string[]
 ): Promise<TaggingServiceResponse<void>> {
+  console.groupCollapsed(`%csetTagsForPhoto: ${photoId}`, 'color: #666; font-weight: bold;');
+  debug.flow('TaggingService.setTagsForPhoto', 'Setting tags', { photoId, athleteCount: athleteIds.length })
+  debug.perf.start('taggingService.setTagsForPhoto')
+
   try {
+    if (USE_FAKE_DATA) {
+      fakePhotoTags.set(photoId, new Set(athleteIds))
+      debug.perf.end('taggingService.setTagsForPhoto')
+      debug.flow('TaggingService.setTagsForPhoto', 'Tags set successfully (fake)', { photoId, athleteCount: athleteIds.length })
+      console.groupEnd()
+      return { data: undefined, error: null }
+    }
+
     if (!isValidUUID(photoId)) {
+      debug.perf.end('taggingService.setTagsForPhoto')
+      debug.error('TaggingService.setTagsForPhoto', 'Invalid photo ID', { photoId })
+      console.groupEnd()
       throw new Error('Invalid photo ID')
     }
 
     // Validate all athlete IDs
     for (const id of athleteIds) {
       if (!isValidUUID(id)) {
+        debug.perf.end('taggingService.setTagsForPhoto')
+        debug.error('TaggingService.setTagsForPhoto', 'Invalid athlete ID', { photoId, invalidId: id })
+        console.groupEnd()
         throw new Error(`Invalid athlete ID: ${id}`)
       }
     }
@@ -366,8 +504,14 @@ export async function setTagsForPhoto(
       if (deleteError) throw deleteError
     }
 
+    debug.perf.end('taggingService.setTagsForPhoto')
+    debug.flow('TaggingService.setTagsForPhoto', 'Tags set successfully', { photoId, athleteCount: athleteIds.length, added: toAdd.length, removed: toRemove.length })
+    console.groupEnd()
     return { data: undefined, error: null }
   } catch (err) {
+    debug.perf.end('taggingService.setTagsForPhoto')
+    debug.error('TaggingService.setTagsForPhoto', 'Failed to set tags', { error: err, photoId })
+    console.groupEnd()
     console.error('[taggingService] Error setting tags:', err)
     return {
       data: null,

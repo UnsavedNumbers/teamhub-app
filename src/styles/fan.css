@@ -155,7 +155,9 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  overflow-x: clip;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .fan-page img,
@@ -230,19 +232,22 @@
 }
 
 .fan-container {
-  max-width: var(--content-max-width);
+  width: 100%;
+  max-width: min(var(--content-max-width), 100%);
   margin: 0 auto;
   padding: 0 var(--spacing-6);
 }
 
 .fan-container-wide {
-  max-width: var(--container-max-width);
+  width: 100%;
+  max-width: min(var(--container-max-width), 100%);
   margin: 0 auto;
   padding: 0 var(--spacing-6);
 }
 
 .fan-main {
   padding: var(--spacing-12) 0;
+  overflow-x: hidden;
 }
 
 .fan-grid {
@@ -346,6 +351,11 @@
 }
 
 .fan-header-icon {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--color-text-muted);
   transition: color var(--transition-normal);
 }
@@ -563,7 +573,7 @@
 }
 
 .fan-trending-label {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
@@ -571,7 +581,7 @@
 }
 
 .fan-trending-link {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
@@ -651,7 +661,7 @@
   padding-right: var(--spacing-2);
   scrollbar-width: none;
   -ms-overflow-style: none;
-  max-width: calc(100vw - var(--spacing-4));
+  max-width: 100%;
 }
 
 .fan-events-scroll::-webkit-scrollbar {
@@ -684,7 +694,7 @@
 
 .fan-event-badge {
   padding: var(--spacing-1) var(--spacing-2);
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
@@ -705,7 +715,7 @@
 }
 
 .fan-event-venue {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-normal);
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
@@ -794,7 +804,7 @@
 }
 
 .fan-feed-tab {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
@@ -923,7 +933,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--tracking-widest);
   color: white;
@@ -943,7 +953,7 @@
 }
 
 .fan-post-meta p {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-normal);
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
@@ -1025,7 +1035,7 @@
 }
 
 .fan-post-tag {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
@@ -1068,7 +1078,7 @@
 }
 
 .fan-post-action span:last-child {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
@@ -1114,7 +1124,7 @@
 }
 
 .fan-sidebar-title {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-black);
   letter-spacing: var(--tracking-extreme);
   text-transform: uppercase;
@@ -1172,7 +1182,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
   overflow: hidden;
@@ -1199,7 +1209,7 @@
 }
 
 .fan-promo-title {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-black);
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
@@ -1207,7 +1217,7 @@
 }
 
 .fan-promo-text {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   color: var(--color-zinc-500);
   line-height: var(--line-height-relaxed);
   margin-bottom: var(--spacing-4);
@@ -1218,7 +1228,7 @@
   padding: var(--spacing-2) 0;
   background-color: var(--color-primary);
   color: white;
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
@@ -1282,7 +1292,7 @@
 }
 
 .fan-footer-link {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
@@ -1295,7 +1305,7 @@
 }
 
 .fan-footer-copy {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -1493,8 +1503,9 @@
 
 /* Hero Section - Full Width Breakout */
 .fan-org-profile-hero {
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
   background-color: var(--color-zinc-50);
   padding-top: var(--spacing-16);
   padding-bottom: 0;
@@ -1801,8 +1812,9 @@
 
 /* Content Grid */
 .fan-org-profile-content {
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
   background-color: var(--color-background);
 }
 
@@ -1854,7 +1866,7 @@
 }
 
 .fan-org-profile-feed-filter {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
   letter-spacing: var(--tracking-widest);
@@ -1908,7 +1920,7 @@
 }
 
 .fan-org-profile-post-initials {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--tracking-widest);
   color: var(--color-background);
@@ -1923,7 +1935,7 @@
 }
 
 .fan-org-profile-post-time {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   color: var(--color-zinc-400);
   text-transform: uppercase;
   letter-spacing: var(--tracking-widest);
@@ -1980,7 +1992,7 @@
 }
 
 .fan-org-profile-post-action span:last-child {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
   letter-spacing: var(--tracking-widest);
@@ -2004,7 +2016,7 @@
 }
 
 .fan-org-profile-sidebar-title {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-extrabold);
   letter-spacing: var(--tracking-extreme);
   color: var(--color-zinc-400);
@@ -2029,7 +2041,7 @@
 }
 
 .fan-org-profile-next-game-time {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
   letter-spacing: var(--tracking-widest);
@@ -2105,7 +2117,7 @@
   padding: var(--spacing-2) 0;
   background-color: var(--color-background);
   color: var(--color-primary);
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
   letter-spacing: var(--tracking-widest);
@@ -2205,7 +2217,7 @@
 }
 
 .fan-settings-section-title {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-extrabold);
   letter-spacing: var(--tracking-extreme);
   text-transform: uppercase;
@@ -2293,7 +2305,7 @@
 }
 
 .fan-settings-version p {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: var(--tracking-widest);
@@ -2591,7 +2603,7 @@
 }
 
 .fan-linked-athlete-status {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
   letter-spacing: var(--tracking-widest);
@@ -2930,7 +2942,7 @@
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-1-5) var(--spacing-3);
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
@@ -2978,7 +2990,7 @@
 
 .fan-event-type-badge {
   padding: var(--spacing-1) var(--spacing-2);
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--tracking-wide);
   text-transform: capitalize;
@@ -4012,4 +4024,48 @@
   flex-shrink: 0;
   font-size: 0.875rem;
   color: var(--color-zinc-300);
+}
+
+/* ----------------------------------------------------------------------------
+   Responsive Guardrails
+   ---------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  .fan-container,
+  .fan-container-wide {
+    padding-left: var(--spacing-4);
+    padding-right: var(--spacing-4);
+  }
+
+  .fan-main {
+    padding: var(--spacing-8) 0;
+  }
+
+  .fan-header {
+    height: 4rem;
+  }
+
+  .fan-header-inner {
+    padding-left: var(--spacing-4);
+    padding-right: var(--spacing-4);
+  }
+
+  .fan-header-left {
+    gap: var(--spacing-4);
+  }
+
+  .fan-header-right {
+    gap: var(--spacing-3);
+  }
+
+  .fan-grid {
+    gap: var(--spacing-8);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .fan-container,
+  .fan-container-wide {
+    padding-left: var(--spacing-5);
+    padding-right: var(--spacing-5);
+  }
 }

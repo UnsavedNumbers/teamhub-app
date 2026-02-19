@@ -18,6 +18,22 @@ interface NotificationJobRow {
   error: string | null
   created_at: string
   sent_at: string | null
+  retry_count: number | null
+  next_retry_at: string | null
+  updated_at: string
+}
+
+const MAX_RETRIES = 3
+const INITIAL_RETRY_DELAY_MS = 60000 // 1 minute
+const MAX_RETRY_DELAY_MS = 3600000 // 1 hour
+
+// Calculate next retry time with exponential backoff
+function calculateNextRetry(retryCount: number): Date {
+  const delayMs = Math.min(
+    INITIAL_RETRY_DELAY_MS * Math.pow(2, retryCount),
+    MAX_RETRY_DELAY_MS
+  )
+  return new Date(Date.now() + delayMs)
 }
 
 serve(async (req) => {
@@ -73,12 +89,14 @@ serve(async (req) => {
       jobs = data as NotificationJobRow[] | null
       fetchError = error
     } else {
-      // Fetch queued notification jobs (limit to prevent timeout)
+      // Fetch queued notification jobs that are ready to process (newest first so client-triggered invites are processed)
+      const now = new Date().toISOString()
       const { data, error } = await supabase
         .from('notification_jobs')
         .select('*')
         .eq('status', 'queued')
-        .order('created_at', { ascending: true })
+        .or(`next_retry_at.is.null,next_retry_at.lte.${now}`)
+        .order('created_at', { ascending: false })
         .limit(10)
       
       jobs = data as NotificationJobRow[] | null
@@ -127,6 +145,13 @@ serve(async (req) => {
             payload.invite_url = `${platformBaseUrl}${guardianInvitePath}?token=${token}&type=guardian`
           }
         }
+        
+        if (job.type === 'athlete_invite') {
+          const token = payload.invite_token
+          if (token) {
+            payload.invite_url = `${platformBaseUrl}${guardianInvitePath}?token=${token}&type=athlete`
+          }
+        }
 
         const notificationJob: NotificationJob = {
           id: job.id,
@@ -141,8 +166,8 @@ serve(async (req) => {
           sent_at: job.sent_at || undefined
         }
 
-        // Send the email
-        const result = await sendNotificationEmail(notificationJob)
+        // Send the email (pass supabase for branding)
+        const result = await sendNotificationEmail(notificationJob, supabase)
 
         if (result.success) {
           // Mark as sent
@@ -151,43 +176,105 @@ serve(async (req) => {
             .update({
               status: 'sent',
               sent_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              next_retry_at: null, // Clear retry schedule
             })
             .eq('id', job.id)
 
           results.push({ id: job.id, status: 'sent', emailId: result.emailId })
         } else {
-          // Mark as failed
-          await supabase
-            .from('notification_jobs')
-            .update({
-              status: 'failed',
-              error: result.error,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', job.id)
+          // Retry logic with exponential backoff
+          const currentRetryCount = job.retry_count || 0
+          
+          if (currentRetryCount < MAX_RETRIES) {
+            // Schedule retry with exponential backoff
+            const nextRetryAt = calculateNextRetry(currentRetryCount)
+            await supabase
+              .from('notification_jobs')
+              .update({
+                status: 'queued', // Keep as queued for retry
+                error: result.error,
+                retry_count: currentRetryCount + 1,
+                next_retry_at: nextRetryAt.toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', job.id)
 
-          results.push({ id: job.id, status: 'failed', error: result.error })
+            results.push({ 
+              id: job.id, 
+              status: 'retry_scheduled', 
+              error: result.error,
+              retry_count: currentRetryCount + 1,
+              next_retry_at: nextRetryAt.toISOString()
+            })
+          } else {
+            // Max retries exceeded - mark as permanently failed
+            await supabase
+              .from('notification_jobs')
+              .update({
+                status: 'failed',
+                error: result.error || 'Max retries exceeded',
+                updated_at: new Date().toISOString(),
+                next_retry_at: null,
+              })
+              .eq('id', job.id)
+
+            results.push({ 
+              id: job.id, 
+              status: 'failed', 
+              error: result.error || 'Max retries exceeded',
+              retry_count: currentRetryCount
+            })
+          }
         }
 
       } catch (error) {
         console.error(`Failed to process job ${job.id}:`, error)
 
-        // Mark as failed
-        await supabase
-          .from('notification_jobs')
-          .update({
-            status: 'failed',
-            error: error instanceof Error ? error.message : 'Unknown error',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', job.id)
+        // Retry logic for exceptions
+        const currentRetryCount = job.retry_count || 0
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        
+        if (currentRetryCount < MAX_RETRIES) {
+          // Schedule retry with exponential backoff
+          const nextRetryAt = calculateNextRetry(currentRetryCount)
+          await supabase
+            .from('notification_jobs')
+            .update({
+              status: 'queued', // Keep as queued for retry
+              error: errorMessage,
+              retry_count: currentRetryCount + 1,
+              next_retry_at: nextRetryAt.toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', job.id)
 
-        results.push({
-          id: job.id,
-          status: 'failed',
-          error: error instanceof Error ? error.message : 'Unknown error'
-        })
+          results.push({
+            id: job.id,
+            status: 'retry_scheduled',
+            error: errorMessage,
+            retry_count: currentRetryCount + 1,
+            next_retry_at: nextRetryAt.toISOString()
+          })
+        } else {
+          // Max retries exceeded - mark as permanently failed
+          await supabase
+            .from('notification_jobs')
+            .update({
+              status: 'failed',
+              error: errorMessage,
+              updated_at: new Date().toISOString(),
+              next_retry_at: null,
+            })
+            .eq('id', job.id)
+
+          results.push({
+            id: job.id,
+            status: 'failed',
+            error: errorMessage,
+            retry_count: currentRetryCount
+          })
+        }
       }
     }
 
@@ -220,13 +307,73 @@ serve(async (req) => {
 
 /**
  * Check if user/org wants to receive this type of notification
+ * Uses notifications_v2 if available, falls back to legacy preferences
  */
 async function checkNotificationPreferences(
   supabase: any,
   job: NotificationJobRow
 ): Promise<boolean> {
   try {
-    // Check user preferences first
+    if (!job.user_id || !job.org_id) {
+      // No user_id means org-wide or system notification - allow by default
+      return true
+    }
+
+    // Try notifications_v2 first
+    const { data: user } = await supabase
+      .from('users')
+      .select('preferences, id')
+      .eq('id', job.user_id)
+      .single()
+
+    if (user?.preferences) {
+      const prefs = user.preferences as any
+      const notifications_v2 = prefs?.notifications_v2
+
+      // Extract action from payload (we store it there)
+      const action = job.payload?.action as string | undefined
+
+      if (notifications_v2 && action && job.org_id) {
+        // Determine user's role in this org
+        const { data: orgMember } = await supabase
+          .from('organization_members')
+          .select('role')
+          .eq('org_id', job.org_id)
+          .eq('user_id', job.user_id)
+          .single()
+
+        if (orgMember?.role) {
+          const role = orgMember.role === 'parent' ? 'guardian' : orgMember.role
+          const orgPrefs = notifications_v2[job.org_id]
+          const rolePrefs = orgPrefs?.[role]
+
+          if (rolePrefs && Array.isArray(rolePrefs)) {
+            // Find the group that contains this action
+            for (const group of rolePrefs) {
+              const actionToggle = group.actions?.find((a: any) => a.id === action)
+              if (actionToggle) {
+                // Check if action is enabled
+                const actionEnabled = group.allEnabled || actionToggle.enabled
+                if (!actionEnabled) {
+                  return false
+                }
+
+                // Check if email channel is enabled
+                const channels = group.channels || []
+                if (!channels.includes('email')) {
+                  return false
+                }
+
+                // Action is enabled and email channel is on
+                return true
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Fallback to legacy preferences
     if (job.user_id) {
       const { data: userPrefs } = await supabase
         .from('user_preferences')

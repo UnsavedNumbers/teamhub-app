@@ -30,6 +30,7 @@ interface PaymentDisplay {
 }
 
 export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabProps) {
+  // All hooks must be called unconditionally at the top
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const [payments, setPayments] = useState<PaymentDisplay[]>([])
@@ -40,39 +41,6 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
   const handleViewAllPayments = useCallback(() => {
     navigate(`/admin/payments?teamId=${teamId}`)
   }, [navigate, teamId])
-
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
-
-  // If no season, show message (payments can still work without season, but less useful)
-  if (!seasonId) {
-    return (
-      <div className="pa-card">
-        <EmptyState
-          icon="payments"
-          title="No active season"
-          description="Please select an active season to view team payments, or view all organization payments."
-          noCard
-        />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--pa-space-4)' }}>
-          <Button variant="secondary" onClick={() => navigate('/admin/payments')}>
-            View All Organization Payments
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
 
   const fetchPayments = useCallback(async () => {
     if (!isReady || !teamId) {
@@ -147,12 +115,39 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
   }, [context, isReady, teamId, seasonId])
 
   useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
     fetchPayments()
   }, [fetchPayments])
 
   const handleViewOrganizationPayments = useCallback(() => {
     navigate('/admin/payments')
   }, [navigate])
+
+  // Early returns after all hooks are called
+  // If no season, show message (payments can still work without season, but less useful)
+  if (!seasonId) {
+    return (
+      <div className="pa-card">
+        <EmptyState
+          icon="payments"
+          title="No active season"
+          description="Please select an active season to view team payments, or view all organization payments."
+          noCard
+        />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--pa-space-4)' }}>
+          <Button variant="secondary" onClick={() => navigate('/admin/payments')}>
+            View All Organization Payments
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -269,7 +264,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
             <span 
-              className="pa-label dark:text-slate-400" 
+              className="oa-label dark:text-slate-400" 
               style={{ 
                 color: overallStatus === 'error'
                   ? 'rgb(239, 68, 68)'
@@ -302,7 +297,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
         {/* Total Due Card */}
         <div className="pa-card" style={{ padding: 'var(--pa-space-5)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
-            <span className="pa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
+            <span className="oa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
               Total Due
             </span>
           </div>
@@ -314,7 +309,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
         {/* Total Paid Card */}
         <div className="pa-card" style={{ padding: 'var(--pa-space-5)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
-            <span className="pa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
+            <span className="oa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
               Total Paid
             </span>
           </div>
@@ -326,7 +321,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
         {/* Outstanding Balance Card */}
         <div className="pa-card" style={{ padding: 'var(--pa-space-5)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
-            <span className="pa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
+            <span className="oa-label dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 0 }}>
               Outstanding
             </span>
           </div>
@@ -352,7 +347,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
-            <span className="pa-label dark:text-slate-400" style={{ color: 'rgb(16, 185, 129)', margin: 0, fontWeight: 700 }}>
+            <span className="oa-label dark:text-slate-400" style={{ color: 'rgb(16, 185, 129)', margin: 0, fontWeight: 700 }}>
               Paid
             </span>
           </div>
@@ -372,7 +367,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
-              <span className="pa-label dark:text-slate-400" style={{ color: 'rgb(251, 191, 36)', margin: 0, fontWeight: 700 }}>
+              <span className="oa-label dark:text-slate-400" style={{ color: 'rgb(251, 191, 36)', margin: 0, fontWeight: 700 }}>
                 Partial
               </span>
             </div>
@@ -393,7 +388,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-3)' }}>
-              <span className="pa-label dark:text-slate-400" style={{ color: 'rgb(239, 68, 68)', margin: 0, fontWeight: 700 }}>
+              <span className="oa-label dark:text-slate-400" style={{ color: 'rgb(239, 68, 68)', margin: 0, fontWeight: 700 }}>
                 Overdue
               </span>
             </div>
@@ -566,3 +561,4 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
     </div>
   )
 }
+

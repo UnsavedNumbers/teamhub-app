@@ -6,6 +6,8 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type {
     OrgSportProfileSettings,
     FieldOverride,
@@ -21,6 +23,36 @@ interface ServiceResponse<T> {
 }
 
 const supabaseAny = supabase as any
+const fakeOrgSportSettingsStore = new Map<string, OrgSportProfileSettings>()
+
+function getFakeSettingsKey(orgId: string, sportCode: SportCode): string {
+    return `${orgId}:${sportCode}`
+}
+
+function cloneOverrides(overrides: Record<string, FieldOverride>): Record<string, FieldOverride> {
+    return Object.fromEntries(
+        Object.entries(overrides ?? {}).map(([fieldKey, override]) => [fieldKey, { ...override }])
+    )
+}
+
+function cloneSettings(settings: OrgSportProfileSettings): OrgSportProfileSettings {
+    return {
+        ...settings,
+        overrides: cloneOverrides(settings.overrides),
+    }
+}
+
+function buildFakeSettingsId(orgId: string, sportCode: SportCode): string {
+    const safeOrgId = orgId.replace(/[^a-zA-Z0-9_-]/g, '')
+    const safeSportCode = String(sportCode).replace(/[^a-zA-Z0-9_-]/g, '')
+    return `mock-org-sport-settings-${safeOrgId}-${safeSportCode}`
+}
+
+async function simulateDelay(): Promise<void> {
+    if (FAKE_DATA_DELAY_MS > 0) {
+        await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+    }
+}
 
 /**
  * Get org sport profile settings for a specific sport
@@ -29,13 +61,38 @@ export async function getOrgSportSettings(
     orgId: string,
     sportCode: SportCode
 ): Promise<ServiceResponse<OrgSportProfileSettings>> {
+    console.groupCollapsed(`%cgetOrgSportSettings: ${orgId} - ${sportCode}`, 'color: #666; font-weight: bold;');
+    debug.data('OrgSportSettingsService.getOrgSportSettings', 'Request', { orgId, sportCode })
+    debug.perf.start('orgSportSettingsService.getOrgSportSettings')
+
     try {
         // Validate inputs
         if (!orgId) {
+            debug.perf.end('orgSportSettingsService.getOrgSportSettings')
+            debug.error('OrgSportSettingsService.getOrgSportSettings', 'orgId is required', { orgId, sportCode })
+            console.groupEnd()
             throw new Error('orgId is required')
         }
         if (!sportCode) {
+            debug.perf.end('orgSportSettingsService.getOrgSportSettings')
+            debug.error('OrgSportSettingsService.getOrgSportSettings', 'sportCode is required', { orgId, sportCode })
+            console.groupEnd()
             throw new Error('sportCode is required')
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const key = getFakeSettingsKey(orgId, sportCode)
+            const existing = fakeOrgSportSettingsStore.get(key)
+
+            debug.perf.end('orgSportSettingsService.getOrgSportSettings')
+            debug.data('OrgSportSettingsService.getOrgSportSettings', 'Response (fake)', {
+                orgId,
+                sportCode,
+                hasData: !!existing,
+            })
+            console.groupEnd()
+            return { data: existing ? cloneSettings(existing) : null, error: null }
         }
 
         const { data, error } = await supabaseAny
@@ -48,11 +105,17 @@ export async function getOrgSportSettings(
         if (error) {
             // Not found is not an error - return null data (org uses defaults)
             if (error.code === 'PGRST116') {
+                debug.perf.end('orgSportSettingsService.getOrgSportSettings')
+                debug.data('OrgSportSettingsService.getOrgSportSettings', 'Response (not found, using defaults)', { orgId, sportCode })
+                console.groupEnd()
                 return { data: null, error: null }
             }
             throw error
         }
 
+        debug.perf.end('orgSportSettingsService.getOrgSportSettings')
+        debug.data('OrgSportSettingsService.getOrgSportSettings', 'Response', { orgId, sportCode, hasData: !!data })
+        console.groupEnd()
         return { data: data as OrgSportProfileSettings | null, error: null }
     } catch (err) {
         console.error('[OrgSportSettingsService] Error getting org sport settings:', err)
@@ -66,10 +129,33 @@ export async function getOrgSportSettings(
 export async function getAllOrgSportSettings(
     orgId: string
 ): Promise<ServiceResponse<OrgSportProfileSettings[]>> {
+    console.groupCollapsed(`%cgetAllOrgSportSettings: ${orgId}`, 'color: #666; font-weight: bold;');
+    debug.data('OrgSportSettingsService.getAllOrgSportSettings', 'Request', { orgId })
+    debug.perf.start('orgSportSettingsService.getAllOrgSportSettings')
+
     try {
         // Validate input
         if (!orgId) {
+            debug.perf.end('orgSportSettingsService.getAllOrgSportSettings')
+            debug.error('OrgSportSettingsService.getAllOrgSportSettings', 'orgId is required', { orgId })
+            console.groupEnd()
             throw new Error('orgId is required')
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const allSettings = Array.from(fakeOrgSportSettingsStore.values())
+                .filter((setting) => setting.org_id === orgId)
+                .sort((a, b) => a.sport_code.localeCompare(b.sport_code))
+                .map(cloneSettings)
+
+            debug.perf.end('orgSportSettingsService.getAllOrgSportSettings')
+            debug.data('OrgSportSettingsService.getAllOrgSportSettings', 'Response (fake)', {
+                orgId,
+                settingCount: allSettings.length,
+            })
+            console.groupEnd()
+            return { data: allSettings, error: null }
         }
 
         const { data, error } = await supabaseAny
@@ -80,8 +166,14 @@ export async function getAllOrgSportSettings(
 
         if (error) throw error
 
+        debug.perf.end('orgSportSettingsService.getAllOrgSportSettings')
+        debug.data('OrgSportSettingsService.getAllOrgSportSettings', 'Response', { orgId, settingCount: data?.length || 0 })
+        console.groupEnd()
         return { data: (data as OrgSportProfileSettings[] | null) || [], error: null }
     } catch (err) {
+        debug.perf.end('orgSportSettingsService.getAllOrgSportSettings')
+        debug.error('OrgSportSettingsService.getAllOrgSportSettings', 'Failed to get all org sport settings', { error: err, orgId })
+        console.groupEnd()
         console.error('[OrgSportSettingsService] Error getting all org sport settings:', err)
         return { data: null, error: err as Error }
     }
@@ -106,6 +198,35 @@ export async function upsertOrgSportSettings(
         }
         if (!overrides || typeof overrides !== 'object') {
             throw new Error('overrides must be a valid object')
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+
+            const key = getFakeSettingsKey(orgId, sportCode)
+            const existing = fakeOrgSportSettingsStore.get(key)
+            const now = new Date().toISOString()
+            const next: OrgSportProfileSettings = existing
+                ? {
+                    ...existing,
+                    overrides: cloneOverrides(overrides),
+                    version: (existing.version ?? 0) + 1,
+                    updated_by: existing.updated_by ?? 'demo-org-admin',
+                    updated_at: now,
+                }
+                : {
+                    id: buildFakeSettingsId(orgId, sportCode),
+                    org_id: orgId,
+                    sport_code: sportCode,
+                    overrides: cloneOverrides(overrides),
+                    version: 1,
+                    updated_by: 'demo-org-admin',
+                    updated_at: now,
+                    created_at: now,
+                }
+
+            fakeOrgSportSettingsStore.set(key, next)
+            return { data: cloneSettings(next), error: null }
         }
 
         // Get current user ID for audit trail
@@ -133,10 +254,16 @@ export async function upsertOrgSportSettings(
 
         if (error) throw error
 
+        debug.perf.end('orgSportSettingsService.upsertOrgSportSettings')
+        debug.flow('OrgSportSettingsService.upsertOrgSportSettings', 'Settings upserted successfully', { orgId, sportCode })
+        console.groupEnd()
         console.log(`[OrgSportSettingsService] Upserted org sport settings for org ${orgId}, sport ${sportCode}`)
 
         return { data: data as OrgSportProfileSettings | null, error: null }
     } catch (err) {
+        debug.perf.end('orgSportSettingsService.upsertOrgSportSettings')
+        debug.error('OrgSportSettingsService.upsertOrgSportSettings', 'Failed to upsert settings', { error: err, orgId, sportCode })
+        console.groupEnd()
         console.error('[OrgSportSettingsService] Error upserting org sport settings:', err)
         return { data: null, error: err as Error }
     }
@@ -174,8 +301,19 @@ export async function updateFieldOverride(
             [fieldKey]: override,
         }
 
-        return await upsertOrgSportSettings(orgId, sportCode, updatedOverrides)
+        const result = await upsertOrgSportSettings(orgId, sportCode, updatedOverrides)
+        debug.perf.end('orgSportSettingsService.updateFieldOverride')
+        if (result.error) {
+            debug.error('OrgSportSettingsService.updateFieldOverride', 'Failed to update field override', { error: result.error, orgId, sportCode, fieldKey })
+        } else {
+            debug.flow('OrgSportSettingsService.updateFieldOverride', 'Field override updated successfully', { orgId, sportCode, fieldKey })
+        }
+        console.groupEnd()
+        return result
     } catch (err) {
+        debug.perf.end('orgSportSettingsService.updateFieldOverride')
+        debug.error('OrgSportSettingsService.updateFieldOverride', 'Exception updating field override', { error: err, orgId, sportCode, fieldKey })
+        console.groupEnd()
         console.error('[OrgSportSettingsService] Error updating field override:', err)
         return { data: null, error: err as Error }
     }
@@ -189,15 +327,28 @@ export async function removeFieldOverride(
     sportCode: SportCode,
     fieldKey: string
 ): Promise<ServiceResponse<OrgSportProfileSettings>> {
+    console.groupCollapsed(`%cremoveFieldOverride: ${orgId} - ${sportCode} - ${fieldKey}`, 'color: #666; font-weight: bold;');
+    debug.flow('OrgSportSettingsService.removeFieldOverride', 'Removing field override', { orgId, sportCode, fieldKey })
+    debug.perf.start('orgSportSettingsService.removeFieldOverride')
+
     try {
         // Validate inputs
         if (!orgId) {
+            debug.perf.end('orgSportSettingsService.removeFieldOverride')
+            debug.error('OrgSportSettingsService.removeFieldOverride', 'orgId is required', { orgId, sportCode, fieldKey })
+            console.groupEnd()
             throw new Error('orgId is required')
         }
         if (!sportCode) {
+            debug.perf.end('orgSportSettingsService.removeFieldOverride')
+            debug.error('OrgSportSettingsService.removeFieldOverride', 'sportCode is required', { orgId, sportCode, fieldKey })
+            console.groupEnd()
             throw new Error('sportCode is required')
         }
         if (!fieldKey) {
+            debug.perf.end('orgSportSettingsService.removeFieldOverride')
+            debug.error('OrgSportSettingsService.removeFieldOverride', 'fieldKey is required', { orgId, sportCode, fieldKey })
+            console.groupEnd()
             throw new Error('fieldKey is required')
         }
 
@@ -206,6 +357,9 @@ export async function removeFieldOverride(
 
         if (!currentSettings) {
             // No settings exist, nothing to remove
+            debug.perf.end('orgSportSettingsService.removeFieldOverride')
+            debug.data('OrgSportSettingsService.removeFieldOverride', 'No settings to remove', { orgId, sportCode, fieldKey })
+            console.groupEnd()
             return { data: null, error: null }
         }
 
@@ -216,14 +370,30 @@ export async function removeFieldOverride(
         // If no overrides remain, delete the entire settings row
         if (Object.keys(remainingOverrides).length === 0) {
             const deleteResult = await deleteOrgSportSettings(orgId, sportCode)
+            debug.perf.end('orgSportSettingsService.removeFieldOverride')
             if (deleteResult.error) {
+                debug.error('OrgSportSettingsService.removeFieldOverride', 'Failed to delete settings', { error: deleteResult.error, orgId, sportCode, fieldKey })
+                console.groupEnd()
                 return { data: null, error: deleteResult.error }
             }
+            debug.flow('OrgSportSettingsService.removeFieldOverride', 'Settings deleted (no overrides remaining)', { orgId, sportCode, fieldKey })
+            console.groupEnd()
             return { data: null, error: null }
         }
 
-        return await upsertOrgSportSettings(orgId, sportCode, remainingOverrides)
+        const result = await upsertOrgSportSettings(orgId, sportCode, remainingOverrides)
+        debug.perf.end('orgSportSettingsService.removeFieldOverride')
+        if (result.error) {
+            debug.error('OrgSportSettingsService.removeFieldOverride', 'Failed to remove field override', { error: result.error, orgId, sportCode, fieldKey })
+        } else {
+            debug.flow('OrgSportSettingsService.removeFieldOverride', 'Field override removed successfully', { orgId, sportCode, fieldKey })
+        }
+        console.groupEnd()
+        return result
     } catch (err) {
+        debug.perf.end('orgSportSettingsService.removeFieldOverride')
+        debug.error('OrgSportSettingsService.removeFieldOverride', 'Exception removing field override', { error: err, orgId, sportCode, fieldKey })
+        console.groupEnd()
         console.error('[OrgSportSettingsService] Error removing field override:', err)
         return { data: null, error: err as Error }
     }
@@ -246,6 +416,13 @@ export async function deleteOrgSportSettings(
             throw new Error('sportCode is required')
         }
 
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const key = getFakeSettingsKey(orgId, sportCode)
+            fakeOrgSportSettingsStore.delete(key)
+            return { data: null, error: null }
+        }
+
         const { error } = await supabaseAny
             .from('org_sport_profile_settings')
             .delete()
@@ -254,10 +431,16 @@ export async function deleteOrgSportSettings(
 
         if (error) throw error
 
+        debug.perf.end('orgSportSettingsService.deleteOrgSportSettings')
+        debug.flow('OrgSportSettingsService.deleteOrgSportSettings', 'Settings deleted successfully', { orgId, sportCode })
+        console.groupEnd()
         console.log(`[OrgSportSettingsService] Deleted org sport settings for org ${orgId}, sport ${sportCode}`)
 
         return { data: null, error: null }
     } catch (err) {
+        debug.perf.end('orgSportSettingsService.deleteOrgSportSettings')
+        debug.error('OrgSportSettingsService.deleteOrgSportSettings', 'Failed to delete settings', { error: err, orgId, sportCode })
+        console.groupEnd()
         console.error('[OrgSportSettingsService] Error deleting org sport settings:', err)
         return { data: null, error: err as Error }
     }
@@ -273,24 +456,42 @@ export async function isFieldRequired(
     fieldKey: string,
     defaultIsOptional: boolean
 ): Promise<boolean> {
+    console.groupCollapsed(`%cisFieldRequired: ${orgId} - ${sportCode} - ${fieldKey}`, 'color: #666; font-weight: bold;');
+    debug.data('OrgSportSettingsService.isFieldRequired', 'Request', { orgId, sportCode, fieldKey, defaultIsOptional })
+    debug.perf.start('orgSportSettingsService.isFieldRequired')
+
     try {
         const { data: settings } = await getOrgSportSettings(orgId, sportCode)
 
         if (!settings || !settings.overrides[fieldKey]) {
             // No override, use default
-            return !defaultIsOptional
+            const isRequired = !defaultIsOptional
+            debug.perf.end('orgSportSettingsService.isFieldRequired')
+            debug.data('OrgSportSettingsService.isFieldRequired', 'Response (using default)', { orgId, sportCode, fieldKey, isRequired })
+            console.groupEnd()
+            return isRequired
         }
 
         const override = settings.overrides[fieldKey]
 
         // If override explicitly sets is_required, use that
         if (override.is_required !== undefined) {
+            debug.perf.end('orgSportSettingsService.isFieldRequired')
+            debug.data('OrgSportSettingsService.isFieldRequired', 'Response (using override)', { orgId, sportCode, fieldKey, isRequired: override.is_required })
+            console.groupEnd()
             return override.is_required
         }
 
         // Otherwise, use default
-        return !defaultIsOptional
+        const isRequired = !defaultIsOptional
+        debug.perf.end('orgSportSettingsService.isFieldRequired')
+        debug.data('OrgSportSettingsService.isFieldRequired', 'Response (override without is_required, using default)', { orgId, sportCode, fieldKey, isRequired })
+        console.groupEnd()
+        return isRequired
     } catch (err) {
+        debug.perf.end('orgSportSettingsService.isFieldRequired')
+        debug.error('OrgSportSettingsService.isFieldRequired', 'Failed to check if field is required', { error: err, orgId, sportCode, fieldKey })
+        console.groupEnd()
         console.error('[OrgSportSettingsService] Error checking if field is required:', err)
         // On error, default to optional (safer)
         return false
@@ -312,6 +513,9 @@ export async function isFieldEnabled(
 
         if (!settings || !settings.overrides[fieldKey]) {
             // No override, use default
+            debug.perf.end('orgSportSettingsService.isFieldEnabled')
+            debug.data('OrgSportSettingsService.isFieldEnabled', 'Response (using default)', { orgId, sportCode, fieldKey, isEnabled: defaultIsEnabled })
+            console.groupEnd()
             return defaultIsEnabled
         }
 
@@ -319,12 +523,21 @@ export async function isFieldEnabled(
 
         // If override explicitly sets is_enabled, use that
         if (override.is_enabled !== undefined) {
+            debug.perf.end('orgSportSettingsService.isFieldEnabled')
+            debug.data('OrgSportSettingsService.isFieldEnabled', 'Response (using override)', { orgId, sportCode, fieldKey, isEnabled: override.is_enabled })
+            console.groupEnd()
             return override.is_enabled
         }
 
         // Otherwise, use default
+        debug.perf.end('orgSportSettingsService.isFieldEnabled')
+        debug.data('OrgSportSettingsService.isFieldEnabled', 'Response (override without is_enabled, using default)', { orgId, sportCode, fieldKey, isEnabled: defaultIsEnabled })
+        console.groupEnd()
         return defaultIsEnabled
     } catch (err) {
+        debug.perf.end('orgSportSettingsService.isFieldEnabled')
+        debug.error('OrgSportSettingsService.isFieldEnabled', 'Failed to check if field is enabled', { error: err, orgId, sportCode, fieldKey })
+        console.groupEnd()
         console.error('[OrgSportSettingsService] Error checking if field is enabled:', err)
         // On error, default to enabled (safer)
         return true

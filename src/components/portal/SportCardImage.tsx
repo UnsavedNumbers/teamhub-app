@@ -8,7 +8,7 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { SportImageSkeleton } from './SportImageSkeleton'
 import { 
-    getRandomSportImagePath, 
+    getSportImagePath, 
     getSportGradientFallback, 
     getSportImageAlt 
 } from '../../utils/sportImages'
@@ -34,7 +34,7 @@ export function SportCardImage({
     const [selectedImagePath, setSelectedImagePath] = useState<string>('')
     const imgRef = useRef<HTMLImageElement>(null)
 
-    // Select random image path (always use same image regardless of theme)
+    // Select fixed sport image path (always use same image regardless of theme)
     useEffect(() => {
         const sportName = sport?.name || null
         // If sport is not yet known, do NOT load a default image.
@@ -46,7 +46,7 @@ export function SportCardImage({
             return
         }
 
-        const path = getRandomSportImagePath(sportName, type, false)
+        const path = getSportImagePath(sportName, type, false)
         setSelectedImagePath(path)
         setImageLoaded(false) // Reset loaded state when path changes
         setImageError(false)

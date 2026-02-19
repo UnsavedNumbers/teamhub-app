@@ -11,6 +11,7 @@ import { getAthletes } from '../../data/services/familyService'
 import { getUnpaidFeeAssignmentsForOrg } from '../../data/services/paymentsService'
 import { getUpcomingEventsForUser } from '../../data/services/eventsService'
 import { getSeasons } from '../../data/services/seasonsService'
+import { USE_FAKE_DATA } from '../../data/config'
 import { STORAGE_KEYS } from '../../constants/storage'
 import {
   AdminPageHeader,
@@ -18,10 +19,11 @@ import {
   Select,
 } from '../../components/admin'
 import { cn } from '../../utils/cn'
+import { DEMO_PAGE_IMAGES } from '../../utils/demoImagePlaceholders'
 import '../../styles/orgAdmin.css'
 
 // ─── Unsplash imagery (free, production-safe, sports-themed) ────────────
-const IMG = {
+const REMOTE_IMG = {
   heroStadium: 'https://images.unsplash.com/photo-1521412644187-c49fa049e84d?auto=format&fit=crop&w=1600&q=80',
   heroTrack: 'https://images.unsplash.com/photo-1461896836934-bd45ba8fcde5?auto=format&fit=crop&w=1600&q=80',
   heroBasketball: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1600&q=80',
@@ -32,6 +34,10 @@ const IMG = {
   cardField: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80',
   cardUniforms: 'https://images.unsplash.com/photo-1580087256394-dc596e1c8f4f?auto=format&fit=crop&w=800&q=80',
 }
+
+const LOCAL_FAKE_IMG = DEMO_PAGE_IMAGES.adminDashboard
+
+const IMG = USE_FAKE_DATA ? LOCAL_FAKE_IMG : REMOTE_IMG
 
 // ─── Types ──────────────────────────────────────────────────────────────
 type DashboardLayout = 'stadium' | 'editorial' | 'athlete'
@@ -178,10 +184,10 @@ function DashboardSkeleton() {
 // ─── Quick-action configs ───────────────────────────────────────────────
 function useQuickActions(navigate: NavigateFunction, t: TFunc) {
   return [
-    { icon: 'add_circle', label: t('admin.dashboard.actionNewEvent'), onClick: () => navigate(getLink('admin.events.create')), img: IMG.cardSchedule },
-    { icon: 'person_add', label: t('admin.dashboard.actionAddUser'), onClick: () => navigate(getLink('admin.users.create')), img: IMG.cardPlayers },
+    { icon: 'qr_code_scanner', label: t('admin.dashboard.actionNewEvent'), onClick: () => navigate(getLink('admin.ticketingScanner')), img: IMG.cardSchedule },
+    { icon: 'video_library', label: t('admin.dashboard.actionAddUser'), onClick: () => navigate(getLink('admin.videos.list')), img: IMG.cardPlayers },
     { icon: 'request_quote', label: t('admin.dashboard.actionAssignFee'), onClick: () => navigate(getLink('admin.payments.create')), img: IMG.cardPayments },
-    { icon: 'group_add', label: t('admin.dashboard.actionManageTeams'), onClick: () => navigate(getLink('admin.teams.list')), img: IMG.cardTraining },
+    { icon: 'add_circle', label: t('admin.dashboard.actionManageTeams'), onClick: () => navigate(getLink('admin.events.create')), img: IMG.cardTraining },
     { icon: 'photo_library', label: t('admin.dashboard.actionPhotos'), onClick: () => navigate(getLink('admin.photos.list')), img: IMG.cardField },
     { icon: 'campaign', label: t('admin.dashboard.actionAnnouncement'), onClick: () => navigate(getLink('admin.announcements')), img: IMG.cardUniforms },
   ]
@@ -208,11 +214,11 @@ function StadiumDashboard({ stats, recentActivity, upcomingEvents, t, navigate, 
           <h1 className="dash-stadium-headline">{t(getGreetingKey())}</h1>
           <p className="dash-stadium-sub">{t('admin.dashboard.heroTagline')}</p>
           <div className="dash-stadium-hero-actions">
-            <Button variant="primary" onClick={() => navigate(getLink('admin.events.create'))}>
+            <Button variant="primary" onClick={() => navigate(getLink('admin.ticketingScanner'))}>
               <span className="material-symbols-outlined oa-icon-sm" aria-hidden>add</span>
               {t('admin.dashboard.actionNewEvent')}
             </Button>
-            <Button variant="ghost" onClick={() => navigate(getLink('admin.teams.list'))}
+            <Button variant="ghost" onClick={() => navigate(getLink('admin.events.create'))}
               style={{ color: '#fff', borderColor: 'rgba(255,255,255,.4)' }}>
               {t('admin.dashboard.actionManageTeams')}
             </Button>
@@ -579,7 +585,7 @@ function AthleteDashboard({ stats, recentActivity, upcomingEvents, t, navigate, 
 // ═════════════════════════════════════════════════════════════════════════
 
 export default function AdminDashboard() {
-  const [layout, setLayout] = useState<DashboardLayout>(loadLayout)
+  const [layout, setLayout] = useState<DashboardLayout>(() => loadLayout())
   const [stats, setStats] = useState<DashboardStats>({
     totalTeams: 0, totalPlayers: 0, activeSeasons: 0,
     outstandingPayments: 0, upcomingEvents: 0, pendingUniformOrders: 0,

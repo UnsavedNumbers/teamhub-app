@@ -390,32 +390,35 @@ async function verifyVideoAccess(
     if (member.role === "org_admin" || member.role === "coach") {
       return true
     }
+    // Any org member can see organization-scoped videos (matches DB can_view_video)
+    if (video.visibility === "organization") {
+      return true
+    }
   }
-  
-  // Check if user is a guardian of a linked athlete
+
+  // Check if user is a guardian of a linked athlete (table uses user_id, not guardian_id)
   if (video.video_athlete_links?.length > 0) {
     const athleteIds = video.video_athlete_links.map((l: any) => l.athlete_id)
-    
+
     const { data: guardians } = await supabase
       .from("athlete_guardians")
       .select("athlete_id")
-      .eq("guardian_id", userId)
+      .eq("user_id", userId)
+      .eq("status", "active")
       .in("athlete_id", athleteIds)
-    
+
     if (guardians && guardians.length > 0) {
-      // Guardian can only see team/private videos if their athlete is linked
-      if (video.visibility === "team" || video.visibility === "private") {
+      // Guardian can see team, guardians, or private videos when their athlete is linked
+      if (video.visibility === "team" || video.visibility === "guardians" || video.visibility === "private") {
         return true
       }
     }
   }
-  
-  // For team visibility, check if user is on same team
+
+  // For team visibility, org members with any role can access (e.g. parent on team)
   if (video.visibility === "team") {
-    // This would require additional team membership checks
-    // For now, org members with any role can access team videos
     return !!member
   }
-  
+
   return false
 }

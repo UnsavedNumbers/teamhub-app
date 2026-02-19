@@ -54,6 +54,35 @@ function validateOptimisticLock(currentUpdatedAt: string, storedUpdatedAt: strin
   }
 }
 
+function sanitizeFanVisibilityDefaults(
+  defaults: unknown
+): VisibilitySettings['fan_visibility_defaults'] | undefined {
+  if (!defaults || typeof defaults !== 'object' || Array.isArray(defaults)) {
+    return undefined
+  }
+
+  return Object.entries(defaults as Record<string, unknown>).reduce<Record<string, boolean>>(
+    (acc, [key, value]) => {
+      acc[key] = typeof value === 'boolean' ? value : false
+      return acc
+    },
+    {}
+  )
+}
+
+function sanitizeVisibilitySettingsPayload(
+  settings: Partial<VisibilitySettings>
+): Partial<VisibilitySettings> {
+  if (!Object.prototype.hasOwnProperty.call(settings, 'fan_visibility_defaults')) {
+    return settings
+  }
+
+  return {
+    ...settings,
+    fan_visibility_defaults: sanitizeFanVisibilityDefaults(settings.fan_visibility_defaults),
+  }
+}
+
 export async function getOrganizationSettings(
   context: UserContext
 ): Promise<{ data: OrganizationSettings | null; error: Error | null }> {
@@ -169,7 +198,8 @@ export async function updateVisibilitySettings(
 ): Promise<{ error: Error | null }> {
   try {
     await simulateDelay()
-    const validated = visibilitySettingsSchema.partial().parse(settings)
+    const sanitizedSettings = sanitizeVisibilitySettingsPayload(settings)
+    const validated = visibilitySettingsSchema.partial().parse(sanitizedSettings)
     const current = ensureSettings(context)
     validateOptimisticLock(currentUpdatedAt, current.visibility.updated_at)
 

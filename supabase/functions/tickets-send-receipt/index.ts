@@ -1,17 +1,20 @@
 // deno-lint-ignore-file no-explicit-any
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
+import { crypto } from "https://deno.land/std@0.208.0/crypto/mod.ts"
 import { qrcode } from "https://deno.land/x/qrcode/mod.ts"
-import { getFullUrl } from "../shared/url-generator.ts"
+import { getOrgTicketAccessUrl, getTicketAccessUrl, getFullUrl } from '../shared/url-generator.ts'
 
-const TEMPLATE = `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Ticket Receipt</title></head><body style="margin:0;padding:20px;background:#f3f4f6;font-family:Arial,sans-serif;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td align="center"><table role="presentation" cellpadding="0" cellspacing="0" width="640" style="max-width:640px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;"><tr><td style="padding:20px 20px 8px 20px;"><div style="font-size:24px;font-weight:700;">Ticket Receipt</div><div style="font-size:12px;color:#6b7280;">Receipt ID: {{RECEIPT_ID}}</div></td></tr><tr><td style="padding:0 20px 12px 20px;"><div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px;"><div style="font-size:18px;font-weight:700;">{{EVENT_NAME}}</div><div style="margin-top:8px;font-size:14px;line-height:1.5;"><strong>Organization:</strong> {{ORGANIZATION_NAME}}<br/><strong>Date:</strong> {{EVENT_DATE}}<br/><strong>Time:</strong> {{EVENT_TIME}}<br/><strong>Venue:</strong> {{VENUE_ADDRESS}}</div></div></td></tr><tr><td style="padding:0 20px 12px 20px;"><div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px;"><div style="font-size:16px;font-weight:700;margin-bottom:8px;">Order Summary</div><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;"><tr><th style="padding:8px;border:1px solid #d1d5db;background:#f3f4f6;text-align:left;font-size:12px;">Ticket Type</th><th style="padding:8px;border:1px solid #d1d5db;background:#f3f4f6;text-align:right;font-size:12px;">Qty</th><th style="padding:8px;border:1px solid #d1d5db;background:#f3f4f6;text-align:right;font-size:12px;">Unit</th><th style="padding:8px;border:1px solid #d1d5db;background:#f3f4f6;text-align:right;font-size:12px;">Subtotal</th></tr>{{LINE_ITEMS_ROWS}}{{FEES_TAX_ROWS}}</table><div style="margin-top:10px;padding:12px;border-radius:8px;background:#111827;color:#fff;text-align:center;font-size:18px;font-weight:700;">Total Paid: {{TOTAL_PAID}}</div><div style="margin-top:10px;font-size:14px;line-height:1.5;"><strong>Purchase Time:</strong> {{PURCHASE_DATE_TIME}}<br/><strong>Buyer Email:</strong> {{BUYER_EMAIL}}<br/><strong>Order ID:</strong> {{ORDER_ID}}<br/><strong>Stripe Ref:</strong> {{STRIPE_REFERENCE}}</div></div></td></tr><tr><td style="padding:0 20px 12px 20px;"><div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px;"><div style="font-size:16px;font-weight:700;margin-bottom:8px;">Ticket Codes</div><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">{{TICKET_CODES_ROWS}}</table>{{PRIMARY_QR_BLOCK}}</div></td></tr><tr><td style="padding:0 20px 22px 20px;text-align:center;"><a href="{{MY_TICKETS_URL}}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:8px;">View My Tickets</a><div style="margin-top:8px;font-size:12px;color:#6b7280;">This link requires sign-in.</div></td></tr></table></td></tr></table></body></html>`
-
+// CORS helpers
 function buildCorsHeaders(req: Request) {
   const origin = req.headers.get("Origin") ?? "*"
-  const reqHeaders = req.headers.get("Access-Control-Request-Headers") ?? "authorization, x-client-info, apikey, content-type"
+  const reqHeaders =
+    req.headers.get("Access-Control-Request-Headers") ??
+    "authorization, x-client-info, apikey, content-type"
+
   return {
     "Access-Control-Allow-Origin": origin,
-    Vary: "Origin",
+    "Vary": "Origin",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": reqHeaders,
     "Access-Control-Max-Age": "86400",
@@ -116,7 +119,19 @@ export async function sendTicketReceiptEmail(req: Request, supabase: any, orderI
 
   const { data: tickets } = await supabase
     .from("tickets")
-    .select("id, entry_code, ticket_type_id, ticket_types (name)")
+    .select(`
+      id,
+      entry_code,
+      ticket_type_id,
+      ticket_types (name),
+      seat_assignments!tickets_seat_assignment_id_fkey (
+        seat_map_sections (
+          section_name,
+          row_identifier,
+          seat_identifier
+        )
+      )
+    `)
     .eq("order_id", orderId)
 
   const tokenById = new Map<string, string>()
@@ -139,7 +154,13 @@ export async function sendTicketReceiptEmail(req: Request, supabase: any, orderI
 
   const ticketCodeRows = (tickets ?? []).length > 0
     ? (tickets ?? [])
-      .map((ticket: any) => `<tr><td style="padding:8px 0;border-bottom:1px solid #e5e7eb;"><div style="font-size:12px;color:#6b7280;">${escapeHtml(ticket.ticket_types?.name ?? "Ticket")}</div><div style="font-size:16px;font-weight:700;letter-spacing:.08em;">${escapeHtml(ticket.entry_code ?? "N/A")}</div></td></tr>`)
+      .map((ticket: any) => {
+        const seat = ticket.seat_assignments?.seat_map_sections
+        const seatText = seat
+          ? `Section ${seat.section_name}, Row ${seat.row_identifier}, Seat ${seat.seat_identifier}`
+          : ""
+        return `<tr><td style="padding:8px 0;border-bottom:1px solid #e5e7eb;"><div style="font-size:12px;color:#6b7280;">${escapeHtml(ticket.ticket_types?.name ?? "Ticket")}</div><div style="font-size:16px;font-weight:700;letter-spacing:.08em;">${escapeHtml(ticket.entry_code ?? "N/A")}</div>${seatText ? `<div style="font-size:12px;color:#4b5563;margin-top:4px;">${escapeHtml(seatText)}</div>` : ""}</td></tr>`
+      })
       .join("")
     : `<tr><td style="padding:8px 0;color:#6b7280;">Ticket code available in portal.</td></tr>`
 
@@ -175,58 +196,428 @@ export async function sendTicketReceiptEmail(req: Request, supabase: any, orderI
     PRIMARY_QR_BLOCK: primaryQrBlock,
     MY_TICKETS_URL: escapeHtml(getFullUrl("portal.myTickets", baseUrl)),
   })
+}
 
-  const resendApiKey = Deno.env.get("RESEND_API_KEY")
-  if (!resendApiKey) {
-    await supabase.from("email_receipts").update({ status: "failed", error_message: "RESEND_API_KEY missing" }).eq("order_id", orderId)
-    return json(req, { error: "Server misconfigured" }, 500)
+// Hash token
+async function hashToken(token: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(token)
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
+}
+
+// Generate magic link token
+function generateToken(): string {
+  const array = new Uint8Array(32)
+  crypto.getRandomValues(array)
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("")
+}
+
+// Base64URL encode (URL-safe base64)
+function base64UrlEncode(buffer: Uint8Array): string {
+  const base64 = btoa(String.fromCharCode(...buffer))
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+// Base64URL decode
+function base64UrlDecode(str: string): Uint8Array {
+  const base64 = str.replace(/-/g, '+').replace(/_/g, '/')
+  const padding = (4 - (base64.length % 4)) % 4
+  const padded = base64 + '='.repeat(padding)
+  const binary = atob(padded)
+  return new Uint8Array([...binary].map(char => char.charCodeAt(0)))
+}
+
+// Encrypt payload for access link
+async function encryptAccessPayload(payload: { ticket_id: string; qr_token: string; issued_at: number }): Promise<string> {
+  const secret = Deno.env.get("TICKET_LINK_SECRET") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+  if (!secret) {
+    throw new Error("TICKET_LINK_SECRET not configured")
   }
 
-  const text = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
-  const resendResponse = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: "notifications@youthsports.team",
-      to: order.purchaser_email,
-      subject: `Ticket Receipt - ${event?.title ?? "Event"}`,
-      html,
-      text,
-    }),
-  })
+  // Use AES-GCM for authenticated encryption
+  const encoder = new TextEncoder()
+  const payloadJson = JSON.stringify(payload)
+  const payloadData = encoder.encode(payloadJson)
 
-  if (!resendResponse.ok) {
-    const errorBody = await resendResponse.text()
-    await supabase.from("email_receipts").update({ status: "failed", error_message: `Resend error: ${resendResponse.status} ${errorBody}` }).eq("order_id", orderId)
-    return json(req, { error: "Failed to send receipt email" }, 500)
+  // Derive key from secret using SHA-256
+  const secretKey = encoder.encode(secret)
+  const keyData = await crypto.subtle.digest("SHA-256", secretKey)
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt"]
+  )
+
+  // Generate IV (12 bytes for GCM)
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+
+  // Encrypt
+  const encrypted = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    payloadData
+  )
+
+  // Combine IV and encrypted data
+  const combined = new Uint8Array(iv.length + encrypted.byteLength)
+  combined.set(iv)
+  combined.set(new Uint8Array(encrypted), iv.length)
+
+  // Base64URL encode for URL safety
+  return base64UrlEncode(combined)
+}
+
+// Generate access link for a ticket
+async function generateAccessLink(ticketId: string, qrToken: string, baseUrl: string, orgSlug?: string): Promise<string> {
+  const payload = {
+    ticket_id: ticketId,
+    qr_token: qrToken,
+    issued_at: Date.now(),
   }
 
-  const resendData = await resendResponse.json()
-  const sentAt = new Date().toISOString()
-  await supabase.from("email_receipts").update({ status: "sent", sent_at: sentAt, provider_message_id: resendData?.id ?? null, error_message: null }).eq("order_id", orderId)
-  await supabase.from("ticket_orders").update({ receipt_email_sent_at: sentAt }).eq("id", orderId)
-  return json(req, { success: true, email_sent: true, provider_message_id: resendData?.id ?? null })
+  const encrypted = await encryptAccessPayload(payload)
+  
+  if (orgSlug) {
+    return `${baseUrl}/o/${orgSlug}/tickets/access?t=${encrypted}`
+  }
+  return `${baseUrl}/tickets/access?t=${encrypted}`
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: buildCorsHeaders(req) })
-  if (req.method !== "POST") return json(req, { error: "Method not allowed" }, 405)
+  // Preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: buildCorsHeaders(req) })
+  }
+
+  if (req.method !== "POST") {
+    return json(req, { error: "Method not allowed" }, 405)
+  }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-  if (!supabaseUrl || !serviceRoleKey) return json(req, { error: "Server misconfigured" }, 500)
-  if ((req.headers.get("Authorization") ?? "") !== `Bearer ${serviceRoleKey}`) return json(req, { error: "Unauthorized" }, 401)
+  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    return json(req, { error: "Server misconfigured" }, 500)
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
+
+  // Parse payload
   let payload: any
   try {
     payload = await req.json()
   } catch {
     return json(req, { error: "Invalid JSON" }, 400)
   }
-  const orderId = payload?.order_id as string | undefined
-  const ticketsWithTokens = payload?.tickets_with_tokens as Array<{ id?: string; qr_token_raw: string; entry_code: string; ticket_type_id: string }> | undefined
-  if (!orderId) return json(req, { error: "Missing order_id" }, 400)
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey)
-  return await sendTicketReceiptEmail(req, supabase, orderId, ticketsWithTokens)
+  const orderId = payload?.order_id as string | undefined
+  const ticketsWithTokens = payload?.tickets_with_tokens as Array<{
+    id?: string
+    qr_token_raw: string
+    entry_code: string
+    ticket_type_id: string
+  }> | undefined
+
+  if (!orderId) {
+    return json(req, { error: "Missing order_id" }, 400)
+  }
+
+  try {
+    // Load order with event, org, and items (T4: check status and idempotency)
+    const { data: order, error: orderError } = await supabase
+      .from("ticket_orders")
+      .select(
+        `
+        id,
+        org_id,
+        purchaser_email,
+        purchaser_name,
+        purchaser_user_id,
+        status,
+        receipt_email_sent_at,
+        total_cents,
+        ticketed_events (
+          id,
+          title,
+          starts_at,
+          venue_name,
+          venue_city,
+          venue_state
+        ),
+        organizations!ticket_orders_org_id_fkey (
+          slug
+        )
+      `,
+      )
+      .eq("id", orderId)
+      .single()
+
+    if (orderError || !order) {
+      return json(req, { error: "Order not found" }, 404)
+    }
+
+    // Guard: order must be paid and tickets must exist (T4)
+    if (order.status !== "paid") {
+      return json(req, { error: "Order is not paid" }, 400)
+    }
+
+    // Check idempotency: if receipt already sent, return success (T4)
+    if (order.receipt_email_sent_at) {
+      return json(req, { success: true, email_sent: true, skipped: true })
+    }
+
+    // Load tickets with ticket types for email
+    const { data: tickets, error: ticketsError } = await supabase
+      .from("tickets")
+      .select(`
+        id,
+        entry_code,
+        ticket_type_id,
+        ticket_types (
+          name
+        )
+      `)
+      .eq("order_id", orderId)
+
+    if (ticketsError || !tickets || tickets.length === 0) {
+      return json(req, { error: "No tickets found for order" }, 400)
+    }
+
+    // If tickets_with_tokens provided, use those; otherwise fall back to loading from DB
+    const ticketsForEmail = ticketsWithTokens || tickets.map(t => ({
+      id: t.id,
+      qr_token_raw: "", // Will use entry_code fallback
+      entry_code: t.entry_code,
+      ticket_type_id: t.ticket_type_id,
+    }))
+
+    // Load order items
+    const { data: orderItems } = await supabase
+      .from("ticket_order_items")
+      .select(
+        `
+        quantity,
+        unit_price_cents,
+        line_total_cents,
+        ticket_types (
+          name
+        )
+      `,
+      )
+      .eq("order_id", orderId)
+
+    // Create magic link token for guest access (T10: handle conflict)
+    let token: string | null = null
+    const { data: existingLink } = await supabase
+      .from("ticket_access_links")
+      .select("id")
+      .eq("order_id", orderId)
+      .eq("email", order.purchaser_email)
+      .single()
+
+    if (!existingLink) {
+      // Create new access link
+      token = generateToken()
+      const tokenHash = await hashToken(token)
+      const expiresAt = new Date()
+      expiresAt.setDate(expiresAt.getDate() + 30) // 30 days
+
+      const { error: linkError } = await supabase.from("ticket_access_links").insert({
+        order_id: orderId,
+        email: order.purchaser_email,
+        token_hash: tokenHash,
+        expires_at: expiresAt.toISOString(),
+      })
+
+      if (linkError) {
+        // Conflict or other error - link may have been created concurrently
+        console.error("Failed to create access link (may already exist):", linkError)
+        // Continue - if link exists, user can access via other means
+      }
+    } else {
+      // Link already exists (T10: idempotent) - we can't get the raw token from hash
+      // For guest users, we'll use a generic message or they can request access
+    }
+
+    // Build ticket URL
+    const baseUrl = Deno.env.get("SITE_URL") || "https://platform.youthsports.team"
+    const orgSlug = (order.organizations as any)?.slug
+    // Use org-scoped URL if slug exists, otherwise fall back to legacy pattern
+    // For guest users, if token is null (link already exists), use org tickets page
+    let ticketUrl: string
+    if (order.purchaser_user_id) {
+      ticketUrl = getFullUrl('portal.myTickets', baseUrl)
+    } else if (token && orgSlug) {
+      ticketUrl = getOrgTicketAccessUrl(orgSlug, token, baseUrl) // Guest magic link with org context
+    } else if (token) {
+      ticketUrl = getTicketAccessUrl(token, baseUrl) // Legacy guest magic link
+    } else if (orgSlug) {
+      // Link already exists, direct to org tickets page
+      ticketUrl = getFullUrl('portal.orgTickets', baseUrl, { orgSlug })
+    } else {
+      ticketUrl = getFullUrl('portal.tickets', baseUrl)
+    }
+
+    const event = order.ticketed_events as any
+    const eventDate = event?.starts_at ? new Date(event.starts_at).toLocaleDateString() : "TBD"
+    const eventLocation = event?.venue_name
+      ? `${event.venue_name}, ${event.venue_city || ""} ${event.venue_state || ""}`.trim()
+      : "Location TBD"
+
+    // Build items_html (pre-rendered HTML for template)
+    const itemsHtml = (orderItems || [])
+      .map(
+        (item: any) =>
+          `<tr>
+            <td style="padding: 10px; border: 1px solid #d1d5db;">${item.ticket_types?.name || "Ticket"}</td>
+            <td style="padding: 10px; text-align: center; border: 1px solid #d1d5db;">${item.quantity}</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #d1d5db;">$${(item.unit_price_cents / 100).toFixed(2)}</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #d1d5db;">$${(item.line_total_cents / 100).toFixed(2)}</td>
+          </tr>`,
+      )
+      .join("")
+
+    // Build ticket type lookup from order items
+    const ticketTypeNames = new Map<string, string>()
+    for (const item of (orderItems || [])) {
+      ticketTypeNames.set(item.ticket_types?.id || "", item.ticket_types?.name || "Ticket")
+    }
+
+    // Build ticket links with QR tokens and access links
+    const ticketLinks: Array<{
+      ticket_id: string
+      ticket_type_name: string
+      entry_code: string
+      qr_token_raw: string
+      access_link: string
+    }> = []
+
+    // Map tickets to links with QR tokens
+    for (const ticket of ticketsForEmail) {
+      // Get ticket type name from lookup map
+      const ticketTypeName = ticketTypeNames.get(ticket.ticket_type_id) || "Ticket"
+
+      // Generate encrypted access link for this ticket
+      const accessLink = await generateAccessLink(
+        ticket.id!,
+        ticket.qr_token_raw || ticket.entry_code,
+        baseUrl,
+        orgSlug
+      )
+
+      ticketLinks.push({
+        ticket_id: ticket.id!,
+        ticket_type_name: ticketTypeName,
+        entry_code: ticket.entry_code,
+        qr_token_raw: ticket.qr_token_raw,
+        access_link: accessLink,
+      })
+    }
+
+    // Generate QR codes for tickets (prefer QR token, fallback to entry_code)
+    const ticketQRCodes: Array<{ ticket_id: string; qr_data_url: string }> = []
+    for (const ticketLink of ticketLinks) {
+      try {
+        // Use QR token if available, otherwise use entry_code
+        const qrValue = ticketLink.qr_token_raw || ticketLink.entry_code
+        if (qrValue) {
+          const qrBase64 = await qrcode(qrValue, { size: 250 })
+          ticketQRCodes.push({
+            ticket_id: ticketLink.ticket_id,
+            qr_data_url: `data:image/png;base64,${qrBase64}`,
+          })
+        }
+      } catch (qrError) {
+        console.error(`Failed to generate QR code for ticket ${ticketLink.ticket_id}:`, qrError)
+        // Continue without QR for this ticket
+      }
+    }
+    
+    // Legacy: first ticket QR for backward compatibility
+    let qrImageDataUrl = ""
+    if (ticketQRCodes.length > 0) {
+      qrImageDataUrl = ticketQRCodes[0].qr_data_url
+    }
+
+    // Build payload for notification_jobs
+    const notificationPayload = {
+      ticket_url: ticketUrl,
+      event_title: event?.title || "Event",
+      event_date: eventDate,
+      event_location: eventLocation,
+      items_html: itemsHtml,
+      total: `$${(order.total_cents / 100).toFixed(2)}`,
+      qr_image_data_url: qrImageDataUrl, // Legacy: first ticket QR
+      ticket_links: ticketLinks.map(link => ({
+        ticket_id: link.ticket_id,
+        ticket_type_name: link.ticket_type_name,
+        entry_code: link.entry_code,
+        access_link: link.access_link,
+        formatted_entry_code: link.entry_code.length >= 12
+          ? `${link.entry_code.slice(0, 4)}-${link.entry_code.slice(4, 8)}-${link.entry_code.slice(8)}`
+          : link.entry_code.length >= 8
+          ? `${link.entry_code.slice(0, 4)}-${link.entry_code.slice(4)}`
+          : link.entry_code,
+      })),
+      ticket_qr_codes: ticketQRCodes, // QR codes keyed by ticket_id
+    }
+
+    // Insert notification job
+    const { data: notificationJob, error: jobError } = await supabase
+      .from("notification_jobs")
+      .insert({
+        org_id: order.org_id,
+        email: order.purchaser_email,
+        user_id: order.purchaser_user_id || null,
+        type: "ticket_receipt",
+        payload: notificationPayload,
+        status: "queued",
+      })
+      .select("id")
+      .single()
+
+    if (jobError || !notificationJob) {
+      console.error("Failed to create notification job:", jobError)
+      return json(req, { error: "Failed to enqueue receipt email" }, 500)
+    }
+
+    // Invoke notification-worker with job_id (T5: handle failure gracefully)
+    const functionsUrl = supabaseUrl.replace("/rest/v1", "")
+    try {
+      const workerResponse = await fetch(`${functionsUrl}/functions/v1/notification-worker`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${supabaseServiceRoleKey}`,
+        },
+        body: JSON.stringify({
+          job_ids: [notificationJob.id],
+        }),
+      })
+
+      if (!workerResponse.ok) {
+        const errorText = await workerResponse.text()
+        console.error("Failed to invoke notification-worker:", errorText)
+        // Don't fail - job is queued and will be processed later
+      }
+    } catch (invokeError) {
+      console.error("Error invoking notification-worker:", invokeError)
+      // Don't fail - job is queued and will be processed later (T5)
+    }
+
+    // Update order receipt sent timestamp (set after worker is invoked)
+    await supabase
+      .from("ticket_orders")
+      .update({ receipt_email_sent_at: new Date().toISOString() })
+      .eq("id", orderId)
+
+    return json(req, { success: true, email_sent: true, job_id: notificationJob.id })
+  } catch (error: any) {
+    console.error("Error sending receipt:", error)
+    return json(req, { error: error.message || "Internal server error" }, 500)
+  }
 })

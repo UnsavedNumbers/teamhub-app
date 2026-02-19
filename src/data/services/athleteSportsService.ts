@@ -7,6 +7,9 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
+import { getSportProfilesForAthlete } from '../fake/fakeAthleteSportProfiles'
+import { getSportsForOrg } from '../fake/fakeTeams'
 
 export type SportType = 'plays' | 'interested'
 
@@ -45,12 +48,59 @@ export async function getAthleteSports(
     athleteId: string,
     orgId: string
 ): Promise<{ data: AthleteSportWithDetails[]; error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        return { data: [], error: null }
-    }
+    console.groupCollapsed(`%cgetAthleteSports: ${athleteId}`, 'color: #666; font-weight: bold;');
+    debug.data('AthleteSportsService.getAthleteSports', 'Request', { athleteId, orgId })
+    debug.perf.start('athleteSportsService.getAthleteSports')
 
     try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            // Get sport profiles for this athlete
+            const profiles = getSportProfilesForAthlete(athleteId)
+            // Get all sports to map codes to IDs
+            const allSports = getSportsForOrg(orgId)
+            // Map sport codes to sport IDs
+            // Sport codes use snake_case, slugs use kebab-case
+            const sportCodeToId: Record<string, string> = {}
+            allSports.forEach(sport => {
+                if (sport.slug) {
+                    // Convert slug to code format (e.g., 'track-and-field' -> 'track_field', 'flag-football' -> 'flag_football')
+                    const code = sport.slug.replace(/-/g, '_')
+                    sportCodeToId[code] = sport.id
+                }
+                // Also map by name (case-insensitive) as fallback
+                if (sport.name) {
+                    const nameCode = sport.name.toLowerCase().replace(/\s+/g, '_').replace(/&/g, '').replace(/and/g, '')
+                    sportCodeToId[nameCode] = sport.id
+                }
+            })
+            // Create athlete sports from profiles (all are 'plays' since they have profiles)
+            const athleteSports: AthleteSportWithDetails[] = profiles
+                .map(profile => {
+                    const sportId = sportCodeToId[profile.sport_code] || ''
+                    const sport = allSports.find(s => s.id === sportId)
+                    // Only include if we found a matching sport
+                    if (!sportId || !sport) {
+                        console.warn(`[athleteSportsService] Could not find sport for code: ${profile.sport_code}`)
+                        return null
+                    }
+                    return {
+                        id: `athlete-sport-${athleteId}-${profile.sport_code}`,
+                        athlete_id: athleteId,
+                        sport_id: sportId,
+                        org_id: orgId,
+                        sport_type: 'plays' as SportType,
+                        sport_name: sport.name,
+                        created_at: profile.created_at,
+                        updated_at: profile.updated_at,
+                    }
+                })
+                .filter((s): s is AthleteSportWithDetails => s !== null)
+            debug.perf.end('athleteSportsService.getAthleteSports')
+            debug.data('AthleteSportsService.getAthleteSports', 'Response (fake)', { athleteId, sportCount: athleteSports.length })
+            console.groupEnd()
+            return { data: athleteSports, error: null }
+        }
         const { data, error } = await supabase
             .from('athlete_sports')
             .select(`
@@ -68,8 +118,14 @@ export async function getAthleteSports(
             sport_name: row.sport?.name || 'Unknown Sport'
         })) as AthleteSportWithDetails[]
 
+        debug.perf.end('athleteSportsService.getAthleteSports')
+        debug.data('AthleteSportsService.getAthleteSports', 'Response', { athleteId, sportCount: sports.length })
+        console.groupEnd()
         return { data: sports, error: null }
     } catch (err) {
+        debug.perf.end('athleteSportsService.getAthleteSports')
+        debug.error('AthleteSportsService.getAthleteSports', 'Failed to get athlete sports', { error: err, athleteId, orgId })
+        console.groupEnd()
         console.error('[athleteSportsService] Error getting athlete sports:', err)
         return {
             data: [],
@@ -86,12 +142,18 @@ export async function updateAthleteSports(
     orgId: string,
     sports: Array<{ sport_id: string; sport_type: SportType }>
 ): Promise<{ error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        return { error: null }
-    }
+    console.groupCollapsed(`%cupdateAthleteSports: ${athleteId}`, 'color: #666; font-weight: bold;');
+    debug.flow('AthleteSportsService.updateAthleteSports', 'Updating athlete sports', { athleteId, orgId, sportCount: sports.length })
+    debug.perf.start('athleteSportsService.updateAthleteSports')
 
     try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            debug.perf.end('athleteSportsService.updateAthleteSports')
+            debug.flow('AthleteSportsService.updateAthleteSports', 'Sports updated (fake)', { athleteId, sportCount: sports.length })
+            console.groupEnd()
+            return { error: null }
+        }
         if (!orgId) {
             return { error: new Error('Organization is required to update sports.') }
         }
@@ -131,8 +193,14 @@ export async function updateAthleteSports(
             if (insertError) throw insertError
         }
 
+        debug.perf.end('athleteSportsService.updateAthleteSports')
+        debug.flow('AthleteSportsService.updateAthleteSports', 'Sports updated successfully', { athleteId, sportCount: validSports.length })
+        console.groupEnd()
         return { error: null }
     } catch (err) {
+        debug.perf.end('athleteSportsService.updateAthleteSports')
+        debug.error('AthleteSportsService.updateAthleteSports', 'Failed to update athlete sports', { error: err, athleteId, orgId, sportCount: sports.length })
+        console.groupEnd()
         console.error('[athleteSportsService] Error updating athlete sports:', err)
         
         // Check for permission errors
@@ -159,23 +227,29 @@ export async function addAthleteSport(
     orgId: string,
     sportType: SportType
 ): Promise<{ data: AthleteSport | null; error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        return {
-            data: {
-                id: `demo-athlete-sport-${Date.now()}`,
-                athlete_id: athleteId,
-                sport_id: sportId,
-                org_id: orgId,
-                sport_type: sportType,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            },
-            error: null
-        }
-    }
+    console.groupCollapsed(`%caddAthleteSport: ${athleteId} - ${sportId}`, 'color: #666; font-weight: bold;');
+    debug.flow('AthleteSportsService.addAthleteSport', 'Adding athlete sport', { athleteId, sportId, orgId, sportType })
+    debug.perf.start('athleteSportsService.addAthleteSport')
 
     try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            debug.perf.end('athleteSportsService.addAthleteSport')
+            debug.flow('AthleteSportsService.addAthleteSport', 'Sport added (fake)', { athleteId, sportId, sportType })
+            console.groupEnd()
+            return {
+                data: {
+                    id: `demo-athlete-sport-${Date.now()}`,
+                    athlete_id: athleteId,
+                    sport_id: sportId,
+                    org_id: orgId,
+                    sport_type: sportType,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                },
+                error: null
+            }
+        }
         const { data, error } = await supabase
             .from('athlete_sports')
             .insert({
@@ -208,12 +282,18 @@ export async function removeAthleteSport(
     orgId: string,
     sportType?: SportType
 ): Promise<{ error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        return { error: null }
-    }
+    console.groupCollapsed(`%cremoveAthleteSport: ${athleteId} - ${sportId}`, 'color: #666; font-weight: bold;');
+    debug.flow('AthleteSportsService.removeAthleteSport', 'Removing athlete sport', { athleteId, sportId, orgId, sportType })
+    debug.perf.start('athleteSportsService.removeAthleteSport')
 
     try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            debug.perf.end('athleteSportsService.removeAthleteSport')
+            debug.flow('AthleteSportsService.removeAthleteSport', 'Sport removed (fake)', { athleteId, sportId, sportType })
+            console.groupEnd()
+            return { error: null }
+        }
         let query = supabase
             .from('athlete_sports')
             .delete()
@@ -230,8 +310,14 @@ export async function removeAthleteSport(
 
         if (error) throw error
 
+        debug.perf.end('athleteSportsService.removeAthleteSport')
+        debug.flow('AthleteSportsService.removeAthleteSport', 'Sport removed successfully', { athleteId, sportId, sportType })
+        console.groupEnd()
         return { error: null }
     } catch (err) {
+        debug.perf.end('athleteSportsService.removeAthleteSport')
+        debug.error('AthleteSportsService.removeAthleteSport', 'Failed to remove athlete sport', { error: err, athleteId, sportId, orgId, sportType })
+        console.groupEnd()
         console.error('[athleteSportsService] Error removing athlete sport:', err)
         return {
             error: err instanceof Error ? err : new Error('Remove failed')

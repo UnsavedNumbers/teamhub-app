@@ -4,7 +4,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getAthleteById } from '../../data/services/familyService'
 import { getAthleteSports } from '../../data/services/athleteSportsService'
 import { getAthleteGuardians, linkGuardianToAthlete, removeGuardianFromAthlete, validateGuardianEmail, getAthleteInvites, cancelInvite, resendInvite } from '../../data/services/guardianService'
-import { getAthletePhotoUrl } from '../../data/services/athletePhotoService'
+import AthleteAvatar from '../../components/portal/AthleteAvatar'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
 import { useT } from '../../i18n/useI18n'
@@ -12,7 +12,7 @@ import { Button, Card, Table, type TableColumn, Badge, ConfirmDialog } from '../
 import { Tabs, TabsList, TabsTrigger, TabsContent, StatCard } from '../../components/platformAdmin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import OfflineBanner from '../../components/admin/OfflineBanner'
-import { getDisplayName, calculateAge, getGenderLabel, formatSports, getAthleteInitials } from '../../utils/athleteHelpers'
+import { getDisplayName, calculateAge, getGenderLabel, formatSports } from '../../utils/athleteHelpers'
 import { formatPhoneDisplay } from '../../utils/phoneFormatting'
 import { GuardianMatchIndicator } from '../../components/admin/GuardianMatchIndicator'
 import { checkGuardianMatch, debounce } from '../../utils/guardianMatching'
@@ -64,7 +64,6 @@ export default function AthleteDetail() {
   const [guardians, setGuardians] = useState<Guardian[]>([])
   const [pendingInvites, setPendingInvites] = useState<PendingGuardianInvite[]>([])
   const [teams, setTeams] = useState<TeamMembership[]>([])
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -73,10 +72,14 @@ export default function AthleteDetail() {
 
   // Link Guardian Modal State
   const [showLinkGuardianModal, setShowLinkGuardianModal] = useState(false)
+  const [inviteMode, setInviteMode] = useState<'single' | 'bulk'>('single')
   const [guardianEmail, setGuardianEmail] = useState('')
+  const [bulkEmails, setBulkEmails] = useState('')
+  const [bulkResults, setBulkResults] = useState<Array<{ email: string; status: 'success' | 'error'; message: string }>>([])
   const [guardianMatch, setGuardianMatch] = useState<GuardianMatch | null>(null)
   const [isCheckingGuardian, setIsCheckingGuardian] = useState(false)
   const [isLinkingGuardian, setIsLinkingGuardian] = useState(false)
+  const [isBulkLinking] = useState(false)
   const [linkGuardianError, setLinkGuardianError] = useState<string | null>(null)
   const [emailTouched, setEmailTouched] = useState(false)
   const emailInputRef = useRef<HTMLInputElement>(null)
@@ -140,14 +143,6 @@ export default function AthleteDetail() {
       }
 
       setAthlete(athleteData)
-
-      // Load photo (using new photo system)
-      if (athleteData.has_profile_photo && athleteData.org_id && athleteData.id) {
-        const url = getAthletePhotoUrl(athleteData.org_id, athleteData.id, '512')
-        if (isMountedRef.current && url) {
-          setPhotoUrl(url)
-        }
-      }
 
       // Fetch sports
       const { data: sportsData } = await getAthleteSports(athleteId, context.orgId)
@@ -314,11 +309,14 @@ export default function AthleteDetail() {
   useEffect(() => {
     if (!showLinkGuardianModal) {
       setGuardianEmail('')
+      setBulkEmails('')
+      setBulkResults([])
       setGuardianMatch(null)
       setLinkGuardianError(null)
       setEmailTouched(false)
       setIsCheckingGuardian(false)
       setIsLinkingGuardian(false)
+      setInviteMode('single')
     }
   }, [showLinkGuardianModal])
 
@@ -581,6 +579,84 @@ export default function AthleteDetail() {
     }
   }, [athleteId, context.orgId, inviteActionLoading, t])
 
+  const handleBulkInvite = useCallback(async () => {
+    if (!athleteId || !bulkEmails.trim()) {
+      setLinkGuardianError(t('admin.athletes.guardians.bulkEmailsRequired'))
+      return
+    }
+
+    const emails = bulkEmails
+      .split('\n')
+      .map(email => email.trim())
+      .filter(email => email && validateGuardianEmail(email))
+
+    if (emails.length === 0) {
+      setLinkGuardianError(t('admin.athletes.guardians.noValidEmails'))
+      return
+    }
+
+    setBulkResults([])
+    setLinkGuardianError(null)
+
+    try {
+      const results: Array<{ email: string; status: 'success' | 'error'; message: string }> = []
+
+      for (const email of emails) {
+        try {
+          const { error } = await linkGuardianToAthlete(
+            athleteId,
+            email,
+            context.orgId,
+            'parent'
+          )
+
+          if (error) {
+            results.push({
+              email,
+              status: 'error',
+              message: error.message || t('admin.athletes.guardians.linkError')
+            })
+          } else {
+            results.push({
+              email,
+              status: 'success',
+              message: t('admin.athletes.guardians.inviteSent')
+            })
+          }
+        } catch (err) {
+          results.push({
+            email,
+            status: 'error',
+            message: t('admin.athletes.guardians.linkError')
+          })
+        }
+      }
+
+      setBulkResults(results)
+
+      // Refresh guardians and invites
+      const { data: guardiansData } = await getAthleteGuardians(athleteId, context.orgId)
+      if (isMountedRef.current && guardiansData) {
+        setGuardians(guardiansData)
+      }
+
+      const { data: invitesData } = await getAthleteInvites(athleteId, context.orgId)
+      if (isMountedRef.current && invitesData) {
+        setPendingInvites(invitesData.map(invite => ({
+          id: invite.id,
+          email: invite.email,
+          status: invite.status,
+          expires_at: invite.expires_at,
+          created_at: invite.created_at,
+          token: invite.token
+        })))
+      }
+    } catch (err) {
+      console.error('Error in bulk invite:', err)
+      setLinkGuardianError(t('admin.athletes.guardians.bulkInviteError'))
+    }
+  }, [athleteId, bulkEmails, context.orgId, t])
+
   // Team table columns - MUST be before conditional returns (Rules of Hooks)
   const teamColumns: TableColumn<TeamMembership>[] = useMemo(() => [
     {
@@ -793,7 +869,6 @@ export default function AthleteDetail() {
   const age = calculateAge(athlete.date_of_birth)
   const genderLabel = getGenderLabel(athlete.gender)
   const { plays, interested } = formatSports(athlete.sports)
-  const initials = getAthleteInitials(athlete.first_name, athlete.last_name)
   const updatedLabel = formatUpdatedRelative(athlete.updated_at)
   const primaryColor = 'var(--oa-theme-action-primary, var(--org-btn-primary-bg, #137fec))'
 
@@ -914,32 +989,8 @@ export default function AthleteDetail() {
               }}
               className="dark:bg-slate-800 dark:border-slate-700"
             >
-              {photoUrl ? (
-                <img
-                  src={photoUrl}
-                  alt={displayName}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    background: `color-mix(in srgb, ${primaryColor} 20%, transparent)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: primaryColor,
-                    fontSize: '48px',
-                    fontWeight: 900,
-                  }}
-                >
-                  {initials}
-                </div>
+              {athlete && (
+                <AthleteAvatar athlete={athlete} photoSize="512" className="w-full h-full object-cover" />
               )}
             </div>
 
@@ -1481,43 +1532,118 @@ export default function AthleteDetail() {
 
             {/* Content */}
             <div className="oa-modal-content">
-              <div className="oa-form-group">
-                <label className="oa-label">
-                  {t('admin.athletes.guardians.emailLabel')}
-                </label>
-                <div className="oa-input-wrapper">
-                  <input
-                    ref={emailInputRef}
-                    type="email"
-                    value={guardianEmail}
-                    onChange={(e) => {
-                      setGuardianEmail(e.target.value)
-                      if (!emailTouched) setEmailTouched(true)
-                      setLinkGuardianError(null)
-                    }}
-                    placeholder={t('admin.athletes.guardians.emailPlaceholder')}
-                    disabled={isLinkingGuardian}
-                    className={linkGuardianError && emailTouched ? 'oa-input oa-input--error' : 'oa-input'}
-                    autoFocus
-                  />
+              {/* Mode Toggle */}
+              <div className="oa-mb-4">
+                <div className="oa-flex oa-gap-2">
+                  <Button
+                    variant={inviteMode === 'single' ? 'primary' : 'secondary'}
+                    size="compact"
+                    onClick={() => setInviteMode('single')}
+                  >
+                    {t('admin.athletes.guardians.singleInvite')}
+                  </Button>
+                  <Button
+                    variant={inviteMode === 'bulk' ? 'primary' : 'secondary'}
+                    size="compact"
+                    onClick={() => setInviteMode('bulk')}
+                  >
+                    {t('admin.athletes.guardians.bulkInvite')}
+                  </Button>
                 </div>
-                {linkGuardianError && emailTouched && (
-                  <p className="oa-body-s oa-helper oa-helper--error">
-                    {linkGuardianError}
-                  </p>
-                )}
+              </div>
 
-                {/* Match Indicator */}
-                {emailTouched && guardianEmail && !linkGuardianError && (
-                  <div className="oa-mt-3">
-                    <GuardianMatchIndicator
-                      match={guardianMatch}
-                      isLoading={isCheckingGuardian}
-                      error={null}
+              {inviteMode === 'single' ? (
+                <div className="oa-form-group">
+                  <label className="oa-label">
+                    {t('admin.athletes.guardians.emailLabel')}
+                  </label>
+                  <div className="oa-input-wrapper">
+                    <input
+                      ref={emailInputRef}
+                      type="email"
+                      value={guardianEmail}
+                      onChange={(e) => {
+                        setGuardianEmail(e.target.value)
+                        if (!emailTouched) setEmailTouched(true)
+                        setLinkGuardianError(null)
+                      }}
+                      placeholder={t('admin.athletes.guardians.emailPlaceholder')}
+                      disabled={isLinkingGuardian}
+                      className={linkGuardianError && emailTouched ? 'oa-input oa-input--error' : 'oa-input'}
+                      autoFocus
                     />
                   </div>
-                )}
-              </div>
+                  {linkGuardianError && emailTouched && (
+                    <p className="oa-body-s oa-helper oa-helper--error">
+                      {linkGuardianError}
+                    </p>
+                  )}
+
+                  {/* Match Indicator */}
+                  {emailTouched && guardianEmail && !linkGuardianError && (
+                    <div className="oa-mt-3">
+                      <GuardianMatchIndicator
+                        match={guardianMatch}
+                        isLoading={isCheckingGuardian}
+                        error={null}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="oa-form-group">
+                    <label className="oa-label">
+                      {t('admin.athletes.guardians.bulkEmailsLabel')}
+                    </label>
+                    <div className="oa-input-wrapper">
+                      <textarea
+                        value={bulkEmails}
+                        onChange={(e) => setBulkEmails(e.target.value)}
+                        placeholder={t('admin.athletes.guardians.bulkEmailsPlaceholder')}
+                        className="oa-input"
+                        rows={6}
+                        style={{ fontFamily: 'monospace', fontSize: '14px' }}
+                        disabled={isBulkLinking}
+                      />
+                    </div>
+                    <p className="oa-body-xs oa-text-muted oa-mt-2">
+                      {t('admin.athletes.guardians.bulkEmailsHelp')}
+                    </p>
+                    {linkGuardianError && (
+                      <p className="oa-body-s oa-helper oa-helper--error oa-mt-2">
+                        {linkGuardianError}
+                      </p>
+                    )}
+                  </div>
+
+                  {bulkResults.length > 0 && (
+                    <div className="oa-mt-4">
+                      <p className="oa-label oa-mb-2">{t('admin.athletes.guardians.bulkResults')}</p>
+                      <div className="oa-space-y-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                        {bulkResults.map((result, idx) => (
+                          <div
+                            key={idx}
+                            className={`oa-p-2 oa-rounded ${
+                              result.status === 'success' 
+                                ? 'oa-bg-emerald-50 dark:oa-bg-emerald-900/20' 
+                                : 'oa-bg-red-50 dark:oa-bg-red-900/20'
+                            }`}
+                          >
+                            <div className="oa-flex oa-items-center oa-gap-2">
+                              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                                {result.status === 'success' ? 'check_circle' : 'error'}
+                              </span>
+                              <span className="oa-text-sm oa-font-medium">{result.email}</span>
+                              <span className="oa-text-xs oa-text-muted">{result.message}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Actions */}
@@ -1525,18 +1651,29 @@ export default function AthleteDetail() {
               <Button
                 variant="secondary"
                 onClick={handleCloseLinkGuardianModal}
-                disabled={isLinkingGuardian}
+                disabled={isLinkingGuardian || isBulkLinking}
               >
                 {t('admin.athletes.guardians.cancel')}
               </Button>
-              <OrgAdminButton
-                variant="primary"
-                onClick={handleLinkGuardian}
-                disabled={isLinkingGuardian || !guardianEmail || !validateGuardianEmail(guardianEmail) || !!linkGuardianError}
-                loading={isLinkingGuardian}
-              >
-                {t('admin.athletes.guardians.linkButton')}
-              </OrgAdminButton>
+              {inviteMode === 'single' ? (
+                <OrgAdminButton
+                  variant="primary"
+                  onClick={handleLinkGuardian}
+                  disabled={isLinkingGuardian || !guardianEmail || !validateGuardianEmail(guardianEmail) || !!linkGuardianError}
+                  loading={isLinkingGuardian}
+                >
+                  {t('admin.athletes.guardians.linkButton')}
+                </OrgAdminButton>
+              ) : (
+                <OrgAdminButton
+                  variant="primary"
+                  onClick={handleBulkInvite}
+                  disabled={isBulkLinking || !bulkEmails.trim()}
+                  loading={isBulkLinking}
+                >
+                  {t('admin.athletes.guardians.bulkInviteButton')}
+                </OrgAdminButton>
+              )}
             </div>
           </div>
         </div>

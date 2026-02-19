@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-r
 import { lazy, Suspense } from 'react'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { OrganizationProvider } from './contexts/OrganizationContext'
+import { DemoSessionProvider } from './contexts/DemoSessionContext'
 import { LoadingStateProvider } from './contexts/LoadingStateContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -12,7 +13,10 @@ import FullScreenLoader from './components/common/FullScreenLoader'
 import { getHostAppContext } from './utils/host'
 import { useOrganizationTheme } from './hooks/useOrganizationTheme'
 import { getLink, getPath, RouteKeys } from './utils/routes'
+import { I18nProvider } from './i18n/I18nProvider'
 import { Toaster } from './components/Toaster'
+import { ConditionalRouteLogger } from './lib/debug/integrations/RouteLogger'
+import { USE_FAKE_DATA } from './data/config'
 
 // Marketing Page
 import Marketing from './pages/Marketing'
@@ -23,8 +27,10 @@ import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import AcceptInvite from './pages/AcceptInvite'
+import JoinByLink from './pages/JoinByLink'
 import AuthCallback from './pages/AuthCallback'
 import ConfirmEmail from './pages/ConfirmEmail'
+import CompleteProfile from './pages/CompleteProfile'
 import Unauthorized from './pages/Unauthorized'
 
 // Main Pages (keep unchanged - Tailwind CSS)
@@ -53,6 +59,13 @@ import Photos from './pages/Photos'
 const Notifications = lazy(() => import('./pages/Notifications'))
 const PhotosGallery = lazy(() => import('./pages/PhotosGallery'))
 
+// Help Center Pages
+const HelpHomepage = lazy(() => import('./pages/help/HelpHomepage'))
+const CategoryLandingPage = lazy(() => import('./pages/help/CategoryLandingPage'))
+const TopicPage = lazy(() => import('./pages/help/TopicPage'))
+const ArticlePage = lazy(() => import('./pages/help/ArticlePage'))
+const HelpContactPage = lazy(() => import('./pages/help/ContactPage'))
+
 // Ticketing Pages
 import TicketEventList from './pages/ticketing/TicketEventList'
 import TicketEventDetail from './pages/ticketing/TicketEventDetail'
@@ -77,6 +90,7 @@ const PortalCreateEvent = lazy(() => import('./pages/portal/PortalCreateEvent'))
 const PortalEditEvent = lazy(() => import('./pages/portal/PortalEditEvent'))
 const FollowedOrgs = lazy(() => import('./pages/portal/FollowedOrgs'))
 const BookmarkedEvents = lazy(() => import('./pages/portal/BookmarkedEvents'))
+const PortalContactPage = lazy(() => import('./pages/portal/ContactPage'))
 
 // Fan Pages - Lazy loaded
 const FanHome = lazy(() => import('./pages/fan/FanHome'))
@@ -127,6 +141,15 @@ const PlatformEventLog = lazy(() => import('./pages/platformAdmin/EventLog'))
 const PlatformFeatureFlags = lazy(() => import('./pages/platformAdmin/FeatureFlags'))
 const PlatformFeatureFlagDetail = lazy(() => import('./pages/platformAdmin/FeatureFlagDetail'))
 const PlatformAdmins = lazy(() => import('./pages/platformAdmin/PlatformAdmins'))
+const PlatformAdminSettings = lazy(() => import('./pages/platformAdmin/PlatformAdminSettings'))
+const ContactSubmissions = lazy(() => import('./pages/platformAdmin/ContactSubmissions'))
+const HelpCenterSettings = lazy(() => import('./pages/platformAdmin/HelpCenterSettings'))
+const HelpCenterRoleMappings = lazy(() => import('./pages/platformAdmin/HelpCenterRoleMappings'))
+const HelpCenterCategoryPages = lazy(() => import('./pages/platformAdmin/HelpCenterCategoryPages'))
+const HelpCenterSections = lazy(() => import('./pages/platformAdmin/HelpCenterSections'))
+const HelpCenterThumbnails = lazy(() => import('./pages/platformAdmin/HelpCenterThumbnails'))
+const PlatformDemoManagement = lazy(() => import('./pages/platformAdmin/DemoManagement'))
+const PlatformDemoOrgDetail = lazy(() => import('./pages/platformAdmin/DemoOrgDetail'))
 const LicensesOverview = lazy(() => import('./pages/platformAdmin/LicensesOverview'))
 const LicenseTiers = lazy(() => import('./pages/platformAdmin/LicenseTiers'))
 const LicenseTierDetail = lazy(() => import('./pages/platformAdmin/LicenseTierDetail'))
@@ -139,6 +162,8 @@ const LicensesAudit = lazy(() => import('./pages/platformAdmin/LicensesAudit'))
 
 // Email Preview - Platform Admin Feature
 const EmailPreview = lazy(() => import('./pages/platformAdmin/EmailPreview'))
+const EmailTemplates = lazy(() => import('./pages/platformAdmin/EmailTemplates'))
+const EmailTemplateEditor = lazy(() => import('./pages/platformAdmin/EmailTemplateEditor'))
 // Photos - Platform Admin (overview, content review, storage, org galleries)
 const PlatformPhotosOverview = lazy(() => import('./pages/platformAdmin/PhotosOverview'))
 const PlatformPhotosContentReview = lazy(() => import('./pages/platformAdmin/PhotosContentReview'))
@@ -158,6 +183,7 @@ const Sports = lazy(() => import('./pages/admin/Sports'))
 const SportDetail = lazy(() => import('./pages/admin/SportDetail'))
 const SportUpdate = lazy(() => import('./pages/admin/SportUpdate'))
 const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'))
+const AdminNotificationAnalytics = lazy(() => import('./pages/admin/AdminNotificationAnalytics'))
 const Programs = lazy(() => import('./pages/admin/Programs'))
 const ProgramDetail = lazy(() => import('./pages/admin/ProgramDetail'))
 const ProgramUpdate = lazy(() => import('./pages/admin/ProgramUpdate'))
@@ -172,6 +198,7 @@ const TeamDetail = lazy(() => import('./pages/admin/TeamDetail'))
 const TeamUpdate = lazy(() => import('./pages/admin/TeamUpdate'))
 const Roster = lazy(() => import('./pages/admin/Roster'))
 const Events = lazy(() => import('./pages/admin/Events'))
+const AdminEventDetail = lazy(() => import('./pages/admin/AdminEventDetail'))
 const AdminAnnouncements = lazy(() => import('./pages/admin/AdminAnnouncements'))
 const CreateEvent = lazy(() => import('./pages/admin/CreateEvent'))
 const EditEvent = lazy(() => import('./pages/admin/EditEvent'))
@@ -183,7 +210,9 @@ const TicketingOrders = lazy(() => import('./pages/admin/TicketingOrders'))
 const TicketingOrderDetail = lazy(() => import('./pages/admin/TicketingOrderDetail'))
 const CreateTicketedEvent = lazy(() => import('./pages/admin/CreateTicketedEvent'))
 const CreateTicketType = lazy(() => import('./pages/admin/CreateTicketType'))
-const TicketedEventDetail = lazy(() => import('./pages/admin/TicketedEventDetail'))
+const EditTicketType = lazy(() => import('./pages/admin/EditTicketType'))
+const TicketingSeatMaps = lazy(() => import('./pages/admin/TicketingSeatMaps'))
+const SeatMapBuilder = lazy(() => import('./pages/admin/ticketing/SeatMapBuilder'))
 const CompTicketsPage = lazy(() => import('./pages/admin/CompTicketsPage'))
 const ValidationDashboard = lazy(() => import('./pages/admin/ValidationDashboard'))
 const CreateFee = lazy(() => import('./pages/admin/CreateFee'))
@@ -217,6 +246,15 @@ const CheckoutSuccess = lazy(() => import('./pages/admin/CheckoutSuccess'))
 const CheckoutCancel = lazy(() => import('./pages/admin/CheckoutCancel'))
 const TrialExpired = lazy(() => import('./pages/admin/TrialExpired'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
+const AdminContactPage = lazy(() => import('./pages/admin/ContactPage'))
+
+const adminEventsListPath = getPath('admin.events.list').replace('/admin/', '')
+const adminEventsCreatePath = getPath('admin.events.create').replace('/admin/', '')
+const adminEventsDetailPath = getPath('admin.events.detail').replace('/admin/', '')
+const adminEventsEditPath = getPath('admin.events.edit').replace('/admin/', '')
+const adminEventsAttendancePath = getPath('admin.events.attendance').replace('/admin/', '')
+const platformDemoManagementPath = getPath('platformAdmin.demoManagement.list').replace('/platform-admin/', '')
+const platformDemoManagementDetailPath = getPath('platformAdmin.demoManagement.detail').replace('/platform-admin/', '')
 const AdminFamilies = lazy(() => import('./pages/admin/AdminFamilies'))
 const CreateFamily = lazy(() => import('./pages/admin/CreateFamily'))
 const FamilyDetail = lazy(() => import('./pages/admin/FamilyDetail'))
@@ -227,6 +265,7 @@ const EditAthlete = lazy(() => import('./pages/admin/EditAthlete'))
 const AdminAthletes = lazy(() => import('./pages/admin/AdminAthletes'))
 const ImportAthletes = lazy(() => import('./pages/admin/ImportAthletes'))
 const GuardianAttachmentRequests = lazy(() => import('./pages/admin/GuardianAttachmentRequests').then(m => ({ default: m.default })))
+const Invitations = lazy(() => import('./pages/admin/Invitations'))
 const AdminSportSettings = lazy(() => import('./pages/admin/AdminSportSettings'))
 
 function HostHomeRoute() {
@@ -284,15 +323,19 @@ function HostGateLayout() {
 
 function App() {
   return (
-    <OrganizationProvider>
-      <AuthProvider>
-        <LoadingStateProvider>
-          <FeatureGateProvider>
-            <AppWithTheme />
-          </FeatureGateProvider>
-        </LoadingStateProvider>
-      </AuthProvider>
-    </OrganizationProvider>
+    <I18nProvider>
+      <DemoSessionProvider>
+        <OrganizationProvider>
+          <AuthProvider>
+            <LoadingStateProvider>
+              <FeatureGateProvider>
+                <AppWithTheme />
+              </FeatureGateProvider>
+            </LoadingStateProvider>
+          </AuthProvider>
+        </OrganizationProvider>
+      </DemoSessionProvider>
+    </I18nProvider>
   )
 }
 
@@ -318,6 +361,7 @@ function AppWithTheme() {
     <>
       <Toaster />
       <FullScreenLoader />
+      <ConditionalRouteLogger />
       <Routes>
           {/* Marketing Landing Page - Public */}
           <Route path="/" element={<HostHomeRoute />} />
@@ -330,14 +374,14 @@ function AppWithTheme() {
           <Route path="/o/:orgSlug/tickets/access" element={<TicketAccessPage />} />
           <Route path="/o/:orgSlug/tickets/access/:token" element={<OrgScopedTicketAccess />} />
           
-          {/* Legacy Public Ticketing Routes (deprecated - will be removed) */}
-          <Route path="/tickets" element={<TicketEventList />} />
-          <Route path="/tickets/events/:eventId" element={<TicketEventDetail />} />
-          <Route path="/tickets/order/:orderId" element={<TicketOrderSuccess />} />
-          <Route path="/tickets/access" element={<TicketAccessPage />} />
-          <Route path="/tickets/access/:token" element={<TicketAccess />} />
-          <Route path="/tickets/resend" element={<ResendTicketsPage />} />
-          <Route path="/tickets/validate/:token" element={<TicketScanner />} />
+          {/* Public Ticketing Routes */}
+          <Route path="/portal/tickets" element={<TicketEventList />} />
+          <Route path="/portal/tickets/events/:eventId" element={<TicketEventDetail />} />
+          <Route path="/portal/tickets/order/:orderId" element={<TicketOrderSuccess />} />
+          <Route path="/portal/tickets/access" element={<TicketAccessPage />} />
+          <Route path="/portal/tickets/access/:token" element={<TicketAccess />} />
+          <Route path="/portal/tickets/resend" element={<ResendTicketsPage />} />
+          <Route path="/portal/tickets/validate/:token" element={<TicketScanner />} />
           
           {/* Public Shared Video Routes */}
           <Route path="/share/video/:token" element={
@@ -357,59 +401,85 @@ function AppWithTheme() {
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="reset-password" element={<ResetPassword />} />
             <Route path="accept-invite" element={<AcceptInvite />} />
+            <Route path="join/link" element={<JoinByLink />} />
             <Route path="auth/callback" element={<AuthCallback />} />
             <Route path="confirm-email" element={<ConfirmEmail />} />
             <Route path="unauthorized" element={<Unauthorized />} />
 
-            {/* Protected Portal Routes - Guardians Only */}
-            <Route path="role-selection" element={<ProtectedRoute allowedRoles={['parent']}><RoleSelection /></ProtectedRoute>} />
-            <Route path="dashboard" element={<ProtectedRoute allowedRoles={['parent']}><Dashboard /></ProtectedRoute>} />
-            <Route path="settings" element={<ProtectedRoute allowedRoles={['parent']}><Settings /></ProtectedRoute>} />
-            <Route path="athletes" element={<ProtectedRoute allowedRoles={['parent']}><Athletes /></ProtectedRoute>} />
+            {/* Protected Portal Routes - Guardians and Athletes */}
+            <Route path="role-selection" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><RoleSelection /></ProtectedRoute>} />
+            <Route path="dashboard" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><Dashboard /></ProtectedRoute>} />
+            <Route path="settings" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><Settings /></ProtectedRoute>} />
+            <Route path="athletes" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><Athletes /></ProtectedRoute>} />
             <Route path="athletes/new" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><CreateAthletePortal /></Suspense></ProtectedRoute>} />
-            <Route path="athletes/:id/profile" element={<ProtectedRoute allowedRoles={['parent']}><AthleteProfile /></ProtectedRoute>} />
+            <Route path="athletes/:id/profile" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><AthleteProfile /></ProtectedRoute>} />
             <Route path="athletes/:id/edit" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><EditAthletePortal /></Suspense></ProtectedRoute>} />
             <Route path="athletes/request-attachment" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><RequestAthleteAttachment /></Suspense></ProtectedRoute>} />
-            <Route path="join" element={<ProtectedRoute allowedRoles={['parent']}><JoinTeam /></ProtectedRoute>} />
+            {/* Join route is public - handles auth internally */}
+            <Route path="join" element={<JoinTeam />} />
+            <Route path="complete-profile" element={<ProtectedRoute><CompleteProfile /></ProtectedRoute>} />
             <Route path="calendar/new" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><PortalCreateEvent /></Suspense></ProtectedRoute>} />
             <Route path="calendar/events/:eventId/edit" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><PortalEditEvent /></Suspense></ProtectedRoute>} />
-            <Route path="calendar/events/:eventId" element={<ProtectedRoute allowedRoles={['parent']}><EventDetail /></ProtectedRoute>} />
-            <Route path="calendar" element={<ProtectedRoute allowedRoles={['parent']}><Calendar /></ProtectedRoute>} />
-            <Route path="payments" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.payments"><MyPayments /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="payments/:id" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.payments.detail"><PaymentDetail /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="payments/success" element={<ProtectedRoute allowedRoles={['parent']}><PaymentSuccess /></ProtectedRoute>} />
-            <Route path="payments/cancel" element={<ProtectedRoute allowedRoles={['parent']}><PaymentCancel /></ProtectedRoute>} />
-            <Route path="uniforms" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.uniforms"><Uniforms /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="uniforms/:kitId" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.uniforms.detail"><UniformKitOrder /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="travel" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.travel"><Travel /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="travel/:id" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.travel.detail"><TravelDetail /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="tryouts" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.tryouts"><Tryouts /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="tryouts/:tryoutId" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.tryouts.detail"><TryoutDetail /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="calendar/events/:eventId" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><EventDetail /></ProtectedRoute>} />
+            <Route path="calendar" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><Calendar /></ProtectedRoute>} />
+            <Route path="payments" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.payments"><MyPayments /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="payments/:id" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.payments.detail"><PaymentDetail /></FeatureGateRoute></ProtectedRoute>} />
+            <Route
+              path="payments/success"
+              element={
+                USE_FAKE_DATA
+                  ? <PaymentSuccess />
+                  : <ProtectedRoute allowedRoles={['parent', 'athlete']}><PaymentSuccess /></ProtectedRoute>
+              }
+            />
+            <Route
+              path="payments/cancel"
+              element={
+                USE_FAKE_DATA
+                  ? <PaymentCancel />
+                  : <ProtectedRoute allowedRoles={['parent', 'athlete']}><PaymentCancel /></ProtectedRoute>
+              }
+            />
+            <Route path="uniforms" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.uniforms"><Uniforms /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="uniforms/:kitId" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.uniforms.detail"><UniformKitOrder /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="travel" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.travel"><Travel /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="travel/:id" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.travel.detail"><TravelDetail /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="tryouts" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.tryouts"><Tryouts /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="tryouts/:tryoutId" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.tryouts.detail"><TryoutDetail /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="messages" element={<Navigate to="/portal/huddles/announcements" replace />} />
-            <Route path="messages/:announcementId" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.messages"><AnnouncementDetail /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="messages/:announcementId" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.messages"><AnnouncementDetail /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="huddles" element={<Navigate to="/portal/huddles/announcements" replace />} />
-            <Route path="huddles/announcements" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="huddles/chat" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="photos" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.photos"><Photos /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="photos/gallery/:id" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.photosGallery"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="huddles/announcements" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="huddles/chat" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="photos" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.photos"><Photos /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="photos/gallery/:id" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.photosGallery"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute></ProtectedRoute>} />
             <Route path="photos/gallery/:id/manage" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.photosGalleryManage"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute></ProtectedRoute>} />
 
             {/* Videos */}
-            <Route path="videos" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><GuardianVideos /></Suspense></ProtectedRoute>} />
-            <Route path="videos/:id" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><GuardianVideoDetail /></Suspense></ProtectedRoute>} />
+            <Route path="videos" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><Suspense fallback={<AdminLoadingSpinner />}><GuardianVideos /></Suspense></ProtectedRoute>} />
+            <Route path="videos/:id" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><Suspense fallback={<AdminLoadingSpinner />}><GuardianVideoDetail /></Suspense></ProtectedRoute>} />
 
-            <Route path="account/tickets" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.myTickets"><MyTickets /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="account/tickets" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.myTickets"><MyTickets /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="follows" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><FollowedOrgs /></Suspense></ProtectedRoute>} />
-            <Route path="bookmarks" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><BookmarkedEvents /></Suspense></ProtectedRoute>} />
+            <Route path="bookmarks" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><Suspense fallback={<AdminLoadingSpinner />}><BookmarkedEvents /></Suspense></ProtectedRoute>} />
 
             {/* Redirect root portal to dashboard */}
-            <Route path="notifications" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.messages"><Suspense fallback={<AdminLoadingSpinner />}><Notifications /></Suspense></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="notifications" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.messages"><Suspense fallback={<AdminLoadingSpinner />}><Notifications /></Suspense></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="contact" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><Suspense fallback={<AdminLoadingSpinner />}><PortalContactPage /></Suspense></ProtectedRoute>} />
             <Route index element={<Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace />} />
 
             {/* Catch-all to prevent blank/"blue" screens on unknown portal routes */}
             {/* Use replace: false to preserve browser history for back button navigation */}
             <Route path="*" element={<Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace={false} />} />
           </Route>
+
+          {/* Help Center Routes - Accessible to all authenticated users */}
+          <Route path="/help" element={<ProtectedRoute><HelpHomepage /></ProtectedRoute>} />
+          <Route path="/help/contact" element={<ProtectedRoute><Suspense fallback={<FullScreenLoader />}><HelpContactPage /></Suspense></ProtectedRoute>} />
+          <Route path="/help/:parentCategorySlug/:categorySlug/:articleSlug" element={<ProtectedRoute><ArticlePage /></ProtectedRoute>} />
+          <Route path="/help/:roleSlug/:topicSlug" element={<ProtectedRoute><Suspense fallback={<FullScreenLoader />}><TopicPage /></Suspense></ProtectedRoute>} />
+          <Route path="/help/:categorySlug" element={<ProtectedRoute><CategoryLandingPage /></ProtectedRoute>} />
+          <Route path="/help/:categorySlug/:articleSlug" element={<ProtectedRoute><ArticlePage /></ProtectedRoute>} />
 
           {/* Fan Routes - Public fan experience */}
           <Route path="/fan" element={<Suspense fallback={<AdminLoadingSpinner />}><FanLayout /></Suspense>}>
@@ -514,6 +584,7 @@ function AppWithTheme() {
               <Route path="guardians/:id" element={<FeatureGateRoute routeKey="admin.guardians.detail"><FamilyDetail /></FeatureGateRoute>} />
               <Route path="guardians" element={<FeatureGateRoute routeKey="admin.guardians.list"><AdminFamilies /></FeatureGateRoute>} />
               <Route path="guardian-requests" element={<FeatureGateRoute routeKey="admin.guardianRequests"><GuardianAttachmentRequests /></FeatureGateRoute>} />
+              <Route path="invitations" element={<FeatureGateRoute routeKey="admin.invitations"><Invitations /></FeatureGateRoute>} />
 
               {/* Backward Compatibility Redirects */}
               <Route path="organization/sports/:id" element={<RedirectWithParams to="/admin/sports" />} />
@@ -525,6 +596,10 @@ function AppWithTheme() {
               <Route path="organization/seasons/:id" element={<RedirectWithParams to="/admin/seasons" />} />
               <Route path="organization/seasons" element={<Navigate to="/admin/seasons" replace />} />
               <Route path="organization/teams" element={<Navigate to="/admin/teams" replace />} />
+              <Route path="users" element={<Navigate to="/admin/organization/users" replace />} />
+              <Route path="scanner" element={<Navigate to="/admin/ticketing/scanner" replace />} />
+              <Route path="staff" element={<Navigate to="/admin/organization?tab=staff" replace />} />
+              <Route path="events/create" element={<Navigate to={getLink(RouteKeys.ADMIN_CREATE_EVENT)} replace />} />
               <Route path="athletes/:id/edit" element={<RedirectWithParams to="/admin/athletes" />} />
               <Route path="families/:familyId/athletes/new" element={<RedirectWithParams to="/admin/guardians" paramKey="familyId" suffix="/athletes/new" />} />
               <Route path="families/new" element={<Navigate to="/admin/guardians/new" replace />} />
@@ -538,11 +613,11 @@ function AppWithTheme() {
               {/* Events */}
             
               {/* Events */}
-              <Route path="events" element={<FeatureGateRoute routeKey="admin.events.list"><Events /></FeatureGateRoute>} />
-              <Route path="events/new" element={<FeatureGateRoute routeKey="admin.events.create"><CreateEvent /></FeatureGateRoute>} />
-              <Route path="events/:id/edit" element={<FeatureGateRoute routeKey="admin.events.edit"><EditEvent /></FeatureGateRoute>} />
-              <Route path="events/:id/attendance" element={<FeatureGateRoute routeKey="admin.attendance"><AttendanceRoster /></FeatureGateRoute>} />
-              <Route path="events/:id" element={<FeatureGateRoute routeKey="admin.events.list"><Events /></FeatureGateRoute>} />
+              <Route path={adminEventsListPath} element={<FeatureGateRoute routeKey="admin.events.list"><Events /></FeatureGateRoute>} />
+              <Route path={adminEventsCreatePath} element={<FeatureGateRoute routeKey="admin.events.create"><CreateEvent /></FeatureGateRoute>} />
+              <Route path={adminEventsEditPath} element={<FeatureGateRoute routeKey="admin.events.edit"><EditEvent /></FeatureGateRoute>} />
+              <Route path={adminEventsAttendancePath} element={<FeatureGateRoute routeKey="admin.attendance"><AttendanceRoster /></FeatureGateRoute>} />
+              <Route path={adminEventsDetailPath} element={<FeatureGateRoute routeKey="admin.events.detail"><AdminEventDetail /></FeatureGateRoute>} />
 
               {/* Announcements */}
               <Route path="announcements" element={<FeatureGateRoute routeKey="admin.announcements.list"><AdminAnnouncements /></FeatureGateRoute>} />
@@ -556,12 +631,16 @@ function AppWithTheme() {
               <Route path="payments/new" element={<FeatureGateRoute routeKey="admin.payments.fees.create"><CreateFee /></FeatureGateRoute>} />
             
               {/* Ticketing */}
+              <Route path="ticketing/scanner/:eventId" element={<FeatureGateRoute routeKey="admin.ticketingScanner"><TicketScanner /></FeatureGateRoute>} />
               <Route path="ticketing/scanner" element={<FeatureGateRoute routeKey="admin.ticketingScanner"><TicketScanner /></FeatureGateRoute>} />
               <Route path="ticketing/events" element={<FeatureGateRoute routeKey="admin.ticketingEvents.list"><Suspense fallback={<AdminLoadingSpinner />}><TicketingEvents /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/seat-maps" element={<FeatureGateRoute routeKey="admin.ticketingEvents.seatMaps.list"><Suspense fallback={<AdminLoadingSpinner />}><TicketingSeatMaps /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/seat-maps/:seatMapId/edit" element={<FeatureGateRoute routeKey="admin.ticketingEvents.seatMaps.edit"><Suspense fallback={<AdminLoadingSpinner />}><SeatMapBuilder /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/new" element={<FeatureGateRoute routeKey="admin.ticketingEvents.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateTicketedEvent /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/:id/ticket-types/new" element={<FeatureGateRoute routeKey="admin.ticketingEvents.ticketTypes.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateTicketType /></Suspense></FeatureGateRoute>} />
-              <Route path="ticketing/events/:id" element={<FeatureGateRoute routeKey="admin.ticketingEvents.detail"><Suspense fallback={<AdminLoadingSpinner />}><TicketedEventDetail /></Suspense></FeatureGateRoute>} />
-              <Route path="ticketing/events/:id/dashboard" element={<FeatureGateRoute routeKey="admin.ticketingEvents.detail"><Suspense fallback={<AdminLoadingSpinner />}><ValidationDashboard /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/events/:id/ticket-types/edit" element={<FeatureGateRoute routeKey="admin.ticketingEvents.ticketTypes.edit"><Suspense fallback={<AdminLoadingSpinner />}><EditTicketType /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/events/:eventId/seat-maps/:seatMapId" element={<FeatureGateRoute routeKey="admin.ticketingEvents.seatMaps.builder"><Suspense fallback={<AdminLoadingSpinner />}><SeatMapBuilder /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/events/:id/dashboard" element={<FeatureGateRoute routeKey="admin.ticketingEvents.list"><Suspense fallback={<AdminLoadingSpinner />}><ValidationDashboard /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/comp-tickets" element={<FeatureGateRoute routeKey="admin.ticketingEvents.create"><Suspense fallback={<AdminLoadingSpinner />}><CompTicketsPage /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/orders" element={<FeatureGateRoute routeKey="admin.ticketingOrders"><Suspense fallback={<AdminLoadingSpinner />}><TicketingOrders /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/orders/:orderId" element={<FeatureGateRoute routeKey="admin.ticketingOrders"><Suspense fallback={<AdminLoadingSpinner />}><TicketingOrderDetail /></Suspense></FeatureGateRoute>} />
@@ -602,6 +681,7 @@ function AppWithTheme() {
               <Route path="users/new" element={<CreateUser />} />
               <Route path="users/:id" element={<EditUser />} />
               <Route path="notifications" element={<AdminNotifications />} />
+              <Route path="notifications/analytics" element={<AdminNotificationAnalytics />} />
             
               {/* Organization */}
               <Route path="organization" element={<OrganizationSettings />} />
@@ -615,6 +695,8 @@ function AppWithTheme() {
               {/* Personal Settings */}
               <Route path="settings" element={<AdminSettings />} />
               <Route path="settings/sport-profiles" element={<AdminSportSettings />} />
+              <Route path="contact" element={<Suspense fallback={<AdminLoadingSpinner />}><AdminContactPage /></Suspense>} />
+              <Route path="help" element={<Navigate to="/help" replace />} />
             </Route>
           </Route>
 
@@ -642,6 +724,8 @@ function AppWithTheme() {
               {/* Organizations */}
               <Route path="organizations" element={<PlatformOrganizations />} />
               <Route path="organizations/:id" element={<PlatformOrganizationDetail />} />
+              <Route path={platformDemoManagementPath} element={<PlatformDemoManagement />} />
+              <Route path={platformDemoManagementDetailPath} element={<PlatformDemoOrgDetail />} />
               
               {/* Users */}
               <Route path="users" element={<PlatformUsers />} />
@@ -665,6 +749,17 @@ function AppWithTheme() {
               
               {/* Platform Admins */}
               <Route path="admins" element={<PlatformAdmins />} />
+              <Route path="settings" element={<PlatformAdminSettings />} />
+              
+              {/* Contact Submissions */}
+              <Route path="contact-submissions" element={<ContactSubmissions />} />
+              
+              {/* Help Center */}
+              <Route path="help-center/settings" element={<HelpCenterSettings />} />
+              <Route path="help-center/role-mappings" element={<HelpCenterRoleMappings />} />
+              <Route path="help-center/category-pages" element={<HelpCenterCategoryPages />} />
+              <Route path="help-center/sections" element={<HelpCenterSections />} />
+              <Route path="help-center/thumbnails" element={<HelpCenterThumbnails />} />
               
               {/* Licenses & Entitlements */}
               <Route path="licenses" element={<LicensesOverview />} />
@@ -685,6 +780,9 @@ function AppWithTheme() {
 
               {/* Email Preview */}
               <Route path="email-preview" element={<EmailPreview />} />
+              <Route path="emails" element={<EmailTemplates />} />
+              <Route path="emails/new" element={<EmailTemplateEditor />} />
+              <Route path="emails/:slug/edit" element={<EmailTemplateEditor />} />
 
               {/* Photos */}
               <Route path="photos" element={<PlatformPhotosOverview />} />

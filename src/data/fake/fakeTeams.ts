@@ -718,6 +718,82 @@ export const fakeCoachAssignments: FakeCoachAssignment[] = [
 ]
 
 // ============================================================================
+// Programmatic Generation: 24 Additional Teams
+// ============================================================================
+
+import { TEAM_MASCOTS, pick as genPick } from './generators'
+
+const EXTRA_SPORT_IDS = [SPORT_SOCCER_ID, SPORT_BASKETBALL_ID, SPORT_BASEBALL_ID, SPORT_VOLLEYBALL_ID, SPORT_FOOTBALL_ID, SPORT_LACROSSE_ID]
+const EXTRA_LEVEL_IDS = [LEVEL_SOCCER_REC_U10_ID, LEVEL_SOCCER_REC_U12_ID, LEVEL_BB_REC_U10_ID, LEVEL_BB_REC_U12_ID, LEVEL_VB_U10_ID, LEVEL_BASEBALL_U8_ID]
+const EXTRA_PROGRAM_IDS = [PROGRAM_SOCCER_REC_ID, PROGRAM_SOCCER_COMP_ID, PROGRAM_BASKETBALL_REC_ID, PROGRAM_BASKETBALL_ELITE_ID, 'program-vb-rec', 'program-bb-rec']
+const AGE_GROUPS = ['U8', 'U10', 'U12', 'U14', 'U16']
+const GENDERS: Array<'coed' | 'male' | 'female'> = ['coed', 'male', 'female']
+const SKILL_LEVELS: Array<'recreational' | 'competitive' | 'elite'> = ['recreational', 'competitive', 'elite']
+
+for (let i = 0; i < 24; i++) {
+    const sportIdx = i % EXTRA_SPORT_IDS.length
+    const mascot = genPick(TEAM_MASCOTS, i + 10)
+    const ageGroup = genPick(AGE_GROUPS, i)
+    const teamId = `team-gen-${String(i + 1).padStart(3, '0')}`
+
+    fakeTeams.push({
+        id: teamId,
+        org_id: DEMO_ORG_A_ID,
+        program_id: genPick(EXTRA_PROGRAM_IDS, sportIdx),
+        level_id: genPick(EXTRA_LEVEL_IDS, sportIdx),
+        sport_id: EXTRA_SPORT_IDS[sportIdx],
+        name: `${ageGroup} ${mascot}`,
+        max_roster_size: 12 + (i % 6),
+        is_active: i < 20, // 4 inactive teams
+        created_at: getDateInPreviousYear(6 + (i % 6), 1 + (i % 28)),
+        updated_at: getDateInCurrentYear(1, 15),
+        age_group: ageGroup,
+        gender: genPick(GENDERS, i),
+        skill_level: genPick(SKILL_LEVELS, i),
+    })
+
+    // Link each to current season
+    fakeTeamSeasons.push({
+        team_id: teamId,
+        season_id: SEASON_SPRING_CURRENT_ID,
+        is_active: i < 20,
+        created_at: getDateInCurrentYear(2, 1),
+        updated_at: getDateInCurrentYear(2, 1),
+    })
+
+    // Add 6-12 generated children as team members
+    const rosterSize = 6 + (i % 7)
+    for (let m = 0; m < rosterSize; m++) {
+        const childIdx = i * 12 + m
+        const childId = `child-gen-${String(childIdx + 1).padStart(4, '0')}`
+        fakeTeamMembers.push({
+            id: `tm-gen-${String(i * 12 + m + 1).padStart(4, '0')}`,
+            team_id: teamId,
+            season_id: SEASON_SPRING_CURRENT_ID,
+            athlete_id: childId,
+            role: m === 0 ? 'captain' : 'player',
+            status: m < rosterSize - 1 ? 'active' : (i % 3 === 0 ? 'pending' : 'active'),
+            jersey_number: String(1 + (m % 30)),
+            position: null,
+            joined_at: getDateInCurrentYear(2, 1 + (m % 28)),
+            created_at: getDateInCurrentYear(2, 1 + (m % 28)),
+            updated_at: getDateInCurrentYear(2, 1 + (m % 28)),
+        })
+    }
+
+    // Assign a coach
+    const coachIds = [COACH_ONLY_ID, PARENT_COACH_ID, USER_COACH_MARTINEZ_ID, USER_COACH_THOMPSON_ID]
+    fakeCoachAssignments.push({
+        id: `ca-gen-${String(i + 1).padStart(3, '0')}`,
+        team_id: teamId,
+        season_id: SEASON_SPRING_CURRENT_ID,
+        user_id: genPick(coachIds, i),
+        role: 'head_coach',
+        created_at: getDateInCurrentYear(2, 1),
+    })
+}
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 

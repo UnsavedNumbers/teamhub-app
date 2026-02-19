@@ -9,7 +9,8 @@
  * - Hierarchy visualization data
  */
 
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug';
 import type { FeatureEntitlement } from '../../types/domain/License';
 
 /**
@@ -49,6 +50,10 @@ export interface ParentValidationResult {
  * @returns Array of ancestor feature keys, or null if feature not found
  */
 export async function getFeatureAncestors(featureKey: string): Promise<string[] | null> {
+  console.groupCollapsed(`%cgetFeatureAncestors: ${featureKey}`, 'color: #666; font-weight: bold;');
+  debug.data('FeatureHierarchyService.getFeatureAncestors', 'Request', { featureKey })
+  debug.perf.start('featureHierarchyService.getFeatureAncestors')
+
   try {
     const { data, error } = await (supabase as any).rpc('get_feature_ancestors', {
       p_feature_key: featureKey,
@@ -56,12 +61,21 @@ export async function getFeatureAncestors(featureKey: string): Promise<string[] 
     });
 
     if (error) {
+      debug.perf.end('featureHierarchyService.getFeatureAncestors')
+      debug.error('FeatureHierarchyService.getFeatureAncestors', 'Failed to fetch ancestors', { error, featureKey })
+      console.groupEnd()
       console.error('[FeatureHierarchy] Error fetching ancestors:', error);
       return null;
     }
 
+    debug.perf.end('featureHierarchyService.getFeatureAncestors')
+    debug.data('FeatureHierarchyService.getFeatureAncestors', 'Response', { featureKey, ancestorCount: data?.length || 0 })
+    console.groupEnd()
     return data as string[];
   } catch (err) {
+    debug.perf.end('featureHierarchyService.getFeatureAncestors')
+    debug.error('FeatureHierarchyService.getFeatureAncestors', 'Exception fetching ancestors', { error: err, featureKey })
+    console.groupEnd()
     console.error('[FeatureHierarchy] Exception fetching ancestors:', err);
     return null;
   }
@@ -79,6 +93,10 @@ export async function getFeatureChildren(
   featureKey: string,
   includeArchived: boolean = false
 ): Promise<Array<{ featureKey: string; featureName: string; depth: number }> | null> {
+  console.groupCollapsed(`%cgetFeatureChildren: ${featureKey}`, 'color: #666; font-weight: bold;');
+  debug.data('FeatureHierarchyService.getFeatureChildren', 'Request', { featureKey, includeArchived })
+  debug.perf.start('featureHierarchyService.getFeatureChildren')
+
   try {
     const { data, error } = await (supabase as any).rpc('get_feature_children', {
       p_feature_key: featureKey,
@@ -86,12 +104,21 @@ export async function getFeatureChildren(
     });
 
     if (error) {
+      debug.perf.end('featureHierarchyService.getFeatureChildren')
+      debug.error('FeatureHierarchyService.getFeatureChildren', 'Failed to fetch children', { error, featureKey, includeArchived })
+      console.groupEnd()
       console.error('[FeatureHierarchy] Error fetching children:', error);
       return null;
     }
 
+    debug.perf.end('featureHierarchyService.getFeatureChildren')
+    debug.data('FeatureHierarchyService.getFeatureChildren', 'Response', { featureKey, childCount: data?.length || 0 })
+    console.groupEnd()
     return data as Array<{ featureKey: string; featureName: string; depth: number }>;
   } catch (err) {
+    debug.perf.end('featureHierarchyService.getFeatureChildren')
+    debug.error('FeatureHierarchyService.getFeatureChildren', 'Exception fetching children', { error: err, featureKey, includeArchived })
+    console.groupEnd()
     console.error('[FeatureHierarchy] Exception fetching children:', err);
     return null;
   }
@@ -109,13 +136,23 @@ export async function validateParentAssignment(
   featureKey: string,
   newParentKey: string | null
 ): Promise<ParentValidationResult> {
+  console.groupCollapsed(`%cvalidateParentAssignment: ${featureKey} -> ${newParentKey || 'root'}`, 'color: #666; font-weight: bold;');
+  debug.data('FeatureHierarchyService.validateParentAssignment', 'Request', { featureKey, newParentKey })
+  debug.perf.start('featureHierarchyService.validateParentAssignment')
+
   // Null parent is always valid (root-level feature)
   if (!newParentKey) {
+    debug.perf.end('featureHierarchyService.validateParentAssignment')
+    debug.data('FeatureHierarchyService.validateParentAssignment', 'Response (valid - root level)', { featureKey })
+    console.groupEnd()
     return { valid: true };
   }
 
   // Self-reference check
   if (featureKey === newParentKey) {
+    debug.perf.end('featureHierarchyService.validateParentAssignment')
+    debug.error('FeatureHierarchyService.validateParentAssignment', 'Self-reference invalid', { featureKey, newParentKey })
+    console.groupEnd()
     return {
       valid: false,
       error: 'A feature cannot be its own parent'
@@ -169,6 +206,10 @@ export async function validateParentAssignment(
 export async function getFeatureHierarchyFlat(
   includeArchived: boolean = false
 ): Promise<FeatureWithHierarchy[]> {
+  console.groupCollapsed(`%cgetFeatureHierarchyFlat: ${includeArchived ? 'with archived' : 'active only'}`, 'color: #666; font-weight: bold;');
+  debug.data('FeatureHierarchyService.getFeatureHierarchyFlat', 'Request', { includeArchived })
+  debug.perf.start('featureHierarchyService.getFeatureHierarchyFlat')
+
   try {
     type FeatureEntitlementRowWithParent = {
       id: string;
@@ -205,11 +246,17 @@ export async function getFeatureHierarchyFlat(
     const features = (data ?? []) as FeatureEntitlementRowWithParent[];
 
     if (error) {
+      debug.perf.end('featureHierarchyService.getFeatureHierarchyFlat')
+      debug.error('FeatureHierarchyService.getFeatureHierarchyFlat', 'Failed to fetch features', { error, includeArchived })
+      console.groupEnd()
       console.error('[FeatureHierarchy] Error fetching features:', error);
       return [];
     }
 
     if (!features || features.length === 0) {
+      debug.perf.end('featureHierarchyService.getFeatureHierarchyFlat')
+      debug.data('FeatureHierarchyService.getFeatureHierarchyFlat', 'Response (empty)', { includeArchived })
+      console.groupEnd()
       return [];
     }
 
@@ -262,8 +309,14 @@ export async function getFeatureHierarchyFlat(
       });
     }
 
+    debug.perf.end('featureHierarchyService.getFeatureHierarchyFlat')
+    debug.data('FeatureHierarchyService.getFeatureHierarchyFlat', 'Response', { includeArchived, featureCount: result.length })
+    console.groupEnd()
     return result;
   } catch (err) {
+    debug.perf.end('featureHierarchyService.getFeatureHierarchyFlat')
+    debug.error('FeatureHierarchyService.getFeatureHierarchyFlat', 'Exception fetching hierarchy', { error: err, includeArchived })
+    console.groupEnd()
     console.error('[FeatureHierarchy] Exception fetching hierarchy:', err);
     return [];
   }
@@ -294,10 +347,17 @@ export async function updateFeatureParent(
   featureKey: string,
   newParentKey: string | null
 ): Promise<{ success: boolean; error?: string }> {
+  console.groupCollapsed(`%cupdateFeatureParent: ${featureKey} -> ${newParentKey || 'root'}`, 'color: #666; font-weight: bold;');
+  debug.flow('FeatureHierarchyService.updateFeatureParent', 'Updating parent', { featureId, featureKey, newParentKey })
+  debug.perf.start('featureHierarchyService.updateFeatureParent')
+
   // Validate first
   const validation = await validateParentAssignment(featureKey, newParentKey);
   
   if (!validation.valid) {
+    debug.perf.end('featureHierarchyService.updateFeatureParent')
+    debug.error('FeatureHierarchyService.updateFeatureParent', 'Validation failed', { featureId, featureKey, newParentKey, error: validation.error })
+    console.groupEnd()
     return { success: false, error: validation.error };
   }
 
@@ -308,12 +368,21 @@ export async function updateFeatureParent(
       .eq('id', featureId);
 
     if (error) {
+      debug.perf.end('featureHierarchyService.updateFeatureParent')
+      debug.error('FeatureHierarchyService.updateFeatureParent', 'Failed to update parent', { error, featureId, featureKey, newParentKey })
+      console.groupEnd()
       console.error('[FeatureHierarchy] Error updating parent:', error);
       return { success: false, error: error.message };
     }
 
+    debug.perf.end('featureHierarchyService.updateFeatureParent')
+    debug.flow('FeatureHierarchyService.updateFeatureParent', 'Parent updated successfully', { featureId, featureKey, newParentKey })
+    console.groupEnd()
     return { success: true };
   } catch (err) {
+    debug.perf.end('featureHierarchyService.updateFeatureParent')
+    debug.error('FeatureHierarchyService.updateFeatureParent', 'Exception updating parent', { error: err, featureId, featureKey, newParentKey })
+    console.groupEnd()
     console.error('[FeatureHierarchy] Exception updating parent:', err);
     return {
       success: false,

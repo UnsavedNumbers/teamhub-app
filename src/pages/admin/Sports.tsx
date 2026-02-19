@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import { USE_FAKE_DATA } from '../../data/config'
 import { getSports, deleteSport } from '../../data/services/sportsService'
 import { getPrograms } from '../../data/services/sportsService'
@@ -21,6 +22,9 @@ import '../../styles/orgAdmin.css'
 import './Sports.css'
 
 export default function Sports() {
+  // Add lifecycle logging
+  useDebugLifecycle('Sports')
+
   const { context, isReady } = useUserContext()
   const { isOffline } = useOffline()
   const location = useLocation()

@@ -2,10 +2,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { 
   getCalendarEvents,
   updateRSVP, 
+  getSports,
   getAthletes, 
+  getTeams,
   isGeneralRSVP, 
   isAthleteRSVP 
 } from '../data/services'
@@ -51,6 +54,9 @@ const defaultFilters: CalendarFilters = {
 const EVENTS_PER_PAGE = 9
 
 export default function Calendar() {
+  // Add lifecycle logging
+  useDebugLifecycle('Calendar')
+
   // I18n hook - will throw if I18nProvider is missing (correct behavior)
   const { t } = useI18n()
   
@@ -175,15 +181,80 @@ export default function Calendar() {
         console.error('Error fetching events:', eventsError)
         setError(eventsError.message || 'Failed to load events')
         setEvents([])
+        setEventSports({})
       } else {
           // Events are already filtered server-side via the query params
           const filtered = (data || []).map(mapSummaryToCalendarEvent)
           setEvents(filtered)
-          
-          // Skip loading sports for calendar list view - this was causing N+1 queries
-          // Sports are now loaded only when viewing individual event details
-          // For calendar display, we use the team/season info from the lightweight query
-          setEventSports({})
+
+          // Resolve event sports in batch (one teams query + one sports query).
+          // This restores local sport card images without reintroducing N+1 calls.
+          const teamIds = Array.from(
+            new Set(
+              filtered
+                .map((event) => event.team_id)
+                .filter((teamId): teamId is string => typeof teamId === 'string' && teamId.length > 0),
+            ),
+          )
+
+          if (teamIds.length === 0) {
+            setEventSports({})
+          } else {
+            const [teamsResult, sportsResult] = await Promise.all([
+              getTeams(context),
+              getSports(context),
+            ])
+
+            const sportById = new Map<string, SportInfo>()
+            for (const sport of sportsResult.data || []) {
+              if (!sport?.id || !sport?.name) continue
+              sportById.set(sport.id, {
+                id: sport.id,
+                name: sport.name,
+                color: sport.color || 'var(--org-btn-primary-bg, #137fec)',
+                icon: sport.icon || undefined,
+              })
+            }
+
+            const teamSportById = new Map<string, SportInfo>()
+            for (const team of teamsResult.data || []) {
+              const teamWithSport = team as (typeof team) & {
+                sport?: { id?: string; name?: string; color?: string | null; icon?: string | null } | null
+              }
+
+              if (!team?.id || !teamIds.includes(team.id)) continue
+
+              const joinedSport = teamWithSport.sport
+              if (joinedSport?.id && joinedSport?.name) {
+                teamSportById.set(team.id, {
+                  id: joinedSport.id,
+                  name: joinedSport.name,
+                  color: joinedSport.color || 'var(--org-btn-primary-bg, #137fec)',
+                  icon: joinedSport.icon || undefined,
+                })
+                continue
+              }
+
+              const fallbackSportId = (team as { sport_id?: string | null }).sport_id
+              if (fallbackSportId) {
+                const fallbackSport = sportById.get(fallbackSportId)
+                if (fallbackSport) {
+                  teamSportById.set(team.id, fallbackSport)
+                }
+              }
+            }
+
+            const nextEventSports: Record<string, SportInfo | null> = {}
+            for (const event of filtered) {
+              if (!event.team_id) {
+                nextEventSports[event.id] = null
+                continue
+              }
+              nextEventSports[event.id] = teamSportById.get(event.team_id) || null
+            }
+
+            setEventSports(nextEventSports)
+          }
       }
     } catch (err) {
       console.error('Unexpected error in fetchData:', err)

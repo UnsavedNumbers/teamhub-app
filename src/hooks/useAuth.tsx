@@ -10,12 +10,26 @@ import {
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { useOrganization, Organization } from '../contexts/OrganizationContext'
+import { useDemoSession } from '../contexts/DemoSessionContext'
 import type { PlatformAdminRole } from '../types/platformAdmin.types'
 import type { HomeLocation } from '../types/location'
 import { geocodeZipToHomeLocation } from '../utils/homeLocation'
+import { DEMO_ORG_A_ID, USE_FAKE_DATA } from '../data/config'
+import { generateDemoData } from '../data/fake/demoDataEngine'
+import { getDemoUserContext } from '../data/fake/userContext'
+import { getOrganizationById } from '../data/fake/fakeOrganizations'
+import { validateDemoCode } from '../data/services/demoCodeService'
+import { getDemoOrg } from '../data/services/demoOrgService'
+import {
+  clearStoredDemoCode,
+  createDemoSession,
+  endDemoSession,
+  getStoredDemoCode,
+} from '../data/services/demoSessionService'
+import { debug } from '../lib/debug'
 
-// Role types - now per organization
-type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff'
+// Role types - now per organization (must match OrganizationContext.OrgMemberRole)
+type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff' | 'athlete'
 type LegacyUserRole = 'parent' | 'coach' | 'admin'
 
 interface UserProfile {
@@ -43,12 +57,13 @@ interface AuthContextType {
   profile: UserProfile | null
   session: Session | null
   loading: boolean
-  signInWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null }>
+  signInWithEmail: (email: string, password: string, demoCode?: string) => Promise<{ error: AuthError | null }>
   signInWithGoogle: () => Promise<{ error: AuthError | null }>
   signUp: (email: string, password: string, firstName: string, lastName: string, phone: string, zipcode: string, requiresOrgSetup?: boolean, signupMode?: 'fan' | 'parent') => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>
+  updateEmail: (newEmail: string, redirectTo?: string) => Promise<{ error: AuthError | null }>
   refreshProfile: () => Promise<void>
   // Role helpers (UX-only, not security - RLS handles authorization)
   hasRole: (orgId: string, role: OrgMemberRole) => boolean
@@ -60,6 +75,70 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const FAKE_AUTH_STORAGE_KEY = 'teamhub_fake_auth_state'
+
+interface FakeAuthState {
+  userId: string
+  email: string
+  orgId: string
+  orgName: string
+  roles: OrgMemberRole[]
+  isPlatformAdmin: boolean
+}
+
+function readFakeAuthState(): FakeAuthState | null {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.sessionStorage.getItem(FAKE_AUTH_STORAGE_KEY)
+    if (!raw) return null
+
+    const parsed = JSON.parse(raw) as Partial<FakeAuthState>
+    if (!parsed || typeof parsed.email !== 'string' || parsed.email.trim().length === 0) {
+      return null
+    }
+
+    const roles = Array.isArray(parsed.roles)
+      ? parsed.roles.filter(
+          (role): role is OrgMemberRole =>
+            role === 'parent' || role === 'coach' || role === 'org_admin' || role === 'staff' || role === 'athlete',
+        )
+      : []
+
+    const safeEmail = parsed.email.trim().toLowerCase()
+    const safeUserId = typeof parsed.userId === 'string' && parsed.userId.trim().length > 0
+      ? parsed.userId.trim()
+      : ''
+    const safeOrgId = typeof parsed.orgId === 'string' && parsed.orgId.trim().length > 0
+      ? parsed.orgId.trim()
+      : DEMO_ORG_A_ID
+    const safeOrgName = typeof parsed.orgName === 'string' && parsed.orgName.trim().length > 0
+      ? parsed.orgName.trim()
+      : (getOrganizationById(safeOrgId)?.name ?? 'Demo Organization')
+
+    return {
+      userId: safeUserId,
+      email: safeEmail,
+      orgId: safeOrgId,
+      orgName: safeOrgName,
+      roles,
+      isPlatformAdmin: parsed.isPlatformAdmin === true,
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeFakeAuthState(state: FakeAuthState): void {
+  if (typeof window === 'undefined') return
+  window.sessionStorage.setItem(FAKE_AUTH_STORAGE_KEY, JSON.stringify(state))
+}
+
+function clearFakeAuthState(): void {
+  if (typeof window === 'undefined') return
+  window.sessionStorage.removeItem(FAKE_AUTH_STORAGE_KEY)
+}
+
 /* ===================== PROVIDER ===================== */
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -69,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const { setOrganizations, currentOrganization } = useOrganization()
+  const { refreshSession } = useDemoSession()
 
   // Prevent duplicate profile fetches (Bug Prevention #1 & #7)
   const profileFetchRef = useRef<Set<string>>(new Set())
@@ -84,7 +164,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfile = useCallback(
     async (userId: string) => {
       // Prevent duplicate fetches for same user (Bug Prevention #1 & #7)
-      if (profileFetchRef.current.has(userId)) return
+      if (profileFetchRef.current.has(userId)) {
+        debug.flow('Auth', 'Profile fetch skipped (already in progress)', { userId })
+        return
+      }
+
+      debug.flow('Auth', 'Profile fetch started', { userId })
+      debug.perf.start(`auth.fetchProfile-${userId}`)
 
       profileFetchRef.current.add(userId)
       setLoading(true)
@@ -95,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let { data: userData, error: userError } = await supabase
           .from('users')
           .select(
-            'id, email, phone, display_name, home_zipcode, home_location, role, family_id, org_id, requires_org_setup'
+            'id, email, phone, display_name, first_name, last_name, home_zipcode, home_location, role, family_id, org_id, requires_org_setup'
           )
           .eq('id', userId)
           .single()
@@ -105,8 +191,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const retryResult = await supabase
             .from('users')
             .select(
-              'id, email, phone, display_name, role, family_id, org_id, requires_org_setup'
-            )
+            'id, email, phone, display_name, first_name, last_name, role, family_id, org_id, requires_org_setup'
+          )
             .eq('id', userId)
             .single()
           userData = retryResult.data as any
@@ -115,6 +201,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Simplified error handling (Bug Prevention #4 & #9)
         if (userError || !userData) {
+          const userErrorMessage = (userError?.message || '').toLowerCase()
+          const isNetworkError =
+            userErrorMessage.includes('networkerror') ||
+            userErrorMessage.includes('failed to fetch') ||
+            userErrorMessage.includes('network request failed')
+
+          if (isNetworkError) {
+            console.warn('Profile fetch network error:', userError)
+            const { data: sessionData } = await supabase.auth.getSession()
+            const sessionUser = sessionData.session?.user
+
+            if (mountedRef.current && sessionUser?.id === userId) {
+              const metadata = sessionUser.user_metadata ?? {}
+              const fallbackProfile: UserProfile = {
+                id: sessionUser.id,
+                email: sessionUser.email ?? null,
+                phone: typeof metadata.phone === 'string' ? metadata.phone : '',
+                first_name: '',
+                last_name: '',
+                display_name:
+                  typeof metadata.display_name === 'string' ? metadata.display_name : null,
+                home_location: null,
+                home_zipcode:
+                  typeof metadata.home_zipcode === 'string' ? metadata.home_zipcode : undefined,
+                role: undefined,
+                family_id: null,
+                org_id: null,
+                organizations: [],
+                isPlatformAdmin: false,
+                platformAdminRole: null,
+                requiresOrgSetup: Boolean(metadata.requires_org_setup),
+              }
+              setProfile((prev) => prev ?? fallbackProfile)
+              setOrganizations([])
+            }
+            return
+          }
+
           console.error('Profile fetch error:', userError)
           await supabase.auth.signOut()
           setProfile(null)
@@ -136,6 +260,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: string | null
           phone: string | null
           display_name: string | null
+          first_name?: string
+          last_name?: string
           home_location?: HomeLocation | null
           home_zipcode?: string | null
           role: string | null
@@ -175,7 +301,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const roles = Array.isArray(o.roles)
                 ? o.roles.filter(
                   (r: unknown): r is OrgMemberRole =>
-                    r === 'parent' || r === 'coach' || r === 'org_admin' || r === 'staff'
+                    r === 'parent' || r === 'coach' || r === 'org_admin' || r === 'staff' || r === 'athlete'
                 )
                 : []
 
@@ -229,8 +355,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: validUserData.id,
           email: validUserData.email,
           phone: validUserData.phone ?? '',
-          first_name: '', // first_name and last_name not in users table, derived from display_name if needed
-          last_name: '',
+          first_name: validUserData.first_name ?? '',
+          last_name: validUserData.last_name ?? '',
           display_name: validUserData.display_name,
           home_location: (validUserData.home_location as HomeLocation | null) ?? null,
           home_zipcode: validUserData.home_zipcode ?? undefined,
@@ -255,8 +381,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setProfile(profileData)
         setOrganizations(orgs)
+        debug.perf.end(`auth.fetchProfile-${userId}`)
+        debug.flow('Auth', 'Profile fetch completed', {
+          userId,
+          orgCount: orgs.length,
+          isPlatformAdmin: profileData.isPlatformAdmin,
+          requiresOrgSetup: profileData.requiresOrgSetup
+        })
       } catch (err) {
-        console.error('Error in fetchProfile:', err)
+        debug.perf.end(`auth.fetchProfile-${userId}`)
+        const message = err instanceof Error ? err.message.toLowerCase() : ''
+        const isNetworkError =
+          message.includes('networkerror') ||
+          message.includes('failed to fetch') ||
+          message.includes('network request failed')
+
+        if (isNetworkError) {
+          debug.error('Auth', 'Profile fetch failed (network)', { userId, error: err })
+          return
+        }
+
+        debug.error('Auth', 'Profile fetch failed', { userId, error: err })
         if (mountedRef.current) {
           setProfile(null)
         }
@@ -274,6 +419,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     mountedRef.current = true
+
+    if (USE_FAKE_DATA) {
+      const persisted = readFakeAuthState()
+      if (persisted) {
+        const resolvedContext = getDemoUserContext(persisted.email)
+        const resolvedOrgId = persisted.orgId || resolvedContext?.orgId || DEMO_ORG_A_ID
+        const resolvedOrgName =
+          persisted.orgName ||
+          getOrganizationById(resolvedOrgId)?.name ||
+          'Demo Organization'
+        const resolvedRoles: OrgMemberRole[] =
+          persisted.roles.length > 0
+            ? persisted.roles
+            : resolvedContext?.roles && resolvedContext.roles.length > 0
+              ? resolvedContext.roles
+              : ['parent']
+        const resolvedUserId = persisted.userId || resolvedContext?.userId || `demo-${persisted.email}`
+
+        const organizations: Organization[] = [
+          {
+            id: resolvedOrgId,
+            name: resolvedOrgName,
+            roles: resolvedRoles,
+            get role(): OrgMemberRole {
+              return this.roles[0] ?? 'parent'
+            },
+          },
+        ]
+
+        const demoUser = {
+          id: resolvedUserId,
+          email: persisted.email,
+          user_metadata: { signup_mode: 'parent' },
+        } as unknown as User
+
+        const legacyRole: LegacyUserRole | undefined = resolvedRoles.includes('org_admin')
+          ? 'admin'
+          : resolvedRoles.includes('coach')
+            ? 'coach'
+            : resolvedRoles.includes('parent')
+              ? 'parent'
+              : undefined
+
+        const demoProfile: UserProfile = {
+          id: resolvedUserId,
+          email: persisted.email,
+          phone: '',
+          first_name: '',
+          last_name: '',
+          display_name: persisted.email.split('@')[0] ?? null,
+          home_location: null,
+          home_zipcode: undefined,
+          role: legacyRole,
+          family_id: null,
+          org_id: resolvedOrgId,
+          organizations,
+          isPlatformAdmin: persisted.isPlatformAdmin,
+          platformAdminRole: null,
+          requiresOrgSetup: false,
+        }
+
+        if (mountedRef.current) {
+          setUser(demoUser)
+          setSession(null)
+          setProfile(demoProfile)
+          setOrganizations(organizations)
+        }
+      } else {
+        clearFakeAuthState()
+      }
+
+      setLoading(false)
+      return () => {
+        mountedRef.current = false
+      }
+    }
 
     supabase.auth.getSession().then(({ data }) => {
       if (!mountedRef.current) return
@@ -315,9 +536,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session) {
           setSession(session)
           // Don't update user or trigger profile fetch - nothing meaningful changed
+          debug.flow('Auth', 'Token refreshed', { userId: session.user.id })
         }
         return
       }
+
+      // Log auth state changes
+      debug.flow('Auth', `State change: ${event}`, {
+        event,
+        userId: session?.user?.id,
+        hasSession: !!session,
+        email: session?.user?.email
+      })
 
       // Event debouncing (Bug Prevention #3)
       const now = Date.now()
@@ -346,7 +576,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session)
       setUser(session?.user ?? null)
 
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_IN') {
+        debug.flow('Auth', 'User signed in', { userId: session?.user?.id, email: session?.user?.email })
+      } else if (event === 'SIGNED_OUT') {
+        debug.flow('Auth', 'User signed out', { previousUserId: user?.id })
         if (!mountedRef.current) return
         setProfile(null)
         setOrganizations([])
@@ -383,9 +616,129 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /* ===================== AUTH ACTIONS ===================== */
 
-  async function signInWithEmail(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error }
+  async function signInWithEmail(email: string, password: string, demoCode?: string) {
+    return debug.group(`Auth.signInWithEmail: ${email}`, async () => {
+        debug.flow('Auth', 'Login attempt', { email, method: 'email' })
+        debug.perf.start('auth.signInWithEmail')
+
+        const toAuthError = (message: string): AuthError => ({ name: 'AuthError', message } as AuthError)
+
+        if (USE_FAKE_DATA) {
+      const demoContext = getDemoUserContext(email)
+      if (!demoContext) {
+        return { error: toAuthError('Invalid login credentials') }
+      }
+
+      const normalizedDemoCode = (demoCode ?? getStoredDemoCode() ?? '').trim().toUpperCase()
+      let resolvedDemoOrgId = demoContext.orgId
+      let resolvedDemoOrgName = getOrganizationById(demoContext.orgId)?.name ?? 'Demo Organization'
+
+      if (normalizedDemoCode) {
+        const validation = await validateDemoCode(normalizedDemoCode)
+        if (!validation.valid || !validation.demoOrgId) {
+          const messageByReason: Record<string, string> = {
+            missing: 'Demo code is required.',
+            not_found: 'Invalid demo code.',
+            revoked: 'This demo code has been revoked.',
+            expired: 'This demo code has expired.',
+            inactive_org: 'This demo organization is inactive.',
+          }
+          const reason = validation.reason ?? 'not_found'
+          return { error: toAuthError(messageByReason[reason] ?? 'Invalid demo code.') }
+        }
+
+        const demoOrg = await getDemoOrg(validation.demoOrgId)
+        await generateDemoData(demoOrg, demoOrg.sports_sponsored, normalizedDemoCode)
+        await createDemoSession(normalizedDemoCode, demoContext.userId)
+        refreshSession()
+        resolvedDemoOrgId = validation.demoOrgId
+        resolvedDemoOrgName = getOrganizationById(validation.demoOrgId)?.name ?? demoOrg.name ?? 'Demo Organization'
+      }
+
+      const roles: OrgMemberRole[] = demoContext.roles
+      const organizations: Organization[] = [
+        {
+          id: resolvedDemoOrgId,
+          name: resolvedDemoOrgName,
+          roles,
+          get role(): OrgMemberRole {
+            return roles[0] ?? 'parent'
+          },
+        },
+      ]
+
+      const legacyRole: LegacyUserRole | undefined = roles.includes('org_admin')
+        ? 'admin'
+        : roles.includes('coach')
+          ? 'coach'
+          : roles.includes('parent')
+            ? 'parent'
+            : undefined
+
+      const demoUser = {
+        id: demoContext.userId,
+        email: demoContext.email,
+        user_metadata: { signup_mode: 'parent' },
+      } as unknown as User
+
+      const demoProfile: UserProfile = {
+        id: demoContext.userId,
+        email: demoContext.email,
+        phone: '',
+        first_name: '',
+        last_name: '',
+        display_name: demoContext.email?.split('@')[0] ?? null,
+        home_location: null,
+        home_zipcode: undefined,
+        role: legacyRole,
+        family_id: null,
+        org_id: resolvedDemoOrgId,
+        organizations,
+        isPlatformAdmin: demoContext.isPlatformAdmin,
+        platformAdminRole: null,
+        requiresOrgSetup: false,
+      }
+
+      writeFakeAuthState({
+        userId: demoContext.userId,
+        email: demoContext.email ?? email.toLowerCase().trim(),
+        orgId: resolvedDemoOrgId,
+        orgName: resolvedDemoOrgName,
+        roles,
+        isPlatformAdmin: demoContext.isPlatformAdmin,
+      })
+
+      setUser(demoUser)
+      setSession(null)
+            setProfile(demoProfile)
+            setOrganizations(organizations)
+            setLoading(false)
+            clearStoredDemoCode()
+            debug.perf.end('auth.signInWithEmail')
+            debug.flow('Auth', 'Login successful (demo)', {
+              email,
+              userId: demoContext.userId,
+              roles: demoContext.roles,
+              demoOrgId: resolvedDemoOrgId,
+            })
+            return { error: null }
+        }
+
+        try {
+            const { error } = await supabase.auth.signInWithPassword({ email, password })
+            debug.perf.end('auth.signInWithEmail')
+            if (error) {
+                debug.error('Auth', 'Login failed', { email, error: error.message })
+            } else {
+                debug.flow('Auth', 'Login initiated', { email })
+            }
+            return { error }
+        } catch (err) {
+            debug.perf.end('auth.signInWithEmail')
+            debug.error('Auth', 'Login exception', { email, error: err })
+            return { error: err as AuthError }
+        }
+    })
   }
 
   async function signInWithGoogle() {
@@ -404,11 +757,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error }
   }
 
-  async function signUp(email: string, password: string, firstName: string, lastName: string, phone: string, zipcode: string, requiresOrgSetup?: boolean, signupMode?: 'fan' | 'parent') {
-    // Import getBaseUrl to get current origin (supports localhost and production)
-    const { getBaseUrl } = await import('../utils/host')
-    const baseUrl = getBaseUrl()
-    const trimmedZip = zipcode.trim()
+  async function signUp(email: string, password: string, firstName: string, lastName: string, phone: string, zipcode: string, requiresOrgSetup?: boolean, signupMode?: 'fan' | 'parent', tosAccepted?: boolean, privacyAccepted?: boolean) {
+    return debug.group(`Auth.signUp: ${email}`, async () => {
+        debug.flow('Auth', 'Signup attempt', { email, signupMode, requiresOrgSetup })
+        debug.perf.start('auth.signUp')
+
+        // Import getBaseUrl to get current origin (supports localhost and production)
+        const { getBaseUrl } = await import('../utils/host')
+        const baseUrl = getBaseUrl()
+        const trimmedZip = zipcode.trim()
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -432,29 +789,96 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     })
 
-    if (!error && data?.session?.user && trimmedZip) {
-      try {
-        const homeLocation = await geocodeZipToHomeLocation(trimmedZip)
-        if (homeLocation) {
-          await supabase
-            .from('users')
-            .update({ home_location: homeLocation as any, home_zipcode: trimmedZip })
-            .eq('id', data.session.user.id)
-        }
-      } catch (err) {
-        console.error('Failed to save home_location after signup', err)
-      }
-    }
+        if (!error && data?.user) {
+          const userId = data.session?.user?.id || data.user.id
+          const now = new Date().toISOString()
+          const consentVersion = '1.0' // Update this when ToS/Privacy Policy versions change
 
-    return { error }
+          try {
+            // Update user with consent and home location
+            const updateData: any = {}
+            
+            if (tosAccepted) {
+              updateData.tos_accepted_at = now
+            }
+            if (privacyAccepted) {
+              updateData.privacy_policy_accepted_at = now
+            }
+            if (tosAccepted || privacyAccepted) {
+              updateData.consent_version = consentVersion
+            }
+            if (trimmedZip) {
+              updateData.home_zipcode = trimmedZip
+            }
+
+            if (Object.keys(updateData).length > 0) {
+              if (trimmedZip) {
+                try {
+                  const homeLocation = await geocodeZipToHomeLocation(trimmedZip)
+                  if (homeLocation) {
+                    updateData.home_location = homeLocation
+                  }
+                } catch (err) {
+                  debug.error('Auth', 'Failed to geocode zipcode', { email, error: err })
+                }
+              }
+
+              await supabase
+                .from('users')
+                .update(updateData)
+                .eq('id', userId)
+            }
+          } catch (err) {
+            debug.error('Auth', 'Failed to save consent/home location after signup', { email, error: err })
+          }
+        }
+
+        debug.perf.end('auth.signUp')
+        if (error) {
+          debug.error('Auth', 'Signup failed', { email, error: error.message })
+        } else {
+          debug.flow('Auth', 'Signup successful', { email, userId: data?.user?.id, signupMode })
+        }
+        return { error }
+    })
   }
 
   async function signOut() {
-    await supabase.auth.signOut()
-    setUser(null)
-    setProfile(null)
-    setSession(null)
-    setOrganizations([])
+    return debug.group('Auth.signOut', async () => {
+        debug.flow('Auth', 'Logout started', { userId: user?.id })
+        debug.perf.start('auth.signOut')
+
+        if (USE_FAKE_DATA) {
+          if (user?.id) {
+            await endDemoSession(user.id)
+          } else {
+            clearStoredDemoCode()
+            refreshSession()
+          }
+          clearFakeAuthState()
+          setUser(null)
+          setProfile(null)
+          setSession(null)
+          setOrganizations([])
+          setLoading(false)
+          debug.perf.end('auth.signOut')
+          debug.flow('Auth', 'Logout completed (demo)', { userId: user?.id })
+          return
+        }
+
+        try {
+          await supabase.auth.signOut()
+          setUser(null)
+          setProfile(null)
+          setSession(null)
+          setOrganizations([])
+          debug.perf.end('auth.signOut')
+          debug.flow('Auth', 'Logout completed', { userId: user?.id })
+        } catch (err) {
+          debug.perf.end('auth.signOut')
+          debug.error('Auth', 'Logout failed', { userId: user?.id, error: err })
+        }
+    })
   }
 
   async function resetPassword(email: string) {
@@ -475,7 +899,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error }
   }
 
+  async function updateEmail(newEmail: string, redirectTo?: string) {
+    // Import getBaseUrl to get current origin (supports localhost and production)
+    const { getBaseUrl } = await import('../utils/host')
+    const baseUrl = getBaseUrl()
+    
+    // Use provided redirectTo or default to current path (settings page)
+    const emailRedirectTo = redirectTo 
+      ? `${baseUrl}${redirectTo}` 
+      : `${baseUrl}${window.location.pathname}`
+    
+    const { error } = await supabase.auth.updateUser(
+      { email: newEmail },
+      { emailRedirectTo }
+    )
+    return { error }
+  }
+
   async function refreshProfile() {
+    if (USE_FAKE_DATA) {
+      return
+    }
+
     if (user?.id) {
       await fetchProfile(user.id)
     }
@@ -516,6 +961,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
     resetPassword,
     updatePassword,
+    updateEmail,
     refreshProfile,
     hasRole,
     hasAnyRole,
@@ -533,4 +979,9 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
+}
+
+/** Returns auth context or undefined when outside AuthProvider. Use when component may render outside provider. */
+export function useOptionalAuth() {
+  return useContext(AuthContext)
 }

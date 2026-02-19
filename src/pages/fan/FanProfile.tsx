@@ -17,11 +17,18 @@ import {
 } from '../../data/services/fanService'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import AthleteAvatar from '../../components/portal/AthleteAvatar'
+import { useUserContext } from '../../hooks/useUserContext'
 import { showError, showSuccess } from '../../utils/toast'
 import { supabase } from '../../lib/supabase'
+import type { Athlete } from '../../types/family'
 import '../../styles/fan.css'
 
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+
 export default function FanProfile() {
+  useDebugLifecycle('FanProfile')
+  
   const navigate = useNavigate()
   
   const [loading, setLoading] = useState(true)
@@ -532,18 +539,6 @@ export function FanProfileNotifications() {
             </button>
           </div>
 
-          <div className="fan-toggle-row">
-            <div className="fan-toggle-info">
-              <span className="fan-toggle-title">Push Notifications</span>
-              <span className="fan-toggle-description">Receive push notifications on your device</span>
-            </div>
-            <button
-              className={`fan-toggle ${preferences.push_enabled ? 'active' : ''}`}
-              onClick={() => updatePref('push_enabled', !preferences.push_enabled)}
-            >
-              <span className="fan-toggle-track" />
-            </button>
-          </div>
         </div>
 
         {/* Notification Types */}
@@ -555,7 +550,7 @@ export function FanProfileNotifications() {
             description="When event times or locations change"
             value={preferences.schedule_changes_channel}
             onChange={(v) => updatePref('schedule_changes_channel', v)}
-            disabled={!preferences.email_enabled && !preferences.push_enabled}
+            disabled={!preferences.email_enabled}
           />
           
           <NotificationTypeRow
@@ -563,7 +558,7 @@ export function FanProfileNotifications() {
             description="Updates about your tickets and orders"
             value={preferences.ticket_updates_channel}
             onChange={(v) => updatePref('ticket_updates_channel', v)}
-            disabled={!preferences.email_enabled && !preferences.push_enabled}
+            disabled={!preferences.email_enabled}
           />
           
           <NotificationTypeRow
@@ -571,7 +566,7 @@ export function FanProfileNotifications() {
             description="Important announcements from teams you follow"
             value={preferences.announcements_channel}
             onChange={(v) => updatePref('announcements_channel', v)}
-            disabled={!preferences.email_enabled && !preferences.push_enabled}
+            disabled={!preferences.email_enabled}
           />
           
           <NotificationTypeRow
@@ -579,7 +574,7 @@ export function FanProfileNotifications() {
             description="When new media is added to galleries"
             value={preferences.photos_added_channel}
             onChange={(v) => updatePref('photos_added_channel', v)}
-            disabled={!preferences.email_enabled && !preferences.push_enabled}
+            disabled={!preferences.email_enabled}
           />
           
           <NotificationTypeRow
@@ -587,7 +582,7 @@ export function FanProfileNotifications() {
             description="Scores and results from games"
             value={preferences.game_results_channel}
             onChange={(v) => updatePref('game_results_channel', v)}
-            disabled={!preferences.email_enabled && !preferences.push_enabled}
+            disabled={!preferences.email_enabled}
           />
         </div>
 
@@ -693,7 +688,7 @@ function NotificationTypeRow({ title, description, value, onChange, disabled }: 
  */
 export function FanProfileLinkedAthletes() {
   const navigate = useNavigate()
-  
+  const { context } = useUserContext()
   const [loading, setLoading] = useState(true)
   const [linkedAthletes, setLinkedAthletes] = useState<any[]>([])
   const [showLinkModal, setShowLinkModal] = useState(false)
@@ -782,11 +777,11 @@ export function FanProfileLinkedAthletes() {
                 {linkedAthletes.map((athlete) => (
                   <div key={athlete.id} className="fan-linked-athlete-card">
                     <div className="fan-linked-athlete-avatar">
-                      {athlete.photo_url ? (
-                        <img src={athlete.photo_url} alt="" />
-                      ) : (
-                        <span className="material-symbols-outlined">person</span>
-                      )}
+                      <AthleteAvatar
+                        athlete={{ id: athlete.id, first_name: athlete.first_name, last_name: athlete.last_name, org_id: athlete.org_id ?? context?.orgId, has_profile_photo: !!athlete.photo_url, profile_photo_updated_at: null } as unknown as Athlete}
+                        photoSize="256"
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                     <div className="fan-linked-athlete-info">
                       <h3>{athlete.first_name} {athlete.last_name}</h3>

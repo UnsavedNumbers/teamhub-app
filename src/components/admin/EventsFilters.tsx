@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { cn } from '../../utils/cn'
-import { DatePicker } from '../platformAdmin/DatePicker'
+import { DatePicker } from './DatePicker'
 import type { EventsFilters } from '../../types/eventsManagement'
 import type { EventType } from '../../types/calendar'
 import { EVENT_TYPE_LABELS } from '../../types/calendar'
@@ -15,7 +15,7 @@ interface EventsFiltersProps {
 }
 
 const filterChipBase =
-    'px-2 py-1 rounded text-xs font-bold border transition-colors'
+    'px-2 py-1 rounded text-xs font-bold border transition-colors cursor-pointer'
 
 export default function EventsFilters({
     filters,
@@ -71,6 +71,10 @@ export default function EventsFilters({
         onFiltersChange({ ...filters, status: next })
     }
 
+    const handleVisibleToFansToggle = () => {
+        onFiltersChange({ ...filters, visibleToFans: !filters.visibleToFans })
+    }
+
     const activeFilterCount =
         filters.search.length +
         filters.eventTypes.length +
@@ -78,6 +82,7 @@ export default function EventsFilters({
         filters.sportIds.length +
         filters.seasonIds.length +
         filters.status.length +
+        (filters.visibleToFans ? 1 : 0) +
         (filters.dateFrom ? 1 : 0) +
         (filters.dateTo ? 1 : 0)
 
@@ -110,6 +115,9 @@ export default function EventsFilters({
     filters.status.forEach((status) => {
         activeFilterChips.push({ key: `status-${status}`, label: status.charAt(0).toUpperCase() + status.slice(1) })
     })
+    if (filters.visibleToFans) {
+        activeFilterChips.push({ key: 'visibleToFans', label: 'Visible to Fans' })
+    }
 
     const handleRemoveChip = (key: string) => {
         if (key === 'search') {
@@ -133,6 +141,8 @@ export default function EventsFilters({
         } else if (key.startsWith('status-')) {
             const status = key.replace('status-', '') as 'scheduled' | 'cancelled' | 'completed' | 'postponed'
             handleStatusToggle(status)
+        } else if (key === 'visibleToFans') {
+            onFiltersChange({ ...filters, visibleToFans: false })
         }
     }
 
@@ -142,9 +152,9 @@ export default function EventsFilters({
         borderColor: 'var(--org-btn-primary-bg)',
     }
     const chipDefaultStyle = {
-        background: 'var(--org-surface-primary, #fff)',
-        color: 'var(--org-text-secondary, #374151)',
-        borderColor: 'var(--org-border-default, #e5e7eb)',
+        background: 'var(--org-surface-primary)',
+        color: 'var(--org-text-secondary)',
+        borderColor: 'var(--org-border-default)',
     }
 
     return (
@@ -155,10 +165,10 @@ export default function EventsFilters({
                 onClick={() => setIsOpen(!isOpen)}
             >
                 <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--org-text-tertiary, #6b7280)' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--org-text-tertiary)' }}>
                         filter_list
                     </span>
-                    <span className="font-bold text-sm uppercase tracking-wider" style={{ color: 'var(--org-text-primary, #111)' }}>
+                    <span className="font-bold text-sm uppercase tracking-wider" style={{ color: 'var(--org-text-primary)' }}>
                         Filters
                     </span>
                     {activeFilterCount > 0 && (
@@ -170,7 +180,7 @@ export default function EventsFilters({
                         </span>
                     )}
                 </div>
-                <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--org-text-tertiary, #6b7280)' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--org-text-tertiary)' }}>
                     {isOpen ? 'expand_less' : 'expand_more'}
                 </span>
             </div>
@@ -187,7 +197,7 @@ export default function EventsFilters({
                             <div className="relative">
                                 <span
                                     className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                                    style={{ color: 'var(--org-text-tertiary, #6b7280)' }}
+                                    style={{ color: 'var(--org-text-tertiary)' }}
                                 >
                                     <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
                                         search
@@ -197,7 +207,7 @@ export default function EventsFilters({
                                     type="text"
                                     className="w-full h-11 pl-10 pr-3 rounded-lg border bg-transparent text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
                                     style={{
-                                        borderColor: 'var(--org-border-default, #e5e7eb)',
+                                        borderColor: 'var(--org-border-default)',
                                         color: 'var(--org-text-primary)',
                                     }}
                                     value={filters.search}
@@ -214,7 +224,7 @@ export default function EventsFilters({
                             </label>
                             <DatePicker
                                 value={filters.dateFrom}
-                                onChange={(value) => onFiltersChange({ ...filters, dateFrom: value })}
+                                onChange={(e) => onFiltersChange({ ...filters, dateFrom: e.target.value })}
                             />
                         </div>
 
@@ -225,8 +235,8 @@ export default function EventsFilters({
                             </label>
                             <DatePicker
                                 value={filters.dateTo}
-                                onChange={(value) => onFiltersChange({ ...filters, dateTo: value })}
-                                minValue={filters.dateFrom}
+                                onChange={(e) => onFiltersChange({ ...filters, dateTo: e.target.value })}
+                                min={filters.dateFrom}
                             />
                         </div>
 
@@ -247,6 +257,16 @@ export default function EventsFilters({
                                     </button>
                                 ))}
                             </div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                                <button
+                                    onClick={handleVisibleToFansToggle}
+                                    className={filterChipBase}
+                                    style={filters.visibleToFans ? chipSelectedStyle : chipDefaultStyle}
+                                    type="button"
+                                >
+                                    Visible to Fans
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -254,7 +274,7 @@ export default function EventsFilters({
                     <div className={cn('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4')}>
                         {/* Event Types */}
                         <div>
-                            <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--org-text-tertiary, #6b7280)' }}>
+                            <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--org-text-tertiary)' }}>
                                 Event Types
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -274,7 +294,7 @@ export default function EventsFilters({
                         {/* Teams */}
                         {teams.length > 0 && (
                             <div>
-                                <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--org-text-tertiary, #6b7280)' }}>
+                                <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--org-text-tertiary)' }}>
                                     Teams
                                 </div>
                                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
@@ -295,7 +315,7 @@ export default function EventsFilters({
                         {/* Seasons */}
                         {seasons.length > 0 && (
                             <div>
-                                <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--org-text-tertiary, #6b7280)' }}>
+                                <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--org-text-tertiary)' }}>
                                     Seasons
                                 </div>
                                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
@@ -320,7 +340,7 @@ export default function EventsFilters({
                             <button
                                 onClick={onClearAll}
                                 className="text-xs font-bold underline transition-colors hover:opacity-80"
-                                style={{ color: 'var(--org-status-error-bg, #dc2626)' }}
+                                style={{ color: 'var(--org-status-error-bg)' }}
                             >
                                 Clear All Filters
                             </button>
@@ -337,14 +357,14 @@ export default function EventsFilters({
                             key={chip.key}
                             className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold"
                             style={{
-                                background: 'var(--org-surface-tertiary, rgba(0,0,0,0.06))',
+                                background: 'var(--org-surface-tertiary)',
                                 color: 'var(--org-text-primary)',
                             }}
                         >
                             {chip.label}
                             <button
                                 onClick={() => handleRemoveChip(chip.key)}
-                                className="p-0.5 rounded-full flex items-center justify-center transition-colors hover:bg-black/10"
+                                className="p-0.5 rounded-full flex items-center justify-center transition-colors hover:bg-black/10 dark:hover:bg-white/10"
                                 style={{ color: 'inherit' }}
                                 aria-label={`Remove ${chip.label} filter`}
                             >

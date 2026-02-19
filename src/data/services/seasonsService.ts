@@ -7,6 +7,7 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
+import { debug } from '../../lib/debug'
 import type { UserContext } from '../fake/userContext'
 import type { Season, CreateSeasonDTO, UpdateSeasonDTO } from '../types/organization'
 import { getSeasonById, getSeasonsForOrg } from '../fake/fakeTeams'
@@ -27,16 +28,20 @@ export async function getSeasons(
   context: UserContext,
   options: GetSeasonsOptions = {}
 ): Promise<{ data: Season[]; error: Error | null }> {
-  if (USE_FAKE_DATA) {
-    await simulateDelay()
-    const allSeasons = getSeasonsForOrg(context.orgId)
-    if (options.activeOnly) {
-      return { data: allSeasons.filter(s => s.is_active), error: null }
-    }
-    return { data: allSeasons, error: null }
-  }
+  console.groupCollapsed(`%cgetSeasons: ${context.orgId}`, 'color: #666; font-weight: bold;');
+  debug.data('SeasonsService.getSeasons', 'Request', { context: { userId: context.userId, orgId: context.orgId }, options })
+  debug.perf.start('seasonsService.getSeasons')
 
   try {
+    if (USE_FAKE_DATA) {
+      await simulateDelay()
+      const allSeasons = getSeasonsForOrg(context.orgId)
+      const seasons = options.activeOnly ? allSeasons.filter(s => s.is_active) : allSeasons
+      debug.perf.end('seasonsService.getSeasons')
+      debug.data('SeasonsService.getSeasons', 'Response (fake)', { seasonCount: seasons.length, activeOnly: options.activeOnly })
+      console.groupEnd()
+      return { data: seasons, error: null }
+    }
     let query = supabase
       .from('seasons')
       .select('*')
@@ -69,8 +74,14 @@ export async function getSeasons(
       created_at: row.created_at,
       updated_at: row.updated_at,
     }))
+    debug.perf.end('seasonsService.getSeasons')
+    debug.data('SeasonsService.getSeasons', 'Response', { seasonCount: mapped.length, activeOnly: options.activeOnly })
+    console.groupEnd()
     return { data: mapped, error: null }
   } catch (err) {
+    debug.perf.end('seasonsService.getSeasons')
+    debug.error('SeasonsService.getSeasons', 'Failed to get seasons', { error: err, context: { userId: context.userId, orgId: context.orgId }, options })
+    console.groupEnd()
     console.error('[seasonsService] Error getting seasons:', err)
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
     const errorDetails = err && typeof err === 'object' && 'details' in err ? (err as any).details : undefined
@@ -85,12 +96,19 @@ export async function getSeason(
   context: UserContext,
   seasonId: string
 ): Promise<{ data: Season | null; error: Error | null }> {
-  if (USE_FAKE_DATA) {
-    await simulateDelay()
-    return { data: getSeasonById(seasonId) ?? null, error: null }
-  }
+  console.groupCollapsed(`%cgetSeason: ${seasonId}`, 'color: #666; font-weight: bold;');
+  debug.data('SeasonsService.getSeason', 'Request', { seasonId, context: { userId: context.userId, orgId: context.orgId } })
+  debug.perf.start('seasonsService.getSeason')
 
   try {
+    if (USE_FAKE_DATA) {
+      await simulateDelay()
+      const season = getSeasonById(seasonId) ?? null
+      debug.perf.end('seasonsService.getSeason')
+      debug.data('SeasonsService.getSeason', 'Response (fake)', { seasonId, found: !!season })
+      console.groupEnd()
+      return { data: season, error: null }
+    }
     const { data, error } = await supabase
       .from('seasons')
       .select('*')
@@ -101,6 +119,9 @@ export async function getSeason(
     if (error) throw error
     type SeasonRow = Database['public']['Tables']['seasons']['Row'] & { id: string; name: string; start_date: string; end_date: string; is_active: boolean; org_id: string }
     const row = data as SeasonRow
+    debug.perf.end('seasonsService.getSeason')
+    debug.data('SeasonsService.getSeason', 'Response', { seasonId, seasonName: row.name })
+    console.groupEnd()
     return {
       data: {
         id: row.id,
@@ -116,6 +137,9 @@ export async function getSeason(
       error: null,
     }
   } catch (err) {
+    debug.perf.end('seasonsService.getSeason')
+    debug.error('SeasonsService.getSeason', 'Failed to get season', { error: err, seasonId, context: { userId: context.userId, orgId: context.orgId } })
+    console.groupEnd()
     console.error('[seasonsService] Error getting season:', err)
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
   }
@@ -125,25 +149,31 @@ export async function createSeason(
   context: UserContext,
   dto: CreateSeasonDTO
 ): Promise<{ data: Season | null; error: Error | null }> {
-  if (USE_FAKE_DATA) {
-    await simulateDelay()
-    return {
-      data: {
-        id: `demo-season-${Date.now()}`,
-        org_id: dto.org_id,
-        team_id: null,
-        name: dto.name,
-        start_date: dto.start_date,
-        end_date: dto.end_date,
-        is_active: dto.is_active ?? false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      error: null,
-    }
-  }
+  console.groupCollapsed(`%ccreateSeason: ${dto.name}`, 'color: #666; font-weight: bold;');
+  debug.flow('SeasonsService.createSeason', 'Creating season', { seasonName: dto.name, orgId: dto.org_id })
+  debug.perf.start('seasonsService.createSeason')
 
   try {
+    if (USE_FAKE_DATA) {
+      await simulateDelay()
+      debug.perf.end('seasonsService.createSeason')
+      debug.flow('SeasonsService.createSeason', 'Season created (fake)', { seasonName: dto.name })
+      console.groupEnd()
+      return {
+        data: {
+          id: `demo-season-${Date.now()}`,
+          org_id: dto.org_id,
+          team_id: null,
+          name: dto.name,
+          start_date: dto.start_date,
+          end_date: dto.end_date,
+          is_active: dto.is_active ?? false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        error: null,
+      }
+    }
     const insertData = {
       org_id: dto.org_id,
       name: dto.name,
@@ -206,11 +236,17 @@ export async function createSeason(
       console.error('[seasonsService] Failed to log SEASON_CREATED event:', logResult.error)
     }
 
+    debug.perf.end('seasonsService.createSeason')
+    debug.flow('SeasonsService.createSeason', 'Season created successfully', { seasonId: season.id, seasonName: season.name })
+    console.groupEnd()
     return {
       data: season,
       error: null,
     }
   } catch (err) {
+    debug.perf.end('seasonsService.createSeason')
+    debug.error('SeasonsService.createSeason', 'Failed to create season', { error: err, seasonName: dto.name, orgId: dto.org_id })
+    console.groupEnd()
     console.error('[seasonsService] Error creating season:', err)
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
     const errorDetails = err && typeof err === 'object' && 'details' in err ? (err as any).details : undefined
@@ -226,12 +262,18 @@ export async function updateSeason(
   seasonId: string,
   dto: UpdateSeasonDTO
 ): Promise<{ data: Season | null; error: Error | null }> {
-  if (USE_FAKE_DATA) {
-    await simulateDelay()
-    return { data: null, error: null }
-  }
+  console.groupCollapsed(`%cupdateSeason: ${seasonId}`, 'color: #666; font-weight: bold;');
+  debug.flow('SeasonsService.updateSeason', 'Updating season', { seasonId, seasonName: dto.name })
+  debug.perf.start('seasonsService.updateSeason')
 
   try {
+    if (USE_FAKE_DATA) {
+      await simulateDelay()
+      debug.perf.end('seasonsService.updateSeason')
+      debug.flow('SeasonsService.updateSeason', 'Season updated (fake)', { seasonId })
+      console.groupEnd()
+      return { data: null, error: null }
+    }
     type SeasonUpdate = Database['public']['Tables']['seasons']['Update']
     const updateData = {
       name: dto.name,
@@ -315,8 +357,13 @@ export async function isSeasonEmpty(
       .eq('season_id', seasonId)
 
     if (error) throw error
-    return { isEmpty: (count ?? 0) === 0, error: null }
+    const isEmpty = (count ?? 0) === 0
+    debug.perf.end('seasonsService.isSeasonEmpty')
+    debug.data('SeasonsService.isSeasonEmpty', 'Response', { seasonId, isEmpty })
+    return { isEmpty, error: null }
   } catch (err) {
+    debug.perf.end('seasonsService.isSeasonEmpty')
+    debug.error('SeasonsService.isSeasonEmpty', 'Failed to check if season is empty', { error: err, seasonId })
     console.error('[seasonsService] Error checking if season is empty:', err)
     return { isEmpty: false, error: err instanceof Error ? err : new Error('Failed to check if season is empty') }
   }
@@ -326,12 +373,18 @@ export async function deleteSeason(
   context: UserContext,
   seasonId: string
 ): Promise<{ error: Error | null }> {
-  if (USE_FAKE_DATA) {
-    await simulateDelay()
-    return { error: null }
-  }
+  console.groupCollapsed(`%cdeleteSeason: ${seasonId}`, 'color: #666; font-weight: bold;');
+  debug.flow('SeasonsService.deleteSeason', 'Deleting season', { seasonId })
+  debug.perf.start('seasonsService.deleteSeason')
 
   try {
+    if (USE_FAKE_DATA) {
+      await simulateDelay()
+      debug.perf.end('seasonsService.deleteSeason')
+      debug.flow('SeasonsService.deleteSeason', 'Season deleted (fake)', { seasonId })
+      console.groupEnd()
+      return { error: null }
+    }
     const { data: existingSeason } = await supabase
       .from('seasons')
       .select('id, org_id, name, start_date, end_date, is_active')
@@ -368,8 +421,14 @@ export async function deleteSeason(
       console.error('[seasonsService] Failed to log SEASON_DELETED event:', logResult.error)
     }
 
+    debug.perf.end('seasonsService.deleteSeason')
+    debug.flow('SeasonsService.deleteSeason', 'Season deleted successfully', { seasonId })
+    console.groupEnd()
     return { error: null }
   } catch (err) {
+    debug.perf.end('seasonsService.deleteSeason')
+    debug.error('SeasonsService.deleteSeason', 'Failed to delete season', { error: err, seasonId })
+    console.groupEnd()
     return { error: err instanceof Error ? err : new Error('Delete season failed') }
   }
 }

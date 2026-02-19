@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useFeatureFlags } from '../../utils/featureFlags'
 import { 
   Card, 
   Input, 
@@ -10,12 +11,13 @@ import {
   Button,
   ConfirmDialog,
 } from '../../components/admin'
-import { PageHeader, Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/platformAdmin'
-import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+import { AdminPageHeader } from '../../components/admin/AdminPageHeader'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/platformAdmin'
 import { getUserPreferences, updateUserPreferences, type UserPreferences } from '../../data/services/preferencesService'
 import { supabase } from '../../lib/supabase'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../../data/config'
 import { showSuccess, showError } from '../../utils/toast'
-import { getLink } from '../../utils/routes'
+import { getLink, RouteKeys } from '../../utils/routes'
 import { validatePhoneFormat } from '../../utils/phoneValidation'
 import NotificationPreferences from '../../components/common/NotificationPreferences'
 import { mergeNotificationPreferences, setPreferencesForContext, canonicalRole } from '../../utils/notificationPreferencesConfig'
@@ -116,13 +118,15 @@ function useDebounce<T extends (...args: any[]) => any>(callback: T, delay: numb
 }
 
 export default function AdminSettings() {
-  const { user, profile, updatePassword, refreshProfile } = useAuth()
+  const { user, profile, updatePassword, updateEmail, refreshProfile } = useAuth()
   const { currentOrganization } = useOrganization()
   const t = useT()
   const translator = t as unknown as (key: string) => string
   
   // URL Persistence
   const [searchParams, setSearchParams] = useSearchParams()
+  const { isEnabled, loading: flagsLoading } = useFeatureFlags(['orgadmin_advanced_personal_settings'])
+  const showAdvancedTab = flagsLoading || isEnabled('orgadmin_advanced_personal_settings')
   const activeTab = searchParams.get('tab') || 'profile'
 
   const handleTabChange = (value: string) => {
@@ -138,9 +142,6 @@ export default function AdminSettings() {
   const [changingPassword, setChangingPassword] = useState(false)
   
   // Success/error states
-  const [profileSuccess, setProfileSuccess] = useState(false)
-  const [workflowSuccess, setWorkflowSuccess] = useState(false)
-  const [advancedSuccess, setAdvancedSuccess] = useState(false)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
@@ -164,6 +165,13 @@ export default function AdminSettings() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordValidation, setPasswordValidation] = useState<ReturnType<typeof validatePassword> | null>(null)
   
+  // Email change state
+  const [showEmailModal, setShowEmailModal] = useState(false)
+  const [newEmail, setNewEmail] = useState('')
+  const [confirmEmail, setConfirmEmail] = useState('')
+  const [changingEmail, setChangingEmail] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  
   // Timezone options
   const timezoneOptions = useRef(getTimezoneOptions())
 
@@ -173,6 +181,16 @@ export default function AdminSettings() {
     if (roles.includes('coach')) return 'coach'
     return 'guardian'
   }, [currentOrganization?.roles])
+
+  const breadcrumbs = useMemo(() => {
+    if (currentOrganization) {
+      return [
+        { label: currentOrganization.name, path: getLink(RouteKeys.ADMIN_DASHBOARD) },
+        { label: 'Personal Settings' }
+      ]
+    }
+    return [{ label: 'Personal Settings' }]
+  }, [currentOrganization])
   
   // Load initial data
   useEffect(() => {
@@ -252,6 +270,24 @@ export default function AdminSettings() {
     loadSettings()
   }, [user, profile, currentOrganization?.id, activeRole, translator]) // Watch currentOrganization changes
   
+  // Refresh profile once when settings page mounts (so email is current after an email change). Omit refreshProfile from deps to avoid loop when profile updates.
+  useEffect(() => {
+    if (user?.id) {
+      refreshProfile()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: run only when user id is set, not when refreshProfile reference changes
+  }, [user?.id])
+
+  // Show friendly message when redirected with email link error (expired or access denied)
+  useEffect(() => {
+    const errorCode = searchParams.get('error_code')
+    const errorParam = searchParams.get('error')
+    if (errorCode === 'otp_expired' || errorParam === 'access_denied') {
+      showError('Email link is invalid or has expired. Please request a new link from the Change Email section below.')
+      setSearchParams({}, { replace: true })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount to clear auth error from URL
+
   // Debounced save handlers to prevent race conditions
   const debouncedSaveProfile = useDebounce(async () => {
     if (!user?.id) return
@@ -289,22 +325,25 @@ export default function AdminSettings() {
     
     setSavingProfile(true)
     setError(null)
-    setProfileSuccess(false)
     
     try {
-      // Update first_name, last_name, phone, and display_name in users table
-      // Bug 4 prevention: Use updated_at for optimistic conflict detection
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ 
-          first_name: trimmedFirstName,
-          last_name: trimmedLastName,
-          phone: trimmedPhone,
-          display_name: `${trimmedFirstName} ${trimmedLastName}`.trim(),
-        } as any) // Type cast to handle auto-generated types
-        .eq('id', user.id)
-      
-      if (updateError) throw updateError
+      if (USE_FAKE_DATA) {
+        await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+      } else {
+        // Update first_name, last_name, phone, and display_name in users table
+        // Bug 4 prevention: Use updated_at for optimistic conflict detection
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            first_name: trimmedFirstName,
+            last_name: trimmedLastName,
+            phone: trimmedPhone,
+            display_name: `${trimmedFirstName} ${trimmedLastName}`.trim(),
+          } as any) // Type cast to handle auto-generated types
+          .eq('id', user.id)
+
+        if (updateError) throw updateError
+      }
       
       // Update timezone in preferences (phone is now in users table)
       const updatedPrefs: UserPreferences = {
@@ -328,7 +367,6 @@ export default function AdminSettings() {
       await refreshProfile()
       
       showSuccess('Profile updated successfully!')
-      setProfileSuccess(true)
     } catch (err) {
       console.error('Error saving profile:', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to save profile'
@@ -434,6 +472,65 @@ export default function AdminSettings() {
     },
     [persistNotificationGroups]
   )
+
+  const handleUpdateDigestWindow = useCallback(
+    (groupId: NotificationGroup['id'], window: 'daily' | 'weekly') => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) =>
+          group.id === groupId ? { ...group, digestWindow: window } : group
+        )
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
+
+  const handleToggleQuietHours = useCallback(
+    (groupId: NotificationGroup['id'], enabled: boolean) => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) =>
+          group.id === groupId
+            ? {
+                ...group,
+                quietHoursEnabled: enabled,
+                quietHoursStart: enabled ? group.quietHoursStart || '22:00' : undefined,
+                quietHoursEnd: enabled ? group.quietHoursEnd || '08:00' : undefined,
+              }
+            : group
+        )
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
+
+  const handleUpdateQuietHours = useCallback(
+    (groupId: NotificationGroup['id'], start: string, end: string) => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) =>
+          group.id === groupId ? { ...group, quietHoursStart: start, quietHoursEnd: end } : group
+        )
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
+
+  const handleUpdateTimezone = useCallback(
+    (groupId: NotificationGroup['id'], timezone: string) => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) =>
+          group.id === groupId ? { ...group, timezone } : group
+        )
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
   
   // Handle workflow save with debouncing
   const debouncedSaveWorkflow = useDebounce(async () => {
@@ -441,7 +538,6 @@ export default function AdminSettings() {
     
     setSavingWorkflow(true)
     setError(null)
-    setWorkflowSuccess(false)
     
     try {
       const { error: prefsError } = await updateUserPreferences(user.id, preferences)
@@ -474,7 +570,6 @@ export default function AdminSettings() {
     
     setSavingAdvanced(true)
     setError(null)
-    setAdvancedSuccess(false)
     
     try {
       const { error: prefsError } = await updateUserPreferences(user.id, preferences)
@@ -510,6 +605,62 @@ export default function AdminSettings() {
     }
   }, [newPassword])
   
+  // Handle email change with validation
+  const handleChangeEmail = async () => {
+    setEmailError(null)
+    
+    // Validation
+    if (!newEmail || !confirmEmail) {
+      setEmailError('Please enter both email addresses')
+      return
+    }
+    
+    if (newEmail !== confirmEmail) {
+      setEmailError('Email addresses do not match')
+      return
+    }
+    
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(newEmail)) {
+      setEmailError('Please enter a valid email address')
+      return
+    }
+    
+    // Check if same as current email
+    if (newEmail.toLowerCase() === profile?.email?.toLowerCase()) {
+      setEmailError('New email must be different from your current email')
+      return
+    }
+    
+    setChangingEmail(true)
+    
+    try {
+      if (USE_FAKE_DATA) {
+        await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+      } else {
+        const { error } = await updateEmail(newEmail, '/admin/settings')
+        if (error) throw error
+      }
+      
+      showSuccess('Confirmation links have been sent to your current and new email addresses. Click both links to complete the change.')
+      setShowEmailModal(false)
+      setNewEmail('')
+      setConfirmEmail('')
+    } catch (err) {
+      console.error('Error changing email:', err)
+      const rawMessage = err instanceof Error ? err.message : 'Failed to change email'
+      const isRateLimit = /rate limit|too many requests/i.test(rawMessage)
+      const errorMessage = isRateLimit
+        ? 'Too many email requests. Please wait about an hour before trying again.'
+        : rawMessage
+      setEmailError(errorMessage)
+      showError(errorMessage)
+    } finally {
+      setChangingEmail(false)
+    }
+  }
+  
   // Handle password change with validation
   const handleChangePassword = async () => {
     if (!newPassword || newPassword !== confirmPassword) {
@@ -528,14 +679,19 @@ export default function AdminSettings() {
     setPasswordSuccess(false)
     
     try {
-      const { error: pwError } = await updatePassword(newPassword)
-      if (pwError) throw pwError
+      if (USE_FAKE_DATA) {
+        await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
+      } else {
+        const { error: pwError } = await updatePassword(newPassword)
+        if (pwError) throw pwError
+      }
       
       showSuccess('Password changed successfully!')
       setShowPasswordModal(false)
       setNewPassword('')
       setConfirmPassword('')
       setPasswordValidation(null)
+      setPasswordSuccess(true)
     } catch (err) {
       console.error('Error changing password:', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to change password'
@@ -551,7 +707,9 @@ export default function AdminSettings() {
   // Handle sign out all sessions
   const handleSignOutAll = async () => {
     try {
-      await supabase.auth.signOut({ scope: 'global' })
+      if (!USE_FAKE_DATA) {
+        await supabase.auth.signOut({ scope: 'global' })
+      }
       window.location.href = '/login'
     } catch (err) {
       console.error('Error signing out:', err)
@@ -569,15 +727,16 @@ export default function AdminSettings() {
   }
   
   return (
-    <div className="oa-page">
-      <PageHeader
+    <div className="oa-root">
+      <AdminPageHeader
         title="Personal Settings"
-        description="Manage your account settings and preferences"
+        subtitle="Manage your account settings and preferences"
+        breadcrumbs={breadcrumbs}
       />
       
+      
       {error && (
-        <div className="oa-alert oa-alert-error" style={{ marginBottom: '1.5rem' }}>
-          <span className="material-symbols-outlined">error</span>
+        <div className="oa-alert oa-alert-error oa-mb-4" style={{ background: 'var(--oa-danger-bg)', color: 'var(--oa-danger)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
           {error}
         </div>
       )}
@@ -594,18 +753,18 @@ export default function AdminSettings() {
           <option value="notifications">Notifications</option>
           <option value="workflow">Workflow</option>
           <option value="security">Security</option>
-          <option value="advanced">Advanced</option>
+          {showAdvancedTab && <option value="advanced">Advanced</option>}
         </select>
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="oa-tabs">
-        <TabsList>
+        <TabsList className="oa-mb-6">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="roles">Role & Access</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="workflow">Workflow</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          {showAdvancedTab && <TabsTrigger value="advanced">Advanced</TabsTrigger>}
         </TabsList>
         
         <TabsContent value="profile">
@@ -620,9 +779,10 @@ export default function AdminSettings() {
             setTimezone={setTimezone}
             timezoneOptions={timezoneOptions.current}
             profile={profile}
+            displayEmail={user?.email ?? profile?.email ?? null}
             onSave={handleSaveProfile}
             saving={savingProfile}
-            success={profileSuccess}
+            onShowEmailModal={() => setShowEmailModal(true)}
           />
         </TabsContent>
 
@@ -634,15 +794,11 @@ export default function AdminSettings() {
         </TabsContent>
 
         <TabsContent value="notifications">
-          <Card className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">{t('portal.settings.notifications.title')}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {t('portal.settings.notifications.toggles.individual')}
-                </p>
-              </div>
-            </div>
+          <Card>
+            <h3 className="oa-h3 oa-mb-4">{t('portal.settings.notifications.title')}</h3>
+            <p className="oa-text-muted oa-mb-4">
+              {t('portal.settings.notifications.toggles.individual')}
+            </p>
             <NotificationPreferences
               role={activeRole}
               groups={notificationGroups}
@@ -650,6 +806,10 @@ export default function AdminSettings() {
               onToggleGroupDigest={handleToggleGroupDigest}
               onToggleAction={handleToggleAction}
               onToggleChannel={handleToggleChannel}
+              onUpdateDigestWindow={handleUpdateDigestWindow}
+              onToggleQuietHours={handleToggleQuietHours}
+              onUpdateQuietHours={handleUpdateQuietHours}
+              onUpdateTimezone={handleUpdateTimezone}
               saving={savingNotifications}
             />
           </Card>
@@ -661,29 +821,121 @@ export default function AdminSettings() {
             setPreferences={setPreferences}
             onSave={handleSaveWorkflow}
             saving={savingWorkflow}
-            success={workflowSuccess}
           />
         </TabsContent>
 
         <TabsContent value="security">
           <SecuritySettings 
             user={user}
+            profile={profile}
+            displayEmail={user?.email ?? profile?.email ?? null}
             onShowPasswordModal={() => setShowPasswordModal(true)}
+            onShowEmailModal={() => setShowEmailModal(true)}
             onSignOutAll={() => setShowSignOutAllDialog(true)}
             passwordSuccess={passwordSuccess}
           />
         </TabsContent>
 
-        <TabsContent value="advanced">
-          <AdvancedSettings 
-            preferences={preferences}
-            setPreferences={setPreferences}
-            onSave={handleSaveAdvanced}
-            saving={savingAdvanced}
-            success={advancedSuccess}
-          />
-        </TabsContent>
+        {showAdvancedTab && (
+          <TabsContent value="advanced">
+            <AdvancedSettings 
+              preferences={preferences}
+              setPreferences={setPreferences}
+              onSave={handleSaveAdvanced}
+              saving={savingAdvanced}
+            />
+          </TabsContent>
+        )}
       </Tabs>
+      
+      {/* Email Change Modal */}
+      {showEmailModal && (
+        <div className="oa-modal-overlay" onClick={() => setShowEmailModal(false)} style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}>
+          <div className="oa-modal" onClick={(e) => e.stopPropagation()} style={{ background: 'var(--oa-bg, #fff)', borderRadius: '8px', maxWidth: '28rem', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)' }}>
+            <div className="oa-modal-header" style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--oa-border, #e5e7eb)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Change Email</h2>
+              <button
+                type="button"
+                className="oa-modal-close"
+                onClick={() => {
+                  setShowEmailModal(false)
+                  setEmailError(null)
+                  setNewEmail('')
+                  setConfirmEmail('')
+                }}
+                aria-label="Close"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="oa-modal-content" style={{ padding: '1.5rem', overflowY: 'auto', flex: '1 1 auto' }}>
+              <div className="oa-form-group oa-mb-4">
+                <p className="oa-text-muted">
+                  Current email: <strong>{profile?.email}</strong>
+                </p>
+              </div>
+              <div className="oa-form-grid oa-form-grid-2">
+                <div className="oa-form-group">
+                  <Input
+                    label="New Email"
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => {
+                      setNewEmail(e.target.value)
+                      setEmailError(null)
+                    }}
+                    placeholder="Enter new email address"
+                    error={emailError && (!newEmail || newEmail !== confirmEmail) ? emailError : undefined}
+                  />
+                </div>
+                <div className="oa-form-group">
+                  <Input
+                    label="Confirm New Email"
+                    type="email"
+                    value={confirmEmail}
+                    onChange={(e) => {
+                      setConfirmEmail(e.target.value)
+                      setEmailError(null)
+                    }}
+                    placeholder="Confirm new email address"
+                    error={confirmEmail && newEmail !== confirmEmail ? 'Email addresses do not match' : undefined}
+                  />
+                </div>
+              </div>
+              {emailError && (
+                <div className="oa-alert oa-alert-error" style={{ marginTop: '1rem', background: 'var(--oa-danger-bg)', color: 'var(--oa-danger)', padding: '1rem', borderRadius: '8px' }}>
+                  {emailError}
+                </div>
+              )}
+              <div className="oa-form-group oa-mt-4">
+                <p className="oa-text-muted oa-text-sm">
+                  Confirmation links will be sent to both your current and new email addresses. You must click both links to complete the change.
+                </p>
+              </div>
+            </div>
+            <div className="oa-modal-footer" style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--oa-border, #e5e7eb)', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', flexShrink: 0 }}>
+              <Button
+                onClick={() => {
+                  setShowEmailModal(false)
+                  setEmailError(null)
+                  setNewEmail('')
+                  setConfirmEmail('')
+                }}
+                variant="secondary"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleChangeEmail}
+                disabled={changingEmail || !newEmail || !confirmEmail || newEmail !== confirmEmail}
+                variant="primary"
+              >
+                {changingEmail ? 'Sending...' : 'Change Email'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Password Change Modal */}
       {showPasswordModal && (
@@ -759,12 +1011,12 @@ export default function AdminSettings() {
               </div>
             </div>
             <div className="oa-modal-footer">
-              <OrgAdminButton
+              <Button
                 onClick={() => setShowPasswordModal(false)}
-                variant="primary"
+                variant="secondary"
               >
                 Cancel
-              </OrgAdminButton>
+              </Button>
               <Button
                 onClick={handleChangePassword}
                 disabled={changingPassword || !newPassword || newPassword !== confirmPassword}
@@ -807,92 +1059,88 @@ function ProfileSettings({
   setTimezone, 
   timezoneOptions,
   profile,
+  displayEmail,
   onSave,
   saving,
-  success 
+  onShowEmailModal
 }: any) {
   return (
     <Card>
-      <div className="oa-card-header">
-        <h3 className="oa-card-title">
-          <span className="material-symbols-outlined">person</span>
-          Profile
-        </h3>
-      </div>
-      <div className="oa-card-content">
-        <div className="oa-form-grid oa-form-grid-2">
-          <div className="oa-form-group">
-            <Input
-              label="First Name"
-              value={firstName}
-              onChange={(e: any) => setFirstName(e.target.value)}
-              placeholder="John"
-              required
-              maxLength={100}
-              helper="Your first name"
-            />
-          </div>
-          
-          <div className="oa-form-group">
-            <Input
-              label="Last Name"
-              value={lastName}
-              onChange={(e: any) => setLastName(e.target.value)}
-              placeholder="Smith"
-              required
-              maxLength={100}
-              helper="Your last name"
-            />
-          </div>
-          
-          <div className="oa-form-group">
-            <Input
-              label="Email"
-              value={profile?.email || ''}
-              disabled
-              helper="Email is used for login and cannot be changed here"
-            />
-          </div>
-          
-          <div className="oa-form-group">
-            <Input
-              label="Phone Number"
-              type="tel"
-              value={phone}
-              onChange={(e: any) => setPhone(e.target.value)}
-              placeholder="(555) 123-4567"
-              required
-              maxLength={20}
-              helper="Required - used for account recovery and notifications"
-            />
-          </div>
-          
-          <div className="oa-form-group">
-            <Select
-              label="Timezone"
-              value={timezone}
-              onChange={(e: any) => setTimezone(e.target.value)}
-              options={timezoneOptions}
-              helper="Override organization timezone for your account"
-            />
+      <h3 className="oa-h3 oa-mb-4">Profile</h3>
+      <div className="oa-form-grid oa-form-grid-2">
+        <div className="oa-form-group">
+          <Input
+            label="First Name"
+            value={firstName}
+            onChange={(e: any) => setFirstName(e.target.value)}
+            placeholder="John"
+            required
+            maxLength={100}
+            helper="Your first name"
+          />
+        </div>
+        
+        <div className="oa-form-group">
+          <Input
+            label="Last Name"
+            value={lastName}
+            onChange={(e: any) => setLastName(e.target.value)}
+            placeholder="Smith"
+            required
+            maxLength={100}
+            helper="Your last name"
+          />
+        </div>
+        
+        <div className="oa-form-group">
+          <label className="oa-label">Email</label>
+          <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'baseline', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.875rem', color: 'var(--oa-text, #111)' }}>
+              {displayEmail ?? profile?.email ?? 'No email set'}
+            </span>
+            <button
+              type="button"
+              className="oa-link-button"
+              onClick={() => typeof onShowEmailModal === 'function' && onShowEmailModal()}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '0.875rem', color: 'var(--org-link-color, #137fec)', textDecoration: 'underline' }}
+            >
+              Change email
+            </button>
           </div>
         </div>
         
-        <div className="oa-form-actions">
-          <Button
-            onClick={onSave}
-            disabled={saving}
-            variant="primary"
-          >
-            {saving ? 'Saving...' : 'Save Profile'}
-          </Button>
-          {success && (
-            <span className="oa-success-message">
-              <span className="material-symbols-outlined">check_circle</span>
-              Saved successfully
-            </span>
-          )}
+        <div className="oa-form-group">
+          <Input
+            label="Phone Number"
+            type="tel"
+            value={phone}
+            onChange={(e: any) => setPhone(e.target.value)}
+            placeholder="(555) 123-4567"
+            required
+            maxLength={20}
+            helper="Required - used for account recovery and notifications"
+          />
         </div>
+        
+        <div className="oa-form-group">
+          <Select
+            label="Timezone"
+            value={timezone}
+            onChange={(e: any) => setTimezone(e.target.value)}
+            options={timezoneOptions}
+            helper="Override organization timezone for your account"
+          />
+        </div>
+      </div>
+      
+      <div className="oa-form-actions">
+        <Button
+          onClick={onSave}
+          disabled={saving}
+          variant="primary"
+        >
+          {saving ? 'Saving...' : 'Save Profile'}
+        </Button>
       </div>
     </Card>
   )
@@ -901,250 +1149,230 @@ function ProfileSettings({
 function RoleSettings({ currentOrganization, profile }: any) {
   return (
     <Card>
-      <div className="oa-card-header">
-        <h3 className="oa-card-title">
-          <span className="material-symbols-outlined">badge</span>
-          Role & Access
-        </h3>
-      </div>
-      <div className="oa-card-content">
-        <div className="oa-info-section">
+      <h3 className="oa-h3 oa-mb-4">Role & Access</h3>
+      
+      <div className="oa-info-section">
+        <div className="oa-info-row">
+          <span className="oa-info-label">Current Organization</span>
+          <span className="oa-info-value">
+            {currentOrganization?.name || 'No organization selected'}
+          </span>
+        </div>
+        
+        {currentOrganization && (
           <div className="oa-info-row">
-            <span className="oa-info-label">Current Organization</span>
-            <span className="oa-info-value">
-              {currentOrganization?.name || 'No organization selected'}
-            </span>
-          </div>
-          
-          {currentOrganization && (
-            <div className="oa-info-row">
-              <span className="oa-info-label">Your Roles</span>
-              <div className="oa-badges">
-                {currentOrganization.roles?.map((role: string) => (
-                  <span key={role} className="oa-badge oa-badge-primary">
-                    {role === 'org_admin' ? 'Admin' : role.charAt(0).toUpperCase() + role.slice(1)}
-                  </span>
-                ))}
-              </div>
+            <span className="oa-info-label">Your Roles</span>
+            <div className="oa-badges">
+              {currentOrganization.roles?.map((role: string) => (
+                <span key={role} className="oa-badge oa-badge-primary">
+                  {role === 'org_admin' ? 'Admin' : role.charAt(0).toUpperCase() + role.slice(1)}
+                </span>
+              ))}
             </div>
-          )}
-          
-          <div className="oa-info-row">
-            <span className="oa-info-label">All Organizations</span>
-            <div className="oa-org-list">
-              {profile?.organizations && profile.organizations.length > 0 ? (
-                profile.organizations.map((org: any) => (
-                  <div key={org.id} className="oa-org-item">
-                    <span className="oa-org-name">{org.name}</span>
-                    <div className="oa-badges">
-                      {org.roles?.map((role: string) => (
-                        <span key={role} className="oa-badge oa-badge-secondary">
-                          {role === 'org_admin' ? 'Admin' : role.charAt(0).toUpperCase() + role.slice(1)}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <span className="oa-text-muted">No organizations</span>
-              )}
-            </div>
-          </div>
-          
-          {profile?.isPlatformAdmin && (
-            <div className="oa-info-row">
-              <span className="oa-badge oa-badge-success">
-                <span className="material-symbols-outlined">admin_panel_settings</span>
-                Platform Administrator
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-function WorkflowSettings({ preferences, setPreferences, onSave, saving, success }: any) {
-  return (
-    <Card>
-      <div className="oa-card-header">
-        <h3 className="oa-card-title">
-          <span className="material-symbols-outlined">tune</span>
-          Workflow Preferences
-        </h3>
-      </div>
-      <div className="oa-card-content">
-        <div className="oa-form-group">
-          <Select
-            label="Default Landing Page"
-            value={preferences.workflow?.default_landing_page || '/admin'}
-            onChange={(e: any) => setPreferences({
-              ...preferences,
-              workflow: { ...preferences.workflow, default_landing_page: e.target.value }
-            })}
-            options={[
-              { value: '/admin', label: 'Dashboard' },
-              { value: getLink('admin.teams.list'), label: 'Teams' },
-              { value: getLink('admin.athletes.list'), label: 'Athletes' },
-              { value: getLink('admin.guardians.list'), label: 'Guardians' },
-              { value: '/admin/attendance', label: 'Attendance' },
-              { value: '/admin/events', label: 'Events' },
-              { value: '/admin/payments', label: 'Payments' },
-            ]}
-            helper="Page to show after login"
-          />
-        </div>
-        
-        <div className="oa-form-group">
-          <Checkbox
-            label="Remember last selected filters"
-            checked={preferences.workflow?.remember_filters ?? true}
-            onChange={(e: any) => setPreferences({
-              ...preferences,
-              workflow: { ...preferences.workflow, remember_filters: e.target.checked }
-            })}
-            helper="Restore your previous filter selections when returning to pages"
-          />
-        </div>
-        
-        <div className="oa-form-group">
-          <Checkbox
-            label="Auto-select last active organization"
-            checked={preferences.workflow?.auto_select_org ?? true}
-            onChange={(e: any) => setPreferences({
-              ...preferences,
-              workflow: { ...preferences.workflow, auto_select_org: e.target.checked }
-            })}
-            helper="Automatically select the last organization you worked in"
-          />
-        </div>
-        
-        <div className="oa-form-actions">
-          <Button
-            onClick={onSave}
-            disabled={saving}
-            variant="primary"
-          >
-            {saving ? 'Saving...' : 'Save Workflow'}
-          </Button>
-          {success && (
-            <span className="oa-success-message">
-              <span className="material-symbols-outlined">check_circle</span>
-              Saved successfully
-            </span>
-          )}
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-function SecuritySettings({ user, onShowPasswordModal, onSignOutAll, passwordSuccess }: any) {
-  return (
-    <Card>
-      <div className="oa-card-header">
-        <h3 className="oa-card-title">
-          <span className="material-symbols-outlined">security</span>
-          Security
-        </h3>
-      </div>
-      <div className="oa-card-content">
-        <div className="oa-form-group">
-          <label className="oa-label">Password</label>
-          <OrgAdminButton
-            onClick={onShowPasswordModal}
-            variant="primary"
-          >
-            Change Password
-          </OrgAdminButton>
-          {passwordSuccess && (
-            <div className="oa-alert oa-alert-success" style={{ marginTop: '1rem' }}>
-              <span className="material-symbols-outlined">check_circle</span>
-              Password changed successfully
-            </div>
-          )}
-        </div>
-        
-        {user?.last_sign_in_at && (
-          <div className="oa-info-row">
-            <span className="oa-info-label">Last login</span>
-            <span className="oa-info-value">
-              {new Date(user.last_sign_in_at).toLocaleString()}
-            </span>
           </div>
         )}
         
-        <div className="oa-form-group">
-          <label className="oa-label">Sessions</label>
-          <Button
-            onClick={onSignOutAll}
-            variant="danger"
-          >
-            Sign Out All Sessions
-          </Button>
-          <p className="oa-helper-text">
-            This will sign you out from all devices
-          </p>
+        <div className="oa-info-row">
+          <span className="oa-info-label">All Organizations</span>
+          <div className="oa-org-list">
+            {profile?.organizations && profile.organizations.length > 0 ? (
+              profile.organizations.map((org: any) => (
+                <div key={org.id} className="oa-org-item">
+                  <span className="oa-org-name">{org.name}</span>
+                  <div className="oa-badges">
+                    {org.roles?.map((role: string) => (
+                      <span key={role} className="oa-badge oa-badge-secondary">
+                        {role === 'org_admin' ? 'Admin' : role.charAt(0).toUpperCase() + role.slice(1)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <span className="oa-text-muted">No organizations</span>
+            )}
+          </div>
         </div>
+        
+        {profile?.isPlatformAdmin && (
+          <div className="oa-info-row">
+            <span className="oa-badge oa-badge-success">
+              <span className="material-symbols-outlined">admin_panel_settings</span>
+              Platform Administrator
+            </span>
+          </div>
+        )}
       </div>
     </Card>
   )
 }
 
-function AdvancedSettings({ preferences, setPreferences, onSave, saving, success }: any) {
+function WorkflowSettings({ preferences, setPreferences, onSave, saving }: any) {
   return (
     <Card>
-      <div className="oa-card-header">
-        <h3 className="oa-card-title">
-          <span className="material-symbols-outlined">science</span>
-          Advanced
-        </h3>
+      <h3 className="oa-h3 oa-mb-4">Workflow Preferences</h3>
+      <div className="oa-form-group">
+        <Select
+          label="Default Landing Page"
+          value={preferences.workflow?.default_landing_page || '/admin'}
+          onChange={(e: any) => setPreferences({
+            ...preferences,
+            workflow: { ...preferences.workflow, default_landing_page: e.target.value }
+          })}
+          options={[
+            { value: '/admin', label: 'Dashboard' },
+            { value: getLink('admin.teams.list'), label: 'Teams' },
+            { value: getLink('admin.athletes.list'), label: 'Athletes' },
+            { value: getLink('admin.guardians.list'), label: 'Guardians' },
+            { value: '/admin/attendance', label: 'Attendance' },
+            { value: '/admin/events', label: 'Events' },
+            { value: '/admin/payments', label: 'Payments' },
+          ]}
+          helper="Page to show after login"
+        />
       </div>
-      <div className="oa-card-content">
-        <div className="oa-form-group">
-          <Checkbox
-            label="Enable beta features"
-            checked={preferences.advanced?.beta_features ?? false}
-            onChange={(e: any) => setPreferences({
-              ...preferences,
-              advanced: { ...preferences.advanced, beta_features: e.target.checked }
-            })}
-            helper="Access experimental features (may be unstable)"
-          />
-        </div>
+      
+      <div className="oa-form-group">
+        <Checkbox
+          label="Remember last selected filters"
+          checked={preferences.workflow?.remember_filters ?? true}
+          onChange={(e: any) => setPreferences({
+            ...preferences,
+            workflow: { ...preferences.workflow, remember_filters: e.target.checked }
+          })}
+          helper="Restore your previous filter selections when returning to pages"
+        />
+      </div>
+      
+      <div className="oa-form-group">
+        <Checkbox
+          label="Auto-select last active organization"
+          checked={preferences.workflow?.auto_select_org ?? true}
+          onChange={(e: any) => setPreferences({
+            ...preferences,
+            workflow: { ...preferences.workflow, auto_select_org: e.target.checked }
+          })}
+          helper="Automatically select the last organization you worked in"
+        />
+      </div>
+      
+      <div className="oa-form-actions">
+        <Button
+          onClick={onSave}
+          disabled={saving}
+          variant="primary"
+        >
+          {saving ? 'Saving...' : 'Save Workflow'}
+        </Button>
+      </div>
+    </Card>
+  )
+}
+
+function SecuritySettings({ user, profile, displayEmail, onShowPasswordModal, onShowEmailModal, onSignOutAll, passwordSuccess }: any) {
+  return (
+    <Card>
+      <h3 className="oa-h3 oa-mb-4">Security</h3>
         
-        <div className="oa-form-group">
-          <Select
-            label="UI Density"
-            value={preferences.advanced?.ui_density || 'comfortable'}
-            onChange={(e: any) => setPreferences({
-              ...preferences,
-              advanced: { ...preferences.advanced, ui_density: e.target.value as 'comfortable' | 'compact' }
-            })}
-            options={[
-              { value: 'comfortable', label: 'Comfortable' },
-              { value: 'compact', label: 'Compact' },
-            ]}
-            helper="Adjust spacing and sizing of interface elements"
-          />
-        </div>
-        
-        <div className="oa-form-actions">
-          <Button
-            onClick={onSave}
-            disabled={saving}
-            variant="primary"
+      <div className="oa-form-group">
+        <label className="oa-label">Email</label>
+        <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'baseline', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.875rem', color: 'var(--oa-text, #111)' }}>
+            {displayEmail ?? profile?.email ?? 'No email set'}
+          </span>
+          <button
+            type="button"
+            className="oa-link-button"
+            onClick={onShowEmailModal}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '0.875rem', color: 'var(--org-link-color, #137fec)', textDecoration: 'underline' }}
           >
-            {saving ? 'Saving...' : 'Save Advanced'}
-          </Button>
-          {success && (
-            <span className="oa-success-message">
-              <span className="material-symbols-outlined">check_circle</span>
-              Saved successfully
-            </span>
-          )}
+            Change email
+          </button>
         </div>
+      </div>
+      
+      <div className="oa-form-group">
+        <label className="oa-label">Password</label>
+        <Button
+          onClick={onShowPasswordModal}
+          variant="secondary"
+        >
+          Change Password
+        </Button>
+        {passwordSuccess && (
+          <div className="oa-alert oa-alert-success" style={{ marginTop: '1rem', background: 'var(--oa-success-bg)', color: 'var(--oa-success)', padding: '1rem', borderRadius: '8px' }}>
+            <span className="material-symbols-outlined">check_circle</span>
+            Password changed successfully
+          </div>
+        )}
+      </div>
+      
+      {user?.last_sign_in_at && (
+        <div className="oa-info-row">
+          <span className="oa-info-label">Last login</span>
+          <span className="oa-info-value">
+            {new Date(user.last_sign_in_at).toLocaleString()}
+          </span>
+        </div>
+      )}
+      
+      <div className="oa-form-group">
+        <label className="oa-label">Sessions</label>
+        <Button
+          onClick={onSignOutAll}
+          variant="danger"
+        >
+          Sign Out All Sessions
+        </Button>
+        <p className="oa-helper-text">
+          This will sign you out from all devices
+        </p>
+      </div>
+    </Card>
+  )
+}
+
+function AdvancedSettings({ preferences, setPreferences, onSave, saving }: any) {
+  return (
+    <Card>
+      <h3 className="oa-h3 oa-mb-4">Advanced</h3>
+      
+      <div className="oa-form-group">
+        <Checkbox
+          label="Enable beta features"
+          checked={preferences.advanced?.beta_features ?? false}
+          onChange={(e: any) => setPreferences({
+            ...preferences,
+            advanced: { ...preferences.advanced, beta_features: e.target.checked }
+          })}
+          helper="Access experimental features (may be unstable)"
+        />
+      </div>
+      
+      <div className="oa-form-group">
+        <Select
+          label="UI Density"
+          value={preferences.advanced?.ui_density || 'comfortable'}
+          onChange={(e: any) => setPreferences({
+            ...preferences,
+            advanced: { ...preferences.advanced, ui_density: e.target.value as 'comfortable' | 'compact' }
+          })}
+          options={[
+            { value: 'comfortable', label: 'Comfortable' },
+            { value: 'compact', label: 'Compact' },
+          ]}
+          helper="Adjust spacing and sizing of interface elements"
+        />
+      </div>
+      
+      <div className="oa-form-actions">
+        <Button
+          onClick={onSave}
+          disabled={saving}
+          variant="primary"
+        >
+          {saving ? 'Saving...' : 'Save Advanced'}
+        </Button>
       </div>
     </Card>
   )

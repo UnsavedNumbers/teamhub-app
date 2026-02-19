@@ -41,7 +41,12 @@ const statusLabels: Record<FeeAssignmentStatus, string> = {
   overdue: 'Overdue',
 }
 
+import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+import { USE_FAKE_DATA } from '../data/config'
+
 export default function MyPayments() {
+  useDebugLifecycle('MyPayments')
+  
   const t = useT()
   const [assignments, setAssignments] = useState<FeeAssignment[]>([])
   const [loading, setLoading] = useState(true)
@@ -63,14 +68,21 @@ export default function MyPayments() {
   const [creatingPartialCheckout, setCreatingPartialCheckout] = useState(false)
 
 
-  const { context, isReady } = useUserContext()
+  const { context, isReady, isAuthenticated } = useUserContext()
   const navigate = useNavigate()
 
+  // In fake data mode, load payments even when no org is selected so /portal/payments shows demo data
+  const shouldLoad = isReady || (USE_FAKE_DATA && isAuthenticated)
+
   useEffect(() => {
-    if (!isReady) return
+    if (!shouldLoad) return
+    if (USE_FAKE_DATA && !context.orgId) {
+      setOrgAllowsPartialPayments(true)
+    } else {
+      fetchOrgPaymentPolicy()
+    }
     fetchAssignments()
-    fetchOrgPaymentPolicy()
-  }, [context, isReady])
+  }, [context, shouldLoad])
 
   async function fetchOrgPaymentPolicy() {
     try {
@@ -133,7 +145,7 @@ export default function MyPayments() {
         description: fa.fee.description ?? null,
         due_date: fa.fee.due_date,
         fee_type: fa.fee.fee_type ?? '',
-        allow_partial_payment: (fa.fee as any).allow_partial_payment ?? false,
+        allow_partial_payment: (fa.fee as any).allow_partial_payment ?? (fa.fee as any).allow_partial ?? false,
         min_partial_cents: (fa.fee as any).min_partial_cents ?? null,
         season: (fa.fee as any).season ? {
           id: (fa.fee as any).season.id,
@@ -248,6 +260,20 @@ export default function MyPayments() {
     }
   }
 
+  const redirectToCheckout = (checkoutUrl: string) => {
+    try {
+      const parsed = new URL(checkoutUrl, window.location.origin)
+      if (parsed.origin === window.location.origin) {
+        navigate(`${parsed.pathname}${parsed.search}${parsed.hash}`)
+        return
+      }
+    } catch {
+      // Fall back to hard navigation when URL parsing fails.
+    }
+
+    window.location.href = checkoutUrl
+  }
+
   const handleApplyDiscount = async () => {
     const code = discountCode.trim()
     if (!code) {
@@ -329,7 +355,7 @@ export default function MyPayments() {
       })
 
       if (checkout_session_url) {
-        window.location.href = checkout_session_url
+        redirectToCheckout(checkout_session_url)
       } else {
         setCheckoutError('Failed to create checkout session')
       }
@@ -348,6 +374,18 @@ export default function MyPayments() {
     }
 
     const amountCents = Math.round(amount * 100)
+    const minimumPartialCents = Math.max(1, Math.ceil(assignment.amount_cents * 0.1))
+    const remainingCents = assignment.balance_cents
+
+    if (amountCents < minimumPartialCents) {
+      setPartialPaymentError(`Minimum partial payment is $${(minimumPartialCents / 100).toFixed(2)}`)
+      return
+    }
+
+    if (amountCents > remainingCents) {
+      setPartialPaymentError(`Amount cannot exceed remaining balance of $${(remainingCents / 100).toFixed(2)}`)
+      return
+    }
 
     setPartialPaymentError(null)
     setCreatingPartialCheckout(true)
@@ -355,12 +393,13 @@ export default function MyPayments() {
       const { checkout_session_url } = await createParentPartialCheckoutSession({
         feeAssignmentId: assignment.id,
         amountCents,
+        totalFeeAmountCents: assignment.amount_cents,
         successUrl: `${window.location.origin}/portal/payments/success`,
         cancelUrl: `${window.location.origin}/portal/payments/cancel`,
       })
 
       if (checkout_session_url) {
-        window.location.href = checkout_session_url
+        redirectToCheckout(checkout_session_url)
       } else {
         setPartialPaymentError('Failed to create checkout session')
       }
@@ -606,7 +645,7 @@ export default function MyPayments() {
                         {orgAllowsPartialPayments && 
                          a.fee?.allow_partial_payment && 
                          (a.status === 'unpaid' || a.status === 'partial') && 
-                         a.balance_cents > 0 && (
+                         a.balance_cents >= Math.max(1, Math.ceil(a.amount_cents * 0.1)) && (
                           <Button
                             variant="secondary"
                             onClick={(e) => {
@@ -647,8 +686,10 @@ export default function MyPayments() {
           const assignment = filteredAssignments.find(a => a.id === partialPaymentModalOpen)
           if (!assignment) return null
 
-          const maxAmount = assignment.balance_cents / 100
-          const minAmount = assignment.fee?.min_partial_cents ? assignment.fee.min_partial_cents / 100 : 0.01
+          const maxAmountCents = assignment.balance_cents
+          const minAmountCents = Math.max(1, Math.ceil(assignment.amount_cents * 0.1))
+          const maxAmount = maxAmountCents / 100
+          const minAmount = minAmountCents / 100
 
           return (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => {
@@ -673,11 +714,9 @@ export default function MyPayments() {
                       Amount due: ${(assignment.balance_cents / 100).toFixed(2)}
                     </p>
                   )}
-                  {assignment.fee?.min_partial_cents && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Minimum partial payment: ${(assignment.fee.min_partial_cents / 100).toFixed(2)}
-                    </p>
-                  )}
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Minimum partial payment (10% of total fee): ${(minAmountCents / 100).toFixed(2)}
+                  </p>
                 </div>
                 <div className="mb-4">
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">

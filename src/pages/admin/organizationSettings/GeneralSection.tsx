@@ -47,6 +47,8 @@ interface GeneralSectionProps {
   onDirtyChange: (dirty: boolean) => void
 }
 
+import { useDebugLifecycle } from '../../../lib/debug/integrations/useDebugLifecycle'
+
 export default function GeneralSection({
   settings,
   isSaving,
@@ -55,6 +57,8 @@ export default function GeneralSection({
   onSettingsUpdated,
   onDirtyChange,
 }: GeneralSectionProps) {
+  useDebugLifecycle('GeneralSection')
+  
   const { context } = useUserContext()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)

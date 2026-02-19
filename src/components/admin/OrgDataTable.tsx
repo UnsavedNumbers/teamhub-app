@@ -138,7 +138,7 @@ export default function OrgDataTable<T extends { id: string }>({
     <div className="oa-card" style={{ padding: 0, overflow: 'hidden' }}>
       {/* Top Pagination */}
       <div
-        className={cn('oa-flex', 'oa-items-center', 'oa-gap-3', 'oa-table-pagination')}
+        className={cn('oa-flex', 'oa-items-center', 'oa-gap-3', 'oa-table-pagination', 'oa-table-pagination--top')}
         style={{
           padding: 'var(--pa-space-3)',
         }}
@@ -193,7 +193,7 @@ export default function OrgDataTable<T extends { id: string }>({
       </div>
 
       {/* Desktop Table View */}
-      <div className="oa-table-desktop" style={{ overflowX: 'auto' }}>
+      <div className="oa-table-desktop oa-table-scroll-wrap" style={{ overflowX: 'auto' }}>
         <table className="oa-table" style={{ width: '100%' }}>
           <thead>
             <tr>
@@ -311,7 +311,7 @@ export default function OrgDataTable<T extends { id: string }>({
 
       {/* Bottom Pagination */}
       <div
-        className={cn('oa-flex', 'oa-items-center', 'oa-gap-3', 'oa-table-pagination')}
+        className={cn('oa-flex', 'oa-items-center', 'oa-gap-3', 'oa-table-pagination', 'oa-table-pagination--bottom')}
         style={{
           padding: 'var(--pa-space-3)',
           borderTop: '1px solid var(--org-border-default, var(--pa-n100))',

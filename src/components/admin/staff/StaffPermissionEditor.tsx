@@ -69,7 +69,7 @@ export default function StaffPermissionEditor({
     >
       <div className="pa-space-y-4">
         <div>
-          <label className="pa-label pa-mb-2">{t('admin.staff.permissions')}</label>
+          <label className="oa-label pa-mb-2">{t('admin.staff.permissions')}</label>
           <div className="pa-space-y-2">
             {STAFF_PERMISSION_KEYS.map((key) => (
               <label
@@ -114,4 +114,5 @@ export default function StaffPermissionEditor({
     </Modal>
   )
 }
+
 
