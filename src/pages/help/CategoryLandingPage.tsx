@@ -14,12 +14,14 @@ import {
   getCategorySubcategoryGroups,
   searchArticles,
 } from '../../data/services/helpCenterDataService'
+import { getAllCachedWordPressData } from '../../data/services/helpCenterSyncService'
 import type {
   HelpCategory,
   HelpSection,
   HelpArticle,
   HelpSubcategoryGroup,
 } from '../../data/services/helpCenterDataService'
+import type { WordPressPost, WordPressTag } from '../../data/services/wordpressApiService'
 import { showError } from '../../utils/toast'
 import { debug } from '../../lib/debug'
 import { getLink, getPath } from '../../utils/routes'
@@ -43,6 +45,8 @@ export default function CategoryLandingPage() {
   const [searchResults, setSearchResults] = useState<HelpArticle[]>([])
   const [searching, setSearching] = useState(false)
   const [showSearchResults, setShowSearchResults] = useState(false)
+  const [featuredTagIds, setFeaturedTagIds] = useState<number[]>([])
+  const [postExcerptsById, setPostExcerptsById] = useState<Record<number, string>>({})
 
   const userRole: UserRole | null = profile && profile.role
     ? (mapAuthRoleToStandardRole(
@@ -94,9 +98,11 @@ export default function CategoryLandingPage() {
         console.log('[CategoryLandingPage] 🔄 Fetching articles and subcategories...')
       }
 
-      const [articlesResult, childCategoriesResult] = await Promise.all([
+      const [articlesResult, childCategoriesResult, tagsResult, postsResult] = await Promise.all([
         getCategoryArticles(categorySlug, userRole),
         getCategorySubcategoryGroups(categorySlug),
+        getAllCachedWordPressData<WordPressTag>('tag'),
+        getAllCachedWordPressData<WordPressPost>('post'),
       ])
 
       if (articlesResult.error) {
@@ -109,6 +115,25 @@ export default function CategoryLandingPage() {
       setSections(articlesResult.data?.sections || [])
       setGeneralArticles(articlesResult.data?.generalArticles || [])
       setSubcategoryGroups(childCategoriesResult.data || [])
+      if (!tagsResult.error) {
+        const featuredIds = (tagsResult.data || [])
+          .filter((tag) => tag.slug?.toLowerCase() === 'featured' || tag.name?.toLowerCase() === 'featured')
+          .map((tag) => tag.id)
+        setFeaturedTagIds(featuredIds)
+      } else {
+        setFeaturedTagIds([])
+      }
+      if (!postsResult.error) {
+        const excerpts = Object.fromEntries(
+          (postsResult.data || []).map((post) => [
+            post.id,
+            (post.excerpt?.rendered || '').replace(/<[^>]*>/g, '').trim(),
+          ])
+        )
+        setPostExcerptsById(excerpts)
+      } else {
+        setPostExcerptsById({})
+      }
 
       if (window.location.hostname === 'localhost') {
         console.log('[CategoryLandingPage] ✅ Data loaded successfully')
@@ -175,6 +200,29 @@ export default function CategoryLandingPage() {
 
     return unique
   }, [subcategoryGroups])
+
+  const taxonomyArticles = useMemo(() => {
+    const merged = [...allArticles, ...directArticles]
+    const seen = new Set<number>()
+    return merged.filter((article) => {
+      if (seen.has(article.id)) return false
+      seen.add(article.id)
+      return true
+    })
+  }, [allArticles, directArticles])
+
+  const featuredArticle = useMemo(() => {
+    if (featuredTagIds.length === 0) return null
+    const featured = taxonomyArticles
+      .filter((article) => article.tags?.some((tagId) => featuredTagIds.includes(tagId)))
+      .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime())
+    return featured[0] || null
+  }, [taxonomyArticles, featuredTagIds])
+
+  const displayArticles = useMemo(
+    () => (featuredArticle ? allArticles.filter((article) => article.id !== featuredArticle.id) : allArticles),
+    [allArticles, featuredArticle]
+  )
 
   // Search functionality
   useEffect(() => {
@@ -312,6 +360,81 @@ export default function CategoryLandingPage() {
       </section>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-20">
+        {featuredArticle && (() => {
+          const featuredArticleExcerpt = postExcerptsById[featuredArticle.id] || featuredArticle.excerpt || ''
+          const featuredArticleLink = (() => {
+            if (featuredArticle.categoryPath && featuredArticle.categoryPath.length > 1) {
+              const parentPath = featuredArticle.categoryPath.slice(0, -1).filter(slug => slug !== 'help')
+              if (parentPath.length === 1) {
+                return getLink('portal.helpArticleNested', {
+                  parentCategorySlug: parentPath[0],
+                  categorySlug: featuredArticle.categorySlug || '',
+                  articleSlug: featuredArticle.slug || '',
+                })
+              }
+              return `${getPath('portal.help')}/${parentPath.join('/')}/${featuredArticle.categorySlug}/${featuredArticle.slug}`
+            }
+            return getLink('portal.helpArticle', {
+              categorySlug: featuredArticle.categorySlug || '',
+              articleSlug: featuredArticle.slug || '',
+            })
+          })()
+
+          return (
+            <div className="mb-8">
+              <div className="relative overflow-hidden bg-[#1a242d] border border-slate-800 rounded-xl p-1 shadow-2xl">
+                <div className="absolute top-0 right-0 p-6 opacity-10">
+                  <span className="material-symbols-outlined text-9xl text-[#0d7ff2]">analytics</span>
+                </div>
+                <div className="flex flex-col lg:flex-row gap-8 items-center bg-[#101922]/50 p-8 rounded-lg relative overflow-hidden">
+                  <div
+                    className="absolute inset-0 opacity-5"
+                    style={{
+                      backgroundImage: 'radial-gradient(#0d7ff2 0.5px, transparent 0.5px)',
+                      backgroundSize: '24px 24px',
+                      backgroundColor: '#1a242d',
+                      pointerEvents: 'none',
+                    }}
+                  ></div>
+                  <div className="w-full lg:w-1/2 aspect-video rounded-lg overflow-hidden border border-slate-700 shadow-inner group">
+                    {featuredArticle.featuredImageUrl || category?.coverPhotoUrl ? (
+                      <img
+                        src={featuredArticle.featuredImageUrl || category?.coverPhotoUrl}
+                        alt={featuredArticle.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-slate-900 flex items-center justify-center text-slate-500">
+                        <span className="material-symbols-outlined text-5xl">article</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="w-full lg:w-1/2 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-[#0d7ff2] text-white text-[10px] font-black px-2 py-1 rounded tracking-tighter">
+                        {t('photos.browse.featuredLabel')}
+                      </span>
+                      <span className="text-slate-500 text-xs font-medium uppercase tracking-widest">
+                        {t('portal.settings.helpCenter.minRead', { minutes: featuredArticle.readingTime || 5 })}
+                      </span>
+                    </div>
+                    <h2 className="text-3xl font-bold text-white leading-tight">{featuredArticle.title}</h2>
+                    <p className="text-slate-400 font-sans leading-relaxed">{featuredArticleExcerpt}</p>
+                    <div className="pt-4 flex gap-4">
+                      <Link
+                        to={featuredArticleLink}
+                        className="bg-[#0d7ff2] text-white px-8 py-3 rounded-lg font-bold hover:shadow-lg hover:shadow-[#0d7ff2]/30 transition-all flex items-center gap-2"
+                      >
+                        {t('common.view')} <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
         {/* Display Subcategory Groups as Tiles */}
         {subcategoryGroups.length > 0 && (
           <>
@@ -381,7 +504,7 @@ export default function CategoryLandingPage() {
         )}
 
         {/* Display Articles within Subcategories */}
-        {allArticles.length > 0 && (
+        {displayArticles.length > 0 && (
           <>
             <div className="flex items-end justify-between mb-8">
               <div>
@@ -392,7 +515,7 @@ export default function CategoryLandingPage() {
 
             {/* Article Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {allArticles.map((article) => {
+              {displayArticles.map((article) => {
                 const articleCategorySlug = article.categorySlug || category.slug || ''
                 const isNew = article.lastModified && new Date(article.lastModified) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
                 const isUpdated = article.lastModified && new Date(article.lastModified) > new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) && !isNew
@@ -454,7 +577,7 @@ export default function CategoryLandingPage() {
                         <span className="material-symbols-outlined text-sm">schedule</span>
                         {article.readingTime || '5'} min
                       </span>
-                      <span className="text-[#0d7ff2] hover:underline flex items-center gap-1">
+                      <span className="text-[#0d7ff2] flex items-center gap-1">
                         Read article <span className="material-symbols-outlined text-sm">open_in_new</span>
                       </span>
                     </div>
@@ -465,7 +588,7 @@ export default function CategoryLandingPage() {
           </>
         )}
 
-        {subcategoryGroups.length === 0 && allArticles.length === 0 && (
+        {subcategoryGroups.length === 0 && displayArticles.length === 0 && !featuredArticle && (
           <div className="bg-white dark:bg-[#1a242d] rounded-xl border border-slate-200 dark:border-slate-800 p-8 text-center">
             <h2 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">
               {t('portal.settings.helpCenter.noArticles')}
@@ -483,3 +606,4 @@ export default function CategoryLandingPage() {
     </div>
   )
 }
+

@@ -54,6 +54,12 @@ export interface WordPressPost {
   modified: string
   categories: number[]
   tags: number[]
+  featured_media?: number
+  featured_media_url?: string
+  jetpack_featured_media_url?: string
+  _embedded?: {
+    'wp:featuredmedia'?: Array<{ source_url?: string }>
+  }
   status: string
   link: string
 }
@@ -131,7 +137,7 @@ class WordPressApiClient {
 
     if (this.config.authMethod === 'application_password' && this.config.credentials) {
       // Application password format: username:password
-      const credentials = Buffer.from(this.config.credentials).toString('base64')
+      const credentials = btoa(this.config.credentials)
       headers['Authorization'] = `Basic ${credentials}`
     } else if (this.config.authMethod === 'oauth_token' && this.config.credentials) {
       headers['Authorization'] = `Bearer ${this.config.credentials}`
@@ -319,6 +325,7 @@ class WordPressApiClient {
     params.append('per_page', (options.perPage || 100).toString())
     params.append('page', (options.page || 1).toString())
     params.append('status', 'publish') // Only published posts
+    params.append('_embed', '1')
     
     return this.makeRequest<WordPressPost[]>(`/posts?${params.toString()}`)
   }

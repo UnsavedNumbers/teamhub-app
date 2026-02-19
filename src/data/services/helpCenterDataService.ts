@@ -123,6 +123,7 @@ export interface HelpArticle {
   slug: string
   excerpt: string
   content: string
+  featuredImageUrl?: string
   categorySlug: string
   categoryName: string
   categoryPath?: string[]
@@ -513,6 +514,7 @@ export async function getCategoryArticles(
         slug: post.slug,
         excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ''),
         content: post.content.rendered,
+        featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
         categorySlug: articleCategory.slug,
         categoryName: articleCategory.name,
         categoryPath,
@@ -646,6 +648,7 @@ export async function getCategoryChildArticles(
         slug: post.slug,
         excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ''),
         content: post.content.rendered,
+        featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
         categorySlug: category.slug,
         categoryName: category.name,
         categoryPath,
@@ -801,6 +804,7 @@ export async function getCategorySubcategoryGroups(
         slug: post.slug,
         excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ''),
         content: post.content.rendered,
+        featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
         categorySlug: childCategory.slug,
         categoryName: childCategory.name,
         categoryPath,
@@ -900,6 +904,7 @@ export async function getArticleBySlug(
       slug: post.slug,
       excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ''),
       content: post.content.rendered,
+      featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
       categorySlug: articleCategory.slug,
       categoryName: articleCategory.name,
       categoryPath,
@@ -1010,6 +1015,7 @@ async function searchArticlesClientSide(
           slug: post.slug,
           excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ''),
           content: post.content.rendered,
+          featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
           categorySlug: '',
           categoryName: '',
           tags: post.tags,
@@ -1026,6 +1032,7 @@ async function searchArticlesClientSide(
         slug: post.slug,
         excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ''),
         content: post.content.rendered,
+        featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
         categorySlug: category.slug,
         categoryName: category.name,
         categoryPath,
@@ -1052,4 +1059,3 @@ function estimateReadingTime(content: string): number {
   const minutes = Math.ceil(words / 200) // Average reading speed: 200 words/minute
   return minutes
 }
-

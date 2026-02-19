@@ -1200,42 +1200,27 @@ export default function CoachVideoDetail() {
         disabled={USE_FAKE_DATA}
       />
 
-      {/* Description and Tags (directly under video) */}
-      <Card className="mb-8">
-        <div className="space-y-6">
-          {/* Description */}
-          {video.description && (
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                {t('videoLibrary.details.description')}
-              </label>
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                {video.description}
-              </p>
+      {/* Tags (directly under video) */}
+      {video.tags && video.tags.length > 0 && (
+        <Card className="mb-8">
+          <div>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+              Tags
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {video.tags.map((tagLink, i) => (
+                <div
+                  key={i}
+                  className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-500 flex items-center gap-1.5"
+                >
+                  <Icon name="label" size="text-sm" />
+                  {tagLink.tag?.name?.toUpperCase() || 'TAG'}
+                </div>
+              ))}
             </div>
-          )}
-
-          {/* Tags */}
-          {video.tags && video.tags.length > 0 && (
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                Tags
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {video.tags.map((tagLink, i) => (
-                  <div
-                    key={i}
-                    className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-500 flex items-center gap-1.5"
-                  >
-                    <Icon name="label" size="text-sm" />
-                    {tagLink.tag?.name?.toUpperCase() || 'TAG'}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </Card>
+          </div>
+        </Card>
+      )}
 
       {/* Accordion Sections (below video) */}
       <div className="space-y-3">
@@ -1243,6 +1228,16 @@ export default function CoachVideoDetail() {
         <AccordionItem title="Video Details">
           <div className="space-y-4">
             <div className="pt-4 border-t border-gray-100 dark:border-gray-800 grid grid-cols-2 gap-4">
+              {video.description && (
+                <div className="col-span-2 pb-4 mb-1 border-b border-gray-100 dark:border-gray-800">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                    {t('videoLibrary.details.description')}
+                  </label>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                    {video.description}
+                  </p>
+                </div>
+              )}
               <div>
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
                   {t('videoLibrary.details.uploadedBy')}

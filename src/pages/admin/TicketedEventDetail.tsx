@@ -450,7 +450,8 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
 
   const lastUpdatedAt = (() => {
     const updatedAt = new Date(event.updated_at)
-    return Number.isNaN(updatedAt.getTime()) ? t('ticketing.detail.values.unavailable') : updatedAt.toLocaleString()
+    if (Number.isNaN(updatedAt.getTime())) return t('ticketing.detail.values.unavailable')
+    return updatedAt.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
   })()
   const internalDescription = event.description?.trim() || t('ticketing.detail.values.notProvided')
   const publicDescription = event.event_description?.trim() || t('ticketing.detail.values.notProvided')

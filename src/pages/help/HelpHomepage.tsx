@@ -1,18 +1,17 @@
 /**
  * Help Center Homepage
  * 
- * Main entry point for the help center homepage.
- * Implements the exact layout from designs/helpcenter/code.html
+ * Main entry point for role-scoped help content.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { mapAuthRoleToStandardRole } from '../../lib/routeGuard'
-import { getCategoriesForRole, searchArticles, getCategoryArticles } from '../../data/services/helpCenterDataService'
-import type { HelpCategory, HelpArticle } from '../../data/services/helpCenterDataService'
+import { getCategoriesForRole, getCategoryChildArticles, getCategoryArticles, searchArticles } from '../../data/services/helpCenterDataService'
+import type { HelpCategory, HelpArticle, HelpCategoryArticleGroup } from '../../data/services/helpCenterDataService'
 import { showError } from '../../utils/toast'
-import { getLink } from '../../utils/routes'
+import { getLink, getPath } from '../../utils/routes'
 import { debug } from '../../lib/debug'
 import { useT } from '../../i18n/useI18n'
 import { getMarketingSiteUrl, getHomeLink, getPortalLink, getAdminPortalLink } from '../../utils/helpCenter/helpLinks'
@@ -21,20 +20,24 @@ import '../../styles/helpCenter.css'
 
 type UserRole = 'parent' | 'coach' | 'org_admin' | 'athlete' | 'platform_admin'
 
-// Helper to get category navigation items with translations
-function getCategoryNavItems(t: (key: any) => string) {
-  return [
-    { slug: 'onboard', labelKey: 'categoryNavGettingStarted', titleKey: 'categoryNavGettingStarted' },
-    { slug: 'profile', labelKey: 'categoryNavAccountSettings', titleKey: 'categoryNavAccount' },
-    { slug: 'roster', labelKey: 'categoryNavTeamManagement', titleKey: 'categoryNavTeams' },
-    { slug: 'season', labelKey: 'categoryNavEventsSchedules', titleKey: 'categoryNavEvents' },
-    { slug: 'billing', labelKey: 'categoryNavPaymentsBilling', titleKey: 'categoryNavBilling' },
-    { slug: 'comply', labelKey: 'categoryNavSafetyCompliance', titleKey: 'categoryNavSafety' },
-  ].map(item => ({
-    slug: item.slug,
-    label: t(`portal.settings.helpCenter.${item.labelKey}`),
-    title: t(`portal.settings.helpCenter.${item.titleKey}`),
-  }))
+interface RoleCategoryGroup {
+  root: HelpCategory
+  children: HelpCategoryArticleGroup[]
+}
+
+interface HelpGuideListItem extends HelpArticle {
+  linkCategorySlug: string
+}
+
+function getGuideIcon(categoryName: string): string {
+  const normalized = categoryName.toLowerCase()
+
+  if (normalized.includes('bill') || normalized.includes('payment') || normalized.includes('fee')) return 'payments'
+  if (normalized.includes('security') || normalized.includes('safety') || normalized.includes('compliance')) return 'shield'
+  if (normalized.includes('team') || normalized.includes('roster') || normalized.includes('staff')) return 'groups'
+  if (normalized.includes('event') || normalized.includes('travel') || normalized.includes('schedule')) return 'event'
+
+  return 'description'
 }
 
 export default function HelpHomepage() {
@@ -42,13 +45,12 @@ export default function HelpHomepage() {
   const navigate = useNavigate()
   const t = useT()
   const [loading, setLoading] = useState(true)
-  const [categories, setCategories] = useState<HelpCategory[]>([])
+  const [roleCategoryGroups, setRoleCategoryGroups] = useState<RoleCategoryGroup[]>([])
+  const [activeCategorySlug, setActiveCategorySlug] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<HelpArticle[]>([])
   const [searching, setSearching] = useState(false)
   const [showSearchResults, setShowSearchResults] = useState(false)
-  const [popularArticles, setPopularArticles] = useState<HelpArticle[]>([])
-  const [trendingArticles, setTrendingArticles] = useState<HelpArticle[]>([])
 
   // Get user role with safe access
   const userRole: UserRole | null = profile && profile.role
@@ -72,32 +74,75 @@ export default function HelpHomepage() {
 
     setLoading(true)
     try {
-      // Load categories
+      // Load categories mapped to the user role
       const categoriesResult = await getCategoriesForRole(userRole)
       if (categoriesResult.error) {
         showError(t('errorMessages.fetchFailed'))
         return
       }
-      setCategories(categoriesResult.data || [])
 
-      // Load popular and trending articles by fetching from multiple categories
-      const allArticles: HelpArticle[] = []
-      const categorySlugs = (categoriesResult.data || []).slice(0, 6).map(cat => cat.slug)
-      
-      for (const slug of categorySlugs) {
-        const articlesResult = await getCategoryArticles(slug, userRole)
-        if (!articlesResult.error && articlesResult.data) {
-          const generalArticles: HelpArticle[] = articlesResult.data.generalArticles || []
-          const sectionArticles: HelpArticle[] = (articlesResult.data.sections || [])
-            .flatMap(section => section.articles || [])
-          allArticles.push(...generalArticles, ...sectionArticles)
+      const rootCategories = categoriesResult.data || []
+      const childCategoryResults = await Promise.all(
+        rootCategories.map(async (root) => {
+          const childResult = await getCategoryChildArticles(root.slug)
+          if (!childResult.error && (childResult.data || []).length > 0) {
+            return {
+              root,
+              error: null,
+              children: childResult.data || [],
+            }
+          }
+
+          const directArticlesResult = await getCategoryArticles(root.slug, userRole)
+          if (directArticlesResult.error) {
+            return {
+              root,
+              error: directArticlesResult.error,
+              children: [] as HelpCategoryArticleGroup[],
+            }
+          }
+
+          const sectionArticles = (directArticlesResult.data?.sections || []).flatMap(section => section.articles || [])
+          const directArticles = directArticlesResult.data?.generalArticles || []
+          const seenArticleIds = new Set<number>()
+          const uniqueArticles = [...sectionArticles, ...directArticles].filter(article => {
+            if (seenArticleIds.has(article.id)) return false
+            seenArticleIds.add(article.id)
+            return true
+          })
+
+          return {
+            root,
+            error: null,
+            children: uniqueArticles.length > 0
+              ? [{
+                  id: root.id,
+                  name: root.name,
+                  slug: root.slug,
+                  parentId: root.parentId || 0,
+                  depth: 1,
+                  articles: uniqueArticles,
+                }]
+              : [],
+          }
+        })
+      )
+
+      const groups: RoleCategoryGroup[] = []
+      for (const group of childCategoryResults) {
+        if (group.error) {
+          debug.error('HelpHomepage', 'Failed to load child categories', {
+            error: group.error,
+            rootCategorySlug: group.root.slug,
+          })
+          continue
         }
+        groups.push({
+          root: group.root,
+          children: group.children,
+        })
       }
-
-      // Popular: first 3 articles
-      setPopularArticles(allArticles.slice(0, 3))
-      // Trending: next 5 articles
-      setTrendingArticles(allArticles.slice(3, 8))
+      setRoleCategoryGroups(groups)
     } catch (err) {
       showError(t('errorMessages.fetchFailed'))
       debug.error('HelpHomepage', 'Exception loading data', { error: err })
@@ -112,10 +157,93 @@ export default function HelpHomepage() {
     }
   }, [userRole, loadData])
 
-  // Debounced search
-  const debouncedSearch = useCallback(
-    debounce(async (query: string) => {
-      if (!query.trim() || !userRole || !t) {
+  const categoryPills = useMemo(() => {
+    const seenCategoryIds = new Set<number>()
+    const directChildren: HelpCategoryArticleGroup[] = []
+
+    for (const group of roleCategoryGroups) {
+      for (const category of group.children) {
+        if (category.depth !== 1 || seenCategoryIds.has(category.id)) {
+          continue
+        }
+        seenCategoryIds.add(category.id)
+        directChildren.push(category)
+      }
+    }
+
+    return directChildren
+  }, [roleCategoryGroups])
+
+  useEffect(() => {
+    if (activeCategorySlug === 'all') return
+
+    const stillExists = categoryPills.some(category => category.slug === activeCategorySlug)
+    if (!stillExists) {
+      setActiveCategorySlug('all')
+    }
+  }, [activeCategorySlug, categoryPills])
+
+  const selectedCategoryName = useMemo(() => {
+    if (activeCategorySlug === 'all') {
+      return t('portal.settings.helpCenter.allGuides')
+    }
+
+    return categoryPills.find(category => category.slug === activeCategorySlug)?.name || t('portal.settings.helpCenter.allGuides')
+  }, [activeCategorySlug, categoryPills, t])
+
+  const visibleArticles = useMemo(() => {
+    const seenArticleIds = new Set<number>()
+    const articles: HelpGuideListItem[] = []
+
+    for (const group of roleCategoryGroups) {
+      const relevantCategories = (() => {
+        if (activeCategorySlug === 'all') {
+          return group.children
+        }
+
+        const selectedCategory = group.children.find(
+          category => category.depth === 1 && category.slug === activeCategorySlug
+        )
+        if (!selectedCategory) {
+          return [] as HelpCategoryArticleGroup[]
+        }
+
+        const includedCategoryIds = new Set<number>([selectedCategory.id])
+        let changed = true
+
+        while (changed) {
+          changed = false
+          for (const category of group.children) {
+            if (includedCategoryIds.has(category.parentId) && !includedCategoryIds.has(category.id)) {
+              includedCategoryIds.add(category.id)
+              changed = true
+            }
+          }
+        }
+
+        return group.children.filter(category => includedCategoryIds.has(category.id))
+      })()
+
+      for (const category of relevantCategories) {
+        for (const article of category.articles) {
+          if (seenArticleIds.has(article.id)) {
+            continue
+          }
+          seenArticleIds.add(article.id)
+          articles.push({
+            ...article,
+            linkCategorySlug: article.categorySlug || category.slug || group.root.slug,
+          })
+        }
+      }
+    }
+
+    return articles
+  }, [activeCategorySlug, roleCategoryGroups])
+
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      if (!searchQuery.trim() || !userRole || !t) {
         setSearchResults([])
         setShowSearchResults(false)
         return
@@ -123,7 +251,7 @@ export default function HelpHomepage() {
 
       setSearching(true)
       try {
-        const result = await searchArticles(query, userRole)
+        const result = await searchArticles(searchQuery, userRole)
         if (result.error) {
           console.error('Search error:', result.error)
           setSearchResults([])
@@ -137,13 +265,10 @@ export default function HelpHomepage() {
       } finally {
         setSearching(false)
       }
-    }, 300),
-    [userRole, t]
-  )
+    }, 300)
 
-  useEffect(() => {
-    debouncedSearch(searchQuery)
-  }, [searchQuery, debouncedSearch])
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery, t, userRole])
 
   // Keyboard shortcut for search
   useEffect(() => {
@@ -158,32 +283,6 @@ export default function HelpHomepage() {
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [])
-
-  // Helper to get icon for article category
-  const getArticleIcon = (categorySlug: string): string => {
-    const iconMap: Record<string, string> = {
-      'onboard': 'menu_book',
-      'profile': 'person',
-      'roster': 'groups',
-      'season': 'event',
-      'billing': 'payments',
-      'comply': 'security',
-    }
-    return iconMap[categorySlug] || 'article'
-  }
-
-  // Helper to get category label
-  const getArticleCategoryLabel = (article: HelpArticle): string => {
-    const categoryMap: Record<string, string> = {
-      'onboard': t('portal.settings.helpCenter.categoryNavGettingStarted'),
-      'profile': t('portal.settings.helpCenter.categoryNavAccountSettings'),
-      'roster': t('portal.settings.helpCenter.categoryNavTeamManagement'),
-      'season': t('portal.settings.helpCenter.categoryNavEventsSchedules'),
-      'billing': t('portal.settings.helpCenter.categoryNavPaymentsBilling'),
-      'comply': t('portal.settings.helpCenter.categoryNavSafetyCompliance'),
-    }
-    return categoryMap[article.categorySlug || ''] || t('portal.settings.helpCenter.general')
-  }
 
   if (authLoading || loading) {
     return (
@@ -260,10 +359,23 @@ export default function HelpHomepage() {
                 {searchResults.map((article) => (
                   <Link
                     key={article.id}
-                    to={getLink('portal.helpArticle', {
-                      categorySlug: article.categorySlug || '',
-                      articleSlug: article.slug || '',
-                    })}
+                    to={(() => {
+                      if (article.categoryPath && article.categoryPath.length > 1) {
+                        const parentPath = article.categoryPath.slice(0, -1).filter(slug => slug !== 'help')
+                        if (parentPath.length === 1) {
+                          return getLink('portal.helpArticleNested', {
+                            parentCategorySlug: parentPath[0],
+                            categorySlug: article.categorySlug || '',
+                            articleSlug: article.slug || '',
+                          })
+                        }
+                        return `${getPath('portal.help')}/${parentPath.join('/')}/${article.categorySlug}/${article.slug}`
+                      }
+                      return getLink('portal.helpArticle', {
+                        categorySlug: article.categorySlug || '',
+                        articleSlug: article.slug || '',
+                      })
+                    })()}
                     className="block px-6 py-4 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
                     onClick={() => {
                       setShowSearchResults(false)
@@ -287,115 +399,99 @@ export default function HelpHomepage() {
         </div>
       </section>
 
-      {/* Category Navigation Bar */}
-      <section className="max-w-[1440px] mx-auto px-8 -mt-16 relative z-10">
-        <div className="bg-white dark:bg-slate-900 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.2)] grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-x divide-slate-100 dark:divide-slate-800">
-          {getCategoryNavItems(t).map((item) => {
-            const category = categories.find(cat => cat.slug === item.slug)
-            if (!category) return null
-            
-            return (
-              <Link
-                key={item.slug}
-                to={getLink('portal.helpCategory', { categorySlug: item.slug })}
-                className="p-10 group hover:bg-[#0062FF] transition-all duration-300"
-              >
-                <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-white/60 mb-2">
-                  {item.label}
-                </span>
-                <span className="block font-impact font-[900] text-4xl leading-none group-hover:text-white uppercase">
-                  {item.title}
-                </span>
-              </Link>
-            )
-          })}
-        </div>
-      </section>
-
       {/* Main Content */}
-      <main className="max-w-[1440px] mx-auto px-8 py-24">
-        <div className="grid grid-cols-12 gap-16">
-          {/* Popular Resources */}
-          <div className="col-span-12 lg:col-span-7">
-            <h3 className="font-impact font-[900] text-4xl uppercase tracking-tighter mb-12 flex items-center">
-              <span className="w-12 h-1 bg-[#0062FF] mr-6"></span>
-              {t('portal.settings.helpCenter.popularResources')}
-            </h3>
-            <div className="space-y-4">
-              {popularArticles.length === 0 ? (
-                <p className="text-slate-500">{t('portal.settings.helpCenter.noPopularResources')}</p>
-              ) : (
-                popularArticles.map((article) => (
-                  <Link
-                    key={article.id}
-                    to={getLink('portal.helpArticle', {
-                      categorySlug: article.categorySlug || '',
-                      articleSlug: article.slug || '',
-                    })}
-                    className="w-full group flex items-center justify-between p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-[#0062FF] dark:hover:border-[#0062FF] transition-all"
-                  >
-                    <div className="flex items-center">
-                      <span className={`material-symbols-outlined text-slate-400 group-hover:text-[#0062FF] mr-6 text-3xl`}>
-                        {getArticleIcon(article.categorySlug)}
-                      </span>
-                      <div className="text-left">
-                        <span className="block font-black text-[10px] uppercase tracking-widest text-slate-400 mb-1">
-                          {getArticleCategoryLabel(article)}
-                        </span>
-                        <span className="font-bold text-lg uppercase tracking-tight">{article.title}</span>
-                      </div>
-                    </div>
-                    <span className="material-symbols-outlined text-[#0062FF] opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
-                  </Link>
-                ))
-              )}
-            </div>
+      <main className="max-w-[1440px] mx-auto px-8 py-16">
+        {roleCategoryGroups.length === 0 ? (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8">
+            <p className="text-slate-500 dark:text-slate-400">{t('portal.settings.helpCenter.noArticles')}</p>
           </div>
+        ) : (
+          <section className="rounded-2xl bg-[#EFF2F6] border border-slate-200/70 p-6 md:p-8">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+              <nav className="flex items-center gap-2 text-sm">
+                <span className="font-semibold text-slate-400">{t('portal.settings.helpCenter.breadcrumbKnowledge')}</span>
+                <span className="material-symbols-outlined text-[16px] text-slate-400">chevron_right</span>
+                <span className="font-semibold text-slate-900">{selectedCategoryName}</span>
+              </nav>
 
-          {/* Trending Topics */}
-          <div className="col-span-12 lg:col-span-5">
-            <div className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 p-12">
-              <h3 className="font-impact font-black uppercase tracking-widest text-sm mb-12 flex items-center">
-                <span className="w-8 h-[2px] bg-[#0062FF] mr-3"></span>
-                {t('portal.settings.helpCenter.trendingTopics')}
-              </h3>
-              {trendingArticles.length === 0 ? (
-                <p className="text-slate-400 dark:text-slate-500">{t('portal.settings.helpCenter.noTrendingTopics')}</p>
-              ) : (
-                <ul className="space-y-8">
-                  {trendingArticles.map((article) => (
-                    <li key={article.id} className="flex items-start group">
-                      <span className="material-symbols-outlined text-[#0062FF] mr-4 text-2xl font-bold">check_circle</span>
-                      <div>
-                        <span className="block font-black text-[10px] uppercase tracking-widest opacity-60 mb-1">
-                          {getArticleCategoryLabel(article)}
-                        </span>
-                        <Link
-                          to={getLink('portal.helpArticle', {
-                            categorySlug: article.categorySlug || '',
-                            articleSlug: article.slug || '',
-                          })}
-                          className="text-lg font-bold leading-tight uppercase tracking-tight group-hover:text-[#0062FF] transition-colors cursor-pointer block"
-                        >
-                          {article.title}
-                        </Link>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <Link
-                to={getLink('portal.help')}
-                className="mt-12 w-full py-4 border-2 border-slate-700 dark:border-slate-200 font-black text-xs uppercase tracking-[0.3em] hover:bg-[#0062FF] hover:border-[#0062FF] transition-all block text-center"
-              >
-                {t('portal.settings.helpCenter.viewAllTopics')}
-              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveCategorySlug('all')}
+                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+                    activeCategorySlug === 'all'
+                      ? 'bg-[#4F7DE8] text-white'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  {t('portal.settings.helpCenter.allGuides')}
+                </button>
+                {categoryPills.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => setActiveCategorySlug(category.slug)}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+                      activeCategorySlug === category.slug
+                        ? 'bg-[#4F7DE8] text-white'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        </div>
+
+            {visibleArticles.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                <p className="text-slate-500">{t('portal.settings.helpCenter.noArticles')}</p>
+              </div>
+            ) : (
+              <ul className="space-y-4">
+                {visibleArticles.map((article) => (
+                  <li key={article.id}>
+                    <Link
+                      to={(() => {
+                        if (article.categoryPath && article.categoryPath.length > 1) {
+                          const parentPath = article.categoryPath.slice(0, -1).filter(slug => slug !== 'help')
+                          if (parentPath.length === 1) {
+                            return getLink('portal.helpArticleNested', {
+                              parentCategorySlug: parentPath[0],
+                              categorySlug: article.categorySlug || '',
+                              articleSlug: article.slug || '',
+                            })
+                          }
+                          return `${getPath('portal.help')}/${parentPath.join('/')}/${article.categorySlug}/${article.slug}`
+                        }
+                        return getLink('portal.helpArticle', {
+                          categorySlug: article.linkCategorySlug || '',
+                          articleSlug: article.slug || '',
+                        })
+                      })()}
+                      className="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-5 hover:border-[#4F7DE8]/30 hover:shadow-sm transition-all"
+                    >
+                      <div className="h-12 w-12 rounded-xl bg-[#EEF3FF] flex items-center justify-center flex-shrink-0">
+                        <span className="material-symbols-outlined text-[#4F7DE8]">{getGuideIcon(article.categoryName || article.title)}</span>
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-2xl font-bold text-slate-900 truncate">{article.title}</h3>
+                        <p className="mt-1 text-slate-500 line-clamp-2">{article.excerpt || ''}</p>
+                      </div>
+
+                      <div className="h-12 w-12 rounded-xl bg-[#4F7DE8] text-white flex items-center justify-center flex-shrink-0">
+                        <span className="material-symbols-outlined">arrow_forward</span>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
       </main>
 
-      {/* Footer */}
       <footer className="max-w-[1440px] mx-auto px-8 pb-16">
         <div className="pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center space-x-8">
@@ -422,20 +518,4 @@ export default function HelpHomepage() {
       </footer>
     </div>
   )
-}
-
-// Debounce utility
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null
-  return function executedFunction(...args: Parameters<T>) {
-    const later = () => {
-      timeout = null
-      func(...args)
-    }
-    if (timeout) clearTimeout(timeout)
-    timeout = setTimeout(later, wait)
-  }
 }

@@ -6,6 +6,7 @@
 
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
+import { getWordPressConfigForApi } from './helpCenterConfigService'
 import {
   type WordPressConfig,
   type WordPressCategory,
@@ -21,6 +22,14 @@ import {
 } from './wordpressApiService'
 
 const supabaseUntyped = supabase as any
+const CACHE_TTL_MS = 60 * 60 * 1000
+const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000
+let autoSyncPromise: Promise<boolean> | null = null
+
+interface CacheRow {
+  data: unknown
+  expires_at: string
+}
 
 // ============================================================================
 // Types
@@ -59,7 +68,7 @@ async function cacheItem(
   expiresAt?: Date
 ): Promise<{ error: Error | null }> {
   try {
-    const expiresAtValue = expiresAt || new Date(Date.now() + 60 * 60 * 1000) // 1 hour default
+    const expiresAtValue = expiresAt || new Date(Date.now() + CACHE_TTL_MS) // 1 hour default
 
     const { error } = await supabaseUntyped
       .from('help_wordpress_cache')
@@ -148,14 +157,20 @@ async function syncCategories(
       return { categories: [], errors }
     }
 
-    // Get child categories under "Help"
-    const childCategoriesResult = await getWordPressCategories(config, helpCategory.id)
-    if (childCategoriesResult.error) {
-      errors.push(`Failed to fetch child categories: ${childCategoriesResult.error.message}`)
-      return { categories: [], errors }
-    }
+    // Get all descendants under "Help" (not only direct children)
+    const categoriesUnderHelp: WordPressCategory[] = []
+    const queue: number[] = [helpCategory.id]
+    while (queue.length > 0) {
+      const parentId = queue.shift()
+      if (!parentId) continue
 
-    categories = childCategoriesResult.data || []
+      const children = allCategoriesResult.data.filter(cat => cat.parent === parentId)
+      for (const child of children) {
+        categoriesUnderHelp.push(child)
+        queue.push(child.id)
+      }
+    }
+    categories = categoriesUnderHelp
 
     // Cache all categories (including parent)
     const categoriesToCache = [helpCategory, ...categories]
@@ -185,6 +200,114 @@ async function syncCategories(
   }
 
   return { categories, errors }
+}
+
+async function shouldAutoSync(force: boolean): Promise<boolean> {
+  if (force) return true
+
+  const { data: configRow, error } = await supabaseUntyped
+    .from('help_wordpress_config')
+    .select('last_sync_at, connection_status')
+    .limit(1)
+    .maybeSingle()
+
+  if (error || !configRow) {
+    return false
+  }
+
+  if (configRow.connection_status === 'disconnected') {
+    return false
+  }
+
+  if (!configRow.last_sync_at) {
+    return true
+  }
+
+  const lastSyncMs = new Date(configRow.last_sync_at).getTime()
+  if (Number.isNaN(lastSyncMs)) {
+    return true
+  }
+
+  return Date.now() - lastSyncMs >= AUTO_SYNC_INTERVAL_MS
+}
+
+async function triggerAutoSync(force = false): Promise<boolean> {
+  if (autoSyncPromise) {
+    return autoSyncPromise
+  }
+
+  autoSyncPromise = (async () => {
+    try {
+      const shouldRun = await shouldAutoSync(force)
+      if (!shouldRun) {
+        return false
+      }
+
+      const configResult = await getWordPressConfigForApi()
+      if (configResult.error || !configResult.data) {
+        return false
+      }
+
+      const syncResult = await syncWordPressData(configResult.data)
+      return syncResult.success
+    } catch (err) {
+      debug.error('HelpCenterSyncService', 'Auto-sync failed', { error: err })
+      return false
+    } finally {
+      autoSyncPromise = null
+    }
+  })()
+
+  return autoSyncPromise
+}
+
+async function fetchCacheItemRow(
+  cacheType: 'category' | 'tag' | 'post' | 'page',
+  wordpressId?: number,
+  wordpressSlug?: string
+): Promise<{ data: CacheRow | null; error: Error | null }> {
+  let query = supabaseUntyped
+    .from('help_wordpress_cache')
+    .select('data, expires_at')
+    .eq('cache_type', cacheType)
+
+  if (wordpressId !== undefined) {
+    query = query.eq('wordpress_id', wordpressId)
+  } else if (wordpressSlug) {
+    query = query.eq('wordpress_slug', wordpressSlug)
+  } else {
+    return {
+      data: null,
+      error: new Error('Either wordpressId or wordpressSlug must be provided'),
+    }
+  }
+
+  const { data, error } = await query.maybeSingle()
+  if (error) {
+    return { data: null, error }
+  }
+
+  return { data: (data as CacheRow | null) || null, error: null }
+}
+
+async function fetchCacheRows(
+  cacheType: 'category' | 'tag' | 'post' | 'page'
+): Promise<{ data: CacheRow[]; error: Error | null }> {
+  const { data, error } = await supabaseUntyped
+    .from('help_wordpress_cache')
+    .select('data, expires_at')
+    .eq('cache_type', cacheType)
+
+  if (error) {
+    return { data: [], error }
+  }
+
+  return { data: (data as CacheRow[]) || [], error: null }
+}
+
+function isFresh(expiresAtIso?: string): boolean {
+  if (!expiresAtIso) return false
+  return new Date(expiresAtIso).getTime() > Date.now()
 }
 
 /**
@@ -531,34 +654,42 @@ export async function getCachedWordPressData<T>(
   wordpressSlug?: string
 ): Promise<{ data: T | null; error: Error | null }> {
   try {
-    let query = supabaseUntyped
-      .from('help_wordpress_cache')
-      .select('data')
-      .eq('cache_type', cacheType)
-      .gt('expires_at', new Date().toISOString())
+    const initial = await fetchCacheItemRow(cacheType, wordpressId, wordpressSlug)
+    if (initial.error) {
+      return { data: null, error: initial.error }
+    }
 
-    if (wordpressId !== undefined) {
-      query = query.eq('wordpress_id', wordpressId)
-    } else if (wordpressSlug) {
-      query = query.eq('wordpress_slug', wordpressSlug)
-    } else {
-      return {
-        data: null,
-        error: new Error('Either wordpressId or wordpressSlug must be provided'),
+    if (!initial.data) {
+      await triggerAutoSync(true)
+      const refreshed = await fetchCacheItemRow(cacheType, wordpressId, wordpressSlug)
+      if (refreshed.error) {
+        return { data: null, error: refreshed.error }
       }
+      return { data: (refreshed.data?.data as T) || null, error: null }
     }
 
-    const { data, error } = await query.maybeSingle()
-
-    if (error) {
-      return { data: null, error }
+    if (isFresh(initial.data.expires_at)) {
+      const synced = await triggerAutoSync(false)
+      if (synced) {
+        const refreshedAfterSync = await fetchCacheItemRow(cacheType, wordpressId, wordpressSlug)
+        if (!refreshedAfterSync.error && refreshedAfterSync.data) {
+          return { data: refreshedAfterSync.data.data as T, error: null }
+        }
+      }
+      return { data: initial.data.data as T, error: null }
     }
 
-    if (!data) {
-      return { data: null, error: null }
+    await triggerAutoSync(true)
+    const refreshed = await fetchCacheItemRow(cacheType, wordpressId, wordpressSlug)
+    if (refreshed.error) {
+      return { data: initial.data.data as T, error: null }
     }
 
-    return { data: data.data as T, error: null }
+    if (refreshed.data) {
+      return { data: refreshed.data.data as T, error: null }
+    }
+
+    return { data: initial.data.data as T, error: null }
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err))
     return { data: null, error }
@@ -572,18 +703,38 @@ export async function getAllCachedWordPressData<T>(
   cacheType: 'category' | 'tag' | 'post' | 'page'
 ): Promise<{ data: T[]; error: Error | null }> {
   try {
-    const { data, error } = await supabaseUntyped
-      .from('help_wordpress_cache')
-      .select('data')
-      .eq('cache_type', cacheType)
-      .gt('expires_at', new Date().toISOString())
-
-    if (error) {
-      return { data: [], error }
+    const initial = await fetchCacheRows(cacheType)
+    if (initial.error) {
+      return { data: [], error: initial.error }
     }
 
-    const items = (data || []).map((item: any) => item.data as T)
-    return { data: items, error: null }
+    const freshRows = initial.data.filter(row => isFresh(row.expires_at))
+    if (freshRows.length > 0) {
+      const synced = await triggerAutoSync(false)
+      if (synced) {
+        const refreshedAfterSync = await fetchCacheRows(cacheType)
+        if (!refreshedAfterSync.error && refreshedAfterSync.data.length > 0) {
+          const refreshedFreshRows = refreshedAfterSync.data.filter(row => isFresh(row.expires_at))
+          if (refreshedFreshRows.length > 0) {
+            return { data: refreshedFreshRows.map(row => row.data as T), error: null }
+          }
+          return { data: refreshedAfterSync.data.map(row => row.data as T), error: null }
+        }
+      }
+      return { data: freshRows.map(row => row.data as T), error: null }
+    }
+
+    await triggerAutoSync(true)
+    const refreshed = await fetchCacheRows(cacheType)
+    if (!refreshed.error && refreshed.data.length > 0) {
+      const refreshedFreshRows = refreshed.data.filter(row => isFresh(row.expires_at))
+      if (refreshedFreshRows.length > 0) {
+        return { data: refreshedFreshRows.map(row => row.data as T), error: null }
+      }
+      return { data: refreshed.data.map(row => row.data as T), error: null }
+    }
+
+    return { data: initial.data.map(row => row.data as T), error: null }
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err))
     return { data: [], error }

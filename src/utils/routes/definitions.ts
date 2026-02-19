@@ -241,6 +241,12 @@ const portal = {
         label: 'Help Article',
         icon: 'help',
     },
+    helpArticleNested: {
+        path: '/help/:parentCategorySlug/:categorySlug/:articleSlug',
+        params: ['parentCategorySlug', 'categorySlug', 'articleSlug'] as const,
+        label: 'Help Article (Nested)',
+        icon: 'help',
+    },
     contact: {
         path: '/portal/contact',
         label: 'Contact Support',

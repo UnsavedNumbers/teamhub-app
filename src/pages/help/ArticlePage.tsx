@@ -4,7 +4,7 @@
  * Displays a help article with content rendering and tool link support.
  */
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { Fragment, useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { mapAuthRoleToStandardRole } from '../../lib/routeGuard'
@@ -25,7 +25,7 @@ import '../../styles/helpCenter.css'
 type UserRole = 'parent' | 'coach' | 'org_admin' | 'athlete' | 'platform_admin'
 
 export default function ArticlePage() {
-  const { categorySlug, articleSlug } = useParams<{ categorySlug: string; articleSlug: string }>()
+  const { categorySlug, articleSlug, parentCategorySlug } = useParams<{ categorySlug: string; articleSlug: string; parentCategorySlug?: string }>()
   const { user, profile, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const t = useT()
@@ -97,8 +97,9 @@ export default function ArticlePage() {
 
     setLoading(true)
     try {
-      // Load article
-      const result = await getArticleBySlug(categorySlug, articleSlug)
+      // Load article - use the categorySlug from URL (last segment if nested)
+      const actualCategorySlug = categorySlug
+      const result = await getArticleBySlug(actualCategorySlug, articleSlug)
       if (result.error) {
         if (t) showError(t('errorMessages.fetchFailed'))
         navigate(getLink('portal.helpCategory', { categorySlug: categorySlug || '' }))
@@ -330,17 +331,45 @@ export default function ArticlePage() {
         {/* Main Content */}
         <main className="flex-1 px-8 md:px-16 py-16 max-w-5xl">
           {/* Breadcrumbs */}
-          <nav className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-12">
+          <nav className="flex items-start space-x-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-12">
             <Link to={getLink('portal.help')} className="hover:text-[#0062FF]">
-              {t('portal.settings.helpCenter.breadcrumbSupport')}
+              {t('portal.settings.helpCenter.breadcrumbKnowledge')}
             </Link>
-            <span className="material-symbols-outlined text-xs">chevron_right</span>
-            <Link
-              to={getLink('portal.helpCategory', { categorySlug: article.categorySlug || '' })}
-              className="hover:text-[#0062FF]"
-            >
-              {article.categoryName || ''}
-            </Link>
+            {article.categoryPath && article.categoryPath.length > 1 ? (
+              <>
+                {article.categoryPath.slice(0, -1).filter(slug => slug !== 'help').map((slug) => {
+                  const originalIdx = article.categoryPath!.slice(0, -1).findIndex(s => s === slug)
+                  return (
+                    <Fragment key={slug}>
+                      <span className="material-symbols-outlined text-xs">chevron_right</span>
+                      <Link
+                        to={getLink('portal.helpCategory', { categorySlug: slug })}
+                        className="hover:text-[#0062FF]"
+                      >
+                        {article.categoryNames?.[originalIdx] || slug}
+                      </Link>
+                    </Fragment>
+                  )
+                })}
+                <span className="material-symbols-outlined text-xs">chevron_right</span>
+                <Link
+                  to={getLink('portal.helpCategory', { categorySlug: article.categorySlug || '' })}
+                  className="hover:text-[#0062FF]"
+                >
+                  {article.categoryName || ''}
+                </Link>
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-xs">chevron_right</span>
+                <Link
+                  to={getLink('portal.helpCategory', { categorySlug: article.categorySlug || '' })}
+                  className="hover:text-[#0062FF]"
+                >
+                  {article.categoryName || ''}
+                </Link>
+              </>
+            )}
             <span className="material-symbols-outlined text-xs">chevron_right</span>
             <span className="text-slate-900">{article.title || ''}</span>
           </nav>
@@ -375,7 +404,7 @@ export default function ArticlePage() {
                 </span>
                 <Link
                   to={getLink('portal.helpCategory', { categorySlug: article.categorySlug || '' })}
-                  className="text-sm font-bold font-impact uppercase tracking-tight text-[#0062FF] hover:underline"
+                  className="text-sm font-bold font-impact uppercase tracking-tight text-[#0062FF]"
                 >
                   {getArticleCategoryLabel(article)}
                 </Link>
@@ -499,7 +528,7 @@ export default function ArticlePage() {
               </p>
               <Link
                 to={getLink('portal.help')}
-                className="text-[10px] font-black text-[#0062FF] uppercase tracking-[0.2em] flex items-center hover:underline"
+                className="text-[10px] font-black text-[#0062FF] uppercase tracking-[0.2em] flex items-center"
               >
                 Contact Support <span className="material-symbols-outlined text-sm ml-1">arrow_forward</span>
               </Link>

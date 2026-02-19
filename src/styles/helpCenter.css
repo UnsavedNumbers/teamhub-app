@@ -29,15 +29,13 @@ html.dark {
 /* Tool Link Styling */
 .help-article-content a.tool-link {
   color: #2563eb;
-  text-decoration: underline;
-  text-decoration-style: dotted;
+  text-decoration: none;
   cursor: pointer;
   position: relative;
 }
 
 .help-article-content a.tool-link:hover {
   color: #1d4ed8;
-  text-decoration-style: solid;
 }
 
 .help-article-content a.tool-link::after {
@@ -148,12 +146,12 @@ html.dark {
   color: #0062FF;
   text-decoration: none;
   font-weight: 600;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.2s;
+  border-bottom: none;
+  transition: color 0.2s;
 }
 
 .help-article-content a:not(.tool-link):hover {
-  border-bottom-color: #0062FF;
+  color: #0052CC;
 }
 
 .dark .help-article-content a:not(.tool-link) {
@@ -161,7 +159,7 @@ html.dark {
 }
 
 .dark .help-article-content a:not(.tool-link):hover {
-  border-bottom-color: #3b82f6;
+  color: #60a5fa;
 }
 
 .help-article-content code {
@@ -340,4 +338,14 @@ html.dark {
 
 .dark .help-article-content strong {
   color: #f8fafc;
+}
+
+/* Category Landing Page Card Hover Effect */
+.card-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.card-hover:hover {
+  border-color: #0d7ff2;
+  transform: translateY(-2px);
 }

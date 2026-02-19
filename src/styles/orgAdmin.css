@@ -840,6 +840,22 @@ html.dark .oa-text-slate-900 {
 
 .oa-page-header {
     margin-bottom: var(--pa-space-6);
+    position: relative;
+    padding-bottom: var(--pa-space-4);
+    border-bottom: 1px solid var(--org-border-default, var(--pa-n100));
+    --oa-header-primary: var(--org-btn-primary-bg, #7c3aed);
+    --oa-header-secondary: var(--org-btn-secondary-bg, var(--org-link-color, #0ea5e9));
+}
+
+.oa-page-header::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    width: min(360px, 44%);
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--oa-header-primary), var(--oa-header-secondary));
 }
 
 .oa-breadcrumbs {
@@ -871,11 +887,11 @@ html.dark .oa-text-slate-900 {
 }
 
 .oa-breadcrumb-link:hover {
-    color: var(--org-text-tertiary, var(--pa-theme-text-accent));
+    color: var(--oa-header-secondary);
 }
 
 .oa-breadcrumb-current {
-    color: var(--oa-n900, var(--org-btn-primary-bg, #7c3aed));
+    color: var(--oa-header-primary);
     background: none !important;
     font-weight: 700;
 }
@@ -898,7 +914,7 @@ html.dark .oa-text-slate-900 {
     line-height: 1;
     text-transform: uppercase;
     letter-spacing: -0.02em;
-    color: var(--oa-n900, var(--org-btn-primary-bg, #7c3aed));
+    color: var(--oa-header-primary);
     margin: 0 0 var(--pa-space-2) 0;
 }
 
@@ -983,14 +999,14 @@ html.dark .oa-breadcrumb-link:hover {
 }
 
 html.dark .oa-breadcrumb-current {
-    color: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--pa-text-primary))) !important;
+    color: var(--oa-header-primary) !important;
     background: none !important;
     font-weight: 700;
     opacity: 1;
 }
 
 html.dark .oa-page-title {
-    color: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--pa-text-primary)));
+    color: var(--oa-header-primary);
 }
 
 html.dark .oa-page-subtitle {
@@ -1335,6 +1351,7 @@ html.dark .oa-ticketing-meta-item {
     margin: 0 0 var(--pa-space-1);
     color: var(--pa-text-muted);
     font: var(--pa-text-caption);
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
@@ -1343,7 +1360,7 @@ html.dark .oa-ticketing-meta-item {
     margin: 0;
     color: var(--pa-n900);
     font: var(--pa-text-body-m);
-    font-weight: 600;
+    font-weight: 400;
     line-height: 1.4;
     word-break: break-word;
 }

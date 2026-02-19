@@ -475,6 +475,7 @@ function AppWithTheme() {
           {/* Help Center Routes - Accessible to all authenticated users */}
           <Route path="/help" element={<ProtectedRoute><HelpHomepage /></ProtectedRoute>} />
           <Route path="/help/contact" element={<ProtectedRoute><Suspense fallback={<FullScreenLoader />}><HelpContactPage /></Suspense></ProtectedRoute>} />
+          <Route path="/help/:parentCategorySlug/:categorySlug/:articleSlug" element={<ProtectedRoute><ArticlePage /></ProtectedRoute>} />
           <Route path="/help/:categorySlug" element={<ProtectedRoute><CategoryLandingPage /></ProtectedRoute>} />
           <Route path="/help/:categorySlug/:articleSlug" element={<ProtectedRoute><ArticlePage /></ProtectedRoute>} />
 
