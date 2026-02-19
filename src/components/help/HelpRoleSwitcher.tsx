@@ -91,9 +91,24 @@ export function HelpRoleSwitcher({ currentRoleSlug, onRoleChange }: HelpRoleSwit
   }, [location.pathname])
 
   const getCurrentRole = useCallback((): RoleInfo | undefined => {
-    if (!currentRoleSlug) return undefined
-    return roles.find(r => r.slug === currentRoleSlug || r.categorySlug === currentRoleSlug) || 
-           roles.find(r => location.pathname.includes(r.slug) || location.pathname.includes(r.categorySlug || ''))
+    if (currentRoleSlug) {
+      const exactSlugMatch = roles.find(r => r.slug === currentRoleSlug)
+      if (exactSlugMatch) {
+        return exactSlugMatch
+      }
+
+      const categorySlugMatch = roles.find(r => r.categorySlug && r.categorySlug === currentRoleSlug)
+      if (categorySlugMatch) {
+        return categorySlugMatch
+      }
+    }
+
+    const pathSlugMatch = roles.find(r => location.pathname.includes(`/${r.slug}`))
+    if (pathSlugMatch) {
+      return pathSlugMatch
+    }
+
+    return roles.find(r => (r.categorySlug ? location.pathname.includes(`/${r.categorySlug}`) : false))
   }, [currentRoleSlug, roles, location.pathname])
 
   const handleRoleSelect = (role: RoleInfo) => {
@@ -107,6 +122,9 @@ export function HelpRoleSwitcher({ currentRoleSlug, onRoleChange }: HelpRoleSwit
   }
 
   const currentRole = getCurrentRole()
+  const isRoleActive = (role: RoleInfo) =>
+    currentRole?.slug === role.slug ||
+    (Boolean(currentRole?.categorySlug) && Boolean(role.categorySlug) && currentRole?.categorySlug === role.categorySlug)
 
   return (
     <>
@@ -118,7 +136,7 @@ export function HelpRoleSwitcher({ currentRoleSlug, onRoleChange }: HelpRoleSwit
               key={role.role}
               type="button"
               onClick={() => handleRoleSelect(role)}
-              className={`help-role-tab ${currentRole?.slug === role.slug || currentRole?.categorySlug === role.categorySlug ? 'active' : ''}`}
+              className={`help-role-tab ${isRoleActive(role) ? 'active' : ''}`}
             >
               {role.label}
             </button>
@@ -149,7 +167,7 @@ export function HelpRoleSwitcher({ currentRoleSlug, onRoleChange }: HelpRoleSwit
                 key={role.role}
                 type="button"
                 onClick={() => handleRoleSelect(role)}
-                className={`help-role-dropdown-item ${currentRole?.slug === role.slug || currentRole?.categorySlug === role.categorySlug ? 'active' : ''}`}
+                className={`help-role-dropdown-item ${isRoleActive(role) ? 'active' : ''}`}
               >
                 {role.label}
               </button>

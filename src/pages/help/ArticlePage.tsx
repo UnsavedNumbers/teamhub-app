@@ -283,12 +283,17 @@ export default function ArticlePage() {
         return processContentWithHeadingIds(withToolLinks)
       })()
     : ''
+  const articleExcerpt = (article.excerpt || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 
   return (
     <>
       <HelpFeatureLayout
         pageTitle={article.title}
-        pageDescription={article.excerpt || ''}
+        pageDescription={articleExcerpt}
         sidebarSections={[]}
         headerActions={<HelpHeaderSearch scopeRole={userRole || undefined} />}
         headerRoleSwitcher={<HelpRoleSwitcher currentRoleSlug={currentRoleSlug} />}

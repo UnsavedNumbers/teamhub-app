@@ -197,6 +197,45 @@ function getSlugFromFileName(fileName: string): string {
   return fileName.replace(/\.[^/.]+$/, '')
 }
 
+function decodeHtmlEntities(value?: string | null): string {
+  if (!value) return ''
+
+  return value.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (_, entity: string) => {
+    const named: Record<string, string> = {
+      amp: '&',
+      lt: '<',
+      gt: '>',
+      quot: '"',
+      apos: "'",
+      nbsp: ' ',
+    }
+
+    if (entity in named) {
+      return named[entity]
+    }
+
+    if (entity.startsWith('#x') || entity.startsWith('#X')) {
+      const code = Number.parseInt(entity.slice(2), 16)
+      return Number.isFinite(code) ? String.fromCodePoint(code) : `&${entity};`
+    }
+
+    if (entity.startsWith('#')) {
+      const code = Number.parseInt(entity.slice(1), 10)
+      return Number.isFinite(code) ? String.fromCodePoint(code) : `&${entity};`
+    }
+
+    return `&${entity};`
+  })
+}
+
+function toPlainText(value?: string | null): string {
+  if (!value) return ''
+  return decodeHtmlEntities(value)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function resolveAccessibleCategoryIds(
   allCategories: WordPressCategory[],
   baseCategoryIds: number[],
@@ -345,11 +384,11 @@ export async function getCategoriesForRole(
       const categoryImageUrl = getCategoryImageUrl(category)
       return {
         id: category.id,
-        name: category.name,
+        name: decodeHtmlEntities(category.name),
         slug: category.slug,
         parentId: category.parent,
         description: pageMapping?.pageContentHtml
-          ? pageMapping.pageContentHtml.replace(/<[^>]*>/g, '').substring(0, 200)
+          ? toPlainText(pageMapping.pageContentHtml).substring(0, 200)
           : undefined,
         coverPhotoUrl: categoryImageUrl, // Use WordPress category image instead of page featured image
         thumbnailUrl: thumbnails[category.slug],
@@ -399,6 +438,8 @@ export async function getCategoryDetails(
 
     const thumbnailUrls = await getCategoryThumbnailUrls([category.slug])
     const thumbnailUrl = thumbnailUrls[category.slug]
+    const wordpressDescription = toPlainText(category.description?.rendered)
+    const mappedDescription = toPlainText(pageMapping?.pageContentHtml)
 
     // Get category image URL
     const getCategoryImageUrl = (cat: WordPressCategory): string => {
@@ -415,11 +456,11 @@ export async function getCategoryDetails(
 
     const helpCategory: HelpCategory & { coverPhotoUrl: string; description: string } = {
       id: category.id,
-      name: category.name,
+      name: decodeHtmlEntities(category.name),
       slug: category.slug,
       parentId: category.parent,
       coverPhotoUrl: getCategoryImageUrl(category), // Use WordPress category image
-      description: pageMapping?.pageContentHtml || '',
+      description: wordpressDescription || mappedDescription,
       thumbnailUrl,
       articleCount,
     }
@@ -517,7 +558,7 @@ export async function getCategoryArticles(
       
       while (current) {
         slugs.unshift(current.slug)
-        names.unshift(current.name)
+        names.unshift(decodeHtmlEntities(current.name))
         if (current.parent === 0) break
         current = allCategories.find(c => c.id === current!.parent)
       }
@@ -539,13 +580,13 @@ export async function getCategoryArticles(
 
       const article: HelpArticle = {
         id: post.id,
-        title: post.title.rendered,
+        title: toPlainText(post.title.rendered),
         slug: post.slug,
-        excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ''),
+        excerpt: toPlainText(post.excerpt.rendered),
         content: post.content.rendered,
         featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
         categorySlug: articleCategory.slug,
-        categoryName: articleCategory.name,
+        categoryName: decodeHtmlEntities(articleCategory.name),
         categoryPath,
         categoryNames,
         tags: post.tags,
@@ -656,7 +697,7 @@ export async function getCategoryChildArticles(
       
       while (current) {
         slugs.unshift(current.slug)
-        names.unshift(current.name)
+        names.unshift(decodeHtmlEntities(current.name))
         if (current.parent === 0) break
         current = allCategories.find(c => c.id === current!.parent)
       }
@@ -673,13 +714,13 @@ export async function getCategoryChildArticles(
 
       const articles: HelpArticle[] = categoryPosts.map(post => ({
         id: post.id,
-        title: post.title.rendered,
+        title: toPlainText(post.title.rendered),
         slug: post.slug,
-        excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ''),
+        excerpt: toPlainText(post.excerpt.rendered),
         content: post.content.rendered,
         featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
         categorySlug: category.slug,
-        categoryName: category.name,
+        categoryName: decodeHtmlEntities(category.name),
         categoryPath,
         categoryNames,
         tags: post.tags,
@@ -689,7 +730,7 @@ export async function getCategoryChildArticles(
 
       return {
         id: category.id,
-        name: category.name,
+        name: decodeHtmlEntities(category.name),
         slug: category.slug,
         parentId: category.parent,
         depth,
@@ -791,7 +832,7 @@ export async function getCategorySubcategoryGroups(
       
       while (current) {
         slugs.unshift(current.slug)
-        names.unshift(current.name)
+        names.unshift(decodeHtmlEntities(current.name))
         if (current.parent === 0) break
         current = allCategories.find(c => c.id === current!.parent)
       }
@@ -829,13 +870,13 @@ export async function getCategorySubcategoryGroups(
 
       const articles: HelpArticle[] = groupPosts.map(post => ({
         id: post.id,
-        title: post.title.rendered,
+        title: toPlainText(post.title.rendered),
         slug: post.slug,
-        excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ''),
+        excerpt: toPlainText(post.excerpt.rendered),
         content: post.content.rendered,
         featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
         categorySlug: childCategory.slug,
-        categoryName: childCategory.name,
+        categoryName: decodeHtmlEntities(childCategory.name),
         categoryPath,
         categoryNames,
         tags: post.tags,
@@ -860,9 +901,9 @@ export async function getCategorySubcategoryGroups(
 
       return {
         id: childCategory.id,
-        name: childCategory.name,
+        name: decodeHtmlEntities(childCategory.name),
         slug: childCategory.slug,
-        description: childCategory.description?.rendered ? childCategory.description.rendered.replace(/<[^>]*>/g, '').substring(0, 150) : undefined,
+        description: childCategory.description?.rendered ? toPlainText(childCategory.description.rendered).substring(0, 150) : undefined,
         articles: uniqueArticles,
       }
     })
@@ -917,7 +958,7 @@ export async function getArticleBySlug(
       
       while (current) {
         slugs.unshift(current.slug)
-        names.unshift(current.name)
+        names.unshift(decodeHtmlEntities(current.name))
         if (current.parent === 0) break
         current = allCategories.find(c => c.id === current!.parent)
       }
@@ -929,13 +970,13 @@ export async function getArticleBySlug(
 
     const article: HelpArticle = {
       id: post.id,
-      title: post.title.rendered,
+      title: toPlainText(post.title.rendered),
       slug: post.slug,
-      excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ''),
+      excerpt: toPlainText(post.excerpt.rendered) || toPlainText(post.content.rendered).substring(0, 240),
       content: post.content.rendered,
       featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
       categorySlug: articleCategory.slug,
-      categoryName: articleCategory.name,
+      categoryName: decodeHtmlEntities(articleCategory.name),
       categoryPath,
       categoryNames,
       tags: post.tags,
@@ -1024,7 +1065,7 @@ async function searchArticlesClientSide(
       
       while (current) {
         slugs.unshift(current.slug)
-        names.unshift(current.name)
+        names.unshift(decodeHtmlEntities(current.name))
         if (current.parent === 0) break
         current = categories.find(c => c.id === current!.parent)
       }
@@ -1040,9 +1081,9 @@ async function searchArticlesClientSide(
       if (!category) {
         return {
           id: post.id,
-          title: post.title.rendered,
+          title: toPlainText(post.title.rendered),
           slug: post.slug,
-          excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ''),
+          excerpt: toPlainText(post.excerpt.rendered),
           content: post.content.rendered,
           featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
           categorySlug: '',
@@ -1057,13 +1098,13 @@ async function searchArticlesClientSide(
 
       return {
         id: post.id,
-        title: post.title.rendered,
+        title: toPlainText(post.title.rendered),
         slug: post.slug,
-        excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ''),
+        excerpt: toPlainText(post.excerpt.rendered),
         content: post.content.rendered,
         featuredImageUrl: post.featured_media_url || post.jetpack_featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
         categorySlug: category.slug,
-        categoryName: category.name,
+        categoryName: decodeHtmlEntities(category.name),
         categoryPath,
         categoryNames,
         tags: post.tags,

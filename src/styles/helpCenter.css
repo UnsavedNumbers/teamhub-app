@@ -869,11 +869,7 @@ html.dark {
 
 .help-article-content strong {
   font-weight: 700;
-  color: #0f172a;
-}
-
-.dark .help-article-content strong {
-  color: #f8fafc;
+  color: var(--help-text);
 }
 
 /* Category Landing Page Card Hover Effect */

@@ -162,6 +162,11 @@ export default function TopicPage() {
   }, [roleSlug])
 
   const currentRoleSlug = getCurrentRoleSlug()
+  const topicExcerpt = (category?.description || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 
   if (authLoading || loading) {
     return (
@@ -199,7 +204,7 @@ export default function TopicPage() {
   return (
     <HelpFeatureLayout
       pageTitle={category.name}
-      pageDescription={(category.description || '').replace(/<[^>]*>/g, '').substring(0, 240)}
+      pageDescription={topicExcerpt}
       sidebarSections={[]}
       headerActions={<HelpHeaderSearch scopeRole={userRole || undefined} />}
       headerRoleSwitcher={<HelpRoleSwitcher currentRoleSlug={currentRoleSlug} />}

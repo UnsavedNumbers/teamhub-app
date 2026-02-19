@@ -94,8 +94,10 @@ export default function HelpHomepage() {
 
       const mappings = mappingsResult.data || []
       const cardsWithSlugs = baseCards.map(card => {
-        // Find the first mapping for this role (primary category)
-        const roleMapping = mappings.find(m => m.role === card.role)
+        const roleMappings = mappings.filter(m => m.role === card.role)
+        const roleMapping =
+          roleMappings.find(m => m.wordpressCategorySlug === card.slug) ||
+          roleMappings[0]
         return {
           ...card,
           categorySlug: roleMapping?.wordpressCategorySlug,
@@ -134,7 +136,7 @@ export default function HelpHomepage() {
       headerActions={<HelpHeaderSearch scopeRole={null} />}
       headerRoleSwitcher={undefined}
     >
-      <section className="help-uber-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', maxWidth: '800px', margin: '0 auto' }}>
+      <section className="help-uber-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', maxWidth: '920px', margin: '0 auto' }}>
         {roleCards.map((card) => {
           const categoryLink = card.categorySlug
             ? getLink('portal.helpCategory', { categorySlug: card.categorySlug })
@@ -145,10 +147,10 @@ export default function HelpHomepage() {
               key={card.role}
               to={categoryLink}
               className="help-role-card"
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', justifyContent: 'center' }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', justifyContent: 'center', minHeight: '132px', padding: '1rem 0.875rem' }}
             >
-              <div className="help-role-card-icon">
-                <span className="material-symbols-outlined">{card.icon}</span>
+              <div className="help-role-card-icon" style={{ background: 'transparent' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '2.25rem' }}>{card.icon}</span>
               </div>
               <h3 className="help-role-card-title" style={{ marginTop: '1rem', marginBottom: 0 }}>{card.label}</h3>
             </Link>
