@@ -34,6 +34,33 @@ export default function OrganizationBilling() {
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
   const isMounted = useIsMounted()
+  
+  // Check if this is a sub-org (they don't have billing)
+  const { data: orgData } = useQuery({
+    queryKey: ['org-parent-check', orgId],
+    queryFn: async () => {
+      if (!orgId) return null
+      const { data } = await supabase
+        .from('organizations')
+        .select('parent_org_id')
+        .eq('id', orgId)
+        .maybeSingle()
+      return data
+    },
+    enabled: !!orgId,
+  })
+  
+  const isSubOrg = orgData?.parent_org_id != null
+  
+  useEffect(() => {
+    if (isSubOrg && isMounted) {
+      navigate('/admin/organization', { replace: true })
+    }
+  }, [isSubOrg, isMounted, navigate])
+  
+  if (isSubOrg) {
+    return null // Will redirect
+  }
 
   const { summary, loading, error } = useLicense(orgId)
 

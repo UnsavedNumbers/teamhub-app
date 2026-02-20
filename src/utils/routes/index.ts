@@ -109,6 +109,7 @@ export const RouteKeys = {
     // Root
     MARKETING: 'root.marketing',
     DEMO_REQUEST: 'root.demoRequest',
+    DEMO_ENTRY: 'root.demoEntry',
 
     // Portal
     PORTAL_DASHBOARD: 'portal.dashboard',
@@ -142,6 +143,7 @@ export const RouteKeys = {
     PORTAL_ORG_TICKETS: 'portal.orgTickets',
     PORTAL_ORG_TICKET_EVENT: 'portal.orgTicketEvent',
     PORTAL_ORG_TICKET_ORDER: 'portal.orgTicketOrder',
+    PORTAL_SUB_ORG_REGISTRATION: 'portal.subOrgRegistration',
     PORTAL_ORG_TICKET_ACCESS: 'portal.orgTicketAccess',
     PORTAL_ORG_TICKET_ACCESS_LANDING: 'portal.orgTicketAccessLanding',
 

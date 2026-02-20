@@ -24,7 +24,7 @@ import {
   revokeDemoCode,
 } from '@/data/services/demoCodeService'
 import { sendApprovalEmail } from '@/services/demoResultWebhookService'
-import type { CreateDemoOrgInput, DemoCode, DemoOrgPOC, DemoOrganization } from '@/types/demoManagement'
+import type { CreateDemoOrgInput, DemoAllowedRole, DemoCode, DemoOrgPOC, DemoOrganization } from '@/types/demoManagement'
 import { getLink } from '@/utils/routes'
 import { useI18n } from '@/i18n/useI18n'
 
@@ -47,6 +47,9 @@ export default function DemoOrgDetail() {
   const [resendConfirmOpen, setResendConfirmOpen] = useState(false)
   const [resendLoading, setResendLoading] = useState(false)
   const [resendSuccess, setResendSuccess] = useState<string | null>(null)
+  const [allowedRolesEditing, setAllowedRolesEditing] = useState(false)
+  const [allowedRolesSaving, setAllowedRolesSaving] = useState(false)
+  const [selectedRoles, setSelectedRoles] = useState<DemoAllowedRole[]>([])
 
   const orgId = id ?? ''
 
@@ -70,6 +73,8 @@ export default function DemoOrgDetail() {
       setOrganization(org)
       setPocs(pocRows)
       setCodes(codeRows)
+      // Initialize selected roles from org's allowed_roles (default to all if not set)
+      setSelectedRoles(org.allowed_roles ?? ['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan'])
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : t('common.error.loadFailed'))
       setOrganization(null)
@@ -230,6 +235,111 @@ export default function DemoOrgDetail() {
                   {primaryPoc.phone || '—'}
                 </div>
               </>
+            )}
+          </div>
+
+          {/* Allowed Roles Section */}
+          <div className="pa-card pa-mt-4 pa-stack" style={{ gap: 'var(--pa-space-2)' }}>
+            <div className="pa-flex pa-items-center pa-justify-between">
+              <div>
+                <strong>{t('platformAdmin.demoManagement.detail.allowedRoles.title', 'Allowed Roles')}</strong>
+                <div className="pa-text-sm pa-text-muted">
+                  {t('platformAdmin.demoManagement.detail.allowedRoles.description', 'Select which roles are available for this demo organization.')}
+                </div>
+              </div>
+              {!allowedRolesEditing && (
+                <Button variant="ghost" size="sm" onClick={() => setAllowedRolesEditing(true)}>
+                  {t('common.edit')}
+                </Button>
+              )}
+            </div>
+
+            {allowedRolesEditing ? (
+              <div className="pa-stack" style={{ gap: 'var(--pa-space-2)' }}>
+                {(['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan'] as DemoAllowedRole[]).map((role) => {
+                  const roleLabels: Record<DemoAllowedRole, string> = {
+                    org_admin: t('platformAdmin.demoManagement.detail.allowedRoles.orgAdmin', 'Org Admin'),
+                    coach: t('platformAdmin.demoManagement.detail.allowedRoles.coach', 'Coach'),
+                    parent: t('platformAdmin.demoManagement.detail.allowedRoles.guardian', 'Guardian'),
+                    athlete: t('platformAdmin.demoManagement.detail.allowedRoles.athlete', 'Athlete'),
+                    staff: t('platformAdmin.demoManagement.detail.allowedRoles.volunteer', 'Volunteer'),
+                    fan: t('platformAdmin.demoManagement.detail.allowedRoles.fan', 'Fan'),
+                  }
+                  return (
+                    <label key={role} className="pa-flex pa-items-center pa-gap-2 pa-cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedRoles.includes(role)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedRoles([...selectedRoles, role])
+                          } else {
+                            setSelectedRoles(selectedRoles.filter((r) => r !== role))
+                          }
+                        }}
+                        className="pa-checkbox"
+                      />
+                      <span>{roleLabels[role]}</span>
+                    </label>
+                  )
+                })}
+                <div className="pa-flex pa-gap-2 pa-mt-2">
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      if (!organization) return
+                      setAllowedRolesSaving(true)
+                      try {
+                        await updateDemoOrg(organization.id, { allowed_roles: selectedRoles })
+                        setAllowedRolesEditing(false)
+                        await loadData()
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : t('common.error.updateFailed'))
+                      } finally {
+                        setAllowedRolesSaving(false)
+                      }
+                    }}
+                    disabled={allowedRolesSaving || selectedRoles.length === 0}
+                  >
+                    {allowedRolesSaving ? t('common.saving') : t('common.save')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setAllowedRolesEditing(false)
+                      setSelectedRoles(organization.allowed_roles ?? ['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan'])
+                    }}
+                    disabled={allowedRolesSaving}
+                  >
+                    {t('common.cancel')}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="pa-text-sm">
+                {selectedRoles.length > 0 ? (
+                  <div className="pa-flex pa-flex-wrap pa-gap-2">
+                    {selectedRoles.map((role) => {
+                      const roleLabels: Record<DemoAllowedRole, string> = {
+                        org_admin: t('platformAdmin.demoManagement.detail.allowedRoles.orgAdmin', 'Org Admin'),
+                        coach: t('platformAdmin.demoManagement.detail.allowedRoles.coach', 'Coach'),
+                        parent: t('platformAdmin.demoManagement.detail.allowedRoles.guardian', 'Guardian'),
+                        athlete: t('platformAdmin.demoManagement.detail.allowedRoles.athlete', 'Athlete'),
+                        staff: t('platformAdmin.demoManagement.detail.allowedRoles.volunteer', 'Volunteer'),
+                        fan: t('platformAdmin.demoManagement.detail.allowedRoles.fan', 'Fan'),
+                      }
+                      return (
+                        <span key={role} className="pa-badge pa-badge-secondary">
+                          {roleLabels[role]}
+                        </span>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <span className="pa-text-muted">{t('platformAdmin.demoManagement.detail.allowedRoles.none', 'No roles selected')}</span>
+                )}
+              </div>
             )}
           </div>
 

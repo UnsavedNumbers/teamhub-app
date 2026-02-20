@@ -146,6 +146,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const latestUserRef = useRef<User | null>(null)
+  const latestProfileRef = useRef<UserProfile | null>(null)
+  const latestLoadingRef = useRef(true)
+  const lastAuthSnapshotRef = useRef<string>('')
+  const sessionRecoveryInFlightRef = useRef(false)
+  const lastSessionRecoveryAttemptRef = useRef(0)
 
   const { setOrganizations, currentOrganization } = useOrganization()
   const { refreshSession } = useDemoSession()
@@ -158,6 +164,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Mounted flag for cleanup (Bug Prevention #2)
   const mountedRef = useRef(true)
+
+  // Keep latest identity in refs for auth event handlers without re-subscribing.
+  useEffect(() => {
+    latestUserRef.current = user
+  }, [user])
+
+  useEffect(() => {
+    latestProfileRef.current = profile
+  }, [profile])
+
+  useEffect(() => {
+    latestLoadingRef.current = loading
+  }, [loading])
+
+  const getAuthRouteContext = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return { route: 'n/a', traceId: null as string | null }
+    }
+    const route = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    const traceId = window.sessionStorage.getItem('auth_debug_trace_id')
+    return { route, traceId }
+  }, [])
+
+  // Snapshot log for auth state transitions to diagnose redirect races.
+  useEffect(() => {
+    const snapshot = {
+      userId: user?.id ?? null,
+      profileId: profile?.id ?? null,
+      sessionUserId: session?.user?.id ?? null,
+      loading,
+      orgCount: profile?.organizations.length ?? 0,
+      ...getAuthRouteContext(),
+    }
+    const serialized = JSON.stringify(snapshot)
+    if (lastAuthSnapshotRef.current === serialized) return
+    lastAuthSnapshotRef.current = serialized
+    debug.data('Auth.state', 'Snapshot', snapshot)
+  }, [user, profile, session, loading, getAuthRouteContext])
 
   /* ===================== FETCH PROFILE ===================== */
 
@@ -415,6 +459,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [setOrganizations]
   )
 
+  // Recover auth state if session exists in Supabase but local user/profile were never hydrated.
+  // This covers callback flows where setSession() does not emit a usable auth event.
+  useEffect(() => {
+    if (loading) return
+    if (user) return
+    if (sessionRecoveryInFlightRef.current) return
+
+    const now = Date.now()
+    if (now - lastSessionRecoveryAttemptRef.current < 1500) return
+    lastSessionRecoveryAttemptRef.current = now
+    sessionRecoveryInFlightRef.current = true
+
+    debug.flow('Auth', 'Session recovery check start', {
+      ...getAuthRouteContext(),
+    })
+
+    supabase.auth.getSession()
+      .then(({ data, error }) => {
+        if (!mountedRef.current) return
+        if (error) {
+          debug.error('Auth', 'Session recovery check failed', {
+            error: error.message,
+            ...getAuthRouteContext(),
+          })
+          return
+        }
+
+        const recoveredSession = data.session
+        if (!recoveredSession?.user) {
+          debug.flow('Auth', 'Session recovery check: no session', {
+            ...getAuthRouteContext(),
+          })
+          return
+        }
+
+        debug.flow('Auth', 'Session recovery found session, hydrating auth state', {
+          recoveredUserId: recoveredSession.user.id,
+          ...getAuthRouteContext(),
+        })
+        setSession(recoveredSession)
+        setUser(recoveredSession.user)
+        fetchProfile(recoveredSession.user.id)
+      })
+      .finally(() => {
+        sessionRecoveryInFlightRef.current = false
+      })
+  }, [loading, user, fetchProfile, getAuthRouteContext])
+
   /* ===================== AUTH BOOTSTRAP ===================== */
 
   useEffect(() => {
@@ -496,11 +588,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    debug.flow('Auth', 'Bootstrap: getSession() start', getAuthRouteContext())
+
     supabase.auth.getSession().then(({ data }) => {
       if (!mountedRef.current) return
 
       // Handle session/user mismatch (Bug Prevention #10)
       const session = data.session
+      debug.flow('Auth', 'Bootstrap: getSession() result', {
+        hasSession: !!session,
+        sessionUserId: session?.user?.id ?? null,
+        ...getAuthRouteContext(),
+      })
       if (!mountedRef.current) return
       setSession(session)
       setUser(session?.user ?? null)
@@ -529,14 +628,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mountedRef.current) return
 
-      // Ignore TOKEN_REFRESHED events - they fire on tab focus and cause unnecessary re-renders
-      // The session is still valid, no need to trigger loading states or re-fetch profile
+      const currentUser = latestUserRef.current
+      const currentProfile = latestProfileRef.current
+      debug.flow('Auth', `Auth event received: ${event}`, {
+        event,
+        eventUserId: session?.user?.id ?? null,
+        currentUserId: currentUser?.id ?? null,
+        currentProfileId: currentProfile?.id ?? null,
+        loading: latestLoadingRef.current,
+        ...getAuthRouteContext(),
+      })
+
+      // TOKEN_REFRESHED can happen after setSession() during callback flows.
+      // If local identity is not hydrated yet, recover user/profile from the refreshed session.
       if (event === 'TOKEN_REFRESHED') {
-        // Silently update session without triggering loading states
         if (session) {
           setSession(session)
-          // Don't update user or trigger profile fetch - nothing meaningful changed
-          debug.flow('Auth', 'Token refreshed', { userId: session.user.id })
+
+          const needsUserHydration = !currentUser || currentUser.id !== session.user.id
+          const needsProfileHydration = !currentProfile || currentProfile.id !== session.user.id
+
+          if (needsUserHydration) {
+            setUser(session.user)
+          }
+
+          if (needsUserHydration || needsProfileHydration) {
+            debug.flow('Auth', 'Token refreshed with missing identity, hydrating', {
+              userId: session.user.id,
+              needsUserHydration,
+              needsProfileHydration,
+              ...getAuthRouteContext(),
+            })
+            fetchProfile(session.user.id)
+          } else {
+            debug.flow('Auth', 'Token refreshed', { userId: session.user.id, ...getAuthRouteContext() })
+          }
         }
         return
       }
@@ -546,7 +672,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         event,
         userId: session?.user?.id,
         hasSession: !!session,
-        email: session?.user?.email
+        email: session?.user?.email,
+        currentUserId: currentUser?.id ?? null,
+        currentProfileId: currentProfile?.id ?? null,
+        ...getAuthRouteContext(),
       })
 
       // Event debouncing (Bug Prevention #3)
@@ -557,6 +686,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastEvent.event === event &&
         now - lastEvent.timestamp < 100
       ) {
+        debug.data('Auth', 'Debounced duplicate auth event', {
+          event,
+          deltaMs: now - lastEvent.timestamp,
+          ...getAuthRouteContext(),
+        })
         return // Skip duplicate event within 100ms
       }
       lastAuthEventRef.current = { event, timestamp: now }
@@ -579,7 +713,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_IN') {
         debug.flow('Auth', 'User signed in', { userId: session?.user?.id, email: session?.user?.email })
       } else if (event === 'SIGNED_OUT') {
-        debug.flow('Auth', 'User signed out', { previousUserId: user?.id })
+        debug.flow('Auth', 'User signed out', { previousUserId: currentUser?.id ?? null })
         if (!mountedRef.current) return
         setProfile(null)
         setOrganizations([])
@@ -596,7 +730,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mountedRef.current = false
       subscription.unsubscribe()
     }
-  }, [fetchProfile, setOrganizations])
+  }, [fetchProfile, setOrganizations, getAuthRouteContext])
 
   /* ===================== LOADING STATE TIMEOUT FALLBACK ===================== */
 

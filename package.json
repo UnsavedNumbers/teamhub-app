@@ -24,6 +24,7 @@
     "db:next-migration-version": "node scripts/next-migration-version.mjs",
     "db:prepare-baseline": "npm run db:copy-baseline && npm run db:organize-baseline",
     "generate:feature-keys": "npx tsx scripts/generate-feature-keys.ts",
+    "demo:create-accounts": "npx tsx scripts/create-demo-accounts.ts",
     "emails:watch": "mjml -w emails/mjml -o emails/compiled",
     "demo:resize-athlete-photos": "node scripts/resize-demo-athlete-photos.mjs",
     "emails:build": "mjml emails/mjml/admin-invite.mjml emails/mjml/announcement.mjml emails/mjml/follow-up-message.mjml emails/mjml/guardian-invite.mjml emails/mjml/marketing-promo.mjml emails/mjml/member-referral.mjml emails/mjml/new_event.mjml emails/mjml/new_message.mjml emails/mjml/newsletter.mjml emails/mjml/organizer-outreach.mjml emails/mjml/partner-invite.mjml emails/mjml/password-reset.mjml emails/mjml/payment_receipt.mjml emails/mjml/photo-approved.mjml emails/mjml/photo-rejected.mjml emails/mjml/program-highlights.mjml emails/mjml/re-engagement.mjml emails/mjml/staff-invite.mjml emails/mjml/urgent-notification.mjml -o emails/compiled"

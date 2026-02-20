@@ -332,6 +332,12 @@ const portal = {
         label: 'Ticket Access',
         icon: 'qr_code_scanner',
     },
+    subOrgRegistration: {
+        path: '/o/:orgSlug/register-sub-org',
+        params: ['orgSlug'] as const,
+        label: 'Register Sub-Organization',
+        icon: 'add_business',
+    },
 } as const satisfies Record<string, RouteDefinition>
 
 // ============================================================================
@@ -493,6 +499,13 @@ const admin = {
             icon: 'admin_panel_settings',
             description: 'Access and roles',
             requiresOrg: true,
+        },
+        subOrgs: {
+            path: '/admin/organization/sub-orgs',
+            label: 'Sub-Organizations',
+            icon: 'apartment',
+            description: 'Manage sub-organizations',
+            requiresOrg: false,
         },
         billing: {
             path: '/admin/organization/billing',
@@ -1623,6 +1636,11 @@ const root = {
         path: '/demo-request',
         label: 'Request a Demo',
         icon: 'request_quote',
+    },
+    demoEntry: {
+        path: '/demo',
+        label: 'Demo Access',
+        icon: 'login',
     },
 } as const satisfies Record<string, RouteDefinition>
 

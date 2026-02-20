@@ -19,6 +19,7 @@ import {
     getSportsForOrg,
     getProgramById,
     getProgramsForOrg,
+    fakeSports,
     type FakeSport,
     type FakeProgram,
 } from '../fake/fakeTeams'
@@ -65,6 +66,26 @@ export async function getSystemSports(): Promise<{ data: Sport[]; error: Error |
     debug.perf.start('sportsService.getSystemSports')
 
     try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const data: Sport[] = fakeSports.map((s): Sport => ({
+                id: s.id,
+                org_id: null,
+                name: s.name || 'Unknown Sport',
+                slug: s.slug ?? null,
+                icon: s.icon ?? null,
+                color: s.color || 'var(--org-btn-primary-bg, #137fec)',
+                created_at: s.created_at || new Date().toISOString(),
+                updated_at: s.updated_at || new Date().toISOString(),
+                deleted_at: s.deleted_at ?? null,
+                is_system: true,
+            }))
+            debug.perf.end('sportsService.getSystemSports')
+            debug.data('SportsService.getSystemSports', 'Response (fake)', { sportCount: data.length })
+            console.groupEnd()
+            return { data, error: null }
+        }
+
         // System sports are identified by org_id IS NULL and is_system = true
         const { data, error } = await supabase
             .from('sports')

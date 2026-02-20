@@ -18,6 +18,33 @@ import MobileMenu from '../components/common/MobileMenu'
 import GlobalNav from '../components/common/GlobalNav'
 import type { NavSection } from '@/types/menu'
 import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '../lib/supabase'
+
+function SubOrgBanner({ parentOrgId }: { parentOrgId: string }) {
+  const { data: parentOrg } = useQuery({
+    queryKey: ['parent-org', parentOrgId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', parentOrgId)
+        .maybeSingle()
+      return data
+    },
+  })
+
+  return (
+    <div className="oa-banner oa-banner-info" style={{ backgroundColor: '#e3f2fd', color: '#1976d2', padding: '12px 16px', borderBottom: '1px solid #bbdefb' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '1200px', margin: '0 auto' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>info</span>
+        <span style={{ fontSize: '14px', fontWeight: 500 }}>
+          This organization is managed by <strong>{parentOrg?.name || 'Parent Organization'}</strong>. Billing is handled by the parent organization.
+        </span>
+      </div>
+    </div>
+  )
+}
 
 export default function AdminLayout() {
   const { loaded: orgThemeLoaded } = useOrgAdminTheme()
@@ -45,6 +72,30 @@ export default function AdminLayout() {
   }, [])
 
   const hasOrg = !!currentOrganization?.id
+  
+  // Fetch parent_org_id for current org
+  const { data: orgData } = useQuery({
+    queryKey: ['org-parent-check', currentOrganization?.id],
+    queryFn: async () => {
+      if (!currentOrganization?.id) return null
+      const { data } = await supabase
+        .from('organizations')
+        .select('parent_org_id')
+        .eq('id', currentOrganization.id)
+        .maybeSingle()
+      return data
+    },
+    enabled: !!currentOrganization?.id,
+  })
+  
+  // Check if current org is a sub-org (has parent) or parent (no parent)
+  const isSubOrg = useMemo(() => {
+    return orgData?.parent_org_id != null
+  }, [orgData?.parent_org_id])
+  
+  const isParentOrg = useMemo(() => {
+    return hasOrg && !isSubOrg
+  }, [hasOrg, isSubOrg])
 
   const handleMobileSidebarClose = useCallback(() => {
     setMobileSidebarOpen(false)
@@ -74,6 +125,7 @@ export default function AdminLayout() {
         { routeKey: 'admin.teams.list', text: t('admin.navigation.organizationTeams'), icon: 'groups', path: getLink('admin.teams.list'), requiresOrg: true },
         { routeKey: 'admin.seasons.list', text: t('admin.navigation.organizationSeasons'), icon: 'calendar_month', path: getLink('admin.seasons.list'), requiresOrg: true },
         { routeKey: 'admin.organization.users', text: t('admin.navigation.organizationStaff'), icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
+        ...(isParentOrg ? [{ routeKey: 'admin.organization.subOrgs', text: 'Sub-Organizations', icon: 'apartment', path: getLink('admin.organization.subOrgs'), requiresOrg: false }] : []),
       ],
     },
     {
@@ -140,7 +192,7 @@ export default function AdminLayout() {
       path: getPath(RouteKeys.ADMIN_SETTINGS),
       requiresOrg: false,
       children: [
-        { routeKey: 'admin.organization.billing', text: t('admin.navigation.billing'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING), requiresOrg: false },
+        ...(isSubOrg ? [] : [{ routeKey: 'admin.organization.billing', text: t('admin.navigation.billing'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING), requiresOrg: false }]),
         { routeKey: 'admin.settings', text: t('admin.navigation.settings'), icon: 'settings', path: getPath(RouteKeys.ADMIN_SETTINGS), requiresOrg: false },
         { routeKey: 'admin.help', text: t('admin.navigation.helpSupport'), icon: 'help', path: getLink('admin.help'), requiresOrg: false },
         { routeKey: 'admin.contact', text: t('admin.navigation.contactSupport'), icon: 'mail', path: getLink('admin.contact'), requiresOrg: false },
@@ -415,6 +467,11 @@ export default function AdminLayout() {
 
         {/* License Warning Banner */}
         {summary && <LicenseWarningBanner summary={summary} />}
+
+        {/* Sub-Org Banner */}
+        {isSubOrg && orgData?.parent_org_id && (
+          <SubOrgBanner parentOrgId={orgData.parent_org_id} />
+        )}
 
         {/* Content */}
         <main className="oa-content">

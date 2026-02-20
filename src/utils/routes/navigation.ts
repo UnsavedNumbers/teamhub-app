@@ -317,6 +317,7 @@ export const orgAdminNavSections: NavigationSection[] = [
                 items: [
                     { routeKey: 'admin.organization.base', text: 'Organization Settings', icon: 'settings', description: 'Organization info' },
                     { routeKey: 'admin.organization.users', text: 'Users', icon: 'admin_panel_settings', description: 'Access and roles' },
+                    { routeKey: 'admin.organization.subOrgs', text: 'Sub-Organizations', icon: 'apartment', description: 'Manage sub-organizations' },
                     { routeKey: 'admin.organization.billing', text: 'Billing', icon: 'credit_card', description: 'Plan and billing' },
                 ],
             },

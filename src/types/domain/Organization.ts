@@ -45,6 +45,9 @@ export interface Organization {
   // Public profile
   logo_url?: string | null
   profile_visible_to_fans?: boolean
+
+  // Sub-organization hierarchy
+  parent_org_id?: string | null
 }
 
 export type OrganizationStatus = 'trial' | 'active' | 'suspended' | 'expired'

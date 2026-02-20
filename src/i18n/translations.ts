@@ -503,6 +503,53 @@ export const en = {
                 switchFailed: 'Failed to switch role. Please try again.',
                 signOutFailed: 'Failed to sign out. Please try again.',
             },
+            subOrgRegistration: {
+                title: 'Register Your School/League',
+                subtitle: 'Register a sub-organization under {{orgName}}',
+                fields: {
+                    orgName: {
+                        label: 'Organization Name',
+                        placeholder: 'e.g., Lincoln High School',
+                        required: 'Organization name is required',
+                    },
+                    contactName: {
+                        label: 'Contact Name',
+                        placeholder: 'Your name',
+                        required: 'Contact name is required',
+                    },
+                    contactEmail: {
+                        label: 'Contact Email',
+                        placeholder: 'your@email.com',
+                        description: 'You will receive login instructions at this email',
+                        required: 'Valid contact email is required',
+                        invalid: 'Please enter a valid email address',
+                    },
+                    orgType: {
+                        label: 'Organization Type (Optional)',
+                        placeholder: 'e.g., High School, Little League, Club',
+                    },
+                    sports: {
+                        label: 'Sports',
+                        description: 'Select the sports your organization will offer',
+                        required: 'Please select at least one sport',
+                        noneAvailable: 'No sports available. Please contact the parent organization.',
+                    },
+                },
+                submit: {
+                    request: 'Submit Registration Request',
+                    create: 'Create Sub-Organization',
+                    submitting: 'Submitting...',
+                    approvalNote: 'Your request will be reviewed by the parent organization',
+                },
+                success: {
+                    request: 'Registration request submitted successfully! The parent organization will review your request.',
+                    create: 'Sub-organization created successfully! You will receive an email with login instructions.',
+                },
+                unavailable: {
+                    title: 'Registration Unavailable',
+                    back: 'Back to {{orgName}}',
+                },
+            },
             emptyStates: {
                 noOrganizations: {
                     title: 'No Organizations',
@@ -2931,6 +2978,72 @@ export const en = {
             subtitle: 'Manage organization users and roles',
             createSubtitle: 'Add a new user to your organization',
         },
+        subOrgs: {
+            title: 'Sub-Organizations',
+            subtitle: 'Manage sub-organizations under your organization',
+            tabs: {
+                subOrgs: 'Sub-Organizations',
+                requests: 'Requests',
+                settings: 'Settings',
+            },
+            list: {
+                empty: 'No sub-organizations yet.',
+                created: 'Created {{date}}',
+                manage: 'Manage',
+                hide: 'Hide',
+                status: {
+                    active: 'Active',
+                    suspended: 'Suspended',
+                },
+            },
+            settings: {
+                title: 'Sub-Organization Settings',
+                status: {
+                    label: 'Status',
+                    active: 'Active',
+                    suspended: 'Suspended',
+                },
+                enabledSports: {
+                    label: 'Enabled Sports',
+                    description: 'Select which sports this sub-org can use',
+                },
+                save: 'Save Changes',
+                confirmDisableSports: 'You are disabling {{count}} sport(s) for this sub-organization. They will not be able to create new teams in these sports. Continue?',
+            },
+            requests: {
+                empty: 'No pending requests.',
+                contact: 'Contact: {{name}} ({{email}})',
+                type: 'Type: {{type}}',
+                requestedSports: 'Requested Sports:',
+                submitted: 'Submitted {{date}}',
+                approve: 'Approve',
+                reject: 'Reject',
+            },
+            parentSettings: {
+                title: 'Sub-Organization Settings',
+                publicRegistration: {
+                    label: 'Allow Public Registration',
+                    description: 'Allow schools/leagues to register as sub-organizations via your public page',
+                },
+                requireApproval: {
+                    label: 'Require Approval',
+                    description: 'Review and approve sub-org registration requests before they are created',
+                },
+                maxCount: {
+                    label: 'Maximum Sub-Organizations (Optional)',
+                    placeholder: 'Leave empty for unlimited',
+                    description: 'Limit the number of sub-organizations that can be created',
+                },
+                save: 'Save Settings',
+                saving: 'Saving...',
+            },
+            messages: {
+                approved: 'Sub-organization approved successfully',
+                rejected: 'Request rejected',
+                settingsUpdated: 'Settings updated',
+                settingsSaved: 'Settings saved',
+            },
+        },
         travel: {
             title: 'Travel Plans',
             subtitle: 'Manage travel itineraries and plans',
@@ -5307,6 +5420,11 @@ export const en = {
             },
         },
     },
+
+    demoEntry: {
+        welcome: 'Welcome to {{orgName}}\'s demo.',
+        whoToUseSiteAs: 'Who would you like to use the site as?',
+    },
 }
 
 /**
@@ -5802,6 +5920,53 @@ export const es = {
                     title: 'Sesi?n Expirada',
                     message: 'Tu sesi?n ha expirado. Por favor inicia sesi?n nuevamente.',
                     action: 'Iniciar Sesi?n',
+                },
+            },
+            subOrgRegistration: {
+                title: 'Registrar Tu Escuela/Liga',
+                subtitle: 'Registrar una sub-organización bajo {{orgName}}',
+                fields: {
+                    orgName: {
+                        label: 'Nombre de la Organización',
+                        placeholder: 'ej., Escuela Secundaria Lincoln',
+                        required: 'El nombre de la organización es requerido',
+                    },
+                    contactName: {
+                        label: 'Nombre de Contacto',
+                        placeholder: 'Tu nombre',
+                        required: 'El nombre de contacto es requerido',
+                    },
+                    contactEmail: {
+                        label: 'Correo de Contacto',
+                        placeholder: 'tu@correo.com',
+                        description: 'Recibirás instrucciones de inicio de sesión en este correo',
+                        required: 'Se requiere un correo de contacto válido',
+                        invalid: 'Por favor ingresa una dirección de correo válida',
+                    },
+                    orgType: {
+                        label: 'Tipo de Organización (Opcional)',
+                        placeholder: 'ej., Escuela Secundaria, Liga Pequeña, Club',
+                    },
+                    sports: {
+                        label: 'Deportes',
+                        description: 'Selecciona los deportes que ofrecerá tu organización',
+                        required: 'Por favor selecciona al menos un deporte',
+                        noneAvailable: 'No hay deportes disponibles. Por favor contacta a la organización padre.',
+                    },
+                },
+                submit: {
+                    request: 'Enviar Solicitud de Registro',
+                    create: 'Crear Sub-Organización',
+                    submitting: 'Enviando...',
+                    approvalNote: 'Tu solicitud será revisada por la organización padre',
+                },
+                success: {
+                    request: '¡Solicitud de registro enviada exitosamente! La organización padre revisará tu solicitud.',
+                    create: '¡Sub-organización creada exitosamente! Recibirás un correo con instrucciones de inicio de sesión.',
+                },
+                unavailable: {
+                    title: 'Registro No Disponible',
+                    back: 'Volver a {{orgName}}',
                 },
             },
         },
@@ -7879,6 +8044,72 @@ export const es = {
             subtitle: 'Administrar usuarios y roles de la organizaci?n',
             createSubtitle: 'Agregar un nuevo usuario a su organizaci?n',
         },
+        subOrgs: {
+            title: 'Sub-Organizaciones',
+            subtitle: 'Administrar sub-organizaciones bajo su organizaci?n',
+            tabs: {
+                subOrgs: 'Sub-Organizaciones',
+                requests: 'Solicitudes',
+                settings: 'Configuraci?n',
+            },
+            list: {
+                empty: 'A?n no hay sub-organizaciones.',
+                created: 'Creado {{date}}',
+                manage: 'Administrar',
+                hide: 'Ocultar',
+                status: {
+                    active: 'Activo',
+                    suspended: 'Suspendido',
+                },
+            },
+            settings: {
+                title: 'Configuraci?n de Sub-Organizaci?n',
+                status: {
+                    label: 'Estado',
+                    active: 'Activo',
+                    suspended: 'Suspendido',
+                },
+                enabledSports: {
+                    label: 'Deportes Habilitados',
+                    description: 'Selecciona qu? deportes puede usar esta sub-organizaci?n',
+                },
+                save: 'Guardar Cambios',
+                confirmDisableSports: 'Est?s deshabilitando {{count}} deporte(s) para esta sub-organizaci?n. No podr?n crear nuevos equipos en estos deportes. ?Continuar?',
+            },
+            requests: {
+                empty: 'No hay solicitudes pendientes.',
+                contact: 'Contacto: {{name}} ({{email}})',
+                type: 'Tipo: {{type}}',
+                requestedSports: 'Deportes Solicitados:',
+                submitted: 'Enviado {{date}}',
+                approve: 'Aprobar',
+                reject: 'Rechazar',
+            },
+            parentSettings: {
+                title: 'Configuraci?n de Sub-Organizaci?n',
+                publicRegistration: {
+                    label: 'Permitir Registro P?blico',
+                    description: 'Permitir que escuelas/ligas se registren como sub-organizaciones a trav?s de su p?gina p?blica',
+                },
+                requireApproval: {
+                    label: 'Requerir Aprobaci?n',
+                    description: 'Revisar y aprobar solicitudes de registro de sub-organizaciones antes de que se creen',
+                },
+                maxCount: {
+                    label: 'M?ximo de Sub-Organizaciones (Opcional)',
+                    placeholder: 'Dejar vac?o para ilimitado',
+                    description: 'Limitar el n?mero de sub-organizaciones que se pueden crear',
+                },
+                save: 'Guardar Configuraci?n',
+                saving: 'Guardando...',
+            },
+            messages: {
+                approved: 'Sub-organizaci?n aprobada exitosamente',
+                rejected: 'Solicitud rechazada',
+                settingsUpdated: 'Configuraci?n actualizada',
+                settingsSaved: 'Configuraci?n guardada',
+            },
+        },
         travel: {
             title: 'Planes de Viaje',
             subtitle: 'Administrar itinerarios y planes de viaje',
@@ -9602,6 +9833,11 @@ export const es = {
                 email: 'Las actualizaciones se enviarán a {{email}}',
             },
         },
+    },
+
+    demoEntry: {
+        welcome: 'Bienvenido a la demo de {{orgName}}.',
+        whoToUseSiteAs: '¿Cómo te gustaría usar el sitio?',
     },
 } as unknown as typeof en
 

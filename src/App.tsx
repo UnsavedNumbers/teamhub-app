@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { OrganizationProvider } from './contexts/OrganizationContext'
@@ -33,6 +33,7 @@ import ConfirmEmail from './pages/ConfirmEmail'
 import CompleteProfile from './pages/CompleteProfile'
 import Unauthorized from './pages/Unauthorized'
 import DemoRequest from './pages/DemoRequest'
+import DemoEntry from './pages/DemoEntry'
 
 // Main Pages (keep unchanged - Tailwind CSS)
 import Dashboard from './pages/Dashboard'
@@ -82,6 +83,7 @@ import OrgScopedTicketEventDetail from './pages/ticketing/OrgScopedTicketEventDe
 import OrgScopedTicketOrderSuccess from './pages/ticketing/OrgScopedTicketOrderSuccess'
 import OrgScopedTicketAccess from './pages/ticketing/OrgScopedTicketAccess'
 import OrgLanding from './pages/ticketing/OrgLanding'
+import SubOrgRegistration from './pages/SubOrgRegistration'
 
 // Portal Pages - Lazy loaded
 const CreateAthletePortal = lazy(() => import('./pages/CreateAthletePortal'))
@@ -242,6 +244,7 @@ const OrganizationStructureForms = lazy(() => import('./pages/admin/Organization
 const OrganizationUsers = lazy(() => import('./pages/admin/OrganizationUsers'))
 const OrganizationOnboarding = lazy(() => import('./pages/admin/OrganizationOnboarding'))
 const OrganizationBilling = lazy(() => import('./pages/admin/OrganizationBilling'))
+const SubOrganizations = lazy(() => import('./pages/admin/SubOrganizations'))
 const PlanSelection = lazy(() => import('./pages/admin/PlanSelection'))
 const CheckoutSuccess = lazy(() => import('./pages/admin/CheckoutSuccess'))
 const CheckoutCancel = lazy(() => import('./pages/admin/CheckoutCancel'))
@@ -270,7 +273,30 @@ const Invitations = lazy(() => import('./pages/admin/Invitations'))
 const AdminSportSettings = lazy(() => import('./pages/admin/AdminSportSettings'))
 
 function HostHomeRoute() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const appContext = getHostAppContext()
+
+  // If Supabase redirected here with auth tokens in the hash (e.g. magic link used Site URL),
+  // send the user to the auth callback so the session is established and they get the right redirect.
+  const hash = location.hash || ''
+  if (hash.includes('access_token')) {
+    // Check if this is a demo callback - magic links from demo entry will have type=magiclink
+    // Also check sessionStorage for demo entry flag
+    const isDemoCallback = hash.includes('type=magiclink') || 
+                          sessionStorage.getItem('demo_entry_initiated') === 'true' ||
+                          USE_FAKE_DATA
+    const search = isDemoCallback ? '?demo=true' : (location.search || '')
+    // Clear the demo entry flag if it was set
+    if (sessionStorage.getItem('demo_entry_initiated') === 'true') {
+      sessionStorage.removeItem('demo_entry_initiated')
+    }
+    navigate({ pathname: '/portal/auth/callback', search: search || undefined, hash }, { replace: true })
+    return <FullScreenLoader message="Completing sign in..." />
+  }
+
+  // Show demo entry page when USE_FAKE_DATA is true (demo environment)
+  if (USE_FAKE_DATA) return <DemoEntry />
   if (appContext === 'platform') return <Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace />
   if (appContext === 'platform-admin') return <Navigate to={getLink(RouteKeys.PLATFORM_DASHBOARD)} replace />
   return <Marketing />
@@ -369,6 +395,7 @@ function AppWithTheme() {
           
           {/* Org-Scoped Public Routes */}
           <Route path="/o/:orgSlug" element={<OrgLanding />} />
+          <Route path="/o/:orgSlug/register-sub-org" element={<SubOrgRegistration />} />
           <Route path="/o/:orgSlug/tickets" element={<OrgScopedTicketEventList />} />
           <Route path="/o/:orgSlug/tickets/events/:eventId" element={<OrgScopedTicketEventDetail />} />
           <Route path="/o/:orgSlug/tickets/order/:orderId" element={<OrgScopedTicketOrderSuccess />} />
@@ -396,6 +423,8 @@ function AppWithTheme() {
 
           {/* Public Demo Request Route */}
           <Route path="/demo-request" element={<DemoRequest />} />
+          {/* Public Demo Entry Route */}
+          <Route path="/demo" element={<DemoEntry />} />
 
           {/* Portal Routes - Guardians Only */}
           <Route path="/portal" element={<HostGateLayout />}>
@@ -691,6 +720,7 @@ function AppWithTheme() {
               <Route path="organization" element={<OrganizationSettings />} />
               <Route path="organization/forms" element={<OrganizationStructureForms />} />
               <Route path="organization/users" element={<OrganizationUsers />} />
+              <Route path="organization/sub-orgs" element={<SubOrganizations />} />
               <Route path="organization/billing" element={<OrganizationBilling />} />
               <Route path="organization/billing/plan-selection" element={<PlanSelection />} />
               <Route path="organization/billing/checkout/success" element={<CheckoutSuccess />} />

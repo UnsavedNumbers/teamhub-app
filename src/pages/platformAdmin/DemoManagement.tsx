@@ -11,11 +11,12 @@ import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import DemoOrgForm from '@/components/platformAdmin/DemoOrgForm'
 import {
   createDemoOrg,
+  createOrganizationForDemoOrg,
   listDemoOrgs,
   listPOCs,
   updateDemoOrg,
 } from '@/data/services/demoOrgService'
-import { listDemoCodesForOrg, revokeAllDemoCodesForOrg, createDemoCode, generateDemoCode } from '@/data/services/demoCodeService'
+import { listDemoCodesForOrg, revokeAllDemoCodesForOrg, createDemoCode } from '@/data/services/demoCodeService'
 import { sendApprovalEmail, sendRejectionWebhook } from '@/services/demoResultWebhookService'
 import type { CreateDemoOrgInput, DemoOrgFilters, DemoOrgPOC, DemoOrganization } from '@/types/demoManagement'
 import { getLink } from '@/utils/routes'
@@ -121,11 +122,14 @@ export default function DemoManagement() {
       const pocs = await listPOCs(approveOrg.id)
       const primaryPoc = pocs.find((poc) => poc.is_primary) ?? pocs[0] ?? null
 
-      const demoCode = generateDemoCode()
-      await createDemoCode({
+      // Create organization row for this demo org (if not already created)
+      await createOrganizationForDemoOrg(approveOrg.id)
+
+      // Create demo code and use the returned code (not a separately generated one)
+      const demoCodeRecord = await createDemoCode({
         demo_org_id: approveOrg.id,
         poc_id: primaryPoc?.id ?? null,
-        allowed_roles: ['org_admin'],
+        allowed_roles: ['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan'],
         expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
       })
 
@@ -133,7 +137,8 @@ export default function DemoManagement() {
         status: 'active',
       })
 
-      await sendApprovalEmail(approveOrg.id, demoCode, primaryPoc, approveOrg)
+      // Use the code returned by createDemoCode (the one actually stored in DB)
+      await sendApprovalEmail(approveOrg.id, demoCodeRecord.demo_code, primaryPoc, approveOrg)
 
       setApproveOrg(null)
       await loadRows()

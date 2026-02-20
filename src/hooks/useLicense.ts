@@ -89,6 +89,19 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
     setError(null)
 
     try {
+      // For sub-orgs, get effective license org_id (parent)
+      let effectiveOrgId = orgId
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('parent_org_id')
+        .eq('id', orgId)
+        .maybeSingle()
+      
+      if (orgData?.parent_org_id) {
+        // This is a sub-org, use parent's license
+        effectiveOrgId = orgData.parent_org_id
+      }
+
       const { data, error: fetchError } = await supabase
         .from('organizations')
         .select(`
@@ -103,7 +116,7 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
           stripe_subscription_id,
           stripe_price_id
         `)
-        .eq('id', orgId)
+        .eq('id', effectiveOrgId)
         .maybeSingle() as { data: {
           license_status?: string | null
           license_plan?: string | null
