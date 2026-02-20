@@ -4,6 +4,7 @@ import type {
   DemoAllowedRole,
   DemoCode,
   DemoCodeValidationResult,
+  DemoOrganizationStatus,
 } from '@/types/demoManagement'
 import { isValidDemoCode, normalizeDemoCode } from '@/types/demoManagement'
 import { USE_FAKE_DATA } from '../config'
@@ -243,7 +244,7 @@ export async function validateDemoCode(code: string): Promise<DemoCodeValidation
   }
 
   let demoCode: DemoCode | null = null
-  let orgStatus: 'active' | 'inactive' | null = null
+  let orgStatus: DemoOrganizationStatus | null = null
 
   if (USE_FAKE_DATA) {
     const store = readDemoManagementStore()

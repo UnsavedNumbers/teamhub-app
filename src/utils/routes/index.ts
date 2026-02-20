@@ -108,6 +108,7 @@ export {
 export const RouteKeys = {
     // Root
     MARKETING: 'root.marketing',
+    DEMO_REQUEST: 'root.demoRequest',
 
     // Portal
     PORTAL_DASHBOARD: 'portal.dashboard',

@@ -132,10 +132,14 @@ export default function DemoManagement() {
     {
       id: 'primaryPoc',
       label: t('platformAdmin.demoManagement.table.primaryPoc'),
-      render: (row) =>
-        row.primaryPoc
-          ? `${row.primaryPoc.first_name} ${row.primaryPoc.last_name}`
-          : t('platformAdmin.demoManagement.table.none'),
+      render: (row) => {
+        if (!row.primaryPoc) return t('platformAdmin.demoManagement.table.none')
+        const name = `${row.primaryPoc.first_name} ${row.primaryPoc.last_name}`.trim() || '—'
+        const email = row.primaryPoc.email || ''
+        const phone = row.primaryPoc.phone || ''
+        const parts = [name, email, phone].filter(Boolean)
+        return parts.join(' • ') || '—'
+      },
     },
     {
       id: 'codeCount',
@@ -158,9 +162,6 @@ export default function DemoManagement() {
       label: t('common.actions'),
       render: (row) => (
         <div className="pa-flex pa-gap-2" onClick={(event) => event.stopPropagation()}>
-          <Button variant="ghost" size="dense" onClick={() => navigate(getLink('platformAdmin.demoManagement.detail', { id: row.id }))}>
-            {t('platformAdmin.demoManagement.actions.view')}
-          </Button>
           <Button variant="ghost" size="dense" onClick={() => { setSelectedOrg(row); setFormOpen(true) }}>
             {t('common.edit')}
           </Button>

@@ -32,6 +32,7 @@ import AuthCallback from './pages/AuthCallback'
 import ConfirmEmail from './pages/ConfirmEmail'
 import CompleteProfile from './pages/CompleteProfile'
 import Unauthorized from './pages/Unauthorized'
+import DemoRequest from './pages/DemoRequest'
 
 // Main Pages (keep unchanged - Tailwind CSS)
 import Dashboard from './pages/Dashboard'
@@ -392,6 +393,9 @@ function AppWithTheme() {
           
           {/* Redirect /accept-invite to /portal/accept-invite for old email links */}
           <Route path="/accept-invite" element={<AcceptInvite />} />
+
+          {/* Public Demo Request Route */}
+          <Route path="/demo-request" element={<DemoRequest />} />
 
           {/* Portal Routes - Guardians Only */}
           <Route path="/portal" element={<HostGateLayout />}>

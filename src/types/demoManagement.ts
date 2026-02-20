@@ -1,6 +1,6 @@
 import type { SportCode } from './sports'
 
-export type DemoOrganizationStatus = 'active' | 'inactive'
+export type DemoOrganizationStatus = 'pending' | 'active' | 'inactive' | 'rejected'
 export type DemoOrgSize = 'small' | 'medium' | 'large'
 export type DemoCodeStatus = 'active' | 'revoked' | 'expired'
 export type DemoAllowedRole = 'org_admin' | 'coach' | 'parent' | 'staff' | 'athlete'

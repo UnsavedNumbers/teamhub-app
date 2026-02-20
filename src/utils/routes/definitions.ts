@@ -1619,6 +1619,11 @@ const root = {
         label: 'Home',
         icon: 'home',
     },
+    demoRequest: {
+        path: '/demo-request',
+        label: 'Request a Demo',
+        icon: 'request_quote',
+    },
 } as const satisfies Record<string, RouteDefinition>
 
 // ============================================================================

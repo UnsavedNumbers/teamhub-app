@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Button,
+  ConfirmDialog,
   PageHeader,
   Tabs,
   TabsContent,
@@ -15,6 +16,7 @@ import {
   getDemoOrg,
   listPOCs,
   updateDemoOrg,
+  deleteDemoOrg,
 } from '@/data/services/demoOrgService'
 import {
   extendDemoCodeExpiration,
@@ -39,6 +41,8 @@ export default function DemoOrgDetail() {
   const [formOpen, setFormOpen] = useState(false)
   const [formLoading, setFormLoading] = useState(false)
   const [initiateOpen, setInitiateOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const orgId = id ?? ''
 
@@ -115,6 +119,21 @@ export default function DemoOrgDetail() {
     }
   }
 
+  const handleDelete = async (): Promise<void> => {
+    if (!organization) return
+
+    setDeleteLoading(true)
+    setError(null)
+
+    try {
+      await deleteDemoOrg(organization.id)
+      navigate(getLink('platformAdmin.demoManagement.list'))
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : t('common.error.deleteFailed'))
+      setDeleteLoading(false)
+    }
+  }
+
   if (loading) {
     return <div>{t('common.loading')}</div>
   }
@@ -163,8 +182,29 @@ export default function DemoOrgDetail() {
             <div><strong>{t('platformAdmin.demoManagement.form.fields.sports')}:</strong> {organization.sports_sponsored.join(', ')}</div>
             <div>
               <strong>{t('platformAdmin.demoManagement.table.primaryPoc')}:</strong>{' '}
-              {primaryPoc ? `${primaryPoc.first_name} ${primaryPoc.last_name}` : t('platformAdmin.demoManagement.table.none')}
+              {primaryPoc ? `${primaryPoc.first_name} ${primaryPoc.last_name}`.trim() || '—' : t('platformAdmin.demoManagement.table.none')}
             </div>
+            {primaryPoc && (
+              <>
+                <div>
+                  <strong>{t('platformAdmin.demoManagement.form.fields.email')}:</strong>{' '}
+                  {primaryPoc.email || '—'}
+                </div>
+                <div>
+                  <strong>{t('platformAdmin.demoManagement.form.fields.phone')}:</strong>{' '}
+                  {primaryPoc.phone || '—'}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="pa-mt-4">
+            <Button
+              variant="danger"
+              onClick={() => setDeleteConfirmOpen(true)}
+            >
+              {t('common.delete')}
+            </Button>
           </div>
         </TabsContent>
 
@@ -222,6 +262,18 @@ export default function DemoOrgDetail() {
         onCreated={() => {
           void loadData()
         }}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title={t('platformAdmin.demoManagement.delete.title')}
+        description={t('platformAdmin.demoManagement.delete.description', { name: organization.name })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirmOpen(false)}
+        variant="danger"
+        loading={deleteLoading}
       />
     </div>
   )
