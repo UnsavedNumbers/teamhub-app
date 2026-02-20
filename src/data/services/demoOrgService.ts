@@ -7,6 +7,7 @@ import type {
   DemoOrgFilters,
   DemoOrgPOC,
   DemoOrganization,
+  DemoOrganizationStatus,
   DemoSession,
   UpdateDemoOrgInput,
   UpdateDemoPOCInput,
@@ -122,6 +123,12 @@ export function writeDemoManagementStore(store: DemoManagementStore): void {
 }
 
 function mapDemoOrganizationRow(row: Record<string, unknown>): DemoOrganization {
+  const statusValue = row.status
+  let status: DemoOrganizationStatus = 'active'
+  if (statusValue === 'pending' || statusValue === 'active' || statusValue === 'inactive' || statusValue === 'rejected') {
+    status = statusValue
+  }
+
   return {
     id: String(row.id),
     name: String(row.name ?? ''),
@@ -138,7 +145,7 @@ function mapDemoOrganizationRow(row: Record<string, unknown>): DemoOrganization 
     payment_enabled: Boolean(row.payment_enabled),
     ticketing_enabled: Boolean(row.ticketing_enabled),
     notes: toStringOrNull(row.notes),
-    status: row.status === 'inactive' ? 'inactive' : 'active',
+    status,
     created_by: toStringOrNull(row.created_by),
     created_at: typeof row.created_at === 'string' ? row.created_at : nowIso(),
     updated_at: typeof row.updated_at === 'string' ? row.updated_at : nowIso(),

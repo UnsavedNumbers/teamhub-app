@@ -222,11 +222,11 @@ export default function DemoOrgDetail() {
             {primaryPoc && (
               <>
                 <div>
-                  <strong>{t('platformAdmin.demoManagement.form.fields.email')}:</strong>{' '}
+                  <strong>{t('platformAdmin.demoManagement.pocs.fields.email')}:</strong>{' '}
                   {primaryPoc.email || '—'}
                 </div>
                 <div>
-                  <strong>{t('platformAdmin.demoManagement.form.fields.phone')}:</strong>{' '}
+                  <strong>{t('platformAdmin.demoManagement.pocs.fields.phone')}:</strong>{' '}
                   {primaryPoc.phone || '—'}
                 </div>
               </>
