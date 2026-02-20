@@ -6720,6 +6720,8 @@ export type Database = {
           longitude: number | null
           name: string
           org_type: Database["public"]["Enums"]["org_type"] | null
+          parent_org_id: string | null
+          inherits_license: boolean | null
           payout_account_id: string | null
           payout_descriptor: string | null
           payout_onboarding_status:
@@ -6737,6 +6739,9 @@ export type Database = {
           slug: string | null
           state: string | null
           status: Database["public"]["Enums"]["org_status"]
+          sub_org_public_registration_enabled: boolean | null
+          sub_org_require_approval: boolean | null
+          sub_org_max_count: number | null
           stripe_customer_id: string | null
           stripe_payouts_disabled_reason: string | null
           stripe_payouts_enabled: boolean | null
@@ -6777,6 +6782,8 @@ export type Database = {
           longitude?: number | null
           name: string
           org_type?: Database["public"]["Enums"]["org_type"] | null
+          parent_org_id?: string | null
+          inherits_license?: boolean | null
           payout_account_id?: string | null
           payout_descriptor?: string | null
           payout_onboarding_status?:
@@ -6794,6 +6801,9 @@ export type Database = {
           slug?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["org_status"]
+          sub_org_public_registration_enabled?: boolean | null
+          sub_org_require_approval?: boolean | null
+          sub_org_max_count?: number | null
           stripe_customer_id?: string | null
           stripe_payouts_disabled_reason?: string | null
           stripe_payouts_enabled?: boolean | null
@@ -6834,6 +6844,8 @@ export type Database = {
           longitude?: number | null
           name?: string
           org_type?: Database["public"]["Enums"]["org_type"] | null
+          parent_org_id?: string | null
+          inherits_license?: boolean | null
           payout_account_id?: string | null
           payout_descriptor?: string | null
           payout_onboarding_status?:
@@ -6851,6 +6863,9 @@ export type Database = {
           slug?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["org_status"]
+          sub_org_public_registration_enabled?: boolean | null
+          sub_org_require_approval?: boolean | null
+          sub_org_max_count?: number | null
           stripe_customer_id?: string | null
           stripe_payouts_disabled_reason?: string | null
           stripe_payouts_enabled?: boolean | null
@@ -8281,6 +8296,95 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sub_org_settings: {
+        Row: {
+          id: string
+          sub_org_id: string
+          enabled_sports: string[]
+          enabled_features: Json
+          branding_overrides: Json | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          sub_org_id: string
+          enabled_sports?: string[]
+          enabled_features?: Json
+          branding_overrides?: Json | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          sub_org_id?: string
+          enabled_sports?: string[]
+          enabled_features?: Json
+          branding_overrides?: Json | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sub_org_settings_sub_org_id_fkey"
+            columns: ["sub_org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sub_org_requests: {
+        Row: {
+          id: string
+          parent_org_id: string
+          requested_name: string
+          contact_email: string
+          contact_name: string
+          school_league_type: string | null
+          requested_sport_codes: string[]
+          status: string
+          resolved_at: string | null
+          resolved_by: string | null
+          created_sub_org_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          parent_org_id: string
+          requested_name: string
+          contact_email: string
+          contact_name: string
+          school_league_type?: string | null
+          requested_sport_codes?: string[]
+          status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          created_sub_org_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          parent_org_id?: string
+          requested_name?: string
+          contact_email?: string
+          contact_name?: string
+          school_league_type?: string | null
+          requested_sport_codes?: string[]
+          status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          created_sub_org_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       stream_channel_metadata: {
         Row: {
@@ -12848,6 +12952,54 @@ export type Database = {
           },
         ]
       }
+      demo_organizations: {
+        Row: {
+          id: string
+          name: string | null
+        }
+        Insert: { id: string; name?: string | null }
+        Update: { id?: string; name?: string | null }
+        Relationships: []
+      }
+      demo_sessions: {
+        Row: {
+          id: string
+          demo_code: string
+          user_id: string
+          demo_org_id: string
+          started_at: string
+          last_activity_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          demo_code: string
+          user_id: string
+          demo_org_id: string
+          started_at?: string
+          last_activity_at?: string
+          expires_at?: string
+        }
+        Update: {
+          id?: string
+          demo_code?: string
+          user_id?: string
+          demo_org_id?: string
+          started_at?: string
+          last_activity_at?: string
+          expires_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          id: string
+          email: string | null
+        }
+        Insert: { id: string; email?: string | null }
+        Update: { id?: string; email?: string | null }
+        Relationships: []
+      }
       event_logs_recent: {
         Row: {
           actor_email: string | null
@@ -13276,6 +13428,10 @@ export type Database = {
         Returns: boolean
       }
       check_platform_admin: { Args: never; Returns: boolean }
+      check_max_sub_org_count: {
+        Args: { p_parent_org_id: string }
+        Returns: boolean
+      }
       check_video_notes_insert_policy: {
         Args: { p_author_id: string; p_video_id: string }
         Returns: Json

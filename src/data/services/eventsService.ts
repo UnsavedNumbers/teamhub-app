@@ -37,6 +37,7 @@ import { normalizeSupabaseResponse, createServiceResponse } from './responseHelp
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
 import { validateDeleteEvent, EVENT_ERRORS } from '../../utils/eventValidation'
 import { debug } from '../../lib/debug'
+import { captureEvent } from '../../lib/analytics/analytics'
 
 // ============================================================================
 // Helper Functions
@@ -1412,7 +1413,12 @@ export async function createEvent(
             }
         }
 
-            // Return the full event
+            captureEvent('event_created', {
+              event_id: eventData.id,
+              organization_id: context.orgId,
+              user_id: context.userId,
+              team_id: formData.team_id ?? undefined,
+            })
             debug.perf.end('eventsService.createEvent')
             debug.flow('EventsService.createEvent', 'Created successfully', { eventId: eventData.id })
             console.groupEnd()
@@ -1553,6 +1559,11 @@ export async function updateEvent(
         }
 
             debug.perf.end('eventsService.updateEvent')
+            captureEvent('event_updated', {
+              event_id: eventId,
+              organization_id: context.orgId,
+              user_id: context.userId,
+            })
             debug.flow('EventsService.updateEvent', 'Updated successfully', { eventId })
             console.groupEnd()
             return getEventDetails(context, eventId)

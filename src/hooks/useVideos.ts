@@ -24,6 +24,7 @@ import type {
 } from '@/types/video'
 import type { Database, Json } from '@/lib/supabase.extended.types'
 import { useAuth } from './useAuth'
+import { captureEvent } from '@/lib/analytics/analytics'
 import { DEMO_ORG_A_ID, USE_FAKE_DATA } from '@/data/config'
 import { getMockVideosForOrg, getMockVideoById } from '@/data/fake/mockVideos'
 import {
@@ -790,6 +791,11 @@ export function useVideoUpload(options: UseVideoUploadOptions): UseVideoUploadRe
               return { ...prev, status: 'processing', progress: 100 }
             }
             if (newStatus === 'ready') {
+              captureEvent('video_uploaded', {
+                video_id: data.video_id,
+                organization_id: orgId,
+                user_id: session?.user?.id,
+              })
               onUploadComplete?.(data.video_id)
               return { 
                 ...prev, 

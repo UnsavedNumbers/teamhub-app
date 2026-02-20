@@ -5,15 +5,13 @@
  * Shows engagement metrics, session duration, page views, and feature usage.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useT } from '@/i18n/useI18n'
 import { supabase } from '@/lib/supabase'
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
@@ -55,10 +53,16 @@ export default function DemoInsights() {
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
 
   // Fetch demo sessions
-  const { data: sessions, isLoading: sessionsLoading, error: sessionsError } = useQuery({
+  const {
+    data: sessions,
+    isLoading: sessionsLoading,
+    error: sessionsError,
+    refetch: refetchSessions,
+  } = useQuery({
     queryKey: ['demo-sessions', dateRange],
     queryFn: async () => {
       const cutoffDate = getCutoffDate(dateRange)
+      const PAGE_SIZE = 500
       let query = supabase
         .from('demo_sessions')
         .select(`
@@ -72,6 +76,7 @@ export default function DemoInsights() {
           demo_organizations!demo_sessions_demo_org_id_fkey(name)
         `)
         .order('started_at', { ascending: false })
+        .limit(PAGE_SIZE)
 
       if (cutoffDate) {
         query = query.gte('started_at', cutoffDate.toISOString())
@@ -161,16 +166,16 @@ export default function DemoInsights() {
 
     // Aggregate page views
     const pageViews: Record<string, number> = {}
-    Object.values(sessionMetrics).forEach((metrics) => {
-      metrics.pages.forEach((page) => {
+    Object.values(sessionMetrics).forEach((metrics: SessionMetrics) => {
+      metrics.pages.forEach((page: { pageId: string; timeSpent: number; visitCount: number }) => {
         pageViews[page.pageId] = (pageViews[page.pageId] || 0) + page.visitCount
       })
     })
 
     // Aggregate feature clicks
     const featureClicks: Record<string, number> = {}
-    Object.values(sessionMetrics).forEach((metrics) => {
-      metrics.features.forEach((feature) => {
+    Object.values(sessionMetrics).forEach((metrics: SessionMetrics) => {
+      metrics.features.forEach((feature: { featureId: string; clickCount: number }) => {
         featureClicks[feature.featureId] = (featureClicks[feature.featureId] || 0) + feature.clickCount
       })
     })
@@ -203,26 +208,33 @@ export default function DemoInsights() {
       <div className="demo-insights-error">
         <h2>{t('demo.insights.error')}</h2>
         <p>{sessionsError instanceof Error ? sessionsError.message : String(sessionsError)}</p>
+        <button
+          type="button"
+          className="demo-insights-retry"
+          onClick={() => refetchSessions()}
+        >
+          {t('common.retry')}
+        </button>
       </div>
     )
   }
 
-  const selectedMetrics = selectedSession ? sessionMetrics[selectedSession] : null
+  const _selectedMetrics = selectedSession ? sessionMetrics[selectedSession] : null
 
   return (
     <div className="demo-insights">
       <div className="demo-insights-header">
-        <h1 className="demo-insights-title">Demo Insights</h1>
+        <h1 className="demo-insights-title">{t('demo.insights.title')}</h1>
         <div className="demo-insights-controls">
           <select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value as typeof dateRange)}
             className="demo-insights-date-select"
           >
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-            <option value="all">All time</option>
+            <option value="7d">{t('demo.insights.dateRange.last7Days')}</option>
+            <option value="30d">{t('demo.insights.dateRange.last30Days')}</option>
+            <option value="90d">{t('demo.insights.dateRange.last90Days')}</option>
+            <option value="all">{t('demo.insights.dateRange.allTime')}</option>
           </select>
         </div>
       </div>
@@ -294,7 +306,7 @@ export default function DemoInsights() {
 
           {/* Session List */}
           <div className="demo-insights-sessions">
-            <h2>Sessions</h2>
+            <h2>{t('demo.insights.sessions')}</h2>
             <div className="demo-insights-session-list">
               {sessions?.map((session) => {
                 const metrics = sessionMetrics[session.id]

@@ -24,11 +24,15 @@ const queryClient = new QueryClient({
   },
 })
 
-// PostHog configuration - only initialize if API key and host are provided
+// PostHog: only enable in production when API key and host are configured
+const posthogEnabled =
+  import.meta.env.PROD &&
+  Boolean(import.meta.env.VITE_PUBLIC_POSTHOG_KEY) &&
+  Boolean(import.meta.env.VITE_PUBLIC_POSTHOG_HOST)
 const posthogApiKey = import.meta.env.VITE_PUBLIC_POSTHOG_KEY
 const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
 
-const posthogOptions = posthogApiKey && posthogHost
+const posthogOptions = posthogEnabled && posthogApiKey && posthogHost
   ? {
       api_host: posthogHost,
       // Enable automatic pageview tracking
@@ -51,8 +55,7 @@ function Root() {
     </QueryClientProvider>
   )
 
-  // Only wrap with PostHogProvider if API key and host are configured
-  if (posthogApiKey && posthogHost && posthogOptions) {
+  if (posthogEnabled && posthogApiKey && posthogHost && posthogOptions) {
     return (
       <PostHogProvider apiKey={posthogApiKey} options={posthogOptions}>
         {app}

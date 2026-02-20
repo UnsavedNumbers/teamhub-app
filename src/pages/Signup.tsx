@@ -12,6 +12,7 @@ import { mapAuthError } from '../utils/authErrorMapper'
 import { supabase } from '../lib/supabase'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { debug } from '../lib/debug'
+import { captureEvent } from '../lib/analytics/analytics'
 
 export default function Signup() {
   const [email, setEmail] = useState('')
@@ -247,6 +248,11 @@ export default function Signup() {
     } else {
       debug.perf.end('signup.formSubmission')
       debug.flow('Signup', 'Signup successful', { email, signupMode, isOrgSetupFlow })
+      captureEvent('signup_completed', {
+        email,
+        signup_mode: signupMode,
+        requires_org_setup: isOrgSetupFlow,
+      })
       setLoading(false)
       // Get athlete_id from sessionStorage if available (from invite flow)
       const athleteId = sessionStorage.getItem('pending_invite_athlete_id')

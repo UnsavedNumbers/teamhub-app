@@ -656,8 +656,8 @@ export async function createSubOrg(
     if (input.enabled_sport_codes.length > 0) {
       const { data: sportsData } = await supabase
         .from('sports')
-        .select('id, code')
-        .in('code', input.enabled_sport_codes)
+        .select('id, slug')
+        .in('slug', input.enabled_sport_codes)
 
       if (sportsData && sportsData.length > 0) {
         const sportInserts = sportsData.map((sport) => ({
@@ -774,7 +774,7 @@ export async function approveSubOrgRequest(
  */
 export async function rejectSubOrgRequest(
   requestId: string,
-  reason?: string
+  _reason?: string
 ): Promise<{ error: Error | null }> {
   try {
     if (USE_FAKE_DATA) {

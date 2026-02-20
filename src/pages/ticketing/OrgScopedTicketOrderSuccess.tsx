@@ -5,7 +5,7 @@
  * Must be wrapped in OrgScopedRoute
  */
 
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getTicketOrderById, getTicketsForOrder } from '@/data/services'
@@ -14,6 +14,7 @@ import type { OrgContext } from '@/utils/orgResolution'
 import { OrgScopedRoute } from '@/components/OrgScopedRoute'
 import type { TicketOrder, TicketOrderItem, TicketType, TicketedEvent, Ticket } from '@/types/ticketing'
 import { getLink, RouteKeys } from '@/utils/routes'
+import { captureEvent } from '@/lib/analytics/analytics'
 
 type TicketOrderWithRelations = TicketOrder & {
   ticket_order_items?: Array<TicketOrderItem & {
@@ -55,6 +56,22 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
     },
     enabled: !!orderId,
   })
+
+  const trackedOrderRef = useRef<string | null>(null)
+  useEffect(() => {
+    const order = orderQuery.data
+    if (!orderId || !order || order.status !== 'paid') return
+    if (trackedOrderRef.current === orderId) return
+    trackedOrderRef.current = orderId
+    const eventId = order.ticketed_events?.id ?? (order as Record<string, unknown>).ticketed_event_id
+    captureEvent('ticket_purchased', {
+      order_id: orderId,
+      event_id: eventId,
+      org_id: org.id,
+      ticket_count: ticketsQuery.data?.length ?? 0,
+      purchaser_user_id: (order as Record<string, unknown>).purchaser_user_id,
+    })
+  }, [orderId, orderQuery.data, org.id, ticketsQuery.data])
 
   if (!orderId) {
     return (

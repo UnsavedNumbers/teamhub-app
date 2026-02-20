@@ -10,6 +10,7 @@ import type { UserContext, PermissionSet } from '../fake/userContext'
 import { calculatePermissions } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
+import { captureEvent } from '../../lib/analytics/analytics'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { normalizeSupabaseResponse } from './responseHelpers'
 import { getAthleteSports } from './athleteSportsService'
@@ -436,9 +437,15 @@ export async function createAthleteBasic(
 
     if (USE_FAKE_DATA) {
         await simulateDelay()
+        const demoId = `demo-child-${Date.now()}`
+        captureEvent('athlete_added', {
+          athlete_id: demoId,
+          user_id: _context.userId,
+          family_id: dto.family_id ?? undefined,
+        })
         return {
             data: {
-                id: `demo-child-${Date.now()}`,
+                id: demoId,
                 first_name: dto.first_name,
                 last_name: dto.last_name,
                 date_of_birth: dto.date_of_birth,
@@ -474,6 +481,11 @@ export async function createAthleteBasic(
 
         if (error) throw error
 
+        captureEvent('athlete_added', {
+          athlete_id: data.id,
+          user_id: _context.userId,
+          family_id: dto.family_id ?? undefined,
+        })
         debug.perf.end('familyService.createAthleteBasic')
         debug.flow('FamilyService.createAthleteBasic', 'Athlete created successfully', { athleteId: data.id, athleteName: `${dto.first_name} ${dto.last_name}` })
         console.groupEnd()
@@ -1288,6 +1300,11 @@ export async function createAthleteWithGuardians(
             },
             error: null
         }
+        captureEvent('athlete_added', {
+          athlete_id: result.data.athlete_id,
+          user_id: context.userId,
+          organization_id: context.orgId ?? undefined,
+        })
         debug.perf.end('familyService.createAthleteWithGuardians')
         debug.flow('FamilyService.createAthleteWithGuardians', 'Athlete created with guardians (fake)', { athleteId: result.data.athlete_id })
         console.groupEnd()
@@ -1346,8 +1363,16 @@ export async function createAthleteWithGuardians(
 
         if (error) throw error
 
+        const athleteId = (data as { athlete_id?: string })?.athlete_id
+        if (athleteId) {
+          captureEvent('athlete_added', {
+            athlete_id: athleteId,
+            user_id: context.userId,
+            organization_id: context.orgId ?? undefined,
+          })
+        }
         debug.perf.end('familyService.createAthleteWithGuardians')
-        debug.flow('FamilyService.createAthleteWithGuardians', 'Athlete created with guardians successfully', { athleteId: (data as any)?.athlete_id })
+        debug.flow('FamilyService.createAthleteWithGuardians', 'Athlete created with guardians successfully', { athleteId })
         console.groupEnd()
         return { data: data as any, error: null }
     } catch (err) {

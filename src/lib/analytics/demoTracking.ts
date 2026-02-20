@@ -28,78 +28,84 @@ export function useDemoTracking() {
   const posthog = usePostHog()
 
   return {
-    /**
-     * Track a feature click from the welcome page
-     */
     trackDemoFeatureClick: (featureId: string, featureName: string, properties?: Partial<DemoEventProperties>) => {
       if (!posthog) return
-
-      posthog.capture('demo_feature_clicked', {
-        feature_id: featureId,
-        feature_name: featureName,
-        demo_session: true,
-        ...properties,
-      })
+      try {
+        posthog.capture('demo_feature_clicked', {
+          feature_id: featureId,
+          feature_name: featureName,
+          demo_session: true,
+          ...properties,
+        })
+      } catch {
+        /* no-op: failures must never break the app */
+      }
     },
 
-    /**
-     * Track a page view in demo mode
-     */
     trackDemoPageView: (pageId: string, pageName: string, properties?: Partial<DemoEventProperties>) => {
       if (!posthog) return
-
-      posthog.capture('$pageview', {
-        page_id: pageId,
-        page_name: pageName,
-        demo_session: true,
-        ...properties,
-      })
+      try {
+        posthog.capture('$pageview', {
+          page_id: pageId,
+          page_name: pageName,
+          demo_session: true,
+          ...properties,
+        })
+      } catch {
+        /* no-op */
+      }
     },
 
-    /**
-     * Track a meaningful action in demo mode
-     */
     trackDemoAction: (action: string, properties?: Record<string, unknown> & Partial<DemoEventProperties>) => {
       if (!posthog) return
-
-      posthog.capture(`demo_${action}`, {
-        demo_session: true,
-        ...properties,
-      })
+      try {
+        posthog.capture(`demo_${action}`, {
+          demo_session: true,
+          ...properties,
+        })
+      } catch {
+        /* no-op */
+      }
     },
 
-    /**
-     * Track guide interactions
-     */
     trackGuideOpened: (pageId: string, properties?: Partial<DemoEventProperties>) => {
       if (!posthog) return
-
-      posthog.capture('demo_guide_opened', {
-        page_id: pageId,
-        demo_session: true,
-        ...properties,
-      })
+      try {
+        posthog.capture('demo_guide_opened', {
+          page_id: pageId,
+          demo_session: true,
+          ...properties,
+        })
+      } catch {
+        /* no-op */
+      }
     },
 
     trackGuideDismissed: (pageId: string, properties?: Partial<DemoEventProperties>) => {
       if (!posthog) return
-
-      posthog.capture('demo_guide_dismissed', {
-        page_id: pageId,
-        demo_session: true,
-        ...properties,
-      })
+      try {
+        posthog.capture('demo_guide_dismissed', {
+          page_id: pageId,
+          demo_session: true,
+          ...properties,
+        })
+      } catch {
+        /* no-op */
+      }
     },
 
     trackGuideActionClicked: (pageId: string, action: string, properties?: Partial<DemoEventProperties>) => {
       if (!posthog) return
-
-      posthog.capture('demo_guide_action_clicked', {
-        page_id: pageId,
-        action,
-        demo_session: true,
-        ...properties,
-      })
+      try {
+        posthog.capture('demo_guide_action_clicked', {
+          page_id: pageId,
+          action,
+          demo_session: true,
+          ...properties,
+        })
+      } catch {
+        /* no-op */
+      }
     },
   }
 }
@@ -112,15 +118,18 @@ export function trackDemoFeatureClick(
   featureName: string,
   properties?: Partial<DemoEventProperties>
 ): void {
-  const posthog = getPostHogInstance()
-  if (!posthog) return
-
-  posthog.capture('demo_feature_clicked', {
-    feature_id: featureId,
-    feature_name: featureName,
-    demo_session: true,
-    ...properties,
-  })
+  try {
+    const posthog = getPostHogInstance()
+    if (!posthog) return
+    posthog.capture('demo_feature_clicked', {
+      feature_id: featureId,
+      feature_name: featureName,
+      demo_session: true,
+      ...properties,
+    })
+  } catch {
+    /* no-op */
+  }
 }
 
 export function trackDemoPageView(
@@ -128,26 +137,32 @@ export function trackDemoPageView(
   pageName: string,
   properties?: Partial<DemoEventProperties>
 ): void {
-  const posthog = getPostHogInstance()
-  if (!posthog) return
-
-  posthog.capture('$pageview', {
-    page_id: pageId,
-    page_name: pageName,
-    demo_session: true,
-    ...properties,
-  })
+  try {
+    const posthog = getPostHogInstance()
+    if (!posthog) return
+    posthog.capture('$pageview', {
+      page_id: pageId,
+      page_name: pageName,
+      demo_session: true,
+      ...properties,
+    })
+  } catch {
+    /* no-op */
+  }
 }
 
 export function trackDemoAction(
   action: string,
   properties?: Record<string, unknown> & Partial<DemoEventProperties>
 ): void {
-  const posthog = getPostHogInstance()
-  if (!posthog) return
-
-  posthog.capture(`demo_${action}`, {
-    demo_session: true,
-    ...properties,
-  })
+  try {
+    const posthog = getPostHogInstance()
+    if (!posthog) return
+    posthog.capture(`demo_${action}`, {
+      demo_session: true,
+      ...properties,
+    })
+  } catch {
+    /* no-op */
+  }
 }

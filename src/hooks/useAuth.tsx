@@ -27,6 +27,7 @@ import {
   getStoredDemoCode,
 } from '../data/services/demoSessionService'
 import { debug } from '../lib/debug'
+import { captureEvent, identifyUser, resetAnalytics } from '../lib/analytics/analytics'
 
 // Role types - now per organization (must match OrganizationContext.OrgMemberRole)
 type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff' | 'athlete'
@@ -756,8 +757,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (event === 'SIGNED_IN') {
         debug.flow('Auth', 'User signed in', { userId: session?.user?.id, email: session?.user?.email })
+        if (session?.user) {
+          captureEvent('login_success', {
+            user_id: session.user.id,
+            email: session.user.email ?? undefined,
+          })
+        }
       } else if (event === 'SIGNED_OUT') {
         debug.flow('Auth', 'User signed out', { previousUserId: currentUser?.id ?? null })
+        resetAnalytics()
         if (!mountedRef.current) return
         setProfile(null)
         setOrganizations([])
@@ -775,6 +783,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe()
     }
   }, [fetchProfile, setOrganizations, getAuthRouteContext])
+
+  // Identify user in PostHog when we have both user and profile (after login or reload)
+  const lastIdentifiedRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!user?.id) {
+      lastIdentifiedRef.current = null
+      return
+    }
+    if (!profile) return
+    if (lastIdentifiedRef.current === user.id) return
+    lastIdentifiedRef.current = user.id
+    const name =
+      profile.display_name?.trim() ||
+      [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim() ||
+      null
+    const organizationId =
+      profile.organizations?.[0]?.id ?? profile.org_id ?? null
+    identifyUser(user.id, {
+      email: profile.email ?? user.email ?? null,
+      name: name || null,
+      organization_id: organizationId,
+    })
+  }, [user?.id, user?.email, profile])
 
   /* ===================== LOADING STATE TIMEOUT FALLBACK ===================== */
 
@@ -907,6 +938,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             debug.perf.end('auth.signInWithEmail')
             if (error) {
                 debug.error('Auth', 'Login failed', { email, error: error.message })
+                captureEvent('login_failed', {
+                  email,
+                  reason: error.message,
+                  method: 'email',
+                })
             } else {
                 debug.flow('Auth', 'Login initiated', { email })
             }
@@ -914,6 +950,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (err) {
             debug.perf.end('auth.signInWithEmail')
             debug.error('Auth', 'Login exception', { email, error: err })
+            captureEvent('login_failed', {
+              email,
+              reason: err instanceof Error ? err.message : 'Unknown error',
+              method: 'email',
+            })
             return { error: err as AuthError }
         }
     })
@@ -1038,7 +1079,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null)
           setSession(null)
           setOrganizations([])
-          setLoading(false)
+          resetAnalytics()
           debug.perf.end('auth.signOut')
           debug.flow('Auth', 'Logout completed (demo)', { userId: user?.id })
           return
@@ -1050,6 +1091,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null)
           setSession(null)
           setOrganizations([])
+          resetAnalytics()
           debug.perf.end('auth.signOut')
           debug.flow('Auth', 'Logout completed', { userId: user?.id })
         } catch (err) {

@@ -6,13 +6,13 @@
  * Design: ticket_mobile_entry (success banner)
  */
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getPublicOrderWithTickets, resendTickets, type PublicOrderResponse } from '@/data/services'
 import { useRouteLink } from '@/utils/routes'
 import TicketCard from '@/components/ticketing/TicketCard'
-
+import { captureEvent } from '@/lib/analytics/analytics'
 import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
 
 export default function TicketOrderSuccess() {
@@ -62,6 +62,25 @@ export default function TicketOrderSuccess() {
     queryFn: () => getPublicOrderWithTickets(orderId!),
     enabled: !!orderId,
   })
+
+  const trackedOrderRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!orderId || !data?.order) return
+    const order = data.order
+    const paid = order.status === 'paid'
+    if (!paid) return
+    if (trackedOrderRef.current === orderId) return
+    trackedOrderRef.current = orderId
+    const ticketCount = data.tickets?.length ?? 0
+    const orderAny = order as Record<string, unknown>
+    captureEvent('ticket_purchased', {
+      order_id: orderId,
+      event_id: order.event?.id,
+      org_id: orderAny.org_id,
+      ticket_count: ticketCount,
+      purchaser_user_id: orderAny.purchaser_user_id,
+    })
+  }, [orderId, data])
 
   if (!orderId) {
     return (

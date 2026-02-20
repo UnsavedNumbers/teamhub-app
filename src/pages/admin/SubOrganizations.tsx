@@ -31,7 +31,6 @@ import {
 import {
   getSubOrgs,
   getSubOrgRequests,
-  getSubOrgSettings,
   updateSubOrgSettings,
   getParentSubConfig,
   updateParentSubConfig,
@@ -122,7 +121,7 @@ export default function SubOrganizations() {
 
   // Reject request mutation
   const rejectMutation = useMutation({
-    mutationFn: rejectSubOrgRequest,
+    mutationFn: (requestId: string) => rejectSubOrgRequest(requestId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sub-org-requests', orgId] })
       showSuccess(t('admin.subOrgs.messages.rejected'))
@@ -168,7 +167,7 @@ export default function SubOrganizations() {
     <div className="admin-page">
       <AdminPageHeader
         title={t('admin.subOrgs.title')}
-        description={t('admin.subOrgs.subtitle')}
+        subtitle={t('admin.subOrgs.subtitle')}
       />
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
@@ -259,7 +258,7 @@ function SubOrgsList({
                   : t('admin.subOrgs.list.status.suspended')}
               </Badge>
               <Button
-                variant="secondary"
+                variant="neutral"
                 onClick={() => setExpandedId(expandedId === subOrg.id ? null : subOrg.id)}
               >
                 {expandedId === subOrg.id ? t('admin.subOrgs.list.hide') : t('admin.subOrgs.list.manage')}
@@ -281,7 +280,7 @@ function SubOrgsList({
 }
 
 function SubOrgSettingsForm({
-  subOrg,
+  subOrg: _subOrg,
   settings,
   onSave,
 }: {
@@ -404,7 +403,7 @@ function RequestsList({
                 <p className="text-sm font-medium">{t('admin.subOrgs.requests.requestedSports')}</p>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {request.requested_sport_codes.map((code) => (
-                    <Badge key={code} variant="secondary">
+                    <Badge key={code} variant="neutral">
                       {SPORT_NAMES[code as SportCode] || code}
                     </Badge>
                   ))}
@@ -423,7 +422,7 @@ function RequestsList({
                 {t('admin.subOrgs.requests.approve')}
               </Button>
               <Button
-                variant="secondary"
+                variant="neutral"
                 onClick={() => onReject(request.id)}
                 disabled={approving || rejecting}
               >
@@ -472,7 +471,7 @@ function ParentSettingsForm({
           <label className="flex items-center gap-2">
             <Checkbox
               checked={publicRegistration}
-              onChange={setPublicRegistration}
+              onChange={(e) => setPublicRegistration(e.target.checked)}
             />
             <span className="font-medium">{t('admin.subOrgs.parentSettings.publicRegistration.label')}</span>
           </label>

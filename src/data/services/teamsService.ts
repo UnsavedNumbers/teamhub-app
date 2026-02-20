@@ -32,6 +32,7 @@ import {
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { Team, CreateTeamDTO, UpdateTeamDTO } from '../types/organization'
+import { captureEvent } from '../../lib/analytics/analytics'
 import type { AddAthletesToTeamResponse } from '../../types/athletes'
 import { buildTeamQuery, buildTeamMembershipQuery, buildCoachAssignmentQuery } from './queryHelpers'
 import { normalizeSupabaseResponse } from './responseHelpers'
@@ -397,6 +398,11 @@ export async function createTeam(
                 updated_at: now,
                 deleted_at: null,
             }
+            captureEvent('team_created', {
+              team_id: created.id,
+              organization_id: dto.org_id,
+              user_id: _context.userId,
+            })
             return { data: created, error: null }
         }
         type TeamInsert = Database['public']['Tables']['teams']['Insert']
@@ -449,6 +455,11 @@ export async function createTeam(
         const mappedTeam = mapSupabaseTeamToDomain(data)
         debug.perf.end('teamsService.createTeam')
         debug.flow('TeamsService.createTeam', 'Team created successfully', { teamId: data.id, teamName: dto.name })
+        captureEvent('team_created', {
+          team_id: (data as { id: string }).id,
+          organization_id: dto.org_id,
+          user_id: _context.userId,
+        })
         console.groupEnd()
         return { data: mappedTeam, error: null }
     } catch (err) {
@@ -499,6 +510,11 @@ export async function updateTeam(
             .single()
 
         if (error) throw error
+        captureEvent('team_updated', {
+          team_id: teamId,
+          organization_id: context.orgId,
+          user_id: context.userId,
+        })
         return { data: data as Team, error: null }
     } catch (err) {
         return { data: null, error: err instanceof Error ? err : new Error('Update team failed') }

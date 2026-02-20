@@ -1,5 +1,5 @@
 import { useState, FormEvent, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useI18n } from '@/i18n/useI18n'
 import { useTheme } from '@/hooks/useTheme'
 import { getLink, RouteKeys } from '@/utils/routes'
@@ -22,7 +22,6 @@ const ROLE_LABELS: Record<DemoAllowedRole, string> = {
 
 export default function DemoEntry() {
   const { t } = useI18n()
-  const navigate = useNavigate()
   const { resolvedTheme } = useTheme()
   const [demoCode, setDemoCode] = useState('')
   const [selectedRole, setSelectedRole] = useState<DemoAllowedRole | ''>('')

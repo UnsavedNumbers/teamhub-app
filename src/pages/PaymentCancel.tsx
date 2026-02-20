@@ -1,14 +1,23 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle } from '../components/portal/Typography'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import { captureEvent } from '../lib/analytics/analytics'
 
 export default function PaymentCancel() {
   useDebugLifecycle('PaymentCancel')
   const navigate = useNavigate()
+  const trackedRef = useRef(false)
+
+  useEffect(() => {
+    if (!trackedRef.current) {
+      trackedRef.current = true
+      captureEvent('payment_failed', { reason: 'cancelled' })
+    }
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => navigate('/portal/payments'), 5000)

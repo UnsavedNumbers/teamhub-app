@@ -12,7 +12,8 @@ import { useOptionalAuth } from '@/hooks/useAuth'
 import { USE_FAKE_DATA } from '@/data/config'
 import { generateDemoData } from '@/data/fake/demoDataEngine'
 import { getDemoOrg } from '@/data/services/demoOrgService'
-import { identifyDemoUser, resetPostHogIdentification } from '@/lib/analytics/posthog'
+import { identifyDemoUser } from '@/lib/analytics/posthog'
+import { resetAnalytics } from '@/lib/analytics/analytics'
 import { getPrimaryRole } from '@/utils/roleHelpers'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import type { DemoAllowedRole } from '@/types/demoManagement'
@@ -84,7 +85,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     if (!snapshot.is_demo_session || !snapshot.expires_at) {
       // Session ended - reset PostHog identification if we had a session before
       if (previousSessionRef.current.is_demo_session && user?.id) {
-        resetPostHogIdentification()
+        resetAnalytics()
       }
       setSession(emptySnapshot)
       previousSessionRef.current = emptySnapshot
@@ -95,7 +96,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     if (Number.isNaN(expiresMs) || expiresMs <= Date.now()) {
       // Session expired - reset PostHog identification
       if (previousSessionRef.current.is_demo_session && user?.id) {
-        resetPostHogIdentification()
+        resetAnalytics()
       }
       clearStoredDemoCode()
       clearDemoSessionSnapshot()
@@ -151,7 +152,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const clearPendingDemoCode = useCallback(() => {
     // Reset PostHog identification when clearing demo session
     if (user?.id && session.is_demo_session) {
-      resetPostHogIdentification()
+      resetAnalytics()
     }
     clearStoredDemoCode()
     clearDemoSessionSnapshot()

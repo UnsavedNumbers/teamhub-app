@@ -187,6 +187,11 @@ const EditUser = lazy(() => import('./pages/admin/EditUser'))
 const OrganizationStructureOverview = lazy(() => import('./pages/admin/OrganizationStructureNew'))
 const Sports = lazy(() => import('./pages/admin/Sports'))
 const SportDetail = lazy(() => import('./pages/admin/SportDetail'))
+// Reporting Pages
+import ReportsOverview from './pages/admin/reporting/ReportsOverview'
+import SavedReports from './pages/admin/reporting/SavedReports'
+import ExportHistory from './pages/admin/reporting/ExportHistory'
+import ScheduledReports from './pages/admin/reporting/ScheduledReports'
 const SportUpdate = lazy(() => import('./pages/admin/SportUpdate'))
 const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'))
 const AdminNotificationAnalytics = lazy(() => import('./pages/admin/AdminNotificationAnalytics'))
@@ -667,6 +672,14 @@ function AppWithTheme() {
             
               {/* Payments */}
               <Route path="payments" element={<FeatureGateRoute routeKey="admin.payments.list"><Payments /></FeatureGateRoute>} />
+
+              {/* Reporting */}
+              <Route path="reports" element={<FeatureGateRoute routeKey="admin.reports.overview"><ReportsOverview /></FeatureGateRoute>} />
+              <Route path="reports/builder" element={<FeatureGateRoute routeKey="admin.reports.builder"><ReportsOverview /></FeatureGateRoute>} />
+              <Route path="reports/saved" element={<FeatureGateRoute routeKey="admin.reports.saved"><SavedReports /></FeatureGateRoute>} />
+              <Route path="reports/exports" element={<FeatureGateRoute routeKey="admin.reports.exports"><ExportHistory /></FeatureGateRoute>} />
+              <Route path="reports/schedules" element={<FeatureGateRoute routeKey="admin.reports.schedules"><ScheduledReports /></FeatureGateRoute>} />
+              <Route path="reports/:reportId" element={<FeatureGateRoute routeKey="admin.reports.viewer"><ReportsOverview /></FeatureGateRoute>} />
               <Route path="payments/:id" element={<FeatureGateRoute routeKey="admin.payments.detail"><AdminPaymentDetail /></FeatureGateRoute>} />
               <Route path="payments/new" element={<FeatureGateRoute routeKey="admin.payments.fees.create"><CreateFee /></FeatureGateRoute>} />
             

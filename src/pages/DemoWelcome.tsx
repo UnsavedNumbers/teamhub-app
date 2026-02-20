@@ -9,7 +9,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useT } from '@/i18n/useI18n'
 import { useDemoSession } from '@/contexts/DemoSessionContext'
-import { useUserContext } from '@/hooks/useUserContext'
 import { useDemoTracking } from '@/lib/analytics/demoTracking'
 import { markDemoWelcomeCompleted, isInDemoSession } from '@/utils/demoMode'
 import { getFeaturesForRole, type DemoFeature } from '@/data/demo/featureRegistry'
@@ -36,8 +35,7 @@ export default function DemoWelcome() {
   const t = useT()
   const navigate = useNavigate()
   const { session, loading: sessionLoading } = useDemoSession()
-  const { currentOrganization, loading: orgLoading } = useOrganization()
-  const { context } = useUserContext()
+  const { currentOrganization, isLoading: orgLoading } = useOrganization()
   const { trackDemoFeatureClick } = useDemoTracking()
   const [error, setError] = useState<string | null>(null)
 
@@ -115,7 +113,7 @@ export default function DemoWelcome() {
     })
 
     // Navigate to feature
-    const route = getLink(feature.routeKey as RouteKeys)
+    const route = getLink(feature.routeKey as keyof typeof RouteKeys)
     if (route) {
       navigate(route)
     }

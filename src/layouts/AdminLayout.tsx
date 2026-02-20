@@ -168,6 +168,19 @@ export default function AdminLayout() {
       ],
     },
     {
+      label: t('admin.navigation.reporting'),
+      icon: 'analytics',
+      path: getLink('admin.reports.overview'),
+      requiresOrg: true,
+      children: [
+        { routeKey: 'admin.reports.overview', text: t('admin.navigation.reportsOverview'), icon: 'dashboard', path: getLink('admin.reports.overview'), requiresOrg: true },
+        { routeKey: 'admin.reports.builder', text: t('admin.navigation.reportBuilder'), icon: 'build', path: getLink('admin.reports.builder'), requiresOrg: true },
+        { routeKey: 'admin.reports.saved', text: t('admin.navigation.savedReports'), icon: 'bookmark', path: getLink('admin.reports.saved'), requiresOrg: true },
+        { routeKey: 'admin.reports.exports', text: t('admin.navigation.exportHistory'), icon: 'download', path: getLink('admin.reports.exports'), requiresOrg: true },
+        { routeKey: 'admin.reports.schedules', text: t('admin.navigation.scheduledReports'), icon: 'schedule', path: getLink('admin.reports.schedules'), requiresOrg: true },
+      ],
+    },
+    {
       label: t('admin.navigation.photos'),
       icon: 'photo_library',
       path: getLink('admin.photos.list'),

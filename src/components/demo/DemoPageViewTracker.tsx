@@ -223,18 +223,20 @@ export function DemoPageViewTracker() {
     const primaryRole = currentOrganization ? getPrimaryRole(currentOrganization) : 'parent'
     const demoRole = mapRoleToDemoRole(primaryRole || 'parent')
 
-    // PostHog automatically tracks pageviews, but we add custom properties
-    // Use $pageview event with custom properties
-    posthog.capture('$pageview', {
-      page_id: pageId,
-      page_name: pageName,
-      page_path: location.pathname,
-      demo_session: true,
-      demo_code: session.demo_code,
-      demo_role: demoRole,
-      demo_org_id: session.demo_org_id || '',
-      organization_id: session.organization_id || null,
-    })
+    try {
+      posthog.capture('$pageview', {
+        page_id: pageId,
+        page_name: pageName,
+        page_path: location.pathname,
+        demo_session: true,
+        demo_code: session.demo_code,
+        demo_role: demoRole,
+        demo_org_id: session.demo_org_id || '',
+        organization_id: session.organization_id || null,
+      })
+    } catch {
+      /* no-op: failures must never break the app */
+    }
   }, [location.pathname, session.is_demo_session, session.demo_code, session.demo_org_id, session.organization_id, posthog, currentOrganization])
 
   return null

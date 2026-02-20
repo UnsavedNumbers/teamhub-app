@@ -222,6 +222,12 @@ export const RouteKeys = {
     ADMIN_TRYOUTS: 'admin.tryouts.list',
     ADMIN_SETTINGS: 'admin.settings',
     ADMIN_PHOTOS: 'admin.photos.list',
+    ADMIN_REPORTS_OVERVIEW: 'admin.reports.overview',
+    ADMIN_REPORTS_BUILDER: 'admin.reports.builder',
+    ADMIN_REPORTS_SAVED: 'admin.reports.saved',
+    ADMIN_REPORTS_EXPORTS: 'admin.reports.exports',
+    ADMIN_REPORTS_SCHEDULES: 'admin.reports.schedules',
+    ADMIN_REPORTS_VIEWER: 'admin.reports.viewer',
 
     // Platform Admin
     PLATFORM_DASHBOARD: 'platformAdmin.dashboard',

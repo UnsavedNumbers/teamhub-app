@@ -204,6 +204,43 @@
   color: var(--org-text-secondary, #64748b);
 }
 
+.demo-insights-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+  text-align: center;
+  color: var(--org-text-secondary, #6b7280);
+}
+
+.demo-insights-error h2 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--org-text-primary, #111827);
+}
+
+.demo-insights-error p {
+  margin: 0;
+}
+
+.demo-insights-retry {
+  margin-top: 12px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--org-primary, #137fec);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.demo-insights-retry:hover {
+  opacity: 0.9;
+}
+
 /* Dark mode */
 :root[data-theme="dark"] .demo-insights-title,
 .dark .demo-insights-title {

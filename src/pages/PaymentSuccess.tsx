@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -7,6 +7,8 @@ import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import { USE_FAKE_DATA } from '../data/config'
+import { captureEvent } from '../lib/analytics/analytics'
+import { useAuth } from '../hooks/useAuth'
 
 interface SessionItem {
   amount_cents: number
@@ -31,6 +33,8 @@ export default function PaymentSuccess() {
   const [session, setSession] = useState<CheckoutSession | null>(null)
   const [loading, setLoading] = useState(false)
   const sessionId = search.get('session_id')
+  const { user, profile } = useAuth()
+  const trackedSessionRef = useRef<string | null>(null)
 
   useEffect(() => {
     const timer = setTimeout(() => navigate('/portal/payments'), 5000)
@@ -41,6 +45,19 @@ export default function PaymentSuccess() {
     if (USE_FAKE_DATA) return
     if (sessionId) fetchSession(sessionId)
   }, [sessionId])
+
+  useEffect(() => {
+    if (!sessionId || !session || trackedSessionRef.current === sessionId) return
+    trackedSessionRef.current = sessionId
+    const totalCents = session.total_cents ?? 0
+    const orgId = profile?.organizations?.[0]?.id ?? profile?.org_id ?? undefined
+    captureEvent('payment_completed', {
+      checkout_session_id: session.id,
+      amount_cents: totalCents,
+      user_id: user?.id,
+      organization_id: orgId,
+    })
+  }, [sessionId, session, user?.id, profile])
 
   // Refetch session on window focus to get updated balance
   useEffect(() => {

@@ -89,7 +89,7 @@ export default function AuthCallback() {
       return
     }
 
-    const waitKey = `${demoRedirect}|${user?.id ?? 'no-user'}`
+    const waitKey = `${demoRedirect}|${(user as { id?: string } | null)?.id ?? 'no-user'}`
     if (lastDeferredWaitLogRef.current !== waitKey) {
       lastDeferredWaitLogRef.current = waitKey
       logAuthCallback('Deferred redirect waiting for auth context user', {

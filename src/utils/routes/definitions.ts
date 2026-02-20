@@ -883,6 +883,53 @@ const admin = {
         },
     },
 
+    // Reporting
+    reports: {
+        overview: {
+            path: '/admin/reports',
+            label: 'Reports Overview',
+            icon: 'analytics',
+            description: 'Organization analytics and reporting',
+            requiresOrg: true,
+        },
+        builder: {
+            path: '/admin/reports/builder',
+            label: 'Report Builder',
+            icon: 'build',
+            description: 'Build custom reports',
+            requiresOrg: true,
+        },
+        saved: {
+            path: '/admin/reports/saved',
+            label: 'Saved Reports',
+            icon: 'bookmark',
+            description: 'View and manage saved reports',
+            requiresOrg: true,
+        },
+        exports: {
+            path: '/admin/reports/exports',
+            label: 'Export History',
+            icon: 'download',
+            description: 'View export history',
+            requiresOrg: true,
+        },
+        schedules: {
+            path: '/admin/reports/schedules',
+            label: 'Scheduled Reports',
+            icon: 'schedule',
+            description: 'Manage scheduled reports',
+            requiresOrg: true,
+        },
+        viewer: {
+            path: '/admin/reports/:reportId',
+            params: ['reportId'] as const,
+            label: 'Report Viewer',
+            icon: 'visibility',
+            description: 'View report',
+            requiresOrg: true,
+        },
+    },
+
     // Ticketing
     ticketing: {
         path: '/admin/ticketing',
