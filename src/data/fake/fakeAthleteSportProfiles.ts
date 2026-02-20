@@ -31,7 +31,8 @@ function createSportProfile(
     athleteId: string,
     sportCode: SportCode,
     profileData: Record<string, unknown>,
-    equipmentData: Record<string, unknown>
+    equipmentData: Record<string, unknown>,
+    orgId: string = DEMO_ORG_A_ID
 ): AthleteSportProfile {
     const allData = { ...profileData, ...equipmentData }
     const completedFields = Object.values(allData).filter(v => v !== null && v !== undefined && v !== '').length
@@ -40,7 +41,7 @@ function createSportProfile(
 
     return {
         id: `sport-profile-${athleteId}-${sportCode}`,
-        org_id: DEMO_ORG_A_ID,
+        org_id: orgId,
         athlete_id: athleteId,
         sport_code: sportCode,
         profile_data: profileData,
@@ -582,4 +583,121 @@ export function getSportProfileForAthlete(athleteId: string, sportCode: SportCod
     return fakeAthleteSportProfiles.find(
         p => p.athlete_id === athleteId && p.sport_code === sportCode
     ) || null
+}
+
+/**
+ * Generate sport profiles for demo org athletes
+ * Creates profiles for each athlete based on their team's sport and org's sports
+ * Each athlete gets 1-3 sports from the org's sports_sponsored list
+ */
+export function generateDemoAthleteSportProfiles(
+    athletes: Array<{ id: string; team_id: string }>,
+    teams: Array<{ id: string; sport_id: string }>,
+    sports: Array<{ id: string; slug: string }>,
+    orgId: string,
+    seed: string
+): AthleteSportProfile[] {
+    const profiles: AthleteSportProfile[] = []
+    const random = (() => {
+        let seedNum = 0
+        for (let i = 0; i < seed.length; i++) {
+            seedNum = ((seedNum << 5) - seedNum) + seed.charCodeAt(i)
+            seedNum = seedNum & seedNum
+        }
+        return () => {
+            seedNum = (seedNum * 9301 + 49297) % 233280
+            return seedNum / 233280
+        }
+    })()
+
+    // Map sport_id to sport_code (slug)
+    const sportIdToCode: Record<string, SportCode> = {}
+    const availableSportCodes: SportCode[] = []
+    sports.forEach(sport => {
+        if (sport.slug) {
+            const code = sport.slug.replace(/-/g, '_') as SportCode
+            sportIdToCode[sport.id] = code
+            availableSportCodes.push(code)
+        }
+    })
+
+    // Map team_id to sport_code
+    const teamIdToSportCode: Record<string, SportCode> = {}
+    teams.forEach(team => {
+        const sportCode = sportIdToCode[team.sport_id]
+        if (sportCode) {
+            teamIdToSportCode[team.id] = sportCode
+        }
+    })
+
+    // Generate profiles for each athlete
+    athletes.forEach((athlete, index) => {
+        const teamSportCode = teamIdToSportCode[athlete.team_id]
+        if (!teamSportCode || availableSportCodes.length === 0) return
+
+        // Each athlete gets 1-3 sports (always includes their team sport)
+        const numSports = Math.min(1 + Math.floor(random() * Math.min(3, availableSportCodes.length)), availableSportCodes.length)
+        const athleteSports = new Set<SportCode>([teamSportCode])
+        
+        // Add additional random sports from org's sports
+        while (athleteSports.size < numSports && athleteSports.size < availableSportCodes.length) {
+            const randomSport = availableSportCodes[Math.floor(random() * availableSportCodes.length)]
+            athleteSports.add(randomSport)
+        }
+
+        // Create profile for each sport
+        athleteSports.forEach(sportCode => {
+            const profileData: Record<string, unknown> = {
+                experience_years: Math.floor(random() * 5) + 1,
+            }
+
+            const equipmentData: Record<string, unknown> = {
+                jersey_size: ['YS', 'YM', 'YL'][Math.floor(random() * 3)],
+                shorts_size: ['YS', 'YM', 'YL'][Math.floor(random() * 3)],
+            }
+
+            // Add sport-specific fields
+            if (sportCode === 'soccer') {
+                profileData.position = ['Forward', 'Midfielder', 'Defender', 'Goalkeeper'][Math.floor(random() * 4)]
+                profileData.preferred_foot = ['Right', 'Left'][Math.floor(random() * 2)]
+                equipmentData.shin_guard_size = ['Youth Small', 'Youth Medium', 'Youth Large'][Math.floor(random() * 3)]
+                equipmentData.cleat_size = String((Math.floor(random() * 5) + 1) + (random() < 0.5 ? 0 : 0.5))
+                equipmentData.cleat_width = ['Standard', 'Wide'][Math.floor(random() * 2)]
+            } else if (sportCode === 'basketball') {
+                profileData.position = ['Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center'][Math.floor(random() * 5)]
+                profileData.shooting_hand = ['Right', 'Left'][Math.floor(random() * 2)]
+                equipmentData.shoe_size = String((Math.floor(random() * 5) + 1) + (random() < 0.5 ? 0 : 0.5))
+                equipmentData.shoe_width = ['Standard', 'Wide'][Math.floor(random() * 2)]
+            } else if (sportCode === 'baseball') {
+                profileData.position = ['Pitcher', 'Catcher', 'First Base', 'Second Base', 'Shortstop', 'Third Base', 'Outfielder'][Math.floor(random() * 7)]
+                profileData.batting_stance = ['Right', 'Left'][Math.floor(random() * 2)]
+                profileData.throwing_hand = ['Right', 'Left'][Math.floor(random() * 2)]
+                equipmentData.pants_size = ['YS', 'YM', 'YL'][Math.floor(random() * 3)]
+                equipmentData.hat_size = 'Youth'
+                equipmentData.glove_size = String(10 + Math.floor(random() * 2) + (random() < 0.5 ? 0 : 0.5))
+                equipmentData.bat_size = `${26 + Math.floor(random() * 4)}/${16 + Math.floor(random() * 4)}`
+            } else if (sportCode === 'softball') {
+                profileData.position = ['Pitcher', 'Catcher', 'First Base', 'Second Base', 'Shortstop', 'Third Base', 'Outfielder'][Math.floor(random() * 7)]
+                profileData.batting_stance = ['Right', 'Left'][Math.floor(random() * 2)]
+                profileData.throwing_hand = ['Right', 'Left'][Math.floor(random() * 2)]
+                equipmentData.pants_size = ['YS', 'YM', 'YL'][Math.floor(random() * 3)]
+                equipmentData.hat_size = 'Youth'
+                equipmentData.glove_size = String(10 + Math.floor(random() * 2) + (random() < 0.5 ? 0 : 0.5))
+                equipmentData.bat_size = `${26 + Math.floor(random() * 4)}/${16 + Math.floor(random() * 4)}`
+            } else {
+                // Generic fallback for other sports
+                equipmentData.shoe_size = String((Math.floor(random() * 5) + 1) + (random() < 0.5 ? 0 : 0.5))
+            }
+
+            profiles.push(createSportProfile(
+                athlete.id,
+                sportCode,
+                profileData,
+                equipmentData,
+                orgId
+            ))
+        })
+    })
+
+    return profiles
 }

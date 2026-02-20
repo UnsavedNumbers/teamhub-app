@@ -16,6 +16,7 @@ import {
 import { fakeEvents, fakeEventLocations, fakeEventRSVPs } from './fakeEvents'
 import { fakeFees, fakeFeeAssignments, fakePayments } from './fakePayments'
 import { fakeFamilies, fakeChildren, fakeFamilyMembers, fakeOrganizationMembers, fakeUsers } from './fakeUsers'
+import { fakeAthleteSportProfiles, generateDemoAthleteSportProfiles } from './fakeAthleteSportProfiles'
 
 function removeWhere<T>(items: T[], predicate: (item: T) => boolean): void {
   for (let index = items.length - 1; index >= 0; index -= 1) {
@@ -59,6 +60,7 @@ function clearDemoOrgData(demoOrgId: string): void {
   removeWhere(fakeFamilyMembers, (item) => String(item.family_id).includes(demoOrgId) || startsWithDemoId(item.user_id))
   removeWhere(fakeOrganizationMembers, (item) => item.org_id === demoOrgId && startsWithDemoId(item.user_id))
   removeWhere(fakeUsers, (item) => startsWithDemoId(item.id))
+  removeWhere(fakeAthleteSportProfiles, (item) => item.org_id === demoOrgId || startsWithDemoId(item.athlete_id))
 }
 
 function appendDemoOrgData(demoOrg: DemoOrganization, demoCode: string): void {
@@ -160,6 +162,16 @@ function appendDemoOrgData(demoOrg: DemoOrganization, demoCode: string): void {
   }))
   fakeFeeAssignments.push(...(feeAssignments as unknown as typeof fakeFeeAssignments))
   fakePayments.push(...(data.payments as unknown as typeof fakePayments))
+
+  // Generate sport profiles for demo athletes
+  const generatedSportProfiles = generateDemoAthleteSportProfiles(
+    data.athletes,
+    data.teams,
+    data.sportsData,
+    demoOrg.id,
+    demoCode
+  )
+  fakeAthleteSportProfiles.push(...generatedSportProfiles)
 
   const familyById = new Map<string, { familyId: string; athlete: (typeof data.athletes)[number] }>()
   data.athletes.forEach((athlete) => {
