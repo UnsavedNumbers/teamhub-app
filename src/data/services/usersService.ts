@@ -7,7 +7,7 @@
  * MIGRATION NOTE: Replace fake data calls with Supabase queries.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
@@ -169,7 +169,8 @@ export async function getOrganizationUsers(
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
-            const demoUsers = listFakeOrganizationUsers(context.orgId, context.userId)
+            const fakeOrgId = DEMO_ORG_A_ID
+            const demoUsers = listFakeOrganizationUsers(fakeOrgId, context.userId)
             return { data: demoUsers, error: null }
         } catch (err) {
             return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
@@ -461,7 +462,8 @@ export async function getOrgStaff(
       if (!orgId) {
         return { data: [], error: new Error(t('common.error.notFound' as any)) }
       }
-      return { data: ensureFakeStaff(orgId), error: null }
+      const fakeOrgId = DEMO_ORG_A_ID
+      return { data: ensureFakeStaff(fakeOrgId), error: null }
     }
 
     const { data, error } = await supabase.rpc('get_org_staff', {

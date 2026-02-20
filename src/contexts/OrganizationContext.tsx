@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useDemoSession } from './DemoSessionContext'
 import { readDemoManagementStore } from '@/data/services/demoOrgService'
 import { getOrganizationById } from '@/data/fake/fakeOrganizations'
+import { getCurrentDemoSessionSnapshot } from '@/data/services/demoSessionService'
 
 export type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff' | 'athlete'
 
@@ -45,7 +45,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [currentOrganization, setCurrentOrganizationState] = useState<Organization | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
-  const { session: demoSession } = useDemoSession()
+  const demoSession = getCurrentDemoSessionSnapshot()
 
   const isDemoSessionActive = demoSession.is_demo_session && Boolean(demoSession.demo_org_id)
 

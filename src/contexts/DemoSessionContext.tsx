@@ -4,16 +4,21 @@ import { normalizeDemoCode } from '@/types/demoManagement'
 import {
   clearStoredDemoCode,
   getCurrentDemoSessionSnapshot,
+  getDemoSession,
   setStoredDemoCode,
 } from '@/data/services/demoSessionService'
 import { clearDemoSessionSnapshot } from '@/data/fake/demoDataStore'
+import { useOptionalAuth } from '@/hooks/useAuth'
+import { USE_FAKE_DATA } from '@/data/config'
+import { generateDemoData } from '@/data/fake/demoDataEngine'
+import { getDemoOrg } from '@/data/services/demoOrgService'
 
 interface DemoSessionContextValue {
   session: DemoSessionSnapshot
   loading: boolean
   setPendingDemoCode: (code: string) => void
   clearPendingDemoCode: () => void
-  refreshSession: () => void
+  refreshSession: () => Promise<void>
 }
 
 const emptySnapshot: DemoSessionSnapshot = {
@@ -28,9 +33,34 @@ const DemoSessionContext = createContext<DemoSessionContextValue | undefined>(un
 export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<DemoSessionSnapshot>(emptySnapshot)
   const [loading, setLoading] = useState(true)
+  const authContext = useOptionalAuth()
+  const user = authContext?.user ?? null
 
-  const refreshSession = useCallback(() => {
-    const snapshot = getCurrentDemoSessionSnapshot()
+  const refreshSession = useCallback(async () => {
+    // First check localStorage snapshot
+    let snapshot = getCurrentDemoSessionSnapshot()
+
+    // If no snapshot but user is logged in, try fetching from database
+    if (!snapshot.is_demo_session && user?.id) {
+      try {
+        const dbSession = await getDemoSession(user.id)
+        if (dbSession) {
+          snapshot = getCurrentDemoSessionSnapshot()
+          
+          // When USE_FAKE_DATA is true and we have a demo session, ensure fake data is generated
+          if (USE_FAKE_DATA && snapshot.is_demo_session && snapshot.demo_org_id && snapshot.demo_code) {
+            try {
+              const demoOrg = await getDemoOrg(snapshot.demo_org_id)
+              await generateDemoData(demoOrg, demoOrg.sports_sponsored, snapshot.demo_code)
+            } catch (err) {
+              console.error('[DemoSessionContext] Failed to generate demo data:', err)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[DemoSessionContext] Failed to fetch demo session:', err)
+      }
+    }
 
     if (!snapshot.is_demo_session || !snapshot.expires_at) {
       setSession(emptySnapshot)
@@ -46,11 +76,10 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     }
 
     setSession(snapshot)
-  }, [])
+  }, [user?.id])
 
   useEffect(() => {
-    refreshSession()
-    setLoading(false)
+    refreshSession().then(() => setLoading(false))
   }, [refreshSession])
 
   const setPendingDemoCode = useCallback((code: string) => {

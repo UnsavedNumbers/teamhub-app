@@ -8,7 +8,7 @@
  * Each method includes a TODO comment showing the equivalent Supabase query pattern.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext, PermissionSet } from '../fake/userContext'
@@ -694,8 +694,9 @@ export async function getEvents(
 
             const permissions = buildPermissions(context)
             const childTeamMemberships = getChildTeamMemberships()
-            const baseEvents = getBaseFakeEvents(params).map((event) => withFakeEventRelations(event, context.orgId))
-            const visibleEvents = filterEventsByRole(baseEvents, permissions, childTeamMemberships, context.orgId)
+            const fakeOrgId = DEMO_ORG_A_ID
+            const baseEvents = getBaseFakeEvents(params).map((event) => withFakeEventRelations(event, fakeOrgId))
+            const visibleEvents = filterEventsByRole(baseEvents, permissions, childTeamMemberships, fakeOrgId)
             const filteredEvents = applyFakeEventFilters(visibleEvents, params, true)
 
             return { data: filteredEvents, error: null }

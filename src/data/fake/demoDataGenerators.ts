@@ -219,14 +219,38 @@ export function generatePrograms(demoOrgId: string, sports: SportCode[]): Genera
 export function generateSeasons(demoOrgId: string, _programs: GeneratedProgram[]): Array<Record<string, unknown>> {
   const year = yearNow()
   const timestamp = nowIso()
+  const now = new Date()
+  
+  // Helper to check if season is currently active
+  const isActive = (startDate: string, endDate: string): boolean => {
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    return start <= now && now <= end
+  }
+  
+  const springStart = `${year}-03-01`
+  const springEnd = `${year}-06-30`
+  const fallUpcomingStart = `${year + 1}-09-01`
+  const fallUpcomingEnd = `${year + 1}-12-15`
+  
   return [
     {
-      id: `demo-season-${demoOrgId}-${year}`,
+      id: `demo-season-${demoOrgId}-spring-${year}`,
       org_id: demoOrgId,
       name: `Spring ${year}`,
-      start_date: `${year}-03-01`,
-      end_date: `${year}-06-30`,
-      is_active: true,
+      start_date: springStart,
+      end_date: springEnd,
+      is_active: isActive(springStart, springEnd),
+      created_at: timestamp,
+      updated_at: timestamp,
+    },
+    {
+      id: `demo-season-${demoOrgId}-fall-${year + 1}`,
+      org_id: demoOrgId,
+      name: `Fall ${year + 1}`,
+      start_date: fallUpcomingStart,
+      end_date: fallUpcomingEnd,
+      is_active: isActive(fallUpcomingStart, fallUpcomingEnd),
       created_at: timestamp,
       updated_at: timestamp,
     },

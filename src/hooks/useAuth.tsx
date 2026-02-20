@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import { useOrganization, Organization } from '../contexts/OrganizationContext'
+import { OrganizationContext, Organization } from '../contexts/OrganizationContext'
 import { useDemoSession } from '../contexts/DemoSessionContext'
 import type { PlatformAdminRole } from '../types/platformAdmin.types'
 import type { HomeLocation } from '../types/location'
@@ -153,7 +153,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sessionRecoveryInFlightRef = useRef(false)
   const lastSessionRecoveryAttemptRef = useRef(0)
 
-  const { setOrganizations, currentOrganization } = useOrganization()
+  const orgContext = useContext(OrganizationContext)
+  const setOrganizations = orgContext?.setOrganizations ?? (() => {})
+  const currentOrganization = orgContext?.currentOrganization ?? null
   const { refreshSession } = useDemoSession()
 
   // Prevent duplicate profile fetches (Bug Prevention #1 & #7)
@@ -578,19 +580,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(demoProfile)
           setOrganizations(organizations)
         }
+        setLoading(false)
       } else {
+        // No fake auth state, but check for real Supabase session (from demo entry flow)
         clearFakeAuthState()
-      }
-
-      setLoading(false)
-      return () => {
-        mountedRef.current = false
+        // Fall through to check real Supabase session
       }
     }
 
     debug.flow('Auth', 'Bootstrap: getSession() start', getAuthRouteContext())
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!mountedRef.current) return
 
       // Handle session/user mismatch (Bug Prevention #10)
@@ -616,6 +616,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (session?.user) {
+        // When USE_FAKE_DATA is true and we have a real Supabase session (from demo entry),
+        // write fake auth state to sessionStorage so it persists across refreshes
+        if (USE_FAKE_DATA && session.user.email) {
+          try {
+            // Fetch organizations to get roles
+            const { data: orgData } = await supabase.rpc('get_user_organizations', {
+              check_user_id: session.user.id
+            } as any)
+            
+            const organizations = (orgData || []).map((org: any) => ({
+              id: org.org_id,
+              name: org.org_name || '',
+              roles: Array.isArray(org.roles)
+                ? org.roles.filter(
+                    (r: unknown): r is OrgMemberRole =>
+                      r === 'parent' || r === 'coach' || r === 'org_admin' || r === 'staff' || r === 'athlete'
+                  )
+                : [],
+            }))
+
+            const firstOrg = organizations[0]
+            const roles = firstOrg?.roles || []
+            const orgId = firstOrg?.id || DEMO_ORG_A_ID
+            const orgName = firstOrg?.name || 'Demo Organization'
+
+            // Check if platform admin
+            const { data: adminData } = await supabase
+              .from('platform_admins')
+              .select('user_id')
+              .eq('user_id', session.user.id)
+              .maybeSingle()
+
+            writeFakeAuthState({
+              userId: session.user.id,
+              email: session.user.email,
+              orgId,
+              orgName,
+              roles,
+              isPlatformAdmin: !!adminData,
+            })
+          } catch (err) {
+            console.error('[useAuth] Failed to write fake auth state:', err)
+          }
+        }
         fetchProfile(session.user.id)
       } else {
         if (!mountedRef.current) return

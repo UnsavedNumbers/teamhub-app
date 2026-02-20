@@ -5,7 +5,7 @@
  * Supports both fake data (demo mode) and real Supabase queries.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import { getSportProfilesForAthlete } from '../fake/fakeAthleteSportProfiles'
@@ -58,7 +58,8 @@ export async function getAthleteSports(
             // Get sport profiles for this athlete
             const profiles = getSportProfilesForAthlete(athleteId)
             // Get all sports to map codes to IDs
-            const allSports = getSportsForOrg(orgId)
+            const fakeOrgId = DEMO_ORG_A_ID
+            const allSports = getSportsForOrg(fakeOrgId)
             // Map sport codes to sport IDs
             // Sport codes use snake_case, slugs use kebab-case
             const sportCodeToId: Record<string, string> = {}

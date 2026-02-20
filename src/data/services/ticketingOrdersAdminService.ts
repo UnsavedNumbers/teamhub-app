@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { USE_FAKE_DATA } from '../config'
+import { USE_FAKE_DATA, DEMO_ORG_A_ID } from '../config'
 import { debug } from '../../lib/debug'
 import {
   deleteFakeTicketOrder,
@@ -341,7 +341,8 @@ export async function fetchTicketingEvents(orgId: string) {
 
   try {
     if (USE_FAKE_DATA) {
-      const result = getFakeTicketedEvents({ org_id: orgId })
+      const fakeOrgId = DEMO_ORG_A_ID
+      const result = getFakeTicketedEvents({ org_id: fakeOrgId })
         .map((event) => ({
           id: event.id,
           title: event.title,

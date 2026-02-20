@@ -8,7 +8,7 @@
  * Each method includes a TODO comment showing the equivalent Supabase query pattern.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_TRANSACTION_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_TRANSACTION_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { debug } from '../../lib/debug'
 import { calculatePermissions } from '../fake/userContext'
@@ -124,7 +124,8 @@ export async function getFees(
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
-            const fees = activeOnly ? getActiveFeesForOrg(context.orgId) : getFeesForOrg(context.orgId)
+            const fakeOrgId = DEMO_ORG_A_ID
+            const fees = activeOnly ? getActiveFeesForOrg(fakeOrgId) : getFeesForOrg(fakeOrgId)
             return { data: fees, error: null }
         } catch (err) {
             return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
@@ -167,7 +168,8 @@ export async function getFeeDetails(
         try {
             await simulateDelay()
             const fee = getFeeById(feeId)
-            if (!fee || fee.org_id !== context.orgId) {
+            const fakeOrgId = DEMO_ORG_A_ID
+            if (!fee || fee.org_id !== fakeOrgId) {
                 return { data: null, error: null }
             }
             return { data: fee, error: null }
@@ -216,7 +218,8 @@ export async function getFeeAssignmentsForUser(
             const permissions = buildPermissions(context)
 
             if (permissions.canViewAllOrgData) {
-                const fees = getFeesForOrg(context.orgId)
+                const fakeOrgId = DEMO_ORG_A_ID
+                const fees = getFeesForOrg(fakeOrgId)
                 const feeIds = fees.map((f) => f.id)
                 const allAssignments = fakeFeeAssignments.filter((fa) => feeIds.includes(fa.fee_id))
 
@@ -688,7 +691,8 @@ export async function getPayments(
                 return { data: [], error: new Error('Access denied: Admin only') }
             }
 
-            let payments = getPaymentsForOrg(context.orgId)
+            const fakeOrgId = DEMO_ORG_A_ID
+            let payments = getPaymentsForOrg(fakeOrgId)
             payments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
             if (limit && limit > 0) {
@@ -787,8 +791,9 @@ export async function getOrgPaymentSummary(
                 return { data: null, error: new Error('Access denied: Admin only') }
             }
 
-            const totalPaidCents = getTotalPaidForOrg(context.orgId)
-            const totalOutstandingCents = getTotalOutstandingForOrg(context.orgId)
+            const fakeOrgId = DEMO_ORG_A_ID
+            const totalPaidCents = getTotalPaidForOrg(fakeOrgId)
+            const totalOutstandingCents = getTotalOutstandingForOrg(fakeOrgId)
 
             const fees = getFeesForOrg(context.orgId)
             const feeIds = fees.map((f) => f.id)

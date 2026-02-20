@@ -15,7 +15,7 @@
  * - Issue 8: Uses existing events RLS
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { debug } from '../../lib/debug'
@@ -557,8 +557,9 @@ export async function getTravelEvents(
             const permissions = buildPermissions(context)
 
             // Get travel plans and convert to travel events
+            const fakeOrgId = DEMO_ORG_A_ID
             let travelEvents: TravelEvent[] = fakeTravelPlans
-                .filter(p => p.org_id === context.orgId)
+                .filter(p => p.org_id === fakeOrgId)
                 .filter(p => params.includeCancelled || p.status !== 'cancelled')
                 .filter(p => p.status === 'published' || p.status === 'cancelled')
                 .map(convertTravelPlanToEvent)

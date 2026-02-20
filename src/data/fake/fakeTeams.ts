@@ -650,13 +650,28 @@ export const fakeTeams: FakeTeam[] = [
     },
 ]
 
+// Helper to determine if a season is currently active based on dates
+const isSeasonActive = (startDate: string, endDate: string): boolean => {
+    const now = new Date()
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    return start <= now && now <= end
+}
+
+// Helper to determine if a season is upcoming (hasn't started yet)
+const isSeasonUpcoming = (startDate: string): boolean => {
+    const now = new Date()
+    const start = new Date(startDate)
+    return start > now
+}
+
 export const fakeSeasons: FakeSeason[] = [
     {
         id: SEASON_SPRING_CURRENT_ID,
         org_id: DEMO_ORG_A_ID,
         name: getSpringSeasonName(),
         ...getSpringSeasonDates(),
-        is_active: true,
+        is_active: isSeasonActive(getSpringSeasonDates().start_date, getSpringSeasonDates().end_date),
         created_at: `${getCurrentYear()}-01-15T00:00:00Z`,
         updated_at: `${getCurrentYear()}-03-01T00:00:00Z`,
     },
@@ -665,7 +680,7 @@ export const fakeSeasons: FakeSeason[] = [
         org_id: DEMO_ORG_A_ID,
         name: getFallSeasonName(),
         ...getFallSeasonDates(),
-        is_active: false,
+        is_active: isSeasonActive(getFallSeasonDates().start_date, getFallSeasonDates().end_date),
         created_at: `${getPreviousYear()}-07-01T00:00:00Z`,
         updated_at: `${getPreviousYear()}-12-15T00:00:00Z`,
     },
@@ -674,7 +689,7 @@ export const fakeSeasons: FakeSeason[] = [
         org_id: DEMO_ORG_A_ID,
         name: getFallUpcomingSeasonName(),
         ...getFallUpcomingSeasonDates(),
-        is_active: false, // Upcoming season is not yet active
+        is_active: isSeasonActive(getFallUpcomingSeasonDates().start_date, getFallUpcomingSeasonDates().end_date),
         created_at: `${getCurrentYear()}-06-01T00:00:00Z`,
         updated_at: `${getCurrentYear()}-06-01T00:00:00Z`,
     },

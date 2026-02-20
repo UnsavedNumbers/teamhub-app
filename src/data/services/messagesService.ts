@@ -5,7 +5,7 @@
  * Uses Supabase for real data and falls back to fake data for demo/testing.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 const supabaseAny = supabase as any
@@ -177,13 +177,14 @@ export async function getAnnouncements(
         await simulateDelay()
         // ... (existing fake logic simplified/omitted for brevity as we focus on real impl)
         // For brevity reusing existing fake calls if needed or just returning array
+        const fakeOrgId = DEMO_ORG_A_ID
         let announcements: FakeAnnouncement[] = []
         if (params.teamId) {
             const teamAnn = getAnnouncementsForTeam(params.teamId)
-            const orgWideAnn = getOrgWideAnnouncements(context.orgId)
+            const orgWideAnn = getOrgWideAnnouncements(fakeOrgId)
             announcements = params.includeOrgWide ? [...orgWideAnn, ...teamAnn] : teamAnn
         } else {
-            announcements = getAnnouncementsForOrg(context.orgId)
+            announcements = getAnnouncementsForOrg(fakeOrgId)
         }
         // Sort
         announcements.sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime())
@@ -192,7 +193,7 @@ export async function getAnnouncements(
         const mappedAnnouncements: Announcement[] = announcements.map(fake => ({
             id: fake.id,
             team_id: fake.team_id,
-            org_id: context.orgId || null,
+            org_id: fakeOrgId || null,
             author_id: fake.created_by_user_id,
             title: fake.title,
             content: fake.body,

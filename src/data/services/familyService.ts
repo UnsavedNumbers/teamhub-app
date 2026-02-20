@@ -5,7 +5,7 @@
  * Supports both Fake Data (Demo Mode) and Real Supabase Data.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { calculatePermissions } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
@@ -134,10 +134,11 @@ export async function getFamilies(
         if (USE_FAKE_DATA) {
             await simulateDelay()
             const permissions = buildPermissions(context)
+            const fakeOrgId = DEMO_ORG_A_ID
             let result: FakeFamily[] = []
 
             if (permissions.canViewAllOrgData) {
-                result = fakeFamilies.filter((f) => f.org_id === context.orgId)
+                result = fakeFamilies.filter((f) => f.org_id === fakeOrgId)
             } else {
                 result = getFamiliesForUser(context.userId)
             }
@@ -216,9 +217,10 @@ export async function getFamilyDetails(
             }
 
             const members = getFamilyMembersForFamily(familyId).map(mapFakeMember)
+            const fakeOrgId = DEMO_ORG_A_ID
             const children = fakeChildren
                 .filter((c) => c.family_id === familyId)
-                .map((c) => mapFakeChild(c, context.orgId))
+                .map((c) => mapFakeChild(c, fakeOrgId))
 
             debug.perf.end('familyService.getFamilyDetails')
             debug.data('FamilyService.getFamilyDetails', 'Response (fake)', { familyId, hasData: true, memberCount: members.length, childCount: children.length })
@@ -519,7 +521,8 @@ export async function updateAthlete(
         debug.perf.end('familyService.updateAthlete')
         debug.flow('FamilyService.updateAthlete', 'Athlete updated (fake)', { athleteId })
         console.groupEnd()
-        return { data: mapFakeChild(child, context.orgId), error: null }
+        const fakeOrgId = DEMO_ORG_A_ID
+        return { data: mapFakeChild(child, fakeOrgId), error: null }
     }
 
     try {
@@ -652,10 +655,11 @@ export async function getAthletes(
         try {
             await simulateDelay()
             const permissions = buildPermissions(context)
+            const fakeOrgId = DEMO_ORG_A_ID
             if (permissions.canViewAllOrgData) {
                 const results = fakeChildren
-                    .filter(c => fakeFamilies.find(f => f.id === c.family_id)?.org_id === context.orgId)
-                    .map((c) => mapFakeChild(c, context.orgId))
+                    .filter(c => fakeFamilies.find(f => f.id === c.family_id)?.org_id === fakeOrgId)
+                    .map((c) => mapFakeChild(c, fakeOrgId))
                 return { data: results, error: null }
             }
             if (permissions.canViewAssignedTeams && permissions.assignedTeamIds.length > 0) {
@@ -824,10 +828,11 @@ export async function searchAthletes(
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
+            const fakeOrgId = DEMO_ORG_A_ID
             
             let results = fakeChildren
-                .filter(c => fakeFamilies.find(f => f.id === c.family_id)?.org_id === context.orgId)
-                .map((c) => mapFakeChild(c, context.orgId))
+                .filter(c => fakeFamilies.find(f => f.id === c.family_id)?.org_id === fakeOrgId)
+                .map((c) => mapFakeChild(c, fakeOrgId))
             
             // Apply search filter
             if (params.search && params.search.length >= 2) {
@@ -1127,7 +1132,8 @@ export async function getAthleteById(
             // Load athlete sports (same as real data path)
             let sports: Array<{ sport_id: string; sport_name: string; sport_type: 'plays' | 'interested' }> = []
             try {
-                const { data: sportsData, error: sportsError } = await getAthleteSports(athleteId, context.orgId)
+                const fakeOrgId = DEMO_ORG_A_ID
+                const { data: sportsData, error: sportsError } = await getAthleteSports(athleteId, fakeOrgId)
                 if (!sportsError && sportsData) {
                     sports = sportsData.map(s => ({
                         sport_id: s.sport_id,
@@ -1140,7 +1146,8 @@ export async function getAthleteById(
                 // Continue without sports data
             }
             
-            const mappedChild = mapFakeChild(child, context.orgId)
+            const fakeOrgId = DEMO_ORG_A_ID
+            const mappedChild = mapFakeChild(child, fakeOrgId)
             mappedChild.sports = sports
             
             debug.perf.end('familyService.getAthleteById')

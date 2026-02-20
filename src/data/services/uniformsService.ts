@@ -1,4 +1,4 @@
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
@@ -60,12 +60,13 @@ export async function getUniformKits(
 
     try {
         if (USE_FAKE_DATA) {
-            let kits = getUniformKitsForOrg(context.orgId)
+            const fakeOrgId = DEMO_ORG_A_ID
+            let kits = getUniformKitsForOrg(fakeOrgId)
             if (teamIds && teamIds.length > 0) {
                 kits = kits.filter(k => !k.team_id || teamIds.includes(k.team_id))
             }
             debug.perf.end('uniformsService.getUniformKits')
-            debug.data('UniformsService.getUniformKits', 'Response (fake)', { orgId: context.orgId, kitCount: kits.length })
+            debug.data('UniformsService.getUniformKits', 'Response (fake)', { orgId: fakeOrgId, kitCount: kits.length })
             console.groupEnd()
             return { data: kits, error: null }
         }
@@ -229,11 +230,12 @@ export async function getAllUniformSubmissions(
     await simulateDelay()
 
     if (USE_FAKE_DATA) {
-        const orgKits = fakeUniformKits.filter(k => k.org_id === context.orgId)
+        const fakeOrgId = DEMO_ORG_A_ID
+        const orgKits = fakeUniformKits.filter(k => k.org_id === fakeOrgId)
         const orgKitIds = orgKits.map(k => k.id)
         const submissions = fakeUniformSubmissions.filter(s => orgKitIds.includes(s.kit_id))
         debug.perf.end('uniformsService.getAllUniformSubmissions')
-        debug.data('UniformsService.getAllUniformSubmissions', 'Response (fake)', { orgId: context.orgId, submissionCount: submissions.length })
+        debug.data('UniformsService.getAllUniformSubmissions', 'Response (fake)', { orgId: fakeOrgId, submissionCount: submissions.length })
         console.groupEnd()
         return { data: submissions, error: null }
     }

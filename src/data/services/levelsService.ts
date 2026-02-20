@@ -5,7 +5,7 @@
  * Supports both fake data and Supabase.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
@@ -44,7 +44,8 @@ export async function getLevels(
             // If programId provided, filter by it
             // If not, return all for org
             // In fake data, all levels are for Demo Org, but we should be clean
-            let levels = fakeLevels.filter(l => l.org_id === context.orgId)
+            const fakeOrgId = DEMO_ORG_A_ID
+            let levels = fakeLevels.filter(l => l.org_id === fakeOrgId)
             if (programId) {
                 levels = levels.filter(l => l.program_id === programId)
             }

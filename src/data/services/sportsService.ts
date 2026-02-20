@@ -8,12 +8,13 @@
  * The deleted_at column does not exist in the schema, so deletes are hard deletes.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext } from '../fake/userContext'
 import { logSportEvent } from '../../utils/eventLogger'
 import { debug } from '../../lib/debug'
+import { getCurrentDemoSessionSnapshot } from './demoSessionService'
 import {
     getSportById,
     getSportsForOrg,
@@ -153,11 +154,18 @@ export async function getSports(
     debug.perf.start('sportsService.getSports')
 
     try {
-        if (USE_FAKE_DATA) {
+        const demoSession = getCurrentDemoSessionSnapshot()
+        const isDemoSession = demoSession.is_demo_session && demoSession.demo_org_id !== null
+        
+        if (USE_FAKE_DATA || isDemoSession) {
             await simulateDelay()
-            const sports = getSportsForOrg(context.orgId)
+            // When USE_FAKE_DATA is true, use DEMO_ORG_A_ID for filtering static fake data
+            // If there's a demo session with generated data, it will also be in the arrays
+            // but static fake data is keyed to DEMO_ORG_A_ID
+            const fakeOrgId = USE_FAKE_DATA ? DEMO_ORG_A_ID : (isDemoSession && demoSession.demo_org_id ? demoSession.demo_org_id : context.orgId)
+            const sports = getSportsForOrg(fakeOrgId)
             debug.perf.end('sportsService.getSports')
-            debug.data('SportsService.getSports', 'Response (fake)', { sportCount: sports.length })
+            debug.data('SportsService.getSports', 'Response (fake)', { sportCount: sports.length, fakeOrgId, USE_FAKE_DATA, isDemoSession })
             console.groupEnd()
             return { data: sports, error: null }
         }
@@ -320,7 +328,7 @@ export async function getSportBySlug(
 ): Promise<{ data: Sport | FakeSport | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        const allSports = getSportsForOrg(context.orgId)
+        const allSports = getSportsForOrg(DEMO_ORG_A_ID)
         const sport = allSports.find(s => s.slug === sportSlug)
         return { data: sport || null, error: null }
     }
@@ -1202,7 +1210,7 @@ export async function getPrograms(
 
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        let programs = getProgramsForOrg(context.orgId)
+        let programs = getProgramsForOrg(DEMO_ORG_A_ID)
         if (sportId) {
             programs = programs.filter(p => p.sport_id === sportId)
         }

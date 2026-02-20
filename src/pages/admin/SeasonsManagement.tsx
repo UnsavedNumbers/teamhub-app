@@ -160,11 +160,35 @@ export default function SeasonsManagement() {
       id: 'is_active',
       label: 'Status',
       sortable: true,
-      render: (row) => (
-        <Badge variant={row.is_active ? 'success' : 'neutral'}>
-          {row.is_active ? 'Active' : 'Upcoming'}
-        </Badge>
-      )
+      render: (row) => {
+        const now = new Date()
+        const startDate = row.start_date ? new Date(row.start_date) : null
+        const endDate = row.end_date ? new Date(row.end_date) : null
+        
+        let status: 'Past' | 'Active' | 'Upcoming' = 'Upcoming'
+        let variant: 'success' | 'neutral' | 'warning' = 'neutral'
+        
+        if (endDate && endDate < now) {
+          status = 'Past'
+          variant = 'neutral'
+        } else if (startDate && endDate && startDate <= now && now <= endDate) {
+          status = 'Active'
+          variant = 'success'
+        } else if (startDate && startDate > now) {
+          status = 'Upcoming'
+          variant = 'neutral'
+        } else {
+          // Fallback to is_active flag if dates are missing
+          status = row.is_active ? 'Active' : 'Upcoming'
+          variant = row.is_active ? 'success' : 'neutral'
+        }
+        
+        return (
+          <Badge variant={variant}>
+            {status}
+          </Badge>
+        )
+      }
     },
     {
       id: 'actions',

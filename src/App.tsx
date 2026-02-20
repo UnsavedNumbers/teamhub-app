@@ -351,8 +351,8 @@ function HostGateLayout() {
 function App() {
   return (
     <I18nProvider>
-      <DemoSessionProvider>
-        <OrganizationProvider>
+      <OrganizationProvider>
+        <DemoSessionProvider>
           <AuthProvider>
             <LoadingStateProvider>
               <FeatureGateProvider>
@@ -360,8 +360,8 @@ function App() {
               </FeatureGateProvider>
             </LoadingStateProvider>
           </AuthProvider>
-        </OrganizationProvider>
-      </DemoSessionProvider>
+        </DemoSessionProvider>
+      </OrganizationProvider>
     </I18nProvider>
   )
 }

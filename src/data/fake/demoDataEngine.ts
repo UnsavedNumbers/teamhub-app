@@ -1,5 +1,6 @@
 import type { DemoOrganization } from '@/types/demoManagement'
 import type { SportCode } from '@/types/sports'
+import { USE_FAKE_DATA, DEMO_ORG_A_ID } from '../config'
 import { buildDemoGeneratedData } from './demoDataGenerators'
 import { setGeneratedDemoData } from './demoDataStore'
 import { fakeOrganizations } from './fakeOrganizations'
@@ -249,8 +250,10 @@ function appendDemoOrgData(demoOrg: DemoOrganization, demoCode: string): void {
 }
 
 export async function generateDemoData(demoOrg: DemoOrganization, sports: SportCode[], demoCode: string): Promise<void> {
+  // When USE_FAKE_DATA is true, use DEMO_ORG_A_ID so generated data matches static fake data
   const sourceOrg: DemoOrganization = {
     ...demoOrg,
+    id: USE_FAKE_DATA ? DEMO_ORG_A_ID : demoOrg.id,
     sports_sponsored: sports,
   }
 
