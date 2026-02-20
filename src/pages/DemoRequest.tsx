@@ -8,6 +8,7 @@ import { AUTH_PAGE_HERO_IMAGES } from '../utils/authImages'
 import { createDemoOrg } from '../data/services/demoOrgService'
 import { addPOC } from '../data/services/demoOrgService'
 import { sendDemoRequestWebhook, buildReviewUrl } from '../services/demoRequestWebhookService'
+import { getBaseUrl } from '../utils/host'
 import { LocationAutocomplete } from '../components/common/LocationAutocomplete'
 import type { StructuredAddress } from '../types/location'
 import type { CreateDemoOrgInput, CreateDemoPOCInput, DemoOrganizationStatus } from '../types/demoManagement'
@@ -213,6 +214,7 @@ export default function DemoRequest() {
       const reviewUrl = buildReviewUrl(demoOrg.id)
       const webhookPayload = {
         type: 'demo_request' as const,
+        base_url: getBaseUrl(),
         demo_org_id: demoOrg.id,
         name: demoOrg.name,
         first_name: firstName.trim(),

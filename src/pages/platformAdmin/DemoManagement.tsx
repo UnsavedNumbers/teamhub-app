@@ -3,20 +3,20 @@ import { useNavigate } from 'react-router-dom'
 import type { ColumnConfig } from '@/components/platformAdmin'
 import {
   Button,
-  ConfirmDialog,
   FilterBar,
   PageHeader,
   PlatformDataTable,
 } from '@/components/platformAdmin'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import DemoOrgForm from '@/components/platformAdmin/DemoOrgForm'
-import InitiateDemoDialog from '@/components/platformAdmin/InitiateDemoDialog'
 import {
   createDemoOrg,
   listDemoOrgs,
   listPOCs,
   updateDemoOrg,
 } from '@/data/services/demoOrgService'
-import { listDemoCodesForOrg, revokeAllDemoCodesForOrg } from '@/data/services/demoCodeService'
+import { listDemoCodesForOrg, revokeAllDemoCodesForOrg, createDemoCode, generateDemoCode } from '@/data/services/demoCodeService'
+import { sendApprovalEmail, sendRejectionWebhook } from '@/services/demoResultWebhookService'
 import type { CreateDemoOrgInput, DemoOrgFilters, DemoOrgPOC, DemoOrganization } from '@/types/demoManagement'
 import { getLink } from '@/utils/routes'
 import { useI18n } from '@/i18n/useI18n'
@@ -40,7 +40,8 @@ export default function DemoManagement() {
   const [formOpen, setFormOpen] = useState(false)
   const [formLoading, setFormLoading] = useState(false)
   const [selectedOrg, setSelectedOrg] = useState<DemoOrganization | null>(null)
-  const [initiateOrg, setInitiateOrg] = useState<DemoOrganization | null>(null)
+  const [approveOrg, setApproveOrg] = useState<DemoOrganization | null>(null)
+  const [rejectOrg, setRejectOrg] = useState<DemoOrganization | null>(null)
   const [revokeOrg, setRevokeOrg] = useState<DemoOrganization | null>(null)
 
   const loadRows = useCallback(async () => {
@@ -113,6 +114,56 @@ export default function DemoManagement() {
     }
   }
 
+  const handleApprove = async (): Promise<void> => {
+    if (!approveOrg) return
+
+    try {
+      const pocs = await listPOCs(approveOrg.id)
+      const primaryPoc = pocs.find((poc) => poc.is_primary) ?? pocs[0] ?? null
+
+      const demoCode = generateDemoCode()
+      await createDemoCode({
+        demo_org_id: approveOrg.id,
+        poc_id: primaryPoc?.id ?? null,
+        allowed_roles: ['org_admin'],
+        expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+      })
+
+      await updateDemoOrg(approveOrg.id, {
+        status: 'active',
+      })
+
+      await sendApprovalEmail(approveOrg.id, demoCode, primaryPoc, approveOrg)
+
+      setApproveOrg(null)
+      await loadRows()
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : t('common.error.updateFailed'))
+      setApproveOrg(null)
+    }
+  }
+
+  const handleReject = async (): Promise<void> => {
+    if (!rejectOrg) return
+
+    try {
+      const pocs = await listPOCs(rejectOrg.id)
+      const primaryPoc = pocs.find((poc) => poc.is_primary) ?? pocs[0] ?? null
+
+      await updateDemoOrg(rejectOrg.id, {
+        status: 'rejected',
+      })
+
+      await sendRejectionWebhook(rejectOrg.id, primaryPoc, rejectOrg)
+
+      setRejectOrg(null)
+      await loadRows()
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : t('common.error.updateFailed'))
+      setRejectOrg(null)
+    }
+  }
+
   const columns: ColumnConfig<DemoOrgRow>[] = [
     {
       id: 'name',
@@ -136,9 +187,8 @@ export default function DemoManagement() {
         if (!row.primaryPoc) return t('platformAdmin.demoManagement.table.none')
         const name = `${row.primaryPoc.first_name} ${row.primaryPoc.last_name}`.trim() || '—'
         const email = row.primaryPoc.email || ''
-        const phone = row.primaryPoc.phone || ''
-        const parts = [name, email, phone].filter(Boolean)
-        return parts.join(' • ') || '—'
+        if (!email) return name
+        return <a href={`mailto:${email}`} onClick={(e) => e.stopPropagation()}>{name}</a>
       },
     },
     {
@@ -162,11 +212,18 @@ export default function DemoManagement() {
       label: t('common.actions'),
       render: (row) => (
         <div className="pa-flex pa-gap-2" onClick={(event) => event.stopPropagation()}>
+          {row.status === 'pending' && (
+            <>
+              <Button variant="ghost" size="dense" onClick={() => setApproveOrg(row)}>
+                {t('platformAdmin.demoManagement.actions.approve')}
+              </Button>
+              <Button variant="ghost" size="dense" onClick={() => setRejectOrg(row)}>
+                {t('platformAdmin.demoManagement.actions.reject')}
+              </Button>
+            </>
+          )}
           <Button variant="ghost" size="dense" onClick={() => { setSelectedOrg(row); setFormOpen(true) }}>
             {t('common.edit')}
-          </Button>
-          <Button variant="ghost" size="dense" onClick={() => setInitiateOrg(row)}>
-            {t('platformAdmin.demoManagement.actions.initiate')}
           </Button>
           <Button variant="ghost" size="dense" onClick={() => setRevokeOrg(row)}>
             {t('platformAdmin.demoManagement.actions.revokeAll')}
@@ -242,14 +299,23 @@ export default function DemoManagement() {
         onSubmit={handleFormSubmit}
       />
 
-      <InitiateDemoDialog
-        open={Boolean(initiateOrg)}
-        orgId={initiateOrg?.id ?? ''}
-        pocs={initiateOrg ? rows.find((row) => row.id === initiateOrg.id)?.pocs ?? [] : []}
-        onClose={() => setInitiateOrg(null)}
-        onCreated={() => {
-          void loadRows()
-        }}
+      <ConfirmDialog
+        open={Boolean(approveOrg)}
+        title={t('platformAdmin.demoManagement.approve.title')}
+        description={t('platformAdmin.demoManagement.approve.description', { name: approveOrg?.name ?? '' })}
+        confirmLabel={t('platformAdmin.demoManagement.approve.confirm')}
+        onConfirm={handleApprove}
+        onCancel={() => setApproveOrg(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(rejectOrg)}
+        title={t('platformAdmin.demoManagement.reject.title')}
+        description={t('platformAdmin.demoManagement.reject.description', { name: rejectOrg?.name ?? '' })}
+        confirmLabel={t('platformAdmin.demoManagement.reject.confirm')}
+        onConfirm={handleReject}
+        onCancel={() => setRejectOrg(null)}
+        variant="danger"
       />
 
       <ConfirmDialog

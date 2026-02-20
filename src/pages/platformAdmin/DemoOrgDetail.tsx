@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Button,
-  ConfirmDialog,
   PageHeader,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from '@/components/platformAdmin'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import DemoOrgForm from '@/components/platformAdmin/DemoOrgForm'
 import POCManager from '@/components/platformAdmin/POCManager'
 import InitiateDemoDialog from '@/components/platformAdmin/InitiateDemoDialog'
@@ -23,6 +23,7 @@ import {
   listDemoCodesForOrg,
   revokeDemoCode,
 } from '@/data/services/demoCodeService'
+import { sendApprovalEmail } from '@/services/demoResultWebhookService'
 import type { CreateDemoOrgInput, DemoCode, DemoOrgPOC, DemoOrganization } from '@/types/demoManagement'
 import { getLink } from '@/utils/routes'
 import { useI18n } from '@/i18n/useI18n'
@@ -43,6 +44,9 @@ export default function DemoOrgDetail() {
   const [initiateOpen, setInitiateOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [resendConfirmOpen, setResendConfirmOpen] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendSuccess, setResendSuccess] = useState<string | null>(null)
 
   const orgId = id ?? ''
 
@@ -134,6 +138,37 @@ export default function DemoOrgDetail() {
     }
   }
 
+  const handleResendApprovalEmail = async (): Promise<void> => {
+    if (!organization) return
+
+    setResendLoading(true)
+    setError(null)
+    setResendSuccess(null)
+
+    try {
+      const activeCode = codes.find((code) => code.status === 'active')
+      if (!activeCode) {
+        setError(t('platformAdmin.demoManagement.resendApprovalEmail.noActiveCode'))
+        setResendLoading(false)
+        return
+      }
+
+      const result = await sendApprovalEmail(organization.id, activeCode.demo_code, primaryPoc, organization)
+      if (result.success) {
+        setResendSuccess(t('platformAdmin.demoManagement.resendApprovalEmail.success'))
+      } else {
+        setError(result.statusCode 
+          ? t('platformAdmin.demoManagement.resendApprovalEmail.errorWithStatus', { status: result.statusCode })
+          : t('platformAdmin.demoManagement.resendApprovalEmail.error'))
+      }
+      setResendConfirmOpen(false)
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : t('platformAdmin.demoManagement.resendApprovalEmail.error'))
+    } finally {
+      setResendLoading(false)
+    }
+  }
+
   if (loading) {
     return <div>{t('common.loading')}</div>
   }
@@ -198,7 +233,14 @@ export default function DemoOrgDetail() {
             )}
           </div>
 
-          <div className="pa-mt-4">
+          <div className="pa-mt-4 pa-flex pa-gap-2">
+            {organization.status === 'active' && codes.some((code) => code.status === 'active') && (
+              <Button
+                onClick={() => setResendConfirmOpen(true)}
+              >
+                {t('platformAdmin.demoManagement.resendApprovalEmail.button')}
+              </Button>
+            )}
             <Button
               variant="danger"
               onClick={() => setDeleteConfirmOpen(true)}
@@ -206,6 +248,12 @@ export default function DemoOrgDetail() {
               {t('common.delete')}
             </Button>
           </div>
+
+          {resendSuccess && (
+            <div className="pa-mt-4 pa-p-3 pa-bg-green-50 pa-text-green-800 pa-rounded">
+              {resendSuccess}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="pocs">
@@ -265,6 +313,16 @@ export default function DemoOrgDetail() {
       />
 
       <ConfirmDialog
+        open={resendConfirmOpen}
+        title={t('platformAdmin.demoManagement.resendApprovalEmail.title')}
+        description={t('platformAdmin.demoManagement.resendApprovalEmail.description')}
+        confirmLabel={t('platformAdmin.demoManagement.resendApprovalEmail.confirm')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={handleResendApprovalEmail}
+        onCancel={() => setResendConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
         open={deleteConfirmOpen}
         title={t('platformAdmin.demoManagement.delete.title')}
         description={t('platformAdmin.demoManagement.delete.description', { name: organization.name })}
@@ -273,8 +331,9 @@ export default function DemoOrgDetail() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteConfirmOpen(false)}
         variant="danger"
-        loading={deleteLoading}
-      />
+      >
+        {deleteLoading && <div>{t('common.loading')}</div>}
+      </ConfirmDialog>
     </div>
   )
 }

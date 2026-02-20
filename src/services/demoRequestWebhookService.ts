@@ -12,6 +12,7 @@ import { getBaseUrl } from '../utils/host'
 
 export interface DemoRequestPayload {
   type: 'demo_request'
+  base_url: string
   demo_org_id: string
   name: string
   first_name: string

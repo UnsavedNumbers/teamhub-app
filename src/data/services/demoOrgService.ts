@@ -223,7 +223,9 @@ export async function createDemoOrg(input: CreateDemoOrgInput): Promise<DemoOrga
   const sports = ensureSports(input.sports_sponsored)
   const now = nowIso()
   const { data: authUser } = await supabase.auth.getUser()
-  const createdBy = authUser.user?.id ?? null
+  // For public demo requests (status='pending'), always set created_by to null
+  // This allows anonymous users to create demo orgs via the public form
+  const createdBy = input.status === 'pending' ? null : (authUser.user?.id ?? null)
 
   const payload: DemoOrganization = {
     id: createId('demo-org'),
