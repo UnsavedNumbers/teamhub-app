@@ -45,7 +45,7 @@ export default function DemoOrgDetail() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [resendConfirmOpen, setResendConfirmOpen] = useState(false)
-  const [resendLoading, setResendLoading] = useState(false)
+  const [_resendLoading, setResendLoading] = useState(false)
   const [resendSuccess, setResendSuccess] = useState<string | null>(null)
   const [allowedRolesEditing, setAllowedRolesEditing] = useState(false)
   const [allowedRolesSaving, setAllowedRolesSaving] = useState(false)
@@ -242,13 +242,13 @@ export default function DemoOrgDetail() {
           <div className="pa-card pa-mt-4 pa-stack" style={{ gap: 'var(--pa-space-2)' }}>
             <div className="pa-flex pa-items-center pa-justify-between">
               <div>
-                <strong>{t('platformAdmin.demoManagement.detail.allowedRoles.title', 'Allowed Roles')}</strong>
+                <strong>{t('platformAdmin.demoManagement.detail.allowedRoles.title')}</strong>
                 <div className="pa-text-sm pa-text-muted">
-                  {t('platformAdmin.demoManagement.detail.allowedRoles.description', 'Select which roles are available for this demo organization.')}
+                  {t('platformAdmin.demoManagement.detail.allowedRoles.description')}
                 </div>
               </div>
               {!allowedRolesEditing && (
-                <Button variant="ghost" size="sm" onClick={() => setAllowedRolesEditing(true)}>
+                <Button variant="ghost" size="small" onClick={() => setAllowedRolesEditing(true)}>
                   {t('common.edit')}
                 </Button>
               )}
@@ -258,12 +258,12 @@ export default function DemoOrgDetail() {
               <div className="pa-stack" style={{ gap: 'var(--pa-space-2)' }}>
                 {(['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan'] as DemoAllowedRole[]).map((role) => {
                   const roleLabels: Record<DemoAllowedRole, string> = {
-                    org_admin: t('platformAdmin.demoManagement.detail.allowedRoles.orgAdmin', 'Org Admin'),
-                    coach: t('platformAdmin.demoManagement.detail.allowedRoles.coach', 'Coach'),
-                    parent: t('platformAdmin.demoManagement.detail.allowedRoles.guardian', 'Guardian'),
-                    athlete: t('platformAdmin.demoManagement.detail.allowedRoles.athlete', 'Athlete'),
-                    staff: t('platformAdmin.demoManagement.detail.allowedRoles.volunteer', 'Volunteer'),
-                    fan: t('platformAdmin.demoManagement.detail.allowedRoles.fan', 'Fan'),
+                    org_admin: t('platformAdmin.demoManagement.detail.allowedRoles.orgAdmin'),
+                    coach: t('platformAdmin.demoManagement.detail.allowedRoles.coach'),
+                    parent: t('platformAdmin.demoManagement.detail.allowedRoles.guardian'),
+                    athlete: t('platformAdmin.demoManagement.detail.allowedRoles.athlete'),
+                    staff: t('platformAdmin.demoManagement.detail.allowedRoles.volunteer'),
+                    fan: t('platformAdmin.demoManagement.detail.allowedRoles.fan'),
                   }
                   return (
                     <label key={role} className="pa-flex pa-items-center pa-gap-2 pa-cursor-pointer">
@@ -285,7 +285,7 @@ export default function DemoOrgDetail() {
                 })}
                 <div className="pa-flex pa-gap-2 pa-mt-2">
                   <Button
-                    size="sm"
+                    size="small"
                     onClick={async () => {
                       if (!organization) return
                       setAllowedRolesSaving(true)
@@ -305,7 +305,7 @@ export default function DemoOrgDetail() {
                   </Button>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="small"
                     onClick={() => {
                       setAllowedRolesEditing(false)
                       setSelectedRoles(organization.allowed_roles ?? ['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan'])
@@ -322,12 +322,12 @@ export default function DemoOrgDetail() {
                   <div className="pa-flex pa-flex-wrap pa-gap-2">
                     {selectedRoles.map((role) => {
                       const roleLabels: Record<DemoAllowedRole, string> = {
-                        org_admin: t('platformAdmin.demoManagement.detail.allowedRoles.orgAdmin', 'Org Admin'),
-                        coach: t('platformAdmin.demoManagement.detail.allowedRoles.coach', 'Coach'),
-                        parent: t('platformAdmin.demoManagement.detail.allowedRoles.guardian', 'Guardian'),
-                        athlete: t('platformAdmin.demoManagement.detail.allowedRoles.athlete', 'Athlete'),
-                        staff: t('platformAdmin.demoManagement.detail.allowedRoles.volunteer', 'Volunteer'),
-                        fan: t('platformAdmin.demoManagement.detail.allowedRoles.fan', 'Fan'),
+                        org_admin: t('platformAdmin.demoManagement.detail.allowedRoles.orgAdmin'),
+                        coach: t('platformAdmin.demoManagement.detail.allowedRoles.coach'),
+                        parent: t('platformAdmin.demoManagement.detail.allowedRoles.guardian'),
+                        athlete: t('platformAdmin.demoManagement.detail.allowedRoles.athlete'),
+                        staff: t('platformAdmin.demoManagement.detail.allowedRoles.volunteer'),
+                        fan: t('platformAdmin.demoManagement.detail.allowedRoles.fan'),
                       }
                       return (
                         <span key={role} className="pa-badge pa-badge-secondary">
@@ -337,7 +337,7 @@ export default function DemoOrgDetail() {
                     })}
                   </div>
                 ) : (
-                  <span className="pa-text-muted">{t('platformAdmin.demoManagement.detail.allowedRoles.none', 'No roles selected')}</span>
+                  <span className="pa-text-muted">{t('platformAdmin.demoManagement.detail.allowedRoles.none')}</span>
                 )}
               </div>
             )}

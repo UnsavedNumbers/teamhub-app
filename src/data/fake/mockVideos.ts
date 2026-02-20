@@ -262,9 +262,11 @@ export const MOCK_VIDEOS: Video[] = [
 
 /**
  * Get mock videos for a specific organization
+ * In demo mode, always returns videos for DEMO_ORG_A_ID regardless of orgId
  */
-export function getMockVideosForOrg(orgId: string): Video[] {
-  return MOCK_VIDEOS.filter((v) => v.org_id === orgId)
+export function getMockVideosForOrg(_orgId: string): Video[] {
+  // In demo mode, always return videos for DEMO_ORG_A_ID
+  return MOCK_VIDEOS.filter((v) => v.org_id === DEMO_ORG_A_ID)
 }
 
 /**

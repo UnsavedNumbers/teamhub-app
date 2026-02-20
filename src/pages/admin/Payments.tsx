@@ -166,12 +166,15 @@ export default function Payments() {
           console.error('Error checking Stripe status:', error)
         }
         if (isMountedRef.current) {
-          setStripeConnected(status?.connected ?? false)
+          // In demo mode, always show as connected to display fake payment data
+          const USE_FAKE_DATA = import.meta.env.VITE_USE_FAKE_DATA === 'true' || import.meta.env.VITE_USE_FAKE_DATA === '1'
+          setStripeConnected(USE_FAKE_DATA ? true : (status?.connected ?? false))
         }
       } catch (err) {
         console.error('Error checking Stripe status:', err)
         if (isMountedRef.current) {
-          setStripeConnected(false)
+          const USE_FAKE_DATA = import.meta.env.VITE_USE_FAKE_DATA === 'true' || import.meta.env.VITE_USE_FAKE_DATA === '1'
+          setStripeConnected(USE_FAKE_DATA ? true : false)
         }
       } finally {
         if (isMountedRef.current) {
@@ -205,6 +208,16 @@ export default function Payments() {
     try {
       if (isMountedRef.current) {
         setAthleteCheckError(null)
+      }
+      
+      // In demo mode, use fake data
+      const USE_FAKE_DATA = import.meta.env.VITE_USE_FAKE_DATA === 'true' || import.meta.env.VITE_USE_FAKE_DATA === '1'
+      if (USE_FAKE_DATA) {
+        // In fake data mode, we always have athletes with guardians
+        if (isMountedRef.current) {
+          setHasAthletes(true)
+        }
+        return
       }
       
       // Check athlete_guardians table - fees can only be assigned to athletes with guardians

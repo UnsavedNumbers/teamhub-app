@@ -305,13 +305,14 @@ export async function getAttendanceEvents(
     try {
         if (USE_FAKE_DATA) {
             await delay()
+            const now = new Date()
             const mockEvents: AttendanceEventSummary[] = [
             {
-                event_id: 'evt-1',
-                team_name: 'U12 Boys',
+                event_id: 'event-u10-soccer-practice-001',
+                team_name: 'U10 Lightning',
                 event_type: 'practice',
-                start_time: new Date().toISOString(),
-                location_name: 'Main Field',
+                start_time: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                location_name: 'Riverside Sports Complex - Field 4',
                 total_expected: 15,
                 present_count: 12,
                 absent_count: 2,
@@ -319,6 +320,62 @@ export async function getAttendanceEvents(
                 excused_count: 0,
                 unknown_count: 0,
                 status: 'complete'
+            },
+            {
+                event_id: 'event-u10-soccer-game-001',
+                team_name: 'U10 Lightning',
+                event_type: 'game',
+                start_time: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+                location_name: 'Eastside Park',
+                total_expected: 15,
+                present_count: 14,
+                absent_count: 1,
+                late_count: 0,
+                excused_count: 0,
+                unknown_count: 0,
+                status: 'complete'
+            },
+            {
+                event_id: 'event-u12-soccer-practice-001',
+                team_name: 'U12 Thunder',
+                event_type: 'practice',
+                start_time: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString(),
+                location_name: 'Riverside Sports Complex - Field 2',
+                total_expected: 18,
+                present_count: 0,
+                absent_count: 0,
+                late_count: 0,
+                excused_count: 0,
+                unknown_count: 18,
+                status: 'missing'
+            },
+            {
+                event_id: 'event-u10-bb-practice-001',
+                team_name: 'U10 Hoops',
+                event_type: 'practice',
+                start_time: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+                location_name: 'Riverside Sports Complex - Court 1',
+                total_expected: 12,
+                present_count: 0,
+                absent_count: 0,
+                late_count: 0,
+                excused_count: 0,
+                unknown_count: 12,
+                status: 'missing'
+            },
+            {
+                event_id: 'event-u12-soccer-tournament-001',
+                team_name: 'U12 Thunder',
+                event_type: 'tournament',
+                start_time: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+                location_name: 'Regional Tournament Complex',
+                total_expected: 18,
+                present_count: 0,
+                absent_count: 0,
+                late_count: 0,
+                excused_count: 0,
+                unknown_count: 18,
+                status: 'missing'
             }
         ]
         debug.perf.end('attendanceService.getAttendanceEvents')

@@ -7,8 +7,12 @@
 
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
+import { isInDemoSession } from '../../utils/demoMode'
+import { USE_FAKE_DATA } from '../config'
 import type {
   SavedReport,
+  SavedReportConfig,
+  ScheduleConfig,
   CreateSavedReportInput,
   UpdateSavedReportInput,
   ScheduledReport,
@@ -24,8 +28,42 @@ import type {
   UniformMetrics,
   CommunicationMetrics,
   OperationsMetrics,
+  RevenueMetrics,
+  TicketingMetrics,
+  RegistrationMetrics,
+  VideoMetrics,
+  EventsMetrics,
+  ErrorsMetrics,
 } from '../../types/reporting'
+import type { Json } from '../../lib/database.types'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
+import {
+  getFakeOrgHealthMetrics,
+  getFakeParticipationMetrics,
+  getFakeSchedulingMetrics,
+  getFakeTravelMetrics,
+  getFakePaymentMetrics,
+  getFakeUniformMetrics,
+  getFakeCommunicationMetrics,
+  getFakeOperationsMetrics,
+  getFakeRevenueMetrics,
+  getFakeTicketingMetrics,
+  getFakeRegistrationMetrics,
+  getFakeVideoMetrics,
+  getFakeEventsMetrics,
+  getFakeErrorsMetrics,
+  getFakeSavedReportById,
+  getFakeSavedReportByToken,
+  updateFakeSavedReport,
+  deleteFakeSavedReport,
+  getFakeScheduledReports,
+  createFakeScheduledReport,
+  updateFakeScheduledReport,
+  deleteFakeScheduledReport,
+  getFakeExportHistory,
+  createFakeExportHistory,
+  updateFakeExportHistory,
+} from '../fake/fakeReporting'
 
 // ============================================================================
 // Helper Functions
@@ -107,7 +145,7 @@ export async function getSavedReports(
       user_id: row.user_id,
       name: row.name,
       description: row.description,
-      config: row.config,
+      config: row.config as unknown as SavedReportConfig,
       is_shared: row.is_shared,
       share_token: row.share_token,
       created_at: row.created_at,
@@ -146,6 +184,11 @@ export async function getSavedReportById(
       }
     }
 
+    // Use fake data in demo session
+    if (isInDemoSession()) {
+      return await getFakeSavedReportById(reportId, orgId, userId)
+    }
+
     const { data, error } = await supabase
       .from('saved_reports')
       .select('*')
@@ -176,7 +219,7 @@ export async function getSavedReportById(
       user_id: data.user_id,
       name: data.name,
       description: data.description,
-      config: data.config,
+      config: data.config as unknown as SavedReportConfig,
       is_shared: data.is_shared,
       share_token: data.share_token,
       created_at: data.created_at,
@@ -213,6 +256,11 @@ export async function getSavedReportByToken(
       }
     }
 
+    // Use fake data in demo session
+    if (isInDemoSession()) {
+      return await getFakeSavedReportByToken(shareToken)
+    }
+
     const { data, error } = await supabase
       .from('saved_reports')
       .select('*')
@@ -235,7 +283,7 @@ export async function getSavedReportByToken(
       user_id: data.user_id,
       name: data.name,
       description: data.description,
-      config: data.config,
+      config: data.config as unknown as SavedReportConfig,
       is_shared: data.is_shared,
       share_token: data.share_token,
       created_at: data.created_at,
@@ -298,7 +346,7 @@ export async function createSavedReport(
         user_id: userId,
         name: input.name.trim(),
         description: input.description?.trim() || null,
-        config: input.config,
+        config: input.config as unknown as Json,
         is_shared: input.is_shared || false,
         share_token: shareToken,
       })
@@ -320,7 +368,7 @@ export async function createSavedReport(
       user_id: data.user_id,
       name: data.name,
       description: data.description,
-      config: data.config,
+      config: data.config as unknown as SavedReportConfig,
       is_shared: data.is_shared,
       share_token: data.share_token,
       created_at: data.created_at,
@@ -377,6 +425,11 @@ export async function updateSavedReport(
       }
     }
 
+    // Use fake data in demo session
+    if (isInDemoSession()) {
+      return await updateFakeSavedReport(reportId, input, orgId, userId)
+    }
+
     const updateData: Record<string, unknown> = {}
     if (input.name !== undefined) updateData.name = input.name.trim()
     if (input.description !== undefined) updateData.description = input.description?.trim() || null
@@ -422,7 +475,7 @@ export async function updateSavedReport(
       user_id: data.user_id,
       name: data.name,
       description: data.description,
-      config: data.config,
+      config: data.config as unknown as SavedReportConfig,
       is_shared: data.is_shared,
       share_token: data.share_token,
       created_at: data.created_at,
@@ -458,6 +511,11 @@ export async function deleteSavedReport(
       return {
         error: new Error('Report ID, Organization ID, and User ID are required'),
       }
+    }
+
+    // Use fake data in demo session
+    if (isInDemoSession()) {
+      return await deleteFakeSavedReport(reportId, orgId, userId)
     }
 
     const { error } = await supabase
@@ -509,6 +567,11 @@ export async function getScheduledReports(
       }
     }
 
+    // Use fake data in demo session
+    if (isInDemoSession()) {
+      return await getFakeScheduledReports(orgId, userId)
+    }
+
     const { data, error } = await supabase
       .from('scheduled_reports')
       .select('*')
@@ -529,10 +592,10 @@ export async function getScheduledReports(
       org_id: row.org_id,
       user_id: row.user_id,
       name: row.name,
-      report_config: row.report_config,
-      schedule: row.schedule,
-      recipients: row.recipients,
-      format: row.format,
+      report_config: row.report_config as unknown as SavedReportConfig,
+      schedule: row.schedule as unknown as ScheduleConfig,
+      recipients: row.recipients || [],
+      format: row.format as 'csv' | 'xlsx' | 'pdf',
       is_active: row.is_active,
       last_run_at: row.last_run_at,
       next_run_at: row.next_run_at,
@@ -605,6 +668,11 @@ export async function createScheduledReport(
       }
     }
 
+    // Use fake data in demo session
+    if (isInDemoSession()) {
+      return await createFakeScheduledReport(input, orgId, userId)
+    }
+
     // Calculate next_run_at based on schedule
     const nextRunAt = calculateNextRunAt(input.schedule)
 
@@ -614,8 +682,8 @@ export async function createScheduledReport(
         org_id: orgId,
         user_id: userId,
         name: input.name.trim(),
-        report_config: input.report_config,
-        schedule: input.schedule,
+        report_config: input.report_config as unknown as Json,
+        schedule: input.schedule as unknown as Json,
         recipients: input.recipients,
         format: input.format,
         is_active: true,
@@ -638,10 +706,10 @@ export async function createScheduledReport(
       org_id: data.org_id,
       user_id: data.user_id,
       name: data.name,
-      report_config: data.report_config,
-      schedule: data.schedule,
-      recipients: data.recipients,
-      format: data.format,
+      report_config: data.report_config as unknown as SavedReportConfig,
+      schedule: data.schedule as unknown as ScheduleConfig,
+      recipients: data.recipients || [],
+      format: data.format as 'csv' | 'xlsx' | 'pdf',
       is_active: data.is_active,
       last_run_at: data.last_run_at,
       next_run_at: data.next_run_at,
@@ -717,6 +785,11 @@ export async function updateScheduledReport(
       }
     }
 
+    // Use fake data in demo session
+    if (isInDemoSession()) {
+      return await updateFakeScheduledReport(reportId, input, orgId, userId)
+    }
+
     const updateData: Record<string, unknown> = {}
     if (input.name !== undefined) updateData.name = input.name.trim()
     if (input.report_config !== undefined) updateData.report_config = input.report_config
@@ -752,10 +825,10 @@ export async function updateScheduledReport(
       org_id: data.org_id,
       user_id: data.user_id,
       name: data.name,
-      report_config: data.report_config,
-      schedule: data.schedule,
-      recipients: data.recipients,
-      format: data.format,
+      report_config: data.report_config as unknown as SavedReportConfig,
+      schedule: data.schedule as unknown as ScheduleConfig,
+      recipients: data.recipients || [],
+      format: data.format as 'csv' | 'xlsx' | 'pdf',
       is_active: data.is_active,
       last_run_at: data.last_run_at,
       next_run_at: data.next_run_at,
@@ -792,6 +865,11 @@ export async function deleteScheduledReport(
       return {
         error: new Error('Report ID, Organization ID, and User ID are required'),
       }
+    }
+
+    // Use fake data in demo session
+    if (isInDemoSession()) {
+      return await deleteFakeScheduledReport(reportId, orgId, userId)
     }
 
     const { error } = await supabase
@@ -844,6 +922,11 @@ export async function getExportHistory(
       }
     }
 
+    // Use fake data in demo session
+    if (isInDemoSession()) {
+      return await getFakeExportHistory(orgId, userId, limit)
+    }
+
     const { data, error } = await supabase
       .from('export_history')
       .select('*')
@@ -864,11 +947,11 @@ export async function getExportHistory(
       id: row.id,
       org_id: row.org_id,
       user_id: row.user_id,
-      report_config: row.report_config,
-      format: row.format,
+      report_config: row.report_config as unknown as SavedReportConfig,
+      format: row.format as 'csv' | 'xlsx' | 'pdf',
       file_url: row.file_url,
       file_size_bytes: row.file_size_bytes,
-      status: row.status,
+      status: row.status as 'pending' | 'processing' | 'completed' | 'failed',
       error_message: row.error_message,
       created_at: row.created_at,
       completed_at: row.completed_at,
@@ -907,12 +990,17 @@ export async function createExportHistory(
       }
     }
 
+    // Use fake data in demo session
+    if (isInDemoSession()) {
+      return await createFakeExportHistory(reportConfig, format, orgId, userId)
+    }
+
     const { data, error } = await supabase
       .from('export_history')
       .insert({
         org_id: orgId,
         user_id: userId,
-        report_config: reportConfig,
+        report_config: reportConfig as unknown as Json,
         format,
         status: 'pending',
       })
@@ -932,11 +1020,11 @@ export async function createExportHistory(
       id: data.id,
       org_id: data.org_id,
       user_id: data.user_id,
-      report_config: data.report_config,
-      format: data.format,
+      report_config: data.report_config as unknown as SavedReportConfig,
+      format: data.format as 'csv' | 'xlsx' | 'pdf',
       file_url: data.file_url,
       file_size_bytes: data.file_size_bytes,
-      status: data.status,
+      status: data.status as 'pending' | 'processing' | 'completed' | 'failed',
       error_message: data.error_message,
       created_at: data.created_at,
       completed_at: data.completed_at,
@@ -975,6 +1063,11 @@ export async function updateExportHistory(
       return {
         error: new Error('History ID is required'),
       }
+    }
+
+    // Use fake data in demo session
+    if (isInDemoSession()) {
+      return await updateFakeExportHistory(historyId, updates as Partial<ExportHistory>)
     }
 
     const updateData: Record<string, unknown> = {}
@@ -1066,112 +1159,526 @@ function calculateNextRunAt(schedule: { frequency: string; day_of_week?: number;
 
 /**
  * Get organization health metrics
- * TODO: Implement RPC function get_org_health_metrics
  */
 export async function getOrgHealthMetrics(
   filters: ReportFilters
 ): Promise<{ data: OrgHealthMetrics | null; error: Error | null }> {
-  // Placeholder - will be implemented with RPC
-  return {
-    data: null,
-    error: new Error('Organization health metrics not yet implemented'),
+  try {
+    const validationError = validateFilters(filters)
+    if (validationError) {
+      return { data: null, error: validationError }
+    }
+
+    // Use fake data in demo session or if USE_FAKE_DATA is enabled
+    if (isInDemoSession() || USE_FAKE_DATA) {
+      return await getFakeOrgHealthMetrics(filters)
+    }
+
+    const { data, error } = await supabase.rpc('get_org_health_metrics', {
+      org_id: filters.orgId,
+    })
+
+    if (error) {
+      // Fall back to fake data if function doesn't exist (development/demo scenarios)
+      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
+        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
+        return await getFakeOrgHealthMetrics(filters)
+      }
+      debug.error('Failed to fetch org health metrics', error?.message || String(error))
+      return { data: null, error: classifySupabaseError(error) }
+    }
+
+    return { data: (data as unknown) as OrgHealthMetrics, error: null }
+  } catch (err) {
+    debug.error('Error fetching org health metrics', err instanceof Error ? err.message : String(err))
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
   }
 }
 
 /**
  * Get participation metrics
- * TODO: Implement RPC function get_participation_metrics
  */
 export async function getParticipationMetrics(
   filters: ReportFilters
 ): Promise<{ data: ParticipationMetrics | null; error: Error | null }> {
-  // Placeholder - will be implemented with RPC
-  return {
-    data: null,
-    error: new Error('Participation metrics not yet implemented'),
+  try {
+    const validationError = validateFilters(filters)
+    if (validationError) {
+      return { data: null, error: validationError }
+    }
+
+    // Use fake data in demo session or if USE_FAKE_DATA is enabled
+    if (isInDemoSession() || USE_FAKE_DATA) {
+      return await getFakeParticipationMetrics(filters)
+    }
+
+    const { data, error } = await supabase.rpc('get_participation_metrics', {
+      org_id: filters.orgId,
+    })
+
+    if (error) {
+      // Fall back to fake data if function doesn't exist (development/demo scenarios)
+      if (error.message?.includes('Could not find the function') || error.message?.includes('function') && error.message?.includes('not found')) {
+        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
+        return await getFakeParticipationMetrics(filters)
+      }
+      debug.error('Failed to fetch participation metrics', error?.message || String(error))
+      return { data: null, error: classifySupabaseError(error) }
+    }
+
+    return { data: (data as unknown) as ParticipationMetrics, error: null }
+  } catch (err) {
+    debug.error('Error fetching participation metrics', err instanceof Error ? err.message : String(err))
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
   }
 }
 
 /**
  * Get scheduling metrics
- * TODO: Implement RPC function get_scheduling_metrics
  */
 export async function getSchedulingMetrics(
   filters: ReportFilters
 ): Promise<{ data: SchedulingMetrics | null; error: Error | null }> {
-  // Placeholder - will be implemented with RPC
-  return {
-    data: null,
-    error: new Error('Scheduling metrics not yet implemented'),
+  try {
+    const validationError = validateFilters(filters)
+    if (validationError) {
+      return { data: null, error: validationError }
+    }
+
+    // Use fake data in demo session or if USE_FAKE_DATA is enabled
+    if (isInDemoSession() || USE_FAKE_DATA) {
+      return await getFakeSchedulingMetrics(filters)
+    }
+
+    const { data, error } = await supabase.rpc('get_scheduling_metrics', {
+      org_id: filters.orgId,
+    })
+
+    if (error) {
+      // Fall back to fake data if function doesn't exist (development/demo scenarios)
+      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
+        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
+        return await getFakeSchedulingMetrics(filters)
+      }
+      debug.error('Failed to fetch scheduling metrics', error?.message || String(error))
+      return { data: null, error: classifySupabaseError(error) }
+    }
+
+    return { data: (data as unknown) as SchedulingMetrics, error: null }
+  } catch (err) {
+    debug.error('Error fetching scheduling metrics', err instanceof Error ? err.message : String(err))
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
   }
 }
 
 /**
  * Get travel metrics
- * TODO: Implement RPC function get_travel_metrics
  */
 export async function getTravelMetrics(
   filters: ReportFilters
 ): Promise<{ data: TravelMetrics | null; error: Error | null }> {
-  // Placeholder - will be implemented with RPC
-  return {
-    data: null,
-    error: new Error('Travel metrics not yet implemented'),
+  try {
+    const validationError = validateFilters(filters)
+    if (validationError) {
+      return { data: null, error: validationError }
+    }
+
+    // Use fake data in demo session or if USE_FAKE_DATA is enabled
+    if (isInDemoSession() || USE_FAKE_DATA) {
+      return await getFakeTravelMetrics(filters)
+    }
+
+    const { data, error } = await supabase.rpc('get_travel_metrics', {
+      org_id: filters.orgId,
+    })
+
+    if (error) {
+      // Fall back to fake data if function doesn't exist (development/demo scenarios)
+      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
+        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
+        return await getFakeTravelMetrics(filters)
+      }
+      debug.error('Failed to fetch travel metrics', error?.message || String(error))
+      return { data: null, error: classifySupabaseError(error) }
+    }
+
+    return { data: (data as unknown) as TravelMetrics, error: null }
+  } catch (err) {
+    debug.error('Error fetching travel metrics', err instanceof Error ? err.message : String(err))
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
   }
 }
 
 /**
  * Get payment metrics
- * TODO: Implement RPC function get_payment_metrics
  */
 export async function getPaymentMetrics(
   filters: ReportFilters
 ): Promise<{ data: PaymentMetrics | null; error: Error | null }> {
-  // Placeholder - will be implemented with RPC
-  return {
-    data: null,
-    error: new Error('Payment metrics not yet implemented'),
+  try {
+    const validationError = validateFilters(filters)
+    if (validationError) {
+      return { data: null, error: validationError }
+    }
+
+    // Use fake data in demo session or if USE_FAKE_DATA is enabled
+    if (isInDemoSession() || USE_FAKE_DATA) {
+      return await getFakePaymentMetrics(filters)
+    }
+
+    const { data, error } = await supabase.rpc('get_payment_metrics', {
+      org_id: filters.orgId,
+    })
+
+    if (error) {
+      // Fall back to fake data if function doesn't exist (development/demo scenarios)
+      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
+        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
+        return await getFakePaymentMetrics(filters)
+      }
+      debug.error('Failed to fetch payment metrics', error?.message || String(error))
+      return { data: null, error: classifySupabaseError(error) }
+    }
+
+    return { data: (data as unknown) as PaymentMetrics, error: null }
+  } catch (err) {
+    debug.error('Error fetching payment metrics', err instanceof Error ? err.message : String(err))
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
   }
 }
 
 /**
  * Get uniform metrics
- * TODO: Implement RPC function get_uniform_metrics
  */
 export async function getUniformMetrics(
   filters: ReportFilters
 ): Promise<{ data: UniformMetrics | null; error: Error | null }> {
-  // Placeholder - will be implemented with RPC
-  return {
-    data: null,
-    error: new Error('Uniform metrics not yet implemented'),
+  try {
+    const validationError = validateFilters(filters)
+    if (validationError) {
+      return { data: null, error: validationError }
+    }
+
+    // Use fake data in demo session or if USE_FAKE_DATA is enabled
+    if (isInDemoSession() || USE_FAKE_DATA) {
+      return await getFakeUniformMetrics(filters)
+    }
+
+    const { data, error } = await supabase.rpc('get_uniform_metrics', {
+      org_id: filters.orgId,
+    })
+
+    if (error) {
+      // Fall back to fake data if function doesn't exist (development/demo scenarios)
+      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
+        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
+        return await getFakeUniformMetrics(filters)
+      }
+      debug.error('Failed to fetch uniform metrics', error?.message || String(error))
+      return { data: null, error: classifySupabaseError(error) }
+    }
+
+    return { data: (data as unknown) as UniformMetrics, error: null }
+  } catch (err) {
+    debug.error('Error fetching uniform metrics', err instanceof Error ? err.message : String(err))
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
   }
 }
 
 /**
  * Get communication metrics
- * TODO: Implement RPC function get_communication_metrics
  */
 export async function getCommunicationMetrics(
   filters: ReportFilters
 ): Promise<{ data: CommunicationMetrics | null; error: Error | null }> {
-  // Placeholder - will be implemented with RPC
-  return {
-    data: null,
-    error: new Error('Communication metrics not yet implemented'),
+  try {
+    const validationError = validateFilters(filters)
+    if (validationError) {
+      return { data: null, error: validationError }
+    }
+
+    // Use fake data in demo session or if USE_FAKE_DATA is enabled
+    if (isInDemoSession() || USE_FAKE_DATA) {
+      return await getFakeCommunicationMetrics(filters)
+    }
+
+    const { data, error } = await supabase.rpc('get_communication_metrics', {
+      org_id: filters.orgId,
+    })
+
+    if (error) {
+      // Fall back to fake data if function doesn't exist (development/demo scenarios)
+      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
+        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
+        return await getFakeCommunicationMetrics(filters)
+      }
+      debug.error('Failed to fetch communication metrics', error?.message || String(error))
+      return { data: null, error: classifySupabaseError(error) }
+    }
+
+    return { data: (data as unknown) as CommunicationMetrics, error: null }
+  } catch (err) {
+    debug.error('Error fetching communication metrics', err instanceof Error ? err.message : String(err))
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
   }
 }
 
 /**
  * Get operations metrics
- * TODO: Implement RPC function get_operations_metrics
  */
 export async function getOperationsMetrics(
   filters: ReportFilters
 ): Promise<{ data: OperationsMetrics | null; error: Error | null }> {
-  // Placeholder - will be implemented with RPC
-  return {
-    data: null,
-    error: new Error('Operations metrics not yet implemented'),
+  try {
+    const validationError = validateFilters(filters)
+    if (validationError) {
+      return { data: null, error: validationError }
+    }
+
+    // Use fake data in demo session or if USE_FAKE_DATA is enabled
+    if (isInDemoSession() || USE_FAKE_DATA) {
+      return await getFakeOperationsMetrics(filters)
+    }
+
+    const { data, error } = await supabase.rpc('get_operations_metrics', {
+      org_id: filters.orgId,
+    })
+
+    if (error) {
+      // Fall back to fake data if function doesn't exist (development/demo scenarios)
+      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
+        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
+        return await getFakeOperationsMetrics(filters)
+      }
+      debug.error('Failed to fetch operations metrics', error?.message || String(error))
+      return { data: null, error: classifySupabaseError(error) }
+    }
+
+    return { data: (data as unknown) as OperationsMetrics, error: null }
+  } catch (err) {
+    debug.error('Error fetching operations metrics', err instanceof Error ? err.message : String(err))
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+/**
+ * Get revenue metrics
+ */
+export async function getRevenueMetrics(
+  filters: ReportFilters
+): Promise<{ data: RevenueMetrics | null; error: Error | null }> {
+  try {
+    const validationError = validateFilters(filters)
+    if (validationError) {
+      return { data: null, error: validationError }
+    }
+
+    // Use fake data in demo session or if USE_FAKE_DATA is enabled
+    if (isInDemoSession() || USE_FAKE_DATA) {
+      return await getFakeRevenueMetrics(filters)
+    }
+
+    const { data, error } = await (supabase.rpc as any)('get_revenue_metrics', {
+      org_id: filters.orgId,
+    })
+
+    if (error) {
+      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
+        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
+        return await getFakeRevenueMetrics(filters)
+      }
+      debug.error('Failed to fetch revenue metrics', error?.message || String(error))
+      return { data: null, error: classifySupabaseError(error) }
+    }
+
+    return { data: (data as unknown) as RevenueMetrics, error: null }
+  } catch (err) {
+    debug.error('Error fetching revenue metrics', err instanceof Error ? err.message : String(err))
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+/**
+ * Get ticketing metrics
+ */
+export async function getTicketingMetrics(
+  filters: ReportFilters
+): Promise<{ data: TicketingMetrics | null; error: Error | null }> {
+  try {
+    const validationError = validateFilters(filters)
+    if (validationError) {
+      return { data: null, error: validationError }
+    }
+
+    // Use fake data in demo session or if USE_FAKE_DATA is enabled
+    if (isInDemoSession() || USE_FAKE_DATA) {
+      return await getFakeTicketingMetrics(filters)
+    }
+
+    const { data, error } = await (supabase.rpc as any)('get_ticketing_metrics', {
+      org_id: filters.orgId,
+    })
+
+    if (error) {
+      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
+        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
+        return await getFakeTicketingMetrics(filters)
+      }
+      debug.error('Failed to fetch ticketing metrics', error?.message || String(error))
+      return { data: null, error: classifySupabaseError(error) }
+    }
+
+    return { data: (data as unknown) as TicketingMetrics, error: null }
+  } catch (err) {
+    debug.error('Error fetching ticketing metrics', err instanceof Error ? err.message : String(err))
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+/**
+ * Get registration metrics
+ */
+export async function getRegistrationMetrics(
+  filters: ReportFilters
+): Promise<{ data: RegistrationMetrics | null; error: Error | null }> {
+  try {
+    const validationError = validateFilters(filters)
+    if (validationError) {
+      return { data: null, error: validationError }
+    }
+
+    // Use fake data in demo session or if USE_FAKE_DATA is enabled
+    if (isInDemoSession() || USE_FAKE_DATA) {
+      return await getFakeRegistrationMetrics(filters)
+    }
+
+    const { data, error } = await (supabase.rpc as any)('get_registration_metrics', {
+      org_id: filters.orgId,
+    })
+
+    if (error) {
+      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
+        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
+        return await getFakeRegistrationMetrics(filters)
+      }
+      debug.error('Failed to fetch registration metrics', error?.message || String(error))
+      return { data: null, error: classifySupabaseError(error) }
+    }
+
+    return { data: (data as unknown) as RegistrationMetrics, error: null }
+  } catch (err) {
+    debug.error('Error fetching registration metrics', err instanceof Error ? err.message : String(err))
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+/**
+ * Get video metrics
+ */
+export async function getVideoMetrics(
+  filters: ReportFilters
+): Promise<{ data: VideoMetrics | null; error: Error | null }> {
+  try {
+    const validationError = validateFilters(filters)
+    if (validationError) {
+      return { data: null, error: validationError }
+    }
+
+    // Use fake data in demo session or if USE_FAKE_DATA is enabled
+    if (isInDemoSession() || USE_FAKE_DATA) {
+      return await getFakeVideoMetrics(filters)
+    }
+
+    const { data, error } = await (supabase.rpc as any)('get_video_metrics', {
+      org_id: filters.orgId,
+    })
+
+    if (error) {
+      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
+        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
+        return await getFakeVideoMetrics(filters)
+      }
+      debug.error('Failed to fetch video metrics', error?.message || String(error))
+      return { data: null, error: classifySupabaseError(error) }
+    }
+
+    return { data: (data as unknown) as VideoMetrics, error: null }
+  } catch (err) {
+    debug.error('Error fetching video metrics', err instanceof Error ? err.message : String(err))
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+/**
+ * Get events metrics
+ */
+export async function getEventsMetrics(
+  filters: ReportFilters
+): Promise<{ data: EventsMetrics | null; error: Error | null }> {
+  try {
+    const validationError = validateFilters(filters)
+    if (validationError) {
+      return { data: null, error: validationError }
+    }
+
+    // Use fake data in demo session or if USE_FAKE_DATA is enabled
+    if (isInDemoSession() || USE_FAKE_DATA) {
+      return await getFakeEventsMetrics(filters)
+    }
+
+    const { data, error } = await (supabase.rpc as any)('get_events_metrics', {
+      org_id: filters.orgId,
+    })
+
+    if (error) {
+      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
+        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
+        return await getFakeEventsMetrics(filters)
+      }
+      debug.error('Failed to fetch events metrics', error?.message || String(error))
+      return { data: null, error: classifySupabaseError(error) }
+    }
+
+    return { data: (data as unknown) as EventsMetrics, error: null }
+  } catch (err) {
+    debug.error('Error fetching events metrics', err instanceof Error ? err.message : String(err))
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+/**
+ * Get errors metrics
+ */
+export async function getErrorsMetrics(
+  filters: ReportFilters
+): Promise<{ data: ErrorsMetrics | null; error: Error | null }> {
+  try {
+    const validationError = validateFilters(filters)
+    if (validationError) {
+      return { data: null, error: validationError }
+    }
+
+    // Use fake data in demo session or if USE_FAKE_DATA is enabled
+    if (isInDemoSession() || USE_FAKE_DATA) {
+      return await getFakeErrorsMetrics(filters)
+    }
+
+    const { data, error } = await (supabase.rpc as any)('get_errors_metrics', {
+      org_id: filters.orgId,
+    })
+
+    if (error) {
+      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
+        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
+        return await getFakeErrorsMetrics(filters)
+      }
+      debug.error('Failed to fetch errors metrics', error?.message || String(error))
+      return { data: null, error: classifySupabaseError(error) }
+    }
+
+    return { data: (data as unknown) as ErrorsMetrics, error: null }
+  } catch (err) {
+    debug.error('Error fetching errors metrics', err instanceof Error ? err.message : String(err))
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
   }
 }

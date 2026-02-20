@@ -11,7 +11,6 @@ import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { fakeChildren, fakeFamilies, fakeTeamMembers, fakeSports, fakeTeams } from '../fake'
-import { getTeamMembersForSeason, SEASON_SPRING_CURRENT_ID } from '../fake/relationships'
 
 /**
  * Result type for operations
@@ -66,7 +65,7 @@ export async function getAthletes(orgId: string): Promise<OperationResult<Athlet
             const enriched: AthleteCardData[] = athletesForOrg.map(athlete => {
                 // Find primary team membership
                 const teamMembership = fakeTeamMembers.find(
-                    tm => tm.athlete_id === athlete.id && tm.role !== 'inactive'
+                    tm => tm.athlete_id === athlete.id && tm.status !== 'inactive'
                 )
                 const team = teamMembership
                     ? fakeTeams.find(t => t.id === teamMembership.team_id)
@@ -83,7 +82,7 @@ export async function getAthletes(orgId: string): Promise<OperationResult<Athlet
                     last_name: athlete.last_name,
                     birthdate: athlete.date_of_birth,
                     gender: athlete.gender,
-                    jersey_number: athlete.jersey_number,
+                    jersey_number: athlete.jersey_number ? parseInt(athlete.jersey_number, 10) || null : null,
                     photo_url: athlete.photo_url,
                     has_profile_photo: !!athlete.photo_url,
                     org_id: orgId,

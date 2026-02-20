@@ -219,7 +219,6 @@ export default function DemoInsights() {
     )
   }
 
-  const _selectedMetrics = selectedSession ? sessionMetrics[selectedSession] : null
 
   return (
     <div className="demo-insights">
@@ -292,7 +291,7 @@ export default function DemoInsights() {
                       outerRadius={100}
                       label
                     >
-                      {aggregateMetrics.featureClicks.map((_, index) => (
+                      {aggregateMetrics.featureClicks.map((_: { featureId: string; count: number }, index: number) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -334,7 +333,7 @@ export default function DemoInsights() {
                         <div>
                           <h4>{t('demo.insights.pagesVisited')}</h4>
                           <ul>
-                            {metrics.pages.map((page) => (
+                            {metrics.pages.map((page: { pageId: string; timeSpent: number; visitCount: number }) => (
                               <li key={page.pageId}>
                                 {page.pageId}: {Math.round(page.timeSpent)} min ({page.visitCount} visits)
                               </li>

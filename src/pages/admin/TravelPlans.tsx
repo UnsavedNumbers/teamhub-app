@@ -66,6 +66,15 @@ export default function TravelPlans() {
         if (!isReady) return
         const loadTeams = async () => {
             try {
+                // In demo mode, use fake data
+                const USE_FAKE_DATA = import.meta.env.VITE_USE_FAKE_DATA === 'true' || import.meta.env.VITE_USE_FAKE_DATA === '1'
+                if (USE_FAKE_DATA) {
+                    const { getTeamsForOrg } = await import('../../data/fake/fakeTeams')
+                    const fakeTeams = getTeamsForOrg(context.orgId).map((team) => ({ id: team.id, name: team.name }))
+                    setTeams(fakeTeams)
+                    return
+                }
+
                 const { data } = await supabase
                     .from('teams')
                     .select('id, name')

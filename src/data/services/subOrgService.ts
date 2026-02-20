@@ -52,7 +52,7 @@ export interface SubOrgWithSettings {
   slug: string | null
   status: string
   created_at: string
-  parent_org_id: string
+  parent_org_id: string | null
   sub_org_settings?: SubOrgSettings | null
 }
 
@@ -206,7 +206,7 @@ export async function getSubOrgSettings(
         enabled_sports: data.enabled_sports ?? [],
         enabled_features: (data.enabled_features as Record<string, boolean>) ?? {},
         branding_overrides: data.branding_overrides as Record<string, unknown> | null,
-        status: data.status,
+        status: data.status as 'active' | 'suspended',
         created_at: data.created_at,
         updated_at: data.updated_at,
       },
@@ -272,7 +272,7 @@ export async function updateSubOrgSettings(
         enabled_sports: data.enabled_sports ?? [],
         enabled_features: (data.enabled_features as Record<string, boolean>) ?? {},
         branding_overrides: data.branding_overrides as Record<string, unknown> | null,
-        status: data.status,
+        status: data.status as 'active' | 'suspended',
         created_at: data.created_at,
         updated_at: data.updated_at,
       },
@@ -349,7 +349,7 @@ export async function createSubOrgRequest(
         contact_name: data.contact_name,
         school_league_type: data.school_league_type,
         requested_sport_codes: data.requested_sport_codes ?? [],
-        status: data.status,
+        status: data.status as 'pending' | 'approved' | 'rejected',
         resolved_at: data.resolved_at,
         resolved_by: data.resolved_by,
         created_sub_org_id: data.created_sub_org_id,
@@ -397,7 +397,7 @@ export async function getSubOrgRequests(
           contact_name: req.contact_name,
           school_league_type: req.school_league_type,
           requested_sport_codes: req.requested_sport_codes ?? [],
-          status: req.status,
+          status: req.status as 'pending' | 'approved' | 'rejected',
           resolved_at: req.resolved_at,
           resolved_by: req.resolved_by,
           created_sub_org_id: req.created_sub_org_id,
@@ -447,13 +447,33 @@ export async function getSubOrgs(
       return { data: [], error: new Error(error.message) }
     }
 
+    type OrgRow = {
+      id: string
+      name: string
+      slug: string | null
+      status: string
+      created_at: string
+      parent_org_id: string | null
+      sub_org_settings: {
+        id: string
+        sub_org_id: string
+        enabled_sports: string[]
+        enabled_features: Record<string, boolean>
+        branding_overrides: unknown
+        status: string
+        created_at: string
+        updated_at: string
+      } | null
+    }
+    const rows = (data ?? []) as OrgRow[]
+
     return {
       data:
-        data?.map((org) => ({
+        rows.map((org) => ({
           id: org.id,
           name: org.name,
           slug: org.slug,
-          status: org.status,
+          status: org.status as 'active' | 'suspended',
           created_at: org.created_at,
           parent_org_id: org.parent_org_id,
           sub_org_settings: org.sub_org_settings
@@ -466,12 +486,12 @@ export async function getSubOrgs(
                 branding_overrides: org.sub_org_settings.branding_overrides as
                   | Record<string, unknown>
                   | null,
-                status: org.sub_org_settings.status,
+                status: org.sub_org_settings.status as 'active' | 'suspended',
                 created_at: org.sub_org_settings.created_at,
                 updated_at: org.sub_org_settings.updated_at,
               }
             : null,
-        })) ?? [],
+        })),
       error: null,
     }
   } catch (err) {

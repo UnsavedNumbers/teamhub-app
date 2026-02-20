@@ -166,9 +166,9 @@ function appendDemoOrgData(demoOrg: DemoOrganization, demoCode: string): void {
 
   // Generate sport profiles for demo athletes
   const generatedSportProfiles = generateDemoAthleteSportProfiles(
-    data.athletes,
-    data.teams,
-    data.sportsData,
+    data.athletes as Array<{ id: string; team_id: string }>,
+    data.teams as Array<{ id: string; sport_id: string }>,
+    data.sportsData as Array<{ id: string; slug: string }>,
     demoOrg.id,
     demoCode
   )

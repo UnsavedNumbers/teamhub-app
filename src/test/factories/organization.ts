@@ -57,6 +57,11 @@ const defaultOrg: OrganizationsRow = {
   updated_at: '2026-01-01T00:00:00Z',
   website: null,
   zip: null,
+  parent_org_id: null,
+  inherits_license: null,
+  sub_org_public_registration_enabled: null,
+  sub_org_require_approval: null,
+  sub_org_max_count: null,
 }
 
 export function createMockOrganization(overrides?: Partial<OrganizationsRow>): OrganizationsRow {

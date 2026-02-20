@@ -4,7 +4,7 @@
  * Provides org settings data for demo mode with optimistic locking.
  */
 
-import { FAKE_DATA_DELAY_MS } from '../config'
+import { FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import type { UserContext } from './userContext'
 import {
   getDefaultSettings,
@@ -34,13 +34,15 @@ async function simulateDelay(): Promise<void> {
   }
 }
 
-function ensureSettings(context: UserContext): OrganizationSettings {
-  const existing = settingsStore.get(context.orgId)
+function ensureSettings(_context: UserContext): OrganizationSettings {
+  // In demo mode, always use DEMO_ORG_A_ID regardless of context.orgId
+  const effectiveOrgId = DEMO_ORG_A_ID
+  const existing = settingsStore.get(effectiveOrgId)
   if (existing) return existing
 
-  const orgName = getOrganizationById(context.orgId)?.name ?? 'My Organization'
-  const defaults = getDefaultSettings(context.orgId, orgName)
-  settingsStore.set(context.orgId, defaults)
+  const orgName = getOrganizationById(effectiveOrgId)?.name ?? 'My Organization'
+  const defaults = getDefaultSettings(effectiveOrgId, orgName)
+  settingsStore.set(effectiveOrgId, defaults)
   return defaults
 }
 
@@ -112,7 +114,9 @@ export async function updateGeneralSettings(
       updated_at: new Date().toISOString(),
     }
 
-    settingsStore.set(context.orgId, { ...current, general: updated })
+    // In demo mode, always use DEMO_ORG_A_ID
+    const effectiveOrgId = DEMO_ORG_A_ID
+    settingsStore.set(effectiveOrgId, { ...current, general: updated })
     return { error: null }
   } catch (err) {
     return { error: err instanceof Error ? err : new Error('Unknown error') }
@@ -136,7 +140,9 @@ export async function updateDefaultsSettings(
       updated_at: new Date().toISOString(),
     }
 
-    settingsStore.set(context.orgId, { ...current, defaults: updated })
+    // In demo mode, always use DEMO_ORG_A_ID
+    const effectiveOrgId = DEMO_ORG_A_ID
+    settingsStore.set(effectiveOrgId, { ...current, defaults: updated })
     return { error: null }
   } catch (err) {
     return { error: err instanceof Error ? err : new Error('Unknown error') }
@@ -160,7 +166,9 @@ export async function updateAttendanceSettings(
       updated_at: new Date().toISOString(),
     }
 
-    settingsStore.set(context.orgId, { ...current, attendance: updated })
+    // In demo mode, always use DEMO_ORG_A_ID
+    const effectiveOrgId = DEMO_ORG_A_ID
+    settingsStore.set(effectiveOrgId, { ...current, attendance: updated })
     return { error: null }
   } catch (err) {
     return { error: err instanceof Error ? err : new Error('Unknown error') }
@@ -184,7 +192,9 @@ export async function updateRegistrationSettings(
       updated_at: new Date().toISOString(),
     }
 
-    settingsStore.set(context.orgId, { ...current, registration: updated })
+    // In demo mode, always use DEMO_ORG_A_ID
+    const effectiveOrgId = DEMO_ORG_A_ID
+    settingsStore.set(effectiveOrgId, { ...current, registration: updated })
     return { error: null }
   } catch (err) {
     return { error: err instanceof Error ? err : new Error('Unknown error') }
@@ -209,7 +219,9 @@ export async function updateVisibilitySettings(
       updated_at: new Date().toISOString(),
     }
 
-    settingsStore.set(context.orgId, { ...current, visibility: updated })
+    // In demo mode, always use DEMO_ORG_A_ID
+    const effectiveOrgId = DEMO_ORG_A_ID
+    settingsStore.set(effectiveOrgId, { ...current, visibility: updated })
     return { error: null }
   } catch (err) {
     return { error: err instanceof Error ? err : new Error('Unknown error') }
@@ -233,7 +245,9 @@ export async function updateNotificationSettings(
       updated_at: new Date().toISOString(),
     }
 
-    settingsStore.set(context.orgId, { ...current, notifications: updated })
+    // In demo mode, always use DEMO_ORG_A_ID
+    const effectiveOrgId = DEMO_ORG_A_ID
+    settingsStore.set(effectiveOrgId, { ...current, notifications: updated })
     return { error: null }
   } catch (err) {
     return { error: err instanceof Error ? err : new Error('Unknown error') }
@@ -257,7 +271,9 @@ export async function updateAdvancedSettings(
       updated_at: new Date().toISOString(),
     }
 
-    settingsStore.set(context.orgId, { ...current, advanced: updated })
+    // In demo mode, always use DEMO_ORG_A_ID
+    const effectiveOrgId = DEMO_ORG_A_ID
+    settingsStore.set(effectiveOrgId, { ...current, advanced: updated })
     return { error: null }
   } catch (err) {
     return { error: err instanceof Error ? err : new Error('Unknown error') }

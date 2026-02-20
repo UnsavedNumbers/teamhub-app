@@ -5,7 +5,7 @@
  * Uses Supabase for real data and falls back to fake data for demo/testing.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID, DEMO_USER_IDS } from '../config'
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 const supabaseAny = supabase as any
@@ -33,6 +33,7 @@ import {
     getNotificationsForUser,
     getUnreadNotificationCount,
     deleteAnnouncementById as deleteFakeAnnouncementById,
+    updateAnnouncementById as updateFakeAnnouncementById,
     type FakeAnnouncement,
     type FakeNotification,
 } from '../fake/fakeMessages'
@@ -700,6 +701,182 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
     }
 }
 
+export async function updateAnnouncement(
+    context: UserContext,
+    announcementId: string,
+    updates: {
+        title?: string
+        content?: string
+        priority?: 'normal' | 'urgent'
+        type?: 'general' | 'reminder' | 'schedule_change' | 'urgent' | 'payment' | 'travel'
+    }
+): Promise<{ data: Announcement | null; error: Error | null }> {
+    console.groupCollapsed(`%cupdateAnnouncement: ${announcementId}`, 'color: #666; font-weight: bold;');
+    debug.flow('MessagesService.updateAnnouncement', 'Updating announcement', { announcementId, updates })
+    debug.perf.start('messagesService.updateAnnouncement')
+
+    // Input validation
+    const trimmedId = (announcementId ?? '').trim()
+    if (!trimmedId) {
+        debug.perf.end('messagesService.updateAnnouncement')
+        debug.error('MessagesService.updateAnnouncement', 'Validation failed', { error: 'missing_id' })
+        console.groupEnd()
+        return { data: null, error: new Error('Announcement ID is required') }
+    }
+    if (!context.orgId) {
+        debug.perf.end('messagesService.updateAnnouncement')
+        debug.error('MessagesService.updateAnnouncement', 'Validation failed', { error: 'missing_org_id' })
+        console.groupEnd()
+        return { data: null, error: new Error('Organization context is required') }
+    }
+    if (!context.userId) {
+        debug.perf.end('messagesService.updateAnnouncement')
+        debug.error('MessagesService.updateAnnouncement', 'Validation failed', { error: 'missing_user_id' })
+        console.groupEnd()
+        return { data: null, error: new Error('User ID is required') }
+    }
+
+    // Check permission: must be org_admin or author
+    try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+
+            // First, check if announcement exists and get it for permission check
+            const announcement = getFakeAnnouncementById(announcementId)
+            if (!announcement) {
+                return { data: null, error: new Error('Announcement not found') }
+            }
+
+            // Check permission: must be org_admin or author
+            const isAuthor = announcement.created_by_user_id === context.userId
+            const isOrgAdmin = context.roles?.includes('org_admin') ?? false
+
+            if (!isAuthor && !isOrgAdmin) {
+                return { data: null, error: new Error('You do not have permission to edit this announcement') }
+            }
+
+            // Check org ownership
+            if (announcement.org_id !== context.orgId) {
+                return { data: null, error: new Error('Announcement does not belong to your organization') }
+            }
+
+            // Update using helper function
+            const updated = updateFakeAnnouncementById(announcementId, {
+                title: updates.title,
+                body: updates.content,
+                type: updates.type === 'urgent' ? 'emergency' : 'announcement',
+                priority: updates.priority,
+            })
+
+            if (!updated) {
+                return { data: null, error: new Error('Failed to update announcement') }
+            }
+
+            // Map back to Announcement interface
+            const result: Announcement = {
+                id: updated.id,
+                team_id: updated.team_id,
+                org_id: updated.org_id,
+                author_id: updated.created_by_user_id,
+                title: updated.title,
+                content: updated.body,
+                priority: updated.type === 'emergency' ? 'urgent' : 'normal',
+                type: 'general' as const,
+                created_at: updated.created_at,
+                updated_at: updated.updated_at,
+                author: {
+                    email: '',
+                    role: 'coach'
+                }
+            }
+
+            debug.perf.end('messagesService.updateAnnouncement')
+            debug.flow('MessagesService.updateAnnouncement', 'Announcement updated (fake)', { announcementId })
+            console.groupEnd()
+            return { data: result, error: null }
+        }
+
+        // Real Supabase implementation
+        // First, fetch the announcement to check permissions and ownership
+        const { data: existingAnnouncement, error: fetchError } = await supabase
+            .from('announcements')
+            .select('id, author_id, org_id')
+            .eq('id', trimmedId)
+            .single()
+
+        if (fetchError) {
+            if (fetchError.code === 'PGRST116') {
+                return { data: null, error: new Error('Announcement not found') }
+            }
+            throw fetchError
+        }
+
+        if (!existingAnnouncement || typeof existingAnnouncement !== 'object') {
+            return { data: null, error: new Error('Announcement not found') }
+        }
+
+        // Check permission: must be org_admin or author
+        const isAuthor = existingAnnouncement.author_id === context.userId
+        const isOrgAdmin = context.roles?.includes('org_admin') ?? false
+
+        if (!isAuthor && !isOrgAdmin) {
+            return { data: null, error: new Error('You do not have permission to edit this announcement') }
+        }
+
+        // Check org ownership
+        if (existingAnnouncement.org_id !== context.orgId) {
+            return { data: null, error: new Error('Announcement does not belong to your organization') }
+        }
+
+        // Build update data
+        const updateData: any = {
+            updated_at: new Date().toISOString()
+        }
+        if (updates.title !== undefined) updateData.title = updates.title.trim()
+        if (updates.content !== undefined) updateData.content = updates.content.trim()
+        if (updates.priority !== undefined) updateData.priority = updates.priority
+        if (updates.type !== undefined) updateData.type = updates.type
+
+        const { data, error } = await supabase
+            .from('announcements')
+            .update(updateData)
+            .eq('id', trimmedId)
+            .select(`*, author:users(email), team:teams(name, org_id)`)
+            .single()
+
+        if (error) throw error
+
+        if (!data) {
+            return { data: null, error: new Error('Failed to update announcement') }
+        }
+
+        // Map to Announcement interface
+        const result = data as any
+        if (result) {
+            const targetOrgId = result.org_id || context.orgId
+            let role = 'parent'
+            if (targetOrgId) {
+                const memberData = await getOrgMember(targetOrgId, result.author_id)
+                if (memberData) role = memberData.role
+            }
+            result.author = { ...result.author, role }
+        }
+
+        const updatedAnnouncement = result as Announcement
+
+        debug.perf.end('messagesService.updateAnnouncement')
+        debug.flow('MessagesService.updateAnnouncement', 'Announcement updated', { announcementId })
+        console.groupEnd()
+        return { data: updatedAnnouncement, error: null }
+    } catch (err) {
+        debug.perf.end('messagesService.updateAnnouncement')
+        debug.error('MessagesService.updateAnnouncement', 'Failed to update announcement', { error: err, announcementId })
+        console.groupEnd()
+        console.error('Error updating announcement:', err)
+        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
 export async function deleteAnnouncement(
     context: UserContext,
     announcementId: string
@@ -1232,7 +1409,22 @@ export async function getNotifications(
     try {
         if (USE_FAKE_DATA) {
             await simulateDelay()
-            const data = getNotificationsForUser(context.userId).map(mapFakeNotification)
+            // In demo mode, if user is an org admin, return all admin notifications
+            // Otherwise return notifications for the specific user
+            let notifications: FakeNotification[]
+            if (context.roles.includes('org_admin')) {
+                // For org admins, return all admin notifications from DEMO_ORG_A_ID
+                const ADMIN_AMY_ID = DEMO_USER_IDS['admin-only@example.com']
+                const PARENT_ADMIN_ID = DEMO_USER_IDS['parent-admin@example.com']
+                notifications = fakeNotifications.filter(
+                    (n) => n.org_id === DEMO_ORG_A_ID && 
+                    (n.user_id === ADMIN_AMY_ID || n.user_id === PARENT_ADMIN_ID || n.user_id === context.userId) &&
+                    n.role_context === 'org_admin'
+                )
+            } else {
+                notifications = getNotificationsForUser(context.userId)
+            }
+            const data = notifications.map(mapFakeNotification)
             const sliced = typeof limit === 'number' ? data.slice(0, limit) : data
             debug.perf.end('messagesService.getNotifications')
             debug.data('MessagesService.getNotifications', 'Response (fake)', { userId: context.userId, notificationCount: sliced.length })

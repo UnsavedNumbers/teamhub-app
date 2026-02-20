@@ -135,6 +135,18 @@ export interface ExportHistory {
 // ============================================================================
 
 export type ReportDomain =
+  | 'participation'
+  | 'payments'
+  | 'scheduling'
+  | 'travel'
+  | 'uniforms'
+  | 'communications'
+  | 'operations'
+  | 'ticketing'
+  | 'registration'
+  | 'video'
+  | 'events'
+  | 'errors'
   | 'overview'
   | 'participation'
   | 'scheduling'
@@ -196,6 +208,7 @@ export interface TimeSeriesData {
 export interface BarChartDataPoint {
   category: string
   value: number
+  series?: string
   breakdown?: Record<string, number>
 }
 
@@ -328,6 +341,83 @@ export interface OperationsMetrics {
     delivered: number
     failed: number
   }
+}
+
+// ============================================================================
+// Revenue Metrics
+// ============================================================================
+
+export interface RevenueMetrics {
+  totalRevenue: number
+  revenueOverTime: TimeSeriesDataPoint[]
+  revenueBySeason: Array<{ seasonId: string; seasonName: string; revenue: number }>
+  revenueByTeam: Array<{ teamId: string; teamName: string; revenue: number }>
+  paymentsCompleted: number
+  paymentsFailed: number
+  outstandingBalances: number
+  paymentPlansOnTrack: number
+  paymentPlansOverdue: number
+  averagePaymentAmount: number
+  refundsOverTime: TimeSeriesDataPoint[]
+}
+
+// ============================================================================
+// Ticketing Metrics
+// ============================================================================
+
+export interface TicketingMetrics {
+  ticketsSoldOverTime: TimeSeriesDataPoint[]
+  ticketRevenueByEvent: Array<{ eventId: string; eventName: string; revenue: number }>
+  checkInRateByEvent: Array<{ eventId: string; eventName: string; scanned: number; notScanned: number }>
+  walkUpVsPreSale: { walkUp: number; preSale: number }
+  totalTicketRevenue: number
+  topEventsByAttendance: Array<{ eventId: string; eventName: string; attendance: number }>
+}
+
+// ============================================================================
+// Registration Metrics
+// ============================================================================
+
+export interface RegistrationMetrics {
+  registrationsOverTime: TimeSeriesDataPoint[]
+  registrationCompletionRate: number
+  dropOffPoints: Array<{ step: string; count: number }>
+  registrationsByProgram: Array<{ programId: string; programName: string; count: number }>
+  incompleteRegistrations: number
+  waiversSigned: number
+  waiversPending: number
+}
+
+// ============================================================================
+// Video Metrics
+// ============================================================================
+
+export interface VideoMetrics {
+  videoViewsOverTime: TimeSeriesDataPoint[]
+  mostWatchedVideos: Array<{ videoId: string; videoName: string; views: number }>
+  videosWithZeroViews: Array<{ videoId: string; videoName: string }>
+  viewsByTeam: Array<{ teamId: string; teamName: string; views: number }>
+}
+
+// ============================================================================
+// Events Metrics
+// ============================================================================
+
+export interface EventsMetrics {
+  upcomingEventsCount: number
+  eventsCancelledOverTime: TimeSeriesDataPoint[]
+  rsvpRateByEvent: Array<{ eventId: string; eventName: string; rsvpRate: number }>
+}
+
+// ============================================================================
+// Errors Metrics
+// ============================================================================
+
+export interface ErrorsMetrics {
+  paymentFailuresOverTime: TimeSeriesDataPoint[]
+  paymentFailureReasons: Array<{ reason: string; count: number }>
+  errorTypesBreakdown: Array<{ type: string; count: number }>
+  failedCheckIns: number
 }
 
 // ============================================================================

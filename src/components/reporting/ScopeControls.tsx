@@ -5,9 +5,7 @@
  * Provides cascading selectors for org, sub-org, season, sport, program, level, team, and date range.
  */
 
-import { useEffect, useState } from 'react'
 import { useReporting } from '../../contexts/ReportingContext'
-import { useOrganization } from '../../contexts/OrganizationContext'
 import { Select } from '../admin/Select'
 import { DatePicker } from '../admin/DatePicker'
 import { useT } from '../../i18n/useI18n'
@@ -21,7 +19,6 @@ interface ScopeControlsProps {
 export function ScopeControls({ className = '' }: ScopeControlsProps) {
   const t = useT()
   const { scope, setScope, dateRange, setDateRange, setDatePreset, datePreset } = useReporting()
-  const { currentOrganization } = useOrganization()
 
   // Fetch sub-orgs
   const { data: subOrgs } = useQuery({

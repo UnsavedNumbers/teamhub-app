@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getAnnouncements, createAnnouncement, deleteAnnouncement, type Announcement } from '../../data/services/messagesService'
 import { getTeams } from '../../data/services/teamsService'
@@ -41,6 +42,7 @@ import { useT } from '../../i18n/useI18n'
 
 export default function AdminAnnouncements() {
   const t = useT()
+  const navigate = useNavigate()
   const isMountedRef = useRef(true)
   const requestIdRef = useRef(0)
   const { context, isReady } = useUserContext()
@@ -654,6 +656,7 @@ export default function AdminAnnouncements() {
           rowsPerPage={rowsPerPage} 
           onPageChange={setPage} 
           onRowsPerPageChange={setRowsPerPage}
+          onRowClick={(row) => navigate(`/admin/announcements/${row.id}`)}
         />
       )}
 

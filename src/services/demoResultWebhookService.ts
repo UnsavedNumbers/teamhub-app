@@ -1,4 +1,3 @@
-import { getBaseUrl } from '../utils/host'
 import type { DemoOrgPOC } from '../types/demoManagement'
 
 export interface SendApprovalEmailResult {

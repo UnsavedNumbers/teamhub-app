@@ -9,7 +9,7 @@ import { ScopeControls } from '../../../components/reporting/ScopeControls'
 import { AdminPageHeader } from '../../../components/admin'
 import { useSavedReports, useDeleteSavedReport } from '../../../hooks/useReporting'
 import { useT } from '../../../i18n/useI18n'
-import '../../../../styles/orgAdmin.css'
+import '../../../styles/orgAdmin.css'
 
 export default function SavedReports() {
   const t = useT()
@@ -31,7 +31,7 @@ export default function SavedReports() {
       <div className="oa-page">
         <AdminPageHeader
           title={t('admin.reporting.savedReports.title')}
-          description={t('admin.reporting.savedReports.description')}
+          subtitle={t('admin.reporting.savedReports.description')}
         />
 
         <ScopeControls />

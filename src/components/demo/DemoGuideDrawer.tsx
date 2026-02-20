@@ -8,12 +8,10 @@
 
 import * as Dialog from '@radix-ui/react-dialog'
 import { useCallback, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useT } from '@/i18n/useI18n'
 import { useDemoTracking } from '@/lib/analytics/demoTracking'
 import { useDemoSession } from '@/contexts/DemoSessionContext'
 import type { PageGuide } from '@/data/demo/pageGuides'
-import { getLink } from '@/utils/routes'
 import './DemoGuideDrawer.css'
 
 interface DemoGuideDrawerProps {
@@ -27,7 +25,6 @@ interface DemoGuideDrawerProps {
 
 export function DemoGuideDrawer({ guide, isOpen, onClose }: DemoGuideDrawerProps) {
   const t = useT()
-  const navigate = useNavigate()
   const { trackGuideOpened, trackGuideDismissed, trackGuideActionClicked } = useDemoTracking()
   const { session } = useDemoSession()
 

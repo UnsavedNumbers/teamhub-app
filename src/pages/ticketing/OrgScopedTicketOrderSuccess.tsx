@@ -63,13 +63,13 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
     if (!orderId || !order || order.status !== 'paid') return
     if (trackedOrderRef.current === orderId) return
     trackedOrderRef.current = orderId
-    const eventId = order.ticketed_events?.id ?? (order as Record<string, unknown>).ticketed_event_id
+    const eventId = order.ticketed_events?.id ?? (order as unknown as Record<string, unknown>).ticketed_event_id
     captureEvent('ticket_purchased', {
       order_id: orderId,
       event_id: eventId,
       org_id: org.id,
       ticket_count: ticketsQuery.data?.length ?? 0,
-      purchaser_user_id: (order as Record<string, unknown>).purchaser_user_id,
+      purchaser_user_id: (order as unknown as Record<string, unknown>).purchaser_user_id,
     })
   }, [orderId, orderQuery.data, org.id, ticketsQuery.data])
 

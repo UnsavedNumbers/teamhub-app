@@ -9,7 +9,7 @@ import { ScopeControls } from '../../../components/reporting/ScopeControls'
 import { AdminPageHeader } from '../../../components/admin'
 import { useScheduledReports, useDeleteScheduledReport } from '../../../hooks/useReporting'
 import { useT } from '../../../i18n/useI18n'
-import '../../../../styles/orgAdmin.css'
+import '../../../styles/orgAdmin.css'
 
 export default function ScheduledReports() {
   const t = useT()
@@ -31,7 +31,7 @@ export default function ScheduledReports() {
       <div className="oa-page">
         <AdminPageHeader
           title={t('admin.reporting.scheduledReports.title')}
-          description={t('admin.reporting.scheduledReports.description')}
+          subtitle={t('admin.reporting.scheduledReports.description')}
         />
 
         <ScopeControls />

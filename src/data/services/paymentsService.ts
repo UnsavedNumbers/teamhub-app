@@ -32,6 +32,7 @@ import {
     type FakePayment,
 } from '../fake/fakePayments'
 import { getChildrenForUserId, getAssignedTeamsForCoach } from '../fake/relationships'
+import { getChildById, getFamilyById, getUserById, getFamilyMembersForFamily } from '../fake/fakeUsers'
 import { supabase } from '../../lib/supabase'
 import { buildFeeAssignmentQuery } from './queryHelpers'
 import { normalizeSupabaseResponse } from './responseHelpers'
@@ -224,11 +225,41 @@ export async function getFeeAssignmentsForUser(
                 const allAssignments = fakeFeeAssignments.filter((fa) => feeIds.includes(fa.fee_id))
 
                 return {
-                    data: allAssignments.map((fa) => ({
-                        ...fa,
-                        fee: getFeeById(fa.fee_id),
-                        payments: getPaymentsForAssignment(fa.id),
-                    })),
+                    data: allAssignments.map((fa) => {
+                        const athlete = getChildById(fa.athlete_id)
+                        // Get parent/guardian info from family
+                        let parent = null
+                        if (athlete?.family_id) {
+                            const family = getFamilyById(athlete.family_id)
+                            if (family) {
+                                const familyMembers = getFamilyMembersForFamily(family.id)
+                                const guardianMember = familyMembers.find(m => m.role === 'owner' || m.role === 'guardian')
+                                if (guardianMember) {
+                                    const guardianUser = getUserById(guardianMember.user_id)
+                                    if (guardianUser) {
+                                        parent = {
+                                            id: guardianUser.id,
+                                            email: guardianUser.email,
+                                            display_name: guardianUser.display_name,
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        return {
+                            ...fa,
+                            fee: getFeeById(fa.fee_id),
+                            payments: getPaymentsForAssignment(fa.id),
+                            athlete: athlete ? {
+                                id: athlete.id,
+                                first_name: athlete.first_name,
+                                last_name: athlete.last_name,
+                                family_id: athlete.family_id,
+                            } : undefined,
+                            parent: parent || undefined,
+                        }
+                    }),
                     error: null,
                 }
             }
@@ -236,7 +267,42 @@ export async function getFeeAssignmentsForUser(
             const childIds = getChildrenForUserId(context.userId)
             const assignments = childIds.flatMap((childId) => getFeeAssignmentsWithDetailsForChild(childId))
 
-            return { data: assignments, error: null }
+            // Enrich assignments with athlete and parent information
+            const enrichedAssignments = assignments.map((fa) => {
+                const athlete = getChildById(fa.athlete_id)
+                // Get parent/guardian info from family
+                let parent = null
+                if (athlete?.family_id) {
+                    const family = getFamilyById(athlete.family_id)
+                    if (family) {
+                        const familyMembers = getFamilyMembersForFamily(family.id)
+                        const guardianMember = familyMembers.find(m => m.role === 'owner' || m.role === 'guardian')
+                        if (guardianMember) {
+                            const guardianUser = getUserById(guardianMember.user_id)
+                            if (guardianUser) {
+                                parent = {
+                                    id: guardianUser.id,
+                                    email: guardianUser.email,
+                                    display_name: guardianUser.display_name,
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return {
+                    ...fa,
+                    athlete: athlete ? {
+                        id: athlete.id,
+                        first_name: athlete.first_name,
+                        last_name: athlete.last_name,
+                        family_id: athlete.family_id,
+                    } : undefined,
+                    parent: parent || undefined,
+                }
+            })
+
+            return { data: enrichedAssignments, error: null }
         } catch (err) {
             return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
         }

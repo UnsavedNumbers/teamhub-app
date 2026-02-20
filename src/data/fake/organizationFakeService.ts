@@ -4,7 +4,7 @@
  * Provides organization data for demo mode.
  */
 
-import { FAKE_DATA_DELAY_MS } from '../config'
+import { FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import type { Organization } from '../../types/domain/Organization'
 import type { OrganizationUpdateDTO } from '../services/organizationService'
 import { t } from '../../i18n'
@@ -76,7 +76,9 @@ export async function getOrganizationDetails(
 
     await simulateDelay()
 
-    const org = organizationStore.get(orgId) ?? getOrganizationById(orgId)
+    // In demo mode, always return data for DEMO_ORG_A_ID regardless of the orgId passed
+    const effectiveOrgId = DEMO_ORG_A_ID
+    const org = organizationStore.get(effectiveOrgId) ?? getOrganizationById(effectiveOrgId)
     if (!org) {
       return { data: null, error: new Error('Organization not found') }
     }

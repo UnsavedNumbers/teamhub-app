@@ -658,12 +658,6 @@ const isSeasonActive = (startDate: string, endDate: string): boolean => {
     return start <= now && now <= end
 }
 
-// Helper to determine if a season is upcoming (hasn't started yet)
-const isSeasonUpcoming = (startDate: string): boolean => {
-    const now = new Date()
-    const start = new Date(startDate)
-    return start > now
-}
 
 export const fakeSeasons: FakeSeason[] = [
     {

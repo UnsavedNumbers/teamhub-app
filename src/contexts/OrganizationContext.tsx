@@ -71,7 +71,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         get role(): OrgMemberRole {
           return this.roles[0] ?? 'parent'
         },
-      }
+      } as Organization
     }
 
     // Find the demo org in the results - prefer organization_id match, then demo_org_id match
@@ -88,7 +88,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       get role(): OrgMemberRole {
         return this.roles[0] ?? 'parent'
       },
-    }
+    } as Organization
   }, [demoSession])
 
   // Load organizations for demo sessions
@@ -98,7 +98,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       // For demo sessions, fetch org from get_user_organizations which handles demo users
       // Use organization_id from demo session if available, otherwise fall back to demo_org_id lookup
       const targetOrgId = demoSession.organization_id || demoSession.demo_org_id
-      supabase.rpc('get_user_organizations', { check_user_id: userId } as any).then(({ data, error }) => {
+      ;(supabase.rpc('get_user_organizations', { check_user_id: userId } as any).then(({ data, error }) => {
         if (error || !data) {
           setIsLoading(false)
           return
@@ -119,7 +119,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
           sessionStorage.setItem(STORAGE_KEY, selectedOrg.id)
         }
         setIsLoading(false)
-      }).catch(() => {
+      }) as Promise<void>).catch(() => {
         setIsLoading(false)
       })
       return

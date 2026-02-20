@@ -392,9 +392,11 @@ export type MockGalleryWithComputed = Gallery & {
 
 /**
  * Get mock galleries for a specific organization
+ * In demo mode, always returns galleries for DEMO_ORG_A_ID regardless of orgId
  */
-export function getMockGalleriesForOrg(orgId?: string | null): MockGalleryWithComputed[] {
-  const effectiveOrgId = orgId || DEMO_ORG_A_ID
+export function getMockGalleriesForOrg(_orgId?: string | null): MockGalleryWithComputed[] {
+  // In demo mode, always return galleries for DEMO_ORG_A_ID
+  const effectiveOrgId = DEMO_ORG_A_ID
   return MOCK_GALLERIES
     .filter((g) => g.org_id === effectiveOrgId && DEMO_GALLERY_ID_SET.has(g.id))
     .map((gallery) => {

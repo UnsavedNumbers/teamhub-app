@@ -631,7 +631,7 @@ export function generateDemoAthleteSportProfiles(
     })
 
     // Generate profiles for each athlete
-    athletes.forEach((athlete, index) => {
+    athletes.forEach((athlete, _index) => {
         const teamSportCode = teamIdToSportCode[athlete.team_id]
         if (!teamSportCode || availableSportCodes.length === 0) return
 

@@ -8386,6 +8386,61 @@ export type Database = {
         }
         Relationships: []
       }
+      export_history: {
+        Row: {
+          id: string
+          org_id: string
+          user_id: string
+          report_config: Json
+          format: string
+          file_url: string | null
+          file_size_bytes: number | null
+          status: string
+          error_message: string | null
+          created_at: string
+          completed_at: string | null
+        }
+        Insert: { id?: string; org_id: string; user_id: string; report_config: Json; format: string; file_url?: string | null; file_size_bytes?: number | null; status?: string; error_message?: string | null; created_at?: string; completed_at?: string | null }
+        Update: { id?: string; org_id?: string; user_id?: string; report_config?: Json; format?: string; file_url?: string | null; file_size_bytes?: number | null; status?: string; error_message?: string | null; created_at?: string; completed_at?: string | null }
+        Relationships: []
+      }
+      saved_reports: {
+        Row: {
+          id: string
+          org_id: string
+          user_id: string
+          name: string
+          description: string | null
+          config: Json
+          is_shared: boolean
+          share_token: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: { id?: string; org_id: string; user_id: string; name: string; description?: string | null; config: Json; is_shared?: boolean; share_token?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; org_id?: string; user_id?: string; name?: string; description?: string | null; config?: Json; is_shared?: boolean; share_token?: string | null; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
+      scheduled_reports: {
+        Row: {
+          id: string
+          org_id: string
+          user_id: string
+          name: string
+          report_config: Json
+          schedule: Json
+          recipients: string[] | null
+          format: string
+          is_active: boolean
+          last_run_at: string | null
+          next_run_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: { id?: string; org_id: string; user_id: string; name: string; report_config: Json; schedule: Json; recipients?: string[] | null; format?: string; is_active?: boolean; last_run_at?: string | null; next_run_at?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; org_id?: string; user_id?: string; name?: string; report_config?: Json; schedule?: Json; recipients?: string[] | null; format?: string; is_active?: boolean; last_run_at?: string | null; next_run_at?: string | null; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
       stream_channel_metadata: {
         Row: {
           avatar_url: string | null
@@ -13669,6 +13724,14 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["feature_flag_environment"]
       }
+      get_org_health_metrics: { Args: { org_id: string }; Returns: Json }
+      get_participation_metrics: { Args: { org_id: string }; Returns: Json }
+      get_scheduling_metrics: { Args: { org_id: string }; Returns: Json }
+      get_travel_metrics: { Args: { org_id: string }; Returns: Json }
+      get_payment_metrics: { Args: { org_id: string }; Returns: Json }
+      get_uniform_metrics: { Args: { org_id: string }; Returns: Json }
+      get_communication_metrics: { Args: { org_id: string }; Returns: Json }
+      get_operations_metrics: { Args: { org_id: string }; Returns: Json }
       get_event_location_maps_url: {
         Args: { p_location_id: string }
         Returns: string

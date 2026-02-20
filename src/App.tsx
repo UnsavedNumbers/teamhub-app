@@ -189,9 +189,23 @@ const Sports = lazy(() => import('./pages/admin/Sports'))
 const SportDetail = lazy(() => import('./pages/admin/SportDetail'))
 // Reporting Pages
 import ReportsOverview from './pages/admin/reporting/ReportsOverview'
+import ReportBuilder from './pages/admin/reporting/ReportBuilder'
 import SavedReports from './pages/admin/reporting/SavedReports'
 import ExportHistory from './pages/admin/reporting/ExportHistory'
 import ScheduledReports from './pages/admin/reporting/ScheduledReports'
+import ReportViewer from './pages/admin/reporting/ReportViewer'
+import ParticipationReport from './pages/admin/reporting/domain/ParticipationReport'
+import PaymentsReport from './pages/admin/reporting/domain/PaymentsReport'
+import SchedulingReport from './pages/admin/reporting/domain/SchedulingReport'
+import TravelReport from './pages/admin/reporting/domain/TravelReport'
+import UniformsReport from './pages/admin/reporting/domain/UniformsReport'
+import CommunicationsReport from './pages/admin/reporting/domain/CommunicationsReport'
+import OperationsReport from './pages/admin/reporting/domain/OperationsReport'
+import TicketingReport from './pages/admin/reporting/TicketingReport'
+import RegistrationReport from './pages/admin/reporting/RegistrationReport'
+import VideoReport from './pages/admin/reporting/VideoReport'
+import EventsReport from './pages/admin/reporting/EventsReport'
+import ErrorsReport from './pages/admin/reporting/ErrorsReport'
 const SportUpdate = lazy(() => import('./pages/admin/SportUpdate'))
 const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'))
 const AdminNotificationAnalytics = lazy(() => import('./pages/admin/AdminNotificationAnalytics'))
@@ -211,6 +225,7 @@ const Roster = lazy(() => import('./pages/admin/Roster'))
 const Events = lazy(() => import('./pages/admin/Events'))
 const AdminEventDetail = lazy(() => import('./pages/admin/AdminEventDetail'))
 const AdminAnnouncements = lazy(() => import('./pages/admin/AdminAnnouncements'))
+const AdminAnnouncementDetail = lazy(() => import('./pages/admin/AdminAnnouncementDetail'))
 const CreateEvent = lazy(() => import('./pages/admin/CreateEvent'))
 const EditEvent = lazy(() => import('./pages/admin/EditEvent'))
 const AttendanceRoster = lazy(() => import('./pages/admin/AttendanceRoster'))
@@ -488,7 +503,7 @@ function AppWithTheme() {
             <Route path="uniforms" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.uniforms"><Uniforms /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="uniforms/:kitId" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.uniforms.detail"><UniformKitOrder /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="travel" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.travel"><Travel /></FeatureGateRoute></ProtectedRoute>} />
-            <Route path="travel/:id" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.travel.detail"><TravelDetail /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="travel/:id" element={<ProtectedRoute allowedRoles={['parent', 'athlete', 'org_admin']}><FeatureGateRoute routeKey="portal.travel.detail"><TravelDetail /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="tryouts" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.tryouts"><Tryouts /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="tryouts/:tryoutId" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.tryouts.detail"><TryoutDetail /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="messages" element={<Navigate to="/portal/huddles/announcements" replace />} />
@@ -666,6 +681,7 @@ function AppWithTheme() {
 
               {/* Announcements */}
               <Route path="announcements" element={<FeatureGateRoute routeKey="admin.announcements.list"><AdminAnnouncements /></FeatureGateRoute>} />
+              <Route path="announcements/:announcementId" element={<FeatureGateRoute routeKey="admin.announcements.detail"><AdminAnnouncementDetail /></FeatureGateRoute>} />
 
               {/* Attendance */}
               <Route path="attendance" element={<FeatureGateRoute routeKey="admin.attendance"><AdminAttendance /></FeatureGateRoute>} />
@@ -675,11 +691,23 @@ function AppWithTheme() {
 
               {/* Reporting */}
               <Route path="reports" element={<FeatureGateRoute routeKey="admin.reports.overview"><ReportsOverview /></FeatureGateRoute>} />
-              <Route path="reports/builder" element={<FeatureGateRoute routeKey="admin.reports.builder"><ReportsOverview /></FeatureGateRoute>} />
+              <Route path="reports/builder" element={<FeatureGateRoute routeKey="admin.reports.builder"><ReportBuilder /></FeatureGateRoute>} />
               <Route path="reports/saved" element={<FeatureGateRoute routeKey="admin.reports.saved"><SavedReports /></FeatureGateRoute>} />
               <Route path="reports/exports" element={<FeatureGateRoute routeKey="admin.reports.exports"><ExportHistory /></FeatureGateRoute>} />
               <Route path="reports/schedules" element={<FeatureGateRoute routeKey="admin.reports.schedules"><ScheduledReports /></FeatureGateRoute>} />
-              <Route path="reports/:reportId" element={<FeatureGateRoute routeKey="admin.reports.viewer"><ReportsOverview /></FeatureGateRoute>} />
+              <Route path="reports/ticketing" element={<FeatureGateRoute routeKey="admin.reports.overview"><TicketingReport /></FeatureGateRoute>} />
+              <Route path="reports/registration" element={<FeatureGateRoute routeKey="admin.reports.overview"><RegistrationReport /></FeatureGateRoute>} />
+              <Route path="reports/video" element={<FeatureGateRoute routeKey="admin.reports.overview"><VideoReport /></FeatureGateRoute>} />
+              <Route path="reports/events" element={<FeatureGateRoute routeKey="admin.reports.overview"><EventsReport /></FeatureGateRoute>} />
+              <Route path="reports/errors" element={<FeatureGateRoute routeKey="admin.reports.overview"><ErrorsReport /></FeatureGateRoute>} />
+              <Route path="reports/domain/participation" element={<FeatureGateRoute routeKey="admin.reports.overview"><ParticipationReport /></FeatureGateRoute>} />
+              <Route path="reports/domain/payments" element={<FeatureGateRoute routeKey="admin.reports.overview"><PaymentsReport /></FeatureGateRoute>} />
+              <Route path="reports/domain/scheduling" element={<FeatureGateRoute routeKey="admin.reports.overview"><SchedulingReport /></FeatureGateRoute>} />
+              <Route path="reports/domain/travel" element={<FeatureGateRoute routeKey="admin.reports.overview"><TravelReport /></FeatureGateRoute>} />
+              <Route path="reports/domain/uniforms" element={<FeatureGateRoute routeKey="admin.reports.overview"><UniformsReport /></FeatureGateRoute>} />
+              <Route path="reports/domain/communications" element={<FeatureGateRoute routeKey="admin.reports.overview"><CommunicationsReport /></FeatureGateRoute>} />
+              <Route path="reports/domain/operations" element={<FeatureGateRoute routeKey="admin.reports.overview"><OperationsReport /></FeatureGateRoute>} />
+              <Route path="reports/:reportId" element={<FeatureGateRoute routeKey="admin.reports.viewer"><ReportViewer /></FeatureGateRoute>} />
               <Route path="payments/:id" element={<FeatureGateRoute routeKey="admin.payments.detail"><AdminPaymentDetail /></FeatureGateRoute>} />
               <Route path="payments/new" element={<FeatureGateRoute routeKey="admin.payments.fees.create"><CreateFee /></FeatureGateRoute>} />
             

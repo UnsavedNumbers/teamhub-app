@@ -283,7 +283,11 @@ More details coming soon...`,
 // Fake Notifications Data (for parent-only user)
 // ============================================================================
 
+const ADMIN_AMY_ID = DEMO_USER_IDS['admin-only@example.com']
+const PARENT_ADMIN_ID = DEMO_USER_IDS['parent-admin@example.com']
+
 export const fakeNotifications: FakeNotification[] = [
+    // Parent-only notifications
     {
         id: 'notif-001',
         user_id: PARENT_ONLY_ID,
@@ -374,6 +378,152 @@ export const fakeNotifications: FakeNotification[] = [
         read_at: daysAgo(2),
         created_at: daysAgo(3),
     },
+    // Org admin notifications
+    {
+        id: 'notif-admin-001',
+        user_id: ADMIN_AMY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: null,
+        action: 'fee_payment_completed',
+        role_context: 'org_admin',
+        title: 'New Payment Received',
+        body: 'Jennifer Johnson paid $150.00 for Spring Soccer Registration.',
+        presentation_type: 'info',
+        entity_type: 'fee',
+        entity_id: 'pay-001',
+        link_url: '/admin/payments',
+        metadata: { amount_cents: 15000 },
+        dedupe_key: 'demo:notif-admin-001',
+        read_at: null,
+        created_at: hoursAgo(2),
+    },
+    {
+        id: 'notif-admin-002',
+        user_id: ADMIN_AMY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U10_SOCCER_ID,
+        action: 'event_attendance_updated',
+        role_context: 'org_admin',
+        title: 'Attendance Not Submitted',
+        body: 'U10 Lightning practice attendance has not been submitted yet.',
+        presentation_type: 'warning',
+        entity_type: 'event',
+        entity_id: 'event-u10-soccer-practice-001',
+        link_url: '/admin/attendance',
+        metadata: { event_type: 'practice' },
+        dedupe_key: 'demo:notif-admin-002',
+        read_at: null,
+        created_at: hoursAgo(4),
+    },
+    {
+        id: 'notif-admin-003',
+        user_id: ADMIN_AMY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: null,
+        action: 'fee_overdue',
+        role_context: 'org_admin',
+        title: 'Multiple Fees Overdue',
+        body: '5 athletes have overdue fees totaling $225.00.',
+        presentation_type: 'warning',
+        entity_type: 'fee',
+        entity_id: null,
+        link_url: '/admin/payments',
+        metadata: { count: 5, total_cents: 22500 },
+        dedupe_key: 'demo:notif-admin-003',
+        read_at: hoursAgo(1),
+        created_at: hoursAgo(8),
+    },
+    {
+        id: 'notif-admin-004',
+        user_id: ADMIN_AMY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U12_SOCCER_ID,
+        action: 'event_canceled',
+        role_context: 'org_admin',
+        title: 'Event Cancelled',
+        body: 'U12 Thunder tournament has been cancelled due to weather.',
+        presentation_type: 'warning',
+        entity_type: 'event',
+        entity_id: 'event-u12-soccer-tournament-001',
+        link_url: '/admin/events',
+        metadata: { reason: 'weather' },
+        dedupe_key: 'demo:notif-admin-004',
+        read_at: null,
+        created_at: hoursAgo(12),
+    },
+    {
+        id: 'notif-admin-005',
+        user_id: ADMIN_AMY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: null,
+        action: 'athlete_created',
+        role_context: 'org_admin',
+        title: 'New Registration',
+        body: 'A new athlete registered for Spring Basketball.',
+        presentation_type: 'info',
+        entity_type: 'athlete',
+        entity_id: 'reg-001',
+        link_url: '/admin/registrations',
+        metadata: null,
+        dedupe_key: 'demo:notif-admin-005',
+        read_at: daysAgo(1),
+        created_at: daysAgo(1),
+    },
+    {
+        id: 'notif-admin-006',
+        user_id: ADMIN_AMY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: null,
+        action: 'announcement_created',
+        role_context: 'org_admin',
+        title: 'System Maintenance Scheduled',
+        body: 'Scheduled maintenance will occur on March 20th from 2-4 AM.',
+        presentation_type: 'info',
+        entity_type: 'announcement',
+        entity_id: null,
+        link_url: '/admin',
+        metadata: null,
+        dedupe_key: 'demo:notif-admin-006',
+        read_at: null,
+        created_at: daysAgo(2),
+    },
+    // Parent-admin notifications (union of parent and admin)
+    {
+        id: 'notif-parent-admin-001',
+        user_id: PARENT_ADMIN_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: null,
+        action: 'fee_payment_completed',
+        role_context: 'org_admin',
+        title: 'New Payment Received',
+        body: 'Robert Chen paid $125.00 for Spring Basketball Registration.',
+        presentation_type: 'info',
+        entity_type: 'fee',
+        entity_id: 'pay-002',
+        link_url: '/admin/payments',
+        metadata: { amount_cents: 12500 },
+        dedupe_key: 'demo:notif-parent-admin-001',
+        read_at: null,
+        created_at: hoursAgo(3),
+    },
+    {
+        id: 'notif-parent-admin-002',
+        user_id: PARENT_ADMIN_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U10_BASKETBALL_ID,
+        action: 'event_rsvp_required',
+        role_context: 'guardian',
+        title: 'RSVP Reminder',
+        body: "Please respond to Liam's upcoming basketball game this Friday.",
+        presentation_type: 'info',
+        entity_type: 'event',
+        entity_id: 'event-u10-bb-game-001',
+        link_url: '/portal/calendar',
+        metadata: { severity: 'reminder' },
+        dedupe_key: 'demo:notif-parent-admin-002',
+        read_at: null,
+        created_at: hoursAgo(5),
+    },
 ]
 
 // ============================================================================
@@ -434,4 +584,38 @@ export function deleteAnnouncementById(announcementId: string): boolean {
     }
     fakeAnnouncements.splice(index, 1)
     return true
+}
+
+export function updateAnnouncementById(
+    announcementId: string,
+    updates: Partial<{
+        title: string
+        body: string
+        type: 'announcement' | 'emergency'
+        priority: 'normal' | 'urgent'
+    }>
+): FakeAnnouncement | null {
+    const announcement = fakeAnnouncements.find((a) => a.id === announcementId)
+    if (!announcement) {
+        return null
+    }
+    
+    if (updates.title !== undefined) {
+        announcement.title = updates.title
+    }
+    if (updates.body !== undefined) {
+        announcement.body = updates.body
+    }
+    if (updates.type !== undefined) {
+        announcement.type = updates.type
+    }
+    if (updates.priority !== undefined) {
+        // Map priority to type if needed
+        if (updates.priority === 'urgent') {
+            announcement.type = 'emergency'
+        }
+    }
+    
+    announcement.updated_at = new Date().toISOString()
+    return announcement
 }

@@ -29,6 +29,12 @@ import {
   getUniformMetrics,
   getCommunicationMetrics,
   getOperationsMetrics,
+  getRevenueMetrics,
+  getTicketingMetrics,
+  getRegistrationMetrics,
+  getVideoMetrics,
+  getEventsMetrics,
+  getErrorsMetrics,
 } from '../data/services/reportingService'
 import type {
   CreateSavedReportInput,
@@ -483,6 +489,120 @@ export function useOperationsMetrics(filters: ReportFilters | null) {
         throw new Error('Filters are required')
       }
       const result = await getOperationsMetrics(filters)
+      if (result.error) throw result.error
+      return result.data
+    },
+    enabled: !!filters && !!filters.orgId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+}
+
+/**
+ * Get revenue metrics
+ */
+export function useRevenueMetrics(filters: ReportFilters | null) {
+  return useQuery({
+    queryKey: ['revenueMetrics', filters],
+    queryFn: async () => {
+      if (!filters) {
+        throw new Error('Filters are required')
+      }
+      const result = await getRevenueMetrics(filters)
+      if (result.error) throw result.error
+      return result.data
+    },
+    enabled: !!filters && !!filters.orgId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+}
+
+/**
+ * Get ticketing metrics
+ */
+export function useTicketingMetrics(filters: ReportFilters | null) {
+  return useQuery({
+    queryKey: ['ticketingMetrics', filters],
+    queryFn: async () => {
+      if (!filters) {
+        throw new Error('Filters are required')
+      }
+      const result = await getTicketingMetrics(filters)
+      if (result.error) throw result.error
+      return result.data
+    },
+    enabled: !!filters && !!filters.orgId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+}
+
+/**
+ * Get registration metrics
+ */
+export function useRegistrationMetrics(filters: ReportFilters | null) {
+  return useQuery({
+    queryKey: ['registrationMetrics', filters],
+    queryFn: async () => {
+      if (!filters) {
+        throw new Error('Filters are required')
+      }
+      const result = await getRegistrationMetrics(filters)
+      if (result.error) throw result.error
+      return result.data
+    },
+    enabled: !!filters && !!filters.orgId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+}
+
+/**
+ * Get video metrics
+ */
+export function useVideoMetrics(filters: ReportFilters | null) {
+  return useQuery({
+    queryKey: ['videoMetrics', filters],
+    queryFn: async () => {
+      if (!filters) {
+        throw new Error('Filters are required')
+      }
+      const result = await getVideoMetrics(filters)
+      if (result.error) throw result.error
+      return result.data
+    },
+    enabled: !!filters && !!filters.orgId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+}
+
+/**
+ * Get events metrics
+ */
+export function useEventsMetrics(filters: ReportFilters | null) {
+  return useQuery({
+    queryKey: ['eventsMetrics', filters],
+    queryFn: async () => {
+      if (!filters) {
+        throw new Error('Filters are required')
+      }
+      const result = await getEventsMetrics(filters)
+      if (result.error) throw result.error
+      return result.data
+    },
+    enabled: !!filters && !!filters.orgId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+}
+
+/**
+ * Get errors metrics
+ */
+export function useErrorsMetrics(filters: ReportFilters | null) {
+  return useQuery({
+    queryKey: ['errorsMetrics', filters],
+    queryFn: async () => {
+      if (!filters) {
+        throw new Error('Filters are required')
+      }
+      const result = await getErrorsMetrics(filters)
       if (result.error) throw result.error
       return result.data
     },

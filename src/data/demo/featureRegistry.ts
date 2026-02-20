@@ -6,7 +6,7 @@
  */
 
 import type { DemoAllowedRole } from '@/types/demoManagement'
-import { getLink, RouteKeys } from '@/utils/routes'
+import { RouteKeys } from '@/utils/routes'
 
 /**
  * Demo feature definition

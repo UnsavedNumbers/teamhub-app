@@ -170,6 +170,33 @@ export async function getOrganizationThemeSettings(
   debug.data('OrganizationSettingsService.getOrganizationThemeSettings', 'Request', { orgId: context.orgId })
   debug.perf.start('organizationSettingsService.getOrganizationThemeSettings')
 
+  if (USE_FAKE_DATA) {
+    // In fake data mode, use in-memory store for theme settings
+    const themeStore = (globalThis as any).__fakeThemeStore || new Map<string, OrganizationThemeSettings>()
+    if (!(globalThis as any).__fakeThemeStore) {
+      (globalThis as any).__fakeThemeStore = themeStore
+    }
+    
+    const existing = themeStore.get(context.orgId)
+    if (existing) {
+      debug.perf.end('organizationSettingsService.getOrganizationThemeSettings')
+      debug.data('OrganizationSettingsService.getOrganizationThemeSettings', 'Response (fake)', { orgId: context.orgId, themeId: existing.theme_id })
+      console.groupEnd()
+      return { data: existing, error: null }
+    }
+    
+    const defaultTheme: OrganizationThemeSettings = {
+      org_id: context.orgId,
+      theme_id: null,
+      updated_at: null,
+    }
+    themeStore.set(context.orgId, defaultTheme)
+    debug.perf.end('organizationSettingsService.getOrganizationThemeSettings')
+    debug.data('OrganizationSettingsService.getOrganizationThemeSettings', 'Response (fake, default)', { orgId: context.orgId })
+    console.groupEnd()
+    return { data: defaultTheme, error: null }
+  }
+
   try {
     const { data, error } = await fromTable('organization_settings')
       .select('org_id, theme_id, updated_at')
@@ -221,9 +248,26 @@ export async function updateOrganizationThemeSettings(
   debug.flow('OrganizationSettingsService.updateOrganizationThemeSettings', 'Updating theme settings', { orgId: context.orgId, themeId })
   debug.perf.start('organizationSettingsService.updateOrganizationThemeSettings')
 
-  // In fake data mode, just return success (theme is applied via CSS variables in memory)
+  // In fake data mode, store theme in memory and trigger theme refresh
   if (USE_FAKE_DATA) {
     console.log('[organizationSettingsService] Fake data mode - theme update simulated:', themeId)
+    const themeStore = (globalThis as any).__fakeThemeStore || new Map<string, OrganizationThemeSettings>()
+    if (!(globalThis as any).__fakeThemeStore) {
+      (globalThis as any).__fakeThemeStore = themeStore
+    }
+    
+    const updated: OrganizationThemeSettings = {
+      org_id: context.orgId,
+      theme_id: themeId,
+      updated_at: new Date().toISOString(),
+    }
+    themeStore.set(context.orgId, updated)
+    
+    // Trigger theme refresh in the UI
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('org-theme-updated', { detail: { orgId: context.orgId, themeId } }))
+    }
+    
     debug.perf.end('organizationSettingsService.updateOrganizationThemeSettings')
     debug.flow('OrganizationSettingsService.updateOrganizationThemeSettings', 'Theme updated (fake)', { orgId: context.orgId, themeId })
     console.groupEnd()

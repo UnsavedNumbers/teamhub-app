@@ -9,7 +9,7 @@ import { ScopeControls } from '../../../components/reporting/ScopeControls'
 import { AdminPageHeader } from '../../../components/admin'
 import { useExportHistory } from '../../../hooks/useReporting'
 import { useT } from '../../../i18n/useI18n'
-import '../../../../styles/orgAdmin.css'
+import '../../../styles/orgAdmin.css'
 
 export default function ExportHistory() {
   const t = useT()
@@ -20,7 +20,7 @@ export default function ExportHistory() {
       <div className="oa-page">
         <AdminPageHeader
           title={t('admin.reporting.exportHistory.title')}
-          description={t('admin.reporting.exportHistory.description')}
+          subtitle={t('admin.reporting.exportHistory.description')}
         />
 
         <ScopeControls />

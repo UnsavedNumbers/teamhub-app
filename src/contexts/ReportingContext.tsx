@@ -193,7 +193,7 @@ export function ReportingProvider({ children }: ReportingProviderProps) {
     setFiltersState((prev) => ({
       ...prev,
       dateRange: range || undefined,
-      datePreset: range ? 'custom' : null,
+      datePreset: range ? 'custom' : undefined,
     }))
     if (!range) {
       setDatePresetState(null)

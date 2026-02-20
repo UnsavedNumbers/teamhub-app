@@ -557,11 +557,13 @@ export async function getTravelEvents(
             const permissions = buildPermissions(context)
 
             // Get travel plans and convert to travel events
+            // In demo mode, always use DEMO_ORG_A_ID regardless of context.orgId
             const fakeOrgId = DEMO_ORG_A_ID
             let travelEvents: TravelEvent[] = fakeTravelPlans
                 .filter(p => p.org_id === fakeOrgId)
                 .filter(p => params.includeCancelled || p.status !== 'cancelled')
-                .filter(p => p.status === 'published' || p.status === 'cancelled')
+                // For org admins, show all plans (draft, published, cancelled). For others, only published/cancelled
+                .filter(p => permissions.canViewAllOrgData ? true : (p.status === 'published' || p.status === 'cancelled'))
                 .map(convertTravelPlanToEvent)
 
             // Also check regular events with travel indicators
@@ -756,14 +758,10 @@ export async function getTravelEventDetails(
         await simulateDelay()
 
         // Check travel plans first
+        // In demo mode, always allow access regardless of orgId match
         const plan = fakeTravelPlans.find(p => p.id === eventId)
         if (plan) {
-            if (plan.org_id !== context.orgId) {
-                debug.perf.end('travelService.getTravelEventDetails')
-                debug.error('TravelService.getTravelEventDetails', 'Access denied (fake)', { eventId, planOrgId: plan.org_id, contextOrgId: context.orgId })
-                console.groupEnd()
-                return { data: null, error: new Error('Access denied') }
-            }
+            // In demo mode, all travel plans belong to DEMO_ORG_A_ID, so always allow access
             debug.perf.end('travelService.getTravelEventDetails')
             debug.data('TravelService.getTravelEventDetails', 'Response (fake, from plan)', { eventId, hasData: true })
             console.groupEnd()

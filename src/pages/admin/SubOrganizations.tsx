@@ -258,7 +258,7 @@ function SubOrgsList({
                   : t('admin.subOrgs.list.status.suspended')}
               </Badge>
               <Button
-                variant="neutral"
+                variant="secondary"
                 onClick={() => setExpandedId(expandedId === subOrg.id ? null : subOrg.id)}
               >
                 {expandedId === subOrg.id ? t('admin.subOrgs.list.hide') : t('admin.subOrgs.list.manage')}
@@ -422,7 +422,7 @@ function RequestsList({
                 {t('admin.subOrgs.requests.approve')}
               </Button>
               <Button
-                variant="neutral"
+                variant="secondary"
                 onClick={() => onReject(request.id)}
                 disabled={approving || rejecting}
               >
@@ -471,7 +471,7 @@ function ParentSettingsForm({
           <label className="flex items-center gap-2">
             <Checkbox
               checked={publicRegistration}
-              onChange={(e) => setPublicRegistration(e.target.checked)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPublicRegistration(e.target.checked)}
             />
             <span className="font-medium">{t('admin.subOrgs.parentSettings.publicRegistration.label')}</span>
           </label>
@@ -484,7 +484,7 @@ function ParentSettingsForm({
           <label className="flex items-center gap-2">
             <Checkbox
               checked={requireApproval}
-              onChange={setRequireApproval}
+              onChange={(e) => setRequireApproval(e.target.checked)}
               disabled={!publicRegistration}
             />
             <span className="font-medium">{t('admin.subOrgs.parentSettings.requireApproval.label')}</span>
