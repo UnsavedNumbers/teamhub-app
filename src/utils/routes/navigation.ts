@@ -474,6 +474,7 @@ export const platformAdminNavSections: {
             items: [
                 { routeKey: 'platformAdmin.organizations.list', text: 'Organizations', icon: 'apartment', requiredAction: 'view_organizations' },
                 { routeKey: 'platformAdmin.demoManagement.list', text: 'Demo Management', icon: 'bolt', requiredAction: 'view_organizations' },
+                { routeKey: 'platformAdmin.demoInsights', text: 'Demo Insights', icon: 'analytics', requiredAction: 'view_organizations' },
             ],
         },
         {

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import ThemeSwitcher from './ThemeSwitcher'
 import UserContextDropdown from './UserContextDropdown'
 import NotificationBell from './NotificationBell'
+import { DemoModeBadge } from '../demo/DemoModeBadge'
 
 interface GlobalNavProps {
   variant: 'admin' | 'platform-admin'
@@ -28,6 +29,9 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
 
       {/* Right section */}
       <div className="gn-right">
+        {/* Demo Mode Badge */}
+        <DemoModeBadge />
+
         {/* Notifications */}
         <NotificationBell viewAllPath={isAdmin ? '/admin/notifications' : '/platform-admin'} />
 

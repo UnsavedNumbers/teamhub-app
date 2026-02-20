@@ -16,6 +16,7 @@ import { getLink, getPath, RouteKeys } from './utils/routes'
 import { I18nProvider } from './i18n/I18nProvider'
 import { Toaster } from './components/Toaster'
 import { ConditionalRouteLogger } from './lib/debug/integrations/RouteLogger'
+import { DemoPageViewTracker } from './components/demo/DemoPageViewTracker'
 import { USE_FAKE_DATA } from './data/config'
 
 // Marketing Page
@@ -34,6 +35,7 @@ import CompleteProfile from './pages/CompleteProfile'
 import Unauthorized from './pages/Unauthorized'
 import DemoRequest from './pages/DemoRequest'
 import DemoEntry from './pages/DemoEntry'
+import DemoWelcome from './pages/DemoWelcome'
 
 // Main Pages (keep unchanged - Tailwind CSS)
 import Dashboard from './pages/Dashboard'
@@ -153,6 +155,7 @@ const HelpCenterSections = lazy(() => import('./pages/platformAdmin/HelpCenterSe
 const HelpCenterThumbnails = lazy(() => import('./pages/platformAdmin/HelpCenterThumbnails'))
 const PlatformDemoManagement = lazy(() => import('./pages/platformAdmin/DemoManagement'))
 const PlatformDemoOrgDetail = lazy(() => import('./pages/platformAdmin/DemoOrgDetail'))
+const PlatformDemoInsights = lazy(() => import('./pages/platformAdmin/DemoInsights'))
 const LicensesOverview = lazy(() => import('./pages/platformAdmin/LicensesOverview'))
 const LicenseTiers = lazy(() => import('./pages/platformAdmin/LicenseTiers'))
 const LicenseTierDetail = lazy(() => import('./pages/platformAdmin/LicenseTierDetail'))
@@ -259,6 +262,7 @@ const adminEventsEditPath = getPath('admin.events.edit').replace('/admin/', '')
 const adminEventsAttendancePath = getPath('admin.events.attendance').replace('/admin/', '')
 const platformDemoManagementPath = getPath('platformAdmin.demoManagement.list').replace('/platform-admin/', '')
 const platformDemoManagementDetailPath = getPath('platformAdmin.demoManagement.detail').replace('/platform-admin/', '')
+const platformDemoInsightsPath = getPath('platformAdmin.demoInsights').replace('/platform-admin/', '')
 const AdminFamilies = lazy(() => import('./pages/admin/AdminFamilies'))
 const CreateFamily = lazy(() => import('./pages/admin/CreateFamily'))
 const FamilyDetail = lazy(() => import('./pages/admin/FamilyDetail'))
@@ -389,6 +393,7 @@ function AppWithTheme() {
       <Toaster />
       <FullScreenLoader />
       <ConditionalRouteLogger />
+      <DemoPageViewTracker />
       <Routes>
           {/* Marketing Landing Page - Public */}
           <Route path="/" element={<HostHomeRoute />} />
@@ -425,6 +430,8 @@ function AppWithTheme() {
           <Route path="/demo-request" element={<DemoRequest />} />
           {/* Public Demo Entry Route */}
           <Route path="/demo" element={<DemoEntry />} />
+          {/* Demo Welcome Route */}
+          <Route path="/demo/welcome" element={<DemoWelcome />} />
 
           {/* Portal Routes - Guardians Only */}
           <Route path="/portal" element={<HostGateLayout />}>
@@ -760,6 +767,7 @@ function AppWithTheme() {
               <Route path="organizations/:id" element={<PlatformOrganizationDetail />} />
               <Route path={platformDemoManagementPath} element={<PlatformDemoManagement />} />
               <Route path={platformDemoManagementDetailPath} element={<PlatformDemoOrgDetail />} />
+              <Route path={platformDemoInsightsPath} element={<PlatformDemoInsights />} />
               
               {/* Users */}
               <Route path="users" element={<PlatformUsers />} />

@@ -16,6 +16,7 @@ import { getLink, getPath, RouteKeys } from '@/utils/routes'
 import SidebarOrganizationSwitcher from '../components/admin/SidebarOrganizationSwitcher'
 import MobileMenu from '../components/common/MobileMenu'
 import GlobalNav from '../components/common/GlobalNav'
+import { DemoGuideIntegration } from '../components/demo/DemoGuideIntegration'
 import type { NavSection } from '@/types/menu'
 import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 import { useQuery } from '@tanstack/react-query'
@@ -478,6 +479,9 @@ export default function AdminLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Demo Guide Integration */}
+      <DemoGuideIntegration />
 
       {/* Mobile sidebar drawer */}
       {showMobileNav && (

@@ -1206,6 +1206,12 @@ const platformAdmin = {
             icon: 'bolt',
         },
     },
+    demoInsights: {
+        path: '/platform-admin/demo-insights',
+        label: 'Demo Insights',
+        icon: 'analytics',
+        description: 'Demo session analytics and engagement',
+    },
 
     // Users
     users: {
@@ -1641,6 +1647,11 @@ const root = {
         path: '/demo',
         label: 'Demo Access',
         icon: 'login',
+    },
+    demoWelcome: {
+        path: '/demo/welcome',
+        label: 'Demo Welcome',
+        icon: 'welcome',
     },
 } as const satisfies Record<string, RouteDefinition>
 

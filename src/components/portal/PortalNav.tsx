@@ -5,6 +5,7 @@ import ThemeToggle from './ThemeToggle'
 import UserContextDropdown from '../common/UserContextDropdown'
 import NotificationBell from '../common/NotificationBell'
 import MobileMenu from '../common/MobileMenu'
+import { DemoModeBadge } from '../demo/DemoModeBadge'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useTheme } from '../../hooks/useTheme'
@@ -558,6 +559,9 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
 
       {/* Right section */}
       <div className="gn-right">
+        {/* Demo Mode Badge */}
+        <DemoModeBadge />
+
         {/* Role indicator */}
         {currentOrganization && (
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/50">

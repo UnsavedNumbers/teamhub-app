@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import PortalHeader from './PortalHeader'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getContactForCategory } from '../../data/services/organizationContactsService'
+import { DemoGuideIntegration } from '../demo/DemoGuideIntegration'
 import Icon from './Icon'
 import '../../styles/portal.css'
 
@@ -75,6 +76,9 @@ export default function PortalLayout({ children, breadcrumbs, forceRole }: Porta
 
         {children}
       </main>
+
+      {/* Demo Guide Integration */}
+      <DemoGuideIntegration />
 
       {/* General Contact Footer */}
       {generalContact && (

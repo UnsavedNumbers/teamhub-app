@@ -110,6 +110,7 @@ export const RouteKeys = {
     MARKETING: 'root.marketing',
     DEMO_REQUEST: 'root.demoRequest',
     DEMO_ENTRY: 'root.demoEntry',
+    DEMO_WELCOME: 'root.demoWelcome',
 
     // Portal
     PORTAL_DASHBOARD: 'portal.dashboard',
@@ -228,6 +229,7 @@ export const RouteKeys = {
     PLATFORM_ORGANIZATION_DETAIL: 'platformAdmin.organizations.detail',
     PLATFORM_DEMO_MANAGEMENT: 'platformAdmin.demoManagement.list',
     PLATFORM_DEMO_ORG_DETAIL: 'platformAdmin.demoManagement.detail',
+    PLATFORM_DEMO_INSIGHTS: 'platformAdmin.demoInsights',
     PLATFORM_USERS: 'platformAdmin.users.list',
     PLATFORM_USER_DETAIL: 'platformAdmin.users.detail',
     PLATFORM_ADMINS: 'platformAdmin.admins',

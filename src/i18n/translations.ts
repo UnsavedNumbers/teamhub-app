@@ -5425,6 +5425,55 @@ export const en = {
         welcome: 'Welcome to {{orgName}}\'s demo.',
         whoToUseSiteAs: 'Who would you like to use the site as?',
     },
+
+    demo: {
+        welcome: {
+            title: 'Welcome to Your Demo',
+            subtitle: 'Explore the features that help you manage your youth sports organization',
+            getStarted: 'Get Started',
+            skip: 'Skip Tour',
+            featuresTitle: 'Key Features',
+            noFeatures: 'No features available for your role.',
+        },
+        guide: {
+            topActions: 'Top Actions',
+            tryThisNow: 'Try This Now',
+            tryThisButton: 'Try This',
+            tips: 'Tips',
+            businessValue: 'Why This Matters',
+            dismiss: 'Got It',
+            openGuide: 'Show Guide',
+        },
+        badge: {
+            label: 'Demo Mode',
+            tooltip: 'You are currently in demo mode',
+        },
+        insights: {
+            title: 'Demo Insights',
+            loading: 'Loading demo insights...',
+            error: 'Failed to load demo insights',
+            noSessions: 'No demo sessions found for the selected time period.',
+            totalSessions: 'Total Sessions',
+            avgDuration: 'Avg Duration',
+            totalTime: 'Total Time',
+            mostVisitedPages: 'Most Visited Pages',
+            featureUsage: 'Feature Usage',
+            sessions: 'Sessions',
+            pagesVisited: 'Pages Visited',
+            lastPage: 'Last Page',
+            dateRange: {
+                last7Days: 'Last 7 days',
+                last30Days: 'Last 30 days',
+                last90Days: 'Last 90 days',
+                allTime: 'All time',
+            },
+        },
+        welcome: {
+            loading: 'Loading...',
+            error: 'Error',
+            goToDashboard: 'Go to Dashboard',
+        },
+    },
 }
 
 /**
@@ -9838,6 +9887,55 @@ export const es = {
     demoEntry: {
         welcome: 'Bienvenido a la demo de {{orgName}}.',
         whoToUseSiteAs: '¿Cómo te gustaría usar el sitio?',
+    },
+
+    demo: {
+        welcome: {
+            title: 'Bienvenido a Tu Demo',
+            subtitle: 'Explora las funciones que te ayudan a gestionar tu organización deportiva juvenil',
+            getStarted: 'Comenzar',
+            skip: 'Omitir Tour',
+            featuresTitle: 'Características Principales',
+            noFeatures: 'No hay características disponibles para tu rol.',
+        },
+        guide: {
+            topActions: 'Acciones Principales',
+            tryThisNow: 'Prueba Esto Ahora',
+            tryThisButton: 'Probar',
+            tips: 'Consejos',
+            businessValue: 'Por Qué Esto Importa',
+            dismiss: 'Entendido',
+            openGuide: 'Mostrar Guía',
+        },
+        badge: {
+            label: 'Modo Demo',
+            tooltip: 'Actualmente estás en modo demo',
+        },
+        insights: {
+            title: 'Análisis de Demo',
+            loading: 'Cargando análisis de demo...',
+            error: 'Error al cargar análisis de demo',
+            noSessions: 'No se encontraron sesiones de demo para el período seleccionado.',
+            totalSessions: 'Sesiones Totales',
+            avgDuration: 'Duración Promedio',
+            totalTime: 'Tiempo Total',
+            mostVisitedPages: 'Páginas Más Visitadas',
+            featureUsage: 'Uso de Funciones',
+            sessions: 'Sesiones',
+            pagesVisited: 'Páginas Visitadas',
+            lastPage: 'Última Página',
+            dateRange: {
+                last7Days: 'Últimos 7 días',
+                last30Days: 'Últimos 30 días',
+                last90Days: 'Últimos 90 días',
+                allTime: 'Todo el tiempo',
+            },
+        },
+        welcome: {
+            loading: 'Cargando...',
+            error: 'Error',
+            goToDashboard: 'Ir al Panel',
+        },
     },
 } as unknown as typeof en
 
