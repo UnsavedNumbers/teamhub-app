@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 
 import { getErrorMessage } from '../../utils/errorUtils'
@@ -16,7 +16,7 @@ import { useT } from '../../i18n/useI18n'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { createOrganizationUser } from '../../api/users'
-import { showSuccess } from '../../utils/toast'
+import { showSuccess, showError } from '../../utils/toast'
 import '../../styles/orgAdmin.css'
 
 interface UserFormData {
@@ -32,7 +32,8 @@ export default function CreateUser() {
   const [error, setError] = useState<string | null>(null)
   const requestIdRef = useRef(0)
   const isMountedRef = useRef(true)
-  
+  const [searchParams] = useSearchParams()
+
   const t = useT()
   const navigate = useNavigate()
   const { isReady } = useUserContext()
@@ -135,7 +136,26 @@ export default function CreateUser() {
 
       // Success
       showSuccess(result.message || 'User created successfully')
-      navigate('/admin/organization/users')
+      
+      // Check if this is a return flow from sub-org setup
+      const source = searchParams.get('source')
+      if (source === 'suborg_setup') {
+        if (!result.user_id) {
+          // Error: user_id missing in return flow
+          showError('User was created but user ID is missing. Please manually select the admin from the Sub Organizations page.')
+          navigate('/admin/organization/sub-orgs')
+          return
+        }
+        // Navigate to Sub Orgs page with state to open modal
+        navigate('/admin/organization/sub-orgs', {
+          state: {
+            openSubOrgInviteModal: true,
+            suborgAdminUserId: result.user_id,
+          },
+        })
+      } else {
+        navigate('/admin/organization/users')
+      }
     } catch (err: unknown) {
       if (!isMountedRef.current || currentRequestId !== requestIdRef.current) {
         return

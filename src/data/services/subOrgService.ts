@@ -78,6 +78,15 @@ export interface UpdateParentSubConfigInput {
   sub_org_max_count?: number | null
 }
 
+export interface SendSubOrgSetupInstructionsInput {
+  inviterUserId: string
+  invitedAdminUserId: string
+  parentOrgId: string
+  subOrgName: string
+  publicOrgUrl: string
+  note?: string
+}
+
 // ============================================================================
 // Parent Org Configuration
 // ============================================================================
@@ -941,5 +950,159 @@ export async function notifySubOrgAdmins(
     })
   } catch (err) {
     console.error('Failed to notify sub-org admins:', err)
+  }
+}
+
+/**
+ * Send sub-organization setup instructions to an org admin
+ */
+export async function sendSubOrgSetupInstructions(
+  input: SendSubOrgSetupInstructionsInput
+): Promise<{ success: boolean; error: Error | null }> {
+  try {
+    const { inviterUserId, invitedAdminUserId, parentOrgId, subOrgName, publicOrgUrl, note } = input
+
+    // Validate required fields
+    if (!inviterUserId || !invitedAdminUserId || !parentOrgId || !subOrgName || !publicOrgUrl) {
+      return {
+        success: false,
+        error: new Error('Missing required fields: inviterUserId, invitedAdminUserId, parentOrgId, subOrgName, publicOrgUrl'),
+      }
+    }
+
+    // Demo mode: return success without sending
+    if (USE_FAKE_DATA) {
+      return { success: true, error: null }
+    }
+
+    // Get parent org name
+    const { data: parentOrg, error: orgError } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', parentOrgId)
+      .maybeSingle()
+
+    if (orgError || !parentOrg) {
+      return {
+        success: false,
+        error: new Error(orgError?.message || 'Failed to fetch parent organization'),
+      }
+    }
+
+    // Get invited admin user details
+    const { data: invitedUser, error: userError } = await supabase
+      .from('users')
+      .select('id, email, display_name, first_name, last_name')
+      .eq('id', invitedAdminUserId)
+      .maybeSingle()
+
+    if (userError || !invitedUser) {
+      return {
+        success: false,
+        error: new Error(userError?.message || 'Failed to fetch invited admin user'),
+      }
+    }
+
+    // Build setup instructions body
+    const steps = [
+      `You've been invited to set up "${subOrgName}" as a sub-organization under ${parentOrg.name}.`,
+      `Click the link below to register and complete setup.`,
+      `Once registered, you'll have full admin access to manage your sub-organization's teams, athletes, and operations.`,
+    ]
+
+    if (note) {
+      steps.push(`Note from ${parentOrg.name}: ${note}`)
+    }
+
+    const body = [
+      `You've been invited to set up a sub-organization under ${parentOrg.name}.`,
+      '',
+      `Sub-Organization Name: ${subOrgName}`,
+      `Parent Organization: ${parentOrg.name}`,
+      '',
+      'Setup Steps:',
+      ...steps.map((step, idx) => `${idx + 1}. ${step}`),
+      '',
+      `Registration Link: ${publicOrgUrl}`,
+      '',
+      'Click the button below to begin setup.',
+    ].join('\n')
+
+    // Send notification with setup instructions
+    // Use 'invite_sent' action which is valid and maps to 'team_invite' email template
+    const notifyResult = await notifyUsers({
+      userIds: [invitedAdminUserId],
+      orgId: parentOrgId,
+      action: 'invite_sent',
+      roleContext: 'org_admin',
+      title: `Set Up Sub-Organization: ${subOrgName}`,
+      body,
+      linkUrl: publicOrgUrl,
+      entityType: 'system',
+      entityId: parentOrgId,
+      metadata: {
+        sub_org_name: subOrgName,
+        parent_org_name: parentOrg.name,
+        public_org_url: publicOrgUrl,
+        note: note || null,
+        team_name: subOrgName, // For email subject template compatibility
+      },
+    })
+
+    // Check if notification failed
+    if (!notifyResult.success) {
+      const errorMessage = notifyResult.error?.message || 'Failed to send notification'
+      console.error('Sub-org setup notification failed:', {
+        inviterUserId,
+        invitedAdminUserId,
+        subOrgName,
+        error: errorMessage,
+        inAppCount: notifyResult.inAppCount,
+        emailCount: notifyResult.emailCount,
+      })
+      return {
+        success: false,
+        error: new Error(
+          `Failed to send setup instructions. ${errorMessage}. ` +
+          `Please try again or contact support if the problem persists.`
+        ),
+      }
+    }
+
+    // Log success metrics
+    console.log('Sub-org setup instructions sent successfully:', {
+      inviterUserId,
+      invitedAdminUserId,
+      subOrgName,
+      inAppCount: notifyResult.inAppCount,
+      emailCount: notifyResult.emailCount,
+    })
+
+    // Log event if eventLogger is available
+    try {
+      const { logEvent } = await import('../../utils/eventLogger')
+      await logEvent({
+        category: 'SUB_ORG',
+        eventType: 'SEND_SETUP_INSTRUCTIONS',
+        actorRole: 'org_admin',
+        actorUserId: inviterUserId,
+        orgId: parentOrgId,
+        metadata: {
+          invited_admin_user_id: invitedAdminUserId,
+          invited_admin_email: invitedUser.email,
+          sub_org_name: subOrgName,
+        },
+      })
+    } catch (logErr) {
+      // Non-fatal: event logging failed, but notification was sent
+      console.warn('Failed to log sub-org invite event:', logErr)
+    }
+
+    return { success: true, error: null }
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err : new Error(getErrorMessage(err)),
+    }
   }
 }

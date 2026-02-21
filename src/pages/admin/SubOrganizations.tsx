@@ -9,10 +9,11 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useI18n } from '../../i18n/useI18n'
+import { useUserContext } from '../../hooks/useUserContext'
 import { supabase } from '../../lib/supabase'
 import { AdminPageHeader } from '../../components/admin/AdminPageHeader'
 import {
@@ -40,17 +41,28 @@ import {
   type SubOrgRequest,
   type ParentOrgSubConfig,
 } from '../../data/services/subOrgService'
+import { type OrgUser } from '../../data/services/usersService'
+import { getOrganizationSlug } from '../../data/services/organizationService'
+import { getPublicBaseUrl } from '../../utils/publicUrls'
+import { getLink, RouteKeys } from '../../utils/routes'
+import { useCopyToClipboard } from '../../hooks/useCopyToClipboard'
 import { showSuccess, showError } from '../../utils/toast'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { SPORT_NAMES, type SportCode } from '../../types/sports'
+import SubOrgInviteForm from '../../components/admin/SubOrgInviteForm'
+import { cn } from '../../utils/cn'
 import '../../styles/orgAdmin.css'
 
 export default function SubOrganizations() {
   const { t } = useI18n()
   const navigate = useNavigate()
+  const location = useLocation()
   const { currentOrganization } = useOrganization()
+  const { context, isReady: userContextReady } = useUserContext()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'sub-orgs' | 'requests' | 'settings'>('sub-orgs')
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [modalAdminUserId, setModalAdminUserId] = useState<string | null>(null)
 
   const orgId = currentOrganization?.id
 
@@ -105,6 +117,49 @@ export default function SubOrganizations() {
     enabled: !!orgId,
     select: (result) => result.data,
   })
+
+  // Get org slug for public URL
+  const { data: orgSlug, isLoading: orgSlugLoading } = useQuery({
+    queryKey: ['org-slug', orgId],
+    queryFn: async () => {
+      if (!orgId) return null
+      const { data, error } = await getOrganizationSlug(orgId)
+      if (error) return null
+      return data
+    },
+    enabled: !!orgId,
+  })
+
+  // Get eligible other org admins for conditional form
+  const { data: orgUsers, isLoading: orgUsersLoading } = useQuery({
+    queryKey: ['org-users', orgId],
+    queryFn: async () => {
+      if (!context || !userContextReady) return { data: [], error: null }
+      const { getOrganizationUsers } = await import('../../data/services/usersService')
+      return getOrganizationUsers(context)
+    },
+    enabled: !!orgId && !!context && userContextReady,
+    select: (result) => result.data || [],
+  })
+
+  // Calculate eligible other org admins
+  const eligibleOtherAdmins = orgUsers
+    ? orgUsers.filter((user) => user.roles.includes('org_admin') && user.id !== context?.userId)
+    : []
+
+  // Build public URL
+  const publicOrgUrl = orgSlug ? getPublicBaseUrl(orgSlug, 'register-sub-org') : ''
+
+  // Check for return flow from CreateUser
+  useEffect(() => {
+    const state = location.state as { openSubOrgInviteModal?: boolean; suborgAdminUserId?: string } | null
+    if (state?.openSubOrgInviteModal && state?.suborgAdminUserId) {
+      setModalAdminUserId(state.suborgAdminUserId)
+      setShowInviteModal(true)
+      // Clear state to prevent re-opening on refresh
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+  }, [location.state, location.pathname, navigate])
 
   // Approve request mutation
   const approveMutation = useMutation({
@@ -167,7 +222,7 @@ export default function SubOrganizations() {
     <div className="admin-page">
       <AdminPageHeader
         title={t('admin.subOrgs.title')}
-        subtitle={t('admin.subOrgs.subtitle')}
+        subtitle={t('admin.subOrgs.newSubtitle')}
       />
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
@@ -182,7 +237,13 @@ export default function SubOrganizations() {
         </TabsList>
 
         <TabsContent value="sub-orgs">
-          <SubOrgsList
+          <SubOrgsMainTab
+            orgId={orgId!}
+            publicOrgUrl={publicOrgUrl}
+            orgSlug={orgSlug ?? null}
+            orgSlugLoading={orgSlugLoading}
+            eligibleOtherAdmins={eligibleOtherAdmins}
+            eligibleOtherAdminsLoading={orgUsersLoading}
             subOrgs={subOrgs}
             loading={subOrgsLoading}
             onUpdateSettings={(subOrgId, settings) =>
@@ -210,6 +271,307 @@ export default function SubOrganizations() {
           />
         </TabsContent>
       </Tabs>
+
+      {/* Invite Modal */}
+      {showInviteModal && orgId && publicOrgUrl && (
+        <SubOrgInviteModal
+          parentOrgId={orgId}
+          publicOrgUrl={publicOrgUrl}
+          defaultSelectedAdminUserId={modalAdminUserId || undefined}
+          lockedAdminSelection={!!modalAdminUserId}
+          onClose={() => {
+            setShowInviteModal(false)
+            setModalAdminUserId(null)
+          }}
+          onSubmitted={() => {
+            setShowInviteModal(false)
+            setModalAdminUserId(null)
+            queryClient.invalidateQueries({ queryKey: ['sub-orgs', orgId] })
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function SubOrgsMainTab({
+  orgId,
+  publicOrgUrl,
+  orgSlug,
+  orgSlugLoading,
+  eligibleOtherAdmins,
+  eligibleOtherAdminsLoading,
+  subOrgs,
+  loading,
+  onUpdateSettings,
+}: {
+  orgId: string
+  publicOrgUrl: string
+  orgSlug: string | null
+  orgSlugLoading: boolean
+  eligibleOtherAdmins: OrgUser[]
+  eligibleOtherAdminsLoading: boolean
+  subOrgs: SubOrgWithSettings[]
+  loading: boolean
+  onUpdateSettings: (subOrgId: string, settings: any) => void
+}) {
+  const { t } = useI18n()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  return (
+    <div className="oa-space-y-6">
+      {/* Section 1: Introduction */}
+      <Card>
+        <div className="oa-space-y-4">
+          <div>
+            <h2 className="oa-h3 oa-mb-3">{t('admin.subOrgs.intro.title')}</h2>
+            <p className="oa-body-m oa-text-muted oa-mb-3">{t('admin.subOrgs.intro.paragraph1')}</p>
+            <p className="oa-body-m oa-text-muted oa-mb-3">{t('admin.subOrgs.intro.paragraph2')}</p>
+            <p className="oa-body-m oa-text-muted">{t('admin.subOrgs.intro.paragraph3')}</p>
+          </div>
+
+          <div className="oa-space-y-3">
+            <div>
+              <h3 className="oa-body-m oa-font-bold oa-mb-2">{t('admin.subOrgs.intro.useProgramsWhen.title')}</h3>
+              <ul className="oa-list-disc oa-list-inside oa-space-y-1 oa-text-muted">
+                <li>{t('admin.subOrgs.intro.useProgramsWhen.item1')}</li>
+                <li>{t('admin.subOrgs.intro.useProgramsWhen.item2')}</li>
+                <li>{t('admin.subOrgs.intro.useProgramsWhen.item3')}</li>
+                <li>{t('admin.subOrgs.intro.useProgramsWhen.item4')}</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="oa-body-m oa-font-bold oa-mb-2">{t('admin.subOrgs.intro.useSubOrgsWhen.title')}</h3>
+              <ul className="oa-list-disc oa-list-inside oa-space-y-1 oa-text-muted">
+                <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item1')}</li>
+                <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item2')}</li>
+                <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item3')}</li>
+                <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item4')}</li>
+                <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item5')}</li>
+              </ul>
+            </div>
+
+            <div className="oa-pt-2 oa-border-t oa-border-default">
+              <p className="oa-body-m oa-font-medium">{t('admin.subOrgs.intro.ruleOfThumb')}</p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Section 2: Public URL Card */}
+      <PublicSubOrgUrlCard publicOrgUrl={publicOrgUrl} orgSlug={orgSlug} loading={orgSlugLoading} />
+
+      {/* Section 3: Set up a Sub-Org (Conditional) */}
+      {orgSlugLoading || eligibleOtherAdminsLoading ? (
+        <Card>
+          <div className="oa-flex oa-items-center oa-gap-3">
+            <div className="oa-btn-spinner" aria-hidden />
+            <p className="oa-body-m oa-text-muted">{t('common.loading')}</p>
+          </div>
+        </Card>
+      ) : eligibleOtherAdmins.length >= 1 && publicOrgUrl ? (
+        <Card>
+          <h2 className="oa-h3 oa-mb-4">{t('admin.subOrgs.setup.title')}</h2>
+          <SubOrgInviteForm
+            parentOrgId={orgId}
+            publicOrgUrl={publicOrgUrl}
+            renderMode="inline"
+            onSubmitted={() => {
+              queryClient.invalidateQueries({ queryKey: ['sub-orgs', orgId] })
+            }}
+          />
+        </Card>
+      ) : eligibleOtherAdmins.length === 0 ? (
+        <Card>
+          <h2 className="oa-h3 oa-mb-3">{t('admin.subOrgs.setup.blocked.title')}</h2>
+          <p className="oa-body-m oa-text-muted oa-mb-4">{t('admin.subOrgs.setup.blocked.body1')}</p>
+          <p className="oa-body-m oa-text-muted oa-mb-4">{t('admin.subOrgs.setup.blocked.body2')}</p>
+          <Button
+            variant="primary"
+            onClick={() => navigate('/admin/users/new?source=suborg_setup')}
+          >
+            {t('admin.subOrgs.setup.blocked.cta')}
+          </Button>
+        </Card>
+      ) : (
+        <Card>
+          <h2 className="oa-h3 oa-mb-3">{t('admin.subOrgs.setup.blocked.title')}</h2>
+          <p className="oa-body-m oa-text-muted oa-mb-4">{t('admin.subOrgs.publicUrl.noSlug')}</p>
+          <Button
+            variant="secondary"
+            onClick={() => navigate(getLink(RouteKeys.ADMIN_ORGANIZATION))}
+          >
+            {t('admin.subOrgs.publicUrl.setSlug')}
+          </Button>
+        </Card>
+      )}
+
+      {/* Existing Sub-Orgs List (if any) */}
+      {!loading && subOrgs.length > 0 && (
+        <div className="oa-space-y-4">
+          <h2 className="oa-h3">{t('admin.subOrgs.existing.title')}</h2>
+          <SubOrgsList
+            subOrgs={subOrgs}
+            loading={false}
+            onUpdateSettings={onUpdateSettings}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PublicSubOrgUrlCard({ 
+  publicOrgUrl, 
+  orgSlug, 
+  loading 
+}: { 
+  publicOrgUrl: string
+  orgSlug: string | null
+  loading: boolean
+}) {
+  const { t } = useI18n()
+  const navigate = useNavigate()
+  const { copy, copied } = useCopyToClipboard()
+
+  if (loading) {
+    return (
+      <Card>
+        <h2 className="oa-h3 oa-mb-3">{t('admin.subOrgs.publicUrl.title')}</h2>
+        <div className="oa-flex oa-items-center oa-gap-3">
+          <div className="oa-btn-spinner" aria-hidden />
+          <p className="oa-body-m oa-text-muted">{t('common.loading')}</p>
+        </div>
+      </Card>
+    )
+  }
+
+  if (!orgSlug) {
+    return (
+      <Card>
+        <h2 className="oa-h3 oa-mb-3">{t('admin.subOrgs.publicUrl.title')}</h2>
+        <p className="oa-body-m oa-text-muted oa-mb-3">{t('admin.subOrgs.publicUrl.noSlug')}</p>
+        <Button
+          variant="secondary"
+          onClick={() => navigate(getLink(RouteKeys.ADMIN_ORGANIZATION))}
+        >
+          {t('admin.subOrgs.publicUrl.setSlug')}
+        </Button>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <h2 className="oa-h3 oa-mb-3">{t('admin.subOrgs.publicUrl.title')}</h2>
+      <div className="oa-flex oa-items-center oa-gap-3 oa-mb-2">
+        <input
+          type="text"
+          readOnly
+          value={publicOrgUrl}
+          onClick={(e) => (e.target as HTMLInputElement).select()}
+          className="oa-input oa-flex-1 oa-font-mono oa-text-sm"
+          style={{ cursor: 'text' }}
+        />
+        <button
+          type="button"
+          onClick={() => copy(publicOrgUrl)}
+          className={cn('oa-btn', copied ? 'oa-btn--success' : 'oa-btn--primary')}
+          style={{ minWidth: '100px' }}
+        >
+          {copied ? (
+            <>
+              <span className="material-symbols-outlined oa-mr-1" style={{ fontSize: '16px' }}>
+                check
+              </span>
+              {t('common.copied')}
+            </>
+          ) : (
+            <>
+              <span className="material-symbols-outlined oa-mr-1" style={{ fontSize: '16px' }}>
+                content_copy
+              </span>
+              {t('common.copy')}
+            </>
+          )}
+        </button>
+      </div>
+      <p className="oa-helper oa-text-xs">{t('admin.subOrgs.publicUrl.helper')}</p>
+    </Card>
+  )
+}
+
+function SubOrgInviteModal({
+  parentOrgId,
+  publicOrgUrl,
+  defaultSelectedAdminUserId,
+  lockedAdminSelection,
+  onClose,
+  onSubmitted,
+}: {
+  parentOrgId: string
+  publicOrgUrl: string
+  defaultSelectedAdminUserId?: string
+  lockedAdminSelection: boolean
+  onClose: () => void
+  onSubmitted: () => void
+}) {
+  const { t } = useI18n()
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(11, 15, 20, 0.5)',
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="oa-card"
+        style={{
+          width: '100%',
+          maxWidth: '600px',
+          maxHeight: '90vh',
+          margin: 'var(--pa-space-4)',
+          padding: 0,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div style={{ padding: 'var(--pa-space-5)', borderBottom: '1px solid var(--org-border-default, var(--pa-n100))' }}>
+          <h2 className="oa-h2" style={{ margin: 0 }}>
+            {t('admin.subOrgs.inviteModal.title')}
+          </h2>
+          <p className="oa-body-m oa-text-muted" style={{ margin: 'var(--pa-space-2) 0 0 0' }}>
+            {t('admin.subOrgs.inviteModal.subtitle')}
+          </p>
+        </div>
+
+        <div style={{ padding: 'var(--pa-space-5)', flex: 1, overflow: 'auto' }}>
+          <SubOrgInviteForm
+            parentOrgId={parentOrgId}
+            publicOrgUrl={publicOrgUrl}
+            defaultSelectedAdminUserId={defaultSelectedAdminUserId}
+            lockedAdminSelection={lockedAdminSelection}
+            renderMode="modal"
+            onSubmitted={onSubmitted}
+          />
+        </div>
+
+        <div style={{ padding: 'var(--pa-space-5)', borderTop: '1px solid var(--org-border-default, var(--pa-n100))', display: 'flex', justifyContent: 'flex-end' }}>
+          <Button variant="secondary" onClick={onClose}>
+            {t('common.close')}
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

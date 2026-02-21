@@ -123,6 +123,21 @@ export async function sendNotificationEmail(
       };
     }
 
+    // For team_invite, handle sub-org setup instructions
+    if (job.type === 'team_invite' && job.payload.sub_org_name) {
+      // This is a sub-org setup invitation, use custom body
+      const localPart = job.email?.split('@')[0]?.trim() || '';
+      job.payload = {
+        ...job.payload,
+        recipient_firstname: localPart || 'there',
+        recipient_name: localPart || 'there',
+        // Use custom body for sub-org setup
+        message_content: job.payload.body || '',
+        // Ensure team_name is set for subject template
+        team_name: job.payload.sub_org_name || job.payload.team_name || 'Sub-Organization',
+      };
+    }
+
     let branding: OrganizationBranding | null = null;
     if (supabase && job.org_id) {
       branding = await getOrganizationBranding(job.org_id, supabase);
@@ -153,8 +168,14 @@ export async function sendNotificationEmail(
       throw new Error(`Unknown email type: ${job.type}`);
     }
 
-    const subject = injectVariables(config.subject, job.payload, { noEscape: true });
-    const preview = injectVariables(config.preview, job.payload, { noEscape: true });
+    // Customize subject for sub-org setup invitations
+    let subjectTemplate = config.subject
+    if (job.type === 'team_invite' && job.payload.sub_org_name) {
+      subjectTemplate = `Set Up Sub-Organization: ${job.payload.sub_org_name}`
+    }
+
+    const subject = injectVariables(subjectTemplate, job.payload, { noEscape: true })
+    const preview = injectVariables(config.preview, job.payload, { noEscape: true })
 
     // Generate plain text fallback
     const textContent = generatePlainText(htmlContent);
@@ -646,6 +667,69 @@ async function loadTemplate(type: string, payload: Record<string, any>, supabase
   <h2>RSVP Required: {{event_title}}</h2>
   <p>{{body}}</p>
   <p style="color: #6b7280; font-size: 12px;">{{email_footer_text}}</p>
+</body>
+</html>`,
+    team_invite: `<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>You're invited to join {{team_name}}</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
+  <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    {{#if organization_logo_url}}
+    <div style="text-align: center; margin-bottom: 20px;">
+      <img src="{{organization_logo_url}}" alt="{{organization_name}}" style="max-height: 60px; max-width: 200px;" />
+    </div>
+    {{else}}
+    <h1 style="color: {{organization_primary_color}}; margin-bottom: 20px; text-align: center;">{{organization_name}}</h1>
+    {{/if}}
+    
+    <h2 style="color: #1e293b; margin-bottom: 20px;">{{#if sub_org_name}}Set Up Sub-Organization: {{sub_org_name}}{{else}}You're invited to join {{team_name}}{{/if}}</h2>
+    
+    <p>Hi {{recipient_firstname}},</p>
+    
+    {{#if sub_org_name}}
+    <p>You've been invited to set up a sub-organization under <strong>{{parent_org_name}}</strong>.</p>
+    
+    <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid {{organization_primary_color}};">
+      <h3 style="margin-top: 0; color: #1e293b;">Sub-Organization Details</h3>
+      <p><strong>Name:</strong> {{sub_org_name}}</p>
+      <p><strong>Parent Organization:</strong> {{parent_org_name}}</p>
+      {{#if note}}
+      <p><strong>Note:</strong> {{note}}</p>
+      {{/if}}
+    </div>
+    
+    <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+      <h3 style="margin-top: 0; color: #1e40af;">Setup Steps</h3>
+      <ol style="color: #1e293b; line-height: 1.8;">
+        <li>Click the registration link below</li>
+        <li>Complete the sub-organization registration form</li>
+        <li>Once registered, you'll have full admin access to manage your sub-organization</li>
+      </ol>
+    </div>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{link_url}}" style="display: inline-block; background-color: {{organization_primary_color}}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Set Up the Sub-Organization</a>
+    </div>
+    
+    <p style="color: #64748b; font-size: 14px; margin-top: 20px;">Registration Link: <a href="{{link_url}}" style="color: {{organization_primary_color}};">{{link_url}}</a></p>
+    {{else}}
+    <p>You've been invited to join <strong>{{team_name}}</strong>.</p>
+    <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+      {{#if message_content}}
+      <p style="white-space: pre-wrap;">{{message_content}}</p>
+      {{else}}
+      <p>{{body}}</p>
+      {{/if}}
+    </div>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{link_url}}" style="display: inline-block; background-color: {{organization_primary_color}}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Accept Invitation</a>
+    </div>
+    {{/if}}
+    
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
+      {{email_footer_text}}
+    </div>
+  </div>
 </body>
 </html>`
   };

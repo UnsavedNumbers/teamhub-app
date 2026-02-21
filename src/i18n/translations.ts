@@ -37,6 +37,9 @@ export const en = {
         optional: 'Optional',
         dontCancel: 'Don\'t Cancel',
         close: 'Close',
+        copy: 'Copy',
+        copied: 'Copied',
+        saving: 'Saving...',
         back: 'Back',
         next: 'Next',
         goBack: 'Go Back',
@@ -79,7 +82,6 @@ export const en = {
         searching: 'Searching...',
         search: 'Search',
         adding: 'Adding...',
-        saving: 'Saving...',
         success: 'Success',
         pending: 'Pending',
         mostRecent: 'Most recent',
@@ -3335,10 +3337,87 @@ export const en = {
         subOrgs: {
             title: 'Sub-Organizations',
             subtitle: 'Manage sub-organizations under your organization',
+            newSubtitle: 'Invite a separate admin team to run under your organization umbrella.',
             tabs: {
                 subOrgs: 'Sub-Organizations',
                 requests: 'Requests',
                 settings: 'Settings',
+            },
+            intro: {
+                title: 'What are Sub-Organizations?',
+                paragraph1: 'Sub-organizations are separate admin workspaces under a parent organization. They allow a different admin team to manage their own teams, people, seasons, and operations while still being connected to the parent organization umbrella.',
+                paragraph2: 'Each sub-organization operates independently with its own admin users, teams, athletes, and settings. The parent organization can oversee and manage sub-organizations through settings and approvals.',
+                paragraph3: 'If your organization supports license inheritance, sub-organizations may inherit licensing benefits from the parent organization.',
+                useProgramsWhen: {
+                    title: 'Use Programs and Levels when...',
+                    item1: 'The same admin team runs everything (e.g., sports inside a single school or club)',
+                    item2: 'You need age divisions (8U, 10U, JV, Varsity)',
+                    item3: 'You have travel vs rec programs under one leadership team',
+                    item4: 'Multiple teams share one registration and payment setup',
+                },
+                useSubOrgsWhen: {
+                    title: 'Use Sub-Orgs when...',
+                    item1: 'A different admin team needs their own workspace (e.g., a district overseeing multiple independent schools/campuses)',
+                    item2: 'A multi-location club where each location has separate rosters and admins',
+                    item3: 'A league managing multiple independent clubs, where each club admin runs their own operations',
+                    item4: 'A tournament host onboarding partner organizations as sub-orgs for a season',
+                    item5: 'A parent org allowing partner orgs to register publicly under the umbrella, then manage their own teams',
+                },
+                ruleOfThumb: 'If the same admin team runs everything, use Programs and Levels. If a different admin team needs their own workspace, use a Sub-Org.',
+            },
+            publicUrl: {
+                title: 'Public Sub-Org Registration Link',
+                helper: 'Share this link with a partner admin so they can register under your organization.',
+                noSlug: 'Set your organization slug to generate a public registration link.',
+                setSlug: 'Set Organization Slug',
+            },
+            setup: {
+                title: 'Set up a Sub-Organization',
+                blocked: {
+                    title: 'Add another org admin to continue',
+                    body1: 'Sub-organizations must be managed by a separate org admin user.',
+                    body2: 'Add an org admin, then come back to send setup instructions.',
+                    cta: 'Add Org Admin',
+                },
+            },
+            existing: {
+                title: 'Existing Sub-Organizations',
+            },
+            invite: {
+                fields: {
+                    admin: {
+                        label: 'Sub-organization admin',
+                        required: 'Please select an admin to invite',
+                        noAdmins: 'No eligible admins available',
+                    },
+                    name: {
+                        label: 'Sub organization name',
+                        required: 'Sub organization name is required',
+                        tooShort: 'Sub organization name must be at least 2 characters',
+                        tooLong: 'Sub organization name must be 100 characters or less',
+                        helper: 'The sub-organization admin cannot edit this name later.',
+                    },
+                    note: {
+                        label: 'Note (optional)',
+                        helper: 'This note will be included in the setup email.',
+                    },
+                },
+                submit: 'Send Setup Instructions',
+                success: {
+                    sent: 'Instructions sent to {{name}}.',
+                },
+                error: {
+                    loadingAdmins: 'Failed to load eligible admins',
+                    noAdminSelected: 'Please select an admin to invite',
+                    noPublicUrl: 'Organization slug is required. Please set your organization slug in settings first.',
+                    nameTooShort: 'Sub organization name must be at least 2 characters',
+                    nameTooLong: 'Sub organization name must be 100 characters or less',
+                    sendFailed: 'Failed to send setup instructions',
+                },
+            },
+            inviteModal: {
+                title: 'Invite sub-organization admin',
+                subtitle: 'Send setup instructions to the new org admin.',
             },
             list: {
                 empty: 'No sub-organizations yet.',
@@ -5863,6 +5942,9 @@ export const es = {
         cancel: 'Cancelar',
         dontCancel: 'No cancelar',
         close: 'Cerrar',
+        copy: 'Copiar',
+        copied: 'Copiado',
+        saving: 'Guardando...',
         back: 'Volver',
         next: 'Siguiente',
         goBack: 'Volver',
@@ -5894,7 +5976,6 @@ export const es = {
         searching: 'Buscando...',
         search: 'Buscar',
         adding: 'Agregando...',
-        saving: 'Guardando...',
         success: '??xito',
         pending: 'Pendiente',
         mostRecent: 'Mas reciente',
@@ -8811,10 +8892,87 @@ export const es = {
         subOrgs: {
             title: 'Sub-Organizaciones',
             subtitle: 'Administrar sub-organizaciones bajo su organizaci?n',
+            newSubtitle: 'Invite a un equipo administrativo separado para que funcione bajo el paraguas de su organizaci?n.',
             tabs: {
                 subOrgs: 'Sub-Organizaciones',
                 requests: 'Solicitudes',
                 settings: 'Configuraci?n',
+            },
+            intro: {
+                title: '?Qu? son las Sub-Organizaciones?',
+                paragraph1: 'Las sub-organizaciones son espacios de trabajo administrativos separados bajo una organizaci?n principal. Permiten que un equipo administrativo diferente gestione sus propios equipos, personas, temporadas y operaciones mientras siguen conectados al paraguas de la organizaci?n principal.',
+                paragraph2: 'Cada sub-organizaci?n opera de forma independiente con sus propios usuarios administrativos, equipos, atletas y configuraciones. La organizaci?n principal puede supervisar y gestionar las sub-organizaciones a trav?s de configuraciones y aprobaciones.',
+                paragraph3: 'Si su organizaci?n admite herencia de licencias, las sub-organizaciones pueden heredar beneficios de licencia de la organizaci?n principal.',
+                useProgramsWhen: {
+                    title: 'Use Programas y Niveles cuando...',
+                    item1: 'El mismo equipo administrativo gestiona todo (por ejemplo, deportes dentro de una sola escuela o club)',
+                    item2: 'Necesita divisiones por edad (8U, 10U, JV, Varsity)',
+                    item3: 'Tiene programas de viaje vs recreativos bajo un equipo de liderazgo',
+                    item4: 'M?ltiples equipos comparten una configuraci?n de registro y pago',
+                },
+                useSubOrgsWhen: {
+                    title: 'Use Sub-Organizaciones cuando...',
+                    item1: 'Un equipo administrativo diferente necesita su propio espacio de trabajo (por ejemplo, un distrito que supervisa m?ltiples escuelas/campus independientes)',
+                    item2: 'Un club multi-ubicaci?n donde cada ubicaci?n tiene listas y administradores separados',
+                    item3: 'Una liga que gestiona m?ltiples clubes independientes, donde cada administrador del club ejecuta sus propias operaciones',
+                    item4: 'Un anfitri?n de torneo que incorpora organizaciones asociadas como sub-organizaciones para una temporada',
+                    item5: 'Una organizaci?n principal que permite que las organizaciones asociadas se registren p?blicamente bajo el paraguas, luego gestionen sus propios equipos',
+                },
+                ruleOfThumb: 'Si el mismo equipo administrativo gestiona todo, use Programas y Niveles. Si un equipo administrativo diferente necesita su propio espacio de trabajo, use una Sub-Organizaci?n.',
+            },
+            publicUrl: {
+                title: 'Enlace P?blico de Registro de Sub-Organizaci?n',
+                helper: 'Comparta este enlace con un administrador asociado para que se registre bajo su organizaci?n.',
+                noSlug: 'Configure el slug de su organizaci?n para generar un enlace de registro p?blico.',
+                setSlug: 'Configurar Slug de Organizaci?n',
+            },
+            setup: {
+                title: 'Configurar una Sub-Organizaci?n',
+                blocked: {
+                    title: 'Agregue otro administrador de organizaci?n para continuar',
+                    body1: 'Las sub-organizaciones deben ser gestionadas por un usuario administrador de organizaci?n separado.',
+                    body2: 'Agregue un administrador de organizaci?n, luego regrese para enviar instrucciones de configuraci?n.',
+                    cta: 'Agregar Administrador de Organizaci?n',
+                },
+            },
+            existing: {
+                title: 'Sub-Organizaciones Existentes',
+            },
+            invite: {
+                fields: {
+                    admin: {
+                        label: 'Administrador de sub-organizaci?n',
+                        required: 'Por favor seleccione un administrador para invitar',
+                        noAdmins: 'No hay administradores elegibles disponibles',
+                    },
+                    name: {
+                        label: 'Nombre de la sub-organizaci?n',
+                        required: 'El nombre de la sub-organizaci?n es requerido',
+                        tooShort: 'El nombre de la sub-organizaci?n debe tener al menos 2 caracteres',
+                        tooLong: 'El nombre de la sub-organizaci?n debe tener 100 caracteres o menos',
+                        helper: 'El administrador de la sub-organizaci?n no podr? editar este nombre m?s tarde.',
+                    },
+                    note: {
+                        label: 'Nota (opcional)',
+                        helper: 'Esta nota se incluir? en el correo electr?nico de configuraci?n.',
+                    },
+                },
+                submit: 'Enviar Instrucciones de Configuraci?n',
+                success: {
+                    sent: 'Instrucciones enviadas a {{name}}.',
+                },
+                error: {
+                    loadingAdmins: 'Error al cargar administradores elegibles',
+                    noAdminSelected: 'Por favor seleccione un administrador para invitar',
+                    noPublicUrl: 'Se requiere el slug de la organizaci?n. Por favor configure el slug de su organizaci?n en la configuraci?n primero.',
+                    nameTooShort: 'El nombre de la sub-organizaci?n debe tener al menos 2 caracteres',
+                    nameTooLong: 'El nombre de la sub-organizaci?n debe tener 100 caracteres o menos',
+                    sendFailed: 'Error al enviar instrucciones de configuraci?n',
+                },
+            },
+            inviteModal: {
+                title: 'Invitar administrador de sub-organizaci?n',
+                subtitle: 'Enviar instrucciones de configuraci?n al nuevo administrador de organizaci?n.',
             },
             list: {
                 empty: 'A?n no hay sub-organizaciones.',
