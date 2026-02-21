@@ -5,9 +5,7 @@
  * Organized into 3 tabs with insights and visualizations.
  */
 
-import { ReportingProvider } from '../../../../contexts/ReportingContext'
-import { ReportingLayout } from '../../../../components/reporting/ReportingLayout'
-import { ReportPageLayout } from '../../../../components/reporting/ReportPageLayout'
+import { DomainReportView } from './DomainReportView'
 import { ReportTabs } from '../../../../components/reporting/ReportTabs'
 import { InsightSection } from '../../../../components/reporting/InsightSection'
 import { InsightCallout } from '../../../../components/reporting/InsightCallout'
@@ -203,29 +201,25 @@ function TravelReportContent() {
   )
 
   return (
-    <ReportPageLayout
-      title={t('admin.reporting.travel.title')}
-      description={t('admin.reporting.travel.description') || 'Comprehensive travel analytics with summary metrics, distance/time breakdowns, and equity analysis.'}
-    >
-      <ReportTabs
-        tabs={[
-          { id: 'travel-summary', label: 'Travel Summary', content: travelSummaryTab },
-          { id: 'distance-time', label: 'Distance & Time Breakdown', content: distanceTimeTab },
-          { id: 'equity-load', label: 'Equity & Load', content: equityLoadTab },
-        ]}
-      />
-    </ReportPageLayout>
+    <ReportTabs
+      tabs={[
+        { id: 'travel-summary', label: 'Travel Summary', content: travelSummaryTab },
+        { id: 'distance-time', label: 'Distance & Time Breakdown', content: distanceTimeTab },
+        { id: 'equity-load', label: 'Equity & Load', content: equityLoadTab },
+      ]}
+    />
   )
 }
 
 export default function TravelReport() {
+  const t = useT()
   return (
-    <ReportingProvider>
-      <ReportingLayout>
-        <div style={{ padding: '32px', maxWidth: '1800px', margin: '0 auto', width: '100%' }}>
-          <TravelReportContent />
-        </div>
-      </ReportingLayout>
-    </ReportingProvider>
+    <DomainReportView
+      domain="travel"
+      title={t('admin.reporting.travel.title')}
+      description={t('admin.reporting.travel.description') || 'Comprehensive travel analytics with summary metrics, distance/time breakdowns, and equity analysis.'}
+    >
+      <TravelReportContent />
+    </DomainReportView>
   )
 }

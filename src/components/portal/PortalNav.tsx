@@ -87,6 +87,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
           items: [
             { routeKey: 'admin.organization.base', text: 'Organization Settings', icon: 'settings', path: getLink('admin.organization.base'), description: 'Organization info' },
             { routeKey: 'admin.organization.users', text: 'Users', icon: 'admin_panel_settings', path: getLink('admin.organization.users'), description: 'Access and roles' },
+            { routeKey: 'admin.organization.bulkInvite', text: 'Bulk Invites', icon: 'upload', path: getLink('admin.organization.bulkInvite'), description: 'Onboard multiple users' },
             { routeKey: 'admin.organization.billing', text: 'Billing', icon: 'credit_card', path: getLink('admin.organization.billing'), description: 'Plan and billing' },
           ],
         },

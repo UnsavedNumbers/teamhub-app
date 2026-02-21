@@ -105,11 +105,9 @@ export function InsightSection({
           {kpis.map((kpi, index) => (
             <div
               key={index}
+              className="oa-kpi-card"
               style={{
                 padding: '20px',
-                background: 'var(--org-surface-card)',
-                border: '1px solid var(--org-border-default)',
-                borderRadius: '12px',
               }}
             >
               <div
@@ -166,12 +164,10 @@ export function InsightSection({
       {/* Chart */}
       {chart && (
         <div
+          className="reporting-section-card"
           style={{
             marginBottom: '32px',
             padding: '32px',
-            background: 'var(--org-surface-card)',
-            border: '1px solid var(--org-border-default)',
-            borderRadius: '16px',
           }}
         >
           {chart}
@@ -205,11 +201,9 @@ export function InsightSection({
       {/* Drilldown Table */}
       {drilldownTable && (
         <div
+          className="reporting-section-card"
           style={{
             marginTop: '32px',
-            background: 'var(--org-surface-card)',
-            border: '1px solid var(--org-border-default)',
-            borderRadius: '12px',
             overflow: 'hidden',
           }}
         >

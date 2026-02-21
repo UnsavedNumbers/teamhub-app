@@ -223,8 +223,8 @@ html.dark .oa-mobile-header {
 }
 
 html.dark .oa-sidebar {
-    background-color: var(--pa-n900);
-    border-right: 1px solid var(--pa-n700);
+    background-color: var(--pa-surface, #0a0a0a);
+    border-right: 1px solid var(--pa-border-default, #1a1a1a);
 }
 
 .oa-sidebar-header {
@@ -233,7 +233,7 @@ html.dark .oa-sidebar {
 }
 
 html.dark .oa-sidebar-header {
-    border-bottom: 1px solid var(--pa-n700);
+    border-bottom: 1px solid var(--pa-border-default, #1a1a1a);
 }
 
 .oa-sidebar-brand {
@@ -1724,7 +1724,7 @@ html.dark .oa-tier-assignment-card__configure:hover:not(:disabled) {
    ===================================================================== */
 
 .oa-kpi-card {
-    background: var(--pa-surface);
+    background: var(--pa-surface, #ffffff);
     border: 1px solid var(--pa-n100);
     border-radius: var(--pa-radius-m);
     padding: var(--pa-space-5);
@@ -1739,15 +1739,15 @@ html.dark .oa-tier-assignment-card__configure:hover:not(:disabled) {
 
 /* Dark Mode - KPI Cards with prominent elevation */
 html.dark .oa-kpi-card {
-    background: var(--pa-surface);
-    border: 1px solid var(--pa-border-subtle);
+    background: var(--pa-surface, #0a0a0a);
+    border: none;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 html.dark .oa-kpi-card:hover {
     box-shadow: var(--pa-shadow-2);
-    border-color: var(--pa-border-subtle);
-    background: var(--pa-surface);
+    border: none;
+    background: var(--pa-surface, #0a0a0a);
 }
 
 .oa-kpi-label {

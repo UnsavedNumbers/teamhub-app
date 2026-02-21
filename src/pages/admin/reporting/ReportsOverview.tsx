@@ -147,6 +147,7 @@ function ReportsOverviewContent() {
             <Link
               key={report.path}
               to={report.path}
+              className="reporting-overview-tile"
               style={{
                 display: 'block',
                 padding: '24px',
@@ -159,11 +160,15 @@ function ReportsOverviewContent() {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.boxShadow = 'var(--pa-shadow-1, 0 1px 3px rgba(0,0,0,0.1))'
-                e.currentTarget.style.borderColor = 'var(--pa-n200, #cbd5e1)'
+                if (!document.documentElement.classList.contains('dark')) {
+                  e.currentTarget.style.borderColor = 'var(--pa-n200, #cbd5e1)'
+                }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.boxShadow = 'none'
-                e.currentTarget.style.borderColor = 'var(--pa-n100, #e2e8f0)'
+                if (!document.documentElement.classList.contains('dark')) {
+                  e.currentTarget.style.borderColor = 'var(--pa-n100, #e2e8f0)'
+                }
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
@@ -174,7 +179,7 @@ function ReportsOverviewContent() {
                   {report.icon}
                 </span>
                 <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '600', color: 'var(--pa-n900, #0b0f14)' }}>
+                  <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '600', color: 'var(--org-btn-primary-bg, var(--org-color-primary, #3b82f6))' }}>
                     {report.title}
                   </h3>
                   <p style={{ margin: 0, fontSize: '14px', color: 'var(--pa-n500, #6b7280)', lineHeight: '1.5' }}>

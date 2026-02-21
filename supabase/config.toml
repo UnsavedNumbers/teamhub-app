@@ -412,6 +412,9 @@ verify_jwt = false
 [functions.ticketing-events-api]
 verify_jwt = false
 
+[functions.bulk-invite-generate-template]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

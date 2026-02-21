@@ -5,18 +5,18 @@
  * Organized into 4 tabs with insights and visualizations.
  */
 
-import { ReportingProvider } from '../../../contexts/ReportingContext'
-import { ReportingLayout } from '../../../components/reporting/ReportingLayout'
-import { ReportPageLayout } from '../../../components/reporting/ReportPageLayout'
+import { DomainReportView } from './domain/DomainReportView'
 import { ReportTabs } from '../../../components/reporting/ReportTabs'
 import { InsightSection } from '../../../components/reporting/InsightSection'
 import { InsightCallout } from '../../../components/reporting/InsightCallout'
 import { EmptyState } from '../../../components/reporting/EmptyState'
 import { useTicketingMetrics } from '../../../hooks/useReporting'
 import { useReporting } from '../../../contexts/ReportingContext'
+import { useT } from '../../../i18n/useI18n'
 import { TimeSeriesChart, BarChart, PieChart } from '../../../components/reporting/charts'
 
 function TicketingReportContent() {
+  const t = useT()
   const { filters } = useReporting()
   const { data: ticketingMetrics, isLoading, error } = useTicketingMetrics(filters)
 
@@ -30,8 +30,8 @@ function TicketingReportContent() {
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: '80px' }}>
-        <p style={{ fontSize: '16px', color: 'var(--org-text-secondary)' }}>Loading...</p>
+      <div style={{ textAlign: 'center', padding: '48px' }}>
+        <p className="oa-body-m">{t('common.loading')}</p>
       </div>
     )
   }
@@ -39,8 +39,8 @@ function TicketingReportContent() {
   if (error || !ticketingMetrics) {
     return (
       <EmptyState
-        title="Unable to load ticketing data"
-        description="There was an error loading the ticketing metrics. Please try again or contact support if the issue persists."
+        title={t('admin.reporting.ticketing.error.title') || 'Unable to load ticketing data'}
+        description={error?.message || t('admin.reporting.ticketing.error.description') || 'There was an error loading the ticketing metrics. Please try again or contact support if the issue persists.'}
         icon="error"
       />
     )
@@ -304,30 +304,26 @@ function TicketingReportContent() {
   )
 
   return (
-    <ReportPageLayout
-      title="Ticketing & Gate"
-      description="Comprehensive ticket sales analytics, event performance, buyer behavior, and gate operations insights."
-    >
-      <ReportTabs
-        tabs={[
-          { id: 'sales-snapshot', label: 'Ticket Sales Snapshot', content: ticketSalesTab },
-          { id: 'event-performance', label: 'Event Performance', content: eventPerformanceTab },
-          { id: 'buyer-behavior', label: 'Buyer Behavior', content: buyerBehaviorTab },
-          { id: 'gate-operations', label: 'Gate Operations', content: gateOperationsTab },
-        ]}
-      />
-    </ReportPageLayout>
+    <ReportTabs
+      tabs={[
+        { id: 'sales-snapshot', label: 'Ticket Sales Snapshot', content: ticketSalesTab },
+        { id: 'event-performance', label: 'Event Performance', content: eventPerformanceTab },
+        { id: 'buyer-behavior', label: 'Buyer Behavior', content: buyerBehaviorTab },
+        { id: 'gate-operations', label: 'Gate Operations', content: gateOperationsTab },
+      ]}
+    />
   )
 }
 
 export default function TicketingReport() {
+  const t = useT()
   return (
-    <ReportingProvider>
-      <ReportingLayout>
-        <div style={{ padding: '32px', maxWidth: '1800px', margin: '0 auto', width: '100%' }}>
-          <TicketingReportContent />
-        </div>
-      </ReportingLayout>
-    </ReportingProvider>
+    <DomainReportView
+      domain="ticketing"
+      title={t('admin.reporting.ticketing.title') || 'Ticketing & Gate'}
+      description={t('admin.reporting.ticketing.description') || 'Comprehensive ticket sales analytics, event performance, buyer behavior, and gate operations insights.'}
+    >
+      <TicketingReportContent />
+    </DomainReportView>
   )
 }

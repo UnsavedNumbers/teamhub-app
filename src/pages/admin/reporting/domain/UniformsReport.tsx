@@ -5,9 +5,7 @@
  * Organized into 3 tabs with insights and visualizations.
  */
 
-import { ReportingProvider } from '../../../../contexts/ReportingContext'
-import { ReportingLayout } from '../../../../components/reporting/ReportingLayout'
-import { ReportPageLayout } from '../../../../components/reporting/ReportPageLayout'
+import { DomainReportView } from './DomainReportView'
 import { ReportTabs } from '../../../../components/reporting/ReportTabs'
 import { InsightSection } from '../../../../components/reporting/InsightSection'
 import { InsightCallout } from '../../../../components/reporting/InsightCallout'
@@ -28,8 +26,8 @@ function UniformsReportContent() {
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: '80px' }}>
-        <p style={{ fontSize: '16px', color: 'var(--org-text-secondary)' }}>Loading...</p>
+      <div style={{ textAlign: 'center', padding: '48px' }}>
+        <p className="oa-body-m">{t('common.loading')}</p>
       </div>
     )
   }
@@ -37,8 +35,8 @@ function UniformsReportContent() {
   if (error || !metrics) {
     return (
       <EmptyState
-        title="Unable to load uniforms data"
-        description="There was an error loading the uniforms metrics. Please try again or contact support if the issue persists."
+        title={t('admin.reporting.uniforms.error.title') || 'Unable to load uniforms data'}
+        description={error?.message || t('admin.reporting.uniforms.error.description') || 'There was an error loading the uniforms metrics. Please try again or contact support if the issue persists.'}
         icon="error"
       />
     )
@@ -206,29 +204,25 @@ function UniformsReportContent() {
   )
 
   return (
-    <ReportPageLayout
-      title={t('admin.reporting.uniforms.title')}
-      description={t('admin.reporting.uniforms.description') || 'Comprehensive uniforms analytics with order tracking, fulfillment monitoring, and inventory insights.'}
-    >
-      <ReportTabs
-        tabs={[
-          { id: 'orders-snapshot', label: 'Orders Snapshot', content: ordersSnapshotTab },
-          { id: 'fulfillment-issues', label: 'Fulfillment & Issues', content: fulfillmentIssuesTab },
-          { id: 'inventory', label: 'Inventory', content: inventoryTab },
-        ]}
-      />
-    </ReportPageLayout>
+    <ReportTabs
+      tabs={[
+        { id: 'orders-snapshot', label: 'Orders Snapshot', content: ordersSnapshotTab },
+        { id: 'fulfillment-issues', label: 'Fulfillment & Issues', content: fulfillmentIssuesTab },
+        { id: 'inventory', label: 'Inventory', content: inventoryTab },
+      ]}
+    />
   )
 }
 
 export default function UniformsReport() {
+  const t = useT()
   return (
-    <ReportingProvider>
-      <ReportingLayout>
-        <div style={{ padding: '32px', maxWidth: '1800px', margin: '0 auto', width: '100%' }}>
-          <UniformsReportContent />
-        </div>
-      </ReportingLayout>
-    </ReportingProvider>
+    <DomainReportView
+      domain="uniforms"
+      title={t('admin.reporting.uniforms.title')}
+      description={t('admin.reporting.uniforms.description') || 'Comprehensive uniforms analytics with order tracking, fulfillment monitoring, and inventory insights.'}
+    >
+      <UniformsReportContent />
+    </DomainReportView>
   )
 }

@@ -29,7 +29,7 @@ function SchedulingReportContent() {
   if (isLoading) {
     return (
       <div style={{ textAlign: 'center', padding: '80px' }}>
-        <p style={{ fontSize: '16px', color: 'var(--org-text-secondary)' }}>Loading...</p>
+        <p className="oa-body-m">{t('common.loading')}</p>
       </div>
     )
   }
@@ -37,8 +37,8 @@ function SchedulingReportContent() {
   if (error || !metrics) {
     return (
       <EmptyState
-        title="Unable to load scheduling data"
-        description="There was an error loading the scheduling metrics. Please try again or contact support if the issue persists."
+        title={t('admin.reporting.scheduling.error.title') || 'Unable to load scheduling data'}
+        description={error?.message || t('admin.reporting.scheduling.error.description') || 'There was an error loading the scheduling metrics. Please try again or contact support if the issue persists.'}
         icon="error"
       />
     )

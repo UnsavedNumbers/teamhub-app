@@ -50,9 +50,9 @@ function ErrorsReportContent() {
 
       {/* Payment Failures Over Time */}
       {errorsMetrics.paymentFailuresOverTime && errorsMetrics.paymentFailuresOverTime.length > 0 && (
-        <div style={{ marginBottom: '32px', background: 'var(--pa-surface)', border: '1px solid var(--pa-n100)', borderRadius: 'var(--pa-radius-m)', padding: '24px' }}>
+        <div style={{ marginBottom: '32px' }} className="reporting-section-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: 'var(--pa-n900)' }}>Payment Failures Over Time</h3>
+            <h3 className="reporting-section-title" style={{ margin: 0 }}>Payment Failures Over Time</h3>
             <ExportButton data={errorsMetrics.paymentFailuresOverTime} filename="payment-failures-over-time" />
           </div>
           <TimeSeriesChart
@@ -72,9 +72,9 @@ function ErrorsReportContent() {
 
       {/* Payment Failure Reasons */}
       {errorsMetrics.paymentFailureReasons && errorsMetrics.paymentFailureReasons.length > 0 && (
-        <div style={{ marginBottom: '32px', background: 'var(--pa-surface)', border: '1px solid var(--pa-n100)', borderRadius: 'var(--pa-radius-m)', padding: '24px' }}>
+        <div style={{ marginBottom: '32px' }} className="reporting-section-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: 'var(--pa-n900)' }}>Payment Failure Reasons</h3>
+            <h3 className="reporting-section-title" style={{ margin: 0 }}>Payment Failure Reasons</h3>
             <ExportButton data={errorsMetrics.paymentFailureReasons} filename="payment-failure-reasons" />
           </div>
           <PieChart
@@ -91,9 +91,9 @@ function ErrorsReportContent() {
 
       {/* Error Types Breakdown */}
       {errorsMetrics.errorTypesBreakdown && errorsMetrics.errorTypesBreakdown.length > 0 && (
-        <div style={{ marginBottom: '32px', background: 'var(--pa-surface)', border: '1px solid var(--pa-n100)', borderRadius: 'var(--pa-radius-m)', padding: '24px' }}>
+        <div style={{ marginBottom: '32px' }} className="reporting-section-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: 'var(--pa-n900)' }}>Error Types Breakdown</h3>
+            <h3 className="reporting-section-title" style={{ margin: 0 }}>Error Types Breakdown</h3>
             <ExportButton data={errorsMetrics.errorTypesBreakdown} filename="error-types-breakdown" />
           </div>
           <BarChart

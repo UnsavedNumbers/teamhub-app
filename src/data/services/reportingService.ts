@@ -34,6 +34,7 @@ import type {
   VideoMetrics,
   EventsMetrics,
   ErrorsMetrics,
+  TimeSeriesDataPoint,
 } from '../../types/reporting'
 import type { Json } from '../../lib/database.types'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
@@ -1174,21 +1175,21 @@ export async function getOrgHealthMetrics(
       return await getFakeOrgHealthMetrics(filters)
     }
 
-    const { data, error } = await supabase.rpc('get_org_health_metrics', {
-      org_id: filters.orgId,
+    // Try RPC function first
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_org_health_metrics', {
+      p_org_id: filters.orgId,
+      p_sub_org_id: filters.subOrgId || null,
+      p_date_start: filters.dateRange?.start || null,
+      p_date_end: filters.dateRange?.end || null,
     })
 
-    if (error) {
-      // Fall back to fake data if function doesn't exist (development/demo scenarios)
-      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
-        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
-        return await getFakeOrgHealthMetrics(filters)
-      }
-      debug.error('Failed to fetch org health metrics', error?.message || String(error))
-      return { data: null, error: classifySupabaseError(error) }
+    if (!rpcError && rpcData) {
+      return { data: (rpcData as unknown) as OrgHealthMetrics, error: null }
     }
 
-    return { data: (data as unknown) as OrgHealthMetrics, error: null }
+    // When USE_FAKE_DATA is false, return error instead of falling back to fake data
+    debug.error('Failed to fetch org health metrics', rpcError?.message || String(rpcError))
+    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch org health metrics') }
   } catch (err) {
     debug.error('Error fetching org health metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1212,21 +1213,23 @@ export async function getParticipationMetrics(
       return await getFakeParticipationMetrics(filters)
     }
 
-    const { data, error } = await supabase.rpc('get_participation_metrics', {
-      org_id: filters.orgId,
+    // Try RPC function first
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_participation_metrics', {
+      p_org_id: filters.orgId,
+      p_sub_org_id: filters.subOrgId || null,
+      p_season_id: filters.seasonId || null,
+      p_team_id: filters.teamId || null,
+      p_date_start: filters.dateRange?.start || null,
+      p_date_end: filters.dateRange?.end || null,
     })
 
-    if (error) {
-      // Fall back to fake data if function doesn't exist (development/demo scenarios)
-      if (error.message?.includes('Could not find the function') || error.message?.includes('function') && error.message?.includes('not found')) {
-        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
-        return await getFakeParticipationMetrics(filters)
-      }
-      debug.error('Failed to fetch participation metrics', error?.message || String(error))
-      return { data: null, error: classifySupabaseError(error) }
+    if (!rpcError && rpcData) {
+      return { data: (rpcData as unknown) as ParticipationMetrics, error: null }
     }
 
-    return { data: (data as unknown) as ParticipationMetrics, error: null }
+    // When USE_FAKE_DATA is false, return error instead of falling back to fake data
+    debug.error('Failed to fetch participation metrics', rpcError?.message || String(rpcError))
+    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch participation metrics') }
   } catch (err) {
     debug.error('Error fetching participation metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1250,21 +1253,173 @@ export async function getSchedulingMetrics(
       return await getFakeSchedulingMetrics(filters)
     }
 
-    const { data, error } = await supabase.rpc('get_scheduling_metrics', {
-      org_id: filters.orgId,
+    // Try RPC function first
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_scheduling_metrics', {
+      p_org_id: filters.orgId,
+      p_sub_org_id: filters.subOrgId || null,
+      p_season_id: filters.seasonId || null,
+      p_sport_id: filters.sportId || null,
+      p_program_id: filters.programId || null,
+      p_level_id: filters.levelId || null,
+      p_team_id: filters.teamId || null,
+      p_date_start: filters.dateRange?.start || null,
+      p_date_end: filters.dateRange?.end || null,
     })
 
-    if (error) {
-      // Fall back to fake data if function doesn't exist (development/demo scenarios)
-      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
-        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
-        return await getFakeSchedulingMetrics(filters)
-      }
-      debug.error('Failed to fetch scheduling metrics', error?.message || String(error))
-      return { data: null, error: classifySupabaseError(error) }
+    if (!rpcError && rpcData) {
+      return { data: (rpcData as unknown) as SchedulingMetrics, error: null }
     }
 
-    return { data: (data as unknown) as SchedulingMetrics, error: null }
+    // When USE_FAKE_DATA is false, return error instead of falling back to fake data
+    debug.error('Failed to fetch scheduling metrics', rpcError?.message || String(rpcError))
+    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch scheduling metrics') }
+    let eventsQuery = supabase
+      .from('events')
+      .select('id, title, start_time, end_time, is_cancelled, team_id, type, teams(name)')
+      .eq('org_id', filters.orgId)
+
+    if (filters.dateRange) {
+      eventsQuery = eventsQuery.gte('start_time', filters.dateRange.start).lte('start_time', filters.dateRange.end)
+    }
+
+    const { data: events, error: eventsError } = await eventsQuery
+
+    if (eventsError) {
+      debug.error('Failed to fetch events', eventsError?.message || String(eventsError))
+      return { data: null, error: classifySupabaseError(eventsError) }
+    }
+
+    // Group events by type
+    const eventsByTypeMap = new Map<string, number>()
+    ;(events || []).forEach((e: any) => {
+      const type = e.type || 'other'
+      eventsByTypeMap.set(type, (eventsByTypeMap.get(type) || 0) + 1)
+    })
+
+    const eventsByType = Array.from(eventsByTypeMap.entries()).map(([type, count]) => ({ type, count }))
+
+    // Query attendance data
+    const eventIds = (events || []).map((e: any) => e.id)
+    const { data: attendance } = eventIds.length > 0
+      ? await supabase
+          .from('attendance')
+          .select('event_id, status, events!inner(team_id, teams(name))')
+          .in('event_id', eventIds)
+      : { data: [], error: null }
+
+    // Query RSVP data
+    const { data: rsvps } = eventIds.length > 0
+      ? await supabase
+          .from('event_rsvps')
+          .select('event_id, status, events!inner(team_id, teams(name))')
+          .in('event_id', eventIds)
+      : { data: [], error: null }
+
+    // Calculate attendance rates by team
+    const teamAttendanceMap = new Map<string, { total: number; going: number }>()
+    ;(attendance || []).forEach((a: any) => {
+      const teamName = a.events?.teams?.name || 'Unknown'
+      const current = teamAttendanceMap.get(teamName) || { total: 0, going: 0 }
+      teamAttendanceMap.set(teamName, {
+        total: current.total + 1,
+        going: current.going + (a.status === 'going' ? 1 : 0),
+      })
+    })
+
+    // Get team IDs for attendance rates
+    const teamIds = [...new Set((events || []).map((e: any) => e.team_id).filter(Boolean))]
+    const { data: teams } = teamIds.length > 0
+      ? await supabase
+          .from('teams')
+          .select('id, name')
+          .in('id', teamIds)
+      : { data: [], error: null }
+
+    const teamMap = new Map<string, string>()
+    ;(teams || []).forEach((team: any) => {
+      teamMap.set(team.id, team.name || 'Unknown')
+    })
+
+    const attendanceRates = Array.from(teamAttendanceMap.entries()).map(([teamName, stats]) => {
+      // Find team ID by name
+      const teamId = Array.from(teamMap.entries()).find(([_, name]) => name === teamName)?.[0] || ''
+      return {
+        teamId,
+        teamName,
+        rate: stats.total > 0 ? (stats.going / stats.total) * 100 : 0,
+      }
+    })
+
+    // Calculate RSVP rates by team
+    const teamRsvpMap = new Map<string, { total: number; responded: number }>()
+    ;(rsvps || []).forEach((r: any) => {
+      const teamName = r.events?.teams?.name || 'Unknown'
+      const current = teamRsvpMap.get(teamName) || { total: 0, responded: 0 }
+      teamRsvpMap.set(teamName, {
+        total: current.total + 1,
+        responded: current.responded + 1,
+      })
+    })
+
+    const rsvpRates = Array.from(teamRsvpMap.entries()).map(([teamName, stats]) => {
+      const teamId = Array.from(teamMap.entries()).find(([_, name]) => name === teamName)?.[0] || ''
+      return {
+        teamId,
+        teamName,
+        rate: stats.total > 0 ? (stats.responded / stats.total) * 100 : 0,
+      }
+    })
+
+    // Detect scheduling conflicts (events with overlapping times for same team)
+    const conflicts: Array<{ teamName: string; conflictCount: number }> = []
+    const teamEventsMap = new Map<string, Array<{ id: string; starts_at: string; ends_at: string }>>()
+    ;(events || []).forEach((e: any) => {
+      if (e.team_id && e.start_time) {
+        const teamName = e.teams?.name || 'Unknown'
+        const current = teamEventsMap.get(teamName) || []
+        current.push({
+          id: e.id,
+          starts_at: e.start_time,
+          ends_at: e.end_time || e.start_time,
+        })
+        teamEventsMap.set(teamName, current)
+      }
+    })
+
+    teamEventsMap.forEach((teamEvents, teamName) => {
+      let conflictCount = 0
+      for (let i = 0; i < teamEvents.length; i++) {
+        for (let j = i + 1; j < teamEvents.length; j++) {
+          const e1 = teamEvents[i]
+          const e2 = teamEvents[j]
+          if (
+            (e1.starts_at <= e2.starts_at && e1.ends_at >= e2.starts_at) ||
+            (e2.starts_at <= e1.starts_at && e2.ends_at >= e1.starts_at)
+          ) {
+            conflictCount++
+          }
+        }
+      }
+      if (conflictCount > 0) {
+        const teamId = Array.from(teamMap.entries()).find(([_, name]) => name === teamName)?.[0] || ''
+        conflicts.push({ teamId, teamName, conflictCount })
+      }
+    })
+
+    // Calculate no-response list (athletes who haven't RSVP'd to events)
+    const noResponseList: Array<{ eventId: string; eventName: string; athleteId: string; athleteName: string }> = []
+    // This would require querying athletes assigned to teams and comparing with RSVPs
+    // For now, return empty array
+
+    const schedulingMetrics: SchedulingMetrics = {
+      eventsByType,
+      attendanceRates,
+      rsvpRates,
+      conflicts,
+      noResponseList,
+    }
+
+    return { data: schedulingMetrics, error: null }
   } catch (err) {
     debug.error('Error fetching scheduling metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1288,21 +1443,26 @@ export async function getTravelMetrics(
       return await getFakeTravelMetrics(filters)
     }
 
-    const { data, error } = await supabase.rpc('get_travel_metrics', {
-      org_id: filters.orgId,
+    // Try RPC function first
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_travel_metrics', {
+      p_org_id: filters.orgId,
+      p_sub_org_id: filters.subOrgId || null,
+      p_season_id: filters.seasonId || null,
+      p_sport_id: filters.sportId || null,
+      p_program_id: filters.programId || null,
+      p_level_id: filters.levelId || null,
+      p_team_id: filters.teamId || null,
+      p_date_start: filters.dateRange?.start || null,
+      p_date_end: filters.dateRange?.end || null,
     })
 
-    if (error) {
-      // Fall back to fake data if function doesn't exist (development/demo scenarios)
-      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
-        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
-        return await getFakeTravelMetrics(filters)
-      }
-      debug.error('Failed to fetch travel metrics', error?.message || String(error))
-      return { data: null, error: classifySupabaseError(error) }
+    if (!rpcError && rpcData) {
+      return { data: (rpcData as unknown) as TravelMetrics, error: null }
     }
 
-    return { data: (data as unknown) as TravelMetrics, error: null }
+    // When USE_FAKE_DATA is false, return error instead of falling back to fake data
+    debug.error('Failed to fetch travel metrics', rpcError?.message || String(rpcError))
+    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch travel metrics') }
   } catch (err) {
     debug.error('Error fetching travel metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1327,15 +1487,19 @@ export async function getPaymentMetrics(
     }
 
     const { data, error } = await supabase.rpc('get_payment_metrics', {
-      org_id: filters.orgId,
+      p_org_id: filters.orgId,
+      p_sub_org_id: filters.subOrgId || null,
+      p_season_id: filters.seasonId || null,
+      p_sport_id: filters.sportId || null,
+      p_program_id: filters.programId || null,
+      p_level_id: filters.levelId || null,
+      p_team_id: filters.teamId || null,
+      p_date_start: filters.dateRange?.start || null,
+      p_date_end: filters.dateRange?.end || null,
     })
 
     if (error) {
-      // Fall back to fake data if function doesn't exist (development/demo scenarios)
-      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
-        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
-        return await getFakePaymentMetrics(filters)
-      }
+      // When USE_FAKE_DATA is false, return error instead of falling back to fake data
       debug.error('Failed to fetch payment metrics', error?.message || String(error))
       return { data: null, error: classifySupabaseError(error) }
     }
@@ -1364,21 +1528,26 @@ export async function getUniformMetrics(
       return await getFakeUniformMetrics(filters)
     }
 
-    const { data, error } = await supabase.rpc('get_uniform_metrics', {
-      org_id: filters.orgId,
+    // Try RPC function first
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_uniform_metrics', {
+      p_org_id: filters.orgId,
+      p_sub_org_id: filters.subOrgId || null,
+      p_season_id: filters.seasonId || null,
+      p_sport_id: filters.sportId || null,
+      p_program_id: filters.programId || null,
+      p_level_id: filters.levelId || null,
+      p_team_id: filters.teamId || null,
+      p_date_start: filters.dateRange?.start || null,
+      p_date_end: filters.dateRange?.end || null,
     })
 
-    if (error) {
-      // Fall back to fake data if function doesn't exist (development/demo scenarios)
-      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
-        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
-        return await getFakeUniformMetrics(filters)
-      }
-      debug.error('Failed to fetch uniform metrics', error?.message || String(error))
-      return { data: null, error: classifySupabaseError(error) }
+    if (!rpcError && rpcData) {
+      return { data: (rpcData as unknown) as UniformMetrics, error: null }
     }
 
-    return { data: (data as unknown) as UniformMetrics, error: null }
+    // When USE_FAKE_DATA is false, return error instead of falling back to fake data
+    debug.error('Failed to fetch uniform metrics', rpcError?.message || String(rpcError))
+    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch uniform metrics') }
   } catch (err) {
     debug.error('Error fetching uniform metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1402,21 +1571,26 @@ export async function getCommunicationMetrics(
       return await getFakeCommunicationMetrics(filters)
     }
 
-    const { data, error } = await supabase.rpc('get_communication_metrics', {
-      org_id: filters.orgId,
+    // Try RPC function first
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_communication_metrics', {
+      p_org_id: filters.orgId,
+      p_sub_org_id: filters.subOrgId || null,
+      p_season_id: filters.seasonId || null,
+      p_sport_id: filters.sportId || null,
+      p_program_id: filters.programId || null,
+      p_level_id: filters.levelId || null,
+      p_team_id: filters.teamId || null,
+      p_date_start: filters.dateRange?.start || null,
+      p_date_end: filters.dateRange?.end || null,
     })
 
-    if (error) {
-      // Fall back to fake data if function doesn't exist (development/demo scenarios)
-      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
-        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
-        return await getFakeCommunicationMetrics(filters)
-      }
-      debug.error('Failed to fetch communication metrics', error?.message || String(error))
-      return { data: null, error: classifySupabaseError(error) }
+    if (!rpcError && rpcData) {
+      return { data: (rpcData as unknown) as CommunicationMetrics, error: null }
     }
 
-    return { data: (data as unknown) as CommunicationMetrics, error: null }
+    // When USE_FAKE_DATA is false, return error instead of falling back to fake data
+    debug.error('Failed to fetch communication metrics', rpcError?.message || String(rpcError))
+    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch communication metrics') }
   } catch (err) {
     debug.error('Error fetching communication metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1440,21 +1614,21 @@ export async function getOperationsMetrics(
       return await getFakeOperationsMetrics(filters)
     }
 
-    const { data, error } = await supabase.rpc('get_operations_metrics', {
-      org_id: filters.orgId,
+    // Try RPC function first
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_operations_metrics', {
+      p_org_id: filters.orgId,
+      p_sub_org_id: filters.subOrgId || null,
+      p_date_start: filters.dateRange?.start || null,
+      p_date_end: filters.dateRange?.end || null,
     })
 
-    if (error) {
-      // Fall back to fake data if function doesn't exist (development/demo scenarios)
-      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
-        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
-        return await getFakeOperationsMetrics(filters)
-      }
-      debug.error('Failed to fetch operations metrics', error?.message || String(error))
-      return { data: null, error: classifySupabaseError(error) }
+    if (!rpcError && rpcData) {
+      return { data: (rpcData as unknown) as OperationsMetrics, error: null }
     }
 
-    return { data: (data as unknown) as OperationsMetrics, error: null }
+    // When USE_FAKE_DATA is false, return error instead of falling back to fake data
+    debug.error('Failed to fetch operations metrics', rpcError?.message || String(rpcError))
+    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch operations metrics') }
   } catch (err) {
     debug.error('Error fetching operations metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1478,20 +1652,26 @@ export async function getRevenueMetrics(
       return await getFakeRevenueMetrics(filters)
     }
 
-    const { data, error } = await (supabase.rpc as any)('get_revenue_metrics', {
-      org_id: filters.orgId,
+    // Try RPC function first
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_revenue_metrics', {
+      p_org_id: filters.orgId,
+      p_sub_org_id: filters.subOrgId || null,
+      p_season_id: filters.seasonId || null,
+      p_sport_id: filters.sportId || null,
+      p_program_id: filters.programId || null,
+      p_level_id: filters.levelId || null,
+      p_team_id: filters.teamId || null,
+      p_date_start: filters.dateRange?.start || null,
+      p_date_end: filters.dateRange?.end || null,
     })
 
-    if (error) {
-      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
-        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
-        return await getFakeRevenueMetrics(filters)
-      }
-      debug.error('Failed to fetch revenue metrics', error?.message || String(error))
-      return { data: null, error: classifySupabaseError(error) }
+    if (!rpcError && rpcData) {
+      return { data: (rpcData as unknown) as RevenueMetrics, error: null }
     }
 
-    return { data: (data as unknown) as RevenueMetrics, error: null }
+    // When USE_FAKE_DATA is false, return error instead of falling back to fake data
+    debug.error('Failed to fetch revenue metrics', rpcError?.message || String(rpcError))
+    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch revenue metrics') }
   } catch (err) {
     debug.error('Error fetching revenue metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1515,20 +1695,23 @@ export async function getTicketingMetrics(
       return await getFakeTicketingMetrics(filters)
     }
 
-    const { data, error } = await (supabase.rpc as any)('get_ticketing_metrics', {
-      org_id: filters.orgId,
+    // Try RPC function first
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_ticketing_metrics', {
+      p_org_id: filters.orgId,
+      p_sub_org_id: filters.subOrgId || null,
+      p_season_id: filters.seasonId || null,
+      p_sport_id: filters.sportId || null,
+      p_program_id: filters.programId || null,
+      p_level_id: filters.levelId || null,
+      p_team_id: filters.teamId || null,
+      p_date_start: filters.dateRange?.start || null,
+      p_date_end: filters.dateRange?.end || null,
     })
 
-    if (error) {
-      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
-        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
-        return await getFakeTicketingMetrics(filters)
-      }
-      debug.error('Failed to fetch ticketing metrics', error?.message || String(error))
-      return { data: null, error: classifySupabaseError(error) }
+    if (!rpcError && rpcData) {
+      return { data: (rpcData as unknown) as TicketingMetrics, error: null }
     }
 
-    return { data: (data as unknown) as TicketingMetrics, error: null }
   } catch (err) {
     debug.error('Error fetching ticketing metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1552,20 +1735,21 @@ export async function getRegistrationMetrics(
       return await getFakeRegistrationMetrics(filters)
     }
 
-    const { data, error } = await (supabase.rpc as any)('get_registration_metrics', {
-      org_id: filters.orgId,
+    // Try RPC function first
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_registration_metrics', {
+      p_org_id: filters.orgId,
+      p_sub_org_id: filters.subOrgId || null,
+      p_date_start: filters.dateRange?.start || null,
+      p_date_end: filters.dateRange?.end || null,
     })
 
-    if (error) {
-      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
-        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
-        return await getFakeRegistrationMetrics(filters)
-      }
-      debug.error('Failed to fetch registration metrics', error?.message || String(error))
-      return { data: null, error: classifySupabaseError(error) }
+    if (!rpcError && rpcData) {
+      return { data: (rpcData as unknown) as RegistrationMetrics, error: null }
     }
 
-    return { data: (data as unknown) as RegistrationMetrics, error: null }
+    // When USE_FAKE_DATA is false, return error instead of falling back to fake data
+    debug.error('Failed to fetch registration metrics', rpcError?.message || String(rpcError))
+    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch registration metrics') }
   } catch (err) {
     debug.error('Error fetching registration metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1589,20 +1773,26 @@ export async function getVideoMetrics(
       return await getFakeVideoMetrics(filters)
     }
 
-    const { data, error } = await (supabase.rpc as any)('get_video_metrics', {
-      org_id: filters.orgId,
+    // Try RPC function first
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_video_metrics', {
+      p_org_id: filters.orgId,
+      p_sub_org_id: filters.subOrgId || null,
+      p_season_id: filters.seasonId || null,
+      p_sport_id: filters.sportId || null,
+      p_program_id: filters.programId || null,
+      p_level_id: filters.levelId || null,
+      p_team_id: filters.teamId || null,
+      p_date_start: filters.dateRange?.start || null,
+      p_date_end: filters.dateRange?.end || null,
     })
 
-    if (error) {
-      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
-        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
-        return await getFakeVideoMetrics(filters)
-      }
-      debug.error('Failed to fetch video metrics', error?.message || String(error))
-      return { data: null, error: classifySupabaseError(error) }
+    if (!rpcError && rpcData) {
+      return { data: (rpcData as unknown) as VideoMetrics, error: null }
     }
 
-    return { data: (data as unknown) as VideoMetrics, error: null }
+    // When USE_FAKE_DATA is false, return error instead of falling back to fake data
+    debug.error('Failed to fetch video metrics', rpcError?.message || String(rpcError))
+    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch video metrics') }
   } catch (err) {
     debug.error('Error fetching video metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1626,20 +1816,23 @@ export async function getEventsMetrics(
       return await getFakeEventsMetrics(filters)
     }
 
-    const { data, error } = await (supabase.rpc as any)('get_events_metrics', {
-      org_id: filters.orgId,
+    // Try RPC function first
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_events_metrics', {
+      p_org_id: filters.orgId,
+      p_sub_org_id: filters.subOrgId || null,
+      p_season_id: filters.seasonId || null,
+      p_sport_id: filters.sportId || null,
+      p_program_id: filters.programId || null,
+      p_level_id: filters.levelId || null,
+      p_team_id: filters.teamId || null,
+      p_date_start: filters.dateRange?.start || null,
+      p_date_end: filters.dateRange?.end || null,
     })
 
-    if (error) {
-      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
-        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
-        return await getFakeEventsMetrics(filters)
-      }
-      debug.error('Failed to fetch events metrics', error?.message || String(error))
-      return { data: null, error: classifySupabaseError(error) }
+    if (!rpcError && rpcData) {
+      return { data: (rpcData as unknown) as EventsMetrics, error: null }
     }
 
-    return { data: (data as unknown) as EventsMetrics, error: null }
   } catch (err) {
     debug.error('Error fetching events metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1663,20 +1856,26 @@ export async function getErrorsMetrics(
       return await getFakeErrorsMetrics(filters)
     }
 
-    const { data, error } = await (supabase.rpc as any)('get_errors_metrics', {
-      org_id: filters.orgId,
+    // Try RPC function first
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_errors_metrics', {
+      p_org_id: filters.orgId,
+      p_sub_org_id: filters.subOrgId || null,
+      p_season_id: filters.seasonId || null,
+      p_sport_id: filters.sportId || null,
+      p_program_id: filters.programId || null,
+      p_level_id: filters.levelId || null,
+      p_team_id: filters.teamId || null,
+      p_date_start: filters.dateRange?.start || null,
+      p_date_end: filters.dateRange?.end || null,
     })
 
-    if (error) {
-      if (error.message?.includes('Could not find the function') || (error.message?.includes('function') && error.message?.includes('not found'))) {
-        debug.error('RPC function not found, falling back to fake data', error?.message || String(error))
-        return await getFakeErrorsMetrics(filters)
-      }
-      debug.error('Failed to fetch errors metrics', error?.message || String(error))
-      return { data: null, error: classifySupabaseError(error) }
+    if (!rpcError && rpcData) {
+      return { data: (rpcData as unknown) as ErrorsMetrics, error: null }
     }
 
-    return { data: (data as unknown) as ErrorsMetrics, error: null }
+    // When USE_FAKE_DATA is false, return error instead of falling back to fake data
+    debug.error('Failed to fetch errors metrics', rpcError?.message || String(rpcError))
+    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch errors metrics') }
   } catch (err) {
     debug.error('Error fetching errors metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }

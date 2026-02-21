@@ -5,9 +5,7 @@
  * Organized into 3 tabs with insights and visualizations.
  */
 
-import { ReportingProvider } from '../../../../contexts/ReportingContext'
-import { ReportingLayout } from '../../../../components/reporting/ReportingLayout'
-import { ReportPageLayout } from '../../../../components/reporting/ReportPageLayout'
+import { DomainReportView } from './DomainReportView'
 import { ReportTabs } from '../../../../components/reporting/ReportTabs'
 import { InsightSection } from '../../../../components/reporting/InsightSection'
 import { InsightCallout } from '../../../../components/reporting/InsightCallout'
@@ -28,8 +26,8 @@ function CommunicationsReportContent() {
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: '80px' }}>
-        <p style={{ fontSize: '16px', color: 'var(--org-text-secondary)' }}>Loading...</p>
+      <div style={{ textAlign: 'center', padding: '48px' }}>
+        <p className="oa-body-m">{t('common.loading')}</p>
       </div>
     )
   }
@@ -37,8 +35,8 @@ function CommunicationsReportContent() {
   if (error || !metrics) {
     return (
       <EmptyState
-        title="Unable to load communications data"
-        description="There was an error loading the communications metrics. Please try again or contact support if the issue persists."
+        title={t('admin.reporting.communications.error.title') || 'Unable to load communications data'}
+        description={error?.message || t('admin.reporting.communications.error.description') || 'There was an error loading the communications metrics. Please try again or contact support if the issue persists.'}
         icon="error"
       />
     )
@@ -173,29 +171,25 @@ function CommunicationsReportContent() {
   )
 
   return (
-    <ReportPageLayout
-      title={t('admin.reporting.communications.title')}
-      description={t('admin.reporting.communications.description') || 'Comprehensive communications analytics with delivery tracking, audience engagement, and action attribution.'}
-    >
-      <ReportTabs
-        tabs={[
-          { id: 'delivery-reach', label: 'Delivery & Reach', content: deliveryReachTab },
-          { id: 'engagement-audience', label: 'Engagement by Audience', content: engagementAudienceTab },
-          { id: 'response-action', label: 'Response & Action', content: responseActionTab },
-        ]}
-      />
-    </ReportPageLayout>
+    <ReportTabs
+      tabs={[
+        { id: 'delivery-reach', label: 'Delivery & Reach', content: deliveryReachTab },
+        { id: 'engagement-audience', label: 'Engagement by Audience', content: engagementAudienceTab },
+        { id: 'response-action', label: 'Response & Action', content: responseActionTab },
+      ]}
+    />
   )
 }
 
 export default function CommunicationsReport() {
+  const t = useT()
   return (
-    <ReportingProvider>
-      <ReportingLayout>
-        <div style={{ padding: '32px', maxWidth: '1800px', margin: '0 auto', width: '100%' }}>
-          <CommunicationsReportContent />
-        </div>
-      </ReportingLayout>
-    </ReportingProvider>
+    <DomainReportView
+      domain="communications"
+      title={t('admin.reporting.communications.title')}
+      description={t('admin.reporting.communications.description') || 'Comprehensive communications analytics with delivery tracking, audience engagement, and action attribution.'}
+    >
+      <CommunicationsReportContent />
+    </DomainReportView>
   )
 }

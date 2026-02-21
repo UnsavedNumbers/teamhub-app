@@ -166,6 +166,7 @@ export const RouteKeys = {
     ADMIN_ORGANIZATION_BILLING: 'admin.organization.billing',
     ADMIN_ORGANIZATION_BILLING_PLAN_SELECTION: 'admin.organization.billing.planSelection',
     ADMIN_ORGANIZATION_USERS: 'admin.organization.users',
+    ADMIN_ORGANIZATION_BULK_INVITE: 'admin.organization.bulkInvite',
     ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS: 'admin.organization.billing.checkoutSuccess',
     ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL: 'admin.organization.billing.checkoutCancel',
     ADMIN_TRIAL_EXPIRED: 'admin.organization.trialExpired',

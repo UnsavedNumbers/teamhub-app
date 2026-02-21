@@ -265,6 +265,7 @@ const PhotoDetail = lazy(() => import('./pages/admin/PhotoDetail'))
 const OrganizationSettings = lazy(() => import('./pages/admin/OrganizationSettings'))
 const OrganizationStructureForms = lazy(() => import('./pages/admin/OrganizationStructureForms'))
 const OrganizationUsers = lazy(() => import('./pages/admin/OrganizationUsers'))
+const BulkInvitePage = lazy(() => import('./pages/admin/organization/BulkInvitePage'))
 const OrganizationOnboarding = lazy(() => import('./pages/admin/OrganizationOnboarding'))
 const OrganizationBilling = lazy(() => import('./pages/admin/OrganizationBilling'))
 const SubOrganizations = lazy(() => import('./pages/admin/SubOrganizations'))
@@ -768,6 +769,7 @@ function AppWithTheme() {
               <Route path="organization" element={<OrganizationSettings />} />
               <Route path="organization/forms" element={<OrganizationStructureForms />} />
               <Route path="organization/users" element={<OrganizationUsers />} />
+              <Route path="organization/bulk-invite" element={<BulkInvitePage />} />
               <Route path="organization/sub-orgs" element={<SubOrganizations />} />
               <Route path="organization/billing" element={<OrganizationBilling />} />
               <Route path="organization/billing/plan-selection" element={<PlanSelection />} />

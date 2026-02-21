@@ -32,31 +32,29 @@ export function EmptyState({ title, description, icon = 'insights', action }: Em
           width: '80px',
           height: '80px',
           borderRadius: '50%',
-          background: 'var(--org-surface-secondary)',
+          background: 'var(--pa-n100, #f1f5f9)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: '24px',
         }}
+        className="empty-state-icon"
       >
-        <span className="material-symbols-outlined" style={{ fontSize: '40px', color: 'var(--org-text-secondary)' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: '40px', color: 'var(--pa-n500, #64748b)' }}>
           {icon}
         </span>
       </div>
       <h3
+        className="oa-h2"
         style={{
-          fontSize: '24px',
-          fontWeight: '600',
-          color: 'var(--org-text-primary)',
           margin: '0 0 12px 0',
         }}
       >
         {title}
       </h3>
       <p
+        className="oa-body-m"
         style={{
-          fontSize: '16px',
-          color: 'var(--org-text-secondary)',
           margin: '0 0 32px 0',
           maxWidth: '500px',
           lineHeight: '1.6',

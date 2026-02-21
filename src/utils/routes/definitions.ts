@@ -500,6 +500,13 @@ const admin = {
             description: 'Access and roles',
             requiresOrg: true,
         },
+        bulkInvite: {
+            path: '/admin/organization/bulk-invite',
+            label: 'Bulk Invites',
+            icon: 'upload',
+            description: 'Onboard multiple users',
+            requiresOrg: true,
+        },
         subOrgs: {
             path: '/admin/organization/sub-orgs',
             label: 'Sub-Organizations',

@@ -12,13 +12,17 @@
 .reporting-layout {
   display: flex;
   min-height: 100vh;
-  background: var(--org-surface-page, #f7f9fc);
+  background: var(--pa-surface-subtle, #f7f9fc);
+}
+
+html.dark .reporting-layout {
+  background: var(--pa-surface-subtle, #000000);
 }
 
 .reporting-sidebar {
   width: 280px;
-  background: var(--org-surface-card, #ffffff);
-  border-right: 1px solid var(--org-border-default, #e2e8f0);
+  background: var(--pa-surface, #ffffff);
+  border-right: 1px solid var(--pa-n100, #e2e8f0);
   border-left: none; /* No left border - directly adjacent to admin sidebar */
   display: flex;
   flex-direction: column;
@@ -30,6 +34,11 @@
   overflow-y: auto;
   flex-shrink: 0;
   z-index: 99; /* Just below admin sidebar (z-index: 100) */
+}
+
+html.dark .reporting-sidebar {
+  background: var(--pa-surface, #0a0a0a);
+  border-right-color: var(--pa-border-default, #1a1a1a);
 }
 
 .reporting-main {
@@ -46,15 +55,23 @@
 
 .reporting-sidebar-header {
   padding: 24px 20px;
-  border-bottom: 1px solid var(--org-border-default, #e2e8f0);
+  border-bottom: 1px solid var(--pa-n100, #e2e8f0);
+}
+
+html.dark .reporting-sidebar-header {
+  border-bottom-color: var(--pa-border-default, #1a1a1a);
 }
 
 .reporting-sidebar-title {
   font-size: 20px;
   font-weight: 600;
-  color: var(--org-text-primary, #0b0f14);
+  color: var(--pa-n900, #0b0f14);
   margin: 0;
   letter-spacing: -0.02em;
+}
+
+html.dark .reporting-sidebar-title {
+  color: var(--pa-text-primary, #ffffff);
 }
 
 /* ============================================================================
@@ -83,7 +100,7 @@
   gap: 12px;
   padding: 10px 16px;
   border-radius: 8px;
-  color: var(--org-text-secondary, #6b7280);
+  color: var(--pa-n500, #6b7280);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
@@ -91,14 +108,28 @@
   position: relative;
 }
 
+html.dark .reporting-nav-link {
+  color: var(--pa-text-secondary, #d1d5db);
+}
+
 .reporting-nav-link:hover {
-  background: var(--org-surface-hover, #f9fafb);
-  color: var(--org-text-primary, #0b0f14);
+  background: var(--pa-n50, #f9fafb);
+  color: var(--pa-n900, #0b0f14);
+}
+
+html.dark .reporting-nav-link:hover {
+  background: var(--pa-bg-hover, #1a1a1a);
+  color: var(--pa-text-primary, #ffffff);
 }
 
 .reporting-nav-link.active {
-  background: var(--org-color-primary, #3b82f6);
-  color: #ffffff;
+  background: var(--org-btn-primary-bg, var(--org-color-primary, #3b82f6));
+  color: var(--org-btn-primary-text, #ffffff);
+}
+
+html.dark .reporting-nav-link.active {
+  background: var(--org-btn-primary-bg, var(--org-color-primary, #3b82f6));
+  color: var(--org-btn-primary-text, #ffffff);
 }
 
 .reporting-nav-link.active::before {
@@ -109,7 +140,7 @@
   transform: translateY(-50%);
   width: 3px;
   height: 60%;
-  background: var(--org-color-primary, #3b82f6);
+  background: var(--org-btn-primary-bg, var(--org-color-primary, #3b82f6));
   border-radius: 0 2px 2px 0;
 }
 
@@ -136,6 +167,11 @@
   max-width: 1800px;
   margin: 0 auto;
   width: 100%;
+  background: var(--pa-surface-subtle, #f7f9fc);
+}
+
+html.dark .reporting-content {
+  background: var(--pa-surface-subtle, #000000);
 }
 
 /* ============================================================================
@@ -172,6 +208,10 @@
   margin: 0;
 }
 
+html.dark .reporting-metric-card-title {
+  color: var(--pa-text-secondary, #d1d5db);
+}
+
 .reporting-metric-card-icon {
   width: 40px;
   height: 40px;
@@ -190,10 +230,18 @@
   line-height: 1.2;
 }
 
+html.dark .reporting-metric-card-value {
+  color: var(--pa-text-primary, #ffffff);
+}
+
 .reporting-metric-card-label {
   font-size: 14px;
   color: var(--org-text-secondary, #6b7280);
   margin: 0;
+}
+
+html.dark .reporting-metric-card-label {
+  color: var(--pa-text-secondary, #d1d5db);
 }
 
 .reporting-metric-card-trend {
@@ -218,12 +266,17 @@
    ============================================================================ */
 
 .reporting-section-card {
-  background: var(--org-surface-card, #ffffff);
+  background: var(--pa-surface, #ffffff);
   border: 1px solid var(--org-border-default, #e2e8f0);
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   margin-bottom: 32px;
+}
+
+html.dark .reporting-section-card {
+  background: var(--pa-surface, #0a0a0a);
+  border: none;
 }
 
 .reporting-section-header {
@@ -239,6 +292,10 @@
   color: var(--org-text-primary, #0b0f14);
   margin: 0;
   letter-spacing: -0.01em;
+}
+
+html.dark .reporting-section-title {
+  color: var(--pa-text-primary, #ffffff);
 }
 
 .reporting-section-icon {
@@ -302,4 +359,27 @@
   .reporting-grid-4 {
     grid-template-columns: 1fr;
   }
+}
+
+/* ============================================================================
+   Dark Mode Support
+   ============================================================================ */
+
+/* Dark mode styles are defined above with the component styles */
+
+html.dark .empty-state-icon {
+  background: var(--pa-surface, #0a0a0a);
+}
+
+html.dark .empty-state-icon .material-symbols-outlined {
+  color: var(--pa-text-secondary, #d1d5db);
+}
+
+/* Reporting Overview Tiles - No borders in dark mode */
+html.dark .reporting-overview-tile {
+  border: none !important;
+}
+
+html.dark .reporting-overview-tile:hover {
+  border: none !important;
 }

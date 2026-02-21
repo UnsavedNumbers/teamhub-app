@@ -5,9 +5,7 @@
  * Organized into 3 tabs with insights and visualizations.
  */
 
-import { ReportingProvider } from '../../../../contexts/ReportingContext'
-import { ReportingLayout } from '../../../../components/reporting/ReportingLayout'
-import { ReportPageLayout } from '../../../../components/reporting/ReportPageLayout'
+import { DomainReportView } from './DomainReportView'
 import { ReportTabs } from '../../../../components/reporting/ReportTabs'
 import { InsightSection } from '../../../../components/reporting/InsightSection'
 import { InsightCallout } from '../../../../components/reporting/InsightCallout'
@@ -193,29 +191,25 @@ function ParticipationReportContent() {
   )
 
   return (
-    <ReportPageLayout
-      title={t('admin.reporting.participation.title')}
-      description={t('admin.reporting.participation.description') || 'Comprehensive participation tracking with breakdowns, retention analysis, and churn signals.'}
-    >
-      <ReportTabs
-        tabs={[
-          { id: 'story', label: 'Participation Story', content: participationStoryTab },
-          { id: 'breakdown', label: 'Breakdown', content: breakdownTab },
-          { id: 'retention-churn', label: 'Retention & Churn Signals', content: retentionChurnTab },
-        ]}
-      />
-    </ReportPageLayout>
+    <ReportTabs
+      tabs={[
+        { id: 'story', label: 'Participation Story', content: participationStoryTab },
+        { id: 'breakdown', label: 'Breakdown', content: breakdownTab },
+        { id: 'retention-churn', label: 'Retention & Churn Signals', content: retentionChurnTab },
+      ]}
+    />
   )
 }
 
 export default function ParticipationReport() {
+  const t = useT()
   return (
-    <ReportingProvider>
-      <ReportingLayout>
-        <div style={{ padding: '32px', maxWidth: '1800px', margin: '0 auto', width: '100%' }}>
-          <ParticipationReportContent />
-        </div>
-      </ReportingLayout>
-    </ReportingProvider>
+    <DomainReportView
+      domain="participation"
+      title={t('admin.reporting.participation.title')}
+      description={t('admin.reporting.participation.description') || 'Comprehensive participation tracking with breakdowns, retention analysis, and churn signals.'}
+    >
+      <ParticipationReportContent />
+    </DomainReportView>
   )
 }

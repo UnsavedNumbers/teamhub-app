@@ -61,28 +61,43 @@
     --pa-topbar-bg: var(--pa-n0);
 }
 
-/* Dark Mode - Layered Surface System */
+/* Dark Mode - Neutral Black/Gray Palette (Uber/GitHub style) */
 html.dark {
-    /* Surface Layers - Clear hierarchy through distinct backgrounds */
-    --pa-surface-subtle: #0f1419;
-    /* Page background - darkest */
-    --pa-surface: #1a1f26;
-    /* Card background - elevated */
-    --pa-surface-panel: #252b35;
-    /* Panel/Input background - most elevated */
+    /* BACKGROUNDS - True black base with subtle elevation */
+    --pa-surface-subtle: #000000;
+    /* Pure black - main background */
+    --pa-surface: #0a0a0a;
+    /* Very dark gray - cards, containers (darker) */
+    --pa-surface-panel: #111111;
+    /* Elevated surfaces - modals, dropdowns (darker) */
+    --pa-bg-hover: #1a1a1a;
+    /* Hover states (darker) */
+    --pa-bg-active: #222222;
+    /* Active/pressed states (darker) */
 
-    /* Dark Mode Text Hierarchy */
-    --pa-text-primary: #f9fafb;
-    /* High contrast - for metrics and headlines */
+    /* BORDERS - Very dark, subtle separation */
+    --pa-border-subtle: #111111;
+    /* Subtle dividers - almost invisible */
+    --pa-border-default: #1a1a1a;
+    /* Default borders - very dark */
+    --pa-border-emphasis: #222222;
+    /* Emphasized borders - still dark */
+
+    /* TEXT - High contrast white/gray hierarchy */
+    --pa-text-primary: #ffffff;
+    /* Headings, important text - pure white */
     --pa-text-secondary: #d1d5db;
-    /* Medium contrast - for labels */
+    /* Body text, descriptions - lighter gray */
     --pa-text-muted: #9ca3af;
-    /* Low contrast - for hints and meta */
+    /* Muted text, placeholders - medium gray */
+    --pa-text-disabled: #6b7280;
+    /* Disabled states - darker gray */
 
-    /* Border Colors - Subtle separation */
-    --pa-border-subtle: #252b35;
-    --pa-border-default: #374151;
-    --pa-border-emphasis: #4b5563;
+    /* INTERACTIVE - Neutral (org theme colors override these) */
+    --pa-focus-ring: #ffffff;
+    /* Focus outlines - white ring */
+    --pa-link: #ffffff;
+    /* Links - white, underlined on hover */
 
     /* Glass/Translucent Surfaces */
     --pa-glass-bg: rgba(255, 255, 255, 0.98);
@@ -91,6 +106,7 @@ html.dark {
     --pa-glass-blur: blur(20px);
 
     /* Theme-derived Tokens (default values - overridden by useOrganizationTheme) */
+    /* Org theme colors stay as configured - buttons, accents use org colors */
     --pa-theme-action-primary: #003A8F;
     --pa-theme-action-hover: #0052C7;
     --pa-theme-action-active: #002866;
@@ -99,7 +115,8 @@ html.dark {
     --pa-theme-text-accent: #003A8F;
     --pa-theme-text-on-action: #FFFFFF;
     --pa-theme-border-accent: rgba(0, 58, 143, 0.3);
-    --pa-theme-focus-ring: rgba(0, 58, 143, 0.5);
+    --pa-theme-focus-ring: rgba(255, 255, 255, 0.8);
+    /* White focus ring for dark mode */
 
     /* Z-index hierarchy for overlays */
     --z-backdrop: 800;

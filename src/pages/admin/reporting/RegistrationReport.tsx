@@ -5,18 +5,18 @@
  * Organized into 4 tabs with insights and visualizations.
  */
 
-import { ReportingProvider } from '../../../contexts/ReportingContext'
-import { ReportingLayout } from '../../../components/reporting/ReportingLayout'
-import { ReportPageLayout } from '../../../components/reporting/ReportPageLayout'
+import { DomainReportView } from './domain/DomainReportView'
 import { ReportTabs } from '../../../components/reporting/ReportTabs'
 import { InsightSection } from '../../../components/reporting/InsightSection'
 import { InsightCallout } from '../../../components/reporting/InsightCallout'
 import { EmptyState } from '../../../components/reporting/EmptyState'
 import { useRegistrationMetrics } from '../../../hooks/useReporting'
 import { useReporting } from '../../../contexts/ReportingContext'
+import { useT } from '../../../i18n/useI18n'
 import { TimeSeriesChart, BarChart, PieChart, FunnelChart } from '../../../components/reporting/charts'
 
 function RegistrationReportContent() {
+  const t = useT()
   const { filters } = useReporting()
   const { data: registrationMetrics, isLoading, error } = useRegistrationMetrics(filters)
 
@@ -284,30 +284,26 @@ function RegistrationReportContent() {
   )
 
   return (
-    <ReportPageLayout
-      title="Registration"
-      description="Comprehensive registration analytics with funnel analysis, volume tracking, payment exceptions, and form health insights."
-    >
-      <ReportTabs
-        tabs={[
-          { id: 'funnel', label: 'Registration Funnel', content: funnelTab },
-          { id: 'volume-mix', label: 'Volume and Mix', content: volumeMixTab },
-          { id: 'payments-exceptions', label: 'Payments & Exceptions', content: paymentsExceptionsTab },
-          { id: 'form-health', label: 'Form & Requirement Health', content: formHealthTab },
-        ]}
-      />
-    </ReportPageLayout>
+    <ReportTabs
+      tabs={[
+        { id: 'funnel', label: 'Registration Funnel', content: funnelTab },
+        { id: 'volume-mix', label: 'Volume and Mix', content: volumeMixTab },
+        { id: 'payments-exceptions', label: 'Payments & Exceptions', content: paymentsExceptionsTab },
+        { id: 'form-health', label: 'Form & Requirement Health', content: formHealthTab },
+      ]}
+    />
   )
 }
 
 export default function RegistrationReport() {
+  const t = useT()
   return (
-    <ReportingProvider>
-      <ReportingLayout>
-        <div style={{ padding: '32px', maxWidth: '1800px', margin: '0 auto', width: '100%' }}>
-          <RegistrationReportContent />
-        </div>
-      </ReportingLayout>
-    </ReportingProvider>
+    <DomainReportView
+      domain="registration"
+      title={t('admin.reporting.registration.title') || 'Registration'}
+      description={t('admin.reporting.registration.description') || 'Comprehensive registration analytics with funnel analysis, volume tracking, payment exceptions, and form health insights.'}
+    >
+      <RegistrationReportContent />
+    </DomainReportView>
   )
 }

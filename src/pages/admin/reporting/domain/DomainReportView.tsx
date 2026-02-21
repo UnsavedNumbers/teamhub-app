@@ -30,10 +30,10 @@ function DomainReportContent({ title, description, children }: Omit<DomainReport
         {/* Page Header */}
         <div style={{ marginBottom: '32px' }}>
           <h1
+            className="oa-page-title"
             style={{
               fontSize: '28px',
               fontWeight: '600',
-              color: 'var(--org-text-primary)',
               margin: '0 0 8px 0',
               letterSpacing: '-0.02em',
             }}
@@ -42,9 +42,9 @@ function DomainReportContent({ title, description, children }: Omit<DomainReport
           </h1>
           {description && (
             <p
+              className="oa-page-subtitle"
               style={{
                 fontSize: '16px',
-                color: 'var(--org-text-secondary)',
                 margin: 0,
               }}
             >

@@ -5,9 +5,7 @@
  * Organized into 3 tabs with insights and visualizations.
  */
 
-import { ReportingProvider } from '../../../../contexts/ReportingContext'
-import { ReportingLayout } from '../../../../components/reporting/ReportingLayout'
-import { ReportPageLayout } from '../../../../components/reporting/ReportPageLayout'
+import { DomainReportView } from './DomainReportView'
 import { ReportTabs } from '../../../../components/reporting/ReportTabs'
 import { InsightSection } from '../../../../components/reporting/InsightSection'
 import { InsightCallout } from '../../../../components/reporting/InsightCallout'
@@ -25,8 +23,8 @@ function OperationsReportContent() {
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: '80px' }}>
-        <p style={{ fontSize: '16px', color: 'var(--org-text-secondary)' }}>Loading...</p>
+      <div style={{ textAlign: 'center', padding: '48px' }}>
+        <p className="oa-body-m">{t('common.loading')}</p>
       </div>
     )
   }
@@ -34,8 +32,8 @@ function OperationsReportContent() {
   if (error || !metrics) {
     return (
       <EmptyState
-        title="Unable to load operations data"
-        description="There was an error loading the operations metrics. Please try again or contact support if the issue persists."
+        title={t('admin.reporting.operations.error.title') || 'Unable to load operations data'}
+        description={error?.message || t('admin.reporting.operations.error.description') || 'There was an error loading the operations metrics. Please try again or contact support if the issue persists.'}
         icon="error"
       />
     )
@@ -174,29 +172,25 @@ function OperationsReportContent() {
   )
 
   return (
-    <ReportPageLayout
-      title={t('admin.reporting.operations.title')}
-      description={t('admin.reporting.operations.description') || 'Comprehensive operations analytics with org health monitoring, data quality tracking, and workload insights.'}
-    >
-      <ReportTabs
-        tabs={[
-          { id: 'org-health', label: 'Org Health Snapshot', content: orgHealthTab },
-          { id: 'data-quality', label: 'Data Quality & Compliance', content: dataQualityTab },
-          { id: 'workload-bottlenecks', label: 'Workload & Bottlenecks', content: workloadBottlenecksTab },
-        ]}
-      />
-    </ReportPageLayout>
+    <ReportTabs
+      tabs={[
+        { id: 'org-health', label: 'Org Health Snapshot', content: orgHealthTab },
+        { id: 'data-quality', label: 'Data Quality & Compliance', content: dataQualityTab },
+        { id: 'workload-bottlenecks', label: 'Workload & Bottlenecks', content: workloadBottlenecksTab },
+      ]}
+    />
   )
 }
 
 export default function OperationsReport() {
+  const t = useT()
   return (
-    <ReportingProvider>
-      <ReportingLayout>
-        <div style={{ padding: '32px', maxWidth: '1800px', margin: '0 auto', width: '100%' }}>
-          <OperationsReportContent />
-        </div>
-      </ReportingLayout>
-    </ReportingProvider>
+    <DomainReportView
+      domain="operations"
+      title={t('admin.reporting.operations.title')}
+      description={t('admin.reporting.operations.description') || 'Comprehensive operations analytics with org health monitoring, data quality tracking, and workload insights.'}
+    >
+      <OperationsReportContent />
+    </DomainReportView>
   )
 }
