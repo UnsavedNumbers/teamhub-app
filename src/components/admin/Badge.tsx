@@ -7,15 +7,16 @@ interface BadgeProps {
   variant?: BadgeVariant
   children: ReactNode
   className?: string
+  style?: React.CSSProperties
 }
 
 /**
  * Badge - Org Admin styled component
  * Uses oa-badge class with org theme styling
  */
-export function Badge({ variant = 'neutral', children, className = '' }: BadgeProps) {
+export function Badge({ variant = 'neutral', children, className = '', style }: BadgeProps) {
   return (
-    <span className={cn('oa-badge', `oa-badge--${variant}`, className)}>
+    <span className={cn('oa-badge', `oa-badge--${variant}`, className)} style={style}>
       {children}
     </span>
   )

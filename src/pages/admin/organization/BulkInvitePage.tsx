@@ -16,7 +16,7 @@ export default function BulkInvitePage() {
   const [view, setView] = useState<'wizard' | 'history'>('wizard')
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <AdminPageHeader
         title={t('admin.bulkInvite.title')}
         description={t('admin.bulkInvite.description')}

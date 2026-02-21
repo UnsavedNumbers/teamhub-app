@@ -51,7 +51,7 @@ export default function ValidationErrorsDisplay({ validationResult }: Validation
   ])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-full">
       {/* Errors Section */}
       {errorsBySheet.size > 0 && (
         <div>

@@ -415,6 +415,12 @@ verify_jwt = false
 [functions.bulk-invite-generate-template]
 verify_jwt = false
 
+[functions.bulk-invite-validate]
+verify_jwt = false
+
+[functions.bulk-invite-import]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

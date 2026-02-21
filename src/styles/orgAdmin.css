@@ -9243,6 +9243,110 @@ html.dark .oa-order-detail__ticket-icon {
 }
 
 /* =====================================================================
+   BULK INVITE PREVIEW CARDS
+   ===================================================================== */
+
+.oa-bulk-invite-preview-card {
+    background: var(--org-surface-card, var(--pa-surface));
+    border: 1px solid var(--org-border-default, var(--pa-border-default));
+    border-radius: var(--pa-radius-m, 8px);
+    padding: var(--pa-space-3);
+    transition: border-color var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+html.dark .oa-bulk-invite-preview-card {
+    background: #111111 !important;
+    border: 1px solid #222222 !important;
+}
+
+.oa-bulk-invite-preview-card:hover {
+    border-color: var(--org-border-active, var(--pa-theme-border-accent));
+}
+
+html.dark .oa-bulk-invite-preview-card:hover {
+    border-color: #333333 !important;
+}
+
+.oa-bulk-invite-link-card {
+    border-radius: var(--pa-radius-m, 8px);
+    padding: var(--pa-space-3);
+    border: 1px solid;
+    transition: border-color var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.oa-bulk-invite-link-card--success {
+    border-color: var(--org-status-success, #10B981);
+    background: var(--org-card-accent-bg, rgba(16, 185, 129, 0.1));
+}
+
+html.dark .oa-bulk-invite-link-card--success {
+    background: #111111 !important;
+    border-color: rgba(16, 185, 129, 0.6) !important;
+}
+
+.oa-bulk-invite-link-card--error {
+    border-color: var(--org-status-error, #EF4444);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+html.dark .oa-bulk-invite-link-card--error {
+    background: #111111 !important;
+    border-color: rgba(239, 68, 68, 0.6) !important;
+}
+
+.oa-bulk-invite-link-card--warning {
+    border-color: var(--org-status-warning, #F59E0B);
+    background: rgba(245, 158, 11, 0.1);
+}
+
+html.dark .oa-bulk-invite-link-card--warning {
+    background: #111111 !important;
+    border-color: rgba(245, 158, 11, 0.6) !important;
+}
+
+/* Bulk Invite History Table */
+.oa-bulk-invite-history-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.oa-bulk-invite-history-table thead {
+    border-bottom: 1px solid var(--org-border-default, var(--pa-border-default));
+}
+
+.oa-bulk-invite-history-table th {
+    text-align: left;
+    padding: var(--pa-space-3) var(--pa-space-4);
+    font-weight: 600;
+    color: var(--org-text-primary, var(--pa-text-primary));
+}
+
+.oa-bulk-invite-history-table td {
+    padding: var(--pa-space-3) var(--pa-space-4);
+    border-bottom: 1px solid var(--org-border-default, var(--pa-border-default));
+}
+
+.oa-bulk-invite-history-table tbody tr {
+    transition: background-color var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.oa-bulk-invite-history-table tbody tr:hover {
+    background-color: var(--org-surface-hover, var(--pa-bg-hover));
+}
+
+html.dark .oa-bulk-invite-history-table thead {
+    border-bottom-color: var(--pa-border-default, #1a1a1a);
+}
+
+html.dark .oa-bulk-invite-history-table td {
+    border-bottom-color: var(--pa-border-default, #1a1a1a);
+}
+
+html.dark .oa-bulk-invite-history-table tbody tr:hover {
+    background-color: var(--pa-bg-hover, #1a1a1a);
+}
+
+/* =====================================================================
    ORGANIZATION ADMIN DESIGN SYSTEM - DARK MODE COMPLETE
    
    ALL oa-* CLASSES HAVE COMPREHENSIVE DARK MODE SUPPORT via html.dark

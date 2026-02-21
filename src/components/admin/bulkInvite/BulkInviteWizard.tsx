@@ -19,7 +19,7 @@ import {
   type ImportJobStatus,
 } from '@/data/services/bulkInviteService'
 import { FileUpload } from '@/components/common/FileUpload'
-import { Button, Card } from '@/components/admin'
+import { Button, Card, Badge } from '@/components/admin'
 import { showError, showSuccess } from '@/utils/toast'
 import ValidationErrorsDisplay from './ValidationErrorsDisplay'
 
@@ -264,9 +264,11 @@ export default function BulkInviteWizard({ onComplete, onCancel }: BulkInviteWiz
                 <div className="text-sm text-yellow-800">{t('common.error.offline')}</div>
               </div>
             )}
-            <Button onClick={handleDownloadTemplate} disabled={loading || isOffline}>
-              {loading ? 'Downloading...' : t('admin.bulkInvite.downloadTemplate')}
-            </Button>
+            <div className="flex justify-start">
+              <Button onClick={handleDownloadTemplate} disabled={loading || isOffline}>
+                {loading ? 'Downloading...' : t('admin.bulkInvite.downloadTemplate')}
+              </Button>
+            </div>
             {error && <div className="text-red-600">{error}</div>}
           </div>
         )}
@@ -280,15 +282,17 @@ export default function BulkInviteWizard({ onComplete, onCancel }: BulkInviteWiz
                 <div className="text-sm text-yellow-800">{t('common.error.offline')}</div>
               </div>
             )}
-            <FileUpload
-              onFileSelect={handleFileSelect}
-              value={file}
-              accept=".xlsx,.csv"
-              maxSize={10 * 1024 * 1024}
-              showDropZone
-              fullWidth
-              disabled={isOffline}
-            />
+            <div className="max-w-2xl">
+              <FileUpload
+                onFileSelect={handleFileSelect}
+                value={file}
+                accept=".xlsx,.csv"
+                maxSize={10 * 1024 * 1024}
+                showDropZone
+                fullWidth
+                disabled={isOffline}
+              />
+            </div>
             {error && <div className="text-red-600">{error}</div>}
           </div>
         )}
@@ -317,55 +321,168 @@ export default function BulkInviteWizard({ onComplete, onCancel }: BulkInviteWiz
 
         {step === 'preview' && validationResult && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">{t('admin.bulkInvite.steps.preview.title')}</h2>
-            <p className="text-gray-600">{t('admin.bulkInvite.steps.preview.subtitle')}</p>
+            <h2 className="text-xl font-semibold oa-card-title">{t('admin.bulkInvite.steps.preview.title')}</h2>
+            <p className="text-sm" style={{ color: 'var(--org-text-secondary, var(--pa-text-secondary))' }}>
+              {t('admin.bulkInvite.steps.preview.subtitle')}
+            </p>
             
             {/* Consolidated Users Preview */}
             <div>
-              <h3 className="font-semibold mb-2">{t('admin.bulkInvite.steps.preview.consolidatedUsers')}</h3>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {validationResult.consolidated_preview.map((user) => (
-                  <div key={user.email} className="p-3 border rounded">
-                    <div className="font-medium">{user.email}</div>
-                    <div className="text-sm text-gray-600">{user.name} - {user.roles.join(', ')}</div>
-                    {user.name_conflicts.length > 0 && (
-                      <div className="text-xs text-yellow-600 mt-1">
-                        Name conflicts: {user.name_conflicts.map(c => `${c.sheet}: ${c.name}`).join(', ')}
+              <h3 className="font-semibold oa-card-title" style={{ marginBottom: '1.5rem' }}>
+                {t('admin.bulkInvite.steps.preview.consolidatedUsers')}
+              </h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                {validationResult.consolidated_preview.map((user) => {
+                  // Map role codes to display names
+                  const roleDisplayNames: Record<string, string> = {
+                    org_admin: 'Organization Admin',
+                    coach: 'Coach',
+                    parent: 'Guardian',
+                    athlete: 'Athlete',
+                  }
+                  
+                  const displayRoles = user.roles
+                    .map(role => roleDisplayNames[role] || role)
+                    .join(' / ')
+                  
+                  // User is valid if no blocking errors and no name conflicts
+                  const isValid = user.name_conflicts.length === 0
+                  
+                  return (
+                    <div key={user.email} className="oa-bulk-invite-preview-card relative">
+                      <div className="flex items-start gap-3">
+                        {/* Left column: Badges */}
+                        <div className="flex-shrink-0 flex flex-col gap-2 items-start">
+                          <Badge 
+                            variant="neutral" 
+                            className="text-xs"
+                            style={{
+                              background: 'var(--org-badge-primary-bg, var(--pa-theme-surface-accent, rgba(19, 127, 236, 0.1)))',
+                              color: 'var(--org-badge-primary-text, var(--pa-theme-text-accent, var(--org-btn-primary-bg, #137fec)))',
+                            }}
+                          >
+                            {displayRoles}
+                          </Badge>
+                          {user.is_new_user && (
+                            <Badge 
+                              variant="info" 
+                              className="text-xs w-fit"
+                              style={{
+                                background: 'var(--org-badge-primary-bg, var(--pa-theme-surface-accent, rgba(19, 127, 236, 0.1)))',
+                                color: 'var(--org-badge-primary-text, var(--pa-theme-text-accent, var(--org-btn-primary-bg, #137fec)))',
+                              }}
+                            >
+                              New user
+                            </Badge>
+                          )}
+                          {!user.is_new_user && (
+                            <div className="text-xs" style={{ color: 'var(--org-text-muted, var(--pa-text-muted))' }}>
+                              {user.existing_org_member ? 'Existing (in org)' : 'Existing (new to org)'}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Right column: Name and Email */}
+                        <div className="flex-1 min-w-0 pr-8">
+                          <div className="font-bold mb-1" style={{ color: 'var(--org-text-primary, var(--pa-text-primary))' }}>
+                            {user.name}
+                          </div>
+                          <div className="font-bold text-sm" style={{ color: 'var(--org-text-secondary, var(--pa-text-secondary))' }}>
+                            {user.email}
+                          </div>
+                        </div>
+                        
+                        {/* Checkmark: Middle aligned, floating right */}
+                        {isValid && (
+                          <span 
+                            className="material-symbols-outlined absolute top-1/2 right-3 -translate-y-1/2" 
+                            style={{ 
+                              fontSize: '18px', 
+                              color: 'var(--org-status-success, #10B981)' 
+                            }}
+                          >
+                            check_circle
+                          </span>
+                        )}
                       </div>
-                    )}
-                    {user.is_new_user ? (
-                      <div className="text-xs text-blue-600 mt-1">New user</div>
-                    ) : (
-                      <div className="text-xs text-gray-500 mt-1">
-                        Existing user {user.existing_org_member ? '(already in org)' : '(new to org)'}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      {user.name_conflicts.length > 0 && (
+                        <div className="text-xs mt-2" style={{ color: 'var(--org-status-warning, #F59E0B)' }}>
+                          Name conflicts: {user.name_conflicts.map(c => `${c.sheet}: ${c.name}`).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
 
             {/* Athlete-Guardian Links Preview */}
             {validationResult.athlete_guardian_links.length > 0 && (
               <div>
-                <h3 className="font-semibold mb-2">{t('admin.bulkInvite.steps.preview.athleteLinks')}</h3>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {validationResult.athlete_guardian_links.map((link, idx) => (
-                    <div key={idx} className={`p-3 border rounded ${
-                      link.status === 'ok' ? 'border-green-200 bg-green-50' :
-                      link.status === 'missing' ? 'border-red-200 bg-red-50' :
-                      'border-yellow-200 bg-yellow-50'
-                    }`}>
-                      <div className="font-medium">{link.athlete_name} ({link.athlete_email})</div>
-                      <div className="text-sm">
-                        Guardian: {link.guardian_name || link.guardian_email} 
-                        {link.guardian_source === 'existing' && ' (existing)'}
+                <h3 className="font-semibold oa-card-title" style={{ marginBottom: '1.5rem' }}>
+                  {t('admin.bulkInvite.steps.preview.athleteLinks')}
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                  {validationResult.athlete_guardian_links.map((link, idx) => {
+                    const getStatusClass = () => {
+                      if (link.status === 'ok') {
+                        return 'oa-bulk-invite-link-card--success'
+                      } else if (link.status === 'missing') {
+                        return 'oa-bulk-invite-link-card--error'
+                      } else {
+                        return 'oa-bulk-invite-link-card--warning'
+                      }
+                    }
+                    const getStatusTextColor = () => {
+                      if (link.status === 'ok') {
+                        return 'var(--org-status-success, #10B981)'
+                      } else if (link.status === 'missing') {
+                        return 'var(--org-status-error, #EF4444)'
+                      } else {
+                        return 'var(--org-status-warning, #F59E0B)'
+                      }
+                    }
+                    
+                    const isValid = link.status === 'ok'
+                    
+                    return (
+                      <div
+                        key={idx}
+                        className={`oa-bulk-invite-link-card ${getStatusClass()}`}
+                      >
+                        <div className="flex items-start gap-2">
+                          {isValid && (
+                            <span 
+                              className="material-symbols-outlined flex-shrink-0 mt-0.5" 
+                              style={{ 
+                                fontSize: '18px', 
+                                color: 'var(--org-status-success, #10B981)' 
+                              }}
+                            >
+                              check_circle
+                            </span>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium mb-1" style={{ color: 'var(--org-text-primary, var(--pa-text-primary))' }}>
+                              {link.athlete_name}
+                            </div>
+                            <div className="text-xs mb-2" style={{ color: 'var(--org-text-secondary, var(--pa-text-secondary))' }}>
+                              {link.athlete_email}
+                            </div>
+                            <div className="text-sm" style={{ color: 'var(--org-text-secondary, var(--pa-text-secondary))' }}>
+                              Guardian: {link.guardian_name || link.guardian_email} 
+                              {link.guardian_source === 'existing' && ' (existing)'}
+                            </div>
+                            {link.status !== 'ok' && (
+                              <div className="text-xs mt-2" style={{ color: getStatusTextColor() }}>
+                                Status: {link.status}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      {link.status !== 'ok' && (
-                        <div className="text-xs text-red-600 mt-1">Status: {link.status}</div>
-                      )}
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -376,9 +493,11 @@ export default function BulkInviteWizard({ onComplete, onCancel }: BulkInviteWiz
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">{t('admin.bulkInvite.steps.confirm.title')}</h2>
             <p className="text-gray-600">{t('admin.bulkInvite.steps.confirm.subtitle')}</p>
-            <Button onClick={handleStartImport} disabled={loading}>
-              {loading ? 'Starting...' : t('admin.bulkInvite.steps.confirm.startImport')}
-            </Button>
+            <div className="flex justify-start">
+              <Button onClick={handleStartImport} disabled={loading}>
+                {loading ? 'Starting...' : t('admin.bulkInvite.steps.confirm.startImport')}
+              </Button>
+            </div>
           </div>
         )}
 
@@ -453,7 +572,7 @@ export default function BulkInviteWizard({ onComplete, onCancel }: BulkInviteWiz
               </div>
             )}
             
-            <div className="flex gap-2">
+            <div className="flex gap-2 justify-start">
               <Button onClick={onComplete}>{t('admin.bulkInvite.viewHistory')}</Button>
               {jobStatus.status === 'completed_with_errors' && jobId && (
                 <Button 
@@ -475,7 +594,7 @@ export default function BulkInviteWizard({ onComplete, onCancel }: BulkInviteWiz
       </Card>
 
       {/* Navigation buttons */}
-      <div className="flex justify-between">
+      <div className="flex justify-between gap-4">
         <Button variant="outline" onClick={step === 'download' ? onCancel : handleBack} disabled={loading}>
           {t('common.back')}
         </Button>

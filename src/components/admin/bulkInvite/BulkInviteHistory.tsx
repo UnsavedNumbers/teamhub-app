@@ -75,43 +75,102 @@ export default function BulkInviteHistory() {
           </div>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {jobs.map((job) => (
-            <Card key={job.id}>
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-4">
+        <>
+          {/* Desktop: Table layout */}
+          <div className="hidden lg:block overflow-x-auto">
+            <table className="w-full oa-bulk-invite-history-table">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-3 px-4 font-semibold">File Name</th>
+                  <th className="text-left py-3 px-4 font-semibold">Status</th>
+                  <th className="text-left py-3 px-4 font-semibold">Uploaded</th>
+                  <th className="text-left py-3 px-4 font-semibold">Completed</th>
+                  <th className="text-left py-3 px-4 font-semibold">Totals</th>
+                  <th className="text-right py-3 px-4 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {jobs.map((job) => (
+                  <tr key={job.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="py-3 px-4">
+                      <div className="font-medium">{job.file_name || 'Unknown file'}</div>
+                    </td>
+                    <td className="py-3 px-4">
+                      {getStatusBadge(job.status)}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600">
+                      {new Date(job.created_at).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600">
+                      {job.finished_at ? new Date(job.finished_at).toLocaleString() : '-'}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600">
+                      {job.totals_json && typeof job.totals_json === 'object' ? (
+                        <div className="space-y-1">
+                          {job.totals_json.unique_emails && <div>Users: {job.totals_json.unique_emails}</div>}
+                          {job.totals_json.athletes && <div>Athletes: {job.totals_json.athletes}</div>}
+                          {job.totals_json.guardians && <div>Guardians: {job.totals_json.guardians}</div>}
+                          {job.totals_json.coaches && <div>Coaches: {job.totals_json.coaches}</div>}
+                        </div>
+                      ) : '-'}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm">
+                          {t('admin.bulkInvite.history.viewDetails')}
+                        </Button>
+                        {(job.status === 'completed' || job.status === 'completed_with_errors') && (
+                          <Button variant="outline" size="sm">
+                            {t('admin.bulkInvite.history.downloadResults')}
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile: Card layout */}
+          <div className="lg:hidden space-y-4">
+            {jobs.map((job) => (
+              <Card key={job.id}>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
                     <div className="font-medium">{job.file_name || 'Unknown file'}</div>
                     {getStatusBadge(job.status)}
                   </div>
-                  <div className="text-sm text-gray-600 mt-2">
-                    {t('admin.bulkInvite.history.uploadedAt')}: {new Date(job.created_at).toLocaleString()}
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <div>
+                      {t('admin.bulkInvite.history.uploadedAt')}: {new Date(job.created_at).toLocaleString()}
+                    </div>
+                    {job.finished_at && (
+                      <div>
+                        {t('admin.bulkInvite.history.completedAt')}: {new Date(job.finished_at).toLocaleString()}
+                      </div>
+                    )}
+                    {job.totals_json && typeof job.totals_json === 'object' && (
+                      <div className="mt-2">
+                        {t('admin.bulkInvite.history.totals')}: {JSON.stringify(job.totals_json)}
+                      </div>
+                    )}
                   </div>
-                  {job.finished_at && (
-                    <div className="text-sm text-gray-600">
-                      {t('admin.bulkInvite.history.completedAt')}: {new Date(job.finished_at).toLocaleString()}
-                    </div>
-                  )}
-                  {job.totals_json && typeof job.totals_json === 'object' && (
-                    <div className="text-sm text-gray-600 mt-2">
-                      {t('admin.bulkInvite.history.totals')}: {JSON.stringify(job.totals_json)}
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    {t('admin.bulkInvite.history.viewDetails')}
-                  </Button>
-                  {job.status === 'completed' || job.status === 'completed_with_errors' ? (
-                    <Button variant="outline" size="sm">
-                      {t('admin.bulkInvite.history.downloadResults')}
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" size="sm" className="flex-1">
+                      {t('admin.bulkInvite.history.viewDetails')}
                     </Button>
-                  ) : null}
+                    {(job.status === 'completed' || job.status === 'completed_with_errors') && (
+                      <Button variant="outline" size="sm" className="flex-1">
+                        {t('admin.bulkInvite.history.downloadResults')}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
