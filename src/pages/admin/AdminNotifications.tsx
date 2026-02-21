@@ -295,7 +295,12 @@ export default function AdminNotifications() {
   }, [teams, notifications, statusCounts, typeCounts, roleCounts])
 
   return (
-    <div className="oa-root oa-bg-gray-50/30 dark:oa-bg-slate-950">
+    <div 
+      className="oa-root"
+      style={{
+        background: 'var(--pa-surface-subtle)'
+      }}
+    >
       <AdminPageHeader
         breadcrumbs={[{ label: 'Notifications' }]}
         title={
@@ -350,8 +355,20 @@ export default function AdminNotifications() {
             {loading ? (
                 <div className="oa-flex oa-justify-center oa-items-center oa-py-20">
                     <div className="oa-flex oa-flex-col oa-items-center oa-gap-4">
-                        <div className="oa-w-12 oa-h-12 oa-rounded-full oa-border-4 oa-border-gray-200 dark:oa-border-slate-800 oa-border-t-[var(--org-btn-primary-bg)] oa-animate-spin"></div>
-                        <p className="oa-text-sm oa-text-slate-500 oa-font-medium">Loading notifications...</p>
+                        <div 
+                          className="oa-w-12 oa-h-12 oa-rounded-full oa-border-4 oa-border-t-[var(--org-btn-primary-bg)] oa-animate-spin"
+                          style={{
+                            borderColor: 'var(--pa-border-default)'
+                          }}
+                        ></div>
+                        <p 
+                          className="oa-text-sm oa-font-medium"
+                          style={{
+                            color: 'var(--pa-text-muted)'
+                          }}
+                        >
+                          Loading notifications...
+                        </p>
                     </div>
                 </div>
             ) : filteredNotifications.length === 0 ? (
@@ -368,11 +385,28 @@ export default function AdminNotifications() {
                 groupedNotifications.map((group, idx) => (
                     <div key={idx} className="oa-animate-in oa-fade-in oa-slide-in-from-bottom-2 oa-duration-300" style={{ animationDelay: `${idx * 50}ms` }}>
                         <div className="oa-flex oa-items-center oa-gap-3 oa-mb-4">
-                            <div className="oa-h-px oa-flex-1 oa-bg-gradient-to-r oa-from-transparent oa-via-gray-200 dark:oa-via-slate-700 oa-to-transparent"></div>
-                            <h3 className="oa-text-xs oa-font-black oa-uppercase oa-tracking-[0.2em] oa-text-slate-500 dark:oa-text-slate-400 oa-px-3 oa-py-1 oa-bg-white dark:oa-bg-slate-900 oa-rounded-full oa-border oa-border-gray-200 dark:oa-border-slate-800">
+                            <div 
+                              className="oa-h-px oa-flex-1 oa-bg-gradient-to-r oa-from-transparent oa-to-transparent"
+                              style={{
+                                background: 'linear-gradient(to right, transparent, var(--pa-border-default), transparent)'
+                              }}
+                            ></div>
+                            <h3 
+                              className="oa-text-xs oa-font-black oa-uppercase oa-tracking-[0.2em] oa-px-3 oa-py-1 oa-rounded-full oa-border"
+                              style={{
+                                color: 'var(--pa-text-muted)',
+                                background: 'var(--pa-surface)',
+                                borderColor: 'var(--pa-border-default)'
+                              }}
+                            >
                                 {group.label}
                             </h3>
-                            <div className="oa-h-px oa-flex-1 oa-bg-gradient-to-r oa-from-transparent oa-via-gray-200 dark:oa-via-slate-700 oa-to-transparent"></div>
+                            <div 
+                              className="oa-h-px oa-flex-1 oa-bg-gradient-to-r oa-from-transparent oa-to-transparent"
+                              style={{
+                                background: 'linear-gradient(to right, transparent, var(--pa-border-default), transparent)'
+                              }}
+                            ></div>
                         </div>
                         <div className="oa-flex oa-flex-col oa-gap-3">
                             {group.items.map((notification, nIdx) => {
@@ -414,10 +448,12 @@ export default function AdminNotifications() {
                                             {/* Content */}
                                             <div className="oa-flex-1 oa-min-w-0">
                                                 <div className="oa-flex oa-flex-wrap oa-items-center oa-gap-2 oa-mb-2">
-                                                    <h4 className={cn(
-                                                        "oa-text-base oa-font-bold oa-leading-tight",
-                                                        isUnread ? "oa-text-slate-900 dark:oa-text-white" : "oa-text-slate-600 dark:oa-text-slate-400"
-                                                    )}>
+                                                    <h4 
+                                                      className="oa-text-base oa-font-bold oa-leading-tight"
+                                                      style={{
+                                                        color: isUnread ? 'var(--pa-text-primary)' : 'var(--pa-text-secondary)'
+                                                      }}
+                                                    >
                                                         {notification.title}
                                                     </h4>
                                                     {isUnread && (
@@ -460,7 +496,20 @@ export default function AdminNotifications() {
                                                 {isUnread && (
                                                     <button
                                                         onClick={(e) => handleMarkRead(notification.id, e)}
-                                                        className="oa-inline-flex oa-items-center oa-gap-1.5 oa-px-3 oa-py-2 oa-text-xs oa-font-bold oa-text-slate-600 dark:oa-text-slate-300 hover:oa-text-[var(--org-btn-primary-bg)] oa-bg-white dark:oa-bg-slate-800 oa-border oa-border-gray-200 dark:oa-border-slate-700 oa-rounded-lg hover:oa-border-[var(--org-btn-primary-bg)] hover:oa-shadow-sm oa-transition-all"
+                                                        className="oa-inline-flex oa-items-center oa-gap-1.5 oa-px-3 oa-py-2 oa-text-xs oa-font-bold oa-rounded-lg hover:oa-border-[var(--org-btn-primary-bg)] hover:oa-shadow-sm oa-transition-all oa-border"
+                                                        style={{
+                                                          color: 'var(--pa-text-secondary)',
+                                                          background: 'var(--pa-surface-panel)',
+                                                          borderColor: 'var(--pa-border-default)'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                          e.currentTarget.style.color = 'var(--org-btn-primary-bg)'
+                                                          e.currentTarget.style.borderColor = 'var(--org-btn-primary-bg)'
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                          e.currentTarget.style.color = 'var(--pa-text-secondary)'
+                                                          e.currentTarget.style.borderColor = 'var(--pa-border-default)'
+                                                        }}
                                                     >
                                                         <span className="material-symbols-outlined oa-text-[16px]">done</span>
                                                         Dismiss

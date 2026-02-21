@@ -461,8 +461,8 @@ export default function TeamDetail() {
                       opacity: navigating ? 0.6 : 1,
                       padding: 0,
                       lineHeight: 'normal',
+                      color: 'var(--pa-text-muted)'
                     }}
-                    className="text-[var(--org-text-muted)] dark:text-slate-400"
                   >
                     {sportName}
                   </button>
@@ -476,8 +476,8 @@ export default function TeamDetail() {
                       letterSpacing: '0.05em',
                       textDecoration: 'none',
                       lineHeight: 'normal',
+                      color: 'var(--pa-text-muted)'
                     }}
-                    className="text-[var(--org-text-muted)] dark:text-slate-400"
                   >
                     {sportName}
                   </Link>
@@ -503,8 +503,8 @@ export default function TeamDetail() {
                       opacity: navigating ? 0.6 : 1,
                       padding: 0,
                       lineHeight: 'normal',
+                      color: 'var(--pa-text-muted)'
                     }}
-                    className="text-[var(--org-text-muted)] dark:text-slate-400"
                   >
                     {programName}
                   </button>
@@ -518,8 +518,8 @@ export default function TeamDetail() {
                       letterSpacing: '0.05em',
                       textDecoration: 'none',
                       lineHeight: 'normal',
+                      color: 'var(--pa-text-muted)'
                     }}
-                    className="text-[var(--org-text-muted)] dark:text-slate-400"
                   >
                     {programName}
                   </Link>
@@ -563,8 +563,9 @@ export default function TeamDetail() {
           {/* Page title with optional icon */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oa-space-4)', marginBottom: 'var(--oa-space-6)' }}>
             <span
-              className="material-symbols-outlined text-[var(--org-btn-secondary-bg)] dark:text-slate-400"
+              className="material-symbols-outlined"
               style={{
+                color: 'var(--pa-text-muted)',
                 fontSize: '32px',
                 fontVariationSettings: "'FILL' 1"
               }}
@@ -655,8 +656,18 @@ export default function TeamDetail() {
                   cursor: navigating ? 'not-allowed' : 'pointer',
                   transition: 'color 200ms',
                   opacity: navigating ? 0.6 : 1,
+                  color: activeTab === tab ? 'var(--pa-text-primary)' : 'var(--pa-text-muted)'
                 }}
-                className={activeTab === tab ? 'text-[var(--oa-n900)] dark:text-white' : 'text-[var(--oa-n500)] dark:text-slate-400 hover:text-[var(--org-btn-primary-bg)] dark:hover:text-slate-200'}
+                onMouseEnter={(e) => {
+                  if (activeTab !== tab) {
+                    e.currentTarget.style.color = 'var(--org-btn-primary-bg)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== tab) {
+                    e.currentTarget.style.color = 'var(--pa-text-muted)'
+                  }
+                }}
               >
                 {tab.toUpperCase()}
               </button>
@@ -723,60 +734,60 @@ export default function TeamDetail() {
                 >
                   <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ background: 'var(--oa-n50)' }} className="dark:bg-slate-800/50">
+                      <tr style={{ background: 'var(--pa-surface-panel)' }}>
                         <th
                           style={{
                             padding: 'var(--oa-space-4) var(--oa-space-6)',
-                            color: 'var(--oa-n500)',
+                            color: 'var(--pa-text-secondary)',
                             fontSize: '12px',
                             fontWeight: 900,
                             textTransform: 'uppercase',
                             letterSpacing: '0.1em',
                             borderBottom: '1px solid var(--oa-n200)',
+                            borderBottomColor: 'var(--pa-border-default)'
                           }}
-                          className="dark:text-slate-400 dark:border-slate-700"
                         >
                           Athlete Name
                         </th>
                         <th
                           style={{
                             padding: 'var(--oa-space-4) var(--oa-space-6)',
-                            color: 'var(--oa-n500)',
+                            color: 'var(--pa-text-secondary)',
                             fontSize: '12px',
                             fontWeight: 900,
                             textTransform: 'uppercase',
                             letterSpacing: '0.1em',
                             borderBottom: '1px solid var(--oa-n200)',
+                            borderBottomColor: 'var(--pa-border-default)'
                           }}
-                          className="dark:text-slate-400 dark:border-slate-700"
                         >
                           Jersey #
                         </th>
                         <th
                           style={{
                             padding: 'var(--oa-space-4) var(--oa-space-6)',
-                            color: 'var(--oa-n500)',
+                            color: 'var(--pa-text-secondary)',
                             fontSize: '12px',
                             fontWeight: 900,
                             textTransform: 'uppercase',
                             letterSpacing: '0.1em',
                             borderBottom: '1px solid var(--oa-n200)',
+                            borderBottomColor: 'var(--pa-border-default)'
                           }}
-                          className="dark:text-slate-400 dark:border-slate-700"
                         >
                           Position
                         </th>
                         <th
                           style={{
                             padding: 'var(--oa-space-4) var(--oa-space-6)',
-                            color: 'var(--oa-n500)',
+                            color: 'var(--pa-text-secondary)',
                             fontSize: '12px',
                             fontWeight: 900,
                             textTransform: 'uppercase',
                             letterSpacing: '0.1em',
                             borderBottom: '1px solid var(--oa-n200)',
+                            borderBottomColor: 'var(--pa-border-default)'
                           }}
-                          className="dark:text-slate-400 dark:border-slate-700"
                         >
                           Status
                         </th>
@@ -800,8 +811,8 @@ export default function TeamDetail() {
                             style={{
                               transition: 'background-color 200ms',
                               cursor: athleteId && !navigating ? 'pointer' : 'default',
+                              background: 'transparent'
                             }}
-                            className="hover:bg-slate-50 dark:hover:bg-slate-800/30"
                             onMouseEnter={(e) => {
                               if (athleteId && !navigating) {
                                 e.currentTarget.style.background = 'var(--oa-n50)'
@@ -825,12 +836,17 @@ export default function TeamDetail() {
                                     color: isActive ? primaryColor : 'var(--oa-n500)',
                                     fontWeight: 900,
                                     fontSize: '14px',
+                                    ...(!isActive ? { background: 'var(--pa-surface-panel)', color: 'var(--pa-text-muted)' } : {})
                                   }}
-                                  className={!isActive ? 'dark:bg-slate-700 dark:text-slate-400' : ''}
                                 >
                                   {initials}
                                 </div>
-                                <span style={{ color: 'var(--oa-n900)', fontWeight: 700 }} className="dark:text-white">
+                                <span 
+                                  style={{ 
+                                    color: 'var(--pa-text-primary)', 
+                                    fontWeight: 700 
+                                  }}
+                                >
                                   {fullName}
                                 </span>
                               </div>
@@ -848,14 +864,13 @@ export default function TeamDetail() {
                                   alignItems: 'center',
                                   padding: '4px 12px',
                                   borderRadius: '9999px',
-                                  background: isActive ? 'rgba(16, 185, 129, 0.1)' : 'var(--oa-n100)',
-                                  color: isActive ? 'rgb(16, 185, 129)' : 'var(--oa-n500)',
+                                  background: isActive ? 'rgba(16, 185, 129, 0.1)' : 'var(--pa-surface-panel)',
+                                  color: isActive ? 'rgb(16, 185, 129)' : 'var(--pa-text-muted)',
                                   fontSize: '10px',
                                   fontWeight: 900,
                                   textTransform: 'uppercase',
-                                  letterSpacing: '0.1em',
+                                  letterSpacing: '0.1em'
                                 }}
-                                className={isActive ? 'dark:bg-emerald-900/30 dark:text-emerald-400' : 'dark:bg-slate-800 dark:text-slate-400'}
                               >
                                 <span
                                   style={{
@@ -894,9 +909,9 @@ export default function TeamDetail() {
                   padding: 'var(--oa-space-6)',
                   borderRadius: 'var(--oa-radius-l)',
                   border: `1px solid color-mix(in srgb, ${primaryColor} 20%, transparent)`,
-                  background: `color-mix(in srgb, ${primaryColor} 5%, transparent)`,
+                  borderColor: 'var(--pa-border-default)',
+                  background: 'var(--pa-surface-panel)',
                 }}
-                className="dark:bg-slate-800/50 dark:border-slate-700"
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oa-space-3)', marginBottom: 'var(--oa-space-4)' }}>
                   <span className="material-symbols-outlined" style={{ fontSize: '20px', color: primaryColor, fontWeight: 700 }}>
@@ -908,10 +923,9 @@ export default function TeamDetail() {
                       fontWeight: 900,
                       textTransform: 'uppercase',
                       letterSpacing: '0.1em',
-                      color: 'var(--oa-n700)',
+                      color: 'var(--pa-text-secondary)',
                       margin: 0,
                     }}
-                    className="dark:text-slate-300"
                   >
                     Team Summary
                   </h3>
@@ -1000,9 +1014,9 @@ export default function TeamDetail() {
                   padding: 'var(--oa-space-6)',
                   borderRadius: 'var(--oa-radius-l)',
                   border: '1px solid var(--oa-n200)',
-                  background: 'var(--oa-white)',
+                  borderColor: 'var(--pa-border-default)',
+                  background: 'var(--pa-surface-panel)',
                 }}
-                className="dark:border-slate-700 dark:bg-slate-800/50"
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oa-space-3)', marginBottom: 'var(--oa-space-4)' }}>
                   <span className="material-symbols-outlined dark:text-slate-400" style={{ fontSize: '20px', color: 'var(--oa-n400)', fontWeight: 700 }}>
@@ -1014,10 +1028,9 @@ export default function TeamDetail() {
                       fontWeight: 900,
                       textTransform: 'uppercase',
                       letterSpacing: '0.1em',
-                      color: 'var(--oa-n700)',
+                      color: 'var(--pa-text-secondary)',
                       margin: 0,
                     }}
-                    className="dark:text-slate-300"
                   >
                     Recent Activity
                   </h3>
@@ -1041,13 +1054,12 @@ export default function TeamDetail() {
                       <p
                         style={{
                           fontSize: '10px',
-                          color: 'var(--oa-n400)',
+                          color: 'var(--pa-text-muted)',
                           textTransform: 'uppercase',
                           fontWeight: 900,
                           letterSpacing: '0.1em',
                           marginTop: '4px',
                         }}
-                        className="dark:text-slate-400"
                       >
                         2 hours ago
                       </p>
@@ -1071,13 +1083,12 @@ export default function TeamDetail() {
                       <p
                         style={{
                           fontSize: '10px',
-                          color: 'var(--oa-n400)',
+                          color: 'var(--pa-text-muted)',
                           textTransform: 'uppercase',
                           fontWeight: 900,
                           letterSpacing: '0.1em',
                           marginTop: '4px',
                         }}
-                        className="dark:text-slate-400"
                       >
                         Yesterday
                       </p>

@@ -616,7 +616,12 @@ function TicketRevenueReporting({ orgId }: { orgId: string | undefined }) {
           ) : (
             <div className="oa-space-y-4">
               {currentMonth && (
-                <div className="oa-p-4 oa-bg-slate-50 dark:oa-bg-slate-800 oa-rounded-lg">
+                <div 
+                  className="oa-p-4 oa-rounded-lg"
+                  style={{
+                    background: 'var(--pa-surface-panel)'
+                  }}
+                >
                   <p className="oa-body-xs oa-text-slate-500 oa-mb-2">
                     {new Date(`${currentMonth.month}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                   </p>
@@ -631,7 +636,13 @@ function TicketRevenueReporting({ orgId }: { orgId: string | undefined }) {
                 </div>
               )}
               {lastMonth && (
-                <div className="oa-p-4 oa-bg-white dark:oa-bg-slate-900 oa-rounded-lg oa-border oa-border-slate-200 dark:oa-border-slate-700">
+                <div 
+                  className="oa-p-4 oa-rounded-lg oa-border"
+                  style={{
+                    background: 'var(--pa-surface)',
+                    borderColor: 'var(--pa-border-default)'
+                  }}
+                >
                   <p className="oa-body-xs oa-text-slate-500 oa-mb-2">
                     {new Date(`${lastMonth.month}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                   </p>

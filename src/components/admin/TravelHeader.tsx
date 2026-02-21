@@ -35,55 +35,109 @@ export default function TravelHeader({
 
     return (
         <div className={cn('flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6')}>
-            <div className={cn('flex gap-1 p-1 rounded-md')} style={{ background: 'var(--org-surface-secondary, rgba(0,0,0,0.06))' }}>
-                {timeContextOptions.map((option) => (
-                    <button
-                        key={option.value}
-                        onClick={() => onTimeContextChange(option.value)}
-                        className={cn(
-                            'px-4 py-2 rounded text-sm font-bold transition-colors',
-                            timeContext === option.value ? 'shadow-sm' : 'bg-transparent'
-                        )}
-                        style={
-                            timeContext === option.value
-                                ? { background: 'var(--org-surface-primary, #fff)', color: 'var(--org-text-primary, #111)' }
-                                : { color: 'var(--org-text-secondary, #555)' }
-                        }
-                    >
-                        {option.label}
-                        {option.value === 'upcoming' && upcomingCount !== undefined && (
-                            <span
-                                className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
-                                style={{ background: 'var(--org-btn-primary-bg)', color: 'var(--org-btn-primary-text)' }}
-                            >
-                                {upcomingCount}
-                            </span>
-                        )}
-                    </button>
-                ))}
-            </div>
-
-            <div className={cn('flex items-center gap-3 w-full sm:w-auto')}>
-                <div className={cn('flex gap-1 p-1 rounded-md')} style={{ background: 'var(--org-surface-secondary, rgba(0,0,0,0.06))' }}>
-                    {viewModeOptions.map((option) => (
+            <div 
+                className={cn('flex gap-1 p-1 rounded-lg')} 
+                style={{ 
+                    background: 'var(--pa-surface-panel)',
+                    border: '1px solid var(--pa-border-subtle)'
+                }}
+            >
+                {timeContextOptions.map((option) => {
+                    const isActive = timeContext === option.value
+                    return (
                         <button
                             key={option.value}
-                            onClick={() => onViewModeChange(option.value)}
+                            onClick={() => onTimeContextChange(option.value)}
                             className={cn(
-                                'px-3 py-2 rounded text-sm font-bold transition-colors flex items-center gap-1',
-                                viewMode === option.value ? 'shadow-sm' : 'bg-transparent'
+                                'px-4 py-2 rounded-md text-sm font-bold transition-all',
+                                isActive ? '' : 'bg-transparent'
                             )}
                             style={
-                                viewMode === option.value
-                                    ? { background: 'var(--org-surface-primary, #fff)', color: 'var(--org-text-primary, #111)' }
-                                    : { color: 'var(--org-text-secondary, #555)' }
+                                isActive
+                                    ? { 
+                                        background: 'var(--pa-surface)', 
+                                        color: 'var(--pa-text-primary)',
+                                        border: '1px solid var(--pa-border-subtle)',
+                                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)'
+                                    }
+                                    : { 
+                                        color: 'var(--pa-text-secondary)',
+                                        border: '1px solid transparent'
+                                    }
                             }
-                            title={option.label}
+                            onMouseEnter={(e) => {
+                                if (!isActive) {
+                                    e.currentTarget.style.color = 'var(--pa-text-primary)'
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (!isActive) {
+                                    e.currentTarget.style.color = 'var(--pa-text-secondary)'
+                                }
+                            }}
                         >
-                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{option.icon}</span>
-                            <span className="hidden sm:inline">{option.label}</span>
+                            {option.label}
+                            {option.value === 'upcoming' && upcomingCount !== undefined && (
+                                <span
+                                    className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
+                                    style={{ background: 'var(--org-btn-primary-bg)', color: 'var(--org-btn-primary-text)' }}
+                                >
+                                    {upcomingCount}
+                                </span>
+                            )}
                         </button>
-                    ))}
+                    )
+                })}
+            </div>
+
+            <div className={cn('flex items-center gap-3 w-full sm:w-auto flex-shrink-0')}>
+                <div 
+                    className={cn('flex gap-1 p-1 rounded-lg')} 
+                    style={{ 
+                        background: 'var(--pa-surface-panel)',
+                        border: '1px solid var(--pa-border-subtle)'
+                    }}
+                >
+                    {viewModeOptions.map((option) => {
+                        const isActive = viewMode === option.value
+                        return (
+                            <button
+                                key={option.value}
+                                onClick={() => onViewModeChange(option.value)}
+                                className={cn(
+                                    'px-3 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-1',
+                                    isActive ? '' : 'bg-transparent'
+                                )}
+                                style={
+                                    isActive
+                                        ? { 
+                                            background: 'var(--pa-surface)', 
+                                            color: 'var(--pa-text-primary)',
+                                            border: '1px solid var(--pa-border-subtle)',
+                                            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)'
+                                        }
+                                        : { 
+                                            color: 'var(--pa-text-secondary)',
+                                            border: '1px solid transparent'
+                                        }
+                                }
+                                onMouseEnter={(e) => {
+                                    if (!isActive) {
+                                        e.currentTarget.style.color = 'var(--pa-text-primary)'
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!isActive) {
+                                        e.currentTarget.style.color = 'var(--pa-text-secondary)'
+                                    }
+                                }}
+                                title={option.label}
+                            >
+                                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{option.icon}</span>
+                                <span className="hidden sm:inline">{option.label}</span>
+                            </button>
+                        )
+                    })}
                 </div>
 
                 <OrgAdminButton onClick={onCreateClick} variant="primary" icon="add" className="whitespace-nowrap">

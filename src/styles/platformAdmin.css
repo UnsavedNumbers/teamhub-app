@@ -700,10 +700,10 @@ html.dark .pa-org-switcher-name {
 
 /* Dark mode org switcher dropdown */
 html.dark .pa-org-switcher-dropdown {
-    background: var(--pa-n900);
-    border: 1px solid var(--pa-n700);
+    background: var(--pa-surface-panel);
+    border: 1px solid var(--pa-border-default);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-    color: var(--pa-white);
+    color: var(--pa-text-primary);
 }
 
 .pa-org-switcher-item {
@@ -2218,22 +2218,22 @@ html.dark .pa-label--required::after {
 
 /* Dark mode styles - uses CSS variables defined above */
 html.dark .pa-input {
-    background: var(--pa-surface);
-    border-color: #374151;
-    color: #f9fafb;
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-default);
+    color: var(--pa-text-primary);
 }
 
 html.dark .pa-input::placeholder {
-    color: #9ca3af;
+    color: var(--pa-text-muted);
 }
 
 html.dark .pa-input:hover {
-    border-color: #4b5563;
+    border-color: var(--pa-border-emphasis);
 }
 
 html.dark .pa-input:focus {
-    border-color: #6b7280;
-    outline: 2px solid rgba(107, 114, 128, 0.25);
+    border-color: var(--pa-border-emphasis);
+    outline: 2px solid rgba(255, 255, 255, 0.1);
 }
 
 .pa-input--error {
@@ -2266,6 +2266,11 @@ html.dark .pa-select {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%239ca3af' viewBox='0 0 16 16'%3E%3Cpath d='M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.75rem center;
+}
+
+html.dark .pa-select option {
+    background: var(--pa-surface-panel);
+    color: var(--pa-text-primary);
 }
 
 .pa-textarea {
@@ -2672,8 +2677,8 @@ html.dark .pa-timepicker-button:focus {
 }
 
 html.dark .pa-timepicker-dropdown {
-    background: #1f2937;
-    border-color: #374151;
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-default);
 }
 
 .pa-timepicker-column {
@@ -2684,7 +2689,7 @@ html.dark .pa-timepicker-dropdown {
 }
 
 html.dark .pa-timepicker-column {
-    background: #1f2937;
+    background: var(--pa-surface-panel);
 }
 
 .pa-timepicker-column--period {
@@ -2702,9 +2707,9 @@ html.dark .pa-timepicker-column {
 }
 
 html.dark .pa-timepicker-column-header {
-    color: #9ca3af;
-    background: #111827;
-    border-color: #374151;
+    color: var(--pa-text-muted);
+    background: var(--pa-surface);
+    border-color: var(--pa-border-default);
 }
 
 .pa-timepicker-column-scroll {
@@ -2727,7 +2732,7 @@ html.dark .pa-timepicker-column-header {
 }
 
 html.dark .pa-timepicker-option {
-    color: #f9fafb;
+    color: var(--pa-text-primary);
 }
 
 .pa-timepicker-option:hover {
@@ -2735,7 +2740,7 @@ html.dark .pa-timepicker-option {
 }
 
 html.dark .pa-timepicker-option:hover {
-    background: #374151;
+    background: var(--pa-bg-hover);
 }
 
 .pa-timepicker-option--selected {
@@ -2745,8 +2750,9 @@ html.dark .pa-timepicker-option:hover {
 }
 
 html.dark .pa-timepicker-option--selected {
-    background: #3b82f6;
-    color: #ffffff;
+    background: var(--pa-surface);
+    color: var(--pa-text-primary);
+    border: 1px solid var(--pa-border-emphasis);
 }
 
 .pa-timepicker-option--selected:hover {
@@ -2754,7 +2760,7 @@ html.dark .pa-timepicker-option--selected {
 }
 
 html.dark .pa-timepicker-option--selected:hover {
-    background: #2563eb;
+    background: var(--pa-bg-active);
 }
 
 /* Checkbox */
@@ -3340,7 +3346,7 @@ html.dark .pa-table-pagination-label {
     padding: 0 var(--pa-space-3);
     padding-right: 32px;
     border: 1px solid var(--pa-n200);
-    border-radius: var(--pa-radius-s);
+    border-radius: 0;
     background: var(--pa-white);
     font: var(--pa-text-body-m);
     color: var(--pa-n900);
@@ -3349,6 +3355,12 @@ html.dark .pa-table-pagination-label {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%237A8794' viewBox='0 0 16 16'%3E%3Cpath d='M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 8px center;
+}
+
+/* Filter bar selects should have zero border radius */
+.pa-filter-bar .pa-select,
+.pa-filter-bar select.pa-input {
+    border-radius: 0;
 }
 
 html.dark .pa-table-pagination-select {
@@ -6639,7 +6651,7 @@ html.dark .pa-ff-desc-inline:hover {
 }
 
 html.dark .pa-ff-desc-textarea {
-    background: var(--pa-n50);
+    background: var(--pa-surface-panel);
     border-color: var(--pa-border-default);
     color: var(--pa-text-primary);
 }

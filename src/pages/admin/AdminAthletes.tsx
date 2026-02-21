@@ -288,8 +288,21 @@ export default function AdminAthletes() {
     if (!isReady) {
         return (
             <div>
-                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center">
-                    <div className="animate-pulse rounded bg-slate-200 dark:bg-slate-700" style={{ width: '100%', height: '400px' }} />
+                <div 
+                    className="rounded-xl border p-8 text-center"
+                    style={{ 
+                        background: 'var(--pa-surface)',
+                        borderColor: 'var(--pa-border-default)'
+                    }}
+                >
+                    <div 
+                        className="animate-pulse rounded" 
+                        style={{ 
+                            width: '100%', 
+                            height: '400px',
+                            background: 'var(--pa-surface-panel)'
+                        }} 
+                    />
                 </div>
             </div>
         )

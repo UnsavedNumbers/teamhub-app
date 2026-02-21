@@ -318,8 +318,13 @@ export default function AdminAnnouncementDetail() {
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
                 placeholder="Announcement content"
-                className="oa-w-full oa-min-h-[200px] oa-p-3 oa-border oa-border-slate-300 dark:oa-border-slate-600 oa-rounded oa-bg-white dark:oa-bg-slate-800 oa-text-slate-900 dark:oa-text-white oa-resize-y"
-                style={{ fontFamily: 'inherit' }}
+                className="oa-w-full oa-min-h-[200px] oa-p-3 oa-border oa-rounded oa-resize-y"
+                style={{
+                  background: 'var(--pa-surface-panel)',
+                  borderColor: 'var(--pa-border-default)',
+                  color: 'var(--pa-text-primary)',
+                  fontFamily: 'inherit'
+                }}
               />
             ) : (
               <div className="oa-group">

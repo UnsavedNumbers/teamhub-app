@@ -9,10 +9,30 @@
 
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
-import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 
-type BulkImportJob = Database['public']['Tables']['bulk_import_jobs']['Row']
-type BulkImportJobInsert = Database['public']['Tables']['bulk_import_jobs']['Insert']
+/** Local types for bulk_import_jobs (table may not be in generated Database types yet) */
+export interface BulkInviteTotalsJson {
+  unique_emails?: number
+  athletes?: number
+  guardians?: number
+  coaches?: number
+}
+
+export interface BulkInviteProgressJson {
+  step?: string
+  completed?: number
+  total?: number
+}
+
+interface BulkImportJobInsert {
+  org_id: string
+  created_by?: string
+  status: string
+  file_path: string | null
+  file_name: string | null
+  file_size_bytes: number | null
+  totals_json?: unknown
+}
 
 export interface ValidationResult {
   valid: boolean
@@ -54,10 +74,10 @@ export interface ValidationResult {
 
 export interface ImportJobStatus {
   id: string
-  status: BulkImportJob['status']
-  progress_json: BulkImportJob['progress_json']
-  totals_json: BulkImportJob['totals_json']
-  error_summary: BulkImportJob['error_summary']
+  status: string
+  progress_json: BulkInviteProgressJson | null
+  totals_json: BulkInviteTotalsJson | null
+  error_summary: Record<string, unknown> | null
   started_at: string | null
   finished_at: string | null
   created_at: string
@@ -268,7 +288,7 @@ export async function startBulkInviteImport(
       totals_json: totals,
     }
 
-    const { data: job, error: insertError } = await supabase
+    const { data: job, error: insertError } = await (supabase as any)
       .from('bulk_import_jobs')
       .insert(jobData)
       .select()
@@ -288,7 +308,7 @@ export async function startBulkInviteImport(
 
     if (importError) {
       // Update job to failed
-      await supabase
+      await (supabase as any)
         .from('bulk_import_jobs')
         .update({ status: 'failed', error_summary: { error: importError.message } })
         .eq('id', job.id)
@@ -320,7 +340,7 @@ export async function getBulkInviteJobStatus(
       return { data: null, error: new Error('Organization ID and job ID are required') }
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('bulk_import_jobs')
       .select('id, status, progress_json, totals_json, error_summary, started_at, finished_at, created_at, file_name')
       .eq('id', jobId)
@@ -331,7 +351,7 @@ export async function getBulkInviteJobStatus(
       return { data: null, error: error || new Error('Job not found') }
     }
 
-    return { data: data as ImportJobStatus, error: null }
+    return { data: data as unknown as ImportJobStatus, error: null }
   } catch (err) {
     return { data: null, error: err instanceof Error ? err : new Error('Failed to get job status') }
   }
@@ -348,7 +368,7 @@ export async function getBulkInviteJobHistory(
       return { data: null, error: new Error('Organization ID is required') }
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('bulk_import_jobs')
       .select('id, status, progress_json, totals_json, error_summary, started_at, finished_at, created_at, file_name')
       .eq('org_id', orgId)
@@ -378,7 +398,7 @@ export async function downloadBulkInviteErrorsCSV(
     }
 
     // Get job with error summary
-    const { data: job, error: jobError } = await supabase
+    const { data: job, error: jobError } = await (supabase as any)
       .from('bulk_import_jobs')
       .select('error_summary, file_name')
       .eq('id', jobId)
@@ -390,7 +410,7 @@ export async function downloadBulkInviteErrorsCSV(
     }
 
     // Extract errors from error_summary
-    const errorSummary = job.error_summary as any
+    const errorSummary = (job as { error_summary?: unknown }).error_summary as any
     const rowErrors = errorSummary?.row_errors || []
 
     // Filter only errors (not warnings)

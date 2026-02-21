@@ -218,9 +218,13 @@ export default function BulkInviteWizard({ onComplete, onCancel }: BulkInviteWiz
   }, [orgId])
   
   useEffect(() => {
-    if (jobId && step === 'running') {
-      const cleanup = pollJobStatus(jobId)
-      return cleanup
+    if (!jobId || step !== 'running') return
+    let cleanup: (() => void) | undefined
+    pollJobStatus(jobId).then((c) => {
+      cleanup = c
+    })
+    return () => {
+      cleanup?.()
     }
   }, [jobId, step, pollJobStatus])
 
@@ -506,26 +510,26 @@ export default function BulkInviteWizard({ onComplete, onCancel }: BulkInviteWiz
             <h2 className="text-xl font-semibold">{t('admin.bulkInvite.steps.running.title')}</h2>
             <p className="text-gray-600">{t('admin.bulkInvite.steps.running.subtitle')}</p>
             
-            {jobStatus.progress_json && typeof jobStatus.progress_json === 'object' && (
+            {jobStatus.progress_json ? (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>{jobStatus.progress_json.step || 'Processing...'}</span>
                   <span>
-                    {jobStatus.progress_json.completed || 0} / {jobStatus.progress_json.total || 0}
+                    {jobStatus.progress_json.completed ?? 0} / {jobStatus.progress_json.total ?? 0}
                   </span>
                 </div>
-                {jobStatus.progress_json.total && jobStatus.progress_json.total > 0 && (
+                {jobStatus.progress_json.total != null && jobStatus.progress_json.total > 0 ? (
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className="bg-blue-600 h-2 rounded-full transition-all"
                       style={{
-                        width: `${((jobStatus.progress_json.completed || 0) / jobStatus.progress_json.total) * 100}%`,
+                        width: `${(((jobStatus.progress_json.completed ?? 0) / jobStatus.progress_json.total) * 100)}%`,
                       }}
                     />
                   </div>
-                )}
+                ) : null}
               </div>
-            )}
+            ) : null}
             
             <div className="text-sm text-gray-600">{t('admin.bulkInvite.steps.running.safeToNavigate')}</div>
           </div>
@@ -539,36 +543,36 @@ export default function BulkInviteWizard({ onComplete, onCancel }: BulkInviteWiz
             {jobStatus.status === 'completed' && (
               <div className="p-4 bg-green-50 border border-green-200 rounded">
                 <div className="font-medium text-green-800">{t('admin.bulkInvite.steps.results.success')}</div>
-                {jobStatus.totals_json && typeof jobStatus.totals_json === 'object' && (
+                {jobStatus.totals_json ? (
                   <div className="mt-2 text-sm text-green-700">
-                    <div>Unique users: {jobStatus.totals_json.unique_emails || 0}</div>
-                    <div>Athletes: {jobStatus.totals_json.athletes || 0}</div>
-                    <div>Guardians: {jobStatus.totals_json.guardians || 0}</div>
-                    <div>Coaches: {jobStatus.totals_json.coaches || 0}</div>
+                    <div>Unique users: {jobStatus.totals_json.unique_emails ?? 0}</div>
+                    <div>Athletes: {jobStatus.totals_json.athletes ?? 0}</div>
+                    <div>Guardians: {jobStatus.totals_json.guardians ?? 0}</div>
+                    <div>Coaches: {jobStatus.totals_json.coaches ?? 0}</div>
                   </div>
-                )}
+                ) : null}
               </div>
             )}
             
             {jobStatus.status === 'completed_with_errors' && (
               <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
                 <div className="font-medium text-yellow-800">{t('admin.bulkInvite.steps.results.completedWithErrors')}</div>
-                {jobStatus.error_summary && typeof jobStatus.error_summary === 'object' && (
+                {jobStatus.error_summary ? (
                   <div className="mt-2 text-sm text-yellow-700">
                     {JSON.stringify(jobStatus.error_summary)}
                   </div>
-                )}
+                ) : null}
               </div>
             )}
             
             {jobStatus.status === 'failed' && (
               <div className="p-4 bg-red-50 border border-red-200 rounded">
                 <div className="font-medium text-red-800">{t('admin.bulkInvite.steps.results.failed')}</div>
-                {jobStatus.error_summary && typeof jobStatus.error_summary === 'object' && (
+                {jobStatus.error_summary ? (
                   <div className="mt-2 text-sm text-red-700">
                     {JSON.stringify(jobStatus.error_summary)}
                   </div>
-                )}
+                ) : null}
               </div>
             )}
             
@@ -576,7 +580,7 @@ export default function BulkInviteWizard({ onComplete, onCancel }: BulkInviteWiz
               <Button onClick={onComplete}>{t('admin.bulkInvite.viewHistory')}</Button>
               {jobStatus.status === 'completed_with_errors' && jobId && (
                 <Button 
-                  variant="outline"
+                  variant="secondary"
                   onClick={async () => {
                     if (!orgId || !jobId) return
                     const { error } = await downloadBulkInviteErrorsCSV(orgId, jobId)
@@ -595,7 +599,7 @@ export default function BulkInviteWizard({ onComplete, onCancel }: BulkInviteWiz
 
       {/* Navigation buttons */}
       <div className="flex justify-between gap-4">
-        <Button variant="outline" onClick={step === 'download' ? onCancel : handleBack} disabled={loading}>
+        <Button variant="secondary" onClick={step === 'download' ? onCancel : handleBack} disabled={loading}>
           {t('common.back')}
         </Button>
         {step !== 'download' && step !== 'running' && step !== 'results' && (

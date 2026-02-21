@@ -152,23 +152,29 @@ export default function EventsFilters({
         borderColor: 'var(--org-btn-primary-bg)',
     }
     const chipDefaultStyle = {
-        background: 'var(--org-surface-primary)',
-        color: 'var(--org-text-secondary)',
-        borderColor: 'var(--org-border-default)',
+        background: 'var(--pa-surface-panel)',
+        color: 'var(--pa-text-secondary)',
+        borderColor: 'var(--pa-border-default)',
     }
 
     return (
-        <div className="rounded-xl border bg-white shadow-sm dark:bg-slate-800/50 dark:border-slate-700 mb-4">
+        <div 
+            className="rounded-xl border shadow-sm mb-4"
+            style={{ 
+                background: 'var(--pa-surface)',
+                borderColor: 'var(--pa-border-default)'
+            }}
+        >
             {/* Header */}
             <div
                 className={cn('flex items-center justify-between cursor-pointer p-4')}
                 onClick={() => setIsOpen(!isOpen)}
             >
                 <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--org-text-tertiary)' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-text-muted)' }}>
                         filter_list
                     </span>
-                    <span className="font-bold text-sm uppercase tracking-wider" style={{ color: 'var(--org-text-primary)' }}>
+                    <span className="font-bold text-sm uppercase tracking-wider" style={{ color: 'var(--pa-text-primary)' }}>
                         Filters
                     </span>
                     {activeFilterCount > 0 && (
@@ -180,24 +186,27 @@ export default function EventsFilters({
                         </span>
                     )}
                 </div>
-                <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--org-text-tertiary)' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-text-muted)' }}>
                     {isOpen ? 'expand_less' : 'expand_more'}
                 </span>
             </div>
 
             {/* Filter Controls */}
             {isOpen && (
-                <div className="pt-0 p-4 border-t border-slate-200 dark:border-slate-600">
+                <div 
+                    className="pt-0 p-4 border-t"
+                    style={{ borderColor: 'var(--pa-border-default)' }}
+                >
                     <div className={cn('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4')}>
                         {/* Search */}
                         <div className="mb-0">
-                            <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--org-text-secondary)' }}>
+                            <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--pa-text-secondary)' }}>
                                 Search
                             </label>
-                            <div className="relative">
+                            <div className="relative max-w-sm">
                                 <span
                                     className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                                    style={{ color: 'var(--org-text-tertiary)' }}
+                                    style={{ color: 'var(--pa-text-muted)' }}
                                 >
                                     <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
                                         search
@@ -207,8 +216,9 @@ export default function EventsFilters({
                                     type="text"
                                     className="w-full h-11 pl-10 pr-3 rounded-lg border bg-transparent text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
                                     style={{
-                                        borderColor: 'var(--org-border-default)',
-                                        color: 'var(--org-text-primary)',
+                                        borderColor: 'var(--pa-border-default)',
+                                        color: 'var(--pa-text-primary)',
+                                        background: 'var(--pa-surface-panel)'
                                     }}
                                     value={filters.search}
                                     onChange={(e) => handleSearchChange(e.target.value)}
@@ -219,30 +229,34 @@ export default function EventsFilters({
 
                         {/* Date From */}
                         <div className="mb-0">
-                            <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--org-text-secondary)' }}>
+                            <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--pa-text-secondary)' }}>
                                 From Date
                             </label>
-                            <DatePicker
-                                value={filters.dateFrom}
-                                onChange={(e) => onFiltersChange({ ...filters, dateFrom: e.target.value })}
-                            />
+                            <div className="max-w-xs">
+                                <DatePicker
+                                    value={filters.dateFrom}
+                                    onChange={(e) => onFiltersChange({ ...filters, dateFrom: e.target.value })}
+                                />
+                            </div>
                         </div>
 
                         {/* Date To */}
                         <div className="mb-0">
-                            <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--org-text-secondary)' }}>
+                            <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--pa-text-secondary)' }}>
                                 To Date
                             </label>
-                            <DatePicker
-                                value={filters.dateTo}
-                                onChange={(e) => onFiltersChange({ ...filters, dateTo: e.target.value })}
-                                min={filters.dateFrom}
-                            />
+                            <div className="max-w-xs">
+                                <DatePicker
+                                    value={filters.dateTo}
+                                    onChange={(e) => onFiltersChange({ ...filters, dateTo: e.target.value })}
+                                    min={filters.dateFrom}
+                                />
+                            </div>
                         </div>
 
                         {/* Status */}
                         <div className="mb-0">
-                            <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--org-text-secondary)' }}>
+                            <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--pa-text-secondary)' }}>
                                 Status
                             </label>
                             <div className="flex flex-wrap gap-2">
@@ -274,7 +288,7 @@ export default function EventsFilters({
                     <div className={cn('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4')}>
                         {/* Event Types */}
                         <div>
-                            <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--org-text-tertiary)' }}>
+                            <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--pa-text-muted)' }}>
                                 Event Types
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -294,7 +308,7 @@ export default function EventsFilters({
                         {/* Teams */}
                         {teams.length > 0 && (
                             <div>
-                                <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--org-text-tertiary)' }}>
+                                <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--pa-text-muted)' }}>
                                     Teams
                                 </div>
                                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
@@ -315,7 +329,7 @@ export default function EventsFilters({
                         {/* Seasons */}
                         {seasons.length > 0 && (
                             <div>
-                                <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--org-text-tertiary)' }}>
+                                <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--pa-text-muted)' }}>
                                     Seasons
                                 </div>
                                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
@@ -336,11 +350,14 @@ export default function EventsFilters({
 
                     {/* Clear All Button */}
                     {activeFilterCount > 0 && (
-                        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-600">
+                        <div 
+                            className="mt-4 pt-4 border-t"
+                            style={{ borderColor: 'var(--pa-border-default)' }}
+                        >
                             <button
                                 onClick={onClearAll}
                                 className="text-xs font-bold underline transition-colors hover:opacity-80"
-                                style={{ color: 'var(--org-status-error-bg)' }}
+                                style={{ color: 'var(--pa-text-secondary)' }}
                             >
                                 Clear All Filters
                             </button>
@@ -357,15 +374,24 @@ export default function EventsFilters({
                             key={chip.key}
                             className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold"
                             style={{
-                                background: 'var(--org-surface-tertiary)',
-                                color: 'var(--org-text-primary)',
+                                background: 'var(--pa-surface-panel)',
+                                color: 'var(--pa-text-primary)',
                             }}
                         >
                             {chip.label}
                             <button
                                 onClick={() => handleRemoveChip(chip.key)}
-                                className="p-0.5 rounded-full flex items-center justify-center transition-colors hover:bg-black/10 dark:hover:bg-white/10"
-                                style={{ color: 'inherit' }}
+                                className="p-0.5 rounded-full flex items-center justify-center transition-colors"
+                                style={{ 
+                                    color: 'inherit',
+                                    background: 'transparent'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'var(--pa-bg-hover)'
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'transparent'
+                                }}
                                 aria-label={`Remove ${chip.label} filter`}
                             >
                                 <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>

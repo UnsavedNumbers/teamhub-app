@@ -19,18 +19,18 @@ export default function BulkInvitePage() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <AdminPageHeader
         title={t('admin.bulkInvite.title')}
-        description={t('admin.bulkInvite.description')}
+        subtitle={t('admin.bulkInvite.description')}
       />
 
       <div className="flex gap-4">
         <Button
-          variant={view === 'wizard' ? 'default' : 'outline'}
+          variant={view === 'wizard' ? 'primary' : 'secondary'}
           onClick={() => setView('wizard')}
         >
           {t('admin.bulkInvite.uploadFile')}
         </Button>
         <Button
-          variant={view === 'history' ? 'default' : 'outline'}
+          variant={view === 'history' ? 'primary' : 'secondary'}
           onClick={() => setView('history')}
         >
           {t('admin.bulkInvite.viewHistory')}

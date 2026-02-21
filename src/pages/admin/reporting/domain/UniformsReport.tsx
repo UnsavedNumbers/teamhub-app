@@ -35,8 +35,8 @@ function UniformsReportContent() {
   if (error || !metrics) {
     return (
       <EmptyState
-        title={t('admin.reporting.uniforms.error.title') || 'Unable to load uniforms data'}
-        description={error?.message || t('admin.reporting.uniforms.error.description') || 'There was an error loading the uniforms metrics. Please try again or contact support if the issue persists.'}
+        title={t('admin.reporting.uniforms.error.title' as import('../../../../i18n').TranslationKey) || 'Unable to load uniforms data'}
+        description={error?.message || t('admin.reporting.uniforms.error.description' as import('../../../../i18n').TranslationKey) || 'There was an error loading the uniforms metrics. Please try again or contact support if the issue persists.'}
         icon="error"
       />
     )

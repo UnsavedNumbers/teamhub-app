@@ -32,8 +32,8 @@ function OperationsReportContent() {
   if (error || !metrics) {
     return (
       <EmptyState
-        title={t('admin.reporting.operations.error.title') || 'Unable to load operations data'}
-        description={error?.message || t('admin.reporting.operations.error.description') || 'There was an error loading the operations metrics. Please try again or contact support if the issue persists.'}
+        title={t('admin.reporting.operations.error.title' as import('../../../../i18n').TranslationKey) || 'Unable to load operations data'}
+        description={error?.message || t('admin.reporting.operations.error.description' as import('../../../../i18n').TranslationKey) || 'There was an error loading the operations metrics. Please try again or contact support if the issue persists.'}
         icon="error"
       />
     )

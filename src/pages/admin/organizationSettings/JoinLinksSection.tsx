@@ -240,7 +240,13 @@ export default function JoinLinksSection({ orgId }: JoinLinksSectionProps) {
                                 {t('admin.organizationSettings.joinLinks.linkCreated')}
                             </p>
                             <div className="flex items-center gap-2 mb-2">
-                                <code className="text-sm bg-white dark:bg-slate-800 px-2 py-1 rounded flex-1 break-all">
+                                <code 
+                                  className="text-sm px-2 py-1 rounded flex-1 break-all"
+                                  style={{
+                                    background: 'var(--pa-surface-panel)',
+                                    color: 'var(--pa-text-primary)'
+                                  }}
+                                >
                                     {createdLink.url}
                                 </code>
                                 <Button
@@ -252,7 +258,12 @@ export default function JoinLinksSection({ orgId }: JoinLinksSectionProps) {
                                     {t('admin.organizationSettings.joinLinks.copy')}
                                 </Button>
                             </div>
-                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                            <p 
+                              className="text-xs"
+                              style={{
+                                color: 'var(--pa-text-muted)'
+                              }}
+                            >
                                 {t('admin.organizationSettings.joinLinks.expiresAt')}: {formatExpiresAt(createdLink.expiresAt)}
                             </p>
                         </div>
@@ -272,23 +283,49 @@ export default function JoinLinksSection({ orgId }: JoinLinksSectionProps) {
                 </Card>
             ) : links.length === 0 ? (
                 <Card className="p-8 text-center">
-                    <p className="text-slate-500 dark:text-slate-400">{t('admin.organizationSettings.joinLinks.noLinks')}</p>
+                    <p 
+                      style={{
+                        color: 'var(--pa-text-muted)'
+                      }}
+                    >
+                        {t('admin.organizationSettings.joinLinks.noLinks')}
+                    </p>
                 </Card>
             ) : (
                 <Card className="p-0 overflow-hidden">
                     <table className="w-full">
                         <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                                <th 
+                                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                                  style={{
+                                    color: 'var(--pa-text-secondary)'
+                                  }}
+                                >
                                     {t('admin.organizationSettings.joinLinks.team')}
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                                <th 
+                                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                                  style={{
+                                    color: 'var(--pa-text-secondary)'
+                                  }}
+                                >
                                     {t('admin.organizationSettings.joinLinks.link')}
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                                <th 
+                                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                                  style={{
+                                    color: 'var(--pa-text-secondary)'
+                                  }}
+                                >
                                     {t('admin.organizationSettings.joinLinks.autoApprove')}
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                                <th 
+                                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                                  style={{
+                                    color: 'var(--pa-text-secondary)'
+                                  }}
+                                >
                                     {t('admin.organizationSettings.joinLinks.expiresAt')}
                                 </th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
@@ -309,7 +346,13 @@ export default function JoinLinksSection({ orgId }: JoinLinksSectionProps) {
                                         </td>
                                         <td className="px-4 py-3 text-sm">
                                             <div className="flex items-center gap-2">
-                                                <code className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded max-w-xs truncate">
+                                                <code 
+                                                  className="text-xs px-2 py-1 rounded max-w-xs truncate"
+                                                  style={{
+                                                    background: 'var(--pa-surface-panel)',
+                                                    color: 'var(--pa-text-primary)'
+                                                  }}
+                                                >
                                                     {linkUrl}
                                                 </code>
                                                 <Button
@@ -443,7 +486,12 @@ export default function JoinLinksSection({ orgId }: JoinLinksSectionProps) {
                 <TabsContent value="requests" className="space-y-6">
                     <div>
                         <h3 className="text-lg font-semibold mb-2">{t('admin.organizationSettings.joinLinks.pendingRequests')}</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                        <p 
+                          className="text-sm"
+                          style={{
+                            color: 'var(--pa-text-muted)'
+                          }}
+                        >
                             {t('admin.organizationSettings.joinLinks.reviewRequestsDescription')}
                         </p>
                     </div>
@@ -459,15 +507,36 @@ export default function JoinLinksSection({ orgId }: JoinLinksSectionProps) {
                     ) : (
                         <Card className="p-0 overflow-hidden">
                             <table className="w-full">
-                                <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                                <thead 
+                                  className="border-b"
+                                  style={{
+                                    background: 'var(--pa-surface-panel)',
+                                    borderColor: 'var(--pa-border-default)'
+                                  }}
+                                >
                                     <tr>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                                        <th 
+                                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                                  style={{
+                                    color: 'var(--pa-text-secondary)'
+                                  }}
+                                >
                                             {t('admin.organizationSettings.joinLinks.athlete')}
                                         </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                                        <th 
+                                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                                  style={{
+                                    color: 'var(--pa-text-secondary)'
+                                  }}
+                                >
                                             {t('admin.organizationSettings.joinLinks.team')}
                                         </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                                        <th 
+                                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                                  style={{
+                                    color: 'var(--pa-text-secondary)'
+                                  }}
+                                >
                                             {t('admin.organizationSettings.joinLinks.requestedAt')}
                                         </th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">

@@ -16,7 +16,6 @@ import { useT } from '../../../i18n/useI18n'
 import { TimeSeriesChart, BarChart, PieChart, FunnelChart } from '../../../components/reporting/charts'
 
 function RegistrationReportContent() {
-  const t = useT()
   const { filters } = useReporting()
   const { data: registrationMetrics, isLoading, error } = useRegistrationMetrics(filters)
 
@@ -300,8 +299,8 @@ export default function RegistrationReport() {
   return (
     <DomainReportView
       domain="registration"
-      title={t('admin.reporting.registration.title') || 'Registration'}
-      description={t('admin.reporting.registration.description') || 'Comprehensive registration analytics with funnel analysis, volume tracking, payment exceptions, and form health insights.'}
+      title={t('admin.reporting.registration.title' as import('../../../i18n').TranslationKey) || 'Registration'}
+      description={t('admin.reporting.registration.description' as import('../../../i18n').TranslationKey) || 'Comprehensive registration analytics with funnel analysis, volume tracking, payment exceptions, and form health insights.'}
     >
       <RegistrationReportContent />
     </DomainReportView>

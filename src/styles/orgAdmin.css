@@ -1986,22 +1986,22 @@ html.dark .oa-label--required::after {
 }
 
 html.dark .oa-input {
-    background: var(--pa-surface);
-    border-color: #374151;
-    color: #f9fafb;
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-default);
+    color: var(--pa-text-primary);
 }
 
 html.dark .oa-input::placeholder {
-    color: #9ca3af;
+    color: var(--pa-text-muted);
 }
 
 html.dark .oa-input:hover {
-    border-color: #4b5563;
+    border-color: var(--pa-border-emphasis);
 }
 
 html.dark .oa-input:focus {
-    border-color: #6b7280;
-    outline: 2px solid rgba(107, 114, 128, 0.25);
+    border-color: var(--pa-border-emphasis);
+    outline: 2px solid rgba(255, 255, 255, 0.1);
 }
 
 .oa-input--error {
@@ -2423,8 +2423,8 @@ html.dark .oa-timepicker-button:focus {
 }
 
 html.dark .oa-timepicker-dropdown {
-    background: #1f2937;
-    border-color: #374151;
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-default);
 }
 
 .oa-timepicker-column {
@@ -2435,7 +2435,7 @@ html.dark .oa-timepicker-dropdown {
 }
 
 html.dark .oa-timepicker-column {
-    background: #1f2937;
+    background: var(--pa-surface-panel);
 }
 
 .oa-timepicker-column--period {
@@ -2453,9 +2453,9 @@ html.dark .oa-timepicker-column {
 }
 
 html.dark .oa-timepicker-column-header {
-    color: #9ca3af;
-    background: #111827;
-    border-color: #374151;
+    color: var(--pa-text-muted);
+    background: var(--pa-surface);
+    border-color: var(--pa-border-default);
 }
 
 .oa-timepicker-column-scroll {
@@ -2478,7 +2478,7 @@ html.dark .oa-timepicker-column-header {
 }
 
 html.dark .oa-timepicker-option {
-    color: #f9fafb;
+    color: var(--pa-text-primary);
 }
 
 .oa-timepicker-option:hover {
@@ -2486,7 +2486,7 @@ html.dark .oa-timepicker-option {
 }
 
 html.dark .oa-timepicker-option:hover {
-    background: #374151;
+    background: var(--pa-bg-hover);
 }
 
 .oa-timepicker-option--selected {
@@ -2496,8 +2496,9 @@ html.dark .oa-timepicker-option:hover {
 }
 
 html.dark .oa-timepicker-option--selected {
-    background: #3b82f6;
-    color: #ffffff;
+    background: var(--pa-surface);
+    color: var(--pa-text-primary);
+    border: 1px solid var(--pa-border-emphasis);
 }
 
 .oa-timepicker-option--selected:hover {
@@ -2505,7 +2506,7 @@ html.dark .oa-timepicker-option--selected {
 }
 
 html.dark .oa-timepicker-option--selected:hover {
-    background: #2563eb;
+    background: var(--pa-bg-active);
 }
 
 /* =====================================================================
@@ -3391,13 +3392,14 @@ html.dark .oa-table-pagination-info {
     background: var(--org-surface-card, #ffffff);
     border-color: var(--org-border-default, var(--pa-n200));
     color: var(--org-text-primary, var(--pa-n900));
+    border-radius: 0;
 }
 
 html.dark .oa-table-pagination .oa-select,
 html.dark .oa-table-pagination select.oa-input {
-    background: rgba(51, 65, 85, 0.8);
-    border-color: rgba(148, 163, 184, 0.3);
-    color: rgba(241, 245, 249, 0.95);
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-default);
+    color: var(--pa-text-primary);
 }
 
 .oa-table-pagination .oa-select:focus,
@@ -3783,20 +3785,25 @@ html.dark .oa-empty-text {
 
 html.dark .oa-input,
 html.dark .oa-select {
-    background: rgba(30, 41, 59, 0.5);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-default);
     color: var(--pa-text-primary);
 }
 
 html.dark .oa-select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%239ca3af' viewBox='0 0 16 16'%3E%3Cpath d='M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.75rem center;
 }
 
+html.dark .oa-select option {
+    background: var(--pa-surface-panel);
+    color: var(--pa-text-primary);
+}
+
 html.dark .oa-input:hover,
 html.dark .oa-select:hover {
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: var(--pa-border-emphasis);
 }
 
 html.dark .oa-input:focus,
@@ -4186,7 +4193,7 @@ html.dark .oa-btn--ghost:hover:not(:disabled) {
 .oa-theme-active .pa-select,
 .oa-theme-active select.pa-input {
     border: 1px solid var(--org-border-default, #CBD5E1);
-    border-radius: 999px;
+    border-radius: 0;
     padding: 0.5rem 0.875rem;
     font-size: 0.875rem;
     font-weight: 600;
@@ -4206,7 +4213,7 @@ html.dark .oa-btn--ghost:hover:not(:disabled) {
 /* Ensure native selects without pa-input also receive styling inside org-admin pages */
 .oa-theme-active select:not(.pa-input) {
     border: 1px solid var(--org-border-default, #CBD5E1);
-    border-radius: 999px;
+    border-radius: 0;
     padding: 0.5rem 0.875rem;
     font-size: 0.875rem;
     font-weight: 600;
@@ -7085,6 +7092,7 @@ html.dark .oa-stacked-list-item:hover .oa-stacked-list-item-chevron {
     /* Match typical button height */
     background-color: var(--pa-white);
     width: 100%;
+    border-radius: 0;
 }
 
 /* Dark mode overrides */
@@ -7119,8 +7127,8 @@ html.dark .oa-toggle-btn.active {
 
 html.dark .oa-filter-group .pa-select {
     background-color: var(--pa-surface-panel);
-    border-color: var(--pa-border-subtle);
-    color: var(--pa-n100);
+    border-color: var(--pa-border-default);
+    color: var(--pa-text-primary);
 }
 
 /* =====================================================================
@@ -10449,7 +10457,7 @@ html.dark .dash-athlete-tl-title {
 }
 
 html.dark .org-stats-section {
-    background: var(--org-surface-card, #1e293b);
+    background: var(--pa-surface);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
@@ -10477,7 +10485,7 @@ html.dark .org-stats-section {
 }
 
 html.dark .org-stat-box {
-    border-right-color: var(--org-border-default, rgba(255, 255, 255, 0.08));
+    border-right-color: var(--pa-border-default);
 }
 
 .org-stat-box:hover {
@@ -10485,7 +10493,7 @@ html.dark .org-stat-box {
 }
 
 html.dark .org-stat-box:hover {
-    background: var(--org-surface-default, rgba(255, 255, 255, 0.04));
+    background: var(--pa-bg-hover);
 }
 
 .org-stat-box:last-child {
@@ -10512,7 +10520,7 @@ html.dark .org-stat-box:hover {
 }
 
 html.dark .org-stat-value {
-    color: var(--org-text-primary, #f1f5f9);
+    color: var(--pa-text-primary);
 }
 
 .org-stat-value.empty {
@@ -10520,7 +10528,7 @@ html.dark .org-stat-value {
 }
 
 html.dark .org-stat-value.empty {
-    color: var(--org-text-secondary, #475569);
+    color: var(--pa-text-muted);
 }
 
 /* Season Banner */
@@ -10537,7 +10545,7 @@ html.dark .org-stat-value.empty {
 }
 
 html.dark .org-season-banner {
-    background: var(--org-surface-card, #1e293b);
+    background: var(--pa-surface);
     border-left-color: var(--org-btn-primary-bg, #7c3aed);
 }
 
@@ -10571,7 +10579,7 @@ html.dark .org-season-banner {
 }
 
 html.dark .org-season-name {
-    color: var(--org-text-primary, #f1f5f9);
+    color: var(--pa-text-primary);
 }
 
 .org-season-status {
@@ -10601,14 +10609,14 @@ html.dark .org-season-name {
 }
 
 html.dark .org-season-btn {
-    border-color: var(--org-border-default, rgba(255, 255, 255, 0.15));
-    color: var(--org-text-primary, #f1f5f9);
+    border-color: var(--pa-border-default);
+    color: var(--pa-text-primary);
 }
 
 html.dark .org-season-btn:hover {
-    background: var(--org-surface-default, rgba(255, 255, 255, 0.06));
+    background: var(--pa-bg-hover);
     border-color: var(--org-btn-primary-bg, #7c3aed);
-    color: var(--org-text-primary, #f1f5f9);
+    color: var(--pa-text-primary);
 }
 
 /* Content Grid */
@@ -10634,8 +10642,8 @@ html.dark .org-season-btn:hover {
 }
 
 html.dark .org-quick-actions {
-    background: var(--org-surface-card, #1e293b);
-    border-color: var(--org-border-default, rgba(255, 255, 255, 0.08));
+    background: var(--pa-surface);
+    border-color: var(--pa-border-default);
 }
 
 .org-section-header {
@@ -10651,7 +10659,7 @@ html.dark .org-quick-actions {
 }
 
 html.dark .org-section-header {
-    color: var(--org-text-primary, #f1f5f9);
+    color: var(--pa-text-primary);
 }
 
 .org-section-header::before {
@@ -10691,9 +10699,9 @@ html.dark .org-section-header::before {
 }
 
 html.dark .org-action-btn {
-    border-color: var(--org-border-default, rgba(255, 255, 255, 0.08));
-    background: var(--org-surface-default, rgba(255, 255, 255, 0.02));
-    color: var(--org-text-primary, #f1f5f9);
+    border-color: var(--pa-border-default);
+    background: var(--pa-surface-panel);
+    color: var(--pa-text-primary);
 }
 
 .org-action-btn:hover {
@@ -10702,7 +10710,7 @@ html.dark .org-action-btn {
 
 html.dark .org-action-btn:hover {
     border-color: var(--org-btn-primary-bg, #7c3aed);
-    background: var(--org-surface-default, rgba(255, 255, 255, 0.06));
+    background: var(--pa-bg-hover);
 }
 
 .org-action-btn--disabled {
@@ -10735,7 +10743,7 @@ html.dark .org-action-btn:hover {
 }
 
 html.dark .org-action-label {
-    color: var(--org-text-primary, #f1f5f9);
+    color: var(--pa-text-primary);
 }
 
 .org-action-plus {
@@ -10818,8 +10826,8 @@ html.dark .org-principles .org-section-header {
 }
 
 html.dark .org-hierarchy-section {
-    background: var(--org-surface-card, #1e293b);
-    border-color: var(--org-border-default, rgba(255, 255, 255, 0.08));
+    background: var(--pa-surface);
+    border-color: var(--pa-border-default);
 }
 
 .org-hierarchy-header {
@@ -10853,7 +10861,7 @@ html.dark .org-hierarchy-section {
 }
 
 html.dark .org-example-label {
-    color: var(--org-text-secondary, #94A3B8);
+    color: var(--pa-text-secondary);
 }
 
 .org-example-input {
@@ -10867,9 +10875,9 @@ html.dark .org-example-label {
 }
 
 html.dark .org-example-input {
-    background: var(--org-surface-default, rgba(255, 255, 255, 0.04));
-    border-color: var(--org-border-default, rgba(255, 255, 255, 0.15));
-    color: var(--org-text-primary, #f1f5f9);
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-default);
+    color: var(--pa-text-primary);
 }
 
 .org-example-input:focus {
@@ -10938,7 +10946,7 @@ html.dark .org-hierarchy-step.variant-primary {
 }
 
 html.dark .org-hierarchy-label {
-    color: var(--org-text-primary, #f1f5f9);
+    color: var(--pa-text-primary);
 }
 
 .org-hierarchy-description {
@@ -10967,7 +10975,7 @@ html.dark .org-hierarchy-label {
 }
 
 html.dark .org-hierarchy-arrow {
-    color: var(--org-text-secondary, #475569);
+    color: var(--pa-text-muted);
 }
 
 @media (min-width: 768px) {

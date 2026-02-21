@@ -401,7 +401,11 @@ export default function Invitations() {
                             </Card>
                         ) : guardianInvites.length === 0 ? (
                             <Card className="p-8 text-center">
-                                <p className="text-slate-500 dark:text-slate-400">
+                                <p 
+                                  style={{
+                                    color: 'var(--pa-text-muted)'
+                                  }}
+                                >
                                     {t('admin.invitations.noPendingInvites')}
                                 </p>
                             </Card>
@@ -422,7 +426,11 @@ export default function Invitations() {
                             </Card>
                         ) : joinRequests.length === 0 ? (
                             <Card className="p-8 text-center">
-                                <p className="text-slate-500 dark:text-slate-400">
+                                <p 
+                                  style={{
+                                    color: 'var(--pa-text-muted)'
+                                  }}
+                                >
                                     {t('admin.invitations.noPendingRequests')}
                                 </p>
                             </Card>
@@ -579,7 +587,12 @@ export default function Invitations() {
                                         value={reviewReason}
                                         onChange={(e) => setReviewReason(e.target.value)}
                                         placeholder={t('admin.invitations.reasonPlaceholder')}
-                                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800"
+                                        className="w-full px-3 py-2 border rounded"
+                                        style={{
+                                          background: 'var(--pa-surface-panel)',
+                                          borderColor: 'var(--pa-border-default)',
+                                          color: 'var(--pa-text-primary)'
+                                        }}
                                     />
                                 </div>
                             </div>

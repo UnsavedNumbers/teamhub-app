@@ -44,13 +44,14 @@ export default function BulkInviteHistory() {
   }, [orgId])
 
   const getStatusBadge = (status: ImportJobStatus['status']) => {
-    const statusMap: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'error' }> = {
-      draft: { label: t('admin.bulkInvite.history.statusDraft'), variant: 'default' },
-      validated: { label: t('admin.bulkInvite.history.statusValidated'), variant: 'default' },
-      running: { label: t('admin.bulkInvite.history.statusRunning'), variant: 'default' },
+    type BadgeV = 'neutral' | 'success' | 'warning' | 'danger'
+    const statusMap: Record<string, { label: string; variant: BadgeV }> = {
+      draft: { label: t('admin.bulkInvite.history.statusDraft'), variant: 'neutral' },
+      validated: { label: t('admin.bulkInvite.history.statusValidated'), variant: 'neutral' },
+      running: { label: t('admin.bulkInvite.history.statusRunning'), variant: 'neutral' },
       completed: { label: t('admin.bulkInvite.history.statusCompleted'), variant: 'success' },
       completed_with_errors: { label: t('admin.bulkInvite.history.statusCompletedWithErrors'), variant: 'warning' },
-      failed: { label: t('admin.bulkInvite.history.statusFailed'), variant: 'error' },
+      failed: { label: t('admin.bulkInvite.history.statusFailed'), variant: 'danger' },
     }
     const config = statusMap[status] || statusMap.draft
     return <Badge variant={config.variant}>{config.label}</Badge>
@@ -105,22 +106,22 @@ export default function BulkInviteHistory() {
                       {job.finished_at ? new Date(job.finished_at).toLocaleString() : '-'}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">
-                      {job.totals_json && typeof job.totals_json === 'object' ? (
+                      {job.totals_json ? (
                         <div className="space-y-1">
-                          {job.totals_json.unique_emails && <div>Users: {job.totals_json.unique_emails}</div>}
-                          {job.totals_json.athletes && <div>Athletes: {job.totals_json.athletes}</div>}
-                          {job.totals_json.guardians && <div>Guardians: {job.totals_json.guardians}</div>}
-                          {job.totals_json.coaches && <div>Coaches: {job.totals_json.coaches}</div>}
+                          {job.totals_json.unique_emails != null && <div>Users: {job.totals_json.unique_emails}</div>}
+                          {job.totals_json.athletes != null && <div>Athletes: {job.totals_json.athletes}</div>}
+                          {job.totals_json.guardians != null && <div>Guardians: {job.totals_json.guardians}</div>}
+                          {job.totals_json.coaches != null && <div>Coaches: {job.totals_json.coaches}</div>}
                         </div>
                       ) : '-'}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button variant="secondary" size="compact">
                           {t('admin.bulkInvite.history.viewDetails')}
                         </Button>
                         {(job.status === 'completed' || job.status === 'completed_with_errors') && (
-                          <Button variant="outline" size="sm">
+                          <Button variant="secondary" size="compact">
                             {t('admin.bulkInvite.history.downloadResults')}
                           </Button>
                         )}
@@ -150,18 +151,18 @@ export default function BulkInviteHistory() {
                         {t('admin.bulkInvite.history.completedAt')}: {new Date(job.finished_at).toLocaleString()}
                       </div>
                     )}
-                    {job.totals_json && typeof job.totals_json === 'object' && (
+                    {job.totals_json ? (
                       <div className="mt-2">
                         {t('admin.bulkInvite.history.totals')}: {JSON.stringify(job.totals_json)}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                   <div className="flex gap-2 pt-2">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button variant="secondary" size="compact" className="flex-1">
                       {t('admin.bulkInvite.history.viewDetails')}
                     </Button>
                     {(job.status === 'completed' || job.status === 'completed_with_errors') && (
-                      <Button variant="outline" size="sm" className="flex-1">
+                      <Button variant="secondary" size="compact" className="flex-1">
                         {t('admin.bulkInvite.history.downloadResults')}
                       </Button>
                     )}

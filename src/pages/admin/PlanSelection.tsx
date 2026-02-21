@@ -60,7 +60,14 @@ export default function PlanSelection() {
       <div className="oa-root">
         <div className="oa-card" style={{ textAlign: 'center', padding: '2rem' }}>
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">{t('common.loading')}</p>
+          <p 
+            className="mt-4"
+            style={{
+              color: 'var(--pa-text-secondary)'
+            }}
+          >
+            {t('common.loading')}
+          </p>
         </div>
       </div>
     )

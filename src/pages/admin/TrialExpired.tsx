@@ -213,7 +213,13 @@ export default function TrialExpired() {
 
         {/* Status Header Card */}
         <div className="max-w-[960px] w-full mb-16">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 border border-[#e7edf3] dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-8 shadow-sm">
+          <div 
+            className="rounded-2xl p-8 border flex flex-col md:flex-row items-center justify-between gap-8 shadow-sm"
+            style={{
+              background: 'var(--pa-surface)',
+              borderColor: 'var(--pa-border-default)'
+            }}
+          >
             <div className="flex-1 text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
                 <span className="size-3 bg-red-500 rounded-full animate-pulse"></span>
@@ -255,7 +261,13 @@ export default function TrialExpired() {
         <div className="max-w-[960px] w-full mb-20">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border border-[#cfdbe7] dark:border-slate-700 rounded-2xl overflow-hidden">
             {/* Restricted Column */}
-            <div className="bg-[#f8f9fb] dark:bg-slate-950 p-10 flex flex-col gap-8 border-r border-[#cfdbe7] dark:border-slate-700">
+            <div 
+              className="p-10 flex flex-col gap-8 border-r"
+              style={{
+                background: 'var(--pa-surface-panel)',
+                borderColor: 'var(--pa-border-default)'
+              }}
+            >
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-[#4c739a] text-3xl">lock</span>
                 <h3 className="text-2xl font-black uppercase tracking-tight text-[#4c739a]">{t('trialExpired.restricted')}</h3>
@@ -276,7 +288,12 @@ export default function TrialExpired() {
               </ul>
             </div>
             {/* Restored Column */}
-            <div className="bg-white dark:bg-slate-900 p-10 flex flex-col gap-8">
+            <div 
+              className="p-10 flex flex-col gap-8"
+              style={{
+                background: 'var(--pa-surface)'
+              }}
+            >
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-primary text-3xl">check_circle</span>
                 <h3 className="text-2xl font-black uppercase tracking-tight text-primary">{t('trialExpired.restored')}</h3>
@@ -309,7 +326,11 @@ export default function TrialExpired() {
               {planCards.map(plan => (
                 <div
                   key={plan.id}
-                  className="bg-white dark:bg-slate-900 border border-[#e7edf3] dark:border-slate-800 rounded-2xl p-6 flex flex-col"
+                  className="rounded-2xl p-6 flex flex-col border"
+                  style={{
+                    background: 'var(--pa-surface)',
+                    borderColor: 'var(--pa-border-default)'
+                  }}
                 >
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-xl font-black uppercase tracking-tight">{plan.name}</h4>
@@ -358,7 +379,13 @@ export default function TrialExpired() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto py-10 px-10 border-t border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-950">
+      <footer 
+        className="mt-auto py-10 px-10 border-t"
+        style={{
+          background: 'var(--pa-surface-subtle)',
+          borderColor: 'var(--pa-border-default)'
+        }}
+      >
         <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#4c739a]">
             {t('trialExpired.footer.copyright')}

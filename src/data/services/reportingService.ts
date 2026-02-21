@@ -34,7 +34,6 @@ import type {
   VideoMetrics,
   EventsMetrics,
   ErrorsMetrics,
-  TimeSeriesDataPoint,
 } from '../../types/reporting'
 import type { Json } from '../../lib/database.types'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
@@ -1176,7 +1175,7 @@ export async function getOrgHealthMetrics(
     }
 
     // Try RPC function first
-    const { data: rpcData, error: rpcError } = await supabase.rpc('get_org_health_metrics', {
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_org_health_metrics', {
       p_org_id: filters.orgId,
       p_sub_org_id: filters.subOrgId || null,
       p_date_start: filters.dateRange?.start || null,
@@ -1214,7 +1213,7 @@ export async function getParticipationMetrics(
     }
 
     // Try RPC function first
-    const { data: rpcData, error: rpcError } = await supabase.rpc('get_participation_metrics', {
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_participation_metrics', {
       p_org_id: filters.orgId,
       p_sub_org_id: filters.subOrgId || null,
       p_season_id: filters.seasonId || null,
@@ -1254,7 +1253,7 @@ export async function getSchedulingMetrics(
     }
 
     // Try RPC function first
-    const { data: rpcData, error: rpcError } = await supabase.rpc('get_scheduling_metrics', {
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_scheduling_metrics', {
       p_org_id: filters.orgId,
       p_sub_org_id: filters.subOrgId || null,
       p_season_id: filters.seasonId || null,
@@ -1278,8 +1277,13 @@ export async function getSchedulingMetrics(
       .select('id, title, start_time, end_time, is_cancelled, team_id, type, teams(name)')
       .eq('org_id', filters.orgId)
 
-    if (filters.dateRange) {
-      eventsQuery = eventsQuery.gte('start_time', filters.dateRange.start).lte('start_time', filters.dateRange.end)
+    const dateRange = filters.dateRange
+    if (dateRange != null) {
+      const start = dateRange!.start
+      const end = dateRange!.end
+      if (start != null && end != null) {
+        eventsQuery = eventsQuery.gte('start_time', start).lte('start_time', end)
+      }
     }
 
     const { data: events, error: eventsError } = await eventsQuery
@@ -1305,7 +1309,7 @@ export async function getSchedulingMetrics(
           .from('attendance')
           .select('event_id, status, events!inner(team_id, teams(name))')
           .in('event_id', eventIds)
-      : { data: [], error: null }
+      : { data: [] }
 
     // Query RSVP data
     const { data: rsvps } = eventIds.length > 0
@@ -1313,7 +1317,7 @@ export async function getSchedulingMetrics(
           .from('event_rsvps')
           .select('event_id, status, events!inner(team_id, teams(name))')
           .in('event_id', eventIds)
-      : { data: [], error: null }
+      : { data: [] }
 
     // Calculate attendance rates by team
     const teamAttendanceMap = new Map<string, { total: number; going: number }>()
@@ -1333,7 +1337,7 @@ export async function getSchedulingMetrics(
           .from('teams')
           .select('id, name')
           .in('id', teamIds)
-      : { data: [], error: null }
+      : { data: [] }
 
     const teamMap = new Map<string, string>()
     ;(teams || []).forEach((team: any) => {
@@ -1371,7 +1375,7 @@ export async function getSchedulingMetrics(
     })
 
     // Detect scheduling conflicts (events with overlapping times for same team)
-    const conflicts: Array<{ teamName: string; conflictCount: number }> = []
+    const conflicts: Array<{ teamId: string; teamName: string; conflictCount: number }> = []
     const teamEventsMap = new Map<string, Array<{ id: string; starts_at: string; ends_at: string }>>()
     ;(events || []).forEach((e: any) => {
       if (e.team_id && e.start_time) {
@@ -1444,7 +1448,7 @@ export async function getTravelMetrics(
     }
 
     // Try RPC function first
-    const { data: rpcData, error: rpcError } = await supabase.rpc('get_travel_metrics', {
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_travel_metrics', {
       p_org_id: filters.orgId,
       p_sub_org_id: filters.subOrgId || null,
       p_season_id: filters.seasonId || null,
@@ -1486,7 +1490,7 @@ export async function getPaymentMetrics(
       return await getFakePaymentMetrics(filters)
     }
 
-    const { data, error } = await supabase.rpc('get_payment_metrics', {
+    const { data, error } = await (supabase.rpc as any)('get_payment_metrics', {
       p_org_id: filters.orgId,
       p_sub_org_id: filters.subOrgId || null,
       p_season_id: filters.seasonId || null,
@@ -1529,7 +1533,7 @@ export async function getUniformMetrics(
     }
 
     // Try RPC function first
-    const { data: rpcData, error: rpcError } = await supabase.rpc('get_uniform_metrics', {
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_uniform_metrics', {
       p_org_id: filters.orgId,
       p_sub_org_id: filters.subOrgId || null,
       p_season_id: filters.seasonId || null,
@@ -1572,7 +1576,7 @@ export async function getCommunicationMetrics(
     }
 
     // Try RPC function first
-    const { data: rpcData, error: rpcError } = await supabase.rpc('get_communication_metrics', {
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_communication_metrics', {
       p_org_id: filters.orgId,
       p_sub_org_id: filters.subOrgId || null,
       p_season_id: filters.seasonId || null,
@@ -1711,7 +1715,8 @@ export async function getTicketingMetrics(
     if (!rpcError && rpcData) {
       return { data: (rpcData as unknown) as TicketingMetrics, error: null }
     }
-
+    debug.error('Failed to fetch ticketing metrics', rpcError?.message || String(rpcError))
+    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch ticketing metrics') }
   } catch (err) {
     debug.error('Error fetching ticketing metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1832,7 +1837,8 @@ export async function getEventsMetrics(
     if (!rpcError && rpcData) {
       return { data: (rpcData as unknown) as EventsMetrics, error: null }
     }
-
+    debug.error('Failed to fetch events metrics', rpcError?.message || String(rpcError))
+    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch events metrics') }
   } catch (err) {
     debug.error('Error fetching events metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }

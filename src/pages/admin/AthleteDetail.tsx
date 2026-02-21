@@ -944,14 +944,13 @@ export default function AthleteDetail() {
           <span style={{ color: 'var(--oa-n400)', fontSize: '12px', fontWeight: 700, lineHeight: 'normal' }}>/</span>
           <span
             style={{
-              color: 'var(--oa-n600)',
+              color: 'var(--pa-text-muted)',
               fontSize: '12px',
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.1em',
-              lineHeight: 'normal',
+              lineHeight: 'normal'
             }}
-            className="dark:text-slate-400"
           >
             {displayName.toUpperCase()}
           </span>
@@ -980,14 +979,14 @@ export default function AthleteDetail() {
               style={{
                 width: '120px',
                 height: '120px',
-                background: 'var(--oa-white)',
+                background: 'var(--pa-surface-panel)',
                 borderRadius: 'var(--oa-radius-l)',
                 border: '2px solid var(--oa-n200)',
+                borderColor: 'var(--pa-border-default)',
                 boxShadow: 'var(--oa-shadow-2)',
                 overflow: 'hidden',
                 flexShrink: 0,
               }}
-              className="dark:bg-slate-800 dark:border-slate-700"
             >
               {athlete && (
                 <AthleteAvatar athlete={athlete} photoSize="512" className="w-full h-full object-cover" />

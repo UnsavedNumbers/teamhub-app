@@ -5,6 +5,7 @@
  * Organized into 3 tabs with insights and visualizations.
  */
 
+import { useT } from '../../../../i18n/useI18n'
 import { DomainReportView } from './DomainReportView'
 import { ReportTabs } from '../../../../components/reporting/ReportTabs'
 import { InsightSection } from '../../../../components/reporting/InsightSection'
@@ -12,11 +13,9 @@ import { InsightCallout } from '../../../../components/reporting/InsightCallout'
 import { EmptyState } from '../../../../components/reporting/EmptyState'
 import { useParticipationMetrics } from '../../../../hooks/useReporting'
 import { useReporting } from '../../../../contexts/ReportingContext'
-import { useT } from '../../../../i18n/useI18n'
 import { BarChart } from '../../../../components/reporting/charts'
 
 function ParticipationReportContent() {
-  const t = useT()
   const { filters } = useReporting()
   const { data: metrics, isLoading, error } = useParticipationMetrics(filters)
 
