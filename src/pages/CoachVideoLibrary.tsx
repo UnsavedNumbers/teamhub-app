@@ -27,7 +27,7 @@ import { AdminPageHeader, Card, Modal } from '@/components/platformAdmin'
 import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import Button from '@/components/portal/Button'
 import Icon from '@/components/portal/Icon'
-import { t } from '@/i18n'
+import type { TranslationKey } from '@/i18n'
 import { showSuccess, showError } from '@/utils/toast'
 import { isInDemoSession } from '@/utils/demoMode'
 import { useI18n } from '@/i18n/useI18n'
@@ -547,10 +547,10 @@ export default function CoachVideoLibrary() {
       <Modal
         open={showDemoModal}
         onClose={() => setShowDemoModal(false)}
-        title={t('videos.demoMode.title') || 'Demo Mode Active'}
+        title={t('videos.demoMode.title' as TranslationKey) || 'Demo Mode Active'}
       >
         <p className="oa-text-sm oa-text-muted oa-mb-4">
-          {t('videos.demoMode.message') || 'Video upload is not available in demo mode. Please sign in to upload videos.'}
+          {t('videos.demoMode.message' as TranslationKey) || 'Video upload is not available in demo mode. Please sign in to upload videos.'}
         </p>
         <div className="oa-flex oa-justify-end">
           <Button variant="primary" onClick={() => setShowDemoModal(false)}>

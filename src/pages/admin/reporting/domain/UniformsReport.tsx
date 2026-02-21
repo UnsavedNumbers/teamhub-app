@@ -16,7 +16,6 @@ import { useUniformMetrics } from '../../../../hooks/useReporting'
 import { useReporting } from '../../../../contexts/ReportingContext'
 import { useT } from '../../../../i18n/useI18n'
 import { BarChart } from '../../../../components/reporting/charts'
-import { TimeSeriesChart } from '../../../../components/reporting/charts'
 
 function UniformsReportContent() {
   const t = useT()

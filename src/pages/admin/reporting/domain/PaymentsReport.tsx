@@ -14,11 +14,9 @@ import { InsightCallout } from '../../../../components/reporting/InsightCallout'
 import { EmptyState } from '../../../../components/reporting/EmptyState'
 import { useRevenueMetrics } from '../../../../hooks/useReporting'
 import { useReporting } from '../../../../contexts/ReportingContext'
-import { useT } from '../../../../i18n/useI18n'
 import { TimeSeriesChart, BarChart, PieChart } from '../../../../components/reporting/charts'
 
 function PaymentsReportContent() {
-  const t = useT()
   const { filters } = useReporting()
   const { data: revenueMetrics, isLoading, error } = useRevenueMetrics(filters)
 

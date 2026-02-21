@@ -12,7 +12,6 @@ import { useEffect, useState } from 'react'
 import { useReporting } from '../../contexts/ReportingContext'
 import { Select } from '../admin/Select'
 import { DatePicker } from '../admin/DatePicker'
-import { useT } from '../../i18n/useI18n'
 import { supabase } from '../../lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 
@@ -23,7 +22,6 @@ interface FilterSlideOverProps {
 }
 
 export function FilterSlideOver({ isOpen, onClose, categorySpecificFilters }: FilterSlideOverProps) {
-  const t = useT()
   const { scope, setScope, dateRange, setDateRange, setDatePreset, datePreset } = useReporting()
   const [localScope, setLocalScope] = useState(scope)
   const [localDateRange, setLocalDateRange] = useState(dateRange)

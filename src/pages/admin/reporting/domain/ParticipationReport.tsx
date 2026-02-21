@@ -16,7 +16,6 @@ import { useParticipationMetrics } from '../../../../hooks/useReporting'
 import { useReporting } from '../../../../contexts/ReportingContext'
 import { useT } from '../../../../i18n/useI18n'
 import { BarChart } from '../../../../components/reporting/charts'
-import { TimeSeriesChart } from '../../../../components/reporting/charts'
 
 function ParticipationReportContent() {
   const t = useT()
@@ -47,7 +46,6 @@ function ParticipationReportContent() {
 
   const totalActiveAthletes = metrics.activeAthletesByTeam.reduce((sum, item) => sum + item.count, 0)
   const participationRate = 100 // Placeholder - would need total eligible athletes
-  const multiTeamRate = totalActiveAthletes > 0 ? (metrics.multiTeamAthletes / totalActiveAthletes) * 100 : 0
   const dropouts = metrics.rosterChurn.removes
 
   // Tab 1: Participation Story

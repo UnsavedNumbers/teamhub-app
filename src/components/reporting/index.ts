@@ -5,7 +5,7 @@
  */
 
 export { ReportingLayout } from './ReportingLayout'
-export { DomainReportView } from '../pages/admin/reporting/domain/DomainReportView'
+export { DomainReportView } from '../../pages/admin/reporting/domain/DomainReportView'
 export { ScopeControls } from './ScopeControls'
 export { BreadcrumbNav } from './BreadcrumbNav'
 export { MetricCard } from './MetricCard'

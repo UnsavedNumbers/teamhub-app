@@ -45,7 +45,6 @@ function SchedulingReportContent() {
   }
 
   const totalEvents = metrics.eventsByType.reduce((sum, item) => sum + item.count, 0)
-  const avgRsvpRate = metrics.rsvpRates.length > 0 ? metrics.rsvpRates.reduce((sum, item) => sum + item.rate, 0) / metrics.rsvpRates.length : 0
   const avgAttendanceRate = metrics.attendanceRates.length > 0 ? metrics.attendanceRates.reduce((sum, item) => sum + item.rate, 0) / metrics.attendanceRates.length : 0
   const noShowRate = 100 - avgAttendanceRate
   const lateCancelRate = 0 // Placeholder - would need cancellation timing data
@@ -166,7 +165,6 @@ function SchedulingReportContent() {
               <BarChart
                 data={{
                   data: metrics.rsvpRates.slice(0, 10).map((rsvp) => {
-                    const attendance = metrics.attendanceRates.find((a) => a.teamId === rsvp.teamId)
                     return {
                       category: rsvp.teamName.length > 20 ? rsvp.teamName.substring(0, 20) + '...' : rsvp.teamName,
                       value: rsvp.rate,

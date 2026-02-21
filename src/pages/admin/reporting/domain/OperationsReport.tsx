@@ -23,10 +23,6 @@ function OperationsReportContent() {
   const { filters } = useReporting()
   const { data: metrics, isLoading, error } = useOperationsMetrics(filters)
 
-  const formatPercentage = (value: number) => {
-    return `${Math.round(value)}%`
-  }
-
   if (isLoading) {
     return (
       <div style={{ textAlign: 'center', padding: '80px' }}>

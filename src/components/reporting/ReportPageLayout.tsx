@@ -9,7 +9,6 @@
  */
 
 import { useState } from 'react'
-import { useReporting } from '../../contexts/ReportingContext'
 import { FilterSlideOver } from './FilterSlideOver'
 import { FilterSummary } from './FilterSummary'
 

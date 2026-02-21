@@ -44,7 +44,6 @@ function RegistrationReportContent() {
 
   const totalRegistrations = registrationMetrics.registrationsOverTime.reduce((sum, d) => sum + d.value, 0)
   const completionRate = Math.round(registrationMetrics.registrationCompletionRate * 100)
-  const dropOffRate = 100 - completionRate
 
   // Tab 1: Registration Funnel
   const funnelTab = (
