@@ -51,16 +51,6 @@ function TravelReportContent() {
     ]
   }, [metrics, t])
 
-  const _chartData = useMemo(() => {
-    if (!metrics) return null
-    return {
-      data: metrics.tripsPerMonth.map((item) => ({
-        category: item.month,
-        series: 'Trips',
-        value: item.count,
-      })),
-    }
-  }, [metrics])
 
   const timeSeriesData = useMemo(() => {
     if (!metrics) return null

@@ -2791,6 +2791,8 @@ export const en = {
                 allLevels: 'All Levels',
                 team: 'Team',
                 allTeams: 'All Teams',
+                athlete: 'Athlete',
+                allAthletes: 'All Athletes',
                 datePreset: 'Date Range',
                 allDates: 'All Dates',
                 today: 'Today',
@@ -3847,7 +3849,8 @@ export const en = {
         // Demo mode
         demoMode: {
             title: 'Demo Mode Active',
-            message: 'Video editing tools are not available in demo mode.',
+            message: 'Video upload is not available in demo mode. Please sign in to upload videos.',
+            editingMessage: 'Video editing tools are not available in demo mode.',
             disabled: 'This action is disabled in demo mode',
         },
         
@@ -8145,6 +8148,8 @@ export const es = {
                 allLevels: 'Todos los Niveles',
                 team: 'Equipo',
                 allTeams: 'Todos los Equipos',
+                athlete: 'Atleta',
+                allAthletes: 'Todos los Atletas',
                 datePreset: 'Rango de Fechas',
                 allDates: 'Todas las Fechas',
                 today: 'Hoy',

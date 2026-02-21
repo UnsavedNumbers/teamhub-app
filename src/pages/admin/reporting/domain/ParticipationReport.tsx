@@ -5,7 +5,6 @@
  */
 
 import { DomainReportView } from './DomainReportView'
-import { KPICard } from '../../../../components/reporting/KPICard'
 import { BarChart } from '../../../../components/reporting/charts'
 import { VirtualizedTable } from '../../../../components/reporting/VirtualizedTable'
 import { ExportButton } from '../../../../components/reporting/ExportButton'

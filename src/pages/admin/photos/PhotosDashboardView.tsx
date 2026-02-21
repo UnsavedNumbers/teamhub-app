@@ -15,7 +15,7 @@ import {
   getRecentGalleryActivity,
   type RecentActivityItem 
 } from '@/data/services/galleryService'
-import { getMockGalleriesForOrg } from '@/data/fake/mockGalleries'
+import { getMockGalleriesForOrg, getMockRecentActivity, getMockStorageUsage } from '@/data/fake/mockGalleries'
 import { getLink } from '@/utils/routes'
 import './PhotosDashboardView.css'
 
@@ -49,9 +49,11 @@ export function PhotosDashboardView() {
 
       if (USE_FAKE_DATA) {
         const mockGalleries = getMockGalleriesForOrg(context.orgId)
+        const mockActivity = getMockRecentActivity(10)
+        const mockStorage = getMockStorageUsage()
         setGalleries(mockGalleries)
-        setRecentActivity([])
-        setStorageInfo({ currentUsage: 0, limit: 10 * 1024 * 1024 * 1024 })
+        setRecentActivity(mockActivity as RecentActivityItem[])
+        setStorageInfo(mockStorage)
         setLoading(false)
         return
       }

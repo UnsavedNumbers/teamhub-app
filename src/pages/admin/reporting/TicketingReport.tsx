@@ -140,7 +140,6 @@ function TicketingReportContent() {
 }
 
 export default function TicketingReport() {
-  const t = useT()
   return (
     <DomainReportView
       domain="ticketing"

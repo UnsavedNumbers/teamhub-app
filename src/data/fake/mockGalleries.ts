@@ -7,6 +7,7 @@
 
 import { DEMO_ORG_A_ID } from '../config'
 import type { Database } from '@/lib/database.types'
+import type { PhotoStatus } from '@/data/services/galleryService'
 
 type Gallery = Database['public']['Tables']['galleries']['Row']
 type GalleryPhoto = Database['public']['Tables']['gallery_photos']['Row']
@@ -438,4 +439,71 @@ export function getAllMockGalleries(): Gallery[] {
  */
 export function getAllMockPhotos(): GalleryPhoto[] {
   return MOCK_GALLERY_PHOTOS
+}
+
+/**
+ * Get mock recent gallery activity for dashboard
+ */
+export function getMockRecentActivity(limit: number = 10): Array<{
+  type: 'photo_upload' | 'gallery_created' | 'gallery_updated'
+  gallery_id: string
+  gallery_name: string
+  gallery_cover_url: string | null
+  timestamp: string
+  photo_count?: number
+  status?: PhotoStatus
+}> {
+  const activity: Array<{
+    type: 'photo_upload' | 'gallery_created' | 'gallery_updated'
+    gallery_id: string
+    gallery_name: string
+    gallery_cover_url: string | null
+    timestamp: string
+    photo_count?: number
+    status?: PhotoStatus
+  }> = []
+
+  // Generate activity from galleries that have photos
+  for (const gallery of MOCK_GALLERIES) {
+    const photos = getMockPhotosForGallery(gallery.id)
+    if (photos.length === 0) continue
+
+    // Group photos by upload date (simplified - use gallery updated_at)
+    const recentPhotos = photos.filter(p => {
+      const photoDate = new Date(p.created_at)
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      return photoDate >= weekAgo
+    })
+
+    if (recentPhotos.length > 0) {
+      const coverPhoto = photos.find(p => p.id === gallery.cover_photo_id) || photos[0]
+      activity.push({
+        type: 'photo_upload',
+        gallery_id: gallery.id,
+        gallery_name: gallery.name,
+        gallery_cover_url: coverPhoto?.storage_path || null,
+        timestamp: gallery.updated_at,
+        photo_count: recentPhotos.length,
+        status: recentPhotos[recentPhotos.length - 1]?.status || 'approved',
+      })
+    }
+  }
+
+  // Sort by timestamp descending and limit
+  return activity
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, limit)
+}
+
+/**
+ * Calculate mock storage usage from all photos
+ */
+export function getMockStorageUsage(): { currentUsage: number; limit: number } {
+  const totalBytes = MOCK_GALLERY_PHOTOS.reduce((sum, photo) => sum + (photo.size_bytes || 0), 0)
+  // 10GB limit
+  const limitBytes = 10 * 1024 * 1024 * 1024
+  return {
+    currentUsage: totalBytes,
+    limit: limitBytes,
+  }
 }

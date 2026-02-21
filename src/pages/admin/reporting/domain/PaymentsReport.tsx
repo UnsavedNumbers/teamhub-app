@@ -8,8 +8,7 @@ import { DomainReportView } from './DomainReportView'
 import { useRevenueMetrics } from '../../../../hooks/useReporting'
 import { useReporting } from '../../../../contexts/ReportingContext'
 import { useT } from '../../../../i18n/useI18n'
-import { useMemo } from 'react'
-import { TimeSeriesChart, PieChart } from '../../../../components/reporting/charts'
+import { TimeSeriesChart, PieChart, BarChart } from '../../../../components/reporting/charts'
 import { ExportButton } from '../../../../components/reporting/ExportButton'
 
 function PaymentsReportContent() {

@@ -856,7 +856,7 @@ export default function AdminEventDetail() {
             </section>
           )
         ) : (
-          <>
+          <div className="oa-event-detail-tab-content">
         {/* ── Cancelled banner ────────────────────────────────────── */}
         {event.is_cancelled && (
           <div className="oa-cancelled-banner">
@@ -1333,7 +1333,7 @@ export default function AdminEventDetail() {
             </div>
           </section>
         )}
-          </>
+          </div>
         )}
       </div>
 

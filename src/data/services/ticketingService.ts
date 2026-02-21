@@ -264,7 +264,17 @@ export async function getPublicTicketedEventById(id: string) {
  */
 export async function getTicketedEventByIdAdmin(id: string) {
   if (USE_FAKE_DATA) {
-    const event = getFakeTicketedEvent(id, null)
+    // Use the same source as fetchTicketingEvents to ensure consistency
+    const { getFakeTicketingEvents, getFakeTicketedEventById } = await import('@/data/fake/fakeTicketingEvents')
+    const { DEMO_ORG_A_ID } = await import('@/data/config')
+    
+    // First try direct lookup (faster)
+    const directEvent = getFakeTicketedEventById(id, DEMO_ORG_A_ID)
+    if (directEvent) return directEvent
+    
+    // Fallback to searching through getFakeTicketingEvents results (same as list page)
+    const result = getFakeTicketingEvents(DEMO_ORG_A_ID, { page: 1, perPage: 1000 })
+    const event = result.data.find((e) => e.id === id)
     if (!event) throw new Error('Ticketed event not found')
     return event
   }

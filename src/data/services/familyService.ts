@@ -26,7 +26,7 @@ import {
     type FakeFamilyMember,
 } from '../fake/fakeUsers'
 import { getChildrenForUserId, getFamiliesForUserId, getAssignedTeamsForCoach } from '../fake/relationships'
-import { getTeamMembersForSeason, SEASON_SPRING_CURRENT_ID } from '../fake/fakeTeams'
+import { getTeamMembersForSeason, getTeamById, getActiveTeamMembershipsForChild, SEASON_SPRING_CURRENT_ID } from '../fake/fakeTeams'
 import type {
     Family,
     Child,
@@ -874,17 +874,25 @@ export async function searchAthletes(
             // Limit results
             results = results.slice(0, 100)
             
-            // Map to AthleteWithTeams
+            // Map to AthleteWithTeams with currentTeams for disambiguation
             const mapped: AthleteWithTeams[] = results.map(c => {
                 const birthdate = c.date_of_birth ? new Date(c.date_of_birth) : null
-                const age = birthdate 
+                const age = birthdate
                     ? Math.floor((Date.now() - birthdate.getTime()) / (1000 * 60 * 60 * 24 * 365))
                     : null
-                
+                const memberships = getActiveTeamMembershipsForChild(c.id)
+                const currentTeams: CurrentTeam[] = memberships.map((tm) => {
+                    const team = getTeamById(tm.team_id)
+                    return {
+                        teamId: tm.team_id,
+                        teamName: team?.name ?? tm.team_id,
+                        seasonId: tm.season_id,
+                    }
+                })
                 return {
                     ...c,
                     age,
-                    currentTeams: [] // Mock data - would need to fetch from team_memberships
+                    currentTeams,
                 } as unknown as AthleteWithTeams
             })
             

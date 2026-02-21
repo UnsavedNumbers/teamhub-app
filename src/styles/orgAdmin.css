@@ -5820,6 +5820,10 @@ html.dark .oa-stat-item__label {
     line-height: 1.4;
 }
 
+.oa-event-detail-tab-content .oa-stat-item__value {
+    font-weight: 400;
+}
+
 html.dark .oa-stat-item__value {
     color: var(--pa-text-primary);
 }

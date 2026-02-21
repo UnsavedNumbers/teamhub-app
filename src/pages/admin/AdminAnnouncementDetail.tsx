@@ -297,14 +297,15 @@ export default function AdminAnnouncementDetail() {
                   <Select
                     value={editType}
                     onChange={(e) => setEditType(e.target.value as typeof editType)}
-                  >
-                    <option value="general">General</option>
-                    <option value="reminder">Reminder</option>
-                    <option value="schedule_change">Schedule Change</option>
-                    <option value="urgent">Urgent</option>
-                    <option value="payment">Payment</option>
-                    <option value="travel">Travel</option>
-                  </Select>
+                    options={[
+                      { value: 'general', label: 'General' },
+                      { value: 'reminder', label: 'Reminder' },
+                      { value: 'schedule_change', label: 'Schedule Change' },
+                      { value: 'urgent', label: 'Urgent' },
+                      { value: 'payment', label: 'Payment' },
+                      { value: 'travel', label: 'Travel' },
+                    ]}
+                  />
                 </div>
               </div>
             </div>

@@ -12,7 +12,6 @@ import { useOrgHealthMetrics } from '../../../hooks/useReporting'
 import { useT } from '../../../i18n/useI18n'
 import { Link } from 'react-router-dom'
 import { getLink } from '../../../utils/routes'
-import { RouteKeys } from '../../../utils/routes'
 import '../../../styles/reporting.css'
 import '../../../styles/orgAdmin.css'
 

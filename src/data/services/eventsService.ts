@@ -911,17 +911,23 @@ export async function getEventDetails(
             const event = getFakeEventById(eventId)
 
             if (event) {
-                const enrichedEvent = withFakeEventRelations(event, context.orgId)
-                const filtered = filterEventsByRole([enrichedEvent], permissions, childTeamMemberships, context.orgId)
+                const enrichedEvent = withFakeEventRelations(event, DEMO_ORG_A_ID)
+                const filtered = filterEventsByRole([enrichedEvent], permissions, childTeamMemberships, DEMO_ORG_A_ID)
                 return { data: filtered[0] ?? null, error: null }
             }
 
-            const ticketedDirect = getFakeTicketedEventById(eventId, context.orgId)
-            const ticketedByCalendarId = getFakeTicketedEventByCalendarEventId(eventId, context.orgId)
+            // Try to find ticketed event - use getFakeTicketingEvents first to ensure consistency with list page
+            const ticketingEventsResult = getFakeTicketingEvents(DEMO_ORG_A_ID, { page: 1, perPage: 300 })
+            const ticketedFromList = ticketingEventsResult.data.find((candidate) => candidate.event_id === eventId)
+
+            // Also try direct lookups as fallback
+            const ticketedDirect = getFakeTicketedEventById(eventId, DEMO_ORG_A_ID)
+            const ticketedByCalendarId = getFakeTicketedEventByCalendarEventId(eventId, DEMO_ORG_A_ID)
+
             const ticketedFallback =
+                ticketedFromList ??
                 ticketedDirect ??
                 ticketedByCalendarId ??
-                getFakeTicketingEvents(context.orgId, { page: 1, perPage: 300 }).data.find((candidate) => candidate.event_id === eventId) ??
                 null
 
             if (!ticketedFallback) {
@@ -933,7 +939,7 @@ export async function getEventDetails(
                     ? eventId
                     : ticketedFallback.event_id || eventId || `event-${ticketedFallback.id}`
             const syntheticEvent = createSyntheticCalendarEventFromTicketing(syntheticEventId, ticketedFallback)
-            const filtered = filterEventsByRole([syntheticEvent], permissions, childTeamMemberships, context.orgId)
+            const filtered = filterEventsByRole([syntheticEvent], permissions, childTeamMemberships, DEMO_ORG_A_ID)
 
             if (filtered.length === 0) {
                 return { data: null, error: null }
