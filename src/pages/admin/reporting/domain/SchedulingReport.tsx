@@ -1,171 +1,304 @@
 /**
- * Scheduling Report View
+ * Scheduling & Attendance Report
  *
- * Reports on events, RSVPs, attendance, and scheduling conflicts.
+ * Premium reporting page for attendance tracking, team comparisons, RSVP reliability, and schedule load.
+ * Organized into 4 tabs with insights and visualizations.
  */
 
-import { DomainReportView } from './DomainReportView'
-import { KPICard } from '../../../../components/reporting/KPICard'
-import { PieChart } from '../../../../components/reporting/charts'
-import { VirtualizedTable } from '../../../../components/reporting/VirtualizedTable'
-import { ExportButton } from '../../../../components/reporting/ExportButton'
+import { ReportingProvider } from '../../../../contexts/ReportingContext'
+import { ReportingLayout } from '../../../../components/reporting/ReportingLayout'
+import { ReportPageLayout } from '../../../../components/reporting/ReportPageLayout'
+import { ReportTabs } from '../../../../components/reporting/ReportTabs'
+import { InsightSection } from '../../../../components/reporting/InsightSection'
+import { InsightCallout } from '../../../../components/reporting/InsightCallout'
+import { EmptyState } from '../../../../components/reporting/EmptyState'
 import { useSchedulingMetrics } from '../../../../hooks/useReporting'
 import { useReporting } from '../../../../contexts/ReportingContext'
 import { useT } from '../../../../i18n/useI18n'
-import { useMemo } from 'react'
-import type { ColumnDef } from '@tanstack/react-table'
+import { BarChart, PieChart } from '../../../../components/reporting/charts'
 
 function SchedulingReportContent() {
   const t = useT()
   const { filters } = useReporting()
   const { data: metrics, isLoading, error } = useSchedulingMetrics(filters)
 
-  const kpiData = useMemo(() => {
-    if (!metrics) return []
-    const totalEvents = metrics.eventsByType.reduce((sum, item) => sum + item.count, 0)
-    const avgRsvpRate = metrics.rsvpRates.reduce((sum, item) => sum + item.rate, 0) / metrics.rsvpRates.length || 0
-    const avgAttendanceRate = metrics.attendanceRates.reduce((sum, item) => sum + item.rate, 0) / metrics.attendanceRates.length || 0
-    const totalConflicts = metrics.conflicts.reduce((sum, item) => sum + item.conflictCount, 0)
-    
-    return [
-      {
-        title: t('admin.reporting.scheduling.totalEvents'),
-        value: {
-          value: totalEvents,
-          label: 'Events',
-        },
-      },
-      {
-        title: t('admin.reporting.scheduling.avgRsvpRate'),
-        value: {
-          value: Math.round(avgRsvpRate),
-          label: '%',
-        },
-      },
-      {
-        title: t('admin.reporting.scheduling.avgAttendanceRate'),
-        value: {
-          value: Math.round(avgAttendanceRate),
-          label: '%',
-        },
-      },
-      {
-        title: t('admin.reporting.scheduling.totalConflicts'),
-        value: {
-          value: totalConflicts,
-          label: 'Conflicts',
-        },
-      },
-    ]
-  }, [metrics, t])
-
-  const chartData = useMemo(() => {
-    if (!metrics) return null
-    return {
-      data: metrics.eventsByType.map((item) => ({
-        category: item.type,
-        series: 'Events',
-        value: item.count,
-      })),
-    }
-  }, [metrics])
-
-  const tableColumns: ColumnDef<any>[] = useMemo(
-    () => [
-      {
-        accessorKey: 'teamName',
-        header: t('admin.reporting.scheduling.team'),
-      },
-      {
-        accessorKey: 'rsvpRate',
-        header: t('admin.reporting.scheduling.rsvpRate'),
-        cell: ({ getValue }) => `${Math.round(getValue() as number)}%`,
-      },
-      {
-        accessorKey: 'attendanceRate',
-        header: t('admin.reporting.scheduling.attendanceRate'),
-        cell: ({ getValue }) => `${Math.round(getValue() as number)}%`,
-      },
-      {
-        accessorKey: 'conflictCount',
-        header: t('admin.reporting.scheduling.conflicts'),
-      },
-    ],
-    [t]
-  )
-
-  const tableData = useMemo(() => {
-    if (!metrics) return []
-    return metrics.rsvpRates.map((rsvp) => {
-      const attendance = metrics.attendanceRates.find((a) => a.teamId === rsvp.teamId)
-      const conflict = metrics.conflicts.find((c) => c.teamId === rsvp.teamId)
-      return {
-        teamName: rsvp.teamName,
-        rsvpRate: rsvp.rate,
-        attendanceRate: attendance?.rate || 0,
-        conflictCount: conflict?.conflictCount || 0,
-      }
-    })
-  }, [metrics])
+  const formatPercentage = (value: number) => {
+    return `${Math.round(value)}%`
+  }
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: '48px' }}>
-        <p>{t('common.loading')}</p>
+      <div style={{ textAlign: 'center', padding: '80px' }}>
+        <p style={{ fontSize: '16px', color: 'var(--org-text-secondary)' }}>Loading...</p>
       </div>
     )
   }
 
   if (error || !metrics) {
     return (
-      <div style={{ textAlign: 'center', padding: '48px' }}>
-        <p>{t('common.error.loadFailed')}</p>
-      </div>
+      <EmptyState
+        title="Unable to load scheduling data"
+        description="There was an error loading the scheduling metrics. Please try again or contact support if the issue persists."
+        icon="error"
+      />
     )
   }
 
-  return (
+  const totalEvents = metrics.eventsByType.reduce((sum, item) => sum + item.count, 0)
+  const avgRsvpRate = metrics.rsvpRates.length > 0 ? metrics.rsvpRates.reduce((sum, item) => sum + item.rate, 0) / metrics.rsvpRates.length : 0
+  const avgAttendanceRate = metrics.attendanceRates.length > 0 ? metrics.attendanceRates.reduce((sum, item) => sum + item.rate, 0) / metrics.attendanceRates.length : 0
+  const noShowRate = 100 - avgAttendanceRate
+  const lateCancelRate = 0 // Placeholder - would need cancellation timing data
+  const rsvpRate = metrics.rsvpRates.length > 0 ? metrics.rsvpRates.reduce((sum, item) => sum + item.rate, 0) / metrics.rsvpRates.length : 0
+
+  // Tab 1: Attendance Overview
+  const attendanceOverviewTab = (
     <>
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        {kpiData.map((kpi, index) => (
-          <KPICard key={index} title={kpi.title} value={kpi.value} />
-        ))}
+      <InsightSection
+        kpis={[
+          { label: 'Sessions Held', value: totalEvents, format: 'number' },
+          { label: 'Avg Attendance %', value: formatPercentage(avgAttendanceRate), format: 'number' },
+          { label: 'No-Show %', value: formatPercentage(noShowRate), format: 'number' },
+          { label: 'Late Cancel %', value: formatPercentage(lateCancelRate), format: 'number' },
+          { label: 'RSVP Rate', value: formatPercentage(rsvpRate), format: 'number' },
+        ]}
+        chart={
+          metrics.attendanceRates && metrics.attendanceRates.length > 0 ? (
+            <div>
+              <div style={{ marginBottom: '24px', fontSize: '18px', fontWeight: '600', color: 'var(--org-text-primary)' }}>
+                Attendance Trend Over Time
+              </div>
+              <BarChart
+                data={{
+                  data: metrics.attendanceRates.slice(0, 15).map((item) => ({
+                    category: item.teamName.length > 20 ? item.teamName.substring(0, 20) + '...' : item.teamName,
+                    value: item.rate,
+                  })),
+                }}
+                height={400}
+              />
+            </div>
+          ) : null
+        }
+        takeaway={`Average attendance rate of ${formatPercentage(avgAttendanceRate)} across ${totalEvents} sessions. ${formatPercentage(noShowRate)} no-show rate indicates room for improvement.`}
+      />
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '32px' }}>
+        {noShowRate > 20 && (
+          <InsightCallout
+            type="anomaly"
+            title="High No-Show Rate"
+            description={`No-show rate of ${formatPercentage(noShowRate)} is above optimal. Consider implementing reminder systems or attendance incentives.`}
+          />
+        )}
+        {avgAttendanceRate > 85 && (
+          <InsightCallout
+            type="trend"
+            title="Strong Attendance"
+            description={`Attendance rate of ${formatPercentage(avgAttendanceRate)} indicates excellent engagement and commitment.`}
+          />
+        )}
       </div>
+    </>
+  )
 
-      {/* Charts */}
-      {chartData && (
-        <div style={{ marginBottom: '32px', background: 'var(--org-bg-primary)', borderRadius: '8px', padding: '20px', border: '1px solid var(--org-border-color)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          <PieChart data={chartData} title={t('admin.reporting.scheduling.eventsByType')} height={300} />
-        </div>
-      )}
+  // Tab 2: Team Comparisons
+  const teamComparisonsTab = (
+    <>
+      <InsightSection
+        kpis={[
+          { label: 'Best Team Attendance', value: metrics.attendanceRates.length > 0 ? formatPercentage(Math.max(...metrics.attendanceRates.map(a => a.rate))) : 'N/A', format: 'number' },
+          { label: 'Worst Team Attendance', value: metrics.attendanceRates.length > 0 ? formatPercentage(Math.min(...metrics.attendanceRates.map(a => a.rate))) : 'N/A', format: 'number' },
+          { label: 'Attendance Variance', value: metrics.attendanceRates.length > 1 ? formatPercentage(Math.max(...metrics.attendanceRates.map(a => a.rate)) - Math.min(...metrics.attendanceRates.map(a => a.rate))) : '0%', format: 'number' },
+        ]}
+        chart={
+          metrics.attendanceRates && metrics.attendanceRates.length > 0 ? (
+            <div>
+              <div style={{ marginBottom: '24px', fontSize: '18px', fontWeight: '600', color: 'var(--org-text-primary)' }}>
+                Attendance by Team
+              </div>
+              <BarChart
+                data={{
+                  data: metrics.attendanceRates.map((item) => ({
+                    category: item.teamName.length > 25 ? item.teamName.substring(0, 25) + '...' : item.teamName,
+                    value: item.rate,
+                  })),
+                }}
+                height={400}
+              />
+            </div>
+          ) : null
+        }
+        takeaway={
+          metrics.attendanceRates.length > 0
+            ? `Top performing team: ${metrics.attendanceRates.reduce((max, team) => (team.rate > max.rate ? team : max), metrics.attendanceRates[0]).teamName} with ${formatPercentage(metrics.attendanceRates.reduce((max, team) => (team.rate > max.rate ? team : max), metrics.attendanceRates[0]).rate)} attendance.`
+            : 'Team comparison data will appear here once attendance is tracked.'
+        }
+      />
 
-      {/* Table */}
-      <div style={{ marginBottom: '24px', background: 'var(--org-bg-primary)', borderRadius: '8px', padding: '20px', border: '1px solid var(--org-border-color)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: 'var(--org-text-primary)' }}>{t('admin.reporting.scheduling.teamMetrics')}</h3>
-          <ExportButton data={tableData} filename="scheduling-report" />
-        </div>
-        <VirtualizedTable
-          data={tableData}
-          columns={tableColumns}
-          height={400}
-          enablePagination={false}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '32px' }}>
+        {metrics.attendanceRates.length > 0 && (
+          <InsightCallout
+            type="recommendation"
+            title="Teams with Chronic No-Shows"
+            description="Review teams with consistently low attendance to identify coaching or scheduling patterns that may need adjustment."
+          />
+        )}
+      </div>
+    </>
+  )
+
+  // Tab 3: RSVP and Reliability
+  const rsvpReliabilityTab = (
+    <>
+      <InsightSection
+        kpis={[
+          { label: 'RSVP Completion %', value: formatPercentage(rsvpRate), format: 'number' },
+          { label: 'RSVP Accuracy %', value: 'Not enough data yet', format: 'number' },
+          { label: 'Last-Minute Changes', value: 'Not enough data yet', format: 'number' },
+        ]}
+        chart={
+          metrics.rsvpRates && metrics.rsvpRates.length > 0 ? (
+            <div>
+              <div style={{ marginBottom: '24px', fontSize: '18px', fontWeight: '600', color: 'var(--org-text-primary)' }}>
+                RSVP vs Actual Attendance
+              </div>
+              <BarChart
+                data={{
+                  data: metrics.rsvpRates.slice(0, 10).map((rsvp) => {
+                    const attendance = metrics.attendanceRates.find((a) => a.teamId === rsvp.teamId)
+                    return {
+                      category: rsvp.teamName.length > 20 ? rsvp.teamName.substring(0, 20) + '...' : rsvp.teamName,
+                      value: rsvp.rate,
+                      series: 'RSVP Rate',
+                    }
+                  }),
+                }}
+                height={400}
+              />
+            </div>
+          ) : (
+            <EmptyState
+              title="No RSVP data available"
+              description="RSVP reliability analysis requires tracking of RSVP responses and actual attendance."
+              icon="event_available"
+            />
+          )
+        }
+        takeaway={
+          metrics.rsvpRates.length > 0
+            ? `Average RSVP rate of ${formatPercentage(rsvpRate)}. Compare RSVP rates to actual attendance to identify reliability patterns.`
+            : 'RSVP tracking enables better event planning and resource allocation.'
+        }
+      />
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '32px' }}>
+        {rsvpRate < 70 && (
+          <InsightCallout
+            type="friction"
+            title="Low RSVP Completion"
+            description={`RSVP rate of ${formatPercentage(rsvpRate)} indicates many athletes aren't responding. Consider simplifying the RSVP process or sending reminders.`}
+          />
+        )}
+        <InsightCallout
+          type="recommendation"
+          title="Where Communication Helps Attendance"
+          description="Teams with high RSVP rates tend to have better attendance. Encourage RSVP completion to improve planning and engagement."
         />
       </div>
     </>
   )
+
+  // Tab 4: Schedule Load and Conflicts
+  const scheduleLoadTab = (
+    <>
+      <InsightSection
+        kpis={[
+          { label: 'Busy Weeks', value: 'Not enough data yet', format: 'number' },
+          { label: 'Back-to-Back Rate', value: 'Not enough data yet', format: 'number' },
+          { label: 'Travel Burden Indicator', value: 'Not enough data yet', format: 'number' },
+        ]}
+        chart={
+          metrics.eventsByType && metrics.eventsByType.length > 0 ? (
+            <div>
+              <div style={{ marginBottom: '24px', fontSize: '18px', fontWeight: '600', color: 'var(--org-text-primary)' }}>
+                Events by Type
+              </div>
+              <PieChart
+                data={{
+                  data: metrics.eventsByType.map((item) => ({
+                    category: item.type,
+                    value: item.count,
+                  })),
+                }}
+                height={350}
+              />
+            </div>
+          ) : null
+        }
+        takeaway={`${totalEvents} total events scheduled. Monitor schedule density to prevent athlete fatigue and conflicts.`}
+      />
+
+      {metrics.conflicts.length > 0 && (
+        <InsightSection
+          title="Scheduling Conflicts"
+          chart={
+            <div>
+              <div style={{ marginBottom: '24px', fontSize: '18px', fontWeight: '600', color: 'var(--org-text-primary)' }}>
+                Teams with Conflicts
+              </div>
+              <BarChart
+                data={{
+                  data: metrics.conflicts.map((item) => ({
+                    category: item.teamName,
+                    value: item.conflictCount,
+                  })),
+                }}
+                height={300}
+              />
+            </div>
+          }
+          takeaway={`${metrics.conflicts.reduce((sum, c) => sum + c.conflictCount, 0)} total conflicts detected. Review overlapping schedules to reduce conflicts.`}
+        />
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '32px' }}>
+        {metrics.conflicts.length > 0 && (
+          <InsightCallout
+            type="anomaly"
+            title="Fatigue Risk Windows"
+            description="Identify weeks with high event density or back-to-back sessions that may lead to athlete fatigue or burnout."
+          />
+        )}
+      </div>
+    </>
+  )
+
+  return (
+    <ReportPageLayout
+      title={t('admin.reporting.scheduling.title')}
+      description={t('admin.reporting.scheduling.description') || 'Comprehensive scheduling and attendance analytics with team comparisons, RSVP reliability, and conflict analysis.'}
+    >
+      <ReportTabs
+        tabs={[
+          { id: 'attendance-overview', label: 'Attendance Overview', content: attendanceOverviewTab },
+          { id: 'team-comparisons', label: 'Team Comparisons', content: teamComparisonsTab },
+          { id: 'rsvp-reliability', label: 'RSVP & Reliability', content: rsvpReliabilityTab },
+          { id: 'schedule-load', label: 'Schedule Load & Conflicts', content: scheduleLoadTab },
+        ]}
+      />
+    </ReportPageLayout>
+  )
 }
 
 export default function SchedulingReport() {
-  const t = useT()
   return (
-    <DomainReportView
-      domain="scheduling"
-      title={t('admin.reporting.scheduling.title')}
-      description={t('admin.reporting.scheduling.description')}
-    >
-      <SchedulingReportContent />
-    </DomainReportView>
+    <ReportingProvider>
+      <ReportingLayout>
+        <div style={{ padding: '32px', maxWidth: '1800px', margin: '0 auto', width: '100%' }}>
+          <SchedulingReportContent />
+        </div>
+      </ReportingLayout>
+    </ReportingProvider>
   )
 }

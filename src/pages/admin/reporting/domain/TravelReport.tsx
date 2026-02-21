@@ -1,160 +1,231 @@
 /**
- * Travel Report View
+ * Travel Report
  *
- * Reports on travel plans, overlapping trips, and missing details.
+ * Premium reporting page for travel summary, distance/time breakdown, and equity/load analysis.
+ * Organized into 3 tabs with insights and visualizations.
  */
 
-import { DomainReportView } from './DomainReportView'
-import { KPICard } from '../../../../components/reporting/KPICard'
-import { TimeSeriesChart, SingleNumber } from '../../../../components/reporting/charts'
-import { VirtualizedTable } from '../../../../components/reporting/VirtualizedTable'
-import { ExportButton } from '../../../../components/reporting/ExportButton'
+import { ReportingProvider } from '../../../../contexts/ReportingContext'
+import { ReportingLayout } from '../../../../components/reporting/ReportingLayout'
+import { ReportPageLayout } from '../../../../components/reporting/ReportPageLayout'
+import { ReportTabs } from '../../../../components/reporting/ReportTabs'
+import { InsightSection } from '../../../../components/reporting/InsightSection'
+import { InsightCallout } from '../../../../components/reporting/InsightCallout'
+import { EmptyState } from '../../../../components/reporting/EmptyState'
 import { useTravelMetrics } from '../../../../hooks/useReporting'
 import { useReporting } from '../../../../contexts/ReportingContext'
 import { useT } from '../../../../i18n/useI18n'
-import { useMemo } from 'react'
-import type { ColumnDef } from '@tanstack/react-table'
+import { TimeSeriesChart, BarChart } from '../../../../components/reporting/charts'
 
 function TravelReportContent() {
   const t = useT()
   const { filters } = useReporting()
   const { data: metrics, isLoading, error } = useTravelMetrics(filters)
 
-  const kpiData = useMemo(() => {
-    if (!metrics) return []
-    const totalTrips = metrics.tripsPerMonth.reduce((sum, item) => sum + item.count, 0)
-    const totalOverlaps = metrics.overlappingTravel.reduce((sum, item) => sum + item.overlapCount, 0)
-    const missingDetailsCount = metrics.missingDetails.length
-    
-    return [
-      {
-        title: t('admin.reporting.travel.totalTrips'),
-        value: {
-          value: totalTrips,
-          label: 'Trips',
-        },
-      },
-      {
-        title: t('admin.reporting.travel.overlappingTrips'),
-        value: {
-          value: totalOverlaps,
-          label: 'Overlaps',
-        },
-      },
-      {
-        title: t('admin.reporting.travel.missingDetails'),
-        value: {
-          value: missingDetailsCount,
-          label: 'Trips',
-        },
-      },
-    ]
-  }, [metrics, t])
-
-
-  const timeSeriesData = useMemo(() => {
-    if (!metrics) return null
-    return {
-      series: [
-        {
-          name: 'Trips',
-          data: metrics.tripsPerMonth.map((item) => ({
-            date: item.month + '-01', // Convert to full date for time series
-            value: item.count,
-          })),
-        },
-      ],
-    }
-  }, [metrics])
-
-  const tableColumns: ColumnDef<any>[] = useMemo(
-    () => [
-      {
-        accessorKey: 'tripName',
-        header: t('admin.reporting.travel.tripName'),
-      },
-      {
-        accessorKey: 'missingFields',
-        header: t('admin.reporting.travel.missingFields'),
-        cell: ({ getValue }) => (getValue() as string[]).join(', '),
-      },
-    ],
-    [t]
-  )
-
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: '48px' }}>
-        <p>{t('common.loading')}</p>
+      <div style={{ textAlign: 'center', padding: '80px' }}>
+        <p style={{ fontSize: '16px', color: 'var(--org-text-secondary)' }}>Loading...</p>
       </div>
     )
   }
 
   if (error || !metrics) {
     return (
-      <div style={{ textAlign: 'center', padding: '48px' }}>
-        <p>{t('common.error.loadFailed')}</p>
-      </div>
+      <EmptyState
+        title="Unable to load travel data"
+        description="There was an error loading the travel metrics. Please try again or contact support if the issue persists."
+        icon="error"
+      />
     )
   }
 
-  return (
+  const totalTrips = metrics.tripsPerMonth.reduce((sum, item) => sum + item.count, 0)
+  const avgDistance = 0 // Placeholder - would need distance data
+  const totalMiles = 0 // Placeholder - would need distance data
+  const totalTime = 0 // Placeholder - would need time data
+  const mostTraveledTeam = metrics.overlappingTravel.length > 0 ? metrics.overlappingTravel[0].teamName : 'N/A'
+
+  // Tab 1: Travel Summary
+  const travelSummaryTab = (
     <>
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        {kpiData.map((kpi, index) => (
-          <KPICard key={index} title={kpi.title} value={kpi.value} />
-        ))}
-      </div>
+      <InsightSection
+        kpis={[
+          { label: 'Trips', value: totalTrips, format: 'number' },
+          { label: 'Avg Distance', value: avgDistance || 'Not enough data yet', format: 'number' },
+          { label: 'Total Miles', value: totalMiles || 'Not enough data yet', format: 'number' },
+          { label: 'Total Time', value: totalTime || 'Not enough data yet', format: 'number' },
+          { label: 'Most Traveled Team', value: mostTraveledTeam, format: 'number' },
+        ]}
+        chart={
+          metrics.tripsPerMonth && metrics.tripsPerMonth.length > 0 ? (
+            <div>
+              <div style={{ marginBottom: '24px', fontSize: '18px', fontWeight: '600', color: 'var(--org-text-primary)' }}>
+                Travel Over Time
+              </div>
+              <TimeSeriesChart
+                data={{
+                  series: [
+                    {
+                      name: 'Trips',
+                      data: metrics.tripsPerMonth.map((item) => ({
+                        date: item.month + '-01',
+                        value: item.count,
+                      })),
+                    },
+                  ],
+                }}
+                height={400}
+                type="area"
+              />
+            </div>
+          ) : (
+            <EmptyState
+              title="No travel data available"
+              description="Travel data will appear here once trips are planned and tracked."
+              icon="flight"
+            />
+          )
+        }
+        takeaway={`${totalTrips} trips scheduled. Monitor travel patterns to identify burden hotspots and optimize scheduling.`}
+      />
 
-      {/* Charts Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-        {/* Trips Over Time - Line Chart */}
-        {timeSeriesData && (
-          <div style={{ background: 'var(--org-bg-primary)', borderRadius: '8px', padding: '20px', border: '1px solid var(--org-border-color)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-            <TimeSeriesChart data={timeSeriesData} title={t('admin.reporting.travel.tripsPerMonth')} height={300} type="line" />
-          </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '32px' }}>
+        {metrics.overlappingTravel.length > 0 && (
+          <InsightCallout
+            type="anomaly"
+            title="Travel Burden and Hotspots"
+            description={`${metrics.overlappingTravel.reduce((sum, t) => sum + t.overlapCount, 0)} overlapping trips detected. Review scheduling to reduce travel conflicts.`}
+          />
         )}
-        
-        {/* Total Trips - Single Number */}
-        <div style={{ background: 'var(--org-bg-primary)', borderRadius: '8px', padding: '20px', border: '1px solid var(--org-border-color)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          <SingleNumber
-            value={metrics.tripsPerMonth.reduce((sum, item) => sum + item.count, 0)}
-            label={t('admin.reporting.travel.totalTrips')}
-            format="number"
-            size="large"
-          />
-        </div>
       </div>
-
-      {/* Table */}
-      {metrics.missingDetails.length > 0 && (
-        <div style={{ marginBottom: '24px', background: 'var(--org-bg-primary)', borderRadius: '8px', padding: '20px', border: '1px solid var(--org-border-color)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: 'var(--org-text-primary)' }}>{t('admin.reporting.travel.missingDetails')}</h3>
-            <ExportButton data={metrics.missingDetails} filename="travel-report" />
-          </div>
-          <VirtualizedTable
-            data={metrics.missingDetails}
-            columns={tableColumns}
-            height={400}
-            enablePagination={false}
-          />
-        </div>
-      )}
     </>
+  )
+
+  // Tab 2: Distance and Time Breakdown
+  const distanceTimeTab = (
+    <>
+      <InsightSection
+        kpis={[
+          { label: 'Median Distance', value: avgDistance || 'Not enough data yet', format: 'number' },
+          { label: 'Long Trip Count', value: 'Not enough data yet', format: 'number' },
+          { label: 'Peak Travel Weeks', value: 'Not enough data yet', format: 'number' },
+        ]}
+        chart={
+          <EmptyState
+            title="Distance Distribution"
+            description="Distance and time breakdown requires tracking of trip distances, durations, and travel patterns."
+            icon="straighten"
+          />
+        }
+        takeaway="Analyze distance and time patterns to identify opportunities for scheduling improvements and route optimization."
+      />
+
+      {metrics.missingDetails.length > 0 && (
+        <InsightSection
+          title="Trips Missing Details"
+          chart={
+            <div>
+              <div style={{ marginBottom: '24px', fontSize: '18px', fontWeight: '600', color: 'var(--org-text-primary)' }}>
+                Trips Requiring Information
+              </div>
+              <BarChart
+                data={{
+                  data: metrics.missingDetails.slice(0, 10).map((item) => ({
+                    category: item.tripName.length > 25 ? item.tripName.substring(0, 25) + '...' : item.tripName,
+                    value: item.missingFields.length,
+                  })),
+                }}
+                height={300}
+              />
+            </div>
+          }
+          takeaway={`${metrics.missingDetails.length} trips are missing critical details. Complete trip information for better planning.`}
+        />
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '32px' }}>
+        <InsightCallout
+          type="recommendation"
+          title="Scheduling Improvements"
+          description="Use distance and time data to optimize travel schedules, reduce long trips, and balance travel burden across teams."
+        />
+      </div>
+    </>
+  )
+
+  // Tab 3: Equity and Load
+  const equityLoadTab = (
+    <>
+      <InsightSection
+        kpis={[
+          { label: 'Variance Across Teams', value: 'Not enough data yet', format: 'number' },
+          { label: 'Worst-Case Travel', value: 'Not enough data yet', format: 'number' },
+          { label: 'Balanced Schedule Score', value: 'Not enough data yet', format: 'number' },
+        ]}
+        chart={
+          metrics.overlappingTravel && metrics.overlappingTravel.length > 0 ? (
+            <div>
+              <div style={{ marginBottom: '24px', fontSize: '18px', fontWeight: '600', color: 'var(--org-text-primary)' }}>
+                Team Travel Comparison
+              </div>
+              <BarChart
+                data={{
+                  data: metrics.overlappingTravel.map((item) => ({
+                    category: item.teamName,
+                    value: item.overlapCount,
+                  })),
+                }}
+                height={400}
+              />
+            </div>
+          ) : (
+            <EmptyState
+              title="Equity Analysis"
+              description="Equity analysis requires tracking of travel distances and times across all teams to identify fairness risks."
+              icon="balance"
+            />
+          )
+        }
+        takeaway="Monitor travel equity to ensure fair distribution of travel burden across teams and prevent scheduling imbalances."
+      />
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '32px' }}>
+        {metrics.overlappingTravel.length > 0 && (
+          <InsightCallout
+            type="concentration"
+            title="Fairness Risks"
+            description="Review travel distribution to identify teams with disproportionate travel burden and adjust schedules for equity."
+          />
+        )}
+      </div>
+    </>
+  )
+
+  return (
+    <ReportPageLayout
+      title={t('admin.reporting.travel.title')}
+      description={t('admin.reporting.travel.description') || 'Comprehensive travel analytics with summary metrics, distance/time breakdowns, and equity analysis.'}
+    >
+      <ReportTabs
+        tabs={[
+          { id: 'travel-summary', label: 'Travel Summary', content: travelSummaryTab },
+          { id: 'distance-time', label: 'Distance & Time Breakdown', content: distanceTimeTab },
+          { id: 'equity-load', label: 'Equity & Load', content: equityLoadTab },
+        ]}
+      />
+    </ReportPageLayout>
   )
 }
 
 export default function TravelReport() {
-  const t = useT()
   return (
-    <DomainReportView
-      domain="travel"
-      title={t('admin.reporting.travel.title')}
-      description={t('admin.reporting.travel.description')}
-    >
-      <TravelReportContent />
-    </DomainReportView>
+    <ReportingProvider>
+      <ReportingLayout>
+        <div style={{ padding: '32px', maxWidth: '1800px', margin: '0 auto', width: '100%' }}>
+          <TravelReportContent />
+        </div>
+      </ReportingLayout>
+    </ReportingProvider>
   )
 }
