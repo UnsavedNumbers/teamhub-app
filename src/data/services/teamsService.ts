@@ -29,12 +29,13 @@ import {
     getAssignedTeamsForCoach,
     getTeamsForUserChildren,
 } from '../fake/relationships'
+import { getCoachTeamIds } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { Team, CreateTeamDTO, UpdateTeamDTO } from '../types/organization'
 import { captureEvent } from '../../lib/analytics/analytics'
 import type { AddAthletesToTeamResponse } from '../../types/athletes'
-import { buildTeamQuery, buildTeamMembershipQuery, buildCoachAssignmentQuery } from './queryHelpers'
+import { buildTeamQuery, buildTeamMembershipQuery } from './queryHelpers'
 import { normalizeSupabaseResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
 import { logEvent, logTeamEvent } from '../../utils/eventLogger'
@@ -81,10 +82,10 @@ async function simulateDelay(): Promise<void> {
     }
 }
 
-function buildPermissions(context: UserContext): PermissionSet {
+async function buildPermissions(context: UserContext): Promise<PermissionSet> {
     const childIds = getChildrenForUserId(context.userId)
     const assignedTeamIds = context.roles.includes('coach')
-        ? getAssignedTeamsForCoach(context.userId)
+        ? await getCoachTeamIds(context)
         : []
 
     return calculatePermissions(context, assignedTeamIds, childIds, [])
@@ -142,13 +143,6 @@ function mapSupabaseTeamToDomain(team: any): Team {
  */
 function mapSupabaseTeamMemberToDomain(member: any): FakeTeamMember {
     return member as FakeTeamMember
-}
-
-/**
- * Map Supabase coach assignment row to domain type
- */
-function mapSupabaseCoachAssignmentToDomain(assignment: any): FakeCoachAssignment {
-    return assignment as FakeCoachAssignment
 }
 
 function isOrgAdmin(context: UserContext): boolean {
@@ -286,7 +280,7 @@ export async function getTeams(
         try {
             await simulateDelay()
 
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             const fakeOrgId = USE_FAKE_DATA ? DEMO_ORG_A_ID : context.orgId
             let teams = params.activeOnly
                 ? getActiveTeamsForOrg(fakeOrgId)
@@ -1266,7 +1260,7 @@ export async function getTeamRoster(
         try {
             await simulateDelay()
 
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
 
             if (
                 permissions.canViewAllOrgData ||
@@ -1321,60 +1315,45 @@ export async function getTeamRoster(
 }
 
 /**
- * Get coaches for a team and season
+ * Get coaches for a team
+ * Note: seasonId parameter kept for backward compatibility but not used (coaches are assigned to teams, not seasons)
  */
 export async function getTeamCoaches(
     _context: UserContext,
     teamId: string,
-    seasonId: string
+    seasonId?: string  // Optional, kept for backward compatibility
 ): Promise<{ data: FakeCoachAssignment[]; error: Error | null }> {
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
 
-            const coaches = getCoachAssignmentsForTeam(teamId, seasonId)
+            const coaches = getCoachAssignmentsForTeam(teamId, seasonId || '')
             return { data: coaches, error: null }
         } catch (err) {
             return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
         }
     }
 
-    // Real Supabase implementation - NO FALLBACK
+    // Real Supabase implementation - query team_coaches table
     try {
-        // Try coach_assignments table first, fall back to organization_members if it doesn't exist
-        let query: any = buildCoachAssignmentQuery(supabase)
-        query = query.eq('team_id', teamId).eq('season_id', seasonId)
+        const { data, error } = await (supabase as any)
+            .from('team_coaches')
+            .select('*, user:users(id, email, display_name, phone)')
+            .eq('team_id', teamId)
+            .eq('status', 'active')
+            .order('created_at', { ascending: true })
 
-        const { data, error } = await query
+        if (error) throw error
 
-        if (error) {
-            // If coach_assignments doesn't exist, fall back to organization_members
-            const { data: orgData, error: orgError } = await supabase
-                .from('organization_members')
-                .select('user:users(id, email, display_name, phone), role')
-                .eq('role', 'coach')
-                .eq('org_id', _context.orgId)
-
-            if (orgError) throw orgError
-
-            const mapped: FakeCoachAssignment[] = (orgData ?? []).map((row: any) => ({
-                id: row.user?.id ?? '',
-                team_id: teamId,
-                season_id: seasonId,
-                user_id: row.user?.id ?? '',
-                role: 'head_coach' as const,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            }))
-
-            return { data: mapped, error: null }
-        }
-
-        // Normalize and map response
-        const normalizedData = normalizeSupabaseResponse(data, true)
-        const mapped = Array.isArray(normalizedData)
-            ? normalizedData.map(mapSupabaseCoachAssignmentToDomain)
-            : []
+        // Map to FakeCoachAssignment format (keeping season_id empty since assignments are team-level)
+        const mapped: FakeCoachAssignment[] = (data ?? []).map((row: any) => ({
+            id: row.id,
+            team_id: row.team_id,
+            season_id: seasonId || '',  // Keep for compatibility but not used
+            user_id: row.coach_user_id,
+            role: row.role || 'head_coach',
+            created_at: row.created_at,
+        }))
 
         return { data: mapped, error: null }
     } catch (err) {
@@ -1479,41 +1458,24 @@ export async function getTeamsForCoach(
         }
     }
 
-    // Real Supabase implementation - NO FALLBACK
+    // Real Supabase implementation - query team_coaches table
     try {
-        // Try to get teams from coach_assignments, fall back to all org teams if table doesn't exist
-        try {
-            const { data: assignments, error: assignError } = await buildCoachAssignmentQuery(supabase)
-                .eq('user_id', context.userId)
+        const { data: assignments, error: assignError } = await (supabase as any)
+            .from('team_coaches')
+            .select('team:teams(*), role, status')
+            .eq('coach_user_id', context.userId)
+            .eq('status', 'active')
+            .is('end_at', null)  // Only active assignments without end date
 
-            if (!assignError && assignments) {
-                const teamIds = [...new Set((assignments ?? []).map((a: any) => a.team_id))]
-                if (teamIds.length > 0) {
-                    const teamQuery: any = buildTeamQuery(supabase)
-                    const { data: teams, error: teamError } = await teamQuery.in('id', teamIds).order('name')
+        if (assignError) throw assignError
 
-                    if (!teamError) {
-                        const normalizedData = normalizeSupabaseResponse(teams, true)
-                        const mappedTeams = Array.isArray(normalizedData)
-                            ? normalizedData.map(mapSupabaseTeamToDomain)
-                            : []
-                        return { data: mappedTeams as FakeTeam[], error: null }
-                    }
-                }
-            }
-        } catch {
-            // Fall through to org teams query
-        }
-
-        // Fall back to all org teams
-        const { data, error } = await buildTeamQuery(supabase)
-            .eq('org_id', context.orgId)
-            .order('name')
-
-        if (error) throw error
+        // Extract teams from assignments
+        const teams = (assignments ?? [])
+            .map((row: any) => row.team)
+            .filter(Boolean)
 
         // Normalize and map response
-        const normalizedData = normalizeSupabaseResponse(data, true)
+        const normalizedData = normalizeSupabaseResponse(teams, true)
         const mappedTeams = Array.isArray(normalizedData)
             ? normalizedData.map(mapSupabaseTeamToDomain)
             : []
@@ -1522,6 +1484,93 @@ export async function getTeamsForCoach(
     } catch (err) {
         const classifiedError = classifySupabaseError(err)
         return { data: [], error: classifiedError }
+    }
+}
+
+/**
+ * Assign a coach to a team
+ */
+export async function assignCoachToTeam(
+    context: UserContext,
+    teamId: string,
+    coachUserId: string,
+    role: 'head_coach' | 'assistant_coach' | 'team_manager' = 'head_coach'
+): Promise<{ data: FakeCoachAssignment | null; error: Error | null }> {
+    try {
+        // Get team's org_id
+        const { data: team, error: teamError } = await supabase
+            .from('teams')
+            .select('org_id')
+            .eq('id', teamId)
+            .single()
+
+        if (teamError) throw teamError
+        if (!team) {
+            return { data: null, error: new Error('Team not found') }
+        }
+
+        const { data, error } = await (supabase as any)
+            .from('team_coaches')
+            .insert({
+                org_id: team.org_id,
+                team_id: teamId,
+                coach_user_id: coachUserId,
+                role,
+                status: 'active',
+                created_by: context.userId
+            })
+            .select()
+            .single()
+
+        if (error) {
+            // Handle unique constraint violation (coach already assigned)
+            return { data: null, error: classifySupabaseError(error) }
+        }
+
+        // Map to FakeCoachAssignment format
+        const mapped: FakeCoachAssignment = {
+            id: data.id,
+            team_id: data.team_id,
+            season_id: '',  // Not used for team-level assignments
+            user_id: data.coach_user_id,
+            role: data.role as 'head_coach' | 'assistant_coach' | 'team_manager',
+            created_at: data.created_at,
+        }
+
+        return { data: mapped, error: null }
+    } catch (err) {
+        const classifiedError = classifySupabaseError(err)
+        return { data: null, error: classifiedError }
+    }
+}
+
+/**
+ * Remove a coach from a team (sets status to inactive)
+ */
+export async function removeCoachFromTeam(
+    _context: UserContext,
+    teamId: string,
+    coachUserId: string
+): Promise<{ error: Error | null }> {
+    try {
+        const { error } = await (supabase as any)
+            .from('team_coaches')
+            .update({ 
+                status: 'inactive', 
+                end_at: new Date().toISOString() 
+            })
+            .eq('team_id', teamId)
+            .eq('coach_user_id', coachUserId)
+            .eq('status', 'active')
+
+        if (error) {
+            return { error: classifySupabaseError(error) }
+        }
+
+        return { error: null }
+    } catch (err) {
+        const classifiedError = classifySupabaseError(err)
+        return { error: classifiedError }
     }
 }
 

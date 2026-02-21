@@ -25,7 +25,8 @@ import {
     type FakeChild,
     type FakeFamilyMember,
 } from '../fake/fakeUsers'
-import { getChildrenForUserId, getFamiliesForUserId, getAssignedTeamsForCoach } from '../fake/relationships'
+import { getChildrenForUserId, getFamiliesForUserId } from '../fake/relationships'
+import { getCoachTeamIds } from '../fake/userContext'
 import { getTeamMembersForSeason, getTeamById, getActiveTeamMembershipsForChild, SEASON_SPRING_CURRENT_ID } from '../fake/fakeTeams'
 import type {
     Family,
@@ -57,10 +58,12 @@ async function simulateDelay(): Promise<void> {
     }
 }
 
-function buildPermissions(context: UserContext): PermissionSet {
+async function buildPermissions(context: UserContext): Promise<PermissionSet> {
     const ownedChildIds = getChildrenForUserId(context.userId)
     const ownedFamilyIds = getFamiliesForUserId(context.userId)
-    const assignedTeamIds = getAssignedTeamsForCoach(context.userId)
+    const assignedTeamIds = context.roles.includes('coach')
+        ? await getCoachTeamIds(context)
+        : []
     return calculatePermissions(context, assignedTeamIds, ownedChildIds, ownedFamilyIds)
 }
 
@@ -134,7 +137,7 @@ export async function getFamilies(
     try {
         if (USE_FAKE_DATA) {
             await simulateDelay()
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             const fakeOrgId = DEMO_ORG_A_ID
             let result: FakeFamily[] = []
 
@@ -212,7 +215,7 @@ export async function getFamilyDetails(
             if (!family) return { data: null, error: null }
 
             // Access check
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             if (!permissions.canViewAllOrgData && !permissions.ownedFamilyIds.includes(familyId)) {
                 return { data: null, error: new Error('Access denied') }
             }
@@ -512,7 +515,7 @@ export async function updateAthlete(
 
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        const permissions = buildPermissions(context)
+        const permissions = await buildPermissions(context)
         const child = fakeChildren.find(c => c.id === athleteId)
         
         if (!child) {
@@ -666,7 +669,7 @@ export async function getAthletes(
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             const fakeOrgId = DEMO_ORG_A_ID
             if (permissions.canViewAllOrgData) {
                 const results = fakeChildren
@@ -1128,7 +1131,7 @@ export async function getAthleteById(
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             const child = fakeChildren.find(c => c.id === athleteId)
             
             if (!child) {

@@ -16,6 +16,7 @@ import { TeamScheduleTab } from '../../components/admin/TeamScheduleTab'
 import { TeamAttendanceTab } from '../../components/admin/TeamAttendanceTab'
 import { TeamPaymentsTab } from '../../components/admin/TeamPaymentsTab'
 import { TeamSettingsTab } from '../../components/admin/TeamSettingsTab'
+import { TeamCoachesTab } from '../../components/admin/TeamCoachesTab'
 import { PhotoSection } from '@/components/galleries/PhotoSection'
 import '../../styles/orgAdmin.css'
 
@@ -293,7 +294,7 @@ export default function TeamDetail() {
   // Initialize tab from URL on mount
   useEffect(() => {
     const tabParam = searchParams.get('tab')
-    if (tabParam && ['overview', 'roster', 'schedule', 'attendance', 'payments', 'settings', 'galleries'].includes(tabParam)) {
+    if (tabParam && ['overview', 'roster', 'coaches', 'schedule', 'attendance', 'payments', 'settings', 'galleries'].includes(tabParam)) {
       // Tab is already set in URL, no need to update
     } else if (!tabParam) {
       // No tab in URL, set default to overview
@@ -632,7 +633,7 @@ export default function TeamDetail() {
             }}
             className="dark:border-slate-700"
           >
-            {['overview', 'roster', 'schedule', 'attendance', 'payments', 'settings', 'galleries'].map((tab) => (
+            {['overview', 'roster', 'coaches', 'schedule', 'attendance', 'payments', 'settings', 'galleries'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => handleTabChange(tab)}
@@ -687,6 +688,10 @@ export default function TeamDetail() {
             totalAthletes={teamStats.totalAthletes}
             activeAthletes={teamStats.activeAthletes}
           />
+        )}
+
+        {activeTab === 'coaches' && team && (
+          <TeamCoachesTab teamId={teamId || ''} orgId={context.orgId} />
         )}
 
         {activeTab === 'roster' && (

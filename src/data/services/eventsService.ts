@@ -30,7 +30,8 @@ import {
     getFakeTicketedEventById,
     getFakeTicketingEvents,
 } from '../fake/fakeTicketingEvents'
-import { getChildrenForUserId, getAssignedTeamsForCoach, getChildTeamMemberships } from '../fake/relationships'
+import { getChildrenForUserId, getChildTeamMemberships } from '../fake/relationships'
+import { getCoachTeamIds } from '../fake/userContext'
 import { t } from '@/i18n'
 import { buildEventQuery, buildCalendarEventQuery } from './queryHelpers'
 import { normalizeSupabaseResponse, createServiceResponse } from './responseHelpers'
@@ -49,10 +50,10 @@ async function simulateDelay(): Promise<void> {
     }
 }
 
-function buildPermissions(context: UserContext): PermissionSet {
+async function buildPermissions(context: UserContext): Promise<PermissionSet> {
     const childIds = getChildrenForUserId(context.userId)
     const assignedTeamIds = context.roles.includes('coach')
-        ? getAssignedTeamsForCoach(context.userId)
+        ? await getCoachTeamIds(context)
         : []
 
     return calculatePermissions(context, assignedTeamIds, childIds, [])
@@ -571,7 +572,7 @@ export async function getCalendarEvents(
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             const childTeamMemberships = getChildTeamMemberships()
             let events: CalendarEvent[]
             if (params.startDate && params.endDate) {
@@ -693,7 +694,7 @@ export async function getEvents(
         if (USE_FAKE_DATA) {
             await simulateDelay()
 
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             const childTeamMemberships = getChildTeamMemberships()
             const fakeOrgId = DEMO_ORG_A_ID
             const baseEvents = getBaseFakeEvents(params).map((event) => withFakeEventRelations(event, fakeOrgId))
@@ -815,7 +816,7 @@ export async function getEventsCount(
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             const childTeamMemberships = getChildTeamMemberships()
             const baseEvents = getBaseFakeEvents(params).map((event) => withFakeEventRelations(event, context.orgId))
             const visibleEvents = filterEventsByRole(baseEvents, permissions, childTeamMemberships, context.orgId)
@@ -906,7 +907,7 @@ export async function getEventDetails(
         try {
             await simulateDelay()
 
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             const childTeamMemberships = getChildTeamMemberships()
             const event = getFakeEventById(eventId)
 
@@ -1028,7 +1029,7 @@ export async function getEventRSVPs(
             const rsvps = getFakeRSVPsForEvent(eventId)
 
             // Filter by permissions - parents only see their children's RSVPs
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             if (!permissions.canViewAllOrgData && permissions.canViewOwnChildrenData) {
                 return {
                     data: rsvps.filter((r) => permissions.ownedChildIds.includes(r.athlete_id)),
@@ -1080,7 +1081,7 @@ export async function getAthleteEventRSVP(
             await simulateDelay()
 
             // Check permissions - parents can only see their own children's RSVPs
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             if (!permissions.canViewAllOrgData && !permissions.ownedChildIds.includes(childId)) {
                 return { data: null, error: null }
             }
@@ -1132,7 +1133,7 @@ export async function updateRSVP(
             await simulateDelay()
 
             // Check permissions - parents can only update their own children's RSVPs
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             if (!permissions.canViewAllOrgData && !permissions.ownedChildIds.includes(childId)) {
                 return { data: null, error: new Error(t('errors.cannotUpdateRsvp')) }
             }

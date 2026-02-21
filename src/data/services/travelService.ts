@@ -19,7 +19,7 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { debug } from '../../lib/debug'
-import { calculatePermissions } from '../fake/userContext'
+import { calculatePermissions, getCoachTeamIds } from '../fake/userContext'
 import {
     type TravelEvent,
     type TravelTrip,
@@ -33,7 +33,6 @@ import {
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import {
     getChildrenForUserId,
-    getAssignedTeamsForCoach,
     getTeamsForUserChildren,
 } from '../fake/relationships'
 import { fakeEvents } from '../fake/fakeEvents'
@@ -335,10 +334,10 @@ function sanitizeFilename(filename: string): string {
     return sanitized.length > 255 ? sanitized.substring(0, 255) : sanitized
 }
 
-function buildPermissions(context: UserContext): PermissionSet {
+async function buildPermissions(context: UserContext): Promise<PermissionSet> {
     const childIds = getChildrenForUserId(context.userId)
     const assignedTeamIds = context.roles.includes('coach')
-        ? getAssignedTeamsForCoach(context.userId)
+        ? await getCoachTeamIds(context)
         : []
 
     return calculatePermissions(context, assignedTeamIds, childIds, [])
@@ -554,7 +553,7 @@ export async function getTravelEvents(
             try {
             await simulateDelay()
 
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
 
             // Get travel plans and convert to travel events
             // In demo mode, always use DEMO_ORG_A_ID regardless of context.orgId

@@ -8,12 +8,15 @@ import MobileMenu from '../common/MobileMenu'
 import { DemoModeBadge } from '../demo/DemoModeBadge'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useUserContext } from '../../hooks/useUserContext'
 import { useTheme } from '../../hooks/useTheme'
 import { useT } from '../../i18n/useI18n'
 import { useMobile } from '@/hooks/useMobile'
 import { getLink } from '../../utils/routes'
 import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 import { athleteNavSections } from '../../utils/routes/navigation'
+import { TeamSwitcher } from './TeamSwitcher'
+import { useCoachTeamSelection } from '../../hooks/useCoachTeamSelection'
 
 // ============================================================================
 // ORGANIZATION ADMIN MENU STRUCTURE
@@ -56,6 +59,7 @@ interface PortalNavProps {
  */
 export default function PortalNav({ forceRole }: PortalNavProps) {
   const { hasAnyRole, isOrgAdmin } = useAuth()
+  const { context } = useUserContext()
   const { currentOrganization, isLoading: isOrgLoading } = useOrganization()
   const { resolvedTheme } = useTheme()
   const t = useT()
@@ -575,6 +579,11 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
           </div>
         )}
 
+        {/* Team Switcher for coaches */}
+        {currentRole === 'coach' && context && (
+          <CoachTeamSwitcher context={context} />
+        )}
+
         {/* Notifications */}
         <NotificationBell viewAllPath="/portal/notifications" />
 
@@ -599,5 +608,28 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
       brandSubtitle="Team Hub"
     />
     </>
+  )
+}
+
+/**
+ * CoachTeamSwitcher - Wrapper component that loads teams and manages team selection
+ */
+function CoachTeamSwitcher({ context: _context }: { context: any }) {
+  const { selectedTeamId, teams, isLoading, updateTeamSelection, hasTeams } = useCoachTeamSelection()
+
+  if (isLoading) {
+    return null // Don't show anything while loading
+  }
+
+  if (!hasTeams) {
+    return null // Don't show switcher if no teams (empty state handled in pages)
+  }
+
+  return (
+    <TeamSwitcher
+      selectedTeamId={selectedTeamId}
+      onTeamChange={updateTeamSelection}
+      teams={teams}
+    />
   )
 }

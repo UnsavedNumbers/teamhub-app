@@ -8,9 +8,11 @@
  * Instead, it provides utility functions that accept context as parameters.
  */
 
-import { DEMO_USER_IDS, DEMO_ORG_A_ID, USER_CONTEXT_TIMEOUT_MS } from '../config'
+import { DEMO_USER_IDS, DEMO_ORG_A_ID, USER_CONTEXT_TIMEOUT_MS, USE_FAKE_DATA } from '../config'
 import type { OrgMemberRole } from '../../contexts/OrganizationContext'
 import { getUserByEmail, getUserOrganizations } from './fakeUsers'
+import { getAssignedTeamsForCoach } from './relationships'
+import { supabase } from '../../lib/supabase'
 
 // ============================================================================
 // Types
@@ -143,6 +145,31 @@ export function calculatePermissions(
 
         // Family ownership
         ownedFamilyIds,
+    }
+}
+
+/**
+ * Get coach team IDs from database (or fake data)
+ * This replaces the synchronous getAssignedTeamsForCoach() for real database queries
+ */
+export async function getCoachTeamIds(context: UserContext): Promise<string[]> {
+    if (USE_FAKE_DATA) {
+        return getAssignedTeamsForCoach(context.userId)  // Keep fake fallback
+    }
+    
+    try {
+        const { data, error } = await (supabase as any)
+            .rpc('coach_team_ids', { check_user_id: context.userId })
+        
+        if (error) {
+            console.warn('Failed to get coach team IDs:', error)
+            return []
+        }
+        
+        return (Array.isArray(data) ? data : []) as string[]
+    } catch (err) {
+        console.warn('Error getting coach team IDs:', err)
+        return []
     }
 }
 
