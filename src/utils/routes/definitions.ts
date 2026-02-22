@@ -837,6 +837,31 @@ const admin = {
         },
     },
 
+    // Facilities
+    facilities: {
+        list: {
+            path: '/admin/facilities',
+            label: 'Facilities',
+            icon: 'location_city',
+            description: 'Manage fields, courts, gyms, and availability',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/facilities/:id',
+            params: ['id'] as const,
+            label: 'Facility Details',
+            icon: 'location_city',
+            requiresOrg: true,
+        },
+        schedule: {
+            path: '/admin/facilities/schedule',
+            label: 'Schedule',
+            icon: 'calendar_month',
+            description: 'Facility scheduling calendar',
+            requiresOrg: true,
+        },
+    },
+
     // Announcements
     announcements: {
         list: {

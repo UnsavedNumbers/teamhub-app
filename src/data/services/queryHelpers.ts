@@ -31,6 +31,8 @@ export function buildEventQuery(
         team:teams(id, name, org_id),
         season:seasons(id, name),
         event_location:event_locations(*),
+        facility:facilities(*),
+        facility_resource:facility_resources(*),
         rsvps:event_rsvps(*, athlete:athletes(id, first_name, last_name)),
         general_rsvps:event_general_rsvps(*),
         recurring_pattern:recurring_event_patterns(*),

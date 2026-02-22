@@ -39,6 +39,7 @@ import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
 import { validateDeleteEvent, EVENT_ERRORS } from '../../utils/eventValidation'
 import { debug } from '../../lib/debug'
 import { captureEvent } from '../../lib/analytics/analytics'
+import { getFacilityById, getResourceById, createReservation, updateReservation, getReservations, deleteReservation } from './facilitiesService'
 
 // ============================================================================
 // Helper Functions
@@ -85,6 +86,9 @@ function mapSupabaseEventToCalendarEvent(event: any): CalendarEvent {
 
     return {
         ...event,
+        location_mode: event.location_mode || 'external',
+        facility_id: event.facility_id || null,
+        facility_resource_id: event.facility_resource_id || null,
         rsvp_config: rsvpConfig,
         rsvps,
         general_rsvps: generalRsvps,
@@ -1289,8 +1293,9 @@ export async function createEvent(
         if (arrival && arrival >= start) throw new Error('Arrival time must be before start time')
 
         // 1. Insert Event
+        const locationMode = formData.location_mode || 'external'
         type EventInsert = Database['public']['Tables']['events']['Insert']
-        const eventInsertData: EventInsert = {
+        const eventInsertData: EventInsert & { location_mode?: string; facility_id?: string | null; facility_resource_id?: string | null } = {
             title: formData.title,
             type: formData.type,
             org_id: context.orgId,
@@ -1307,39 +1312,103 @@ export async function createEvent(
             external_link: formData.external_link,
             rsvp_enabled: formData.rsvp_enabled,
             rsvp_type: formData.rsvp_enabled ? formData.rsvp_type : null,
-            created_by_user_id: context.userId
+            created_by_user_id: context.userId,
+            location_mode: locationMode,
+            facility_id: locationMode === 'internal' && formData.facility_id ? formData.facility_id : null,
+            facility_resource_id: locationMode === 'internal' && formData.facility_resource_id ? formData.facility_resource_id : null
         }
 
         const { data: eventData, error: insertError } = await supabase
             .from('events')
-            .insert(eventInsertData)
+            .insert(eventInsertData as EventInsert)
             .select()
             .single()
 
         if (insertError) throw insertError
         if (!eventData) throw new Error('No data returned from event creation')
 
-        // 2. Insert Location
-        type LocationInsert = Database['public']['Tables']['event_locations']['Insert']
-        const locationData: LocationInsert = {
-            event_id: eventData.id,
-            venue_name: formData.location.venue_name || null,
-            address_line1: formData.location.address_line1 || null,
-            city: formData.location.city || null,
-            state: formData.location.state || null,
-            postal_code: formData.location.postal_code || null,
-            place_id: formData.location.place_id || null,
-            latitude: formData.location.latitude ? parseFloat(formData.location.latitude) : null,
-            longitude: formData.location.longitude ? parseFloat(formData.location.longitude) : null,
-            is_tbd: formData.location.is_tbd,
-            is_virtual: formData.location.is_virtual,
-            virtual_link: formData.location.virtual_link || null
-        }
+        // 2. Handle Internal Venue (create reservation and sync facility data)
+        if (locationMode === 'internal' && formData.facility_id && formData.facility_resource_id) {
+            // Validate facility and resource belong to org
+            const { data: facility } = await getFacilityById(formData.facility_id)
+            if (!facility || facility.org_id !== context.orgId) {
+                throw new Error('Facility does not belong to organization')
+            }
 
-        const { error: locError } = await supabase.from('event_locations').insert(locationData)
-        if (locError) {
-            console.error('Location save error', locError)
-            // Continue even if location fails, but log it
+            const { data: resource } = await getResourceById(formData.facility_resource_id)
+            if (!resource || resource.org_id !== context.orgId || resource.facility_id !== formData.facility_id) {
+                throw new Error('Resource does not belong to facility or organization')
+            }
+
+            // Create facility reservation linked to event
+            const reservationResult = await createReservation(
+                context.orgId,
+                {
+                    facility_id: formData.facility_id,
+                    resource_id: formData.facility_resource_id,
+                    reservation_type: formData.type === 'game' ? 'game' : formData.type === 'tournament' ? 'tournament' : 'practice',
+                    status: 'confirmed',
+                    start_at: start.toISOString(),
+                    end_at: end.toISOString(),
+                    title: formData.title,
+                    event_id: eventData.id,
+                    team_id: formData.team_id || null,
+                    program_id: formData.program_id || null,
+                    sport_id: formData.sport_id || null,
+                    notes: formData.notes || null,
+                }
+            )
+
+            if (reservationResult.error) {
+                throw new Error(`Failed to create facility reservation: ${reservationResult.error.message}`)
+            }
+
+            // Sync facility address into event_locations for display
+            type LocationInsert = Database['public']['Tables']['event_locations']['Insert']
+            const locationData: LocationInsert = {
+                event_id: eventData.id,
+                venue_name: `${facility.name} - ${resource.name}`,
+                address_line1: facility.formatted_address || null,
+                address_line2: null,
+                city: facility.city || null,
+                state: facility.state || null,
+                postal_code: facility.postal_code || null,
+                place_id: facility.place_id || null,
+                latitude: facility.latitude || null,
+                longitude: facility.longitude || null,
+                is_tbd: false,
+                is_virtual: false,
+                virtual_link: null
+            }
+
+            const { error: locError } = await supabase.from('event_locations').insert(locationData)
+            if (locError) {
+                console.error('Location sync error for internal venue', locError)
+                // Continue even if location sync fails
+            }
+        } else {
+            // 2. Insert Location (external venue)
+            type LocationInsert = Database['public']['Tables']['event_locations']['Insert']
+            const locationData: LocationInsert = {
+                event_id: eventData.id,
+                venue_name: formData.location.venue_name || null,
+                address_line1: formData.location.address_line1 || null,
+                city: formData.location.city || null,
+                state: formData.location.state || null,
+                postal_code: formData.location.postal_code || null,
+                place_id: formData.location.place_id || null,
+                latitude: formData.location.latitude ? parseFloat(formData.location.latitude) : null,
+                longitude: formData.location.longitude ? parseFloat(formData.location.longitude) : null,
+                is_tbd: formData.location.is_tbd,
+                is_virtual: formData.location.is_virtual,
+                virtual_link: formData.location.virtual_link || null
+            }
+
+            const { error: locError } = await supabase.from('event_locations').insert(locationData)
+            if (locError) {
+                console.error('Location save error', locError)
+                // Continue even if location fails, but log it
+            }
         }
 
         // 3. Handle Recurring
@@ -1468,9 +1537,21 @@ export async function updateEvent(
         const arrival = formData.arrival_time ? new Date(formData.arrival_time) : null
         if (arrival && arrival >= start) throw new Error('Arrival time must be before start time')
 
+        // Get existing event to check location_mode (columns may not be in generated types yet)
+        const { data: existingEventRaw } = await supabase
+            .from('events')
+            .select('location_mode, facility_id, facility_resource_id')
+            .eq('id', eventId)
+            .single()
+        const existingEvent = existingEventRaw as { location_mode?: string; facility_id?: string | null; facility_resource_id?: string | null } | null
+
+        const newLocationMode = formData.location_mode || existingEvent?.location_mode || 'external'
+        const wasInternal = existingEvent?.location_mode === 'internal'
+        const isNowInternal = newLocationMode === 'internal'
+
         // 1. Update Event
         type EventUpdate = Database['public']['Tables']['events']['Update']
-        const eventUpdateData: EventUpdate = {
+        const eventUpdateData: EventUpdate & { location_mode?: string; facility_id?: string | null; facility_resource_id?: string | null } = {
             title: formData.title,
             type: formData.type,
             team_id: (formData.team_id || null) as unknown as EventUpdate['team_id'],
@@ -1486,40 +1567,162 @@ export async function updateEvent(
             external_link: formData.external_link,
             rsvp_enabled: formData.rsvp_enabled,
             rsvp_type: formData.rsvp_enabled ? formData.rsvp_type : null,
+            location_mode: newLocationMode,
+            facility_id: isNowInternal && formData.facility_id ? formData.facility_id : null,
+            facility_resource_id: isNowInternal && formData.facility_resource_id ? formData.facility_resource_id : null
         }
 
         const { error: updateError } = await supabase
             .from('events')
-            .update(eventUpdateData)
+            .update(eventUpdateData as EventUpdate)
             .eq('id', eventId)
 
         if (updateError) throw updateError
 
-        // 2. Update Location
-        // First check if location exists
-        const { data: existingLoc } = await supabase.from('event_locations').select('id').eq('event_id', eventId).maybeSingle()
+        // 2. Handle Internal Venue (create/update reservation and sync facility data)
+        if (isNowInternal && formData.facility_id && formData.facility_resource_id) {
+            // Validate facility and resource belong to org
+            const { data: facility } = await getFacilityById(formData.facility_id)
+            if (!facility || facility.org_id !== context.orgId) {
+                throw new Error('Facility does not belong to organization')
+            }
 
-        type LocationUpdate = Database['public']['Tables']['event_locations']['Update']
-        const locationData: LocationUpdate = {
-            venue_name: formData.location.venue_name || null,
-            address_line1: formData.location.address_line1 || null,
-            city: formData.location.city || null,
-            state: formData.location.state || null,
-            postal_code: formData.location.postal_code || null,
-            place_id: formData.location.place_id || null,
-            latitude: formData.location.latitude ? parseFloat(formData.location.latitude) : null,
-            longitude: formData.location.longitude ? parseFloat(formData.location.longitude) : null,
-            is_tbd: formData.location.is_tbd,
-            is_virtual: formData.location.is_virtual,
-            virtual_link: formData.location.virtual_link || null
-        }
+            const { data: resource } = await getResourceById(formData.facility_resource_id)
+            if (!resource || resource.org_id !== context.orgId || resource.facility_id !== formData.facility_id) {
+                throw new Error('Resource does not belong to facility or organization')
+            }
 
-        if (existingLoc) {
-            const { error: locError } = await supabase.from('event_locations').update(locationData).eq('event_id', eventId)
-            if (locError) console.error('Location update error', locError)
+            // Find existing reservation for this event
+            const { data: existingReservations } = await getReservations({
+                org_id: context.orgId,
+                start: start.toISOString(),
+                end: end.toISOString(),
+            })
+
+            const existingReservation = existingReservations?.find(r => r.event_id === eventId)
+
+            if (existingReservation) {
+                // Update existing reservation
+                const reservationResult = await updateReservation(
+                    existingReservation.id,
+                    {
+                        facility_id: formData.facility_id,
+                        resource_id: formData.facility_resource_id,
+                        reservation_type: formData.type === 'game' ? 'game' : formData.type === 'tournament' ? 'tournament' : 'practice',
+                        status: 'confirmed',
+                        start_at: start.toISOString(),
+                        end_at: end.toISOString(),
+                        title: formData.title,
+                        notes: formData.notes || null,
+                    }
+                )
+
+                if (reservationResult.error) {
+                    throw new Error(`Failed to update facility reservation: ${reservationResult.error.message}`)
+                }
+            } else {
+                // Create new reservation
+                const reservationResult = await createReservation(
+                    context.orgId,
+                    {
+                        facility_id: formData.facility_id,
+                        resource_id: formData.facility_resource_id,
+                        reservation_type: formData.type === 'game' ? 'game' : formData.type === 'tournament' ? 'tournament' : 'practice',
+                        status: 'confirmed',
+                        start_at: start.toISOString(),
+                        end_at: end.toISOString(),
+                        title: formData.title,
+                        event_id: eventId,
+                        team_id: formData.team_id || null,
+                        program_id: formData.program_id || null,
+                        sport_id: formData.sport_id || null,
+                        notes: formData.notes || null,
+                    }
+                )
+
+                if (reservationResult.error) {
+                    throw new Error(`Failed to create facility reservation: ${reservationResult.error.message}`)
+                }
+            }
+
+            // Sync facility address into event_locations for display
+            const { data: existingLoc } = await supabase.from('event_locations').select('id').eq('event_id', eventId).maybeSingle()
+
+            type LocationUpdate = Database['public']['Tables']['event_locations']['Update']
+            const locationData: LocationUpdate = {
+                venue_name: `${facility.name} - ${resource.name}`,
+                address_line1: facility.formatted_address || null,
+                address_line2: null,
+                city: facility.city || null,
+                state: facility.state || null,
+                postal_code: facility.postal_code || null,
+                place_id: facility.place_id || null,
+                latitude: facility.latitude || null,
+                longitude: facility.longitude || null,
+                is_tbd: false,
+                is_virtual: false,
+                virtual_link: null
+            }
+
+            if (existingLoc) {
+                const { error: locError } = await supabase.from('event_locations').update(locationData).eq('event_id', eventId)
+                if (locError) console.error('Location sync error for internal venue', locError)
+            } else {
+                const { error: locInsertError } = await supabase.from('event_locations').insert({ ...locationData, event_id: eventId })
+                if (locInsertError) console.error('Location insert error for internal venue', locInsertError)
+            }
+
+            // If switching from internal to external, delete old reservation
+            if (wasInternal && !isNowInternal && existingEvent?.facility_resource_id) {
+                const { data: oldReservations } = await getReservations({
+                    org_id: context.orgId,
+                    start: start.toISOString(),
+                    end: end.toISOString(),
+                })
+                const oldReservation = oldReservations?.find(r => r.event_id === eventId)
+                if (oldReservation) {
+                    await deleteReservation(oldReservation.id)
+                }
+            }
         } else {
-            const { error: locInsertError } = await supabase.from('event_locations').insert({ ...locationData, event_id: eventId })
-            if (locInsertError) console.error('Location insert error', locInsertError)
+            // 2. Update Location (external venue)
+            const { data: existingLoc } = await supabase.from('event_locations').select('id').eq('event_id', eventId).maybeSingle()
+
+            type LocationUpdate = Database['public']['Tables']['event_locations']['Update']
+            const locationData: LocationUpdate = {
+                venue_name: formData.location.venue_name || null,
+                address_line1: formData.location.address_line1 || null,
+                city: formData.location.city || null,
+                state: formData.location.state || null,
+                postal_code: formData.location.postal_code || null,
+                place_id: formData.location.place_id || null,
+                latitude: formData.location.latitude ? parseFloat(formData.location.latitude) : null,
+                longitude: formData.location.longitude ? parseFloat(formData.location.longitude) : null,
+                is_tbd: formData.location.is_tbd,
+                is_virtual: formData.location.is_virtual,
+                virtual_link: formData.location.virtual_link || null
+            }
+
+            if (existingLoc) {
+                const { error: locError } = await supabase.from('event_locations').update(locationData).eq('event_id', eventId)
+                if (locError) console.error('Location update error', locError)
+            } else {
+                const { error: locInsertError } = await supabase.from('event_locations').insert({ ...locationData, event_id: eventId })
+                if (locInsertError) console.error('Location insert error', locInsertError)
+            }
+
+            // If switching from internal to external, delete old reservation
+            if (wasInternal && !isNowInternal && existingEvent?.facility_resource_id) {
+                const { data: oldReservations } = await getReservations({
+                    org_id: context.orgId,
+                    start: start.toISOString(),
+                    end: end.toISOString(),
+                })
+                const oldReservation = oldReservations?.find(r => r.event_id === eventId)
+                if (oldReservation) {
+                    await deleteReservation(oldReservation.id)
+                }
+            }
         }
 
         // 3. Update Ticketing

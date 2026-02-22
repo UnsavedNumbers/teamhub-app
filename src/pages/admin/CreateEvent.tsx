@@ -27,6 +27,8 @@ import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import { FileUpload } from '../../components/common/FileUpload'
 import type { StructuredAddress } from '../../types/location'
+import { getFacilities, getResources } from '../../data/services/facilitiesService'
+import type { Facility, FacilityResource } from '../../types/facilities'
 import { startTransition } from 'react'
 import {
     EventFormData,
@@ -128,6 +130,92 @@ interface Program { id: string; name: string; sport_id: string }
 interface Team { id: string; name: string }
 interface Season { id: string; name: string; team_id?: string; is_active?: boolean; start_date?: string; end_date?: string }
 
+// Internal Venue Selector Component
+function InternalVenueSelector({
+  control,
+  setValue,
+  context,
+  isReady,
+}: {
+  control: any
+  setValue: any
+  context: any
+  isReady: boolean
+}) {
+  const [facilities, setFacilities] = useState<Facility[]>([])
+  const [resources, setResources] = useState<FacilityResource[]>([])
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isReady || !context?.orgId) return
+    const loadFacilities = async () => {
+      const result = await getFacilities(context.orgId)
+      if (result.data) {
+        setFacilities(result.data.filter((f) => f.status === 'active' && f.is_public))
+      }
+    }
+    loadFacilities()
+  }, [isReady, context?.orgId])
+
+  useEffect(() => {
+    if (!selectedFacilityId || !context?.orgId) {
+      setResources([])
+      return
+    }
+    const loadResources = async () => {
+      const result = await getResources(context.orgId, { facility_id: selectedFacilityId })
+      if (result.data) {
+        setResources(result.data.filter((r) => r.status === 'active' && r.reservable))
+      }
+    }
+    loadResources()
+  }, [selectedFacilityId, context?.orgId])
+
+  return (
+    <div className="oa-space-y-4">
+      <Controller
+        name="facility_id"
+        control={control}
+        render={({ field }) => (
+          <Select
+            label="Facility"
+            value={field.value || ''}
+            onChange={(e) => {
+              const facilityId = e.target.value || null
+              field.onChange(facilityId)
+              setSelectedFacilityId(facilityId)
+              setValue('facility_resource_id', null)
+            }}
+            options={[
+              { value: '', label: 'Select Facility' },
+              ...facilities.map((f) => ({ value: f.id, label: f.name })),
+            ]}
+            required
+          />
+        )}
+      />
+      {selectedFacilityId && (
+        <Controller
+          name="facility_resource_id"
+          control={control}
+          render={({ field }) => (
+            <Select
+              label="Resource"
+              value={field.value || ''}
+              onChange={(e) => field.onChange(e.target.value || null)}
+              options={[
+                { value: '', label: 'Select Resource' },
+                ...resources.map((r) => ({ value: r.id, label: r.name })),
+              ]}
+              required
+            />
+          )}
+        />
+      )}
+    </div>
+  )
+}
+
 export default function CreateEvent() {
   const [sports, setSports] = useState<Sport[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
@@ -191,6 +279,9 @@ export default function CreateEvent() {
        is_virtual: false,
        virtual_link: ''
     },
+    location_mode: 'external',
+    facility_id: null,
+    facility_resource_id: null,
     recurring: {
       enabled: false,
       frequency: 'weekly',
@@ -288,6 +379,7 @@ export default function CreateEvent() {
   const watchTicketingEnabled = watch('ticketing.is_ticketed')
   const watchTicketingSalesImmediate = watch('ticketing.sales_immediate')
   const watchEventType = watch('type')
+  const watchLocationMode = watch('location_mode')
 
   useEffect(() => {
     if (!watchTicketingEnabled) return
@@ -1082,6 +1174,21 @@ export default function CreateEvent() {
                     />
                   </div>
                   )}
+                  
+                  {showLocationDetails && (
+                    <>
+                      <div className="oa-form-grid oa-form-grid-3 oa-form-grid-tablet-2col">
+                        <Controller name="location.city" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.city')} />} />
+                        <Controller name="location.state" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.state')} />} />
+                        <Controller name="location.postal_code" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.postalCode')} />} />
+                      </div>
+                      <div className="oa-checkbox-stack">
+                        <Controller name="location.is_tbd" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label={t('admin.events.location.isTBD')} />} />
+                        <Controller name="location.is_virtual" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label={t('admin.events.location.isVirtual')} />} />
+                      </div>
+                      <Controller name="location.virtual_link" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.virtualLink')} placeholder="https://zoom.us/..." />} />
+                    </>
+                  )}
                 </div>
                 <div className="oa-form-grid oa-form-grid-3 oa-mb-4">
                   <div className="oa-select-wrapper">
@@ -1170,46 +1277,112 @@ export default function CreateEvent() {
             <Card title="Location" className="oa-mb-6">
               <div className="oa-form-section-body">
                 <p className="oa-form-section-subtitle oa-mb-4">Point to a venue, mark the event as TBD, or capture a virtual link.</p>
+                
+                {/* Location Mode Toggle */}
+                <div className="oa-mb-4">
+                  <label className="oa-label" style={{ marginBottom: '8px' }}>Venue Type</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <Controller
+                      name="location_mode"
+                      control={control}
+                      defaultValue="external"
+                      render={({ field }) => (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              field.onChange('external')
+                              setValue('facility_id', null)
+                              setValue('facility_resource_id', null)
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '12px',
+                              borderRadius: '8px',
+                              border: `2px solid ${field.value === 'external' ? 'var(--org-btn-primary-bg)' : 'var(--org-border-default)'}`,
+                              background: field.value === 'external' ? 'var(--org-btn-primary-bg)' : 'transparent',
+                              color: field.value === 'external' ? 'var(--org-btn-primary-text)' : 'var(--org-text-secondary)',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              fontWeight: field.value === 'external' ? '600' : '400',
+                            }}
+                          >
+                            External Venue
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              field.onChange('internal')
+                              setValue('location.venue_name', '')
+                              setValue('location.address_line1', '')
+                              setValue('location.place_id', '')
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '12px',
+                              borderRadius: '8px',
+                              border: `2px solid ${field.value === 'internal' ? 'var(--org-btn-primary-bg)' : 'var(--org-border-default)'}`,
+                              background: field.value === 'internal' ? 'var(--org-btn-primary-bg)' : 'transparent',
+                              color: field.value === 'internal' ? 'var(--org-btn-primary-text)' : 'var(--org-text-secondary)',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              fontWeight: field.value === 'internal' ? '600' : '400',
+                            }}
+                          >
+                            Internal Venue
+                          </button>
+                        </>
+                      )}
+                    />
+                  </div>
+                </div>
+
                 <div className="oa-mb-2">
                   <Button type="button" variant="ghost" onClick={() => setShowLocationDetails(!showLocationDetails)}>{showLocationDetails ? 'Simple Location' : 'Detailed Location'}</Button>
                 </div>
                 <div className="oa-space-y-4">
-                  <div className="oa-form-grid oa-form-grid-2 oa-form-grid-tablet-2col">
-                    <Controller
-                      name="location.venue_name"
-                      control={control}
-                      render={({ field }) => (
-                        <LocationAutocomplete
-                          value={field.value || ''}
-                          onInputChange={field.onChange}
-                          onChange={(address: StructuredAddress, placeResult?: google.maps.places.PlaceResult) => {
-                            startTransition(() => {
-                              const placeName = placeResult?.name && placeResult.name !== address.formatted_address
-                                ? placeResult.name
-                                : ''
-                              setValue('location.venue_name', placeName, { shouldValidate: false, shouldDirty: true })
-                              setValue('location.address_line1', address.formatted_address, { shouldValidate: false, shouldDirty: true })
-                              setValue('location.city', address.city, { shouldValidate: false, shouldDirty: true })
-                              setValue('location.state', address.state, { shouldValidate: false, shouldDirty: true })
-                              setValue('location.postal_code', address.postal_code, { shouldValidate: false, shouldDirty: true })
-                              setValue('location.place_id', address.place_id, { shouldValidate: false, shouldDirty: true })
-                              setValue('location.latitude', String(validateCoordinate(address.latitude) ?? ''), { shouldValidate: false, shouldDirty: true })
-                              setValue('location.longitude', String(validateCoordinate(address.longitude) ?? ''), { shouldValidate: false, shouldDirty: true })
-                              if (placeName) field.onChange(placeName)
-                            })
-                          }}
-                          label={t('admin.events.location.venueName')}
-                          placeholder="Search for venue..."
-                          types={['establishment', 'geocode']}
+                  {watchLocationMode === 'internal' ? (
+                    <InternalVenueSelector control={control} setValue={setValue} context={context} isReady={isReady} />
+                  ) : (
+                    <>
+                      <div className="oa-form-grid oa-form-grid-2 oa-form-grid-tablet-2col">
+                        <Controller
+                          name="location.venue_name"
+                          control={control}
+                          render={({ field }) => (
+                            <LocationAutocomplete
+                              value={field.value || ''}
+                              onInputChange={field.onChange}
+                              onChange={(address: StructuredAddress, placeResult?: google.maps.places.PlaceResult) => {
+                                startTransition(() => {
+                                  const placeName = placeResult?.name && placeResult.name !== address.formatted_address
+                                    ? placeResult.name
+                                    : ''
+                                  setValue('location.venue_name', placeName, { shouldValidate: false, shouldDirty: true })
+                                  setValue('location.address_line1', address.formatted_address, { shouldValidate: false, shouldDirty: true })
+                                  setValue('location.city', address.city, { shouldValidate: false, shouldDirty: true })
+                                  setValue('location.state', address.state, { shouldValidate: false, shouldDirty: true })
+                                  setValue('location.postal_code', address.postal_code, { shouldValidate: false, shouldDirty: true })
+                                  setValue('location.place_id', address.place_id, { shouldValidate: false, shouldDirty: true })
+                                  setValue('location.latitude', String(validateCoordinate(address.latitude) ?? ''), { shouldValidate: false, shouldDirty: true })
+                                  setValue('location.longitude', String(validateCoordinate(address.longitude) ?? ''), { shouldValidate: false, shouldDirty: true })
+                                  if (placeName) field.onChange(placeName)
+                                })
+                              }}
+                              label={t('admin.events.location.venueName')}
+                              placeholder="Search for venue..."
+                              types={['establishment', 'geocode']}
+                            />
+                          )}
                         />
-                      )}
-                    />
-                    <Controller
-                      name="location.address_line1"
-                      control={control}
-                      render={({ field }) => <Input {...field} label={t('admin.events.location.address')} />}
-                    />
-                  </div>
+                        <Controller
+                          name="location.address_line1"
+                          control={control}
+                          render={({ field }) => <Input {...field} label={t('admin.events.location.address')} />}
+                        />
+                      </div>
+                    </>
+                  )}
                   
                   {showLocationDetails && (
                     <>

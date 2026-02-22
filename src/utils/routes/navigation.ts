@@ -436,6 +436,7 @@ export const adminMenuItems: MenuItemDefinition[] = [
         requiresOrg: true,
         children: [
             { text: 'Events', icon: 'event', routeKey: 'admin.events.list', requiresOrg: true },
+            { text: 'Facilities', icon: 'location_city', routeKey: 'admin.facilities.list', requiresOrg: true },
             { text: 'Attendance', icon: 'how_to_reg', routeKey: 'admin.attendance', requiresOrg: true },
             { text: 'Uniforms', icon: 'checkroom', routeKey: 'admin.uniforms.list', requiresOrg: true },
         ],
@@ -581,6 +582,7 @@ export const adminGlobalNavSections: NavigationSection[] = [
                 items: [
                     { routeKey: 'admin.payments.list', text: 'Payments', icon: 'credit_card', description: 'Fees & collections' },
                     { routeKey: 'admin.events.list', text: 'Events', icon: 'event', description: 'Schedule & calendar' },
+                    { routeKey: 'admin.facilities.list', text: 'Facilities', icon: 'location_city', description: 'Fields, courts, gyms & scheduling' },
                     { routeKey: 'admin.attendance', text: 'Attendance', icon: 'how_to_reg', description: 'Check-ins & tracking' },
                 ],
             },

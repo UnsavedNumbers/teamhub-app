@@ -84,6 +84,12 @@ export interface CalendarEvent {
         name: string
     }
     event_location?: EventLocation | null
+    
+    // Facilities management (internal venue)
+    location_mode?: 'internal' | 'external'
+    facility_id?: string | null
+    facility_resource_id?: string | null
+    
     rsvps?: EventRSVP[]
     rsvp_config?: EventRSVPConfig
     general_rsvps?: GeneralRSVP[]
@@ -287,6 +293,12 @@ export interface EventFormData {
     weather_dependent: boolean
     external_link: string
     location: EventLocationFormData
+    /** Location mode: 'internal' uses facility/resource reservation, 'external' uses Google place */
+    location_mode?: 'internal' | 'external'
+    /** Facility ID for internal venue */
+    facility_id?: string | null
+    /** Resource ID within facility for internal venue */
+    facility_resource_id?: string | null
     recurring: RecurringEventFormData | null
     rsvp_enabled: boolean
     rsvp_type: RSVPType | null

@@ -161,6 +161,7 @@ export default function AdminLayout() {
       children: [
         { routeKey: 'admin.payments.list', text: t('admin.navigation.payments'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_PAYMENTS), requiresOrg: true },
         { routeKey: 'admin.events.list', text: t('admin.navigation.events'), icon: 'event', path: getPath(RouteKeys.ADMIN_EVENTS), requiresOrg: true },
+        { routeKey: 'admin.facilities.list', text: t('admin.facilities.title'), icon: 'location_city', path: getLink('admin.facilities.list'), requiresOrg: true },
         { routeKey: 'admin.attendance', text: t('admin.navigation.attendance'), icon: 'how_to_reg', path: getLink('admin.attendance'), requiresOrg: true },
         { routeKey: 'admin.notifications', text: t('admin.navigation.notifications'), icon: 'notifications', path: getLink('admin.notifications'), requiresOrg: true },
         { routeKey: 'admin.announcements.list', text: t('admin.navigation.announcements'), icon: 'campaign', path: getPath(RouteKeys.ADMIN_ANNOUNCEMENTS), requiresOrg: true },

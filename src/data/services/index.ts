@@ -13,6 +13,9 @@
 // Event/Calendar Services
 export * from './eventsService'
 
+// Facilities Management Services
+export * from './facilitiesService'
+
 // Team Services
 export * from './teamsService'
 
