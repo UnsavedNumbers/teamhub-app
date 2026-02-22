@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, Card, Button, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState, Tabs, TabsTrigger, TabsContent, Modal, Input, Switch, Select, ConfirmDialog } from '../../components/platformAdmin'
 import { EntitySelect } from '../../components/common/EntitySelect'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
-import { isValidUUID } from '../../utils/uuid'
+import { isValidUuid } from '../../utils/uuid'
 import { isNotFoundError } from '../../utils/errorUtils'
 import { mapFeatureFlag, mapFeatureFlagOverride, mapFeatureFlagAuditLog } from '../../utils/domainMappers'
 import { getLink } from '../../utils/routes'
@@ -81,7 +81,7 @@ export default function FeatureFlagDetail() {
   // Validate route parameter
   const isValidId = useMemo(() => {
     if (!id) return false
-    return isValidUUID(id)
+    return isValidUuid(id)
   }, [id])
   
   const fetchFlag = useCallback(async () => {

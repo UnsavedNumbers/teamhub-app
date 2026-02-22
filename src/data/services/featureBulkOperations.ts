@@ -143,7 +143,7 @@ export async function bulkUpdateCategory(
     return { success: false, error: 'No features selected' }
   }
 
-  const CHUNK_SIZE = 100
+  const CHUNK_SIZE = 50 // Limit bulk operations to 50 features per operation
   const chunks = chunkArray(featureIds, CHUNK_SIZE)
   let totalUpdated = 0
   let failedChunk = -1
@@ -405,7 +405,7 @@ export async function bulkUpdateRoleVisibility(
     return { success: false, error: 'No features selected' }
   }
 
-  const CHUNK_SIZE = 100
+  const CHUNK_SIZE = 50 // Limit bulk operations to 50 features per operation
   const chunks = chunkArray(featureIds, CHUNK_SIZE)
   let totalUpdated = 0
   let failedChunk = -1

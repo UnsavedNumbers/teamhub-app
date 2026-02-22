@@ -16,8 +16,8 @@ export default function NotificationBell({ viewAllPath }: NotificationBellProps)
   // All hooks must be called unconditionally at the top
   const userContextResult = useUserContext()
   const context = userContextResult.context
-  const isReady = userContextResult.isReady
-  const hasReadyContext = Boolean(isReady && context?.userId && context?.orgId)
+  /** Show bell when user is authenticated (userId present). Platform admin may have no org. */
+  const hasUserForNotifications = Boolean(context?.userId)
   const t = useT()
   const navigate = useNavigate()
   const defaultPath = viewAllPath || getLink(RouteKeys.PORTAL_NOTIFICATIONS)
@@ -30,7 +30,7 @@ export default function NotificationBell({ viewAllPath }: NotificationBellProps)
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read_at).length, [notifications])
 
   const fetchNotifications = async () => {
-    if (!hasReadyContext) return
+    if (!hasUserForNotifications) return
     setLoading(true)
     setError(null)
     const { data, error: fetchError } = await notificationService.getNotifications(context, { limit: 10 })
@@ -48,10 +48,10 @@ export default function NotificationBell({ viewAllPath }: NotificationBellProps)
   useEffect(() => {
     fetchNotifications()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasReadyContext])
+  }, [hasUserForNotifications])
 
   useEffect(() => {
-    if (!hasReadyContext) return
+    if (!hasUserForNotifications) return
 
     let channel: any = null
     import('../../lib/supabase').then(({ supabase }) => {
@@ -79,7 +79,7 @@ export default function NotificationBell({ viewAllPath }: NotificationBellProps)
         })
       }
     }
-  }, [context.userId, hasReadyContext])
+  }, [context.userId, hasUserForNotifications])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -103,7 +103,7 @@ export default function NotificationBell({ viewAllPath }: NotificationBellProps)
     if (notification.link_url) {
       navigate(notification.link_url)
     }
-    if (!notification.read_at && hasReadyContext) {
+    if (!notification.read_at && hasUserForNotifications) {
       const { error } = await notificationService.markAsRead(context, notification.id)
       if (!error) {
         setNotifications((prev) =>
@@ -114,8 +114,8 @@ export default function NotificationBell({ viewAllPath }: NotificationBellProps)
     setOpen(false)
   }
 
-  // Early return after all hooks are called
-  if (!hasReadyContext) {
+  // Early return after all hooks are called — show bell when user is logged in (platform admin may have no org)
+  if (!hasUserForNotifications) {
     return null
   }
 

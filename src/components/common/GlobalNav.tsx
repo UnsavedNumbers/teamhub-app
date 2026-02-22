@@ -14,15 +14,19 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
   const brandIcon = isAdmin ? 'sports' : 'shield_person'
   const brandText = isAdmin ? 'YOUTH SPORTS' : 'ADMIN'
 
+  const showLogo = variant !== 'admin'
+
   return (
-    <nav className="gn-root" role="navigation" aria-label="Main navigation">
+    <nav className={`gn-root ${variant === 'admin' ? 'gn-admin' : ''}`} role="navigation" aria-label="Main navigation">
       {/* Left section */}
       <div className="gn-left">
-        {/* Brand */}
+        {/* Brand — admin: text only (no logo); platform-admin: icon + text */}
         <Link to={brandPath} className="gn-brand">
-          <div className="gn-logo">
-            <span className="material-symbols-outlined">{brandIcon}</span>
-          </div>
+          {showLogo && (
+            <div className="gn-logo">
+              <span className="material-symbols-outlined">{brandIcon}</span>
+            </div>
+          )}
           <span className="gn-brand-text">{brandText}</span>
         </Link>
       </div>

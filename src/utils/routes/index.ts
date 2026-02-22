@@ -250,6 +250,8 @@ export const RouteKeys = {
     PLATFORM_AUDIT: 'platformAdmin.audit',
     PLATFORM_FEATURE_FLAGS: 'platformAdmin.featureFlags',
     PLATFORM_LICENSES: 'platformAdmin.licenses.overview',
+    PLATFORM_LICENSE_FEATURES: 'platformAdmin.licenses.features',
+    PLATFORM_LICENSE_FEATURE_DETAIL: 'platformAdmin.licenses.featureDetail',
     PLATFORM_PHOTOS_OVERVIEW: 'platformAdmin.photos.overview',
     PLATFORM_PHOTOS_CONTENT_REVIEW: 'platformAdmin.photos.contentReview',
     PLATFORM_PHOTOS_STORAGE: 'platformAdmin.photos.storage',

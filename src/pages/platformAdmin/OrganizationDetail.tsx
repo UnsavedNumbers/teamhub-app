@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { Badge, Card, ConfirmDialog, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
 import { canPerformAction, getDeniedMessage } from '../../utils/platformAdminPermissions'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
-import { isValidUUID } from '../../utils/uuid'
+import { isValidUuid } from '../../utils/uuid'
 import { useAuth } from '../../hooks/useAuth'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
@@ -66,7 +66,7 @@ export default function OrganizationDetail() {
   // Validate route parameter
   const isValidId = useMemo(() => {
     if (!id) return false
-    return isValidUUID(id)
+    return isValidUuid(id)
   }, [id])
 
   const fetchOrganization = useCallback(async () => {

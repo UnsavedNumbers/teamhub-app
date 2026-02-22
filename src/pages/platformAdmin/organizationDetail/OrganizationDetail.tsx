@@ -19,7 +19,7 @@ import { useAuth } from '../../../hooks/useAuth'
 import { useRolePermissions } from '../../../hooks/useRolePermissions'
 import { useEventListener } from '../../../hooks/useEventListener'
 import { useExportOrganization } from '../../../hooks/useExportOrganization'
-import { isValidUUID } from '../../../utils/uuid'
+import { isValidUuid } from '../../../utils/uuid'
 import { handleRpcError } from '../../../utils/rpcErrorHandler'
 import { isRpcSuccessResponse } from '../../../utils/typeAdapters'
 import { getLink } from '../../../utils/routes'
@@ -84,7 +84,7 @@ export default function OrganizationDetail() {
   // Validate route parameter
   const isValidId = useMemo(() => {
     if (!id) return false
-    return isValidUUID(id)
+    return isValidUuid(id)
   }, [id])
 
   // Reset dialog function

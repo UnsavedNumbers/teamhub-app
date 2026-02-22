@@ -835,27 +835,13 @@ html.dark .oa-text-slate-900 {
 }
 
 /* =====================================================================
-   ORG ADMIN PAGE HEADER - Uses org theme colors
+   ORG ADMIN PAGE HEADER - Black/white/dark gray/light gray design
    ===================================================================== */
 
 .oa-page-header {
     margin-bottom: var(--pa-space-6);
-    position: relative;
     padding-bottom: var(--pa-space-4);
-    border-bottom: 1px solid var(--org-border-default, var(--pa-n100));
-    --oa-header-primary: var(--org-btn-primary-bg, #7c3aed);
-    --oa-header-secondary: var(--org-btn-secondary-bg, var(--org-link-color, #0ea5e9));
-}
-
-.oa-page-header::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    bottom: -1px;
-    width: min(360px, 44%);
-    height: 3px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, var(--oa-header-primary), var(--oa-header-secondary));
+    border-bottom: 1px solid var(--pa-border-default);
 }
 
 .oa-breadcrumbs {
@@ -882,16 +868,16 @@ html.dark .oa-text-slate-900 {
 }
 
 .oa-breadcrumb-link {
-    color: inherit;
+    color: var(--pa-text-secondary);
     text-decoration: none;
 }
 
 .oa-breadcrumb-link:hover {
-    color: var(--oa-header-secondary);
+    color: var(--pa-text-primary);
 }
 
 .oa-breadcrumb-current {
-    color: var(--oa-header-primary);
+    color: var(--pa-text-primary);
     background: none !important;
     font-weight: 700;
 }
@@ -914,13 +900,13 @@ html.dark .oa-text-slate-900 {
     line-height: 1;
     text-transform: uppercase;
     letter-spacing: -0.02em;
-    color: var(--oa-header-primary);
+    color: var(--pa-text-primary);
     margin: 0 0 var(--pa-space-2) 0;
 }
 
 .oa-page-subtitle {
     font-size: 1.125rem;
-    color: var(--oa-text-secondary, var(--pa-text-secondary));
+    color: var(--pa-text-secondary);
     font-weight: 500;
     margin: 0;
 }
@@ -983,30 +969,21 @@ html.dark .oa-text-slate-900 {
     }
 }
 
-/* Dark mode overrides */
+/* Dark mode uses same design tokens (--pa-* resolve per theme) */
 html.dark .oa-breadcrumbs {
-    color: var(--pa-text-primary);
-    opacity: 0.85;
+    color: var(--pa-text-muted);
 }
 
 html.dark .oa-breadcrumb-chevron {
-    color: var(--pa-text-primary);
-    opacity: 0.6;
-}
-
-html.dark .oa-breadcrumb-link:hover {
-    opacity: 1;
+    color: var(--pa-text-muted);
 }
 
 html.dark .oa-breadcrumb-current {
-    color: var(--oa-header-primary) !important;
-    background: none !important;
-    font-weight: 700;
-    opacity: 1;
+    color: var(--pa-text-primary) !important;
 }
 
 html.dark .oa-page-title {
-    color: var(--oa-header-primary);
+    color: var(--pa-text-primary);
 }
 
 html.dark .oa-page-subtitle {

@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { isValidUUID } from '../utils/uuid'
+import { isValidUuid } from '../utils/uuid'
 
 export type PhotoDensity = 'comfortable' | 'compact'
 
@@ -112,7 +112,7 @@ export function usePhotoFilters(options: UsePhotoFiltersOptions) {
       ? defaultStatus
       : DEFAULT_STATUS
 
-    const resolvedOrg = isValidUUID(orgParam) ? orgParam : isValidUUID(storedOrg) ? storedOrg : defaultOrg
+    const resolvedOrg = isValidUuid(orgParam) ? orgParam : isValidUuid(storedOrg) ? storedOrg : defaultOrg
 
     const resolvedDensity: PhotoDensity =
       storedDensity === 'compact' || storedDensity === 'comfortable'
@@ -123,8 +123,8 @@ export function usePhotoFilters(options: UsePhotoFiltersOptions) {
 
     return {
       q: qParam,
-      album: isFavoritesAlbum ? 'favorites' : isValidUUID(albumParam) ? albumParam : null,
-      athlete: isValidUUID(athleteParam) ? athleteParam : null,
+      album: isFavoritesAlbum ? 'favorites' : isValidUuid(albumParam) ? albumParam : null,
+      athlete: isValidUuid(athleteParam) ? athleteParam : null,
       from: isValidDateString(fromParam) ? fromParam : null,
       to: isValidDateString(toParam) ? toParam : null,
       sort: resolvedSort,

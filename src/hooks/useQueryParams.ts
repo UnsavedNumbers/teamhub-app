@@ -9,7 +9,7 @@
 
 import { useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { isValidUUID } from '../utils/uuid'
+import { isValidUuid } from '../utils/uuid'
 
 /**
  * Validated query parameter accessors
@@ -70,7 +70,7 @@ export function useQueryParams(): QueryParamsAccessors {
   const getUUID = useCallback((key: string): string | null => {
     const value = searchParams.get(key)
     if (!value) return null
-    return isValidUUID(value) ? value : null
+    return isValidUuid(value) ? value : null
   }, [searchParams])
 
   const getString = useCallback((

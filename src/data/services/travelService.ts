@@ -37,7 +37,7 @@ import {
 } from '../fake/relationships'
 import { fakeEvents } from '../fake/fakeEvents'
 import { fakeTravelPlans, type FakeTravelPlan, type MeetingLocation } from '../fake/fakeTravel'
-import { isValidUUID } from '../../utils/uuid'
+import { isValidUuid } from '../../utils/uuid'
 
 const supabaseAny = supabase as any
 import { safeParseJSONB } from '../../utils/featureDiscovery/jsonbUtils'
@@ -233,7 +233,7 @@ async function validateTeamBelongsToOrg(
     _context: UserContext,
     teamId: string
 ): Promise<{ valid: boolean; orgId: string | null; error: Error | null }> {
-    if (!isValidUUID(teamId)) {
+    if (!isValidUuid(teamId)) {
         return { valid: false, orgId: null, error: new Error('Invalid team ID format') }
     }
 
@@ -281,7 +281,7 @@ async function validateTeamSeasonRelationship(
     teamId: string,
     seasonId: string
 ): Promise<{ valid: boolean; error: Error | null }> {
-    if (!isValidUUID(teamId) || !isValidUUID(seasonId)) {
+    if (!isValidUuid(teamId) || !isValidUuid(seasonId)) {
         return { valid: false, error: new Error('Invalid team or season ID format') }
     }
 
@@ -938,7 +938,7 @@ export async function createTravelPlan(
         }
 
         // Validate UUIDs
-        if (!isValidUUID(data.team_id) || !isValidUUID(data.season_id)) {
+        if (!isValidUuid(data.team_id) || !isValidUuid(data.season_id)) {
             debug.perf.end('travelService.createTravelPlan')
             debug.error('TravelService.createTravelPlan', 'Invalid UUID format', { teamId: data.team_id, seasonId: data.season_id })
             console.groupEnd()
@@ -1172,7 +1172,7 @@ export async function updateTravelPlan(
 
     try {
         // Validate UUID
-        if (!isValidUUID(planId)) {
+        if (!isValidUuid(planId)) {
             debug.perf.end('travelService.updateTravelPlan')
             debug.error('TravelService.updateTravelPlan', 'Invalid plan ID format', { planId })
             console.groupEnd()
@@ -1376,7 +1376,7 @@ export async function uploadTravelItinerary(
 
     try {
         // Validate UUID
-        if (!isValidUUID(planId)) {
+        if (!isValidUuid(planId)) {
             debug.perf.end('travelService.uploadTravelItinerary')
             debug.error('TravelService.uploadTravelItinerary', 'Invalid plan ID format', { planId })
             console.groupEnd()
@@ -1486,7 +1486,7 @@ export async function getTravelItinerarySignedUrl(
 ): Promise<{ data: string | null; error: Error | null }> {
     try {
         // Validate UUID
-        if (!isValidUUID(planId)) {
+        if (!isValidUuid(planId)) {
             return { data: null, error: new Error('Invalid plan ID format') }
         }
 
@@ -1988,7 +1988,7 @@ export async function getTravelPlanContacts(
         return { data: result, error: null }
     }
 
-    if (!isValidUUID(planId)) {
+    if (!isValidUuid(planId)) {
         debug.perf.end('travelService.getTravelPlanContacts')
         debug.error('TravelService.getTravelPlanContacts', 'Invalid plan ID', { planId })
         console.groupEnd()
@@ -2066,7 +2066,7 @@ export async function deleteTravelPlanContactsForPlan(
         return { error: null }
     }
 
-    if (!isValidUUID(planId)) {
+    if (!isValidUuid(planId)) {
         debug.perf.end('travelService.deleteTravelPlanContactsForPlan')
         debug.error('TravelService.deleteTravelPlanContactsForPlan', 'Invalid plan ID', { planId })
         console.groupEnd()
@@ -2131,7 +2131,7 @@ export async function insertTravelPlanContacts(
         return { error: null }
     }
 
-    if (!isValidUUID(planId)) {
+    if (!isValidUuid(planId)) {
         return { error: new Error('Invalid plan ID') }
     }
 
@@ -2220,7 +2220,7 @@ export async function upsertTravelPlanContacts(
         return { error: null }
     }
 
-    if (!isValidUUID(planId)) {
+    if (!isValidUuid(planId)) {
         debug.perf.end('travelService.upsertTravelPlanContacts')
         debug.error('TravelService.upsertTravelPlanContacts', 'Invalid plan ID', { planId })
         console.groupEnd()
@@ -2323,7 +2323,7 @@ export async function resolveAllTravelContactsForPlan(
         return { data: result, error: null }
     }
 
-    if (!isValidUUID(planId)) {
+    if (!isValidUuid(planId)) {
         debug.perf.end('travelService.resolveAllTravelContactsForPlan')
         debug.error('TravelService.resolveAllTravelContactsForPlan', 'Invalid plan ID', { planId })
         console.groupEnd()
@@ -2479,7 +2479,7 @@ export async function publishTravelPlan(
 
     try {
         // Validate UUID
-        if (!isValidUUID(planId)) {
+        if (!isValidUuid(planId)) {
             debug.perf.end('travelService.publishTravelPlan')
             debug.error('TravelService.publishTravelPlan', 'Invalid plan ID format', { planId })
             console.groupEnd()
@@ -2632,7 +2632,7 @@ export async function cancelTravelPlan(
 
     try {
         // Validate UUID
-        if (!isValidUUID(planId)) {
+        if (!isValidUuid(planId)) {
             debug.perf.end('travelService.cancelTravelPlan')
             debug.error('TravelService.cancelTravelPlan', 'Invalid plan ID format', { planId })
             console.groupEnd()

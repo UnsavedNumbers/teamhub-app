@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../hooks/useAuth'
+import { getLink, RouteKeys } from '../../utils/routes'
 import { 
   PageHeader, 
   PlatformDataTable, 
@@ -22,6 +24,7 @@ import {
   SetAsSystemFeatureModal,
   SetPlatformOnlyModal,
   OfflineBanner,
+  ErrorState,
 } from '../../components/platformAdmin'
 import type { FeatureEntitlementWithCounts } from '../../types/licenseTiers.types'
 import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
@@ -39,6 +42,7 @@ import { showSuccess, showError, showInfo } from '../../utils/toast'
 import type { FeatureCategory } from '../../types/licenseTiers.types'
 import { useI18n } from '../../i18n/useI18n'
 import { formatToastMessage, formatPlural } from '../../utils/toastMessages'
+import { exportToCSV, exportToXLSX } from '../../utils/reporting/exportFormatters'
 
 const CATEGORY_OPTIONS = [
   { value: '', label: 'All Categories' },
@@ -70,7 +74,13 @@ import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycl
 export default function FeatureCatalog() {
   useDebugLifecycle('FeatureCatalog')
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const { t } = useI18n()
+
+  // Platform admin check
+  if (!profile?.isPlatformAdmin) {
+    return <Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace />
+  }
   
   // Data State
   const [features, setFeatures] = useState<FeatureEntitlementWithCounts[]>([])
@@ -78,6 +88,89 @@ export default function FeatureCatalog() {
   const [availableTiers, setAvailableTiers] = useState<Array<{ id: string; tier_key: string; tier_name: string }>>([])
   const [loading, setLoading] = useState(true)
   const [discoveryLoading, setDiscoveryLoading] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const [exportMenuOpen, setExportMenuOpen] = useState(false)
+  const exportMenuRef = useRef<HTMLDivElement>(null)
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setExportMenuOpen(false)
+      }
+    }
+
+    if (exportMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [exportMenuOpen])
+
+  // Fetch all features for export (not paginated)
+  const fetchAllFeaturesForExport = useCallback(async () => {
+    try {
+      let query = supabase
+        .from('admin_feature_entitlements_list')
+        .select('display_name, category, feature_type, description')
+        .is('archived_at', null)
+        .order('category', { ascending: true })
+        .order('display_name', { ascending: true })
+
+      const { data, error } = await query
+
+      if (error) {
+        throw error
+      }
+
+      return data || []
+    } catch (err: any) {
+      console.error('Error fetching features for export:', err)
+      throw err
+    }
+  }, [])
+
+  // Export handler
+  const handleExport = useCallback(async (format: 'csv' | 'xlsx') => {
+    setExporting(true)
+    setExportMenuOpen(false)
+
+    try {
+      const allFeatures = await fetchAllFeaturesForExport()
+
+      if (!allFeatures || allFeatures.length === 0) {
+        showError('No features to export')
+        return
+      }
+
+      // Format data with requested fields: name, category, type, description
+      const exportData = allFeatures.map((feature: any) => ({
+        Name: feature.display_name || '',
+        Category: feature.category || '',
+        Type: feature.feature_type || '',
+        Description: feature.description || '',
+      }))
+
+      const timestamp = new Date().toISOString().split('T')[0]
+      const filename = `features-export-${timestamp}`
+
+      if (format === 'csv') {
+        exportToCSV(exportData, filename)
+        showSuccess(`Exported ${allFeatures.length} features to CSV`)
+      } else {
+        exportToXLSX(exportData, filename, 'Features')
+        showSuccess(`Exported ${allFeatures.length} features to Excel`)
+      }
+    } catch (err: any) {
+      console.error('Export failed:', err)
+      showError(err.message || 'Failed to export features')
+    } finally {
+      setExporting(false)
+    }
+  }, [fetchAllFeaturesForExport])
   const [lastDiscoveredAt, setLastDiscoveredAt] = useState<string | null>(null)
   const [syncStatus, setSyncStatus] = useState<'pending' | 'synced' | 'failed' | null>(null)
   
@@ -339,6 +432,7 @@ export default function FeatureCatalog() {
       }
       console.error('Error:', err)
       setFeatures([])
+      setFetchError(err?.message || 'Failed to load features')
     } finally {
       if (fetchRequestIdRef.current === currentRequestId) {
         setLoading(false)
@@ -436,8 +530,9 @@ export default function FeatureCatalog() {
             setLastDiscoveredAt(cache.last_discovered_at)
             setSyncStatus(cache.sync_status as any)
         }
-    } catch (err) {
+    } catch (err: any) {
         console.error('Discovery failed', err)
+        showError(err.message || 'Discovery failed')
     } finally {
         setDiscoveryLoading(false)
     }
@@ -531,7 +626,10 @@ export default function FeatureCatalog() {
       const syncedCount = result?.synced || 0
       const failedCount = result?.failed || 0
       updateProgress(5, `Sync completed: ${syncedCount} synced, ${failedCount} failed`)
-      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Clear feature gate cache after sync
+      const { clearFeatureGateCache } = await import('../../lib/featureGate/api')
+      clearFeatureGateCache()
       
       await new Promise(resolve => setTimeout(resolve, 500))
       await runDiscovery(false)
@@ -1031,7 +1129,7 @@ export default function FeatureCatalog() {
           <Button
             variant="ghost"
             size="dense"
-            onClick={() => navigate(`/platform-admin/licenses/features/${row.id}`)}
+            onClick={() => navigate(getLink(RouteKeys.PLATFORM_LICENSE_FEATURE_DETAIL, { id: row.id }))}
           >
             Edit
           </Button>
@@ -1056,9 +1154,102 @@ export default function FeatureCatalog() {
                     onRefresh={() => runDiscovery(true)}
                     onSync={handleSync}
                 />
+                <div ref={exportMenuRef} style={{ position: 'relative' }}>
+                  <Button
+                      variant="secondary"
+                      onClick={() => setExportMenuOpen(!exportMenuOpen)}
+                      disabled={exporting}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                        {exporting ? 'sync' : 'download'}
+                      </span>
+                      {exporting ? 'Exporting...' : 'Export'}
+                      <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                        {exportMenuOpen ? 'expand_less' : 'expand_more'}
+                      </span>
+                  </Button>
+                  {exportMenuOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        right: 0,
+                        marginTop: '8px',
+                        backgroundColor: 'var(--pa-surface)',
+                        border: '1px solid var(--pa-border)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                        zIndex: 1000,
+                        minWidth: '160px',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <button
+                        onClick={() => handleExport('csv')}
+                        disabled={exporting}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: exporting ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          opacity: exporting ? 0.5 : 1,
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!exporting) {
+                            e.currentTarget.style.backgroundColor = 'var(--pa-neutral-50)'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent'
+                        }}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                          description
+                        </span>
+                        <span>Export CSV</span>
+                      </button>
+                      <button
+                        onClick={() => handleExport('xlsx')}
+                        disabled={exporting}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: exporting ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          opacity: exporting ? 0.5 : 1,
+                          borderTop: '1px solid var(--pa-border)',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!exporting) {
+                            e.currentTarget.style.backgroundColor = 'var(--pa-neutral-50)'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent'
+                        }}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                          table_chart
+                        </span>
+                        <span>Export Excel</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <Button
                     variant="primary"
-                    onClick={() => navigate('/platform-admin/licenses/features/new')}
+                    onClick={() => navigate(getLink(RouteKeys.PLATFORM_LICENSE_FEATURE_DETAIL, { id: 'new' }))}
                 >
                     Manual Create
                 </Button>
@@ -1189,6 +1380,20 @@ export default function FeatureCatalog() {
             <div style={{ marginBottom: '24px' }}>
                 <FeatureDependencyGraph features={discoveredFeatures} />
             </div>
+        )}
+
+        {fetchError && (
+          <div style={{ marginBottom: '24px' }}>
+            <ErrorState
+              title="Failed to Load Features"
+              message={fetchError}
+              onRetry={() => {
+                setFetchError(null)
+                fetchFeatures()
+              }}
+              retryLabel="Retry"
+            />
+          </div>
         )}
 
         <PlatformDataTable

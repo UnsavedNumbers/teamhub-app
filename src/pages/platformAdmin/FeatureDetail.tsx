@@ -2,13 +2,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
-import { PageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
+import { PageHeader, Card, Button, Input, Select, Checkbox, ErrorState } from '../../components/platformAdmin'
 import { FeatureHierarchySelector } from '../../components/admin/FeatureHierarchySelector'
 import { mapFeatureEntitlement, mapLicenseTier, mapTierFeatureAssignment } from '../../utils/domainMappers'
 import type { FeatureEntitlement, LicenseTier, TierFeatureAssignment } from '../../types/domain/License'
 import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
 import { showSuccess, showError } from '../../utils/toast'
 import { useI18n } from '../../i18n/useI18n'
+import { isUuid } from '../../utils/uuid'
+import { getLink, RouteKeys } from '../../utils/routes'
 
 const FEATURE_CATEGORIES_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
 const FEATURE_TYPES_OPTIONS = FEATURE_TYPES.map(type => ({ value: type, label: type }))
@@ -50,22 +52,47 @@ export default function FeatureDetail() {
 
   const fetchFeature = useCallback(async () => {
     if (isNew) return
+    if (!id || !isUuid(id)) {
+      setError('Invalid feature ID')
+      setLoading(false)
+      return
+    }
 
     setLoading(true)
+    setError(null)
     try {
       const { data, error: featureError } = await supabase
         .from('feature_entitlements')
         .select('*')
-        .eq('id', id!)
+        .eq('id', id)
         .single()
 
-      if (featureError) throw featureError
-      if (data) {
-        const mapped = mapFeatureEntitlement(data)
-        setFeature(mapped)
-        setOriginalFeature(mapped)
+      if (featureError) {
+        if (featureError.code === 'PGRST116') {
+          // Not found
+          setError('Feature not found')
+        } else {
+          throw featureError
+        }
+        return
       }
+
+      if (!data) {
+        setError('Feature not found')
+        return
+      }
+
+      // Check if archived
+      if (data.archived_at) {
+        setError('This feature has been archived')
+        return
+      }
+
+      const mapped = mapFeatureEntitlement(data)
+      setFeature(mapped)
+      setOriginalFeature(mapped)
     } catch (err: any) {
+      console.error('Error fetching feature:', err)
       setError(err.message || 'Failed to load feature')
     } finally {
       setLoading(false)
@@ -371,7 +398,41 @@ export default function FeatureDetail() {
 
     try {
       if (isNew) {
-        const insertData = {
+        // Validate parent exists if set
+        if (feature.parentFeatureKey) {
+          const { data: parentExists, error: parentError } = await supabase
+            .from('feature_entitlements')
+            .select('id, archived_at')
+            .eq('feature_key', feature.parentFeatureKey)
+            .single()
+
+          if (parentError || !parentExists) {
+            setError(`Parent feature "${feature.parentFeatureKey}" not found`)
+            setSaving(false)
+            return false
+          }
+
+          if (parentExists.archived_at) {
+            setError(`Parent feature "${feature.parentFeatureKey}" is archived`)
+            setSaving(false)
+            return false
+          }
+        }
+
+        // Check if feature_key already exists
+        const { data: existing } = await supabase
+          .from('feature_entitlements')
+          .select('id')
+          .eq('feature_key', feature.featureKey)
+          .single()
+
+        if (existing) {
+          setError(`Feature key "${feature.featureKey}" already exists`)
+          setSaving(false)
+          return false
+        }
+
+        const insertData: Database['public']['Tables']['feature_entitlements']['Insert'] = {
           feature_key: feature.featureKey,
           display_name: feature.displayName,
           category: feature.category!,
@@ -382,20 +443,34 @@ export default function FeatureDetail() {
           is_system_feature: feature.isSystemFeature ?? false,
           platform_admin_only: feature.platformAdminOnly ?? false,
           parent_feature_key: feature.parentFeatureKey || null,
-        } as any
+        }
         const { data, error: createError } = await supabase
           .from('feature_entitlements')
           .insert(insertData)
           .select()
           .single()
 
-        if (createError) throw createError
+        if (createError) {
+          if (createError.code === '23505') {
+            // Unique constraint violation
+            throw new Error(`Feature key "${feature.featureKey}" already exists`)
+          }
+          throw createError
+        }
 
         if (data) {
           const newId = (data as { id: string }).id
+          
+          // Clear feature gate cache on create
+          const { clearFeatureGateCache } = await import('../../lib/featureGate/api')
+          clearFeatureGateCache()
+
           if (feature.isSystemFeature) {
-            for (const tier of tiers) {
-              await supabase.from('tier_feature_assignments').insert({
+            // Auto-assign to all tiers for system features
+            // Transaction safety: If any assignment fails, we still have the feature created
+            // but we'll show a warning if assignments partially fail
+            const assignmentPromises = tiers.map(async (tier) => {
+              const { error: assignError } = await supabase.from('tier_feature_assignments').insert({
                 license_tier_id: tier.id,
                 feature_entitlement_id: newId,
                 included: true,
@@ -403,10 +478,20 @@ export default function FeatureDetail() {
                 role_coach: true,
                 role_parent: false,
               })
+              if (assignError) {
+                console.error(`Failed to assign feature to tier ${tier.tierKey}:`, assignError)
+                return { tier: tier.tierKey, error: assignError }
+              }
+              return null
+            })
+            const assignmentResults = await Promise.all(assignmentPromises)
+            const failedAssignments = assignmentResults.filter((r): r is { tier: string; error: any } => r !== null)
+            if (failedAssignments.length > 0) {
+              showError(`Feature created but failed to assign to ${failedAssignments.length} tier(s). Please assign manually.`)
             }
           }
           showSuccess('Feature created successfully!')
-          navigate(`/platform-admin/licenses/features/${newId}`)
+          navigate(getLink(RouteKeys.PLATFORM_LICENSE_FEATURE_DETAIL, { id: newId }))
           return true
         }
         return false
@@ -421,7 +506,35 @@ export default function FeatureDetail() {
           return false
         }
 
-        const updateData = {
+        // Feature key is immutable - prevent updates
+        if (feature.featureKey !== originalFeature?.featureKey) {
+          setError('Feature key cannot be changed after creation')
+          setSaving(false)
+          return false
+        }
+
+        // Validate parent exists if changed
+        if (feature.parentFeatureKey !== originalFeature?.parentFeatureKey && feature.parentFeatureKey) {
+          const { data: parentExists, error: parentError } = await supabase
+            .from('feature_entitlements')
+            .select('id, archived_at')
+            .eq('feature_key', feature.parentFeatureKey)
+            .single()
+
+          if (parentError || !parentExists) {
+            setError(`Parent feature "${feature.parentFeatureKey}" not found`)
+            setSaving(false)
+            return false
+          }
+
+          if (parentExists.archived_at) {
+            setError(`Parent feature "${feature.parentFeatureKey}" is archived`)
+            setSaving(false)
+            return false
+          }
+        }
+
+        const updateData: Database['public']['Tables']['feature_entitlements']['Update'] = {
           display_name: feature.displayName,
           category: feature.category,
           feature_type: feature.featureType,
@@ -432,7 +545,7 @@ export default function FeatureDetail() {
           parent_feature_key: feature.parentFeatureKey || null,
           // Only update rollout_status if feature is toggleable
           ...(feature.isToggleable !== false ? { rollout_status: feature.rolloutStatus } : {}),
-        } as any
+        }
         const { error: updateError } = await supabase
           .from('feature_entitlements')
           .update(updateData)
@@ -440,10 +553,16 @@ export default function FeatureDetail() {
 
         if (updateError) throw updateError
 
+        // Clear feature gate cache on update
+        const { clearFeatureGateCache } = await import('../../lib/featureGate/api')
+        clearFeatureGateCache()
+
         // When marking as system feature, backfill assignments for all active tiers
+        // Transaction safety: If assignments fail, feature update still succeeds
+        // but we'll show a warning
         if (feature.isSystemFeature && !originalFeature?.isSystemFeature) {
-          for (const tier of tiers) {
-            await supabase.from('tier_feature_assignments').upsert(
+          const assignmentPromises = tiers.map(async (tier) => {
+            const { error: assignError } = await supabase.from('tier_feature_assignments').upsert(
               {
                 license_tier_id: tier.id,
                 feature_entitlement_id: id!,
@@ -454,8 +573,19 @@ export default function FeatureDetail() {
               },
               { onConflict: 'license_tier_id,feature_entitlement_id' }
             )
+            if (assignError) {
+              console.error(`Failed to assign feature to tier ${tier.tierKey}:`, assignError)
+              return { tier: tier.tierKey, error: assignError }
+            }
+            return null
+          })
+          const assignmentResults = await Promise.all(assignmentPromises)
+          const failedAssignments = assignmentResults.filter((r): r is { tier: string; error: any } => r !== null)
+          if (failedAssignments.length > 0) {
+            showError(`Feature updated but failed to assign to ${failedAssignments.length} tier(s). Please assign manually.`)
+          } else {
+            await fetchAssignments()
           }
-          await fetchAssignments()
         }
 
         // Update original feature after successful save
@@ -487,6 +617,37 @@ export default function FeatureDetail() {
     return (
       <div>
         <PageHeader title="Loading..." />
+        <Card>
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <div className="pa-skeleton" style={{ height: '24px', width: '200px', margin: '0 auto 1rem' }} />
+            <div className="pa-skeleton" style={{ height: '16px', width: '400px', margin: '0 auto' }} />
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error && !isNew && !feature.featureKey) {
+    return (
+      <div>
+        <PageHeader title="Error" />
+        <ErrorState
+          title="Failed to Load Feature"
+          message={error}
+          onRetry={() => {
+            setError(null)
+            fetchFeature()
+          }}
+          retryLabel="Retry"
+        />
+        <div style={{ marginTop: 'var(--pa-space-4)' }}>
+          <Button
+            variant="secondary"
+            onClick={() => navigate(getLink(RouteKeys.PLATFORM_LICENSE_FEATURES))}
+          >
+            Back to Features
+          </Button>
+        </div>
       </div>
     )
   }
@@ -501,7 +662,7 @@ export default function FeatureDetail() {
             {!isNew && (
               <Button 
                 variant="ghost" 
-                onClick={() => navigate('/platform-admin/licenses/features')}
+                onClick={() => navigate(getLink(RouteKeys.PLATFORM_LICENSE_FEATURES))}
                 className="w-full sm:w-auto min-h-[44px]"
                 style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
               >
@@ -530,7 +691,14 @@ export default function FeatureDetail() {
                 {saving ? 'Saving...' : 'Save and Go Back'}
               </Button>
             )}
-            <Button variant="primary" onClick={handleSave} disabled={saving} className="w-full sm:w-auto min-h-[44px]">
+            <Button 
+              variant="primary" 
+              onClick={handleSave} 
+              disabled={saving} 
+              className="w-full sm:w-auto min-h-[44px]"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              {saving && <span className="material-symbols-outlined" style={{ fontSize: '18px', animation: 'spin 1s linear infinite' }}>sync</span>}
               {saving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>

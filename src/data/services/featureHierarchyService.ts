@@ -12,6 +12,7 @@
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug';
 import type { FeatureEntitlement } from '../../types/domain/License';
+import { clearFeatureGateCache } from '../../lib/featureGate/api';
 
 /**
  * Feature with hierarchy metadata
@@ -374,6 +375,9 @@ export async function updateFeatureParent(
       console.error('[FeatureHierarchy] Error updating parent:', error);
       return { success: false, error: error.message };
     }
+
+    // Clear feature gate cache since parent changes affect child access
+    clearFeatureGateCache();
 
     debug.perf.end('featureHierarchyService.updateFeatureParent')
     debug.flow('FeatureHierarchyService.updateFeatureParent', 'Parent updated successfully', { featureId, featureKey, newParentKey })
