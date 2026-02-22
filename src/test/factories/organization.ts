@@ -58,7 +58,7 @@ const defaultOrg: OrganizationsRow = {
   website: null,
   zip: null,
   parent_org_id: null,
-  inherits_license: null,
+  inherits_license: false,
   sub_org_public_registration_enabled: null,
   sub_org_require_approval: null,
   sub_org_max_count: null,

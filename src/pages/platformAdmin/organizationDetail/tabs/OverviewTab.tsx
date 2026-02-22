@@ -158,8 +158,8 @@ export function OverviewTab({ organization, adminRole, onViewActivity }: Overvie
               </div>
             </div>
             <div>
-              <div className="pa-caption pa-text-muted pa-mb-1">Plan</div>
-              <div className="pa-body-m">{safeString(organization.license_plan)}</div>
+              <div className="pa-caption pa-text-muted pa-mb-1">Tier</div>
+              <div className="pa-body-m">{safeString(organization.tier_name || '—')}</div>
             </div>
             <div>
               <div className="pa-caption pa-text-muted pa-mb-1">Trial Ends</div>

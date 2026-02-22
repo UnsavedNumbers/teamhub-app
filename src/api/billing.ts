@@ -1,12 +1,11 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { LicensePlan } from '../utils/licenseUtils'
 import { t } from '../i18n'
 import { USE_FAKE_DATA, DEMO_TRANSACTION_DELAY_MS } from '../data/config'
 import { getFakeTicketOrdersWithRelations } from '../data/fake/ticketingFakeService'
 
 interface CheckoutSessionParams {
   organizationId: string
-  requestedPlan: LicensePlan
+  tierId: string
   successUrl: string
   cancelUrl: string
 }
@@ -105,8 +104,8 @@ export async function createCheckoutSession(params: CheckoutSessionParams) {
     ensureConfigured()
   }
 
-  const { organizationId, requestedPlan, successUrl, cancelUrl } = params
-  if (!organizationId || !requestedPlan || !successUrl || !cancelUrl) {
+  const { organizationId, tierId, successUrl, cancelUrl } = params
+  if (!organizationId || !tierId || !successUrl || !cancelUrl) {
     throw new Error(t('errors.missingOrganization'))
   }
 
@@ -118,7 +117,7 @@ export async function createCheckoutSession(params: CheckoutSessionParams) {
   const { data, error } = await supabase.functions.invoke('billing-create-checkout-session', {
     body: {
       organization_id: organizationId,
-      requested_plan: requestedPlan,
+      tier_id: tierId,
       success_url: successUrl,
       cancel_url: cancelUrl,
     },

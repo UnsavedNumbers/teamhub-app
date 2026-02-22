@@ -146,10 +146,10 @@ export async function getSavedReports(
       name: row.name,
       description: row.description,
       config: row.config as unknown as SavedReportConfig,
-      is_shared: row.is_shared,
+      is_shared: row.is_shared ?? false,
       share_token: row.share_token,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
+      created_at: row.created_at ?? '',
+      updated_at: row.updated_at ?? '',
     }))
 
     debug.perf.end('reportingService.getSavedReports')
@@ -220,10 +220,10 @@ export async function getSavedReportById(
       name: data.name,
       description: data.description,
       config: data.config as unknown as SavedReportConfig,
-      is_shared: data.is_shared,
+      is_shared: data.is_shared ?? false,
       share_token: data.share_token,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
+      created_at: data.created_at ?? '',
+      updated_at: data.updated_at ?? '',
     }
 
     debug.perf.end('reportingService.getSavedReportById')
@@ -284,10 +284,10 @@ export async function getSavedReportByToken(
       name: data.name,
       description: data.description,
       config: data.config as unknown as SavedReportConfig,
-      is_shared: data.is_shared,
+      is_shared: data.is_shared ?? false,
       share_token: data.share_token,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
+      created_at: data.created_at ?? '',
+      updated_at: data.updated_at ?? '',
     }
 
     debug.perf.end('reportingService.getSavedReportByToken')
@@ -369,10 +369,10 @@ export async function createSavedReport(
       name: data.name,
       description: data.description,
       config: data.config as unknown as SavedReportConfig,
-      is_shared: data.is_shared,
+      is_shared: data.is_shared ?? false,
       share_token: data.share_token,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
+      created_at: data.created_at ?? '',
+      updated_at: data.updated_at ?? '',
     }
 
     debug.perf.end('reportingService.createSavedReport')
@@ -476,10 +476,10 @@ export async function updateSavedReport(
       name: data.name,
       description: data.description,
       config: data.config as unknown as SavedReportConfig,
-      is_shared: data.is_shared,
+      is_shared: data.is_shared ?? false,
       share_token: data.share_token,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
+      created_at: data.created_at ?? '',
+      updated_at: data.updated_at ?? '',
     }
 
     debug.perf.end('reportingService.updateSavedReport')
@@ -596,11 +596,11 @@ export async function getScheduledReports(
       schedule: row.schedule as unknown as ScheduleConfig,
       recipients: row.recipients || [],
       format: row.format as 'csv' | 'xlsx' | 'pdf',
-      is_active: row.is_active,
+      is_active: row.is_active ?? false,
       last_run_at: row.last_run_at,
       next_run_at: row.next_run_at,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
+      created_at: row.created_at ?? '',
+      updated_at: row.updated_at ?? '',
     }))
 
     debug.perf.end('reportingService.getScheduledReports')
@@ -710,11 +710,11 @@ export async function createScheduledReport(
       schedule: data.schedule as unknown as ScheduleConfig,
       recipients: data.recipients || [],
       format: data.format as 'csv' | 'xlsx' | 'pdf',
-      is_active: data.is_active,
+      is_active: data.is_active ?? false,
       last_run_at: data.last_run_at,
       next_run_at: data.next_run_at,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
+      created_at: data.created_at ?? '',
+      updated_at: data.updated_at ?? '',
     }
 
     debug.perf.end('reportingService.createScheduledReport')
@@ -829,11 +829,11 @@ export async function updateScheduledReport(
       schedule: data.schedule as unknown as ScheduleConfig,
       recipients: data.recipients || [],
       format: data.format as 'csv' | 'xlsx' | 'pdf',
-      is_active: data.is_active,
+      is_active: data.is_active ?? false,
       last_run_at: data.last_run_at,
       next_run_at: data.next_run_at,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
+      created_at: data.created_at ?? '',
+      updated_at: data.updated_at ?? '',
     }
 
     debug.perf.end('reportingService.updateScheduledReport')
@@ -953,7 +953,7 @@ export async function getExportHistory(
       file_size_bytes: row.file_size_bytes,
       status: row.status as 'pending' | 'processing' | 'completed' | 'failed',
       error_message: row.error_message,
-      created_at: row.created_at,
+      created_at: row.created_at ?? '',
       completed_at: row.completed_at,
     }))
 
@@ -1026,7 +1026,7 @@ export async function createExportHistory(
       file_size_bytes: data.file_size_bytes,
       status: data.status as 'pending' | 'processing' | 'completed' | 'failed',
       error_message: data.error_message,
-      created_at: data.created_at,
+      created_at: data.created_at ?? '',
       completed_at: data.completed_at,
     }
 

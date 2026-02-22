@@ -421,6 +421,9 @@ verify_jwt = false
 [functions.bulk-invite-import]
 verify_jwt = false
 
+[functions.stripe-verify-price]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

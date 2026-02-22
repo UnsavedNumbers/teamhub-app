@@ -425,8 +425,8 @@ export default function OrganizationDetail() {
             {organization.org_type && (
               <Badge variant="neutral">{organization.org_type}</Badge>
             )}
-            {organization.license_plan && (
-              <Badge variant="info">{organization.license_plan}</Badge>
+            {organization.tier_name && (
+              <Badge variant="info">{organization.tier_name}</Badge>
             )}
           </div>
         </div>
@@ -547,8 +547,8 @@ export default function OrganizationDetail() {
                 </div>
               </div>
               <div>
-                <div className="pa-caption pa-text-muted pa-mb-1">Plan</div>
-                <div className="pa-body-m">{organization.license_plan || '—'}</div>
+                <div className="pa-caption pa-text-muted pa-mb-1">Tier</div>
+                <div className="pa-body-m">{organization.tier_name || '—'}</div>
               </div>
               <div>
                 <div className="pa-caption pa-text-muted pa-mb-1">Trial Ends</div>

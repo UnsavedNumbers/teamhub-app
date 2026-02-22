@@ -5,6 +5,21 @@ import { useAuth } from '../../hooks/useAuth'
 import { StatCard, PageHeader, Card, Button, OfflineBanner } from '../../components/platformAdmin'
 import type { LicenseMetrics, LicenseAlert } from '../../types/licenseTiers.types'
 import { getLink } from '../../utils/routes'
+import { useI18n } from '../../i18n/useI18n'
+
+// Type for admin_license_metrics view (may omit deprecated columns after schema refresh)
+type AdminLicenseMetricsRow = {
+  active_tiers?: number | null
+  total_features?: number | null
+  orgs_on_basic?: number | null
+  orgs_on_power?: number | null
+  orgs_with_tier?: number | null
+  active_overrides?: number | null
+  tiers_missing_price_id?: number | null
+  features_without_assignment?: number | null
+  archived_features?: number | null
+  tiers_with_archived_features?: number | null
+}
 
 // Loading skeleton for stats
 function StatsSkeleton() {
@@ -30,6 +45,7 @@ export default function LicensesOverview() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { profile } = useAuth()
+  const { t } = useI18n()
   const navigate = useNavigate()
 
   const fetchDashboardData = useCallback(async () => {
@@ -50,6 +66,7 @@ export default function LicensesOverview() {
             total_features: 0,
             orgs_on_basic: 0,
             orgs_on_power: 0,
+            orgs_with_tier: 0,
             active_overrides: 0,
             tiers_missing_price_id: 0,
             features_without_assignment: 0,
@@ -59,17 +76,19 @@ export default function LicensesOverview() {
           setError('Failed to load license metrics')
         }
       } else {
+        const m = metricsData as AdminLicenseMetricsRow
         setMetrics({
-          ...metricsData,
-          active_tiers: metricsData.active_tiers ?? 0,
-          total_features: metricsData.total_features ?? 0,
-          orgs_on_basic: metricsData.orgs_on_basic ?? 0,
-          orgs_on_power: metricsData.orgs_on_power ?? 0,
-          active_overrides: metricsData.active_overrides ?? 0,
-          tiers_missing_price_id: metricsData.tiers_missing_price_id ?? 0,
-          features_without_assignment: metricsData.features_without_assignment ?? 0,
-          archived_features: metricsData.archived_features ?? undefined,
-          tiers_with_archived_features: metricsData.tiers_with_archived_features ?? undefined,
+          ...m,
+          active_tiers: m.active_tiers ?? 0,
+          total_features: m.total_features ?? 0,
+          orgs_on_basic: m.orgs_on_basic ?? 0,
+          orgs_on_power: m.orgs_on_power ?? 0,
+          orgs_with_tier: m.orgs_with_tier ?? 0,
+          active_overrides: m.active_overrides ?? 0,
+          tiers_missing_price_id: m.tiers_missing_price_id ?? 0,
+          features_without_assignment: m.features_without_assignment ?? 0,
+          archived_features: m.archived_features ?? undefined,
+          tiers_with_archived_features: m.tiers_with_archived_features ?? undefined,
         })
       }
 
@@ -144,8 +163,8 @@ export default function LicensesOverview() {
       <div>
         <OfflineBanner />
         <PageHeader
-          title="Licenses & Entitlements"
-          subtitle={`Signed in as ${profile?.email ?? 'unknown'}`}
+          title={t('platformAdmin.licenses.overview.title')}
+          subtitle={t('platformAdmin.licenses.overview.subtitle', { email: profile?.email ?? 'unknown' })}
         />
         <StatsSkeleton />
       </div>
@@ -223,28 +242,28 @@ export default function LicensesOverview() {
       {/* Stats Row 1: Tiers & Features */}
       <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4">
         <StatCard
-          label="Active License Tiers"
+          label={t('platformAdmin.licenses.overview.stats.activeTiers')}
           value={metrics?.active_tiers ?? 0}
           icon="workspace_premium"
           onClick={() => navigate(getLink('platformAdmin.licenses.tiers'))}
         />
         <StatCard
-          label="Features in Catalog"
+          label={t('platformAdmin.licenses.overview.stats.totalFeatures')}
           value={metrics?.total_features ?? 0}
           icon="inventory_2"
           onClick={() => navigate(getLink('platformAdmin.licenses.features'))}
         />
         <StatCard
-          label="Features (Power Only)"
+          label={t('platformAdmin.licenses.metrics.featuresPowerOnly')}
           value="—"
           icon="star"
-          meta="See Feature Catalog"
+          meta={t('platformAdmin.licenses.metrics.seeFeatureCatalog')}
         />
         <StatCard
-          label="Features (Basic)"
+          label={t('platformAdmin.licenses.metrics.featuresBasic')}
           value="—"
           icon="check_circle"
-          meta="See Feature Catalog"
+          meta={t('platformAdmin.licenses.metrics.seeFeatureCatalog')}
         />
       </div>
 
@@ -279,14 +298,14 @@ export default function LicensesOverview() {
       {/* Quick Actions */}
       <div className="pa-mt-5">
         <Card
-          title="Quick Actions"
+          title={t('platformAdmin.licenses.overview.quickActionsTitle')}
           actions={
             <Button
               variant="ghost"
               size="dense"
               onClick={() => fetchDashboardData()}
             >
-              Refresh
+              {t('platformAdmin.licenses.overview.refreshButton')}
             </Button>
           }
         >
@@ -312,8 +331,8 @@ export default function LicensesOverview() {
               <div className="pa-flex pa-items-center pa-gap-3">
                 <span className="material-symbols-outlined">workspace_premium</span>
                 <div>
-                  <div className="pa-body-m" style={{ fontWeight: 600 }}>Create Tier</div>
-                  <div className="pa-body-s" style={{ color: 'var(--pa-n500)' }}>Add new license tier</div>
+                  <div className="pa-body-m" style={{ fontWeight: 600 }}>{t('platformAdmin.licenses.overview.actions.createTier')}</div>
+                  <div className="pa-body-s" style={{ color: 'var(--pa-n500)' }}>{t('platformAdmin.licenses.overview.actions.createTierSub')}</div>
                 </div>
               </div>
             </button>
@@ -325,8 +344,8 @@ export default function LicensesOverview() {
               <div className="pa-flex pa-items-center pa-gap-3">
                 <span className="material-symbols-outlined">rule</span>
                 <div>
-                  <div className="pa-body-m" style={{ fontWeight: 600 }}>Create Override</div>
-                  <div className="pa-body-s" style={{ color: 'var(--pa-n500)' }}>Override entitlements for org/user</div>
+                  <div className="pa-body-m" style={{ fontWeight: 600 }}>{t('platformAdmin.licenses.overview.actions.createOverride')}</div>
+                  <div className="pa-body-s" style={{ color: 'var(--pa-n500)' }}>{t('platformAdmin.licenses.overview.actions.createOverrideSub')}</div>
                 </div>
               </div>
             </button>

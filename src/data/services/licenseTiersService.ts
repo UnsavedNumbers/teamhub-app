@@ -99,7 +99,8 @@ function mapAssignmentRow(row: TierFeatureAssignmentRow): TierFeatureAssignment 
 export interface OrgUsingTier {
   id: string
   name: string
-  license_plan: string
+  tier_name: string
+  tier_key: string
 }
 
 export interface CreateTierInput {
@@ -226,6 +227,79 @@ export async function getFeatures(): Promise<FeatureEntitlement[]> {
   }
 }
 
+export async function getActiveTiers(): Promise<LicenseTier[]> {
+  console.groupCollapsed('%cgetActiveTiers', 'color: #666; font-weight: bold;');
+  debug.data('LicenseTiersService.getActiveTiers', 'Request')
+  debug.perf.start('licenseTiersService.getActiveTiers')
+
+  if (USE_FAKE_DATA) {
+    // Return fake tiers
+    const fakeTiers: LicenseTier[] = [
+      {
+        id: 'fake-tier-1',
+        tier_key: 'tier1',
+        tier_name: 'Starter',
+        description: 'Core scheduling and roster tools for small programs.',
+        stripe_price_id: 'price_fake_starter',
+        stripe_verified_at: null,
+        stripe_product_name: null,
+        stripe_amount_cents: 29900,
+        stripe_interval: 'year',
+        stripe_currency: 'usd',
+        stripe_active: true,
+        status: 'active',
+        version: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'fake-tier-2',
+        tier_key: 'tier2',
+        tier_name: 'Pro',
+        description: 'Full suite with travel, tryouts, and advanced insights.',
+        stripe_price_id: 'price_fake_pro',
+        stripe_verified_at: null,
+        stripe_product_name: null,
+        stripe_amount_cents: 99900,
+        stripe_interval: 'year',
+        stripe_currency: 'usd',
+        stripe_active: true,
+        status: 'active',
+        version: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ]
+    debug.perf.end('licenseTiersService.getActiveTiers')
+    debug.data('LicenseTiersService.getActiveTiers', 'Response (fake)', { count: fakeTiers.length })
+    console.groupEnd()
+    return fakeTiers
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('license_tiers')
+      .select('*')
+      .eq('status', 'active')
+      .order('tier_key', { ascending: true })
+
+    if (error) {
+      throw error
+    }
+
+    const result = (data || []).map(row => mapTierRow(row as LicenseTierRow))
+    debug.perf.end('licenseTiersService.getActiveTiers')
+    debug.data('LicenseTiersService.getActiveTiers', 'Response', { count: result.length })
+    console.groupEnd()
+    return result
+  } catch (err) {
+    debug.perf.end('licenseTiersService.getActiveTiers')
+    debug.error('LicenseTiersService.getActiveTiers', 'Failed to get active tiers', { error: err })
+    console.groupEnd()
+    throw err
+  }
+}
+
 export async function getAssignments(tierId: string): Promise<Record<string, TierFeatureAssignment>> {
   console.groupCollapsed(`%cgetAssignments: ${tierId}`, 'color: #666; font-weight: bold;');
   debug.data('LicenseTiersService.getAssignments', 'Request', { tierId })
@@ -284,29 +358,40 @@ export async function getOrganizationsUsingTier(tierKey: string): Promise<OrgUsi
     return result
   }
 
-  // license_plan enum values are: 'starter', 'standard', 'pro'
-  // tier_key 'basic' maps to license_plan 'starter'
-  // tier_key 'power' maps to license_plan 'standard' or 'pro'
-  type LicensePlan = 'starter' | 'standard' | 'pro'
-  const plans: LicensePlan[] =
-    tierKey === 'basic' ? ['starter'] : tierKey === 'power' ? ['standard', 'pro'] : []
+  // Look up tier by tier_key, then query organizations by current_tier_id
+  const { data: tier, error: tierError } = await supabase
+    .from('license_tiers')
+    .select('id, tier_name, tier_key')
+    .eq('tier_key', tierKey)
+    .eq('status', 'active')
+    .maybeSingle()
 
-  if (plans.length === 0) {
+  if (tierError || !tier) {
     debug.perf.end('licenseTiersService.getOrganizationsUsingTier')
-    debug.data('LicenseTiersService.getOrganizationsUsingTier', 'Response (no plans)', { tierKey })
+    debug.data('LicenseTiersService.getOrganizationsUsingTier', 'Response (tier not found)', { tierKey })
     console.groupEnd()
     return []
   }
 
   try {
-    const { data, error } = await supabase
+    // Use typed assertion to avoid "excessively deep" inference (current_tier_id may exist before types are regenerated)
+    type OrgWithTierRow = { id: string; name: string; current_tier_id?: string | null; license_tiers?: { tier_name: string; tier_key: string } | null }
+    const { data, error } = await (supabase as any)
       .from('organizations')
-      .select('id, name, license_plan')
-      .in('license_plan', plans)
-      .order('name', { ascending: true })
+      .select('id, name, current_tier_id, license_tiers:current_tier_id(tier_name, tier_key)')
+      .eq('current_tier_id', tier.id)
+      .order('name', { ascending: true }) as { data: OrgWithTierRow[] | null; error: Error | null }
 
     if (error) throw error
-    const result = (data ?? []) as OrgUsingTier[]
+    
+    // Map response to OrgUsingTier format
+    const result: OrgUsingTier[] = (data ?? []).map((org: OrgWithTierRow) => ({
+      id: org.id,
+      name: org.name,
+      tier_name: org.license_tiers?.tier_name ?? tier.tier_name,
+      tier_key: org.license_tiers?.tier_key ?? tier.tier_key,
+    }))
+    
     debug.perf.end('licenseTiersService.getOrganizationsUsingTier')
     debug.data('LicenseTiersService.getOrganizationsUsingTier', 'Response', { tierKey, orgCount: result.length })
     console.groupEnd()

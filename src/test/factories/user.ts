@@ -20,6 +20,8 @@ const defaultUser: UsersRow = {
   phone: '5551234567',
   preferences: null,
   preferred_timezone: 'America/New_York',
+  profile_completed_at: null,
+  profile_completion_prompted_at: null,
   requires_org_setup: false,
   role: 'parent',
   updated_at: '2026-01-01T00:00:00Z',

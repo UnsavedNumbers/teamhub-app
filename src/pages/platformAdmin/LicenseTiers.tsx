@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { PageHeader, PlatformDataTable, FilterBar, Button, Badge, type ColumnConfig } from '../../components/platformAdmin'
 import type { LicenseTierWithCounts } from '../../types/licenseTiers.types'
+import { useI18n } from '../../i18n/useI18n'
 
 export default function LicenseTiers() {
+  const { t } = useI18n()
   const [tiers, setTiers] = useState<LicenseTierWithCounts[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -65,7 +67,7 @@ export default function LicenseTiers() {
   const columns: ColumnConfig<LicenseTierWithCounts>[] = [
     {
       id: 'tier_name',
-      label: 'Tier Name',
+      label: t('platformAdmin.licenses.tiers.columns.tierName'),
       sortable: true,
       render: (row) => (
         <div>
@@ -99,7 +101,7 @@ export default function LicenseTiers() {
     },
     {
       id: 'status',
-      label: 'Status',
+      label: t('platformAdmin.licenses.tiers.columns.status'),
       render: (row) => (
         <Badge variant={row.status === 'active' ? 'success' : 'neutral'}>
           {row.status}
@@ -108,7 +110,7 @@ export default function LicenseTiers() {
     },
     {
       id: 'stripe_price_id',
-      label: 'Stripe Price ID',
+      label: t('platformAdmin.licenses.tiers.columns.stripePriceId'),
       render: (row) => (
         <div>
           {row.stripe_price_id ? (
@@ -143,7 +145,7 @@ export default function LicenseTiers() {
               <span className="material-symbols-outlined" style={{ fontSize: '14px', verticalAlign: 'middle' }}>
                 check_circle
               </span>
-              {' '}Verified
+              {' '}{t('platformAdmin.licenses.tierDetail.stripeVerificationValid')}
             </div>
           )}
         </div>
@@ -151,7 +153,7 @@ export default function LicenseTiers() {
     },
     {
       id: 'stripe_currency',
-      label: 'Currency',
+      label: t('platformAdmin.licenses.tiers.columns.currency'),
       render: (row) => (
         <div>
           {row.stripe_currency ? row.stripe_currency.toUpperCase() : '—'}
@@ -166,7 +168,7 @@ export default function LicenseTiers() {
     },
     {
       id: 'included_features_count',
-      label: 'Features',
+      label: t('platformAdmin.licenses.tiers.columns.features'),
       align: 'center',
       render: (row) => (
         <div className="pa-body-m">{row.included_features_count}</div>
@@ -174,7 +176,7 @@ export default function LicenseTiers() {
     },
     {
       id: 'orgs_using_count',
-      label: 'Organizations',
+      label: t('platformAdmin.licenses.tiers.columns.organizations'),
       align: 'center',
       render: (row) => (
         <div className="pa-body-m">{row.orgs_using_count}</div>
@@ -182,7 +184,7 @@ export default function LicenseTiers() {
     },
     {
       id: 'updated_at',
-      label: 'Last Updated',
+      label: t('platformAdmin.licenses.tiers.columns.lastUpdated'),
       render: (row) => (
         <div className="pa-body-s" style={{ color: 'var(--pa-n500)' }}>
           {new Date(row.updated_at).toLocaleDateString()}
@@ -191,7 +193,7 @@ export default function LicenseTiers() {
     },
     {
       id: 'actions',
-      label: 'Actions',
+      label: t('platformAdmin.licenses.tiers.columns.actions'),
       align: 'right',
       render: (row) => (
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -200,7 +202,7 @@ export default function LicenseTiers() {
             size="dense"
             onClick={() => navigate(`/platform-admin/licenses/tiers/${row.id}`)}
           >
-            View/Edit
+            {t('platformAdmin.licenses.tiers.actions.viewEdit')}
           </Button>
         </div>
       ),
@@ -210,14 +212,14 @@ export default function LicenseTiers() {
   return (
     <div>
       <PageHeader
-        title="License Tiers"
-        subtitle="Manage Basic and Power license tiers"
+        title={t('platformAdmin.licenses.tiers.title')}
+        subtitle={t('platformAdmin.licenses.tiers.subtitle')}
         actions={
           <Button
             variant="primary"
             onClick={() => navigate('/platform-admin/licenses/tiers/new')}
           >
-            Create Tier
+            {t('platformAdmin.licenses.tiers.createButton')}
           </Button>
         }
       />
@@ -226,7 +228,7 @@ export default function LicenseTiers() {
         <FilterBar
           searchValue={search}
           onSearchChange={setSearch}
-          searchPlaceholder="Search tiers..."
+          searchPlaceholder={t('platformAdmin.licenses.tiers.searchPlaceholder')}
           onClearAll={() => setSearch('')}
         />
       </div>
@@ -235,7 +237,7 @@ export default function LicenseTiers() {
         columns={columns}
         rows={tiers}
         loading={loading}
-        emptyMessage="No license tiers found. Try adjusting your search or create a new tier."
+        emptyMessage={totalCount === 0 && !search ? t('platformAdmin.licenses.tiers.emptyMessageNoTiers') : t('platformAdmin.licenses.tiers.emptyMessage')}
         page={page}
         rowsPerPage={rowsPerPage}
         totalCount={totalCount}

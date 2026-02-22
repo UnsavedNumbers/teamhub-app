@@ -121,17 +121,33 @@ async function hashToken(token: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
 }
 
-function priceToPlan(priceId: string | null): string | null {
-  switch (priceId) {
-    case priceStarter:
-      return "starter"
-    case priceStandard:
-      return "standard"
-    case pricePro:
-      return "pro"
-    default:
-      return null
+async function priceToTierId(
+  supabase: any,
+  priceId: string | null
+): Promise<string | null> {
+  if (!priceId) {
+    console.warn('priceToTierId: priceId is null')
+    return null
   }
+  
+  const { data, error } = await supabase
+    .from('license_tiers')
+    .select('id')
+    .eq('stripe_price_id', priceId)
+    .eq('status', 'active')
+    .maybeSingle()
+  
+  if (error) {
+    console.error('priceToTierId: error looking up tier', { priceId, error })
+    return null
+  }
+  
+  if (!data) {
+    console.warn('priceToTierId: no tier found for price', { priceId })
+    return null
+  }
+  
+  return data.id
 }
 
 // Extract org_id robustly from different Stripe object types
@@ -167,7 +183,6 @@ async function upsertLicense(
   orgId: string,
   payload: {
     status?: string
-    plan?: string | null
     current_period_start?: number | null
     current_period_end?: number | null
     cancel_at_period_end?: boolean | null
@@ -186,10 +201,10 @@ async function upsertLicense(
       : null
 
   // IMPORTANT: use org_id (not organization_id)
+  // Note: plan parameter removed - tier is derived from stripe_price_id via sync_org_license_summary
   const record = {
     org_id: orgId,
     status: payload.status,
-    plan: payload.plan,
     current_period_start: payload.current_period_start ? new Date(payload.current_period_start * 1000).toISOString() : null,
     current_period_end: payload.current_period_end ? new Date(payload.current_period_end * 1000).toISOString() : null,
     cancel_at_period_end: payload.cancel_at_period_end ?? false,
@@ -722,11 +737,10 @@ serve(async (req) => {
 
         const subscription = await stripe.subscriptions.retrieve(subId)
         const priceId = subscription.items.data[0]?.price?.id ?? null
-        const plan = priceToPlan(priceId)
+        const tierId = await priceToTierId(supabase, priceId)
 
         await upsertLicense(supabase, resolvedOrgId, {
           status: subscription.status === "trialing" ? "trial" : "active",
-          plan,
           current_period_start: subscription.current_period_start,
           current_period_end: subscription.current_period_end,
           cancel_at_period_end: subscription.cancel_at_period_end,
@@ -749,8 +763,7 @@ serve(async (req) => {
         // Set webhook result for org license
         webhookResult.org_id = resolvedOrgId
         webhookResult.subscription_id = subscription.id
-        webhookResult.plan = plan
-        webhookResult.message = `Organization license activated: ${plan || 'unknown'} plan for org ${resolvedOrgId.slice(-8).toUpperCase()}`
+        webhookResult.message = `Organization license activated: tier ${tierId ? tierId.slice(-8).toUpperCase() : 'unknown'} for org ${resolvedOrgId.slice(-8).toUpperCase()}`
 
         break
       }
@@ -823,7 +836,7 @@ serve(async (req) => {
         if (!lic?.org_id) break
 
         const priceId = subscription.items.data[0]?.price?.id ?? null
-        const plan = priceToPlan(priceId)
+        const tierId = await priceToTierId(supabase, priceId)
         const status =
           ["past_due", "unpaid"].includes(subscription.status)
             ? "past_due"
@@ -833,7 +846,6 @@ serve(async (req) => {
 
         await upsertLicense(supabase, lic.org_id, {
           status,
-          plan,
           current_period_start: subscription.current_period_start,
           current_period_end: subscription.current_period_end,
           cancel_at_period_end: subscription.cancel_at_period_end,

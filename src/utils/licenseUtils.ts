@@ -1,9 +1,13 @@
 export type LicenseStatus = 'trial' | 'active' | 'past_due' | 'canceled' | 'expired'
+/** @deprecated Use tierId/tierName instead. Will be removed in Phase 8. */
 export type LicensePlan = 'starter' | 'standard' | 'pro'
 
 export interface LicenseSummary {
   status: LicenseStatus | null
-  plan: LicensePlan | null
+  /** @deprecated Use tierId/tierName instead. Will be removed in Phase 8. */
+  plan?: LicensePlan | null
+  tierId?: string | null
+  tierName?: string | null
   currentPeriodEnd?: string | null
   currentPeriodStart?: string | null
   trialEndsAt?: string | null
@@ -12,7 +16,6 @@ export interface LicenseSummary {
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   stripePriceId?: string | null
-  tierName?: string | null
   // Computed properties used by UI components
   isTrial?: boolean
   isGracePeriod?: boolean

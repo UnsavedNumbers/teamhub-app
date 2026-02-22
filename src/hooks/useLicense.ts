@@ -18,6 +18,7 @@ import { USE_FAKE_DATA } from '../data/config'
 
 interface UseLicenseResult {
   licenseStatus: LicenseStatus | null
+  /** @deprecated Use summary.tierId/tierName instead. Will be removed in Phase 8. */
   licensePlan: LicensePlan | null
   summary: LicenseSummary | null
   loading: boolean
@@ -102,11 +103,25 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
         effectiveOrgId = orgData.parent_org_id
       }
 
-      const { data, error: fetchError } = await supabase
+      // Use typed assertion to avoid "excessively deep" inference (current_tier_id may exist before types are regenerated)
+      type OrgLicenseRow = {
+        license_status?: string | null
+        current_tier_id?: string | null
+        license_current_period_start?: string | null
+        license_current_period_end?: string | null
+        license_trial_ends_at?: string | null
+        license_grace_ends_at?: string | null
+        license_cancel_at_period_end?: boolean | null
+        stripe_customer_id?: string | null
+        stripe_subscription_id?: string | null
+        stripe_price_id?: string | null
+        license_tiers?: { tier_name: string; tier_key: string } | null
+      }
+      const { data, error: fetchError } = await (supabase as any)
         .from('organizations')
         .select(`
           license_status,
-          license_plan,
+          current_tier_id,
           license_current_period_start,
           license_current_period_end,
           license_trial_ends_at,
@@ -114,21 +129,11 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
           license_cancel_at_period_end,
           stripe_customer_id,
           stripe_subscription_id,
-          stripe_price_id
+          stripe_price_id,
+          license_tiers:current_tier_id(tier_name, tier_key)
         `)
         .eq('id', effectiveOrgId)
-        .maybeSingle() as { data: {
-          license_status?: string | null
-          license_plan?: string | null
-          license_current_period_start?: string | null
-          license_current_period_end?: string | null
-          license_trial_ends_at?: string | null
-          license_grace_ends_at?: string | null
-          license_cancel_at_period_end?: boolean | null
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
-          stripe_price_id?: string | null
-        } | null; error: { message?: string } | null }
+        .maybeSingle() as { data: OrgLicenseRow | null; error: { message?: string } | null }
 
       if (fetchError) {
         setError(fetchError.message || 'Unknown error')
@@ -142,33 +147,14 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
         return
       }
 
-      // Map license_plan to tier_key
-      const planToTierKey = (plan: string | null | undefined): string | null => {
-        switch (plan) {
-          case 'starter': return 'basic'
-          case 'standard':
-          case 'pro': return 'power'
-          default: return null
-        }
-      }
-      const tierKey = planToTierKey(data.license_plan)
-
-      // Fetch tier_name if tier_key exists
-      let tierName: string | null = null
-      if (tierKey) {
-        const { data: tierData, error: tierError } = await supabase
-          .from('license_tiers')
-          .select('tier_name')
-          .eq('tier_key', tierKey)
-          .maybeSingle()
-        if (!tierError && tierData) {
-          tierName = tierData.tier_name
-        }
-      }
+      // Get tier name from JOIN (no mapping needed)
+      const tierName = data.license_tiers?.tier_name ?? null
+      const tierId = data.current_tier_id ?? null
 
       const parsed: LicenseSummary = {
         status: (data.license_status as LicenseStatus | null) ?? null,
-        plan: (data.license_plan as LicensePlan | null) ?? null,
+        tierId,
+        tierName,
         currentPeriodStart: data.license_current_period_start ?? null,
         currentPeriodEnd: data.license_current_period_end ?? null,
         trialEndsAt: data.license_trial_ends_at ?? null,
@@ -177,7 +163,6 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
         stripeCustomerId: data.stripe_customer_id ?? null,
         stripeSubscriptionId: data.stripe_subscription_id ?? null,
         stripePriceId: data.stripe_price_id ?? null,
-        tierName,
       }
 
       // Populate computed properties

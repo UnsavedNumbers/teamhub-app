@@ -8,7 +8,9 @@
 // Enums
 // ============================================================================
 
-export type LicenseTierKey = 'basic' | 'power'
+// LicenseTierKey is now a string (not a union type) to allow any tier_key from license_tiers table
+// This enforces the "No Hardcoded Tier Values" principle - all tier keys come from the database
+export type LicenseTierKey = string
 
 export type LicenseTierStatus = 'active' | 'archived'
 
@@ -192,8 +194,11 @@ export interface LicenseMetrics {
   active_tiers: number
   total_features: number
   archived_features?: number
-  orgs_on_basic: number
-  orgs_on_power: number
+  /** @deprecated Use dynamic tier grouping instead. Will be removed in Phase 8. */
+  orgs_on_basic?: number
+  /** @deprecated Use dynamic tier grouping instead. Will be removed in Phase 8. */
+  orgs_on_power?: number
+  orgs_with_tier: number
   active_overrides: number
   tiers_missing_price_id: number
   features_without_assignment: number

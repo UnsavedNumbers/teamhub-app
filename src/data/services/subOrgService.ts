@@ -761,7 +761,7 @@ export async function approveSubOrgRequest(
       contact_email: request.contact_email,
       contact_name: request.contact_name,
       school_league_type: request.school_league_type ?? undefined,
-      enabled_sport_codes: request.requested_sport_codes,
+      enabled_sport_codes: request.requested_sport_codes ?? [],
     })
 
     if (createResult.error || !createResult.data) {

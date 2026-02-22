@@ -9,6 +9,7 @@ import { useOrganization } from '../../contexts/OrganizationContext'
 import { useFeatureFlags } from '../../utils/featureFlags'
 import { useLicense } from '../../hooks/useLicense'
 import { useI18n } from '../../i18n/useI18n'
+import { useFeatureGate } from '../../lib/featureGate/useFeatureGate'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
 import { refreshOrganizationTheme } from '../../hooks/useOrganizationTheme'
@@ -96,6 +97,7 @@ export default function OrganizationSettings() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { isEnabled } = useFeatureFlags(['org_advanced_settings', 'org_settings_attendance'])
   const attendanceTabEnabled = isEnabled('org_settings_attendance')
+  const { allowed: hasStripeIntegration } = useFeatureGate('stripe_integration')
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -103,15 +105,11 @@ export default function OrganizationSettings() {
   const [success, setSuccess] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('overview')
 
-  // Check if organization has access to payment features (pro or standard license, and license must be active)
+  // Check if organization has access to payment features using feature gate
   const hasPaymentAccess = useMemo(() => {
-    if (!licenseSummary?.plan) return false
-    // Pro and standard plans have access to Stripe Connect
-    const hasCorrectPlan = licenseSummary.plan === 'pro' || licenseSummary.plan === 'standard'
-    // License must also be active/valid
-    const isActive = licenseSummary.isValid ?? false
-    return hasCorrectPlan && isActive
-  }, [licenseSummary?.plan, licenseSummary?.isValid])
+    // Use feature gate to check stripe_integration access (replaces hardcoded plan checks)
+    return hasStripeIntegration && (licenseSummary?.isValid ?? false)
+  }, [hasStripeIntegration, licenseSummary?.isValid])
 
   // Valid tab values for URL parameter
   const validTabs = useMemo(() => {

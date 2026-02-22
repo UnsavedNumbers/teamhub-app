@@ -105,7 +105,7 @@ export default function DemoInsights() {
     queryFn: async () => {
       if (!sessions || sessions.length === 0) return {}
       const userIds = [...new Set(sessions.map(s => s.user_id))]
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('profiles')
         .select('id, email')
         .in('id', userIds)

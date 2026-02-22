@@ -22,7 +22,7 @@ serve(async (req) => {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform",
       },
     })
   }
@@ -35,40 +35,6 @@ serve(async (req) => {
   }
 
   try {
-    // Get auth header
-    const authHeader = req.headers.get("authorization")
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-
-    // Verify user is platform admin
-    const token = authHeader.replace("Bearer ", "")
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-
-    // Check if user is platform admin
-    const { data: adminCheck, error: adminError } = await supabase
-      .from("platform_admins")
-      .select("role")
-      .eq("user_id", user.id)
-      .maybeSingle()
-
-    if (adminError || !adminCheck) {
-      return new Response(JSON.stringify({ error: "Forbidden: Platform admin access required" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-
     // Parse request body
     const { price_id } = await req.json()
 
