@@ -684,29 +684,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...getAuthRouteContext(),
       })
 
-      // TOKEN_REFRESHED can happen after setSession() during callback flows.
-      // If local identity is not hydrated yet, recover user/profile from the refreshed session.
+      // TOKEN_REFRESHED fires on tab focus when Supabase auto-refreshes the JWT.
+      // Only hydrate profile if the user isn't already loaded — never re-fetch an
+      // existing profile, because that causes setState calls that unmount the
+      // current page and wipe form state.
       if (event === 'TOKEN_REFRESHED') {
         if (session) {
           setSession(session)
 
           const needsUserHydration = !currentUser || currentUser.id !== session.user.id
-          const needsProfileHydration = !currentProfile || currentProfile.id !== session.user.id
 
           if (needsUserHydration) {
             setUser(session.user)
-          }
-
-          if (needsUserHydration || needsProfileHydration) {
             debug.flow('Auth', 'Token refreshed with missing identity, hydrating', {
               userId: session.user.id,
-              needsUserHydration,
-              needsProfileHydration,
               ...getAuthRouteContext(),
             })
             fetchProfile(session.user.id)
           } else {
-            debug.flow('Auth', 'Token refreshed', { userId: session.user.id, ...getAuthRouteContext() })
+            debug.flow('Auth', 'Token refreshed (session updated only)', { userId: session.user.id, ...getAuthRouteContext() })
           }
         }
         return
@@ -752,8 +748,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!mountedRef.current) return
-      setSession(session)
-      setUser(session?.user ?? null)
+
+      // #region agent log
+      if (event === 'SIGNED_IN' && session?.user) {
+        const alreadyLoaded = currentProfile && currentProfile.id === session.user.id
+        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7451fa'},body:JSON.stringify({sessionId:'7451fa',location:'useAuth.tsx:751',message:'SIGNED_IN event - checking if should skip state updates',data:{event,alreadyLoaded,currentUserId:currentUser?.id,newUserId:session.user.id,currentSessionExists:!!latestUserRef.current?.id},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+        // Skip setSession/setUser if user already loaded — prevents unnecessary re-renders
+        // that cause form state loss. Session token refresh happens in Supabase client.
+        if (alreadyLoaded) {
+          fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7451fa'},body:JSON.stringify({sessionId:'7451fa',location:'useAuth.tsx:755',message:'Skipping setSession/setUser - already loaded',data:{userId:session.user.id},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+        } else {
+          setSession(session)
+          setUser(session.user)
+          fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7451fa'},body:JSON.stringify({sessionId:'7451fa',location:'useAuth.tsx:758',message:'Calling setSession/setUser - not loaded',data:{userId:session.user.id},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+        }
+      } else {
+        setSession(session)
+        setUser(session?.user ?? null)
+      }
+      // #endregion
 
       if (event === 'SIGNED_IN') {
         debug.flow('Auth', 'User signed in', { userId: session?.user?.id, email: session?.user?.email })
@@ -762,6 +775,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             user_id: session.user.id,
             email: session.user.email ?? undefined,
           })
+
+          // Only fetch profile if user isn't already loaded — Supabase can
+          // re-emit SIGNED_IN on tab focus / token refresh, and re-fetching
+          // the profile sets loading=true which unmounts the current page.
+          const alreadyLoaded = currentProfile && currentProfile.id === session.user.id
+          if (!alreadyLoaded) {
+            fetchProfile(session.user.id)
+          } else {
+            debug.flow('Auth', 'SIGNED_IN skipped profile fetch (already loaded)', {
+              userId: session.user.id,
+              ...getAuthRouteContext(),
+            })
+          }
         }
       } else if (event === 'SIGNED_OUT') {
         debug.flow('Auth', 'User signed out', { previousUserId: currentUser?.id ?? null })
@@ -771,10 +797,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setOrganizations([])
         setLoading(false)
         return
-      }
-
-      if (event === 'SIGNED_IN' && session?.user) {
-        fetchProfile(session.user.id)
       }
     })
 

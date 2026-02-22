@@ -26,6 +26,12 @@ export default function PlanSelection() {
   const [tiers, setTiers] = useState<LicenseTier[]>([])
   const [tiersLoading, setTiersLoading] = useState(true)
   const [tiersError, setTiersError] = useState<string | null>(null)
+  const [tierLimits, _setTierLimits] = useState<Record<string, {
+    max_teams: number | null
+    max_athletes: number | null
+    photo_storage_gb: number | null
+    max_sub_orgs: number | null
+  }>>({})
 
   const successUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS)}`
   const cancelUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL)}`
@@ -59,6 +65,12 @@ export default function PlanSelection() {
     const amount = tier.stripe_amount_cents / 100
     const interval = tier.stripe_interval === 'year' ? '/year' : tier.stripe_interval === 'month' ? '/month' : ''
     return `$${amount.toFixed(0)}${interval}`
+  }
+
+  // Format limit value
+  const formatLimit = (value: number | null): string => {
+    if (value === null) return 'Unlimited'
+    return value.toLocaleString()
   }
 
   if (!orgId) {
@@ -128,12 +140,35 @@ export default function PlanSelection() {
               </div>
               <div className="oa-h1 oa-mb-4" style={{ fontWeight: 900 }}>{formatPrice(tier)}</div>
               <div className="oa-body-m oa-text-muted oa-mb-6">{tier.description || ''}</div>
-              <div className="oa-flex oa-flex-col oa-gap-2 oa-mb-8">
-                {/* Note: Feature list would need to be fetched from tier_feature_assignments if needed */}
-                <div className="oa-body-s oa-text-muted">
-                  Features included with this tier
+              
+              {/* Tier Limits */}
+              {tierLimits[tier.id] && (
+                <div className="oa-flex oa-flex-col oa-gap-3 oa-mb-8 oa-p-4" style={{ background: 'var(--oa-n50)', borderRadius: '8px' }}>
+                  <div className="oa-body-s oa-font-semibold oa-text-muted oa-uppercase" style={{ fontSize: '0.75rem', letterSpacing: '0.05em' }}>
+                    Tier Limits
+                  </div>
+                  <div className="oa-grid oa-grid-2 oa-gap-3">
+                    <div>
+                      <div className="oa-body-xs oa-text-muted">Max Teams</div>
+                      <div className="oa-body-m oa-font-semibold">{formatLimit(tierLimits[tier.id].max_teams)}</div>
+                    </div>
+                    <div>
+                      <div className="oa-body-xs oa-text-muted">Max Athletes</div>
+                      <div className="oa-body-m oa-font-semibold">{formatLimit(tierLimits[tier.id].max_athletes)}</div>
+                    </div>
+                    <div>
+                      <div className="oa-body-xs oa-text-muted">Photo Storage</div>
+                      <div className="oa-body-m oa-font-semibold">
+                        {tierLimits[tier.id].photo_storage_gb === null ? 'Unlimited' : `${tierLimits[tier.id].photo_storage_gb} GB`}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="oa-body-xs oa-text-muted">Sub Organizations</div>
+                      <div className="oa-body-m oa-font-semibold">{formatLimit(tierLimits[tier.id].max_sub_orgs)}</div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
               <Button 
                 style={{ width: '100%' }} 
                 variant={isCurrent ? 'secondary' : 'primary'} 

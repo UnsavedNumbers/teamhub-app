@@ -41,6 +41,8 @@ import {
   type SubOrgRequest,
   type ParentOrgSubConfig,
 } from '../../data/services/subOrgService'
+import { useAuth } from '../../hooks/useAuth'
+import { getTierLimit } from '../../data/services/tierLimitsService'
 import { type OrgUser } from '../../data/services/usersService'
 import { getOrganizationSlug } from '../../data/services/organizationService'
 import { getPublicBaseUrl } from '../../utils/publicUrls'
@@ -59,12 +61,29 @@ export default function SubOrganizations() {
   const location = useLocation()
   const { currentOrganization } = useOrganization()
   const { context, isReady: userContextReady } = useUserContext()
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'sub-orgs' | 'requests' | 'settings'>('sub-orgs')
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [modalAdminUserId, setModalAdminUserId] = useState<string | null>(null)
+  const [maxSubOrgsLimit, setMaxSubOrgsLimit] = useState<number | null>(null)
 
   const orgId = currentOrganization?.id
+
+  // Load tier-based max_sub_orgs limit
+  useEffect(() => {
+    if (orgId && user?.id) {
+      getTierLimit(orgId, user.id, 'max_sub_orgs')
+        .then(result => {
+          if (!result.error) {
+            setMaxSubOrgsLimit(result.limit)
+          }
+        })
+        .catch(err => {
+          console.warn('[SubOrganizations] Failed to load max_sub_orgs limit:', err)
+        })
+    }
+  }, [orgId, user?.id])
 
   // Check if this is a parent org (not a sub-org)
   const { data: orgData } = useQuery({
@@ -98,8 +117,8 @@ export default function SubOrganizations() {
   const { data: subOrgsData, isLoading: subOrgsLoading } = useQuery({
     queryKey: ['sub-orgs', orgId],
     queryFn: () => getSubOrgs(orgId!),
-    enabled: !!orgId,
     select: (result) => result.data,
+    enabled: !!orgId,
   })
 
   // Get pending requests
@@ -268,6 +287,8 @@ export default function SubOrganizations() {
             config={parentConfig}
             onUpdate={(config) => updateConfigMutation.mutate(config)}
             saving={updateConfigMutation.isPending}
+            maxSubOrgsLimit={maxSubOrgsLimit}
+            currentSubOrgCount={subOrgs.length}
           />
         </TabsContent>
       </Tabs>
@@ -802,10 +823,14 @@ function ParentSettingsForm({
   config,
   onUpdate,
   saving,
+  maxSubOrgsLimit,
+  currentSubOrgCount,
 }: {
   config: ParentOrgSubConfig | null | undefined
   onUpdate: (config: any) => void
   saving: boolean
+  maxSubOrgsLimit: number | null
+  currentSubOrgCount: number
 }) {
   const { t } = useI18n()
   const [publicRegistration, setPublicRegistration] = useState(
@@ -860,15 +885,34 @@ function ParentSettingsForm({
           <label className="block text-sm font-bold mb-2">
             {t('admin.subOrgs.parentSettings.maxCount.label')}
           </label>
+          {maxSubOrgsLimit !== null && (
+            <div className="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm text-blue-800 dark:text-blue-200">
+              <strong>Tier Limit:</strong> {maxSubOrgsLimit === null ? 'Unlimited' : `${maxSubOrgsLimit} sub-organizations`}
+              {maxSubOrgsLimit !== null && (
+                <span className="ml-2">
+                  ({currentSubOrgCount} of {maxSubOrgsLimit} used)
+                </span>
+              )}
+            </div>
+          )}
+          {maxSubOrgsLimit === null && (
+            <div className="mb-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-sm text-green-800 dark:text-green-200">
+              <strong>Unlimited sub-organizations</strong> (Professional tier)
+            </div>
+          )}
           <Input
             type="number"
             value={maxCount}
             onChange={(e) => setMaxCount(e.target.value)}
             placeholder={t('admin.subOrgs.parentSettings.maxCount.placeholder')}
             min="1"
+            disabled={maxSubOrgsLimit !== null}
           />
           <p className="text-sm text-[#617589] dark:text-gray-400 mt-1">
-            {t('admin.subOrgs.parentSettings.maxCount.description')}
+            {maxSubOrgsLimit !== null 
+              ? 'This limit is set by your license tier and cannot be changed here. Upgrade your plan to increase the limit.'
+              : t('admin.subOrgs.parentSettings.maxCount.description')
+            }
           </p>
         </div>
 

@@ -40,6 +40,7 @@ import { normalizeSupabaseResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
 import { logEvent, logTeamEvent } from '../../utils/eventLogger'
 import { debug } from '../../lib/debug'
+import { getTierLimit, isLimitExceeded } from './tierLimitsService'
 
 // ============================================================================
 // Helper Functions
@@ -398,6 +399,33 @@ export async function createTeam(
               user_id: _context.userId,
             })
             return { data: created, error: null }
+        }
+
+        // Check max_teams tier limit before creating
+        const limitResult = await getTierLimit(dto.org_id, _context.userId, 'max_teams')
+        if (limitResult.error) {
+            // Fail open on error (allow creation) but log warning
+            console.warn('[teamsService] Failed to check max_teams limit, allowing creation:', limitResult.error)
+        } else if (limitResult.limit !== null) {
+            // Count current teams for this org
+            const { count: currentTeamCount, error: countError } = await supabase
+                .from('teams')
+                .select('id', { count: 'exact', head: true })
+                .eq('org_id', dto.org_id)
+                .is('deleted_at', null)
+
+            if (!countError && currentTeamCount !== null) {
+                if (isLimitExceeded(currentTeamCount, limitResult.limit)) {
+                    const errorMessage = `You've reached your team limit (${limitResult.limit} teams). Upgrade your plan to add more teams.`
+                    debug.perf.end('teamsService.createTeam')
+                    debug.error('TeamsService.createTeam', 'Team limit exceeded', { currentCount: currentTeamCount, limit: limitResult.limit })
+                    console.groupEnd()
+                    return { 
+                        data: null, 
+                        error: new Error(errorMessage)
+                    }
+                }
+            }
         }
         type TeamInsert = Database['public']['Tables']['teams']['Insert']
         // Generate a temporary invite code - the database trigger will generate the actual one
@@ -863,26 +891,47 @@ export async function createTeamMembership(
 
         // If this is a new membership, check roster capacity
         if (isNew) {
-            // Get team max_roster_size
-            const { data: teamData, error: teamError } = await supabase
+            // Get organization ID for tier limit check
+            const { data: teamOrgData, error: teamOrgError } = await supabase
                 .from('teams')
-                .select('max_roster_size')
+                .select('org_id, max_roster_size')
                 .eq('id', teamId)
                 .single()
 
-            if (!teamError && teamData?.max_roster_size) {
-                // Count active memberships for this team/season
-                const { count, error: countError } = await supabase
-                    .from('team_memberships')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('team_id', teamId)
-                    .eq('season_id', seasonId)
-                    .eq('status', 'active')
+            if (teamOrgError || !teamOrgData) {
+                return { data: null, error: new Error('Team not found') }
+            }
 
-                if (!countError && count !== null && count >= teamData.max_roster_size) {
+            // Check tier limit max_players_per_team (if orgId available)
+            let tierLimit: number | null = null
+            if (teamOrgData.org_id) {
+                const limitResult = await getTierLimit(teamOrgData.org_id, context.userId, 'max_players_per_team')
+                if (!limitResult.error && limitResult.limit !== null) {
+                    tierLimit = limitResult.limit
+                }
+            }
+
+            // Count active memberships for this team/season
+            const { count: currentCount, error: countError } = await supabase
+                .from('team_memberships')
+                .select('id', { count: 'exact', head: true })
+                .eq('team_id', teamId)
+                .eq('season_id', seasonId)
+                .eq('status', 'active')
+
+            if (!countError && currentCount !== null) {
+                // Check tier limit first (if set), then team-specific roster size
+                const effectiveLimit = tierLimit !== null 
+                    ? Math.min(tierLimit, teamOrgData.max_roster_size || Infinity)
+                    : teamOrgData.max_roster_size
+
+                if (effectiveLimit !== null && effectiveLimit !== undefined && currentCount >= effectiveLimit) {
+                    const limitSource = tierLimit !== null && tierLimit < (teamOrgData.max_roster_size || Infinity)
+                        ? 'tier limit'
+                        : 'team roster size'
                     return {
                         data: null,
-                        error: new Error('This team is full. Please contact the organization for more information.')
+                        error: new Error(`This team is full (${effectiveLimit} players, ${limitSource}). Please contact the organization for more information.`)
                     }
                 }
             }
@@ -1013,6 +1062,48 @@ export async function addAthletesToTeam(
     seasonId: string,
     athleteIds: string[]
 ): Promise<AddAthletesToTeamResponse> {
+    // Check tier limit max_players_per_team before bulk add
+    const { data: teamData, error: teamDataError } = await supabase
+        .from('teams')
+        .select('org_id, max_roster_size')
+        .eq('id', teamId)
+        .single()
+
+    if (!teamDataError && teamData?.org_id) {
+        const limitResult = await getTierLimit(teamData.org_id, context.userId, 'max_players_per_team')
+        if (!limitResult.error && limitResult.limit !== null) {
+            // Count current active memberships
+            const { count: currentCount, error: countError } = await supabase
+                .from('team_memberships')
+                .select('id', { count: 'exact', head: true })
+                .eq('team_id', teamId)
+                .eq('season_id', seasonId)
+                .eq('status', 'active')
+
+            if (!countError && currentCount !== null) {
+                const effectiveLimit = Math.min(
+                    limitResult.limit,
+                    teamData.max_roster_size || Infinity
+                )
+                const wouldExceed = currentCount + athleteIds.length > effectiveLimit
+                
+                if (wouldExceed) {
+                    const remaining = Math.max(0, effectiveLimit - currentCount)
+                    return {
+                        data: {
+                            added: [],
+                            skipped: [],
+                            errors: athleteIds.map(id => ({
+                                athleteId: id,
+                                error: `Cannot add athletes: team would exceed limit (${effectiveLimit} players). ${remaining > 0 ? `Only ${remaining} more can be added.` : 'Team is full.'}`
+                            }))
+                        },
+                        error: null
+                    }
+                }
+            }
+        }
+    }
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
@@ -1100,6 +1191,29 @@ export async function addAthletesToTeam(
             }
         }
 
+        // Check tier limit max_players_per_team before bulk add
+        let tierLimit: number | null = null
+        if (teamData.org_id) {
+            const limitResult = await getTierLimit(teamData.org_id, context.userId, 'max_players_per_team')
+            if (!limitResult.error && limitResult.limit !== null) {
+                tierLimit = limitResult.limit
+            }
+        }
+
+        // Get team max_roster_size and current count
+        const { data: teamRosterData, error: _teamRosterError } = await supabase
+            .from('teams')
+            .select('max_roster_size')
+            .eq('id', teamId)
+            .single()
+
+        const { count: currentCount, error: countError } = await supabase
+            .from('team_memberships')
+            .select('id', { count: 'exact', head: true })
+            .eq('team_id', teamId)
+            .eq('season_id', seasonId)
+            .eq('status', 'active')
+
         // Get existing memberships to identify skipped athletes (Issue #2 solution)
         const { data: existingMemberships } = await supabase
             .from('team_memberships')
@@ -1124,6 +1238,35 @@ export async function addAthletesToTeam(
                     errors: []
                 },
                 error: null
+            }
+        }
+
+        // Check if adding these athletes would exceed limits
+        if (!countError && currentCount !== null) {
+            const effectiveLimit = tierLimit !== null 
+                ? Math.min(tierLimit, teamRosterData?.max_roster_size || Infinity)
+                : teamRosterData?.max_roster_size
+
+            if (effectiveLimit !== null && effectiveLimit !== undefined) {
+                const wouldExceed = currentCount + athletesToAdd.length > effectiveLimit
+                
+                if (wouldExceed) {
+                    const remaining = Math.max(0, effectiveLimit - currentCount)
+                    const limitSource = tierLimit !== null && tierLimit < (teamRosterData?.max_roster_size || Infinity)
+                        ? 'tier limit'
+                        : 'team roster size'
+                    return {
+                        data: {
+                            added: [],
+                            skipped,
+                            errors: athletesToAdd.map(id => ({
+                                athleteId: id,
+                                error: `Cannot add athletes: team would exceed ${limitSource} (${effectiveLimit} players). ${remaining > 0 ? `Only ${remaining} more can be added.` : 'Team is full.'}`
+                            }))
+                        },
+                        error: null
+                    }
+                }
             }
         }
 

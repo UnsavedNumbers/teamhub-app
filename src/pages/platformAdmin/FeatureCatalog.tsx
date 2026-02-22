@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { getLink, RouteKeys } from '../../utils/routes'
@@ -76,19 +77,12 @@ export default function FeatureCatalog() {
   const navigate = useNavigate()
   const { profile } = useAuth()
   const { t } = useI18n()
+  const queryClient = useQueryClient()
 
   // Platform admin check
   if (!profile?.isPlatformAdmin) {
     return <Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace />
   }
-  
-  // Data State
-  const [features, setFeatures] = useState<FeatureEntitlementWithCounts[]>([])
-  const [discoveredFeatures, setDiscoveredFeatures] = useState<DiscoveredFeature[]>([])
-  const [availableTiers, setAvailableTiers] = useState<Array<{ id: string; tier_key: string; tier_name: string }>>([])
-  const [loading, setLoading] = useState(true)
-  const [discoveryLoading, setDiscoveryLoading] = useState(false)
-  const [fetchError, setFetchError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
   const exportMenuRef = useRef<HTMLDivElement>(null)
@@ -171,9 +165,6 @@ export default function FeatureCatalog() {
       setExporting(false)
     }
   }, [fetchAllFeaturesForExport])
-  const [lastDiscoveredAt, setLastDiscoveredAt] = useState<string | null>(null)
-  const [syncStatus, setSyncStatus] = useState<'pending' | 'synced' | 'failed' | null>(null)
-  
   // Sync Progress State
   const [syncProgress, setSyncProgress] = useState({
     isActive: false,
@@ -202,7 +193,6 @@ export default function FeatureCatalog() {
   // Pagination
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
-  const [totalCount, setTotalCount] = useState(0)
 
   // Selection State
   const [selectedFeatureIds, setSelectedFeatureIds] = useState<Set<string>>(new Set())
@@ -227,40 +217,27 @@ export default function FeatureCatalog() {
   const [showSetSystemFeatureModal, setShowSetSystemFeatureModal] = useState(false)
   const [showSetPlatformOnlyModal, setShowSetPlatformOnlyModal] = useState(false)
   const [bulkOperationLoading, setBulkOperationLoading] = useState(false)
-
-  // Abort Controller for Race Conditions
-  const abortControllerRef = useRef<AbortController | null>(null)
-  const silentRefreshRef = useRef(false)
-  const fetchRequestIdRef = useRef(0)
+  const [syncLoading, setSyncLoading] = useState(false)
 
   // Fetch license tiers for filter
-  const fetchTiers = useCallback(async () => {
-    try {
+  const { data: availableTiers = [] } = useQuery({
+    queryKey: ['feature-catalog-tiers'],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('license_tiers')
         .select('id, tier_key, tier_name')
         .eq('status', 'active')
         .order('tier_key', { ascending: true })
-
-      if (error) {
-        console.error('Error fetching tiers:', error)
-      } else {
-        setAvailableTiers(data || [])
-      }
-    } catch (err) {
-      console.error('Error fetching tiers:', err)
-    }
-  }, [])
+      if (error) throw error
+      return data || []
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  })
 
   // Fetch features with enhanced filters
-  const fetchFeatures = useCallback(async () => {
-    fetchRequestIdRef.current += 1
-    const currentRequestId = fetchRequestIdRef.current
-
-    if (!silentRefreshRef.current) {
-      setLoading(true)
-    }
-    try {
+  const { data: featuresData, isLoading: loading, error: fetchError } = useQuery({
+    queryKey: ['feature-catalog', page, rowsPerPage, debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, hierarchyFilter, tierExclusiveMode, roleExclusiveMode],
+    queryFn: async () => {
       let query = supabase
         .from('admin_feature_entitlements_list')
         .select('*', { count: 'exact' })
@@ -301,17 +278,13 @@ export default function FeatureCatalog() {
         if (tierFilter.includes('unassigned')) {
           query = query.or('tier_assignments_count.is.null,tier_assignments_count.eq.0')
         } else if (tierExclusiveMode && tierFilter.length === 1) {
-          // Exclusive mode: only features assigned to ONLY this one tier
-          // Use cd (contained by) + cs (contains) to match exactly [tier]
           query = query
             .contains('assigned_tier_keys', [tierFilter[0]])
             .containedBy('assigned_tier_keys', [tierFilter[0]])
         } else {
-          // Filter by tier keys - try overlaps operator
           try {
             query = query.overlaps('assigned_tier_keys', tierFilter)
           } catch (err) {
-            // Fallback: if overlaps doesn't work, we'll need an RPC
             console.warn('Overlaps operator not supported, using alternative filter')
           }
         }
@@ -319,7 +292,6 @@ export default function FeatureCatalog() {
 
       // Role visibility filter
       if (roleExclusiveMode && roleFilter.length === 1) {
-        // Exclusive mode: only features visible to ONLY this role
         const role = roleFilter[0]
         if (role === 'orgAdmin') {
           query = query.eq('visible_to_admin', true).eq('visible_to_coach', false).eq('visible_to_parent', false)
@@ -329,7 +301,6 @@ export default function FeatureCatalog() {
           query = query.eq('visible_to_admin', false).eq('visible_to_coach', false).eq('visible_to_parent', true)
         }
       } else {
-        // Inclusive mode: features visible to any of the selected roles
         if (roleFilter.includes('orgAdmin')) {
           query = query.eq('visible_to_admin', true)
         }
@@ -382,16 +353,8 @@ export default function FeatureCatalog() {
 
       // Hierarchy filter
       if (hierarchyFilter === 'parents') {
-        // Show only features that are parents (i.e., features that OTHER features point to as parent)
-        // This means we need features whose feature_key appears in other features' parent_feature_key
-        // For now, we can do a simple approach: exclude features that have no children
-        // We'll need to check if there exists any feature with parent_feature_key = this feature_key
-        // Since we can't easily do this in a single query, we'll just show non-null parent_feature_key is NOT the way
-        // Actually for "parents" we want to show features that DO NOT have a parent (are root level) but might have children
-        // Let's make this simpler: Parents = features with parent_feature_key IS NULL (root features)
         query = query.is('parent_feature_key', null)
       } else if (hierarchyFilter === 'children') {
-        // Show only features that are children (have a parent)
         query = query.not('parent_feature_key', 'is', null)
       }
 
@@ -403,49 +366,26 @@ export default function FeatureCatalog() {
 
       const { data, error, count } = await query
 
-      if (fetchRequestIdRef.current !== currentRequestId) {
-        return
-      }
+      if (error) throw error
 
-      if (error) {
-        console.error('Error fetching features:', error)
-        setFeatures([])
-        setTotalCount(0)
-      } else {
-        // Normalize array fields and set features
-        const normalized = (data || []).map(row => ({
-          ...row,
-          assigned_tier_keys: normalizeArrayField(row.assigned_tier_keys) || [],
-          integrations: normalizeArrayField(row.integrations) || [],
-        })) as FeatureEntitlementWithCounts[]
-        setFeatures(normalized)
-        setTotalCount(count || 0)
-      }
-    } catch (err: any) {
-      if (fetchRequestIdRef.current !== currentRequestId) {
-        return
-      }
-      // Ignore timeout/cancellation errors from rapid typing
-      if (err?.code === '57014' || err?.message?.includes('cancel')) {
-        console.log('Query cancelled or timed out, likely due to new search')
-        return
-      }
-      console.error('Error:', err)
-      setFeatures([])
-      setFetchError(err?.message || 'Failed to load features')
-    } finally {
-      if (fetchRequestIdRef.current === currentRequestId) {
-        setLoading(false)
-        silentRefreshRef.current = false
-      }
-    }
-  }, [page, rowsPerPage, debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, tierExclusiveMode, roleExclusiveMode])
+      const normalized = (data || []).map(row => ({
+        ...row,
+        assigned_tier_keys: normalizeArrayField(row.assigned_tier_keys) || [],
+        integrations: normalizeArrayField(row.integrations) || [],
+      })) as FeatureEntitlementWithCounts[]
 
-  // Silent refresh: re-fetches data without showing loading skeleton (preserves scroll/position)
+      return { features: normalized, totalCount: count || 0 }
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  })
+
+  const features = featuresData?.features || []
+  const totalCount = featuresData?.totalCount || 0
+
+  // Silent refresh: invalidate query cache
   const silentRefresh = useCallback(async () => {
-    silentRefreshRef.current = true
-    await fetchFeatures()
-  }, [fetchFeatures])
+    await queryClient.invalidateQueries({ queryKey: ['feature-catalog'] })
+  }, [queryClient])
 
   // Debounce search input (400ms delay)
   useEffect(() => {
@@ -516,27 +456,37 @@ export default function FeatureCatalog() {
   }, [statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, hierarchyFilter, selectedFeatureIds.size])
 
   // Discovery Logic
-  const runDiscovery = useCallback(async (force = false) => {
-    if (abortControllerRef.current) abortControllerRef.current.abort()
-    abortControllerRef.current = new AbortController()
+  const { data: discoveryData, isLoading: discoveryLoading } = useQuery({
+    queryKey: ['feature-catalog-discovery'],
+    queryFn: async () => {
+      const results = await discoverAndReconcile(false)
+      const { data: cache } = await supabase.from('feature_discovery_cache').select('*').order('created_at', { ascending: false }).limit(1).single()
+      return {
+        features: results,
+        lastDiscoveredAt: cache?.last_discovered_at || null,
+        syncStatus: cache?.sync_status || null,
+      }
+    },
+    staleTime: 60 * 60 * 1000, // 1 hour
+  })
 
-    setDiscoveryLoading(true)
-    try {
-        const results = await discoverAndReconcile(force)
-        setDiscoveredFeatures(results)
-        
-        const { data: cache } = await supabase.from('feature_discovery_cache').select('*').order('created_at', { ascending: false }).limit(1).single()
-        if (cache) {
-            setLastDiscoveredAt(cache.last_discovered_at)
-            setSyncStatus(cache.sync_status as any)
-        }
-    } catch (err: any) {
-        console.error('Discovery failed', err)
-        showError(err.message || 'Discovery failed')
-    } finally {
-        setDiscoveryLoading(false)
+  const discoveredFeatures = discoveryData?.features || []
+  const lastDiscoveredAt = discoveryData?.lastDiscoveredAt || null
+  const syncStatus = discoveryData?.syncStatus || null
+
+  const runDiscovery = useCallback(async (force = false) => {
+    if (force) {
+      const results = await discoverAndReconcile(true)
+      const { data: cache } = await supabase.from('feature_discovery_cache').select('*').order('created_at', { ascending: false }).limit(1).single()
+      queryClient.setQueryData(['feature-catalog-discovery'], {
+        features: results,
+        lastDiscoveredAt: cache?.last_discovered_at || null,
+        syncStatus: cache?.sync_status || null,
+      })
+    } else {
+      await queryClient.invalidateQueries({ queryKey: ['feature-catalog-discovery'] })
     }
-  }, [])
+  }, [queryClient])
 
   const handleSync = async () => {
     const syncSteps = [
@@ -554,7 +504,7 @@ export default function FeatureCatalog() {
       steps: syncSteps,
       error: null,
     })
-    setDiscoveryLoading(true)
+    setSyncLoading(true)
     
     const updateProgress = (step: number, status?: string) => {
       setSyncProgress(prev => ({
@@ -632,7 +582,8 @@ export default function FeatureCatalog() {
       clearFeatureGateCache()
       
       await new Promise(resolve => setTimeout(resolve, 500))
-      await runDiscovery(false)
+      await queryClient.invalidateQueries({ queryKey: ['feature-catalog-discovery'] })
+      await queryClient.invalidateQueries({ queryKey: ['feature-catalog'] })
       
       setTimeout(() => {
         setSyncProgress({
@@ -661,7 +612,7 @@ export default function FeatureCatalog() {
         })
       }, 3000)
     } finally {
-      setDiscoveryLoading(false)
+      setSyncLoading(false)
     }
   }
 
@@ -977,32 +928,6 @@ export default function FeatureCatalog() {
     setPage(0)
   }, [debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, hierarchyFilter])
 
-  // Initial data fetch on mount
-  // Initial mount: fetch tiers and run discovery once
-  useEffect(() => {
-    fetchTiers()
-    runDiscovery(false)
-    
-    return () => {
-        abortControllerRef.current?.abort()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Only run on mount
-
-  // Fetch features when filters change
-  useEffect(() => {
-    fetchFeatures()
-  }, [fetchFeatures])
-
-  // Cleanup AbortController on unmount
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-        abortControllerRef.current = null
-      }
-    }
-  }, [])
 
   const rows = features.map(f => {
       const discovered = discoveredFeatures.find(df => df.featureKey === f.feature_key);
@@ -1149,8 +1074,8 @@ export default function FeatureCatalog() {
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                 <DiscoveryStatusBadge 
                     lastDiscoveredAt={lastDiscoveredAt}
-                    syncStatus={syncStatus}
-                    loading={discoveryLoading}
+                    syncStatus={syncStatus as 'pending' | 'synced' | 'failed' | null}
+                    loading={discoveryLoading || syncLoading}
                     onRefresh={() => runDiscovery(true)}
                     onSync={handleSync}
                 />
@@ -1386,10 +1311,9 @@ export default function FeatureCatalog() {
           <div style={{ marginBottom: '24px' }}>
             <ErrorState
               title="Failed to Load Features"
-              message={fetchError}
+              message={fetchError instanceof Error ? fetchError.message : 'Failed to load features'}
               onRetry={() => {
-                setFetchError(null)
-                fetchFeatures()
+                queryClient.invalidateQueries({ queryKey: ['feature-catalog'] })
               }}
               retryLabel="Retry"
             />

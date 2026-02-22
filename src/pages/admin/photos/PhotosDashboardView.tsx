@@ -160,9 +160,18 @@ export function PhotosDashboardView() {
         />
         <StatCard 
           label={t('photos.dashboard.storageUsed')} 
-          value={storageInfo ? `${formatStorage(storageInfo.currentUsage)} GB` : '0 GB'}
+          value={storageInfo ? (storageInfo.limit > 0 ? `${formatStorage(storageInfo.currentUsage)} / ${formatStorage(storageInfo.limit)} GB` : `${formatStorage(storageInfo.currentUsage)} GB`) : '0 GB'}
         />
       </div>
+
+      {/* Storage Limit Warning */}
+      {storageInfo && storageInfo.limit > 0 && storageInfo.currentUsage >= storageInfo.limit && (
+        <InlineNotice
+          tone="warning"
+          title="Storage Limit Reached"
+          message={`You've reached your photo storage limit of ${formatStorage(storageInfo.limit)} GB. Upgrade your plan or delete photos to add more.`}
+        />
+      )}
 
       {/* Quick Actions */}
       <div className="dashboard-quick-actions">

@@ -28,25 +28,12 @@ BEGIN
   -- Get effective license org_id (parent if sub-org, self if parent)
   SELECT public.get_effective_license_org_id(p_org_id) INTO v_effective_license_org_id;
 
-  -- Get tier_key from current_tier_id (preferred method)
+  -- Get tier_key from current_tier_id
   SELECT o.current_tier_id, lt.tier_key
   INTO v_current_tier_id, v_tier_key
   FROM organizations o
   LEFT JOIN license_tiers lt ON o.current_tier_id = lt.id AND lt.status = 'active'
   WHERE o.id = v_effective_license_org_id;
-
-  -- Fallback to license_plan mapping during transition
-  IF v_tier_key IS NULL THEN
-    SELECT 
-      CASE o.license_plan::text
-        WHEN 'starter' THEN 'tier1'  -- Updated from 'basic'
-        WHEN 'standard' THEN 'tier2'  -- Updated from 'power'
-        WHEN 'pro' THEN 'tier2'  -- Updated from 'power'
-        ELSE o.license_plan::text
-      END INTO v_tier_key
-    FROM organizations o
-    WHERE o.id = v_effective_license_org_id;
-  END IF;
 
   -- Map tier_key to bytes: tier1 = 1GB, tier2 = 20GB (or use tier-specific limits if available)
   -- TODO: Consider adding storage_limit_bytes column to license_tiers table for data-driven limits
@@ -58,9 +45,8 @@ BEGIN
 END;
 $$;
 
--- Step 3: Update hardcoded tier_key references in get_feature_gate() fallback logic
--- This function has fallback logic that maps license_plan to tier_key (lines 256-257)
--- We'll update just the fallback JOIN condition to use tier1/tier2 instead of basic/power
+-- Step 3: Update get_feature_gate() function to use tier1/tier2 keys
+-- Removed fallback to license_plan (column was removed in migration 20260412000043)
 CREATE OR REPLACE FUNCTION public.get_feature_gate(p_org_id uuid, p_user_id uuid, p_feature_key text) 
 RETURNS jsonb
 LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -305,21 +291,8 @@ BEGIN
   FROM organizations o
   WHERE o.id = COALESCE(v_effective_license_org_id, p_org_id);
 
-  -- Fallback to license_plan mapping during transition (UPDATED tier keys)
-  IF v_license_tier_id IS NULL THEN
-    -- Fallback: try to get tier from license_plan (for orgs not yet migrated)
-    SELECT 
-      lt.id INTO v_license_tier_id
-    FROM organizations o
-    LEFT JOIN license_tiers lt ON (
-      (o.license_plan::text = 'starter' AND lt.tier_key = 'tier1')  -- Updated from 'basic'
-      OR (o.license_plan::text IN ('standard', 'pro') AND lt.tier_key = 'tier2')  -- Updated from 'power'
-      OR (o.license_plan::text = lt.tier_key)
-    )
-    WHERE o.id = COALESCE(v_effective_license_org_id, p_org_id)
-      AND lt.status = 'active'
-    LIMIT 1;
-  END IF;
+  -- No fallback needed - all orgs should have current_tier_id set
+  -- If v_license_tier_id is NULL, org has no tier assigned
 
   -- Validate tier exists and is active (data-driven check)
   IF v_license_tier_id IS NOT NULL THEN
@@ -805,12 +778,11 @@ Checks parent feature hierarchy first (child inherits parent denials), then plat
 system features, overrides (with parent check for children), tier assignments, and roles.
 Child features: if explicitly denied → deny; if explicitly allowed or no assignment → check parent;
 if parent denied → deny; if parent allowed → allow (inherit or use child assignment).
-Uses current_tier_id directly (no plan→tier mapping). Falls back to license_plan mapping during transition.
+Uses current_tier_id directly (no plan→tier mapping).
 Updated tier keys: tier1 (was basic), tier2 (was power).
 Returns JSONB with allowed, gate_action, reason_code, and optional limit_value.';
 
 COMMENT ON FUNCTION public.get_org_photo_storage_limit_bytes(uuid) IS 
 'Returns photo storage limit in bytes for an org based on license tier (current_tier_id).
 For sub-orgs, uses parent organization''s license tier via get_effective_license_org_id.
-Falls back to license_plan mapping during transition period.
 Updated tier keys: tier1 (was basic), tier2 (was power).';

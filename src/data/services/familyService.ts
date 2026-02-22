@@ -14,6 +14,7 @@ import { captureEvent } from '../../lib/analytics/analytics'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { normalizeSupabaseResponse } from './responseHelpers'
 import { getAthleteSports } from './athleteSportsService'
+import { getTierLimit, isLimitExceeded } from './tierLimitsService'
 import {
     fakeFamilies,
     fakeChildren,
@@ -474,6 +475,35 @@ export async function createAthleteBasic(
     }
 
     try {
+        // Check max_athletes tier limit before creating (if orgId available)
+        if (_context.orgId) {
+            const limitResult = await getTierLimit(_context.orgId, _context.userId, 'max_athletes')
+            if (limitResult.error) {
+                // Fail open on error (allow creation) but log warning
+                console.warn('[familyService] Failed to check max_athletes limit, allowing creation:', limitResult.error)
+            } else if (limitResult.limit !== null) {
+                // Count current athletes for this org
+                const { count: currentAthleteCount, error: countError } = await supabase
+                    .from('athletes')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('org_id', _context.orgId)
+                    .is('deleted_at', null)
+
+                if (!countError && currentAthleteCount !== null) {
+                    if (isLimitExceeded(currentAthleteCount, limitResult.limit)) {
+                        const errorMessage = `You've reached your athlete limit (${limitResult.limit} athletes). Upgrade your plan to add more athletes.`
+                        debug.perf.end('familyService.createAthleteBasic')
+                        debug.error('FamilyService.createAthleteBasic', 'Athlete limit exceeded', { currentCount: currentAthleteCount, limit: limitResult.limit })
+                        console.groupEnd()
+                        return { 
+                            data: null, 
+                            error: new Error(errorMessage)
+                        }
+                    }
+                }
+            }
+        }
+
         type ChildInsert = Database['public']['Tables']['athletes']['Insert']
         const insertData = dto satisfies ChildInsert
         const { data, error } = await supabase
@@ -1323,6 +1353,34 @@ export async function createAthleteWithGuardians(
     }
 
     try {
+        // Check max_athletes tier limit before creating (if orgId available)
+        if (context.orgId) {
+            const limitResult = await getTierLimit(context.orgId, context.userId, 'max_athletes')
+            if (limitResult.error) {
+                // Fail open on error (allow creation) but log warning
+                console.warn('[familyService] Failed to check max_athletes limit, allowing creation:', limitResult.error)
+            } else if (limitResult.limit !== null) {
+                // Count current athletes for this org
+                const { count: currentAthleteCount, error: countError } = await supabase
+                    .from('athletes')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('org_id', context.orgId)
+                    .is('deleted_at', null)
+
+                if (!countError && currentAthleteCount !== null) {
+                    if (isLimitExceeded(currentAthleteCount, limitResult.limit)) {
+                        const errorMessage = `You've reached your athlete limit (${limitResult.limit} athletes). Upgrade your plan to add more athletes.`
+                        debug.perf.end('familyService.createAthleteWithGuardians')
+                        debug.error('FamilyService.createAthleteWithGuardians', 'Athlete limit exceeded', { currentCount: currentAthleteCount, limit: limitResult.limit })
+                        console.groupEnd()
+                        return { 
+                            data: null, 
+                            error: new Error(errorMessage)
+                        }
+                    }
+                }
+            }
+        }
         // Prepare athlete data
         const athleteData = {
             first_name: dto.first_name,

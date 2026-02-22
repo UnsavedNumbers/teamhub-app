@@ -510,6 +510,7 @@ export async function getSubOrgs(
 
 /**
  * Check if parent org allows public registration and get max count
+ * Uses tier-based max_sub_orgs limit from tier_feature_assignments
  */
 export async function canCreateSubOrg(
   parentOrgId: string
@@ -524,19 +525,80 @@ export async function canCreateSubOrg(
       return { canCreate: false, reason: 'Public registration is disabled', error: null }
     }
 
-    // Check max count if set
-    if (config.sub_org_max_count !== null && config.sub_org_max_count !== undefined) {
-      const { data: subOrgs, error: subOrgsError } = await getSubOrgs(parentOrgId)
-      if (subOrgsError) {
-        return { canCreate: false, reason: 'Failed to check sub-org count', error: subOrgsError }
-      }
+    // Get tier-based max_sub_orgs limit from tier_feature_assignments
+    // Query the parent org's tier and get the max_sub_orgs limit_value
+    const { data: orgData, error: orgError } = await supabase
+      .from('organizations')
+      .select('current_tier_id')
+      .eq('id', parentOrgId)
+      .single()
 
-      if (subOrgs.length >= config.sub_org_max_count) {
-        return {
-          canCreate: false,
-          reason: `Maximum number of sub-organizations (${config.sub_org_max_count}) reached`,
-          error: null,
+    if (orgError || !orgData?.current_tier_id) {
+      // If no tier is set, fall back to config-based check for backward compatibility
+      if (config.sub_org_max_count !== null && config.sub_org_max_count !== undefined) {
+        const { data: subOrgs, error: subOrgsError } = await getSubOrgs(parentOrgId)
+        if (subOrgsError) {
+          return { canCreate: false, reason: 'Failed to check sub-org count', error: subOrgsError }
         }
+
+        if (subOrgs.length >= config.sub_org_max_count) {
+          return {
+            canCreate: false,
+            reason: `Maximum number of sub-organizations (${config.sub_org_max_count}) reached`,
+            error: null,
+          }
+        }
+      }
+      return { canCreate: true, error: null }
+    }
+
+    // Get max_sub_orgs limit from tier_feature_assignments
+    // First get the feature_entitlement_id for max_sub_orgs
+    const { data: featureData, error: featureError } = await supabase
+      .from('feature_entitlements')
+      .select('id')
+      .eq('feature_key', 'max_sub_orgs')
+      .eq('feature_type', 'limit')
+      .is('archived_at', null)
+      .single()
+
+    if (featureError || !featureData) {
+      // Feature not found, allow creation (fail open)
+      return { canCreate: true, error: null }
+    }
+
+    // Now get the limit_value from tier_feature_assignments
+    const { data: limitData, error: limitError } = await supabase
+      .from('tier_feature_assignments')
+      .select('limit_value')
+      .eq('license_tier_id', orgData.current_tier_id)
+      .eq('feature_entitlement_id', featureData.id)
+      .eq('included', true)
+      .single()
+
+    // If limit not found or error, allow creation (fail open)
+    if (limitError || !limitData) {
+      return { canCreate: true, error: null }
+    }
+
+    const maxSubOrgs = limitData.limit_value
+
+    // NULL limit_value means unlimited
+    if (maxSubOrgs === null) {
+      return { canCreate: true, error: null }
+    }
+
+    // Check current count against limit
+    const { data: subOrgs, error: subOrgsError } = await getSubOrgs(parentOrgId)
+    if (subOrgsError) {
+      return { canCreate: false, reason: 'Failed to check sub-org count', error: subOrgsError }
+    }
+
+    if (subOrgs.length >= maxSubOrgs) {
+      return {
+        canCreate: false,
+        reason: `Maximum number of sub-organizations (${maxSubOrgs}) reached`,
+        error: null,
       }
     }
 
