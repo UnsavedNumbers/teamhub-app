@@ -123,6 +123,7 @@ export function mapOrganization(row: OrganizationRow): Organization {
     createdAt: row.created_at ?? new Date().toISOString(),
     updatedAt: row.updated_at ?? new Date().toISOString(),
     licenseStatus: 'license_status' in row ? row.license_status : null,
+    /** @deprecated Use current_tier_id/tier_name instead. Will be removed in Phase 8. */
     licensePlan: 'license_plan' in row ? (row.license_plan as string | null) : null,
     licenseTrialEndsAt: 'license_trial_ends_at' in row ? row.license_trial_ends_at : null,
     licenseCurrentPeriodEnd: 'license_current_period_end' in row ? row.license_current_period_end : null,

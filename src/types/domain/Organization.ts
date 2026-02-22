@@ -16,6 +16,7 @@ export interface Organization {
 
   // License information
   licenseStatus: string | null
+  /** @deprecated Use current_tier_id/tier_name instead. Will be removed in Phase 8. */
   licensePlan: string | null
   licenseTrialEndsAt: string | null
   licenseCurrentPeriodEnd: string | null

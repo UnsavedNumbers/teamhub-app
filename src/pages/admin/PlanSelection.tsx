@@ -57,7 +57,6 @@ export default function PlanSelection() {
   const formatPrice = (tier: LicenseTier): string => {
     if (!tier.stripe_amount_cents) return 'Contact us'
     const amount = tier.stripe_amount_cents / 100
-    const currency = tier.stripe_currency?.toUpperCase() || 'USD'
     const interval = tier.stripe_interval === 'year' ? '/year' : tier.stripe_interval === 'month' ? '/month' : ''
     return `$${amount.toFixed(0)}${interval}`
   }

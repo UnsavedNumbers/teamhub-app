@@ -32,25 +32,6 @@ function json(req: Request, body: unknown, status = 200) {
   })
 }
 
-// ---- Stripe + helpers ----
-function planToPrice(
-  plan: string,
-  priceStarter?: string | null,
-  priceStandard?: string | null,
-  pricePro?: string | null,
-) {
-  switch (plan) {
-    case "starter":
-      return priceStarter ?? null
-    case "standard":
-      return priceStandard ?? null
-    case "pro":
-      return pricePro ?? null
-    default:
-      return null
-  }
-}
-
 serve(async (req) => {
   // Preflight must always succeed with CORS headers
   if (req.method === "OPTIONS") {
@@ -78,10 +59,6 @@ serve(async (req) => {
     return json(req, { error: "Stripe not configured: missing STRIPE_SECRET_KEY" }, 500)
   }
 
-  const priceStarter = Deno.env.get("STRIPE_PRICE_STARTER_YEAR")
-  const priceStandard = Deno.env.get("STRIPE_PRICE_STANDARD_YEAR")
-  const pricePro = Deno.env.get("STRIPE_PRICE_PRO_YEAR")
-
   const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" })
 
   // Supabase client using service role key; pass through user Authorization header for getUser()
@@ -98,18 +75,31 @@ serve(async (req) => {
   }
 
   const organizationId = payload?.organization_id as string | undefined
-  const requestedPlan = payload?.requested_plan as string | undefined
+  const tierId = payload?.tier_id as string | undefined
   const successUrl = payload?.success_url as string | undefined
   const cancelUrl = payload?.cancel_url as string | undefined
 
-  if (!organizationId || !requestedPlan || !successUrl || !cancelUrl) {
+  if (!organizationId || !tierId || !successUrl || !cancelUrl) {
     return json(req, { error: "Missing required parameters" }, 400)
   }
 
-  const priceId = planToPrice(requestedPlan, priceStarter, priceStandard, pricePro)
-  if (!priceId) {
-    return json(req, { error: "Unsupported plan or missing Stripe price env var for this plan" }, 400)
+  // Fetch tier from database to get stripe_price_id
+  const { data: tier, error: tierError } = await supabase
+    .from("license_tiers")
+    .select("id, tier_key, tier_name, stripe_price_id, status")
+    .eq("id", tierId)
+    .eq("status", "active")
+    .maybeSingle()
+
+  if (tierError || !tier) {
+    return json(req, { error: tierError?.message || "Tier not found or inactive" }, 400)
   }
+
+  if (!tier.stripe_price_id) {
+    return json(req, { error: "Tier does not have a Stripe price ID configured" }, 400)
+  }
+
+  const priceId = tier.stripe_price_id
 
   // Auth (return 401 with CORS rather than throwing)
   const { data: userData, error: userErr } = await supabase.auth.getUser()
@@ -217,7 +207,8 @@ serve(async (req) => {
     client_reference_id: organizationId,
     metadata: {
       org_id: organizationId,
-      requested_plan: requestedPlan,
+      tier_id: tierId,
+      tier_key: tier.tier_key,
       checkout_session_id: checkout.id,
       environment: Deno.env.get("DENO_ENV") ?? "unknown",
     },
@@ -225,7 +216,8 @@ serve(async (req) => {
       metadata: {
         org_id: organizationId,
         checkout_session_id: checkout.id,
-        requested_plan: requestedPlan,
+        tier_id: tierId,
+        tier_key: tier.tier_key,
       },
     },
     success_url: successUrl,

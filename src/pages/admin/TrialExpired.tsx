@@ -93,7 +93,7 @@ export default function TrialExpired() {
   const successUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS)}`
   const cancelUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL)}`
 
-  const { loadingPlan, error: checkoutError, handleSelect } = useCheckoutSession({
+  const { loadingTierId, error: checkoutError, handleSelect } = useCheckoutSession({
     organizationId: orgId || '',
     successUrl,
     cancelUrl,
@@ -347,10 +347,10 @@ export default function TrialExpired() {
                   </div>
                   <button
                     onClick={() => handleSelect(plan.id)}
-                    disabled={!!loadingPlan}
+                    disabled={!!loadingTierId}
                     className="bg-primary text-white font-black px-6 py-3 rounded-lg uppercase tracking-tight disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
                   >
-                    {loadingPlan === plan.id ? t('common.loading') : t('billing.continueToCheckout')}
+                    {loadingTierId === plan.id ? t('common.loading') : t('billing.continueToCheckout')}
                   </button>
                 </div>
               ))}
