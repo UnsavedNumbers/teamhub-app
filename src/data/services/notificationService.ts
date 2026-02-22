@@ -12,6 +12,10 @@ import {
   markNotificationRead as markNotificationReadFromMessages,
   markAllNotificationsRead as markAllNotificationsReadFromMessages,
   getUnreadCount as getUnreadCountFromMessages,
+  archiveNotification as archiveNotificationFromMessages,
+  deleteNotification as deleteNotificationFromMessages,
+  type GetNotificationsOptions,
+  type NotificationCursor,
 } from './messagesService'
 import {
   getUserPreferences,
@@ -24,13 +28,13 @@ type ServiceResult<T = unknown> = Promise<{ data: T | null; error: Error | null 
 
 export const notificationService = {
   /**
-   * Get notifications for a user
+   * Get notifications for a user with cursor-based pagination
    */
   getNotifications: async (
     context: UserContext,
-    limit?: number
-  ): ServiceResult<NotificationRecord[]> => {
-    return getNotificationsFromMessages(context, limit)
+    options?: GetNotificationsOptions | number
+  ): Promise<{ data: NotificationRecord[]; error: Error | null; nextCursor: NotificationCursor | null }> => {
+    return getNotificationsFromMessages(context, options)
   },
 
   /**
@@ -53,10 +57,25 @@ export const notificationService = {
   },
 
   /**
-   * Delete a notification (not currently implemented in messagesService)
+   * Archive a notification
    */
-  deleteNotification: async (): ServiceResult => {
-    return { data: null, error: new Error('Delete notification not yet implemented') }
+  archiveNotification: async (
+    context: UserContext,
+    notificationId: string
+  ): ServiceResult => {
+    const result = await archiveNotificationFromMessages(context, notificationId)
+    return { data: result.success ? true : null, error: result.error }
+  },
+
+  /**
+   * Soft delete a notification
+   */
+  deleteNotification: async (
+    context: UserContext,
+    notificationId: string
+  ): ServiceResult => {
+    const result = await deleteNotificationFromMessages(context, notificationId)
+    return { data: result.success ? true : null, error: result.error }
   },
 
   /**

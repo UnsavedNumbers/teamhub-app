@@ -4,7 +4,7 @@
  * the role/action mapping documented in notification_action_role_mapping.md.
  */
 
-export type NotificationRole = 'guardian' | 'parent' | 'coach' | 'org_admin'
+export type NotificationRole = 'guardian' | 'parent' | 'coach' | 'org_admin' | 'team_manager' | 'athlete' | 'staff' | 'platform_admin'
 export type NotificationPresentation = 'info' | 'warning' | 'urgent'
 export type NotificationEntityType =
   | 'event'
@@ -121,6 +121,8 @@ export interface NotificationRecord {
   metadata: Record<string, unknown> | null
   dedupe_key: string
   read_at: string | null
+  archived_at: string | null
+  deleted_at: string | null
   created_at: string
 }
 
@@ -148,25 +150,25 @@ export interface NotificationCreateResult {
 // Role allowances (derived from notification_action_role_mapping.md)
 export const ACTION_ROLE_MAP: Record<NotificationAction, NotificationRole[]> = {
   // Calendar & Events
-  event_created: ['guardian', 'coach', 'org_admin'],
-  event_updated: ['guardian', 'coach', 'org_admin'],
-  event_rescheduled: ['guardian', 'coach', 'org_admin'],
-  event_canceled: ['guardian', 'coach', 'org_admin'],
-  event_location_updated: ['guardian', 'coach', 'org_admin'],
-  event_time_changed: ['guardian', 'coach', 'org_admin'],
-  event_rsvp_required: ['guardian', 'org_admin'],
-  event_rsvp_updated: ['coach', 'org_admin'],
-  event_attendance_updated: ['coach', 'org_admin'],
-  event_weather_alert: ['guardian', 'coach', 'org_admin'],
+  event_created: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  event_updated: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  event_rescheduled: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  event_canceled: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  event_location_updated: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  event_time_changed: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  event_rsvp_required: ['guardian', 'org_admin', 'athlete'],
+  event_rsvp_updated: ['coach', 'org_admin', 'team_manager'],
+  event_attendance_updated: ['coach', 'org_admin', 'team_manager'],
+  event_weather_alert: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
   // Travel
-  travel_created: ['guardian', 'coach', 'org_admin'],
-  travel_updated: ['guardian', 'coach', 'org_admin'],
-  travel_canceled: ['guardian', 'coach', 'org_admin'],
-  travel_dates_changed: ['guardian', 'coach', 'org_admin'],
-  travel_location_changed: ['guardian', 'coach', 'org_admin'],
-  travel_lodging_added: ['guardian', 'coach', 'org_admin'],
-  travel_transport_added: ['coach', 'org_admin'],
-  travel_overlap_detected: ['coach', 'org_admin'],
+  travel_created: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  travel_updated: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  travel_canceled: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  travel_dates_changed: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  travel_location_changed: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  travel_lodging_added: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  travel_transport_added: ['coach', 'org_admin', 'team_manager', 'staff'],
+  travel_overlap_detected: ['coach', 'org_admin', 'team_manager', 'staff'],
   // Payments & Billing
   fee_created: ['org_admin'],
   fee_assigned: ['guardian', 'org_admin'],
@@ -183,8 +185,8 @@ export const ACTION_ROLE_MAP: Record<NotificationAction, NotificationRole[]> = {
   athlete_created: ['org_admin'],
   athlete_updated: ['org_admin'],
   athlete_removed: ['org_admin'],
-  athlete_added_to_team: ['guardian', 'coach', 'org_admin'],
-  athlete_removed_from_team: ['guardian', 'coach', 'org_admin'],
+  athlete_added_to_team: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete'],
+  athlete_removed_from_team: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete'],
   guardian_attached: ['guardian', 'org_admin'],
   guardian_detached: ['guardian', 'org_admin'],
   // Teams, Programs, Levels
@@ -198,40 +200,40 @@ export const ACTION_ROLE_MAP: Record<NotificationAction, NotificationRole[]> = {
   level_updated: ['org_admin'],
   level_removed: ['org_admin'],
   // Uniforms
-  uniform_size_requested: ['guardian', 'coach', 'org_admin'],
-  uniform_size_submitted: ['guardian', 'coach', 'org_admin'],
-  uniform_order_opened: ['guardian', 'coach', 'org_admin'],
-  uniform_order_updated: ['guardian', 'coach', 'org_admin'],
-  uniform_order_closed: ['guardian', 'coach', 'org_admin'],
-  uniform_missing_info: ['guardian', 'coach', 'org_admin'],
+  uniform_size_requested: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete'],
+  uniform_size_submitted: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete'],
+  uniform_order_opened: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete'],
+  uniform_order_updated: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete'],
+  uniform_order_closed: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete'],
+  uniform_missing_info: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete'],
   // Announcements
-  announcement_created: ['guardian', 'coach', 'org_admin'],
-  announcement_updated: ['guardian', 'coach', 'org_admin'],
+  announcement_created: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  announcement_updated: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
   announcement_deleted: ['org_admin'],
-  announcement_urgent: ['guardian', 'coach', 'org_admin'],
+  announcement_urgent: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
   // Messaging
-  huddle_created: ['guardian', 'coach', 'org_admin'],
-  message_sent: ['guardian', 'coach', 'org_admin'],
-  message_edited: ['guardian', 'coach', 'org_admin'],
-  message_deleted: ['guardian', 'coach', 'org_admin'],
-  message_pinned: ['guardian', 'coach', 'org_admin'],
-  message_reported: ['org_admin'],
-  user_mentioned: ['guardian', 'coach', 'org_admin'],
+  huddle_created: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  message_sent: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  message_edited: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  message_deleted: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  message_pinned: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  message_reported: ['org_admin', 'platform_admin'],
+  user_mentioned: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
   // Invitations & Access
   role_assigned: ['org_admin'],
   role_removed: ['org_admin'],
   access_revoked: ['org_admin'],
-  invite_sent: ['guardian', 'coach', 'org_admin'],
-  invite_accepted: ['guardian', 'coach', 'org_admin'],
-  invite_expired: ['guardian', 'coach', 'org_admin'],
+  invite_sent: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  invite_accepted: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
+  invite_expired: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff'],
   // System & Platform
-  license_activated: ['org_admin'],
-  license_expiring: ['org_admin'],
-  license_expired: ['org_admin'],
-  license_upgraded: ['org_admin'],
-  feature_enabled: ['org_admin'],
-  feature_disabled: ['org_admin'],
-  system_generated_notice: ['guardian', 'coach', 'org_admin'],
+  license_activated: ['org_admin', 'platform_admin'],
+  license_expiring: ['org_admin', 'platform_admin'],
+  license_expired: ['org_admin', 'platform_admin'],
+  license_upgraded: ['org_admin', 'platform_admin'],
+  feature_enabled: ['org_admin', 'platform_admin'],
+  feature_disabled: ['org_admin', 'platform_admin'],
+  system_generated_notice: ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff', 'platform_admin'],
 }
 
 export function isRoleAllowedForAction(action: NotificationAction, role: NotificationRole): boolean {

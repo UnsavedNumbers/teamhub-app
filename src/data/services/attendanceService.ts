@@ -4,6 +4,7 @@ import type { SupabaseExtended as Database } from '../../lib/supabase.extended.t
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { debug } from '../../lib/debug'
+import { collectTeamManagers } from './notificationHelpers'
 import type {
     AttendanceRecord,
     AttendanceSettings,
@@ -270,6 +271,30 @@ export async function updateAttendance(
                                     notes,
                                 },
                             }).catch(err => console.error('Failed to notify about attendance update:', err))
+
+                            // Also notify team managers
+                            if (eventData.team_id) {
+                                const teamManagerIds = await collectTeamManagers(eventData.team_id, context.userId)
+                                if (teamManagerIds.length > 0) {
+                                    await notifyUsers({
+                                        userIds: teamManagerIds,
+                                        orgId: eventData.org_id,
+                                        teamId: eventData.team_id,
+                                        action: 'event_attendance_updated',
+                                        roleContext: 'team_manager',
+                                        title: 'Attendance Updated',
+                                        body: `${athleteName} attendance marked as ${status} for ${eventData.title || 'event'}`,
+                                        linkUrl: `/portal/calendar/events/${eventId}`,
+                                        entityType: 'event',
+                                        entityId: eventId,
+                                        metadata: {
+                                            child_id: childId,
+                                            status,
+                                            notes,
+                                        },
+                                    }).catch(err => console.error('Failed to notify team managers about attendance update:', err))
+                                }
+                            }
                         }
                     }
                 }

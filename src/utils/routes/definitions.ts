@@ -288,6 +288,14 @@ const portal = {
         icon: 'smart_display',
     },
 
+    // Notifications
+    notifications: {
+        path: '/portal/notifications',
+        label: 'Notifications',
+        icon: 'notifications',
+        description: 'View and manage notifications',
+    },
+
     // Role Selection
     roleSelection: {
         path: '/portal/role-selection',

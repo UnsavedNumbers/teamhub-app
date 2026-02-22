@@ -343,6 +343,10 @@ async function checkNotificationPreferences(
           .single()
 
         if (orgMember?.role) {
+          // Normalize 'parent' to 'guardian', all other roles pass through unchanged
+          // Note: team_manager and platform_admin are not in organization_members,
+          // so they won't be handled by this path. They may need special handling
+          // if email preferences are needed for those roles.
           const role = orgMember.role === 'parent' ? 'guardian' : orgMember.role
           const orgPrefs = notifications_v2[job.org_id]
           const rolePrefs = orgPrefs?.[role]

@@ -68,6 +68,11 @@ export const GROUP_CONFIGS: GroupConfig[] = [
 
 const VALID_CHANNELS: DeliveryChannel[] = ['in_app', 'email', 'push']
 
+/**
+ * Canonicalize notification role.
+ * Only 'parent' needs normalization to 'guardian'.
+ * All other roles (including new roles: team_manager, athlete, staff, platform_admin) pass through unchanged.
+ */
 export function canonicalRole(role: NotificationRole): NotificationRole {
   return role === 'parent' ? 'guardian' : role
 }

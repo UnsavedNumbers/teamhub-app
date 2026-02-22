@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { getLink, RouteKeys } from '../utils/routes'
 import { useOptionalAuth } from '../hooks/useAuth'
@@ -7,7 +7,9 @@ import { notificationService } from '../data/services/notificationService'
 import { getAthletes } from '../data/services/familyService'
 import { getTeamsForParent } from '../data/services/teamsService'
 import { NotificationRecord } from '../types/notifications'
+import type { NotificationCursor } from '../data/services/messagesService'
 import PortalHeader from '../components/portal/PortalHeader'
+import NotificationErrorBoundary from '../components/common/NotificationErrorBoundary'
 import { showError, showSuccess } from '../utils/toast'
 import { cn } from '../utils/cn'
 
@@ -119,6 +121,9 @@ export default function Notifications() {
 
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [nextCursor, setNextCursor] = useState<NotificationCursor | null>(null)
+  const [isOffline, setIsOffline] = useState(false)
   const [athletes, setAthletes] = useState<any[]>([])
   const [teams, setTeams] = useState<any[]>([])
   const programs = MOCK_PROGRAMS
@@ -129,27 +134,115 @@ export default function Notifications() {
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set())
   const [selectedProgramIds, setSelectedProgramIds] = useState<Set<string>>(new Set())
   const [selectedSportIds, setSelectedSportIds] = useState<Set<string>>(new Set())
+  const subscriptionRef = useRef<any>(null)
+
+  // Offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false)
+    const handleOffline = () => setIsOffline(true)
+    
+    setIsOffline(!navigator.onLine)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  // Real-time subscription
+  useEffect(() => {
+    if (!isReady || !context.userId) return
+
+    import('../lib/supabase').then(({ supabase }) => {
+      const channel = supabase
+        .channel('notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'user_notifications',
+            filter: `user_id=eq.${context.userId}`
+          },
+          (payload: any) => {
+            const newNotif = mapDbNotification(payload.new)
+            setNotifications((prev) => [newNotif, ...prev])
+          }
+        )
+        .subscribe()
+      
+      subscriptionRef.current = channel
+    })
+
+    return () => {
+      if (subscriptionRef.current) {
+        import('../lib/supabase').then(({ supabase }) => {
+          supabase.channel('notifications').unsubscribe()
+        })
+        subscriptionRef.current = null
+      }
+    }
+  }, [isReady, context.userId])
+
+  const loadNotifications = useCallback(async (cursor: NotificationCursor | null = null, append: boolean = false) => {
+    if (!isReady) return
+
+    if (append) {
+      setLoadingMore(true)
+    } else {
+      setLoading(true)
+    }
+
+    try {
+      const includeArchived = activeTab === 'archived'
+      const { data: notifs, error: notifError, nextCursor: newCursor } = await notificationService.getNotifications(
+        context,
+        {
+          limit: 50,
+          cursor,
+          includeArchived,
+          includeDeleted: false,
+        }
+      )
+      
+      if (notifError) throw notifError
+      
+      if (append) {
+        setNotifications((prev) => [...prev, ...(notifs || [])])
+      } else {
+        setNotifications(notifs || [])
+      }
+      setNextCursor(newCursor)
+    } catch (err) {
+      console.error('Error loading notifications:', err)
+      if (!append) {
+        showError('Failed to load notifications')
+      }
+    } finally {
+      setLoading(false)
+      setLoadingMore(false)
+    }
+  }, [isReady, context, activeTab])
+
+  useEffect(() => {
+    loadNotifications(null, false)
+  }, [loadNotifications])
 
   useEffect(() => {
     if (!isReady) return
 
-    const loadData = async () => {
-      setLoading(true)
+    const loadFilterData = async () => {
       try {
-        // Fetch Notifications
-        const { data: notifs, error: notifError } = await notificationService.getNotifications(context, 50) // Fetch reasonable limit
-        if (notifError) throw notifError
-        setNotifications(notifs || [])
-
         // Fetch Athletes for filters
         const { data: myAthletes } = await getAthletes(context)
         if (myAthletes) {
           setAthletes(myAthletes)
-          // Default all selected
           setSelectedAthleteIds(new Set(myAthletes.map((a: any) => a.id)))
         }
 
-        // Fetch Teams for filters (optional, but good for context)
+        // Fetch Teams for filters
         const { data: myTeams } = await getTeamsForParent(context)
         if (myTeams) {
           setTeams(myTeams)
@@ -159,33 +252,53 @@ export default function Notifications() {
         // Init Mock Data Selections
         setSelectedProgramIds(new Set(MOCK_PROGRAMS.map(p => p.id)))
         setSelectedSportIds(new Set(MOCK_SPORTS.map(s => s.id)))
-
       } catch (err) {
-        console.error('Error loading notifications page data:', err)
-        showError('Failed to load notifications')
-      } finally {
-        setLoading(false)
+        console.error('Error loading filter data:', err)
       }
     }
 
-    loadData()
-  }, [context, isReady])
+    loadFilterData()
+  }, [isReady, context])
 
-  // Filtering Logic
+  // Helper to map DB notification (for real-time updates)
+  const mapDbNotification = useCallback((row: any): NotificationRecord => {
+    return {
+      id: row.id,
+      user_id: row.user_id,
+      org_id: row.org_id,
+      team_id: row.team_id ?? null,
+      action: row.action ?? 'system_generated_notice',
+      presentation_type: row.presentation_type ?? 'info',
+      role_context: row.role_context ?? 'guardian',
+      entity_type: row.entity_type ?? null,
+      entity_id: row.entity_id ?? null,
+      title: row.title,
+      body: row.body,
+      link_url: row.link_url ?? null,
+      metadata: row.metadata ?? null,
+      dedupe_key: row.dedupe_key,
+      read_at: row.read_at ?? null,
+      archived_at: row.archived_at ?? null,
+      deleted_at: row.deleted_at ?? null,
+      created_at: row.created_at,
+    }
+  }, [])
+
+  // Filtering Logic (client-side as per requirements)
   const filteredNotifications = useMemo(() => {
     return notifications.filter(n => {
       // Tab Filter
       if (activeTab === 'unread' && n.read_at) return false
-      if (activeTab === 'archived' && !n.read_at) return false // Assuming archived = read for now, or we could add an 'archived' state
+      if (activeTab === 'archived' && !n.archived_at) return false
+      if (activeTab === 'all' && n.archived_at) return false // Don't show archived in "all" tab
 
-      // TODO: Implement advanced filtering based on metadata if available
-      // The current notification record doesn't strictly link to athlete_id in top level, 
-      // typically it's in metadata or implied by team_id/user_id.
-      // For this implementation, we will primarily filter by Tab as the backend support for athlete-filtering might be complex without specific metadata.
+      // Client-side filtering by athlete/team/program/sport (if metadata available)
+      // Note: This is client-side filtering as per requirements
+      // Backend doesn't support these filters, so we filter what we have
 
       return true
     })
-  }, [notifications, activeTab, selectedAthleteIds /* filterByType */])
+  }, [notifications, activeTab])
 
   // Grouping Logic
   const groupedNotifications = useMemo(() => {
@@ -221,6 +334,8 @@ export default function Notifications() {
     if (!error && data) {
       setNotifications(prev => prev.map(n => ({ ...n, read_at: new Date().toISOString() })))
       showSuccess('All notifications marked as read')
+    } else if (error) {
+      showError(error.message || 'Failed to mark all as read')
     }
   }
 
@@ -228,7 +343,24 @@ export default function Notifications() {
     const { data, error } = await notificationService.markAsRead(context, id)
     if (!error && data) {
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n))
+    } else if (error) {
+      showError(error.message || 'Failed to mark as read')
     }
+  }
+
+  const handleArchive = async (id: string) => {
+    const { data, error } = await notificationService.archiveNotification(context, id)
+    if (!error && data) {
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, archived_at: new Date().toISOString() } : n))
+      showSuccess('Notification archived')
+    } else if (error) {
+      showError(error.message || 'Failed to archive notification')
+    }
+  }
+
+  const handleLoadMore = async () => {
+    if (!nextCursor || loadingMore) return
+    await loadNotifications(nextCursor, true)
   }
 
   const handleToggle = (id: string, currentSet: Set<string>, setFunction: (s: Set<string>) => void) => {
@@ -276,8 +408,9 @@ export default function Notifications() {
   if (!currentOrganization && !orgLoading) return null
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-900 font-sans text-slate-900 dark:text-white">
-      <PortalHeader />
+    <NotificationErrorBoundary>
+      <div className="min-h-screen bg-white dark:bg-slate-900 font-sans text-slate-900 dark:text-white">
+        <PortalHeader />
       
       <main className="max-w-[1400px] mx-auto flex flex-col lg:flex-row min-h-screen gap-6 p-6">
         
@@ -526,13 +659,21 @@ export default function Notifications() {
                                       View Details <span className="material-symbols-outlined text-sm">arrow_forward</span>
                                    </Link>
                                  )}
-                                 {/* Helper to mark as read if unread */}
+                                 {/* Actions */}
                                  {isUnread && (
                                     <button 
                                       onClick={() => handleMarkRead(notification.id)}
                                       className="text-sm font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                                     >
                                       Dismiss
+                                    </button>
+                                 )}
+                                 {!notification.archived_at && activeTab !== 'archived' && (
+                                    <button 
+                                      onClick={() => handleArchive(notification.id)}
+                                      className="text-sm font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                    >
+                                      Archive
                                     </button>
                                  )}
                                </div>
@@ -557,12 +698,35 @@ export default function Notifications() {
             )}
           </div>
 
-          {/* Load More Footer - only if we have data */}
-          {!loading && filteredNotifications.length > 0 && (
+          {/* Offline Indicator */}
+          {isOffline && (
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800">
+              <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+                <span className="material-symbols-outlined">wifi_off</span>
+                <span className="text-sm font-medium">You're offline. Some features may be unavailable.</span>
+              </div>
+            </div>
+          )}
+
+          {/* Load More Footer - only if we have data and next cursor */}
+          {!loading && filteredNotifications.length > 0 && nextCursor && (
             <div className="p-8 flex justify-center">
-              <button className="org-btn-secondary flex items-center gap-2 px-8 py-3 rounded-lg font-bold transition-all">
-                  Load Older Activity
-                  <span className="material-symbols-outlined">expand_more</span>
+              <button 
+                onClick={handleLoadMore}
+                disabled={loadingMore || isOffline}
+                className="org-btn-secondary flex items-center gap-2 px-8 py-3 rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loadingMore ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current"></div>
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    Load Older Activity
+                    <span className="material-symbols-outlined">expand_more</span>
+                  </>
+                )}
               </button>
             </div>
           )}
@@ -580,6 +744,7 @@ export default function Notifications() {
           <span className="text-sm font-bold text-slate-900 dark:text-white">Help Center</span>
         </button>
       </div>
-    </div>
+      </div>
+    </NotificationErrorBoundary>
   )
 }

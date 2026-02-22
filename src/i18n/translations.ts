@@ -693,6 +693,11 @@ export const en = {
             },
             notifications: {
                 title: 'Notifications',
+                viewAll: 'View All',
+                loading: 'Loading notifications...',
+                empty: 'No notifications',
+                loadMore: 'Load Older Activity',
+                offline: "You're offline. Some features may be unavailable.",
                 groups: {
                     events: 'Calendar & Events',
                     travel: 'Travel',
@@ -765,9 +770,6 @@ export const en = {
                 paymentIssues: 'Payment issues',
                 registrationActivity: 'Registration activity',
                 systemAnnouncements: 'System announcements',
-                viewAll: 'View all',
-                empty: 'No notifications yet',
-                loading: 'Loading notifications???',
             },
             payments: {
                 title: 'Payments',
@@ -6696,6 +6698,11 @@ export const es = {
             },
             notifications: {
                 title: 'Notificaciones',
+                viewAll: 'Ver Todo',
+                loading: 'Cargando notificaciones...',
+                empty: 'No hay notificaciones',
+                loadMore: 'Cargar Actividad Anterior',
+                offline: 'Estás sin conexión. Algunas funciones pueden no estar disponibles.',
                 groups: {
                     events: 'Calendario y Eventos',
                     travel: 'Viajes',
@@ -6768,9 +6775,6 @@ export const es = {
                 paymentIssues: 'Problemas de pago',
                 registrationActivity: 'Actividad de registro',
                 systemAnnouncements: 'Anuncios del sistema',
-                viewAll: 'Ver todas',
-                empty: 'A?n no hay notificaciones',
-                loading: 'Cargando notificaciones???',
             },
             payments: {
                 title: 'Pagos',

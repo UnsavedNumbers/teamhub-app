@@ -127,6 +127,7 @@ export const RouteKeys = {
     PORTAL_TRYOUTS: 'portal.tryouts',
     PORTAL_UNIFORMS: 'portal.uniforms',
     PORTAL_SETTINGS: 'portal.settings',
+    PORTAL_NOTIFICATIONS: 'portal.notifications',
     PORTAL_PHOTOS: 'portal.photos',
     PORTAL_PHOTOS_GALLERY: 'portal.photosGallery',
     PORTAL_PHOTOS_GALLERY_MANAGE: 'portal.photosGalleryManage',

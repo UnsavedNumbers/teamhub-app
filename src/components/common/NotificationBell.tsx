@@ -4,6 +4,7 @@ import { cn } from '../../utils/cn'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { notificationService } from '../../data/services/notificationService'
+import { getLink, RouteKeys } from '../../utils/routes'
 import type { NotificationRecord, NotificationPresentation } from '../../types/notifications'
 import { showError } from '../../utils/toast'
 
@@ -11,7 +12,7 @@ interface NotificationBellProps {
   viewAllPath?: string
 }
 
-export default function NotificationBell({ viewAllPath = '/dashboard' }: NotificationBellProps) {
+export default function NotificationBell({ viewAllPath }: NotificationBellProps) {
   // All hooks must be called unconditionally at the top
   const userContextResult = useUserContext()
   const context = userContextResult.context
@@ -19,6 +20,7 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
   const hasReadyContext = Boolean(isReady && context?.userId && context?.orgId)
   const t = useT()
   const navigate = useNavigate()
+  const defaultPath = viewAllPath || getLink(RouteKeys.PORTAL_NOTIFICATIONS)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
@@ -31,7 +33,7 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
     if (!hasReadyContext) return
     setLoading(true)
     setError(null)
-    const { data, error: fetchError } = await notificationService.getNotifications(context, 10)
+    const { data, error: fetchError } = await notificationService.getNotifications(context, { limit: 10 })
     if (fetchError) {
       const message = fetchError.message || t('common.error.label')
       setError(message)
@@ -51,8 +53,9 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
   useEffect(() => {
     if (!hasReadyContext) return
 
+    let channel: any = null
     import('../../lib/supabase').then(({ supabase }) => {
-      supabase
+      channel = supabase
         .channel('notifications')
         .on(
           'postgres_changes',
@@ -70,9 +73,11 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
     })
 
     return () => {
-      import('../../lib/supabase').then(({ supabase }) => {
-         supabase.channel('notifications').unsubscribe()
+      if (channel) {
+        import('../../lib/supabase').then(({ supabase }) => {
+          supabase.channel('notifications').unsubscribe()
         })
+      }
     }
   }, [context.userId, hasReadyContext])
 
@@ -144,7 +149,7 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
           <button
             className="gn-notif-link"
             type="button"
-            onClick={() => navigate(viewAllPath)}
+            onClick={() => navigate(defaultPath)}
           >
             {t('portal.settings.notifications.viewAll')}
           </button>

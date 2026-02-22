@@ -12,6 +12,7 @@ const supabaseAny = supabase as any
 import { getTeamWithOrg, getOrgMembers, getOrgMember, getUserEmail } from '../../lib/supabase-helpers'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext } from '../fake/userContext'
+import { collectTeamManagers, collectStaffMembers } from './notificationHelpers'
 import {
     defaultPresentationForAction,
     isRoleAllowedForAction,
@@ -124,6 +125,8 @@ function mapDbNotification(row: DbNotificationRow): NotificationRecord {
         metadata: (row as any).metadata as Record<string, unknown> | null,
         dedupe_key: row.dedupe_key,
         read_at: row.read_at,
+        archived_at: ((row as any).archived_at ?? null) as string | null,
+        deleted_at: ((row as any).deleted_at ?? null) as string | null,
         created_at: row.created_at,
     }
 }
@@ -145,6 +148,8 @@ function mapFakeNotification(fake: FakeNotification): NotificationRecord {
         metadata: fake.metadata,
         dedupe_key: fake.dedupe_key,
         read_at: fake.read_at,
+        archived_at: (fake as any).archived_at ?? null,
+        deleted_at: (fake as any).deleted_at ?? null,
         created_at: fake.created_at,
     }
 }
@@ -537,9 +542,11 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
 
         // 1. AUDIENCE RESOLUTION
         if (announcement.team_id) {
-            // TEAM ANNOUNCEMENT: Parents of athletes on this team + coaches
+            // TEAM ANNOUNCEMENT: Parents of athletes on this team + coaches + team managers + staff
             const guardianUserIds: string[] = []
             const coachUserIds: string[] = []
+            const teamManagerUserIds: string[] = []
+            const staffUserIds: string[] = []
 
             const { data: members, error: memberError } = await supabase
                 .from('team_memberships')
@@ -584,6 +591,15 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
                     }
                 })
             }
+
+            // Get team managers for team
+            const excludeUserIds = [announcement.author_id, context.userId].filter(Boolean) as string[]
+            const teamManagerIds = await collectTeamManagers(announcement.team_id, excludeUserIds[0] || null)
+            teamManagerUserIds.push(...teamManagerIds.filter(id => !excludeUserIds.includes(id)))
+
+            // Get staff members for organization
+            const staffIds = await collectStaffMembers(orgId, announcement.team_id, excludeUserIds[0] || null)
+            staffUserIds.push(...staffIds.filter(id => !excludeUserIds.includes(id)))
 
             let totalInAppCount = 0
 
@@ -635,10 +651,58 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
                 }
             }
 
+            // Notify team managers
+            if (teamManagerUserIds.length > 0) {
+                const result = await notifyUsers({
+                    userIds: teamManagerUserIds,
+                    orgId,
+                    teamId: announcement.team_id,
+                    action,
+                    roleContext: 'team_manager',
+                    title: announcement.title,
+                    body: announcement.content,
+                    linkUrl: `/portal/messages`,
+                    entityType: 'announcement',
+                    entityId: announcement.id,
+                    presentation: announcement.priority === 'urgent' ? 'urgent' : 'info',
+                    metadata: {
+                        priority: announcement.priority,
+                        type: announcement.type
+                    }
+                })
+                if (result.success) {
+                    totalInAppCount += result.inAppCount
+                }
+            }
+
+            // Notify staff
+            if (staffUserIds.length > 0) {
+                const result = await notifyUsers({
+                    userIds: staffUserIds,
+                    orgId,
+                    teamId: announcement.team_id,
+                    action,
+                    roleContext: 'staff',
+                    title: announcement.title,
+                    body: announcement.content,
+                    linkUrl: `/portal/messages`,
+                    entityType: 'announcement',
+                    entityId: announcement.id,
+                    presentation: announcement.priority === 'urgent' ? 'urgent' : 'info',
+                    metadata: {
+                        priority: announcement.priority,
+                        type: announcement.type
+                    }
+                })
+                if (result.success) {
+                    totalInAppCount += result.inAppCount
+                }
+            }
+
             console.log(`[NotificationService] Distributed ${totalInAppCount} notifications for announcement ${announcement.id}`)
         } else {
             // ORG-WIDE ANNOUNCEMENT: All org members by role
-            const recipientRoles = ['guardian', 'parent', 'coach', 'org_admin']
+            const recipientRoles = ['guardian', 'parent', 'coach', 'org_admin', 'staff']
             const { data: members, error: memberError } = await supabase
                 .from('organization_members')
                 .select('user_id, role')
@@ -651,6 +715,7 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
                     guardian: [],
                     coach: [],
                     org_admin: [],
+                    staff: [],
                 }
 
                 members.forEach(m => {
@@ -658,11 +723,13 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
                     if (userId === announcement.author_id || userId === context.userId) return
 
                     const role = m.role === 'parent' ? 'guardian' : m.role
-                    if (role === 'guardian' || role === 'coach' || role === 'org_admin') {
+                    if (role === 'guardian' || role === 'coach' || role === 'org_admin' || role === 'staff') {
                         if (!usersByRole[role]) usersByRole[role] = []
                         usersByRole[role].push(userId)
                     }
                 })
+                // Note: Team managers are team-scoped, so they are not included in org-wide announcements
+                // They will only receive team-specific announcements
 
                 let totalInAppCount = 0
 
@@ -675,7 +742,7 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
                         orgId,
                         teamId: null,
                         action,
-                        roleContext: role as 'guardian' | 'coach' | 'org_admin',
+                        roleContext: role as 'guardian' | 'coach' | 'org_admin' | 'staff',
                         title: announcement.title,
                         body: announcement.content,
                         linkUrl: `/portal/messages`,
@@ -1398,12 +1465,34 @@ export function subscribeToMessages(
 // Notification Service Functions
 // ============================================================================
 
+export interface NotificationCursor {
+    created_at: string
+    id: string
+}
+
+export interface GetNotificationsOptions {
+    limit?: number
+    cursor?: NotificationCursor | null
+    includeArchived?: boolean
+    includeDeleted?: boolean
+}
+
 export async function getNotifications(
     context: UserContext,
-    limit?: number
-): Promise<{ data: NotificationRecord[]; error: Error | null }> {
+    options: GetNotificationsOptions | number = {}
+): Promise<{ data: NotificationRecord[]; error: Error | null; nextCursor: NotificationCursor | null }> {
+    // Support legacy limit parameter for backward compatibility
+    const opts: GetNotificationsOptions = typeof options === 'number' 
+        ? { limit: options } 
+        : options
+    
+    const limit = opts.limit ?? 50
+    const cursor = opts.cursor ?? null
+    const includeArchived = opts.includeArchived ?? false
+    const includeDeleted = opts.includeDeleted ?? false
+
     console.groupCollapsed(`%cgetNotifications: ${context.userId}`, 'color: #666; font-weight: bold;');
-    debug.data('MessagesService.getNotifications', 'Request', { userId: context.userId, limit })
+    debug.data('MessagesService.getNotifications', 'Request', { userId: context.userId, limit, cursor, includeArchived, includeDeleted })
     debug.perf.start('messagesService.getNotifications')
 
     try {
@@ -1424,22 +1513,63 @@ export async function getNotifications(
             } else {
                 notifications = getNotificationsForUser(context.userId)
             }
-            const data = notifications.map(mapFakeNotification)
-            const sliced = typeof limit === 'number' ? data.slice(0, limit) : data
+            
+            // Apply cursor filtering if provided
+            let filtered = notifications
+            if (cursor) {
+                filtered = notifications.filter(n => {
+                    const nDate = new Date(n.created_at).getTime()
+                    const cDate = new Date(cursor.created_at).getTime()
+                    if (nDate < cDate) return true
+                    if (nDate === cDate && n.id < cursor.id) return true
+                    return false
+                })
+            }
+            
+            // Filter archived/deleted if not included
+            if (!includeArchived) {
+                filtered = filtered.filter(n => !(n as any).archived_at)
+            }
+            if (!includeDeleted) {
+                filtered = filtered.filter(n => !(n as any).deleted_at)
+            }
+            
+            const data = filtered.map(mapFakeNotification).slice(0, limit)
+            const nextCursor = data.length === limit && filtered.length > limit
+                ? { created_at: data[data.length - 1].created_at, id: data[data.length - 1].id }
+                : null
+            
             debug.perf.end('messagesService.getNotifications')
-            debug.data('MessagesService.getNotifications', 'Response (fake)', { userId: context.userId, notificationCount: sliced.length })
+            debug.data('MessagesService.getNotifications', 'Response (fake)', { userId: context.userId, notificationCount: data.length, nextCursor })
             console.groupEnd()
-            return { data: sliced, error: null }
+            return { data, error: null, nextCursor }
         }
+        
         let query = supabase
             .from('user_notifications')
             .select('*')
             .eq('user_id', context.userId)
             .order('created_at', { ascending: false })
+            .order('id', { ascending: false })
 
-        if (limit) {
-            query = query.limit(limit)
+        // Exclude deleted unless explicitly included
+        if (!includeDeleted) {
+            query = query.is('deleted_at', null)
         }
+
+        // Apply cursor-based pagination
+        // Cursor pagination: get records where created_at < cursor.created_at OR (created_at = cursor.created_at AND id < cursor.id)
+        if (cursor) {
+            // Use PostgREST filter syntax for cursor pagination
+            // URL encode cursor values to handle special characters
+            const createdAt = encodeURIComponent(cursor.created_at)
+            const cursorId = encodeURIComponent(cursor.id)
+            // We need: (created_at < cursor.created_at) OR (created_at = cursor.created_at AND id < cursor.id)
+            query = query.or(`created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${cursorId})`)
+        }
+
+        // Limit results
+        query = query.limit(limit + 1) // Fetch one extra to determine if there's more
 
         const { data, error } = await query
 
@@ -1448,16 +1578,29 @@ export async function getNotifications(
             // If table doesn't exist (404), return empty array instead of error
             if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
                 console.warn('[getNotifications] user_notifications table not found, returning empty array')
-                return { data: [], error: null }
+                return { data: [], error: null, nextCursor: null }
             }
             throw error
         }
 
         const records = (data ?? []).map(mapDbNotification)
+        
+        // Filter archived if not included (client-side since RLS might not filter it)
+        const filtered = includeArchived 
+            ? records 
+            : records.filter(r => !r.archived_at)
+        
+        // Determine next cursor
+        const hasMore = filtered.length > limit
+        const result = hasMore ? filtered.slice(0, limit) : filtered
+        const nextCursor = hasMore && result.length > 0
+            ? { created_at: result[result.length - 1].created_at, id: result[result.length - 1].id }
+            : null
+
         debug.perf.end('messagesService.getNotifications')
-        debug.data('MessagesService.getNotifications', 'Response', { userId: context.userId, notificationCount: records.length })
+        debug.data('MessagesService.getNotifications', 'Response', { userId: context.userId, notificationCount: result.length, nextCursor })
         console.groupEnd()
-        return { data: records, error: null }
+        return { data: result, error: null, nextCursor }
     } catch (err) {
         debug.perf.end('messagesService.getNotifications')
         // Handle PostgrestError with code PGRST116 (relation does not exist)
@@ -1465,11 +1608,11 @@ export async function getNotifications(
             debug.data('MessagesService.getNotifications', 'Response (table not found)', { userId: context.userId })
             console.groupEnd()
             console.warn('[getNotifications] user_notifications table not found, returning empty array')
-            return { data: [], error: null }
+            return { data: [], error: null, nextCursor: null }
         }
         debug.error('MessagesService.getNotifications', 'Failed to get notifications', { error: err, userId: context.userId })
         console.groupEnd()
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: [], error: err instanceof Error ? err : new Error('Unknown error'), nextCursor: null }
     }
 }
 
@@ -1516,6 +1659,31 @@ export async function getUnreadCount(
     }
 }
 
+// Helper function for auto-retry with exponential backoff
+async function retryOperation<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000
+): Promise<T> {
+    let lastError: Error | null = null
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            return await operation()
+        } catch (err) {
+            lastError = err instanceof Error ? err : new Error('Unknown error')
+            // Don't retry on certain errors (e.g., validation errors)
+            if (lastError.message.includes('permission') || lastError.message.includes('not found')) {
+                throw lastError
+            }
+            if (attempt < maxRetries - 1) {
+                const delay = baseDelay * Math.pow(2, attempt)
+                await new Promise(resolve => setTimeout(resolve, delay))
+            }
+        }
+    }
+    throw lastError || new Error('Operation failed after retries')
+}
+
 export async function markNotificationRead(
     context: UserContext,
     notificationId: string
@@ -1529,15 +1697,20 @@ export async function markNotificationRead(
             debug.flow('MessagesService.markNotificationRead', 'Notification marked as read (fake)', { notificationId })
             return { success: true, error: null }
         }
-        type NotificationUpdate = Database['public']['Tables']['user_notifications']['Update']
-        const updateData = { read_at: new Date().toISOString() } satisfies NotificationUpdate
-        const { error } = await supabase
-            .from('user_notifications')
-            .update(updateData)
-            .eq('id', notificationId)
-            .eq('user_id', context.userId)
+        
+        const result = await retryOperation(async () => {
+            type NotificationUpdate = Database['public']['Tables']['user_notifications']['Update']
+            const updateData = { read_at: new Date().toISOString() } satisfies NotificationUpdate
+            const { error } = await supabase
+                .from('user_notifications')
+                .update(updateData)
+                .eq('id', notificationId)
+                .eq('user_id', context.userId)
+                .is('deleted_at', null) // Don't update deleted notifications
 
-        if (error) throw error
+            if (error) throw error
+            return true
+        })
         
         // Log read event metrics
         const { data: notification } = await supabase
@@ -1555,7 +1728,7 @@ export async function markNotificationRead(
             ? Math.round((Date.now() - new Date(notification.created_at).getTime()) / 1000)
             : null,
         })
-        return { success: true, error: null }
+        return { success: result, error: null }
     } catch (err) {
         debug.perf.end('messagesService.markNotificationRead')
         debug.error('MessagesService.markNotificationRead', 'Failed to mark notification as read', { error: err, notificationId })
@@ -1577,15 +1750,20 @@ export async function markAllNotificationsRead(
             console.groupEnd()
             return { success: true, error: null }
         }
-        type NotificationUpdate = Database['public']['Tables']['user_notifications']['Update']
-        const updateData = { read_at: new Date().toISOString() } satisfies NotificationUpdate
-        const { error } = await supabase
-            .from('user_notifications')
-            .update(updateData)
-            .eq('user_id', context.userId)
-            .is('read_at', null)
+        
+        const result = await retryOperation(async () => {
+            type NotificationUpdate = Database['public']['Tables']['user_notifications']['Update']
+            const updateData = { read_at: new Date().toISOString() } satisfies NotificationUpdate
+            const { error } = await supabase
+                .from('user_notifications')
+                .update(updateData)
+                .eq('user_id', context.userId)
+                .is('read_at', null)
+                .is('deleted_at', null) // Don't update deleted notifications
 
-        if (error) throw error
+            if (error) throw error
+            return true
+        })
         
         // Log read event metrics
         const { count } = await supabase
@@ -1593,6 +1771,7 @@ export async function markAllNotificationsRead(
           .select('*', { count: 'exact', head: true })
           .eq('user_id', context.userId)
           .not('read_at', 'is', null)
+          .is('deleted_at', null)
         
         debug.perf.end('messagesService.markAllNotificationsRead')
         debug.flow('MessagesService.markAllNotificationsRead', 'All notifications marked as read successfully', {
@@ -1600,11 +1779,89 @@ export async function markAllNotificationsRead(
           totalReadCount: count || 0,
         })
         console.groupEnd()
-        return { success: true, error: null }
+        return { success: result, error: null }
     } catch (err) {
         debug.perf.end('messagesService.markAllNotificationsRead')
         debug.error('MessagesService.markAllNotificationsRead', 'Failed to mark all notifications as read', { error: err, userId: context.userId })
         console.groupEnd()
+        return { success: false, error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
+// Archive a notification
+export async function archiveNotification(
+    context: UserContext,
+    notificationId: string
+): Promise<{ success: boolean; error: Error | null }> {
+    debug.flow('MessagesService.archiveNotification', 'Archiving notification', { notificationId, userId: context.userId })
+    debug.perf.start('messagesService.archiveNotification')
+
+    try {
+        if (USE_FAKE_DATA) {
+            debug.perf.end('messagesService.archiveNotification')
+            debug.flow('MessagesService.archiveNotification', 'Notification archived (fake)', { notificationId })
+            return { success: true, error: null }
+        }
+        
+        const result = await retryOperation(async () => {
+            type NotificationUpdate = Database['public']['Tables']['user_notifications']['Update']
+            const updateData = { archived_at: new Date().toISOString() } as NotificationUpdate
+            const { error } = await supabase
+                .from('user_notifications')
+                .update(updateData)
+                .eq('id', notificationId)
+                .eq('user_id', context.userId)
+                .is('deleted_at', null)
+
+            if (error) throw error
+            return true
+        })
+        
+        debug.perf.end('messagesService.archiveNotification')
+        debug.flow('MessagesService.archiveNotification', 'Notification archived successfully', { notificationId })
+        return { success: result, error: null }
+    } catch (err) {
+        debug.perf.end('messagesService.archiveNotification')
+        debug.error('MessagesService.archiveNotification', 'Failed to archive notification', { error: err, notificationId })
+        return { success: false, error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
+// Soft delete a notification
+export async function deleteNotification(
+    context: UserContext,
+    notificationId: string
+): Promise<{ success: boolean; error: Error | null }> {
+    debug.flow('MessagesService.deleteNotification', 'Soft deleting notification', { notificationId, userId: context.userId })
+    debug.perf.start('messagesService.deleteNotification')
+
+    try {
+        if (USE_FAKE_DATA) {
+            debug.perf.end('messagesService.deleteNotification')
+            debug.flow('MessagesService.deleteNotification', 'Notification deleted (fake)', { notificationId })
+            return { success: true, error: null }
+        }
+        
+        const result = await retryOperation(async () => {
+            type NotificationUpdate = Database['public']['Tables']['user_notifications']['Update']
+            const updateData = { deleted_at: new Date().toISOString() } as NotificationUpdate
+            const { error } = await supabase
+                .from('user_notifications')
+                .update(updateData)
+                .eq('id', notificationId)
+                .eq('user_id', context.userId)
+                .is('deleted_at', null) // Only delete if not already deleted
+
+            if (error) throw error
+            return true
+        })
+        
+        debug.perf.end('messagesService.deleteNotification')
+        debug.flow('MessagesService.deleteNotification', 'Notification deleted successfully', { notificationId })
+        return { success: result, error: null }
+    } catch (err) {
+        debug.perf.end('messagesService.deleteNotification')
+        debug.error('MessagesService.deleteNotification', 'Failed to delete notification', { error: err, notificationId })
         return { success: false, error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }
