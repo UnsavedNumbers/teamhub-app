@@ -638,11 +638,6 @@ export default function TicketScanner() {
                     type="text"
                     value={entryCode}
                     onChange={(e) => handleCodeChange(e.target.value)}
-                    onBlur={() => {
-                      if (scannerMode === 'physical' && !isValidating && !isOffline) {
-                        window.setTimeout(() => inputRef.current?.focus(), 0)
-                      }
-                    }}
                     placeholder={t('ticketing.scanner.entryCodePlaceholder')}
                     className="oa-flex-1 oa-text-xl sm:oa-text-2xl oa-font-mono oa-text-center oa-px-3 sm:oa-px-4 oa-py-4 oa-border-2 oa-rounded-lg oa-bg-[var(--pa-surface)] oa-text-[var(--pa-text-primary)] oa-uppercase oa-tracking-wider oa-min-h-[56px] oa-transition-all oa-input"
                     style={{

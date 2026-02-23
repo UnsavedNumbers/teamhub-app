@@ -21,7 +21,7 @@ import type { NavSection } from '@/types/menu'
 import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import { shouldShowUpgradePrompt, getReasonIcon } from '@/lib/featureGate'
+import { getReasonIcon } from '@/lib/featureGate'
 import { hasAnyRole } from '@/utils/roleHelpers'
 
 function SubOrgBanner({ parentOrgId }: { parentOrgId: string }) {

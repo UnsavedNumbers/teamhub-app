@@ -424,6 +424,12 @@ verify_jwt = false
 [functions.stripe-verify-price]
 verify_jwt = false
 
+[functions.billing-create-checkout-session]
+verify_jwt = false
+
+[functions.billing-customer-portal]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

@@ -5,8 +5,9 @@
  * Uses org admin CSS classes and respects org theme colors.
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
 import { useAuth } from '../../hooks/useAuth'
@@ -16,58 +17,17 @@ import { hasAnyRole } from '../../utils/roleHelpers'
 import { LicensePlan } from '../../utils/licenseUtils'
 import { t } from '../../i18n'
 import { getLink, RouteKeys } from '../../utils/routes'
+import { getActiveTiers } from '../../data/services/licenseTiersService'
 
 interface PlanCard {
   id: LicensePlan
+  tierId: string
+  tierKey: string
   name: string
   price: string
   description: string
   features: string[]
 }
-
-const planCards: PlanCard[] = [
-  { 
-    id: 'starter', 
-    name: t('plans.starter.name'), 
-    price: t('plans.starter.price'), 
-    description: t('plans.starter.description'), 
-    features: [
-      t('plans.features.scheduling'), 
-      t('plans.features.rosters'), 
-      t('plans.features.messaging')
-    ] 
-  },
-  { 
-    id: 'standard', 
-    name: t('plans.standard.name'), 
-    price: t('plans.standard.price'), 
-    description: t('plans.standard.description'), 
-    features: [
-      t('plans.features.scheduling'), 
-      t('plans.features.rosters'), 
-      t('plans.features.messaging'), 
-      t('plans.features.payments'), 
-      t('plans.features.uniforms')
-    ] 
-  },
-  { 
-    id: 'pro', 
-    name: t('plans.pro.name'), 
-    price: t('plans.pro.price'), 
-    description: t('plans.pro.description'), 
-    features: [
-      t('plans.features.scheduling'), 
-      t('plans.features.rosters'), 
-      t('plans.features.messaging'), 
-      t('plans.features.payments'), 
-      t('plans.features.uniforms'), 
-      t('plans.features.travel'), 
-      t('plans.features.tryouts'), 
-      t('plans.features.reporting'), 
-      t('plans.features.support')
-    ] 
-  },
-]
 
 export default function FeatureUpgradePaywallContent() {
   const [searchParams] = useSearchParams()
@@ -75,11 +35,109 @@ export default function FeatureUpgradePaywallContent() {
   const { currentOrganization } = useOrganization()
   const { setLoading } = useLoadingState()
   const orgId = currentOrganization?.id
-  const { loading: licenseLoading, error: licenseError } = useLicense(orgId)
+  const { loading: licenseLoading, error: licenseError, summary } = useLicense(orgId)
   const hasSetLoadingRef = useRef(false)
 
   const isAdmin = currentOrganization ? hasAnyRole(currentOrganization, ['org_admin']) : false
   const isPlatformAdmin = useAuth().profile?.isPlatformAdmin ?? false
+
+  // Fetch active tiers
+  const { data: tiers, isLoading: tiersLoading } = useQuery({
+    queryKey: ['active-tiers'],
+    queryFn: () => getActiveTiers(),
+  })
+
+  // Map tier_key to LicensePlan for backward compatibility
+  const tierKeyToPlanId = (tierKey: string): LicensePlan => {
+    if (tierKey === 'tier1') return 'starter'
+    if (tierKey === 'tier2') return 'standard'
+    if (tierKey === 'tier3') return 'pro'
+    return 'starter' // fallback
+  }
+
+  // Convert tiers to plan cards
+  const planCards: PlanCard[] = useMemo(() => {
+    if (!tiers || tiers.length === 0) return []
+    
+    return tiers.map(tier => {
+      const planId = tierKeyToPlanId(tier.tier_key)
+      const baseFeatures = [
+        t('plans.features.scheduling'), 
+        t('plans.features.rosters'), 
+        t('plans.features.messaging')
+      ]
+      
+      let features = [...baseFeatures]
+      if (tier.tier_key === 'tier2' || tier.tier_key === 'tier3') {
+        features.push(t('plans.features.payments'), t('plans.features.uniforms'))
+      }
+      if (tier.tier_key === 'tier3') {
+        features.push(
+          t('plans.features.travel'), 
+          t('plans.features.tryouts'), 
+          t('plans.features.reporting'), 
+          t('plans.features.support')
+        )
+      }
+
+      // Format price
+      const price = tier.stripe_amount_cents 
+        ? `$${(tier.stripe_amount_cents / 100).toLocaleString()}/${tier.stripe_interval === 'year' ? 'yr' : 'mo'}`
+        : t('plans.starter.price') // fallback
+
+      return {
+        id: planId,
+        tierId: tier.id,
+        tierKey: tier.tier_key,
+        name: tier.tier_name,
+        price,
+        description: tier.description || '',
+        features,
+      }
+    })
+  }, [tiers])
+
+  // Determine current tier level to filter out downgrades
+  const getCurrentTierLevel = (): number | null => {
+    if (!summary?.tierName && !summary?.plan && !summary?.tierId) return null
+    
+    // Try to match by tier ID first
+    if (summary.tierId && tiers) {
+      const currentTier = tiers.find(t => t.id === summary.tierId)
+      if (currentTier) {
+        if (currentTier.tier_key === 'tier1') return 1
+        if (currentTier.tier_key === 'tier2') return 2
+        if (currentTier.tier_key === 'tier3') return 3
+      }
+    }
+    
+    // Fallback to tier name matching
+    const tierName = summary.tierName?.toLowerCase() || ''
+    const plan = summary.plan?.toLowerCase() || ''
+    
+    if (tierName.includes('starter') || plan === 'starter') return 1
+    if (tierName.includes('growth') || plan === 'standard') return 2
+    if (tierName.includes('professional') || plan === 'pro') return 3
+    
+    return null
+  }
+
+  const currentTierLevel = getCurrentTierLevel()
+  
+  // Map tier keys to tier levels
+  const tierKeyToLevel = (tierKey: string): number => {
+    if (tierKey === 'tier1') return 1
+    if (tierKey === 'tier2') return 2
+    if (tierKey === 'tier3') return 3
+    return 1 // fallback
+  }
+
+  // Filter out downgrades and current tier - only show upgrades (higher tiers)
+  const filteredUpgrades = currentTierLevel 
+    ? planCards.filter(plan => tierKeyToLevel(plan.tierKey) > currentTierLevel)
+    : planCards
+  // If filtering leaves nothing (already on highest tier or no tier data), show all
+  const availablePlans = filteredUpgrades.length > 0 ? filteredUpgrades : planCards
 
   const successUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS)}`
   const cancelUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL)}`
@@ -94,14 +152,14 @@ export default function FeatureUpgradePaywallContent() {
 
   // Handle loading state
   useEffect(() => {
-    if (licenseLoading && !hasSetLoadingRef.current) {
+    if ((licenseLoading || tiersLoading) && !hasSetLoadingRef.current) {
       setLoading(true)
       hasSetLoadingRef.current = true
-    } else if (!licenseLoading && hasSetLoadingRef.current) {
+    } else if (!licenseLoading && !tiersLoading && hasSetLoadingRef.current) {
       setLoading(false)
       hasSetLoadingRef.current = false
     }
-  }, [licenseLoading, setLoading])
+  }, [licenseLoading, tiersLoading, setLoading])
 
   // Cleanup loading state on unmount
   useEffect(() => {
@@ -134,7 +192,7 @@ export default function FeatureUpgradePaywallContent() {
     )
   }
 
-  if (licenseLoading) {
+  if (licenseLoading || tiersLoading) {
     return null
   }
 
@@ -310,8 +368,8 @@ export default function FeatureUpgradePaywallContent() {
           <h3 className="oa-h3 oa-text-center oa-mb-8" style={{ textTransform: 'uppercase', letterSpacing: '-0.01em' }}>
             {getFeatureTranslation('planSelectionTitle', 'planSelectionTitle')}
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
-            {planCards.map(plan => (
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${availablePlans.length}, 1fr)`, gap: '24px' }}>
+            {availablePlans.map(plan => (
               <div
                 key={plan.id}
                 className="oa-card"
@@ -335,18 +393,18 @@ export default function FeatureUpgradePaywallContent() {
                   ))}
                 </div>
                 <button
-                  onClick={() => handleSelect(plan.id)}
+                  onClick={() => handleSelect(plan.tierId)}
                   disabled={!!loadingTierId}
                   className="oa-btn oa-btn--primary"
                   style={{
                     fontWeight: 900,
                     textTransform: 'uppercase',
                     letterSpacing: '-0.01em',
-                    opacity: loadingTierId === plan.id ? 0.5 : 1,
-                    cursor: loadingTierId === plan.id ? 'not-allowed' : 'pointer',
+                    opacity: loadingTierId === plan.tierId ? 0.5 : 1,
+                    cursor: loadingTierId === plan.tierId ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {loadingTierId === plan.id ? t('common.loading') : t('billing.continueToCheckout')}
+                  {loadingTierId === plan.tierId ? t('common.loading') : t('billing.continueToCheckout')}
                 </button>
               </div>
             ))}

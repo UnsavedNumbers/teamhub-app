@@ -5,13 +5,13 @@ import { useOrganizationSports } from '../../hooks/useOrganizationSports'
 import { useT } from '../../i18n/useI18n'
 import { getAllUniformSubmissions, type UniformSubmission } from '../../data/services/uniformsService'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
-import { 
-  AdminPageHeader, 
-  Card, 
+import {
+  AdminPageHeader,
+  Card,
   Badge,
   Button,
   OrgDataTable,
-  type ColumnConfig
+  type ColumnConfig,
 } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'

@@ -59,7 +59,7 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
       // Create a fake active license for demo organizations
       const fakeSummary: LicenseSummary = {
         status: 'active',
-        plan: 'pro',
+        plan: 'standard',
         currentPeriodStart: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
         currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
         trialEndsAt: null,
@@ -68,7 +68,8 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
         stripeCustomerId: null,
         stripeSubscriptionId: null,
         stripePriceId: null,
-        tierName: 'Pro (Demo)',
+        tierId: 'fake-tier-2',
+        tierName: 'Growth',
         isTrial: false,
         isGracePeriod: false,
         isValid: true,

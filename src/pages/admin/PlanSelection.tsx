@@ -59,6 +59,49 @@ export default function PlanSelection() {
     fetchTiers()
   }, [])
 
+  // Determine current tier level to filter out downgrades
+  const getCurrentTierLevel = (): number | null => {
+    if (!licenseSummary?.tierName && !licenseSummary?.plan && !licenseSummary?.tierId) return null
+
+    // Try to match by tier ID first
+    if (licenseSummary.tierId && tiers) {
+      const currentTier = tiers.find(t => t.id === licenseSummary.tierId)
+      if (currentTier) {
+        if (currentTier.tier_key === 'tier1') return 1
+        if (currentTier.tier_key === 'tier2') return 2
+        if (currentTier.tier_key === 'tier3') return 3
+      }
+    }
+
+    // Fallback to tier name matching
+    const tierName = licenseSummary.tierName?.toLowerCase() || ''
+    const plan = licenseSummary.plan?.toLowerCase() || ''
+
+    if (tierName.includes('starter') || plan === 'starter') return 1
+    if (tierName.includes('growth') || plan === 'standard') return 2
+    if (tierName.includes('professional') || plan === 'pro') return 3
+
+    return null
+  }
+
+  const currentTierLevel = getCurrentTierLevel()
+
+  // Map tier keys to tier levels
+  const tierKeyToLevel = (tierKey: string): number => {
+    if (tierKey === 'tier1') return 1
+    if (tierKey === 'tier2') return 2
+    if (tierKey === 'tier3') return 3
+    return 1 // fallback
+  }
+
+  // Filter out downgrades and current tier - only show upgrades (higher tiers)
+  const filteredUpgrades = currentTierLevel
+    ? tiers.filter(tier => tierKeyToLevel(tier.tier_key) > currentTierLevel)
+    : tiers
+
+  // Show success message if user is on highest tier (no upgrades available)
+  const showHighestTierMessage = currentTierLevel !== null && filteredUpgrades.length === 0
+
   // Format price for display
   const formatPrice = (tier: LicenseTier): string => {
     if (!tier.stripe_amount_cents) return 'Contact us'
@@ -123,14 +166,20 @@ export default function PlanSelection() {
         </div>
       )}
 
-      {tiers.length === 0 && !tiersLoading && (
-        <div className="oa-card oa-mb-4" style={{ background: 'var(--oa-warning-bg)', border: 'none' }}>
-          {t('billing.noTiersAvailable')}
+      {showHighestTierMessage && (
+        <div className="oa-card oa-mb-4" style={{ background: 'var(--oa-success-bg)', border: 'none' }}>
+          <div className="oa-flex oa-items-center oa-gap-3">
+            <span className="material-symbols-outlined oa-text-success" style={{ fontSize: '24px' }}>check_circle</span>
+            <div>
+              <div className="oa-body-l oa-font-semibold">You're on the highest tier!</div>
+              <div className="oa-body-s oa-text-muted">No upgrade options are currently available.</div>
+            </div>
+          </div>
         </div>
       )}
 
       <div className="oa-grid oa-grid-3 oa-gap-6">
-        {tiers.map(tier => {
+        {filteredUpgrades.map(tier => {
           const isCurrent = currentTierId === tier.id
           return (
             <Card key={tier.id} style={{ borderColor: isCurrent ? 'var(--oa-n900)' : 'transparent', borderWidth: isCurrent ? '2px' : '1px' }}>
