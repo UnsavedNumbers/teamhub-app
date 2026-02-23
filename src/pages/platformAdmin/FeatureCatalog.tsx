@@ -289,12 +289,14 @@ export default function FeatureCatalog() {
 
   // Fetch features with enhanced filters
   const { data: featuresData, isLoading: loading, error: fetchError } = useQuery({
-    queryKey: ['feature-catalog', page, rowsPerPage, debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, hierarchyFilter, tierExclusiveMode, roleExclusiveMode],
+    queryKey: ['feature-catalog', page, rowsPerPage, debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, hierarchyFilter, addonFilter, tierExclusiveMode, roleExclusiveMode],
     queryFn: async () => {
       let query = supabase
         .from('admin_feature_entitlements_list')
         .select('*', { count: 'exact' })
         .is('archived_at', null)
+        // Filter out excluded features at database level (handle both false and null)
+        .or('excluded_from_discovery.is.null,excluded_from_discovery.eq.false')
 
       // Search (use debounced value, require at least 2 characters for search)
       if (debouncedSearch && debouncedSearch.length >= 2) {
@@ -434,8 +436,11 @@ export default function FeatureCatalog() {
         integrations: normalizeArrayField(row.integrations) || [],
       })) as FeatureEntitlementWithCounts[]
 
-      // Filter out excluded features (temporary until view is updated)
-      const filtered = normalized.filter(f => !(f as any).excluded_from_discovery)
+      // Filter out excluded features (backup filter in case view doesn't have the column)
+      const filtered = normalized.filter(f => {
+        const excluded = (f as any).excluded_from_discovery
+        return excluded !== true && excluded !== 'true'
+      })
       const filteredCount = count ? count - (normalized.length - filtered.length) : filtered.length
 
       return { features: filtered, totalCount: filteredCount }
@@ -443,12 +448,34 @@ export default function FeatureCatalog() {
     staleTime: 2 * 60 * 1000, // 2 minutes
   })
 
-  const features = featuresData?.features || []
+  // Memoize features to prevent unnecessary re-renders
+  // Use a stable reference by checking if featuresData exists
+  const features = useMemo(() => {
+    if (!featuresData?.features) return []
+    return featuresData.features
+  }, [featuresData])
   const totalCount = featuresData?.totalCount || 0
 
-  // Auto-expand all parents by default when features load
+  // Track if we've initialized expanded parents to prevent infinite loops
+  const hasInitializedExpandedParents = useRef(false)
+  const prevFeatureKeysRef = useRef<string>('')
+
+  // Auto-expand all parents by default when features load (only once per data load)
   useEffect(() => {
-    if (features.length > 0) {
+    if (features.length === 0) {
+      // Reset flag if features are cleared
+      if (hasInitializedExpandedParents.current) {
+        hasInitializedExpandedParents.current = false
+        prevFeatureKeysRef.current = ''
+      }
+      return
+    }
+
+    // Create a stable key from feature keys to detect actual data changes
+    const currentFeatureKeys = features.map(f => f.feature_key).sort().join(',')
+    
+    // Only run if feature keys actually changed (new data loaded)
+    if (currentFeatureKeys !== prevFeatureKeysRef.current) {
       const parentKeys = new Set<string>()
       features.forEach(f => {
         if (!(f as any).parent_feature_key) {
@@ -459,14 +486,22 @@ export default function FeatureCatalog() {
           }
         }
       })
-      // Only update if there are new parents to expand (avoid infinite loops)
+      
+      // Only update state if there are actually changes
       setExpandedParents(prev => {
-        const allPresent = Array.from(parentKeys).every(key => prev.has(key))
-        if (allPresent && prev.size === parentKeys.size) {
-          return prev // No change needed
+        const prevKeysArray = Array.from(prev).sort()
+        const newKeysArray = Array.from(parentKeys).sort()
+        const keysChanged = prevKeysArray.length !== newKeysArray.length || 
+                           prevKeysArray.some((key, i) => key !== newKeysArray[i])
+        
+        if (!keysChanged) {
+          return prev // No change needed, return same reference
         }
         return parentKeys // Expand all parents by default
       })
+      
+      prevFeatureKeysRef.current = currentFeatureKeys
+      hasInitializedExpandedParents.current = true
     }
   }, [features])
 
@@ -480,21 +515,31 @@ export default function FeatureCatalog() {
 
   // Auto-filter selections when results change
   const prevSelectionCountRef = useRef(0)
+  const prevFeatureIdsRef = useRef<Set<string>>(new Set())
+  
   useEffect(() => {
     const currentIds = new Set(features.map(f => f.id))
-    setSelectedFeatureIds(prev => {
-      const filtered = new Set([...prev].filter(id => currentIds.has(id)))
-      const afterCount = filtered.size
+    const currentIdsString = Array.from(currentIds).sort().join(',')
+    const prevIdsString = Array.from(prevFeatureIdsRef.current).sort().join(',')
+    
+    // Only update if the feature IDs actually changed
+    if (currentIdsString !== prevIdsString) {
+      prevFeatureIdsRef.current = currentIds
       
-      // Track count change for filter notification
-      prevSelectionCountRef.current = afterCount
-      
-      // Clear select-all mode if selections no longer match
-      if (selectAllMode === 'page' && filtered.size !== features.length) {
-        setSelectAllMode('none')
-      }
-      return filtered
-    })
+      setSelectedFeatureIds(prev => {
+        const filtered = new Set([...prev].filter(id => currentIds.has(id)))
+        const afterCount = filtered.size
+        
+        // Track count change for filter notification
+        prevSelectionCountRef.current = afterCount
+        
+        // Clear select-all mode if selections no longer match
+        if (selectAllMode === 'page' && filtered.size !== features.length) {
+          setSelectAllMode('none')
+        }
+        return filtered
+      })
+    }
   }, [features, selectAllMode])
 
   // Track filter changes and notify user when selections are removed

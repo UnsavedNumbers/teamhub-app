@@ -6,6 +6,11 @@ import { useTeamParams } from '../../hooks/useRouteParams'
 import { getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
+import { isBelowMinimumRosterSize } from '../../utils/rosterValidation'
+import { useFeatureGate } from '../../lib/featureGate/useFeatureGate'
+import { useT } from '../../i18n/useI18n'
+import { useOffline } from '../../hooks/useOffline'
+import { showSuccess, showError } from '../../utils/toast'
 import '../../styles/orgAdmin.css'
 import { 
   AdminPageHeader,
@@ -14,9 +19,12 @@ import {
   Select, 
   ConfirmDialog,
   OrgDataTable,
+  EmptyState,
   type ColumnConfig
 } from '../../components/admin'
+import { TransferPlayerModal } from '../../components/admin/TransferPlayerModal'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+import type { Team } from '../../data/types/organization'
 
 interface Season {
   id: string
@@ -39,14 +47,24 @@ export default function Roster() {
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [playerToRemove, setPlayerToRemove] = useState<string | null>(null)
+  const [playerToTransfer, setPlayerToTransfer] = useState<{
+    membershipId: string
+    athleteId: string
+    athleteName: string
+  } | null>(null)
   const [teamInfo, setTeamInfo] = useState<{
     name: string
     sport?: { name: string; id?: string; slug?: string }
     program?: { name: string; id?: string }
     level?: { name: string; id?: string }
+    min_roster_size?: number | null
+    max_roster_size?: number | null
   } | null>(null)
 
   const { context, isReady } = useUserContext()
+  const { isOffline } = useOffline()
+  const transferFeatureGate = useFeatureGate('player_transfer')
+  const t = useT()
 
   const fetchRoster = useCallback(async (seasonId: string) => {
     if (!teamId || !isReady || !seasonId) {
@@ -178,12 +196,15 @@ export default function Roster() {
       return
     }
 
-    // Store team info for breadcrumbs
+    // Store team info for breadcrumbs and roster size limits
+    const team = data as Team
     setTeamInfo({
-      name: data.name,
-      sport: (data as any).sport,
-      program: (data as any).program,
-      level: (data as any).level,
+      name: team.name,
+      sport: (team as any).sport,
+      program: (team as any).program,
+      level: (team as any).level,
+      min_roster_size: team.min_roster_size,
+      max_roster_size: team.max_roster_size,
     })
 
     let seasonList: Season[] = []
@@ -229,20 +250,23 @@ export default function Roster() {
   }
 
   async function handleConfirmRemovePlayer() {
-    if (!playerToRemove) return
+    if (!playerToRemove || isOffline) return
     
     try {
-      // Update team membership status to inactive
+      // Soft delete team membership to preserve history
       const { error } = await supabase
         .from('team_memberships')
-        .update({ status: 'removed' })
+        .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq('id', playerToRemove)
 
       if (error) {
         console.error('Error removing player:', error)
-        // Still remove from UI on error for better UX
+        showError(error.message || t('admin.roster.removePlayerError') || 'Failed to remove player')
+        return
       }
 
+      showSuccess(t('admin.roster.removePlayerSuccess') || 'Player removed successfully')
+      
       // Remove from local state
       setRoster(prev => prev.filter(m => m.id !== playerToRemove))
       
@@ -252,6 +276,7 @@ export default function Roster() {
       }
     } catch (error) {
       console.error('Error removing player:', error)
+      showError(error instanceof Error ? error.message : 'An unexpected error occurred')
     } finally {
       setPlayerToRemove(null)
     }
@@ -265,12 +290,39 @@ export default function Roster() {
       label: 'Actions', 
       align: 'right',
       render: (row) => (
-        <Button
-          variant="danger"
-          size="dense"
-          icon="delete"
-          onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleRemovePlayerClick(row.id); }}
-        />
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+          <Button
+            variant="secondary"
+            size="dense"
+            icon="swap_horiz"
+            onClick={(e: React.MouseEvent) => { 
+              e.stopPropagation()
+              if (transferFeatureGate.allowed && !isOffline) {
+                setPlayerToTransfer({
+                  membershipId: row.id,
+                  athleteId: row.athlete_id,
+                  athleteName: row.child_name || 'Unknown Player',
+                })
+              }
+            }}
+            disabled={!transferFeatureGate.allowed || isOffline}
+            title={
+              !transferFeatureGate.allowed 
+                ? 'Player transfer is not available for your organization'
+                : isOffline
+                ? 'Cannot transfer player while offline'
+                : t('admin.roster.transferPlayer')
+            }
+          />
+          <Button
+            variant="danger"
+            size="dense"
+            icon="delete"
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleRemovePlayerClick(row.id); }}
+            disabled={isOffline}
+            title={isOffline ? 'Cannot remove player while offline' : t('admin.roster.removePlayer')}
+          />
+        </div>
       )
     }
   ]
@@ -338,17 +390,64 @@ export default function Roster() {
         />
       </Card>
 
-      <OrgDataTable
-        columns={columns}
-        rows={roster}
-        loading={loading}
-        totalCount={roster.length}
-        page={0}
-        rowsPerPage={100}
-        onPageChange={() => {}}
-        onRowsPerPageChange={() => {}}
-        emptyMessage={selectedSeason ? "No players on roster for this season." : "Select a season to view the roster."}
-      />
+      {/* Minimum Roster Size Warning */}
+      {teamInfo?.min_roster_size && teamInfo.min_roster_size > 0 && isBelowMinimumRosterSize(roster.length, teamInfo.min_roster_size) && (
+        <Card className="oa-mb-4" style={{
+          background: 'var(--oa-warning-bg, #fffbeb)',
+          borderLeft: '4px solid var(--oa-warning, #f59e0b)',
+        }}>
+          <div style={{ padding: 'var(--oa-space-4)', display: 'flex', alignItems: 'flex-start', gap: 'var(--oa-space-3)' }}>
+            <span className="material-symbols-outlined" style={{ color: 'var(--oa-warning, #f59e0b)', fontSize: '20px', flexShrink: 0, marginTop: '2px' }}>
+              warning
+            </span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, marginBottom: '4px', color: 'var(--oa-text, #1e293b)' }}>
+                {t('admin.roster.belowMinimumWarning')}
+              </div>
+              <div style={{ fontSize: '14px', color: 'var(--oa-text-muted, #64748b)' }}>
+                {t('admin.roster.belowMinimumMessage', { 
+                  currentCount: roster.length, 
+                  minSize: teamInfo.min_roster_size 
+                })}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {loading ? (
+        <Card>
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <div className="oa-spinner" style={{ margin: '0 auto 1rem' }} />
+            <p className="oa-body-m oa-text-muted">{t('common.loading')}</p>
+          </div>
+        </Card>
+      ) : roster.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon="groups"
+            title={t('admin.roster.emptyTitle') || 'No Players on Roster'}
+            description={
+              selectedSeason 
+                ? (t('admin.roster.emptyDescription') || 'Add players to this team roster to get started.')
+                : (t('admin.roster.emptyDescriptionNoSeason') || 'Select a season to view the roster.')
+            }
+            noCard
+          />
+        </Card>
+      ) : (
+        <OrgDataTable
+          columns={columns}
+          rows={roster}
+          loading={false}
+          totalCount={roster.length}
+          page={0}
+          rowsPerPage={100}
+          onPageChange={() => {}}
+          onRowsPerPageChange={() => {}}
+          emptyMessage={t('admin.roster.emptyMessage') || 'No players on roster'}
+        />
+      )}
 
       {/* Basic modal replacement */}
       {showAddModal && (
@@ -375,13 +474,32 @@ export default function Roster() {
         </div>
       )}
 
+      {/* Transfer Player Modal */}
+      {playerToTransfer && context && (
+        <TransferPlayerModal
+          open={!!playerToTransfer}
+          athleteId={playerToTransfer.athleteId}
+          athleteName={playerToTransfer.athleteName}
+          fromTeamId={teamId}
+          fromTeamName={teamInfo?.name || 'Unknown Team'}
+          seasonId={selectedSeason}
+          orgId={context.orgId}
+          onClose={() => setPlayerToTransfer(null)}
+          onSuccess={() => {
+            if (selectedSeason) {
+              fetchRoster(selectedSeason)
+            }
+          }}
+        />
+      )}
+
       {/* Remove Player Confirmation Dialog */}
       <ConfirmDialog
         open={!!playerToRemove}
-        title="Remove Player"
-        description="Are you sure you want to remove this player from the roster?"
-        confirmLabel="Remove"
-        cancelLabel="Cancel"
+        title={t('admin.roster.removePlayer')}
+        description={t('admin.roster.removePlayerConfirm')}
+        confirmLabel={t('admin.roster.removePlayer')}
+        cancelLabel={t('common.cancel')}
         variant="danger"
         onConfirm={handleConfirmRemovePlayer}
         onCancel={() => setPlayerToRemove(null)}

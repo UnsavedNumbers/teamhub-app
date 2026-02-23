@@ -3687,6 +3687,78 @@ html.dark .oa-empty-text {
     user-select: none;
 }
 
+/* Radio Group - matches Checkbox styling with label on same line */
+.oa-radio-group-wrapper {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-3);
+    flex-wrap: wrap;
+}
+
+.oa-radio-group {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-4);
+    flex-wrap: wrap;
+}
+
+.oa-radio-option {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    cursor: pointer;
+    user-select: none;
+}
+
+.oa-radio-input {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    border-radius: 999px;
+    border: 1px solid var(--pa-n300);
+    background: var(--pa-surface);
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 220ms ease, background-color 220ms ease, box-shadow 220ms ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: inset 0 0 0 1px var(--pa-n200);
+}
+
+.oa-radio-input:hover:not(:disabled) {
+    border-color: var(--pa-n500);
+}
+
+.oa-radio-input:checked {
+    border-color: var(--org-btn-secondary-bg, var(--pa-secondary-600));
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.15);
+}
+
+.oa-radio-input:checked::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--org-btn-secondary-bg, var(--pa-secondary-600));
+    position: absolute;
+}
+
+.oa-radio-input:focus-visible {
+    outline: 3px solid var(--org-focus-ring, rgba(59, 130, 246, 0.45));
+    outline-offset: 2px;
+}
+
+.oa-radio-label {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--pa-text-primary);
+    cursor: pointer;
+    user-select: none;
+}
+
 /* Utility Classes for OrgDataTable */
 .oa-flex {
     display: flex;

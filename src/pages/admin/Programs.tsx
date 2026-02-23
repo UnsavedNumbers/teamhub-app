@@ -15,15 +15,19 @@ import { getSports, getPrograms, deleteProgram, getSportBySlug } from '../../dat
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Sport, Program, Level, Team } from '../../data/types/organization'
+import { getProgramStatus } from '../../utils/programStatus'
+import { getRegistrationStatus } from '../../utils/registrationStatus'
 import { AdminPageHeader, Select, ConfirmDialog, Button, Card, Badge, InlineNotice } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import { useI18n } from '../../i18n/useI18n'
 import './Programs.css'
 import '../../styles/orgAdmin.css'
 
 export default function Programs() {
   // Add lifecycle logging
   useDebugLifecycle('Programs')
+  const { t } = useI18n()
 
   const { context, isReady } = useUserContext()
   const { isOffline } = useOffline()
@@ -487,6 +491,46 @@ export default function Programs() {
                         >
                           {program.name}
                         </span>
+                        {program.is_public && (
+                          <Badge variant="info" className="oa-text-[10px] oa-px-2 oa-py-0.5">
+                            {t('admin.programs.details.visibilityPublic')}
+                          </Badge>
+                        )}
+                        {(() => {
+                          const status = getProgramStatus(program)
+                          const statusColors: Record<string, string> = {
+                            unpublished: 'var(--oa-n500)',
+                            upcoming: 'var(--oa-info)',
+                            live: 'var(--oa-success)',
+                            completed: 'var(--oa-n400)',
+                          }
+                          return (
+                            <Badge 
+                              variant="neutral" 
+                              className="oa-text-[10px] oa-px-2 oa-py-0.5 oa-uppercase"
+                              style={{ backgroundColor: statusColors[status] || statusColors.unpublished, color: 'white' }}
+                            >
+                              {status}
+                            </Badge>
+                          )
+                        })()}
+                        {program.registration_start_date && (() => {
+                          const regStatus = getRegistrationStatus(program)
+                          const regStatusColors: Record<string, string> = {
+                            opens_soon: 'var(--oa-warning)',
+                            accepting: 'var(--oa-success)',
+                            closed: 'var(--oa-n400)',
+                          }
+                          return (
+                            <Badge 
+                              variant="neutral" 
+                              className="oa-text-[10px] oa-px-2 oa-py-0.5 oa-uppercase"
+                              style={{ backgroundColor: regStatusColors[regStatus] || regStatusColors.accepting, color: 'white' }}
+                            >
+                              {regStatus.replace('_', ' ')}
+                            </Badge>
+                          )
+                        })()}
                       </div>
 
                       <div className="programs-meta">

@@ -429,6 +429,15 @@ export const fakePrograms: FakeProgram[] = [
         // Deprecated mapping
         age_min: 5,
         age_max: 14,
+        // New enhancement fields
+        is_public: true,
+        activity_start_date: getDateInCurrentYear(3, 1),
+        activity_end_date: getDateInCurrentYear(6, 30),
+        registration_start_date: getDateInCurrentYear(2, 1),
+        registration_end_date: getDateInCurrentYear(2, 28),
+        program_code: 'SOCCER-REC',
+        sponsor: null,
+        default_location_id: null,
     },
     {
         id: PROGRAM_SOCCER_COMP_ID,
@@ -442,6 +451,15 @@ export const fakePrograms: FakeProgram[] = [
         deleted_at: null,
         age_min: 8,
         age_max: 18,
+        // New enhancement fields
+        is_public: true,
+        activity_start_date: getDateInCurrentYear(9, 1),
+        activity_end_date: getDateInCurrentYear(12, 15),
+        registration_start_date: getDateInCurrentYear(8, 1),
+        registration_end_date: getDateInCurrentYear(8, 31),
+        program_code: 'SOCCER-COMP',
+        sponsor: 'Local Sports Foundation',
+        default_location_id: null,
     },
     {
         id: PROGRAM_BASKETBALL_REC_ID,
@@ -455,6 +473,15 @@ export const fakePrograms: FakeProgram[] = [
         deleted_at: null,
         age_min: 6,
         age_max: 14,
+        // New enhancement fields
+        is_public: false,
+        activity_start_date: getDateInCurrentYear(10, 1),
+        activity_end_date: getDateInCurrentYear(12, 20),
+        registration_start_date: getDateInCurrentYear(9, 1),
+        registration_end_date: getDateInCurrentYear(9, 30),
+        program_code: 'BBALL-REC',
+        sponsor: null,
+        default_location_id: null,
     },
     {
         id: PROGRAM_BASKETBALL_ELITE_ID,
@@ -468,6 +495,15 @@ export const fakePrograms: FakeProgram[] = [
         deleted_at: null,
         age_min: 10,
         age_max: 18,
+        // New enhancement fields
+        is_public: true,
+        activity_start_date: getDateInCurrentYear(11, 1),
+        activity_end_date: getDateInCurrentYear(2, 28),
+        registration_start_date: getDateInCurrentYear(10, 1),
+        registration_end_date: getDateInCurrentYear(10, 31),
+        program_code: 'BBALL-ELITE',
+        sponsor: 'Elite Sports Academy',
+        default_location_id: null,
     },
 ]
 

@@ -1355,7 +1355,9 @@ export async function createEvent(
                     team_id: formData.team_id || null,
                     program_id: formData.program_id || null,
                     sport_id: formData.sport_id || null,
+                    customer_id: null,
                     notes: formData.notes || null,
+                    cancellation_reason: null,
                 }
             )
 
@@ -1636,7 +1638,9 @@ export async function updateEvent(
                         team_id: formData.team_id || null,
                         program_id: formData.program_id || null,
                         sport_id: formData.sport_id || null,
+                        customer_id: null,
                         notes: formData.notes || null,
+                        cancellation_reason: null,
                     }
                 )
 

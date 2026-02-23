@@ -134,6 +134,10 @@ export const ROUTE_TO_FEATURE: Record<string, FeatureKey> = {
     'admin.facilities.list': 'facilities_list',
     'admin.facilities.detail': 'facilities_detail',
     'admin.facilities.schedule': 'facilities_schedule',
+    'admin.customers.list': 'facilities_schedule',
+    'admin.customers.detail': 'facilities_schedule',
+    'admin.customers.create': 'facilities_schedule',
+    'admin.customers.edit': 'facilities_schedule',
 
     // -------------------------------------------------------------------------
     // Admin Routes - Photos (map to children)

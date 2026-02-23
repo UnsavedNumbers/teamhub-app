@@ -10,6 +10,7 @@ import { useT } from '../../i18n/useI18n'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
 import { Input, Select, Button } from './'
+import { useFeatureGate } from '../../lib/featureGate'
 import {
     createReservation,
     updateReservation,
@@ -21,6 +22,8 @@ import {
 import { getTeams } from '../../data/services/teamsService'
 import type { FacilityReservation, ReservationType, ReservationStatus, FacilityReservationFormData } from '../../types/facilities'
 import ReservationAlternativesModal from './ReservationAlternativesModal'
+import CustomerSelector from './CustomerSelector'
+import CancelReservationDialog from './CancelReservationDialog'
 
 interface ReservationFormSlideOverProps {
     isOpen: boolean
@@ -60,6 +63,8 @@ export default function ReservationFormSlideOver({
 }: ReservationFormSlideOverProps) {
     const { context, isReady } = useUserContext()
     const t = useT()
+    const customersFeatureGate = useFeatureGate('facilities_schedule')
+    const canUseCustomers = customersFeatureGate.allowed && !customersFeatureGate.loading
 
     const [facilities, setFacilities] = useState<Array<{ id: string; name: string }>>([])
     const [resources, setResources] = useState<Array<{ id: string; name: string }>>([])
@@ -68,6 +73,7 @@ export default function ReservationFormSlideOver({
     const [selectedResourceId, setSelectedResourceId] = useState<string | null>(initialResourceId || null)
     const [conflictCheck, setConflictCheck] = useState<{ hasConflict: boolean; message: string } | null>(null)
     const [alternativesModalOpen, setAlternativesModalOpen] = useState(false)
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
 
     const [formData, setFormData] = useState<FacilityReservationFormData>({
         facility_id: '',
@@ -81,7 +87,9 @@ export default function ReservationFormSlideOver({
         team_id: null,
         program_id: null,
         sport_id: null,
+        customer_id: null,
         notes: null,
+        cancellation_reason: null,
     })
 
     const [errors, setErrors] = useState<Record<string, string>>({})
@@ -156,7 +164,9 @@ export default function ReservationFormSlideOver({
                 team_id: reservation.team_id,
                 program_id: reservation.program_id,
                 sport_id: reservation.sport_id,
+                customer_id: reservation.customer_id || null,
                 notes: reservation.notes,
+                cancellation_reason: reservation.cancellation_reason || null,
             })
             setSelectedFacilityId(reservation.facility_id)
             setSelectedResourceId(reservation.resource_id)
@@ -173,7 +183,9 @@ export default function ReservationFormSlideOver({
                 team_id: null,
                 program_id: null,
                 sport_id: null,
+                customer_id: null,
                 notes: null,
+                cancellation_reason: null,
             })
             setSelectedFacilityId(initialFacilityId || null)
             setSelectedResourceId(initialResourceId || null)
@@ -530,12 +542,37 @@ export default function ReservationFormSlideOver({
                     <Select
                         label={t('admin.facilities.form.linkToTeam')}
                         value={formData.team_id || ''}
-                        onChange={(e) => handleFieldChange('team_id', e.target.value || null)}
+                        onChange={(e) => {
+                            const teamId = e.target.value || null
+                            handleFieldChange('team_id', teamId)
+                            // Clear customer if team selected (mutually exclusive)
+                            if (teamId) {
+                                handleFieldChange('customer_id', null)
+                            }
+                        }}
                         options={[
                             { value: '', label: 'None' },
                             ...teams.map((t) => ({ value: t.id, label: t.name })),
                         ]}
                     />
+
+                    {/* Customer Selection (only if entitled and no team/program/event) */}
+                    {canUseCustomers && !formData.team_id && !formData.program_id && !formData.event_id && (
+                        <CustomerSelector
+                            orgId={context.orgId || ''}
+                            value={formData.customer_id}
+                            onChange={(customerId) => {
+                                handleFieldChange('customer_id', customerId)
+                                // Clear team/program/event if customer selected (mutually exclusive)
+                                if (customerId) {
+                                    handleFieldChange('team_id', null)
+                                    handleFieldChange('program_id', null)
+                                    handleFieldChange('event_id', null)
+                                }
+                            }}
+                            placeholder={t('admin.customers.form.selectCustomer')}
+                        />
+                    )}
 
                     {/* Notes */}
                     <div className="oa-form-group">
@@ -557,15 +594,28 @@ export default function ReservationFormSlideOver({
                         borderTop: '1px solid var(--org-border-default)',
                         display: 'flex',
                         gap: '12px',
-                        justifyContent: 'flex-end',
+                        justifyContent: 'space-between',
                     }}
                 >
-                    <Button variant="secondary" onClick={onClose} disabled={saving}>
-                        {t('common.cancel')}
-                    </Button>
-                    <Button variant="primary" onClick={handleSubmit} disabled={saving || (conflictCheck?.hasConflict && !reservation)}>
-                        {saving ? t('common.saving') : t('common.save')}
-                    </Button>
+                    <div>
+                        {reservation && reservation.status !== 'cancelled' && (
+                            <Button
+                                variant="danger"
+                                onClick={() => setCancelDialogOpen(true)}
+                                disabled={saving}
+                            >
+                                {t('admin.facilities.schedule.cancelReservation')}
+                            </Button>
+                        )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                        <Button variant="secondary" onClick={onClose} disabled={saving}>
+                            {t('common.cancel')}
+                        </Button>
+                        <Button variant="primary" onClick={handleSubmit} disabled={saving || (conflictCheck?.hasConflict && !reservation)}>
+                            {saving ? t('common.saving') : t('common.save')}
+                        </Button>
+                    </div>
                 </div>
             </div>
 
@@ -594,6 +644,33 @@ export default function ReservationFormSlideOver({
                         handleFieldChange('end_at', alt.suggested_end_at)
                         setConflictCheck(null)
                     }}
+                />
+            )}
+
+            {/* Cancel Reservation Dialog */}
+            {reservation && (
+                <CancelReservationDialog
+                    open={cancelDialogOpen}
+                    reservationTitle={reservation.title}
+                    reservationDate={new Date(reservation.start_at).toLocaleString()}
+                    onConfirm={async (cancellationReason) => {
+                        try {
+                            const result = await updateReservation(reservation.id, {
+                                status: 'cancelled',
+                                cancellation_reason: cancellationReason || null,
+                            })
+                            if (result.error) {
+                                showError(result.error.message || t('admin.facilities.errors.updateReservationFailed'))
+                            } else {
+                                showSuccess(t('admin.facilities.success.reservationUpdated'))
+                                setCancelDialogOpen(false)
+                                onSaved()
+                            }
+                        } catch (err) {
+                            showError(getErrorMessage(err) || t('admin.facilities.errors.updateReservationFailed'))
+                        }
+                    }}
+                    onCancel={() => setCancelDialogOpen(false)}
                 />
             )}
         </div>

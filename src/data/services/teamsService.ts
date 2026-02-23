@@ -41,6 +41,8 @@ import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
 import { logEvent, logTeamEvent } from '../../utils/eventLogger'
 import { debug } from '../../lib/debug'
 import { getTierLimit, isLimitExceeded } from './tierLimitsService'
+import { validateRosterLimits } from '../../utils/rosterValidation'
+import { logPlayerTransferAudit } from '../../utils/teamMembershipAuditLogger'
 
 // ============================================================================
 // Helper Functions
@@ -513,16 +515,15 @@ export async function updateTeam(
 
     try {
         type TeamUpdate = Database['public']['Tables']['teams']['Update']
-        const updateData = {
-            name: dto.name,
-            level_id: dto.level_id,
-            sport_id: dto.sport_id ?? null,
-            program_id: dto.program_id ?? null,
-            max_roster_size: dto.max_roster_size ?? null,
-            is_active: dto.is_active ?? true,
-            visible_to_fans: dto.visible_to_fans,
-            updated_at: new Date().toISOString(),
-        } satisfies TeamUpdate
+        const updateData: TeamUpdate = {}
+        if (dto.name !== undefined) updateData.name = dto.name
+        if (dto.level_id !== undefined) updateData.level_id = dto.level_id
+        if (dto.sport_id !== undefined) updateData.sport_id = dto.sport_id ?? null
+        if (dto.program_id !== undefined) updateData.program_id = dto.program_id ?? null
+        if (dto.max_roster_size !== undefined) updateData.max_roster_size = dto.max_roster_size ?? null
+        if (dto.is_active !== undefined) updateData.is_active = dto.is_active
+        if (dto.visible_to_fans !== undefined) updateData.visible_to_fans = dto.visible_to_fans
+        updateData.updated_at = new Date().toISOString()
         const { data, error } = await supabase
             .from('teams')
             .update(updateData)
@@ -920,18 +921,19 @@ export async function createTeamMembership(
                 .eq('status', 'active')
 
             if (!countError && currentCount !== null) {
-                // Check tier limit first (if set), then team-specific roster size
-                const effectiveLimit = tierLimit !== null 
-                    ? Math.min(tierLimit, teamOrgData.max_roster_size || Infinity)
-                    : teamOrgData.max_roster_size
+                // Validate roster limits using centralized utility
+                const validation = validateRosterLimits(
+                    currentCount,
+                    null,
+                    teamOrgData.max_roster_size,
+                    tierLimit,
+                    1 // Adding 1 player
+                )
 
-                if (effectiveLimit !== null && effectiveLimit !== undefined && currentCount >= effectiveLimit) {
-                    const limitSource = tierLimit !== null && tierLimit < (teamOrgData.max_roster_size || Infinity)
-                        ? 'tier limit'
-                        : 'team roster size'
+                if (!validation.isValid && validation.error) {
                     return {
                         data: null,
-                        error: new Error(`This team is full (${effectiveLimit} players, ${limitSource}). Please contact the organization for more information.`)
+                        error: new Error(validation.error)
                     }
                 }
             }
@@ -1062,12 +1064,12 @@ export async function addAthletesToTeam(
     seasonId: string,
     athleteIds: string[]
 ): Promise<AddAthletesToTeamResponse> {
-    // Check tier limit max_players_per_team before bulk add
-    const { data: teamData, error: teamDataError } = await supabase
-        .from('teams')
-        .select('org_id, max_roster_size')
-        .eq('id', teamId)
-        .single()
+        // Check tier limit max_players_per_team before bulk add
+        const { data: teamData, error: teamDataError } = await supabase
+            .from('teams')
+            .select('org_id, max_roster_size')
+            .eq('id', teamId)
+            .single()
 
     if (!teamDataError && teamData?.org_id) {
         const limitResult = await getTierLimit(teamData.org_id, context.userId, 'max_players_per_team')
@@ -1079,23 +1081,26 @@ export async function addAthletesToTeam(
                 .eq('team_id', teamId)
                 .eq('season_id', seasonId)
                 .eq('status', 'active')
+                .is('deleted_at', null)
 
             if (!countError && currentCount !== null) {
-                const effectiveLimit = Math.min(
+                // Validate roster limits using centralized utility
+                const validation = validateRosterLimits(
+                    currentCount,
+                    null,
+                    teamData.max_roster_size,
                     limitResult.limit,
-                    teamData.max_roster_size || Infinity
+                    athleteIds.length
                 )
-                const wouldExceed = currentCount + athleteIds.length > effectiveLimit
-                
-                if (wouldExceed) {
-                    const remaining = Math.max(0, effectiveLimit - currentCount)
+
+                if (!validation.isValid && validation.error) {
                     return {
                         data: {
                             added: [],
                             skipped: [],
                             errors: athleteIds.map(id => ({
                                 athleteId: id,
-                                error: `Cannot add athletes: team would exceed limit (${effectiveLimit} players). ${remaining > 0 ? `Only ${remaining} more can be added.` : 'Team is full.'}`
+                                error: validation.error || 'Cannot add athletes due to roster size constraints.'
                             }))
                         },
                         error: null
@@ -1200,7 +1205,7 @@ export async function addAthletesToTeam(
             }
         }
 
-        // Get team max_roster_size and current count
+        // Get team roster size limits and current count
         const { data: teamRosterData, error: _teamRosterError } = await supabase
             .from('teams')
             .select('max_roster_size')
@@ -1213,6 +1218,7 @@ export async function addAthletesToTeam(
             .eq('team_id', teamId)
             .eq('season_id', seasonId)
             .eq('status', 'active')
+            .is('deleted_at', null)
 
         // Get existing memberships to identify skipped athletes (Issue #2 solution)
         const { data: existingMemberships } = await supabase
@@ -1241,31 +1247,27 @@ export async function addAthletesToTeam(
             }
         }
 
-        // Check if adding these athletes would exceed limits
+        // Validate roster limits using centralized utility
         if (!countError && currentCount !== null) {
-            const effectiveLimit = tierLimit !== null 
-                ? Math.min(tierLimit, teamRosterData?.max_roster_size || Infinity)
-                : teamRosterData?.max_roster_size
+            const validation = validateRosterLimits(
+                currentCount,
+                null,
+                teamRosterData?.max_roster_size,
+                tierLimit,
+                athletesToAdd.length
+            )
 
-            if (effectiveLimit !== null && effectiveLimit !== undefined) {
-                const wouldExceed = currentCount + athletesToAdd.length > effectiveLimit
-                
-                if (wouldExceed) {
-                    const remaining = Math.max(0, effectiveLimit - currentCount)
-                    const limitSource = tierLimit !== null && tierLimit < (teamRosterData?.max_roster_size || Infinity)
-                        ? 'tier limit'
-                        : 'team roster size'
-                    return {
-                        data: {
-                            added: [],
-                            skipped,
-                            errors: athletesToAdd.map(id => ({
-                                athleteId: id,
-                                error: `Cannot add athletes: team would exceed ${limitSource} (${effectiveLimit} players). ${remaining > 0 ? `Only ${remaining} more can be added.` : 'Team is full.'}`
-                            }))
-                        },
-                        error: null
-                    }
+            if (!validation.isValid && validation.error) {
+                return {
+                    data: {
+                        added: [],
+                        skipped,
+                        errors: athletesToAdd.map(id => ({
+                            athleteId: id,
+                            error: validation.error || 'Cannot add athletes due to roster size constraints.'
+                        }))
+                    },
+                    error: null
                 }
             }
         }
@@ -1753,6 +1755,275 @@ export async function getAthleteTeamHistory(
         return { data: Array.from(sportIds), error: null }
     } catch (err) {
         return { data: [], error: mapDatabaseError(err) }
+    }
+}
+
+/**
+ * Transfer a player from one team to another within the same organization
+ * 
+ * This function:
+ * - Validates user is org admin
+ * - Validates both teams belong to the same org
+ * - Validates season belongs to destination team
+ * - Checks roster limits for destination team
+ * - Creates/updates membership on destination team with transfer tracking
+ * - Updates old membership to mark as transferred
+ * - Logs audit events
+ * 
+ * @param context - User context
+ * @param athleteId - ID of the athlete to transfer
+ * @param fromTeamId - ID of the source team
+ * @param toTeamId - ID of the destination team
+ * @param seasonId - ID of the season (must belong to destination team)
+ * @param transferReason - Optional reason for the transfer
+ * @returns Result with new membership ID or error
+ */
+export async function transferPlayerBetweenTeams(
+    context: UserContext,
+    athleteId: string,
+    fromTeamId: string,
+    toTeamId: string,
+    seasonId: string,
+    transferReason?: string | null
+): Promise<{ data: { membershipId: string } | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        return {
+            data: { membershipId: 'fake-membership-id' },
+            error: null
+        }
+    }
+
+    try {
+        // Validate user is org admin
+        if (!isOrgAdmin(context)) {
+            return {
+                data: null,
+                error: new Error('You do not have permission to transfer players between teams.')
+            }
+        }
+
+        // Validate both teams belong to the same org
+        const { data: teamsData, error: teamsError } = await supabase
+            .from('teams')
+            .select('id, org_id, max_roster_size')
+            .in('id', [fromTeamId, toTeamId])
+
+        if (teamsError || !teamsData || teamsData.length !== 2) {
+            return {
+                data: null,
+                error: new Error('One or both teams not found.')
+            }
+        }
+
+        const fromTeam = teamsData.find(t => t.id === fromTeamId)
+        const toTeam = teamsData.find(t => t.id === toTeamId)
+
+        if (!fromTeam || !toTeam) {
+            return {
+                data: null,
+                error: new Error('One or both teams not found.')
+            }
+        }
+
+        if (fromTeam.org_id !== toTeam.org_id || fromTeam.org_id !== context.orgId) {
+            return {
+                data: null,
+                error: new Error('Both teams must belong to your organization.')
+            }
+        }
+
+        // Validate season belongs to destination team
+        const { data: teamSeasonData, error: teamSeasonError } = await supabase
+            .from('team_seasons')
+            .select('team_id')
+            .eq('team_id', toTeamId)
+            .eq('season_id', seasonId)
+            .single()
+
+        if (teamSeasonError || !teamSeasonData) {
+            // Fallback: check if season has direct team_id
+            const { data: seasonData, error: seasonError } = await supabase
+                .from('seasons')
+                .select('id, team_id')
+                .eq('id', seasonId)
+                .single()
+
+            if (seasonError || !seasonData || seasonData.team_id !== toTeamId) {
+                return {
+                    data: null,
+                    error: new Error('Selected season is not available for the destination team.')
+                }
+            }
+        }
+
+        // Find existing membership on source team
+        const { data: existingMembership, error: membershipError } = await supabase
+            .from('team_memberships')
+            .select('id, athlete_id, team_id, season_id, status, created_at, updated_at')
+            .eq('athlete_id', athleteId)
+            .eq('team_id', fromTeamId)
+            .eq('season_id', seasonId)
+            .is('deleted_at', null)
+            .single()
+
+        if (membershipError || !existingMembership) {
+            return {
+                data: null,
+                error: new Error('Player is not a member of the source team for this season.')
+            }
+        }
+
+        // Check roster limits for destination team
+        const { count: currentCount, error: countError } = await supabase
+            .from('team_memberships')
+            .select('id', { count: 'exact', head: true })
+            .eq('team_id', toTeamId)
+            .eq('season_id', seasonId)
+            .eq('status', 'active')
+            .is('deleted_at', null)
+
+        if (countError) {
+            return {
+                data: null,
+                error: new Error('Failed to check destination team roster size.')
+            }
+        }
+
+        // Get tier limit for destination team
+        let tierLimit: number | null = null
+        if (toTeam.org_id) {
+            const limitResult = await getTierLimit(toTeam.org_id, context.userId, 'max_players_per_team')
+            if (!limitResult.error && limitResult.limit !== null) {
+                tierLimit = limitResult.limit
+            }
+        }
+
+        // Validate roster limits (adding 1 player to destination team)
+        const validation = validateRosterLimits(
+            currentCount || 0,
+            null,
+            toTeam.max_roster_size,
+            tierLimit,
+            1
+        )
+
+        if (!validation.isValid && validation.error) {
+            return {
+                data: null,
+                error: new Error(validation.error)
+            }
+        }
+
+        // Check if player is already on destination team (shouldn't happen, but handle gracefully)
+        const { data: existingDestMembership } = await supabase
+            .from('team_memberships')
+            .select('id')
+            .eq('athlete_id', athleteId)
+            .eq('team_id', toTeamId)
+            .eq('season_id', seasonId)
+            .is('deleted_at', null)
+            .single()
+
+        let newMembershipId: string
+
+        if (existingDestMembership) {
+            // Update existing membership on destination team
+            const { data: updatedMembership, error: updateError } = await supabase
+                .from('team_memberships')
+                .update({
+                    status: 'active',
+                    transferred_from_team_id: fromTeamId,
+                    transferred_at: new Date().toISOString(),
+                    transfer_reason: transferReason || null,
+                    updated_at: new Date().toISOString(),
+                } as any)
+                .eq('id', existingDestMembership.id)
+                .select('id')
+                .single()
+
+            if (updateError || !updatedMembership) {
+                return {
+                    data: null,
+                    error: new Error('Failed to update membership on destination team.')
+                }
+            }
+
+            newMembershipId = updatedMembership.id
+        } else {
+            // Create new membership on destination team with transfer tracking
+            const insertData: any = {
+                athlete_id: athleteId,
+                team_id: toTeamId,
+                season_id: seasonId,
+                status: 'active',
+                transferred_from_team_id: fromTeamId,
+                transferred_at: new Date().toISOString(),
+                transfer_reason: transferReason || null,
+            }
+
+            const { data: newMembership, error: insertError } = await supabase
+                .from('team_memberships')
+                .insert(insertData)
+                .select('id')
+                .single()
+
+            if (insertError || !newMembership) {
+                return {
+                    data: null,
+                    error: new Error('Failed to create membership on destination team.')
+                }
+            }
+
+            newMembershipId = newMembership.id
+        }
+
+        // Update old membership to mark as transferred (soft delete or update status)
+        // We'll soft delete it to preserve history
+        const { error: deleteError } = await supabase
+            .from('team_memberships')
+            .update({
+                deleted_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingMembership.id)
+
+        if (deleteError) {
+            console.warn('Failed to soft delete old membership, but transfer succeeded:', deleteError)
+            // Don't fail the transfer if we can't update the old membership
+        }
+
+        // Log audit event
+        await logPlayerTransferAudit({
+            teamMembershipId: newMembershipId,
+            athleteId,
+            fromTeamId,
+            toTeamId,
+            seasonId,
+            changedBy: context.userId,
+            oldValues: {
+                team_id: existingMembership.team_id,
+                status: existingMembership.status,
+                created_at: existingMembership.created_at,
+            },
+            newValues: {
+                team_id: toTeamId,
+                status: 'active',
+                transferred_from_team_id: fromTeamId,
+                transferred_at: new Date().toISOString(),
+            },
+            transferReason: transferReason || null,
+        })
+
+        return {
+            data: { membershipId: newMembershipId },
+            error: null
+        }
+    } catch (err) {
+        return {
+            data: null,
+            error: mapDatabaseError(err)
+        }
     }
 }
 

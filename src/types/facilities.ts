@@ -106,7 +106,9 @@ export interface FacilityReservation {
     team_id: string | null
     program_id: string | null
     sport_id: string | null
+    customer_id: string | null
     notes: string | null
+    cancellation_reason: string | null
     created_by: string | null
     created_at: string
     updated_at: string
@@ -114,6 +116,7 @@ export interface FacilityReservation {
     // Relations (loaded via joins)
     facility?: Facility
     resource?: FacilityResource
+    customer?: import('./customers').Customer
     event?: {
         id: string
         title: string
@@ -193,7 +196,9 @@ export interface FacilityReservationFormData {
     team_id: string | null
     program_id: string | null
     sport_id: string | null
+    customer_id: string | null
     notes: string | null
+    cancellation_reason: string | null
 }
 
 // ============================================================================
@@ -222,6 +227,7 @@ export interface ReservationFilters {
     resource_type?: ResourceType
     team_id?: string
     program_id?: string
+    customer_id?: string
     status?: ReservationStatus
     start?: string // ISO 8601
     end?: string // ISO 8601

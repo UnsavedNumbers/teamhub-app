@@ -12,6 +12,15 @@ interface GeneratedProgram {
   created_at: string
   updated_at: string
   deleted_at: null
+  // New enhancement fields
+  is_public?: boolean | null
+  activity_start_date?: string | null
+  activity_end_date?: string | null
+  registration_start_date?: string | null
+  registration_end_date?: string | null
+  program_code?: string | null
+  sponsor?: string | null
+  default_location_id?: string | null
 }
 
 interface GeneratedLevel {
@@ -200,19 +209,37 @@ export function generateOrg(demoOrg: DemoOrganization): Record<string, unknown> 
 
 export function generatePrograms(demoOrgId: string, sports: SportCode[]): GeneratedProgram[] {
   const timestamp = nowIso()
+  const currentYear = yearNow()
   return sports.flatMap((sportCode) => {
     const profile = SPORT_PROFILES[sportCode]
-    return profile.programNames.map((programName, index) => ({
-      id: `demo-program-${demoOrgId}-${sportCode}-${index + 1}`,
-      org_id: demoOrgId,
-      sport_id: `demo-sport-${demoOrgId}-${sportCode}`,
-      name: programName,
-      description: `${SPORT_NAMES[sportCode]} ${programName}`,
-      gender_category: 'coed',
-      created_at: timestamp,
-      updated_at: timestamp,
-      deleted_at: null,
-    }))
+    return profile.programNames.map((programName, index) => {
+      const programIndex = index + 1
+      // Generate realistic dates based on program index
+      const activityStartMonth = 3 + (index % 3) // March, April, or May
+      const activityEndMonth = activityStartMonth + 3
+      const registrationStartMonth = activityStartMonth - 1
+      
+      return {
+        id: `demo-program-${demoOrgId}-${sportCode}-${programIndex}`,
+        org_id: demoOrgId,
+        sport_id: `demo-sport-${demoOrgId}-${sportCode}`,
+        name: programName,
+        description: `${SPORT_NAMES[sportCode]} ${programName}`,
+        gender_category: 'coed',
+        created_at: timestamp,
+        updated_at: timestamp,
+        deleted_at: null,
+        // New enhancement fields with sample data
+        is_public: index % 2 === 0, // Alternate public/private
+        activity_start_date: `${currentYear}-${String(activityStartMonth).padStart(2, '0')}-01T00:00:00Z`,
+        activity_end_date: `${currentYear}-${String(Math.min(activityEndMonth, 12)).padStart(2, '0')}-28T00:00:00Z`,
+        registration_start_date: `${currentYear}-${String(Math.max(registrationStartMonth, 1)).padStart(2, '0')}-01T00:00:00Z`,
+        registration_end_date: `${currentYear}-${String(activityStartMonth).padStart(2, '0')}-15T00:00:00Z`,
+        program_code: `${sportCode.toUpperCase()}-${programIndex}`,
+        sponsor: index % 3 === 0 ? `Sponsor ${programIndex}` : null,
+        default_location_id: null,
+      }
+    })
   })
 }
 

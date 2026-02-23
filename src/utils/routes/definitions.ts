@@ -898,6 +898,37 @@ const admin = {
         },
     },
 
+    // Customers
+    customers: {
+        list: {
+            path: '/admin/customers',
+            label: 'Customers',
+            icon: 'people',
+            description: 'Manage facility rental customers',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/customers/:id',
+            params: ['id'] as const,
+            label: 'Customer Details',
+            icon: 'people',
+            requiresOrg: true,
+        },
+        create: {
+            path: '/admin/customers/create',
+            label: 'Create Customer',
+            icon: 'add',
+            requiresOrg: true,
+        },
+        edit: {
+            path: '/admin/customers/:id/edit',
+            params: ['id'] as const,
+            label: 'Edit Customer',
+            icon: 'edit',
+            requiresOrg: true,
+        },
+    },
+
     // Announcements
     announcements: {
         list: {

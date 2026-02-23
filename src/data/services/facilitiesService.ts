@@ -591,6 +591,10 @@ export async function getReservations(
             filtered = filtered.filter(r => r.program_id === filters.program_id)
         }
         
+        if (filters.customer_id) {
+            filtered = filtered.filter(r => r.customer_id === filters.customer_id)
+        }
+        
         if (filters.status) {
             filtered = filtered.filter(r => r.status === filters.status)
         }
@@ -612,6 +616,7 @@ export async function getReservations(
                 *,
                 facility:facilities(*),
                 resource:facility_resources(*),
+                customer:customers(*),
                 event:events(id, title, start_time, end_time),
                 team:teams(id, name)
             `)
@@ -631,6 +636,10 @@ export async function getReservations(
 
         if (filters.program_id) {
             query = query.eq('program_id', filters.program_id)
+        }
+
+        if (filters.customer_id) {
+            query = query.eq('customer_id', filters.customer_id)
         }
 
         if (filters.status) {
@@ -685,6 +694,7 @@ export async function getReservationById(
                 *,
                 facility:facilities(*),
                 resource:facility_resources(*),
+                customer:customers(*),
                 event:events(id, title, start_time, end_time),
                 team:teams(id, name)
             `)
@@ -727,6 +737,7 @@ export async function createReservation(
             p_team_id: formData.team_id || null,
             p_program_id: formData.program_id || null,
             p_sport_id: formData.sport_id || null,
+            p_customer_id: formData.customer_id || null,
             p_notes: formData.notes?.trim() || null,
             p_allow_conflict: options?.allowConflict || false,
             p_tentative_blocks: options?.tentativeBlocks || false,
@@ -768,7 +779,9 @@ export async function updateReservation(
             p_start_at: formData.start_at || null,
             p_end_at: formData.end_at || null,
             p_title: formData.title?.trim() || null,
+            p_customer_id: formData.customer_id !== undefined ? formData.customer_id : null,
             p_notes: formData.notes?.trim() || null,
+            p_cancellation_reason: formData.cancellation_reason?.trim() || null,
             p_allow_conflict: options?.allowConflict || false,
             p_tentative_blocks: options?.tentativeBlocks || false,
         })

@@ -290,6 +290,10 @@ const adminEventsAttendancePath = getPath('admin.events.attendance').replace('/a
 const adminFacilitiesListPath = getPath('admin.facilities.list').replace('/admin/', '')
 const adminFacilityDetailPath = getPath('admin.facilities.detail').replace('/admin/', '')
 const adminFacilitiesSchedulePath = getPath('admin.facilities.schedule').replace('/admin/', '')
+const adminCustomersListPath = getPath('admin.customers.list').replace('/admin/', '')
+const adminCustomerDetailPath = getPath('admin.customers.detail').replace('/admin/', '')
+const adminCustomerCreatePath = getPath('admin.customers.create').replace('/admin/', '')
+const adminCustomerEditPath = getPath('admin.customers.edit').replace('/admin/', '')
 const platformDemoManagementPath = getPath('platformAdmin.demoManagement.list').replace('/platform-admin/', '')
 const platformDemoManagementDetailPath = getPath('platformAdmin.demoManagement.detail').replace('/platform-admin/', '')
 const platformDemoInsightsPath = getPath('platformAdmin.demoInsights').replace('/platform-admin/', '')
@@ -308,6 +312,7 @@ const AdminSportSettings = lazy(() => import('./pages/admin/AdminSportSettings')
 const Facilities = lazy(() => import('./pages/admin/Facilities'))
 const FacilityDetail = lazy(() => import('./pages/admin/FacilityDetail'))
 const FacilitiesSchedule = lazy(() => import('./pages/admin/FacilitiesSchedule'))
+const Customers = lazy(() => import('./pages/admin/Customers'))
 
 function HostHomeRoute() {
   const location = useLocation()
@@ -698,6 +703,18 @@ function AppWithTheme() {
               <Route path={adminFacilitiesListPath} element={<FeatureGateRoute routeKey="admin.facilities.list"><Facilities /></FeatureGateRoute>} />
               <Route path={adminFacilityDetailPath} element={<FeatureGateRoute routeKey="admin.facilities.detail"><FacilityDetail /></FeatureGateRoute>} />
               <Route path={adminFacilitiesSchedulePath} element={<FeatureGateRoute routeKey="admin.facilities.schedule"><FacilitiesSchedule /></FeatureGateRoute>} />
+              
+              {/* Customers */}
+              <Route path={adminCustomersListPath} element={<FeatureGateRoute routeKey="admin.customers.list"><Customers /></FeatureGateRoute>} />
+              <Route path={adminCustomerDetailPath} element={<FeatureGateRoute routeKey="admin.customers.detail"><Customers /></FeatureGateRoute>} />
+              <Route path={adminCustomerCreatePath} element={<FeatureGateRoute routeKey="admin.customers.create"><Customers /></FeatureGateRoute>} />
+              <Route path={adminCustomerEditPath} element={<FeatureGateRoute routeKey="admin.customers.edit"><Customers /></FeatureGateRoute>} />
+              
+              {/* Customers */}
+              <Route path={adminCustomersListPath} element={<FeatureGateRoute routeKey="admin.customers.list"><Customers /></FeatureGateRoute>} />
+              <Route path={adminCustomerDetailPath} element={<FeatureGateRoute routeKey="admin.customers.detail"><Customers /></FeatureGateRoute>} />
+              <Route path={adminCustomerCreatePath} element={<FeatureGateRoute routeKey="admin.customers.create"><Customers /></FeatureGateRoute>} />
+              <Route path={adminCustomerEditPath} element={<FeatureGateRoute routeKey="admin.customers.edit"><Customers /></FeatureGateRoute>} />
 
               {/* Announcements */}
               <Route path="announcements" element={<FeatureGateRoute routeKey="admin.announcements.list"><AdminAnnouncements /></FeatureGateRoute>} />

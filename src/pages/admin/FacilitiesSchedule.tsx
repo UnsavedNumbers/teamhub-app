@@ -10,7 +10,8 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
-import { AdminPageHeader, Button, Card } from '../../components/admin'
+import { AdminPageHeader, Button, Card, Select } from '../../components/admin'
+import { useFeatureGate } from '../../lib/featureGate'
 import {
     getFacilities,
     getResources,
@@ -18,7 +19,9 @@ import {
     getBlackouts,
     deleteReservation,
 } from '../../data/services/facilitiesService'
+import { getCustomers } from '../../data/services/customerService'
 import type { Facility, FacilityResource, FacilityReservation, FacilityBlackout } from '../../types/facilities'
+import type { Customer } from '../../types/customers'
 import ReservationFormSlideOver from '../../components/admin/ReservationFormSlideOver'
 import '../../styles/orgAdmin.css'
 
@@ -37,7 +40,10 @@ export default function FacilitiesSchedule() {
     const [selectedFacilityIds, setSelectedFacilityIds] = useState<string[]>(
         facilityFilter ? [facilityFilter] : []
     )
+    const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
+    const [customers, setCustomers] = useState<Customer[]>([])
     const [loading, setLoading] = useState(true)
+    const { allowed: canUseCustomers } = useFeatureGate('facilities_schedule')
 
     // Forms
     const [reservationFormOpen, setReservationFormOpen] = useState(false)
@@ -51,19 +57,25 @@ export default function FacilitiesSchedule() {
     useNavigate()
     const t = useT()
 
-    // Load facilities
+    // Load facilities and customers
     useEffect(() => {
         if (!isReady || !context.orgId) return
 
-        const loadFacilities = async () => {
-            const result = await getFacilities(context.orgId)
-            if (result.data) {
-                setFacilities(result.data)
+        const loadData = async () => {
+            const [facilitiesResult, customersResult] = await Promise.all([
+                getFacilities(context.orgId),
+                canUseCustomers ? getCustomers(context.orgId) : Promise.resolve({ data: [], error: null }),
+            ])
+            if (facilitiesResult.data) {
+                setFacilities(facilitiesResult.data)
+            }
+            if (customersResult.data) {
+                setCustomers(customersResult.data)
             }
         }
 
-        loadFacilities()
-    }, [isReady, context.orgId])
+        loadData()
+    }, [isReady, context.orgId, canUseCustomers])
 
     // Load resources for selected facilities
     useEffect(() => {
@@ -119,6 +131,7 @@ export default function FacilitiesSchedule() {
                 getReservations({
                     org_id: context.orgId,
                     facility_ids: selectedFacilityIds.length > 0 ? selectedFacilityIds : undefined,
+                    customer_id: selectedCustomerId || undefined,
                     start: start.toISOString(),
                     end: end.toISOString(),
                 }),
@@ -139,7 +152,7 @@ export default function FacilitiesSchedule() {
         } finally {
             setLoading(false)
         }
-    }, [isReady, context.orgId, currentDate, selectedFacilityIds, view, t])
+    }, [isReady, context.orgId, currentDate, selectedFacilityIds, selectedCustomerId, view, t])
 
     useEffect(() => {
         fetchScheduleData()
@@ -831,6 +844,21 @@ export default function FacilitiesSchedule() {
                             </button>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {/* Customer Filter */}
+            {canUseCustomers && customers.length > 0 && (
+                <div style={{ marginBottom: '24px' }}>
+                    <Select
+                        label={t('admin.facilities.schedule.filterByCustomer')}
+                        value={selectedCustomerId || ''}
+                        onChange={(e) => setSelectedCustomerId(e.target.value || null)}
+                        options={[
+                            { value: '', label: t('admin.facilities.schedule.allCustomers') },
+                            ...customers.map((c) => ({ value: c.id, label: c.name })),
+                        ]}
+                    />
                 </div>
             )}
 

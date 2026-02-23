@@ -4,10 +4,12 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
 import { getPrograms, getSports, updateProgram } from '../../data/services/sportsService'
-import type { Program, GenderCategory, Sport } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, Input, Select } from '../../components/admin'
+import { getVenuesForOrg } from '../../data/services/venueService'
+import type { Program, GenderCategory, Sport, RegistrationMode } from '../../data/types/organization'
+import { AdminPageHeader, Card, Button, Input, Select, DatePicker, Checkbox } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import { useI18n } from '../../i18n/useI18n'
 import '../../styles/orgAdmin.css'
 
 const GENDER_OPTIONS = [
@@ -17,6 +19,8 @@ const GENDER_OPTIONS = [
   { value: 'coed', label: 'Co-ed' },
 ]
 
+// Registration mode options will be generated from i18n
+
 export default function ProgramUpdate() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
@@ -24,6 +28,7 @@ export default function ProgramUpdate() {
   const navigate = useNavigate()
   const { context, isReady } = useUserContext()
   const { isOffline } = useOffline()
+  const { t } = useI18n()
 
   const [loading, setLoading] = useState(true)
   const [program, setProgram] = useState<Program | null>(null)
@@ -34,11 +39,27 @@ export default function ProgramUpdate() {
   const [sportId, setSportId] = useState('')
   const [gender, setGender] = useState<GenderCategory | ''>('')
   const [name, setName] = useState('')
+  const [is_public, setIsPublic] = useState(false)
+  const [activity_start_date, setActivityStartDate] = useState('')
+  const [activity_end_date, setActivityEndDate] = useState('')
+  const [registration_start_date, setRegistrationStartDate] = useState('')
+  const [registration_end_date, setRegistrationEndDate] = useState('')
+  const [program_code, setProgramCode] = useState('')
+  const [sponsor, setSponsor] = useState('')
+  const [default_location_id, setDefaultLocationId] = useState('')
+  const [registration_mode, setRegistrationMode] = useState<RegistrationMode>('both')
+  const [venues, setVenues] = useState<Array<{ id: string; name: string }>>([])
 
   const sportOptions = useMemo(() => [
     { value: '', label: 'Select sport' },
     ...sports.map(sport => ({ value: sport.id, label: sport.name })),
   ], [sports])
+
+  const registrationModeOptions = useMemo(() => [
+    { value: 'both', label: 'Both individual and team registration' },
+    { value: 'individual_only', label: 'Individual registration only' },
+    { value: 'team_only', label: 'Team registration only' },
+  ], [])
 
   // Load program and sports data
   useEffect(() => {
@@ -69,7 +90,24 @@ export default function ProgramUpdate() {
         setSportId(found.sport_id)
         setGender(found.gender_category)
         setName(found.name)
+        setIsPublic(found.is_public ?? false)
+        setActivityStartDate(found.activity_start_date ? found.activity_start_date.split('T')[0] : '')
+        setActivityEndDate(found.activity_end_date ? found.activity_end_date.split('T')[0] : '')
+        setRegistrationStartDate(found.registration_start_date ? found.registration_start_date.split('T')[0] : '')
+        setRegistrationEndDate(found.registration_end_date ? found.registration_end_date.split('T')[0] : '')
+        setProgramCode(found.program_code || '')
+        setSponsor(found.sponsor || '')
+        setDefaultLocationId(found.default_location_id || '')
+        setRegistrationMode(found.registration_mode || 'both')
         setSports(Array.isArray(sportsResult.data) ? sportsResult.data : [])
+
+        // Load venues
+        try {
+          const venuesList = await getVenuesForOrg(context.orgId)
+          setVenues(venuesList.map(v => ({ id: v.id, name: v.name })))
+        } catch (err) {
+          console.error('[ProgramUpdate] Error loading venues:', err)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load program')
       } finally {
@@ -92,6 +130,15 @@ export default function ProgramUpdate() {
       const result = await updateProgram(context, id, {
         gender_category: gender as GenderCategory,
         name,
+        is_public,
+        activity_start_date: activity_start_date || undefined,
+        activity_end_date: activity_end_date || undefined,
+        registration_start_date: registration_start_date || undefined,
+        registration_end_date: registration_end_date || undefined,
+        program_code: program_code.trim() || undefined,
+        sponsor: sponsor.trim() || undefined,
+        default_location_id: default_location_id || undefined,
+        registration_mode: registration_mode,
       })
       
       if (result.error) {
@@ -188,6 +235,93 @@ export default function ProgramUpdate() {
               required
               disabled={isOffline || USE_FAKE_DATA || submitting}
               placeholder="e.g., Boys Basketball"
+            />
+          </div>
+
+          <div className="oa-form-group">
+            <Checkbox
+              label={t('admin.programs.fields.isPublic.label')}
+              checked={is_public}
+              onChange={(e) => setIsPublic(e.target.checked)}
+              disabled={isOffline || USE_FAKE_DATA || submitting}
+              helper={t('admin.programs.fields.isPublic.helper')}
+            />
+          </div>
+
+          <div className="oa-form-group oa-form-row-halves">
+            <DatePicker
+              label={t('admin.programs.fields.activityStartDate.label')}
+              value={activity_start_date}
+              onChange={(e) => setActivityStartDate(e.target.value)}
+              disabled={isOffline || USE_FAKE_DATA || submitting}
+              helper={t('admin.programs.fields.activityStartDate.helper')}
+            />
+            <DatePicker
+              label={t('admin.programs.fields.activityEndDate.label')}
+              value={activity_end_date}
+              onChange={(e) => setActivityEndDate(e.target.value)}
+              disabled={isOffline || USE_FAKE_DATA || submitting}
+              helper={t('admin.programs.fields.activityEndDate.helper')}
+            />
+          </div>
+
+          <div className="oa-form-group oa-form-row-halves">
+            <DatePicker
+              label={t('admin.programs.fields.registrationStartDate.label')}
+              value={registration_start_date}
+              onChange={(e) => setRegistrationStartDate(e.target.value)}
+              disabled={isOffline || USE_FAKE_DATA || submitting}
+              helper={t('admin.programs.fields.registrationStartDate.helper')}
+            />
+            <DatePicker
+              label={t('admin.programs.fields.registrationEndDate.label')}
+              value={registration_end_date}
+              onChange={(e) => setRegistrationEndDate(e.target.value)}
+              disabled={isOffline || USE_FAKE_DATA || submitting}
+              helper={t('admin.programs.fields.registrationEndDate.helper')}
+            />
+          </div>
+
+          <div className="oa-form-group oa-form-row-halves">
+            <Input
+              label={t('admin.programs.fields.programCode.label')}
+              value={program_code}
+              onChange={(e) => setProgramCode(e.target.value)}
+              disabled={isOffline || USE_FAKE_DATA || submitting}
+              placeholder={t('admin.programs.fields.programCode.placeholder')}
+              helper={t('admin.programs.fields.programCode.helper')}
+            />
+            <Input
+              label={t('admin.programs.fields.sponsor.label')}
+              value={sponsor}
+              onChange={(e) => setSponsor(e.target.value)}
+              disabled={isOffline || USE_FAKE_DATA || submitting}
+              placeholder={t('admin.programs.fields.sponsor.placeholder')}
+              helper={t('admin.programs.fields.sponsor.helper')}
+            />
+          </div>
+
+          <div className="oa-form-group">
+            <Select
+              label={t('admin.programs.fields.defaultLocation.label')}
+              value={default_location_id}
+              onChange={(e) => setDefaultLocationId(e.target.value)}
+              options={[
+                { value: '', label: t('admin.programs.fields.defaultLocation.noLocation') },
+                ...venues.map(v => ({ value: v.id, label: v.name })),
+              ]}
+              disabled={isOffline || USE_FAKE_DATA || submitting}
+            />
+          </div>
+
+          <div className="oa-form-group">
+            <Select
+              label="Registration Mode"
+              value={registration_mode}
+              onChange={(e) => setRegistrationMode(e.target.value as RegistrationMode)}
+              options={registrationModeOptions}
+              disabled={isOffline || USE_FAKE_DATA || submitting}
+              helper="Controls whether this program allows individual registration, team registration, or both"
             />
           </div>
 

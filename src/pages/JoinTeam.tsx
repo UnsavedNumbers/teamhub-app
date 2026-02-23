@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { getTeamByInviteCode, getTeamDetails, createTeamMembership } from '../data/services/teamsService'
 import { getAthletes } from '../data/services/familyService'
+import { canRegisterAsTeam } from '../utils/registrationMode'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
@@ -147,6 +148,17 @@ export default function JoinTeam() {
       setError(errorMessage)
       setLoading(false)
       return
+    }
+
+    // Check if program allows team registration
+    const programId = (teamDetails as any).program?.id || teamData.program_id
+    if (programId) {
+      const allowsTeamRegistration = await canRegisterAsTeam(programId)
+      if (!allowsTeamRegistration) {
+        setError(t('portal.joinTeam.teamRegistrationNotAllowed'))
+        setLoading(false)
+        return
+      }
     }
 
     // Extract seasons from team details

@@ -133,6 +133,9 @@ public/demo-assets/videos/*.mov
 public/demo-assets/videos/*.webm
 
 # Docs
+*xlsx
+*.py
+*.csv
 designs/
 docs
 *.md
