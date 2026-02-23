@@ -1033,6 +1033,38 @@ export default function FeatureCatalog() {
       },
     },
     {
+      id: 'available_as_addon',
+      label: 'Add-On',
+      render: (row) => {
+        const isAddOn = (row as any).available_as_addon === true
+        const isPublic = (row as any).addon_is_public === true
+        const hasPriceId = !!(row as any).addon_stripe_price_id
+        const externalName = (row as any).addon_external_name
+        
+        if (!isAddOn) {
+          return <span className="pa-body-s" style={{ color: 'var(--pa-n400)' }}>-</span>
+        }
+        
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <Badge variant={isPublic ? 'success' : 'neutral'} size="small">
+              {isPublic ? 'Public' : 'Private'}
+            </Badge>
+            {hasPriceId && (
+              <div className="pa-body-xs" style={{ color: 'var(--pa-n500)', fontFamily: 'var(--pa-font-mono)' }}>
+                {(row as any).addon_stripe_price_id?.slice(0, 12)}...
+              </div>
+            )}
+            {externalName && (
+              <div className="pa-body-xs" style={{ color: 'var(--pa-n600)' }}>
+                {externalName}
+              </div>
+            )}
+          </div>
+        )
+      },
+    },
+    {
       id: 'tier_assignments_count',
       label: 'Assignments',
       align: 'center',

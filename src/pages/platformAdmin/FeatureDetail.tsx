@@ -35,6 +35,16 @@ export default function FeatureDetail() {
     unavailableGateAction: 'overlay',
     isSystemFeature: false,
     platformAdminOnly: false,
+    available_as_addon: false,
+    addon_stripe_price_id: null,
+    addon_external_name: null,
+    addon_external_description: null,
+    addon_external_short_label: null,
+    addon_external_bullets: null,
+    addon_external_cta_label: null,
+    addon_display_order: null,
+    addon_is_public: false,
+    addon_eligibility_rules: null,
   })
   const [originalFeature, setOriginalFeature] = useState<Partial<FeatureEntitlement> | null>(null)
   const [tiers, setTiers] = useState<LicenseTier[]>([])
@@ -393,6 +403,22 @@ export default function FeatureDetail() {
       return false
     }
 
+    // Validate add-on configuration if enabled
+    if (feature.available_as_addon) {
+      if (!feature.addon_stripe_price_id || !feature.addon_stripe_price_id.trim()) {
+        setError('Stripe Price ID is required when enabling add-on')
+        return false
+      }
+      if (!feature.addon_stripe_price_id.startsWith('price_')) {
+        setError('Stripe Price ID must start with "price_"')
+        return false
+      }
+      if (!feature.addon_external_name?.trim()) {
+        setError('External Name is required when enabling add-on')
+        return false
+      }
+    }
+
     setSaving(true)
     setError(null)
 
@@ -443,6 +469,17 @@ export default function FeatureDetail() {
           is_system_feature: feature.isSystemFeature ?? false,
           platform_admin_only: feature.platformAdminOnly ?? false,
           parent_feature_key: feature.parentFeatureKey || null,
+          // Add-on fields
+          available_as_addon: feature.available_as_addon ?? false,
+          addon_stripe_price_id: feature.addon_stripe_price_id || null,
+          addon_external_name: feature.addon_external_name?.trim() || null,
+          addon_external_description: feature.addon_external_description || null,
+          addon_external_short_label: feature.addon_external_short_label || null,
+          addon_external_bullets: feature.addon_external_bullets || null,
+          addon_external_cta_label: feature.addon_external_cta_label || null,
+          addon_display_order: feature.addon_display_order || null,
+          addon_is_public: feature.addon_is_public ?? false,
+          addon_eligibility_rules: feature.addon_eligibility_rules || null,
         }
         const { data, error: createError } = await supabase
           .from('feature_entitlements')
@@ -542,6 +579,17 @@ export default function FeatureDetail() {
           unavailable_gate_action: feature.unavailableGateAction || 'overlay',
           is_system_feature: feature.isSystemFeature ?? false,
           platform_admin_only: feature.platformAdminOnly ?? false,
+          // Add-on fields
+          available_as_addon: feature.available_as_addon ?? false,
+          addon_stripe_price_id: feature.addon_stripe_price_id || null,
+          addon_external_name: feature.addon_external_name?.trim() || null,
+          addon_external_description: feature.addon_external_description || null,
+          addon_external_short_label: feature.addon_external_short_label || null,
+          addon_external_bullets: feature.addon_external_bullets || null,
+          addon_external_cta_label: feature.addon_external_cta_label || null,
+          addon_display_order: feature.addon_display_order || null,
+          addon_is_public: feature.addon_is_public ?? false,
+          addon_eligibility_rules: feature.addon_eligibility_rules || null,
           parent_feature_key: feature.parentFeatureKey || null,
           // Only update rollout_status if feature is toggleable
           ...(feature.isToggleable !== false ? { rollout_status: feature.rolloutStatus } : {}),
@@ -1014,6 +1062,143 @@ export default function FeatureDetail() {
                 </Button>
               </div>
             </div>
+          )}
+        </Card>
+
+        {/* Add-On Configuration */}
+        <Card title="Add-On Configuration">
+          <p className="pa-body-s pa-text-muted" style={{ marginBottom: 'var(--pa-space-4)' }}>
+            Configure this feature as a purchasable add-on for organizations.
+          </p>
+
+          <div className="pa-form-group">
+            <div className="pa-flex pa-items-start pa-gap-3">
+              <Checkbox
+                checked={feature.available_as_addon ?? false}
+                onChange={(e) => setFeature({ ...feature, available_as_addon: e.target.checked })}
+              />
+              <div>
+                <label htmlFor="available-as-addon" className="pa-label" style={{ marginBottom: 'var(--pa-space-1)' }}>
+                  Available as Add-On
+                </label>
+                <div className="pa-body-s" style={{ color: 'var(--pa-n600)' }}>
+                  When enabled, org admins can purchase this feature as an add-on to their subscription.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {feature.available_as_addon && (
+            <>
+              <div className="pa-form-group">
+                <label className="pa-label pa-label--required">Stripe Price ID</label>
+                <Input
+                  value={feature.addon_stripe_price_id || ''}
+                  onChange={(e) => setFeature({ ...feature, addon_stripe_price_id: e.target.value.trim() || null })}
+                  placeholder="price_xxxxx"
+                />
+                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                  Annual recurring Stripe Price ID. Must start with "price_".
+                </div>
+              </div>
+
+              <div className="pa-form-group">
+                <label className="pa-label pa-label--required">External Name</label>
+                <Input
+                  value={feature.addon_external_name || ''}
+                  onChange={(e) => setFeature({ ...feature, addon_external_name: e.target.value || null })}
+                  placeholder="e.g., Advanced Ticketing"
+                />
+                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                  Display name shown to org admins when purchasing.
+                </div>
+              </div>
+
+              <div className="pa-form-group">
+                <label className="pa-label">External Description</label>
+                <textarea
+                  className="pa-input pa-textarea"
+                  value={feature.addon_external_description || ''}
+                  onChange={(e) => setFeature({ ...feature, addon_external_description: e.target.value.trim() || null })}
+                  placeholder="Marketing description shown to org admins..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="pa-form-group">
+                <label className="pa-label">Short Label</label>
+                <Input
+                  value={feature.addon_external_short_label || ''}
+                  onChange={(e) => setFeature({ ...feature, addon_external_short_label: e.target.value.trim() || null })}
+                  placeholder="e.g., Ticketing"
+                />
+                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                  Short label for badges/buttons (optional).
+                </div>
+              </div>
+
+              <div className="pa-form-group">
+                <label className="pa-label">Feature Bullets</label>
+                <textarea
+                  className="pa-input pa-textarea"
+                  value={Array.isArray(feature.addon_external_bullets) ? feature.addon_external_bullets.join('\n') : ''}
+                  onChange={(e) => {
+                    const lines = e.target.value.split('\n').filter(line => line.trim())
+                    setFeature({ ...feature, addon_external_bullets: lines.length > 0 ? lines : null })
+                  }}
+                  placeholder="One feature benefit per line..."
+                  rows={4}
+                />
+                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                  List of feature benefits (one per line).
+                </div>
+              </div>
+
+              <div className="pa-form-group">
+                <label className="pa-label">CTA Label</label>
+                <Input
+                  value={feature.addon_external_cta_label || ''}
+                  onChange={(e) => setFeature({ ...feature, addon_external_cta_label: e.target.value.trim() || null })}
+                  placeholder={`Add ${feature.addon_external_name || 'Feature'}`}
+                />
+                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                  Call-to-action button label. Defaults to "Add [External Name]" if not provided.
+                </div>
+              </div>
+
+              <div className="pa-form-group">
+                <label className="pa-label">Display Order</label>
+                <Input
+                  type="number"
+                  value={feature.addon_display_order ?? ''}
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? null : parseInt(e.target.value, 10)
+                    setFeature({ ...feature, addon_display_order: value })
+                  }}
+                  placeholder="0"
+                />
+                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                  Sort order for displaying add-ons. Lower numbers appear first.
+                </div>
+              </div>
+
+              <div className="pa-form-group">
+                <div className="pa-flex pa-items-start pa-gap-3">
+                  <Checkbox
+                    checked={feature.addon_is_public ?? false}
+                    onChange={(e) => setFeature({ ...feature, addon_is_public: e.target.checked })}
+                  />
+                  <div>
+                    <label htmlFor="addon-is-public" className="pa-label" style={{ marginBottom: 'var(--pa-space-1)' }}>
+                      Public (Visible to Org Admins)
+                    </label>
+                    <div className="pa-body-s" style={{ color: 'var(--pa-n600)' }}>
+                      When enabled, this add-on is visible in the org admin store. When disabled, only platform admins can see it.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </Card>
 

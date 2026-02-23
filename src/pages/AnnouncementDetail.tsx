@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+import { debug } from '../lib/debug'
+import { supabase } from '../lib/supabase'
 import { getAnnouncementById, type Announcement } from '../data/services/messagesService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
@@ -14,13 +16,14 @@ export default function AnnouncementDetail() {
   const { announcementId } = useParams<{ announcementId: string }>()
   const [searchParams] = useSearchParams()
 
-  // Add lifecycle logging
   useDebugLifecycle('AnnouncementDetail', { announcementId })
   const [loading, setLoading] = useState(true)
   const [announcement, setAnnouncement] = useState<Announcement | null>(null)
+  const [debugStuck, setDebugStuck] = useState<Record<string, unknown> | null>(null)
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const isMountedRef = useRef(true)
+  const fetchAttemptRef = useRef(0)
 
   // Track if component is mounted to prevent state updates after unmount
   useEffect(() => {
@@ -29,48 +32,137 @@ export default function AnnouncementDetail() {
     }
   }, [])
 
+  // ── DEBUG LAYER 1: log every change in readiness + context ────────────────
+  useEffect(() => {
+    debug.flow('AnnouncementDetail', 'Context/readiness changed', {
+      isReady,
+      announcementId,
+      hasContext: !!context,
+      orgId: (context as unknown as Record<string, unknown> | null)?.org_id ?? null,
+      userId: (context as unknown as Record<string, unknown> | null)?.user_id ?? null,
+    })
+    console.log(
+      '%c[AnnouncementDetail] readiness snapshot',
+      'color:#0ea5e9;font-weight:bold',
+      { isReady, announcementId, context }
+    )
+  }, [isReady, context, announcementId])
+
+  // ── DEBUG LAYER 2: stuck-loading detector (6 s timeout) ──────────────────
+  useEffect(() => {
+    if (!loading) return
+    const timer = setTimeout(async () => {
+      if (!isMountedRef.current || !loading) return
+      const { data: sessionData } = await supabase.auth.getSession()
+      const snapshot = {
+        loading,
+        isReady,
+        announcementId,
+        fetchAttempts: fetchAttemptRef.current,
+        hasSession: !!sessionData?.session,
+        sessionExpiry: sessionData?.session?.expires_at ?? null,
+        userId: sessionData?.session?.user?.id ?? null,
+        contextOrgId: (context as unknown as Record<string, unknown> | null)?.org_id ?? null,
+        contextUserId: (context as unknown as Record<string, unknown> | null)?.user_id ?? null,
+        timestamp: new Date().toISOString(),
+      }
+      debug.error('AnnouncementDetail', '⚠️ Still loading after 6 s — possible RLS block or missing context', snapshot)
+      console.warn(
+        '%c[AnnouncementDetail] ⚠️  STUCK at Loading after 6 s',
+        'color:#f97316;font-weight:bold;font-size:13px',
+        snapshot
+      )
+      if (import.meta.env.DEV) {
+        setDebugStuck(snapshot)
+      }
+    }, 6000)
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading])
+
   const fetchData = useCallback(async () => {
     if (!announcementId) {
+      debug.error('AnnouncementDetail', 'No announcementId — redirecting', {})
       setLoading(false)
       navigate('/portal/messages', { replace: true })
       return
     }
 
     if (!isReady) {
-      // Wait for context to be ready
+      debug.flow('AnnouncementDetail', 'fetchData called but context not ready — waiting', {
+        isReady,
+        announcementId,
+        hasContext: !!context,
+      })
+      console.log('%c[AnnouncementDetail] fetchData: context not ready yet', 'color:#94a3b8', { isReady, context })
       return
     }
+
+    fetchAttemptRef.current += 1
+    const attempt = fetchAttemptRef.current
+
+    debug.flow('AnnouncementDetail', `fetchData start (attempt ${attempt})`, {
+      announcementId,
+      orgId: (context as unknown as Record<string, unknown> | null)?.org_id,
+    })
+
+    // Log auth session state right before the query
+    const { data: sessionData } = await supabase.auth.getSession()
+    console.log(
+      `%c[AnnouncementDetail] attempt #${attempt} — auth session`,
+      'color:#6366f1;font-weight:bold',
+      {
+        hasSession: !!sessionData?.session,
+        userId: sessionData?.session?.user?.id ?? null,
+        expiresAt: sessionData?.session?.expires_at ?? null,
+        announcementId,
+        context,
+      }
+    )
 
     setLoading(true)
 
     try {
+      debug.flow('AnnouncementDetail', 'Calling getAnnouncementById', { announcementId, attempt })
       const { data, error } = await getAnnouncementById(context, announcementId)
 
-      // Check if component is still mounted before updating state
       if (!isMountedRef.current) return
 
+      debug.data('AnnouncementDetail', 'getAnnouncementById result', {
+        attempt,
+        hasData: !!data,
+        errorMessage: error?.message ?? null,
+        announcementId,
+      })
+      console.log(
+        `%c[AnnouncementDetail] attempt #${attempt} — query result`,
+        'color:#10b981;font-weight:bold',
+        { data, error }
+      )
+
       if (error || !data) {
-        // Set loading to false before navigating to prevent hanging
         setLoading(false)
-        
-        // Handle different error types
-        if (error?.message?.includes('not found') || error?.message?.includes('No rows')) {
-          // 404 - announcement not found
-          navigate('/portal/messages', { replace: true })
-        } else {
-          // Other errors - log and redirect
-          console.error('Error fetching announcement:', error)
-          navigate('/portal/messages', { replace: true })
-        }
+        const msg = error?.message ?? 'no data'
+        const isNotFound = msg.includes('not found') || msg.includes('No rows') || msg.includes('PGRST116')
+        debug.error('AnnouncementDetail', isNotFound ? 'Announcement not found (404)' : 'Fetch error — redirecting', {
+          attempt, error: msg, announcementId,
+        })
+        console.warn(
+          `%c[AnnouncementDetail] attempt #${attempt} — redirecting: ${isNotFound ? '404' : 'error'}`,
+          'color:#f43f5e',
+          { error }
+        )
+        navigate('/portal/messages', { replace: true })
         return
       }
 
       setAnnouncement(data)
       setLoading(false)
+      setDebugStuck(null)
     } catch (err) {
-      // Catch any unexpected errors
       if (!isMountedRef.current) return
-      console.error('Unexpected error fetching announcement:', err)
+      debug.error('AnnouncementDetail', 'Unexpected error in fetchData', { err, attempt, announcementId })
+      console.error('%c[AnnouncementDetail] Unexpected error', 'color:#f43f5e;font-weight:bold', err)
       setLoading(false)
       navigate('/portal/messages', { replace: true })
     }
@@ -89,8 +181,33 @@ export default function AnnouncementDetail() {
   if (loading) {
     return (
       <PortalLayout>
-        <div className="flex justify-center py-12">
+        <div className="flex flex-col items-center py-12 gap-6">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+
+          {/* Dev-only stuck-state diagnostic overlay */}
+          {import.meta.env.DEV && debugStuck && (
+            <div style={{
+              maxWidth: 640,
+              background: '#fff7ed',
+              border: '2px solid #f97316',
+              borderRadius: 8,
+              padding: '16px 20px',
+              fontFamily: 'monospace',
+              fontSize: 12,
+              color: '#1e293b',
+              textAlign: 'left',
+            }}>
+              <strong style={{ color: '#f97316', fontSize: 13 }}>⚠️ DEV: Stuck at Loading ({'>'}6 s)</strong>
+              <p style={{ marginTop: 8, marginBottom: 4, color: '#64748b' }}>Check the console for full details. Snapshot:</p>
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                {JSON.stringify(debugStuck, null, 2)}
+              </pre>
+              <p style={{ marginTop: 10, marginBottom: 0, color: '#64748b', fontSize: 11 }}>
+                Likely causes: <strong>RLS blocking the row</strong> (user not a member of this org/team),
+                missing session, or context not resolving (no org linked to user).
+              </p>
+            </div>
+          )}
         </div>
       </PortalLayout>
     )

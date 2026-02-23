@@ -3980,7 +3980,17 @@ export type Database = {
       }
       feature_entitlements: {
         Row: {
+          addon_display_order: number | null
+          addon_eligibility_rules: Json | null
+          addon_external_bullets: string[] | null
+          addon_external_cta_label: string | null
+          addon_external_description: string | null
+          addon_external_name: string | null
+          addon_external_short_label: string | null
+          addon_is_public: boolean
+          addon_stripe_price_id: string | null
           archived_at: string | null
+          available_as_addon: boolean
           category: string
           created_at: string | null
           description: string | null
@@ -4000,7 +4010,17 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          addon_display_order?: number | null
+          addon_eligibility_rules?: Json | null
+          addon_external_bullets?: string[] | null
+          addon_external_cta_label?: string | null
+          addon_external_description?: string | null
+          addon_external_name?: string | null
+          addon_external_short_label?: string | null
+          addon_is_public?: boolean
+          addon_stripe_price_id?: string | null
           archived_at?: string | null
+          available_as_addon?: boolean
           category: string
           created_at?: string | null
           description?: string | null
@@ -4020,7 +4040,17 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          addon_display_order?: number | null
+          addon_eligibility_rules?: Json | null
+          addon_external_bullets?: string[] | null
+          addon_external_cta_label?: string | null
+          addon_external_description?: string | null
+          addon_external_name?: string | null
+          addon_external_short_label?: string | null
+          addon_is_public?: boolean
+          addon_stripe_price_id?: string | null
           archived_at?: string | null
+          available_as_addon?: boolean
           category?: string
           created_at?: string | null
           description?: string | null

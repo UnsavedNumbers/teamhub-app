@@ -19,6 +19,8 @@ import { getLink, RouteKeys } from '../../utils/routes'
 import { getActiveTiers } from '../../data/services/licenseTiersService'
 import { createCheckoutSession, upgradeOrgLicense } from '../../api/billing'
 import { getErrorMessage } from '../../utils/errorUtils'
+import { resolveFeatureFlag } from '../../utils/featureFlags'
+import { supabase } from '../../lib/supabase'
 
 interface PlanCard {
   id: LicensePlan
@@ -209,6 +211,8 @@ export default function FeatureUpgradePaywallContent() {
   const [loadingTierId, setLoadingTierId] = useState<string | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [trialDays, setTrialDays] = useState<number | null>(null)
+  const [trialEligible, setTrialEligible] = useState<boolean>(false)
 
   const handleSelect = async (tierId: string) => {
     if (!orgId) {
@@ -300,6 +304,52 @@ export default function FeatureUpgradePaywallContent() {
       }
     }
   }, [setLoading])
+
+  // Fetch trial info (eligibility and days)
+  useEffect(() => {
+    async function fetchTrialInfo() {
+      if (!orgId) {
+        setTrialDays(null)
+        setTrialEligible(false)
+        return
+      }
+
+      try {
+        // Read feature flag client-side for display
+        const flag = await resolveFeatureFlag('free_trial_days', undefined, orgId)
+        const days = flag?.value_type === 'integer' ? (flag.value as number) : 0
+        setTrialDays(days > 0 ? days : 0)
+
+        // Check eligibility via RPC (single source of truth)
+        const { data: eligibility, error: eligibilityError } = await (supabase as any).rpc('check_trial_eligibility', {
+          p_org_id: orgId,
+        })
+
+        if (eligibilityError) {
+          console.error('[FeatureUpgradePaywallContent] Error checking trial eligibility:', eligibilityError)
+          setTrialEligible(false)
+        } else {
+          setTrialEligible((eligibility as { eligible?: boolean } | null)?.eligible ?? false)
+        }
+      } catch (err) {
+        console.error('[FeatureUpgradePaywallContent] Error fetching trial info:', err)
+        setTrialDays(0)
+        setTrialEligible(false)
+      }
+    }
+
+    fetchTrialInfo()
+  }, [orgId])
+
+  // Calculate trial end date
+  const getTrialEndDate = (): Date | null => {
+    if (!trialDays || trialDays === 0) return null
+    const endDate = new Date()
+    endDate.setDate(endDate.getDate() + trialDays)
+    return endDate
+  }
+
+  const trialEndDate = getTrialEndDate()
 
   // Get feature-specific translations
   const getFeatureTranslation = (key: string, fallbackKey: string) => {
@@ -572,7 +622,36 @@ export default function FeatureUpgradePaywallContent() {
                     __html: plan.price.replace(/~~(.*?)~~/g, '<span style="text-decoration: line-through; opacity: 0.6; margin-left: 8px;">$1</span>')
                   }}
                 />
+                
+                {/* Trial Badge - Only show for paid tiers (tier2, tier3) when eligible and not upgrading */}
+                {trialDays !== null && 
+                 trialDays > 0 && 
+                 trialEligible && 
+                 plan.tierKey !== 'tier1' && 
+                 !(summary?.stripeSubscriptionId && (summary?.status === 'active' || summary?.status === 'trial')) && (
+                  <div className="oa-badge oa-badge--success oa-mb-2" style={{ alignSelf: 'flex-start' }}>
+                    {t('billing.trialBadge', { days: trialDays })}
+                  </div>
+                )}
+                
                 <p className="oa-body-s oa-mb-6" style={{ color: 'var(--org-text-secondary)' }}>{plan.description}</p>
+                
+                {/* Trial Messaging - Only show for paid tiers when eligible and not upgrading */}
+                {trialDays !== null && 
+                 trialDays > 0 && 
+                 trialEligible && 
+                 plan.tierKey !== 'tier1' && 
+                 trialEndDate &&
+                 !(summary?.stripeSubscriptionId && (summary?.status === 'active' || summary?.status === 'trial')) && (
+                  <div className="oa-mb-6">
+                    <div className="oa-body-s oa-text-muted oa-mb-2">
+                      {t('billing.trialNoChargeToday')}
+                    </div>
+                    <div className="oa-body-xs oa-text-muted">
+                      {t('billing.trialAutoChargeDate', { date: trialEndDate.toLocaleDateString() })}
+                    </div>
+                  </div>
+                )}
                 <div className="oa-flex oa-flex-col oa-gap-2 oa-mb-6" style={{ flex: 1 }}>
                   {plan.features.map(feature => (
                     <div key={feature} className="oa-flex oa-items-center oa-gap-2">

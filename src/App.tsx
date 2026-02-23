@@ -275,6 +275,8 @@ const SubOrganizations = lazy(() => import('./pages/admin/SubOrganizations'))
 const PlanSelection = lazy(() => import('./pages/admin/PlanSelection'))
 const CheckoutSuccess = lazy(() => import('./pages/admin/CheckoutSuccess'))
 const CheckoutCancel = lazy(() => import('./pages/admin/CheckoutCancel'))
+const AddOns = lazy(() => import('./pages/admin/AddOns'))
+const AddOnDetail = lazy(() => import('./pages/admin/AddOnDetail'))
 const TrialExpired = lazy(() => import('./pages/admin/TrialExpired'))
 const FeatureUpgradePaywall = lazy(() => import('./pages/admin/FeatureUpgradePaywall'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
@@ -794,6 +796,8 @@ function AppWithTheme() {
               <Route path="organization/billing/plan-selection" element={<PlanSelection />} />
               <Route path="organization/billing/checkout/success" element={<CheckoutSuccess />} />
               <Route path="organization/billing/checkout/cancel" element={<CheckoutCancel />} />
+              <Route path="organization/add-ons" element={<Suspense fallback={<AdminLoadingSpinner />}><AddOns /></Suspense>} />
+              <Route path="organization/add-ons/:featureKey" element={<Suspense fallback={<AdminLoadingSpinner />}><AddOnDetail /></Suspense>} />
               <Route path="organization/feature-upgrade" element={<FeatureUpgradePaywall />} />
               
               {/* Personal Settings */}

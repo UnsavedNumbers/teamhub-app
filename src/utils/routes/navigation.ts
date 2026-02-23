@@ -320,6 +320,7 @@ export const orgAdminNavSections: NavigationSection[] = [
                     { routeKey: 'admin.organization.bulkInvite', text: 'Bulk Invites', icon: 'upload', description: 'Onboard multiple users' },
                     { routeKey: 'admin.organization.subOrgs', text: 'Sub-Organizations', icon: 'apartment', description: 'Manage sub-organizations' },
                     { routeKey: 'admin.organization.billing', text: 'Billing', icon: 'credit_card', description: 'Plan and billing' },
+                    { routeKey: 'admin.organization.addOns', text: 'Add-ons', icon: 'add_circle', description: 'Purchase additional features' },
                 ],
             },
         ],

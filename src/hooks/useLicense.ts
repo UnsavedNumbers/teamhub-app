@@ -110,6 +110,7 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
         current_tier_id?: string | null
         license_current_period_start?: string | null
         license_current_period_end?: string | null
+        license_trial_start?: string | null
         license_trial_ends_at?: string | null
         license_grace_ends_at?: string | null
         license_cancel_at_period_end?: boolean | null
@@ -125,6 +126,7 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
           current_tier_id,
           license_current_period_start,
           license_current_period_end,
+          license_trial_start,
           license_trial_ends_at,
           license_grace_ends_at,
           license_cancel_at_period_end,
@@ -249,6 +251,7 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
         tierName,
         currentPeriodStart: data.license_current_period_start ?? null,
         currentPeriodEnd: data.license_current_period_end ?? null,
+        trialStart: data.license_trial_start ?? null,
         trialEndsAt: data.license_trial_ends_at ?? null,
         graceEndsAt: data.license_grace_ends_at ?? null,
         cancelAtPeriodEnd: data.license_cancel_at_period_end ?? null,

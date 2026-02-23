@@ -52,9 +52,8 @@ export default function AdminAnnouncementDetail() {
     try {
       const { data, error } = await getAnnouncementById(context, announcementId)
 
-      if (!isMountedRef.current) return
-
       if (error || !data) {
+        if (!isMountedRef.current) return
         setLoading(false)
         navigate('/admin/announcements', { replace: true })
         return
@@ -155,6 +154,7 @@ export default function AdminAnnouncementDetail() {
   const priority = (announcement.priority || 'normal').toLowerCase()
   const authorRole = announcement.author?.role || 'parent'
   const authorEmail = announcement.author?.email || ''
+  const authorLabel = authorRole === 'coach' ? 'Coach' : authorRole === 'org_admin' ? 'Admin' : 'Parent'
   const teamName = announcement.team?.name || null
   const isUrgent = priority === 'urgent'
   const isOrgWide = announcement.team_id === null
@@ -185,192 +185,162 @@ export default function AdminAnnouncementDetail() {
         ]}
       />
 
-      <Card className="oa-p-8">
-        <div className="oa-space-y-6">
-          {/* Priority and Author Info */}
-          <div className="oa-flex oa-items-center oa-gap-4 oa-flex-wrap">
+      <Card className="oa-overflow-hidden">
+        {/* Message header: From / To / Type / Date */}
+        <header className="oa-px-5 oa-pt-5 oa-pb-4 oa-border-b oa-border-slate-200 dark:oa-border-slate-700">
+          <div className="oa-flex oa-flex-wrap oa-items-start oa-gap-4 oa-gap-y-3">
+            <div className="oa-min-w-0 oa-flex-1">
+              <div className="oa-flex oa-items-center oa-gap-2 oa-flex-wrap">
+                <span className="oa-text-xs oa-font-medium oa-text-slate-500 dark:oa-text-slate-400 oa-shrink-0">From:</span>
+                <span className="oa-text-sm oa-font-semibold oa-text-slate-900 dark:oa-text-white oa-truncate">
+                  {authorLabel}
+                </span>
+                {authorEmail && (
+                  <span className="oa-text-sm oa-text-slate-500 dark:oa-text-slate-400 oa-truncate">&lt;{authorEmail}&gt;</span>
+                )}
+              </div>
+              <div className="oa-flex oa-items-center oa-gap-2 oa-mt-0.5">
+                <span className="oa-text-xs oa-font-medium oa-text-slate-500 dark:oa-text-slate-400 oa-shrink-0">To:</span>
+                <span className="oa-text-sm oa-text-slate-700 dark:oa-text-slate-300">
+                  {isOrgWide ? 'All Teams' : teamName ?? '—'}
+                </span>
+              </div>
+              <div className="oa-flex oa-items-center oa-gap-2 oa-mt-0.5">
+                <span className="oa-text-xs oa-font-medium oa-text-slate-500 dark:oa-text-slate-400 oa-shrink-0">Type of Announcement:</span>
+                <span className="oa-text-sm oa-font-medium oa-text-slate-700 dark:oa-text-slate-300 oa-capitalize">
+                  <span className="oa-inline-flex oa-align-middle oa-mr-1" aria-hidden>{emoji}</span>
+                  {announcementType.replace(/_/g, ' ')}
+                </span>
+              </div>
+            </div>
+            <div className="oa-shrink-0 oa-text-right">
+              <div className="oa-text-sm oa-font-medium oa-text-slate-700 dark:oa-text-slate-300">
+                {formatDate(announcement.created_at)}
+              </div>
+              <div className="oa-text-xs oa-text-slate-500 dark:oa-text-slate-400">{formatTime(announcement.created_at)}</div>
+              {announcement.updated_at !== announcement.created_at && (
+                <div className="oa-text-xs oa-text-slate-400 dark:oa-text-slate-500 oa-mt-1">
+                  Edited {formatDate(announcement.updated_at)}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="oa-flex oa-items-center oa-gap-2 oa-flex-wrap oa-mt-3">
             {isUrgent && (
-              <span className="oa-px-3 oa-py-1 oa-bg-red-500 oa-text-white oa-text-xs oa-font-black oa-uppercase oa-tracking-widest oa-rounded">
+              <span className="oa-px-2 oa-py-0.5 oa-bg-red-500 oa-text-white oa-text-xs oa-font-semibold oa-uppercase oa-tracking-wide oa-rounded">
                 Urgent
               </span>
             )}
             {isOrgWide && (
-              <span className="oa-px-3 oa-py-1 oa-bg-purple-500/10 oa-text-purple-500 dark:oa-text-purple-400 oa-text-xs oa-font-bold oa-uppercase oa-tracking-widest oa-rounded">
+              <span className="oa-px-2 oa-py-0.5 oa-bg-slate-200 dark:oa-bg-slate-600 oa-text-slate-700 dark:oa-text-slate-200 oa-text-xs oa-font-medium oa-rounded">
                 Org-Wide
               </span>
             )}
-            <span className={cn(
-              'oa-px-3 oa-py-1 oa-text-xs oa-font-bold oa-uppercase oa-tracking-widest oa-rounded',
-              authorRole === 'coach'
-                ? 'oa-bg-[var(--org-btn-primary-bg)]/10 oa-text-[var(--org-link-color)]'
-                : 'oa-bg-purple-500/10 oa-text-purple-500 dark:oa-text-purple-400'
-            )}>
-              {authorRole === 'coach' ? 'Coach' : authorRole === 'org_admin' ? 'Admin' : 'Parent'}
-            </span>
-            {authorEmail && (
-              <span className="oa-text-sm oa-text-slate-500 dark:oa-text-slate-400">{authorEmail}</span>
-            )}
           </div>
+        </header>
 
-          {/* Team Name */}
-          {isOrgWide ? (
-            <div className="oa-flex oa-items-center oa-gap-3">
-              <span className="material-symbols-outlined oa-text-slate-400">business</span>
-              <p className="oa-font-bold oa-text-slate-900 dark:oa-text-white">All Teams</p>
-            </div>
-          ) : teamName ? (
-            <div className="oa-flex oa-items-center oa-gap-3">
-              <span className="material-symbols-outlined oa-text-slate-400">group</span>
-              <p className="oa-font-bold oa-text-slate-900 dark:oa-text-white">{teamName}</p>
-            </div>
-          ) : null}
-
-          {/* Dates */}
-          <div className="oa-flex oa-items-center oa-gap-3">
-            <span className="material-symbols-outlined oa-text-slate-400">schedule</span>
-            <div>
-              <p className="oa-font-black oa-text-slate-900 dark:oa-text-white">{formatDate(announcement.created_at)}</p>
-              <p className="oa-text-sm oa-font-bold oa-text-slate-500 dark:oa-text-slate-400">{formatTime(announcement.created_at)}</p>
-            </div>
-          </div>
-
-          {announcement.updated_at !== announcement.created_at && (
-            <div className="oa-flex oa-items-center oa-gap-3">
-              <span className="material-symbols-outlined oa-text-slate-400">edit</span>
-              <p className="oa-text-sm oa-font-bold oa-text-slate-500 dark:oa-text-slate-400">
-                Updated {formatDate(announcement.updated_at)} at {formatTime(announcement.updated_at)}
-              </p>
-            </div>
+        {/* Subject - same horizontal alignment as header */}
+        <div className="oa-px-5 oa-pt-4 oa-pb-2">
+          <div className="oa-text-xs oa-font-medium oa-text-slate-500 dark:oa-text-slate-400 oa-mb-2">Subject</div>
+          {isEditingTitle && canEdit ? (
+            <Input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              placeholder="Subject"
+              className="oa-text-xl oa-font-bold"
+            />
+          ) : (
+            <h2 className="oa-text-xl oa-font-bold oa-text-slate-900 dark:oa-text-white oa-m-0 oa-tracking-tight" style={{ fontFamily: 'var(--pa-font-display)' }}>
+              {announcement.title}
+            </h2>
           )}
+        </div>
 
-          {/* Title - Inline Editable */}
-          <div className="oa-pt-4 oa-border-t oa-border-slate-200 dark:oa-border-slate-700">
-            <div className="oa-flex oa-items-start oa-gap-3">
-              <span className="oa-text-3xl">{emoji}</span>
-              <div className="oa-flex-1">
-                {isEditingTitle && canEdit ? (
-                  <Input
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    placeholder="Announcement title"
-                    className="oa-text-xl oa-font-bold"
-                  />
-                ) : (
-                  <div className="oa-flex oa-items-center oa-gap-2 oa-group">
-                    <h2 className="oa-text-xl oa-font-bold oa-text-slate-900 dark:oa-text-white">{announcement.title}</h2>
-                    {canEdit && (
-                      <button
-                        onClick={() => setIsEditingTitle(true)}
-                        className="oa-opacity-0 group-hover:oa-opacity-100 oa-transition-opacity oa-text-slate-400 hover:oa-text-slate-600"
-                        title="Edit title"
-                      >
-                        <span className="material-symbols-outlined oa-text-sm">edit</span>
-                      </button>
-                    )}
-                  </div>
-                )}
+        {/* Priority and Type - when editing */}
+        {canEdit && (isEditingTitle || isEditingContent) && (
+          <div className="oa-px-5 oa-pb-4">
+            <div className="oa-grid oa-grid-cols-2 oa-gap-4 oa-max-w-md">
+              <div>
+                <label className="oa-block oa-text-xs oa-font-medium oa-text-slate-500 dark:oa-text-slate-400 oa-mb-1">Priority</label>
+                <Select
+                  value={editPriority}
+                  onChange={(e) => setEditPriority(e.target.value as 'normal' | 'urgent')}
+                  options={[
+                    { value: 'normal', label: 'Normal' },
+                    { value: 'urgent', label: 'Urgent' },
+                  ]}
+                />
+              </div>
+              <div>
+                <label className="oa-block oa-text-xs oa-font-medium oa-text-slate-500 dark:oa-text-slate-400 oa-mb-1">Type</label>
+                <Select
+                  value={editType}
+                  onChange={(e) => setEditType(e.target.value as typeof editType)}
+                  options={[
+                    { value: 'general', label: 'General' },
+                    { value: 'reminder', label: 'Reminder' },
+                    { value: 'schedule_change', label: 'Schedule Change' },
+                    { value: 'urgent', label: 'Urgent' },
+                    { value: 'payment', label: 'Payment' },
+                    { value: 'travel', label: 'Travel' },
+                  ]}
+                />
               </div>
             </div>
           </div>
+        )}
 
-          {/* Priority and Type - Always Editable for Org Admins */}
-          {canEdit && (isEditingTitle || isEditingContent) && (
-            <div className="oa-space-y-4 oa-pt-4 oa-border-t oa-border-slate-200 dark:oa-border-slate-700">
-              <div className="oa-grid oa-grid-cols-2 oa-gap-4">
-                <div>
-                  <label className="oa-block oa-text-sm oa-font-medium oa-text-slate-700 dark:oa-text-slate-300 oa-mb-2">
-                    Priority
-                  </label>
-                  <Select
-                    value={editPriority}
-                    onChange={(e) => setEditPriority(e.target.value as 'normal' | 'urgent')}
-                    options={[
-                      { value: 'normal', label: 'Normal' },
-                      { value: 'urgent', label: 'Urgent' },
-                    ]}
-                  />
-                </div>
-                <div>
-                  <label className="oa-block oa-text-sm oa-font-medium oa-text-slate-700 dark:oa-text-slate-300 oa-mb-2">
-                    Type
-                  </label>
-                  <Select
-                    value={editType}
-                    onChange={(e) => setEditType(e.target.value as typeof editType)}
-                    options={[
-                      { value: 'general', label: 'General' },
-                      { value: 'reminder', label: 'Reminder' },
-                      { value: 'schedule_change', label: 'Schedule Change' },
-                      { value: 'urgent', label: 'Urgent' },
-                      { value: 'payment', label: 'Payment' },
-                      { value: 'travel', label: 'Travel' },
-                    ]}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Content - Inline Editable */}
-          <div className="oa-pt-4 oa-border-t oa-border-slate-200 dark:oa-border-slate-700">
-            {isEditingContent && canEdit ? (
-              <textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                placeholder="Announcement content"
-                className="oa-w-full oa-min-h-[200px] oa-p-3 oa-border oa-rounded oa-resize-y"
-                style={{
-                  background: 'var(--pa-surface-panel)',
-                  borderColor: 'var(--pa-border-default)',
-                  color: 'var(--pa-text-primary)',
-                  fontFamily: 'inherit'
-                }}
-              />
-            ) : (
-              <div className="oa-group">
-                <p className="oa-text-slate-600 dark:oa-text-slate-300 oa-whitespace-pre-wrap oa-leading-relaxed">
-                  {announcement.content}
-                </p>
-                {canEdit && (
-                  <button
-                    onClick={() => setIsEditingContent(true)}
-                    className="oa-opacity-0 group-hover:oa-opacity-100 oa-transition-opacity oa-mt-2 oa-text-slate-400 hover:oa-text-slate-600"
-                    title="Edit content"
-                  >
-                    <span className="material-symbols-outlined oa-text-sm">edit</span> Edit
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Save/Cancel Buttons - Show when editing */}
-          {canEdit && (isEditingTitle || isEditingContent) && (
-            <div className="oa-flex oa-gap-2 oa-pt-4 oa-border-t oa-border-slate-200 dark:oa-border-slate-700">
-              <Button
-                variant="primary"
-                onClick={handleSave}
-                disabled={saving || !editTitle.trim() || !editContent.trim()}
-              >
-                {saving ? 'Saving...' : 'Save Changes'}
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={handleCancelEdit}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
+        {/* Message body - same horizontal alignment as header */}
+        <div className="oa-px-5 oa-pb-6">
+          <div className="oa-text-xs oa-font-medium oa-text-slate-500 dark:oa-text-slate-400 oa-mb-2">Message</div>
+          {isEditingContent && canEdit ? (
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              placeholder="Message"
+              className="oa-w-full oa-min-h-[200px] oa-p-3 oa-border oa-border-slate-300 dark:oa-border-slate-600 oa-rounded oa-resize-y oa-text-sm oa-leading-relaxed oa-bg-white dark:oa-bg-slate-800 oa-text-slate-900 dark:oa-text-slate-100"
+            />
+          ) : (
+            <div className="oa-text-sm oa-leading-relaxed oa-whitespace-pre-wrap oa-text-slate-700 dark:oa-text-slate-300">
+              {announcement.content}
             </div>
           )}
         </div>
-      </Card>
 
-      <div className="oa-mt-6">
-        <Button variant="primary" onClick={() => navigate('/admin/announcements')}>
-          Back to Announcements
-        </Button>
-      </div>
+        <footer className="oa-px-5 oa-pt-6 oa-pb-6 oa-border-t oa-border-slate-200 dark:oa-border-slate-700" style={{ marginTop: 'var(--pa-space-6)' }}>
+            {canEdit && (isEditingTitle || isEditingContent) ? (
+              <div className="oa-flex oa-flex-wrap oa-items-center oa-gap-2">
+                <Button
+                  variant="primary"
+                  onClick={handleSave}
+                  disabled={saving || !editTitle.trim() || !editContent.trim()}
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </Button>
+                <Button variant="ghost" onClick={handleCancelEdit} disabled={saving}>
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <div className="oa-flex oa-flex-wrap oa-items-center oa-gap-2">
+                {canEdit && (
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setIsEditingTitle(true)
+                      setIsEditingContent(true)
+                    }}
+                  >
+                    Edit Announcement
+                  </Button>
+                )}
+                <Button variant="ghost" onClick={() => navigate('/admin/announcements')}>
+                  Back to Announcements
+                </Button>
+              </div>
+            )}
+        </footer>
+      </Card>
     </div>
   )
 }

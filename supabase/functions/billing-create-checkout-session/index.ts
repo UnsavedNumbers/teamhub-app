@@ -2,6 +2,8 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
 import Stripe from "https://esm.sh/stripe@12.18.0?dts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
+import { getFreeTrialDaysForOrgSignup } from "../shared/getFreeTrialDays.ts"
+import { checkTrialEligibility } from "../shared/checkTrialEligibility.ts"
 
 // ---- CORS helpers (robust preflight) ----
 // - Echo Access-Control-Request-Headers so OPTIONS never fails due to missing headers
@@ -128,6 +130,29 @@ serve(async (req) => {
     return json(req, { error: "Forbidden" }, 403)
   }
 
+  // Check for existing in-progress checkout session (prevent duplicate trials)
+  const { data: existingCheckout, error: existingCheckoutError } = await supabase
+    .from("checkout_sessions")
+    .select("id, status")
+    .eq("org_id", organizationId)
+    .eq("status", "in_progress")
+    .maybeSingle()
+
+  if (existingCheckoutError && existingCheckoutError.code !== "PGRST116") {
+    // PGRST116 is "not found" which is fine, other errors are not
+    return json(req, { error: `Failed to check existing checkout sessions: ${existingCheckoutError.message}` }, 400)
+  }
+
+  if (existingCheckout) {
+    return json(req, { error: "A checkout session is already in progress for this organization" }, 400)
+  }
+
+  // Check trial eligibility and get trial days (after auth check)
+  const eligibility = await checkTrialEligibility(supabase, organizationId)
+  const trialDays = eligibility.eligible
+    ? await getFreeTrialDaysForOrgSignup(supabase, organizationId, user.id)
+    : 0
+
   // Load or create license record for customer id (org_licenses schema uses org_id)
   const { data: existingLicense, error: licError } = await supabase
     .from("org_licenses")
@@ -200,11 +225,14 @@ serve(async (req) => {
   }
 
   // Create Stripe subscription Checkout Session
-  const session = await stripe.checkout.sessions.create({
+  // Include trial_period_days if eligible and trialDays > 0
+  // Always require payment method collection for automatic post-trial charging
+  const sessionConfig: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
     customer: stripeCustomerId,
     line_items: [{ price: priceId, quantity: 1 }],
     client_reference_id: organizationId,
+    payment_method_collection: "always", // Required for automatic post-trial charging
     metadata: {
       org_id: organizationId,
       tier_id: tierId,
@@ -222,7 +250,17 @@ serve(async (req) => {
     },
     success_url: successUrl,
     cancel_url: cancelUrl,
-  })
+  }
+
+  // Add trial_period_days only if eligible and trialDays > 0
+  if (trialDays > 0) {
+    sessionConfig.subscription_data = {
+      ...sessionConfig.subscription_data,
+      trial_period_days: trialDays,
+    }
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionConfig)
 
   // Store stripe session id on our checkout_sessions row (optional but useful)
   const { error: checkoutUpdateErr } = await supabase

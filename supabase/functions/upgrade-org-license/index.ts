@@ -334,19 +334,67 @@ serve(async (req) => {
   }
 
   // ============================================================================
-  // STEP 5: Update Subscription with Proration
+  // STEP 5: Identify Add-Ons to Remove (if included in new tier)
+  // ============================================================================
+
+  // Get features included in new tier
+  const { data: newTierFeatures, error: tierFeaturesErr } = await supabase
+    .from("tier_feature_assignments")
+    .select("feature_entitlements!inner(feature_key)")
+    .eq("license_tier_id", targetTierId)
+    .eq("included", true)
+
+  if (tierFeaturesErr) {
+    return json(req, { error: tierFeaturesErr.message }, 400)
+  }
+
+  const includedFeatureKeys = (newTierFeatures || [])
+    .map((tf: any) => tf.feature_entitlements?.feature_key)
+    .filter((key: string | undefined): key is string => !!key)
+
+  // Get org's active add-ons
+  const { data: activeAddOns, error: addOnsErr } = await supabase
+    .from("org_addon_entitlements")
+    .select("id, feature_key, stripe_subscription_item_id")
+    .eq("org_id", orgId)
+    .eq("status", "active")
+
+  if (addOnsErr) {
+    return json(req, { error: addOnsErr.message }, 400)
+  }
+
+  // Find add-ons that are now included in tier
+  const addOnsToRemove = (activeAddOns || []).filter((addon) =>
+    includedFeatureKeys.includes(addon.feature_key),
+  )
+
+  // ============================================================================
+  // STEP 6: Update Subscription with Proration (including add-on removal)
   // ============================================================================
 
   try {
+    const subscriptionItems: Array<
+      | { id: string; price: string }
+      | { id: string; deleted: boolean }
+    > = [
+      {
+        id: subscriptionItem.id,
+        price: targetTier.stripe_price_id,
+      },
+    ]
+
+    // Add items to remove (add-ons now included in tier)
+    addOnsToRemove.forEach((addon) => {
+      subscriptionItems.push({
+        id: addon.stripe_subscription_item_id,
+        deleted: true,
+      })
+    })
+
     const updatedSubscription = await stripe.subscriptions.update(
       license.stripe_subscription_id,
       {
-        items: [
-          {
-            id: subscriptionItem.id,
-            price: targetTier.stripe_price_id,
-          },
-        ],
+        items: subscriptionItems,
         proration_behavior: "create_prorations",
         billing_cycle_anchor: "unchanged",
         payment_behavior: "default_incomplete",
@@ -357,7 +405,31 @@ serve(async (req) => {
     )
 
     // ============================================================================
-    // STEP 6: Handle Payment Result
+    // STEP 7: Update Add-On Entitlements (mark removed add-ons as canceled)
+    // ============================================================================
+
+    for (const addon of addOnsToRemove) {
+      await supabase
+        .from("org_addon_entitlements")
+        .update({
+          status: "canceled",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", addon.id)
+
+      await supabase.from("license_change_log").insert({
+        org_id: orgId,
+        actor_user_id: user.id,
+        action_type: "addon_removed_tier_upgrade",
+        feature_key: addon.feature_key,
+        stripe_subscription_id: license.stripe_subscription_id,
+        stripe_subscription_item_id: addon.stripe_subscription_item_id,
+        result_status: "succeeded",
+      })
+    }
+
+    // ============================================================================
+    // STEP 8: Handle Payment Result
     // ============================================================================
 
     let invoice: Stripe.Invoice | null = null

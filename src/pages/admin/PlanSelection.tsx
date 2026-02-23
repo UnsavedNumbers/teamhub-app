@@ -15,6 +15,8 @@ import {
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { createCheckoutSession, upgradeOrgLicense } from '../../api/billing'
 import { getErrorMessage } from '../../utils/errorUtils'
+import { resolveFeatureFlag } from '../../utils/featureFlags'
+import { supabase } from '../../lib/supabase'
 
 export default function PlanSelection() {
   const navigate = useNavigate()
@@ -40,6 +42,8 @@ export default function PlanSelection() {
   const [loadingTierId, setLoadingTierId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [trialDays, setTrialDays] = useState<number | null>(null)
+  const [trialEligible, setTrialEligible] = useState<boolean>(false)
 
   const handleSelect = async (tierId: string) => {
     if (!orgId) {
@@ -118,6 +122,42 @@ export default function PlanSelection() {
     fetchTiers()
   }, [])
 
+  // Fetch trial info (eligibility and days)
+  useEffect(() => {
+    async function fetchTrialInfo() {
+      if (!orgId) {
+        setTrialDays(null)
+        setTrialEligible(false)
+        return
+      }
+
+      try {
+        // Read feature flag client-side for display
+        const flag = await resolveFeatureFlag('free_trial_days', undefined, orgId)
+        const days = flag?.value_type === 'integer' ? (flag.value as number) : 0
+        setTrialDays(days > 0 ? days : 0)
+
+        // Check eligibility via RPC (single source of truth)
+        const { data: eligibility, error: eligibilityError } = await (supabase as any).rpc('check_trial_eligibility', {
+          p_org_id: orgId,
+        })
+
+        if (eligibilityError) {
+          console.error('[PlanSelection] Error checking trial eligibility:', eligibilityError)
+          setTrialEligible(false)
+        } else {
+          setTrialEligible((eligibility as { eligible?: boolean } | null)?.eligible ?? false)
+        }
+      } catch (err) {
+        console.error('[PlanSelection] Error fetching trial info:', err)
+        setTrialDays(0)
+        setTrialEligible(false)
+      }
+    }
+
+    fetchTrialInfo()
+  }, [orgId])
+
   // Determine current tier level to filter out downgrades
   const getCurrentTierLevel = (): number | null => {
     if (!licenseSummary?.tierName && !licenseSummary?.plan && !licenseSummary?.tierId) return null
@@ -174,6 +214,16 @@ export default function PlanSelection() {
     if (value === null) return 'Unlimited'
     return value.toLocaleString()
   }
+
+  // Calculate trial end date
+  const getTrialEndDate = (): Date | null => {
+    if (!trialDays || trialDays === 0) return null
+    const endDate = new Date()
+    endDate.setDate(endDate.getDate() + trialDays)
+    return endDate
+  }
+
+  const trialEndDate = getTrialEndDate()
 
   if (!orgId) {
     return (
@@ -264,7 +314,27 @@ export default function PlanSelection() {
                 {isCurrent && <div className="oa-badge oa-badge--neutral">CURRENT</div>}
               </div>
               <div className="oa-h1 oa-mb-4" style={{ fontWeight: 900 }}>{formatPrice(tier)}</div>
+              
+              {/* Trial Badge - Only show for paid tiers (tier2, tier3) when eligible */}
+              {trialDays !== null && trialDays > 0 && trialEligible && tier.tier_key !== 'tier1' && (
+                <div className="oa-badge oa-badge--success oa-mb-2">
+                  {t('billing.trialBadge', { days: trialDays })}
+                </div>
+              )}
+              
               <div className="oa-body-m oa-text-muted oa-mb-6">{tier.description || ''}</div>
+              
+              {/* Trial Messaging - Only show for paid tiers when eligible */}
+              {trialDays !== null && trialDays > 0 && trialEligible && tier.tier_key !== 'tier1' && trialEndDate && (
+                <div className="oa-mb-6">
+                  <div className="oa-body-s oa-text-muted oa-mb-2">
+                    {t('billing.trialNoChargeToday')}
+                  </div>
+                  <div className="oa-body-xs oa-text-muted">
+                    {t('billing.trialAutoChargeDate', { date: trialEndDate.toLocaleDateString() })}
+                  </div>
+                </div>
+              )}
               
               {/* Tier Limits */}
               {tierLimits[tier.id] && (

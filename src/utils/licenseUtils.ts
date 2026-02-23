@@ -10,6 +10,7 @@ export interface LicenseSummary {
   tierName?: string | null
   currentPeriodEnd?: string | null
   currentPeriodStart?: string | null
+  trialStart?: string | null
   trialEndsAt?: string | null
   graceEndsAt?: string | null
   cancelAtPeriodEnd?: boolean | null

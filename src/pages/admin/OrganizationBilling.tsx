@@ -421,6 +421,16 @@ export default function OrganizationBilling() {
                 {summary?.currentPeriodEnd ? formatDate(summary.currentPeriodEnd) : '—'}
               </p>
             </div>
+            {summary?.trialStart && summary?.status === 'trial' && (
+              <div>
+                <p className="oa-body-xs oa-text-slate-500 oa-mb-1">
+                  {t('billing.trialStartedLabel')}
+                </p>
+                <p className="oa-body-s oa-font-medium">
+                  {formatDate(summary.trialStart)}
+                </p>
+              </div>
+            )}
           </div>
         </Card>
 

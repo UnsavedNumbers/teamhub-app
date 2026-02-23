@@ -555,6 +555,22 @@ const admin = {
                 },
             },
         },
+        addOns: {
+            path: '/admin/organization/add-ons',
+            label: 'Add-ons',
+            icon: 'add_circle',
+            description: 'Purchase additional features',
+            requiresOrg: true,
+            routes: {
+                detail: {
+                    path: '/admin/organization/add-ons/:featureKey',
+                    params: ['featureKey'] as const,
+                    label: 'Add-on Details',
+                    icon: 'info',
+                    requiresOrg: true,
+                },
+            },
+        },
         trialExpired: {
             path: '/admin/organization/trial-expired',
             label: 'Trial Expired',

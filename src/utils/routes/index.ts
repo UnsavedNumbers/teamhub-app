@@ -170,6 +170,8 @@ export const RouteKeys = {
     ADMIN_ORGANIZATION_BULK_INVITE: 'admin.organization.bulkInvite',
     ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS: 'admin.organization.billing.checkoutSuccess',
     ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL: 'admin.organization.billing.checkoutCancel',
+    ADMIN_ORGANIZATION_ADDONS: 'admin.organization.addOns',
+    ADMIN_ORGANIZATION_ADDON_DETAIL: 'admin.organization.addOns.detail',
     ADMIN_TRIAL_EXPIRED: 'admin.organization.trialExpired',
     ADMIN_FEATURE_UPGRADE: 'admin.organization.featureUpgrade',
     ADMIN_ONBOARDING: 'admin.onboarding',
