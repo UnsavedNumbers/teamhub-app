@@ -9,7 +9,7 @@ export interface NotificationJob {
   org_id: string;
   user_id?: string;
   email: string;
-  type: 'new_event' | 'new_message' | 'payment_receipt' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email' | 'guardian_invite' | 'athlete_invite' | 'athlete_account_created' | 'athlete_linked' | 'ticket_receipt' | 'uniform_notification' | 'travel_notification' | 'photo_moderation' | 'rsvp_notification';
+  type: 'new_event' | 'new_message' | 'payment_receipt' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email' | 'guardian_invite' | 'athlete_invite' | 'athlete_account_created' | 'athlete_linked' | 'ticket_receipt' | 'uniform_notification' | 'travel_notification' | 'photo_moderation' | 'rsvp_notification' | 'org_contact_request' | 'platform_feature_request_signal';
   payload: Record<string, any>;
   status: 'queued' | 'sent' | 'failed';
   error?: string;
@@ -92,6 +92,14 @@ const EMAIL_CONFIG = {
   rsvp_notification: {
     subject: 'RSVP Required: {{event_title}}',
     preview: 'Please RSVP for this event'
+  },
+  org_contact_request: {
+    subject: '{{email_subject}}',
+    preview: 'A member of your organization has sent you a request'
+  },
+  platform_feature_request_signal: {
+    subject: '[Feature Signal] {{feature_name}} requested at {{org_name}}',
+    preview: 'A guardian or athlete has requested a feature not in their plan'
   }
 };
 
@@ -734,7 +742,67 @@ async function loadTemplate(type: string, payload: Record<string, any>, supabase
 </html>`
   };
 
-  const template = templates[type];
+  const orgContactRequestTemplate = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>{{email_subject}}</title></head>
+<body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px; margin: 0;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    {{#if organization_logo_url}}
+    <div style="text-align: center; margin-bottom: 24px;">
+      <img src="{{organization_logo_url}}" alt="{{organization_name}}" style="max-height: 60px; max-width: 200px;" />
+    </div>
+    {{else}}
+    <h1 style="color: #1e293b; margin-bottom: 24px; font-size: 22px;">{{organization_name}}</h1>
+    {{/if}}
+    <h2 style="color: #1e293b; margin-top: 0; font-size: 18px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px;">{{email_subject}}</h2>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
+      <tr><td style="padding: 6px 0; color: #64748b; width: 140px;">Category</td><td style="padding: 6px 0; color: #1e293b; font-weight: 600;">{{category_label}}</td></tr>
+      <tr><td style="padding: 6px 0; color: #64748b;">Submitted by</td><td style="padding: 6px 0; color: #1e293b;">{{requester_role}}</td></tr>
+      {{#if requested_feature_name}}
+      <tr><td style="padding: 6px 0; color: #64748b;">Feature requested</td><td style="padding: 6px 0; color: #1e293b; font-weight: 600;">{{requested_feature_name}}</td></tr>
+      <tr><td colspan="2"><span style="display: inline-block; background-color: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">Not included in current plan</span></td></tr>
+      {{/if}}
+    </table>
+    <div style="background-color: #f8fafc; padding: 16px; border-radius: 6px; border-left: 4px solid {{organization_primary_color}}; margin-bottom: 24px;">
+      <p style="margin: 0; color: #1e293b; line-height: 1.6; white-space: pre-wrap;">{{message}}</p>
+    </div>
+    <div style="text-align: center; margin: 24px 0;">
+      <a href="{{request_detail_url}}" style="display: inline-block; background-color: {{organization_primary_color}}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Request</a>
+    </div>
+    <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; color: #94a3b8; font-size: 12px; text-align: center;">
+      {{email_footer_text}}
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const platformFeatureSignalTemplate = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>[Feature Signal] {{feature_name}} at {{org_name}}</title></head>
+<body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px; margin: 0;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <h2 style="color: #1e293b; margin-top: 0; font-size: 18px;">[Feature Signal] {{feature_name}}</h2>
+    <p style="color: #475569; margin-bottom: 4px;">A <strong>{{requester_role}}</strong> at <strong>{{org_name}}</strong> requested a feature not included in their plan.</p>
+    <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;">
+      <tr style="background-color: #f8fafc;"><td style="padding: 10px 16px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Organization</td><td style="padding: 10px 16px; color: #1e293b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">{{org_name}}</td></tr>
+      <tr><td style="padding: 10px 16px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Feature key</td><td style="padding: 10px 16px; color: #1e293b; font-family: monospace; border-bottom: 1px solid #e2e8f0;">{{feature_key}}</td></tr>
+      <tr style="background-color: #f8fafc;"><td style="padding: 10px 16px; color: #64748b;">Requester role</td><td style="padding: 10px 16px; color: #1e293b;">{{requester_role}}</td></tr>
+    </table>
+    <div style="text-align: center; margin: 24px 0;">
+      <a href="{{org_detail_url}}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Org in Platform Admin</a>
+    </div>
+    <p style="color: #94a3b8; font-size: 12px; text-align: center;">This is an internal platform signal. Do not forward.</p>
+  </div>
+</body>
+</html>`;
+
+  const extendedTemplates: Record<string, string> = {
+    ...templates,
+    org_contact_request: orgContactRequestTemplate,
+    platform_feature_request_signal: platformFeatureSignalTemplate,
+  };
+
+  const template = extendedTemplates[type];
   if (!template) {
     throw new Error(`Template not found for type: ${type}`);
   }

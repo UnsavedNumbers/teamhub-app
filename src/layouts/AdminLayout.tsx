@@ -170,6 +170,7 @@ export default function AdminLayout() {
         { routeKey: 'admin.facilities.list', text: t('admin.facilities.title'), icon: 'location_city', path: getLink('admin.facilities.list'), requiresOrg: true },
         { routeKey: 'admin.attendance', text: t('admin.navigation.attendance'), icon: 'how_to_reg', path: getLink('admin.attendance'), requiresOrg: true },
         { routeKey: 'admin.notifications', text: t('admin.navigation.notifications'), icon: 'notifications', path: getLink('admin.notifications'), requiresOrg: true },
+        { routeKey: 'admin.contactRequests.list', text: t('admin.navigation.contactRequests'), icon: 'inbox', path: getLink('admin.contactRequests.list'), requiresOrg: true },
         { routeKey: 'admin.announcements.list', text: t('admin.navigation.announcements'), icon: 'campaign', path: getPath(RouteKeys.ADMIN_ANNOUNCEMENTS), requiresOrg: true },
         { routeKey: 'admin.travel.list', text: t('admin.navigation.travel'), icon: 'flight', path: getLink('admin.travel.list'), requiresOrg: true },
         { routeKey: 'admin.uniforms.list', text: t('admin.navigation.uniforms'), icon: 'checkroom', path: getPath(RouteKeys.ADMIN_UNIFORMS), requiresOrg: true },
@@ -378,13 +379,16 @@ export default function AdminLayout() {
 
             // If item has no children, render as direct link
             if (!hasChildren) {
-              if (isDisabled) {
+              const isGatedDisabled = item.isGated && item.gateAction === 'disable'
+              const isGatedModal = item.isGated && item.gateAction === 'modal'
+              
+              if (isDisabled || isGatedDisabled) {
                 return (
                   <div key={item.label} className="oa-nav-item-top">
                     <div
                       className="oa-nav-link-top"
                       style={{ opacity: 0.4, cursor: 'not-allowed' }}
-                      title={t('admin.navigation.requiresOrganizationSetup')}
+                      title={item.gateMessage || t('admin.navigation.requiresOrganizationSetup')}
                     >
                       <span className="material-symbols-outlined">{item.icon}</span>
                       <span>{item.label}</span>
@@ -396,6 +400,30 @@ export default function AdminLayout() {
               // Dashboard should never show as active (always white like unselected items)
               const isDashboard = item.label === t('admin.navigation.dashboard')
               const shouldShowActive = !isDashboard && active
+
+              // Handle modal gate action
+              if (isGatedModal) {
+                return (
+                  <div key={item.label} className="oa-nav-item-top">
+                    <div
+                      className={`oa-nav-link-top ${shouldShowActive ? 'active' : ''} ${isDashboard ? 'oa-nav-dashboard' : ''}`}
+                      onClick={() => {
+                        setFeatureGateModal({
+                          open: true,
+                          message: item.gateMessage || 'This feature is not available',
+                          reasonCode: item.reasonCode,
+                          featureKey: item.featureKey,
+                        })
+                      }}
+                      style={{ cursor: 'pointer' }}
+                      title={item.gateMessage}
+                    >
+                      <span className="material-symbols-outlined">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </div>
+                  </div>
+                )
+              }
 
               return (
                 <div key={item.label} className="oa-nav-item-top">

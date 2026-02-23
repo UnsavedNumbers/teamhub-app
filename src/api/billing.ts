@@ -15,6 +15,24 @@ interface PortalSessionParams {
   returnUrl: string
 }
 
+interface UpgradeLicenseParams {
+  organizationId: string
+  targetTierId: string
+  returnUrl?: string
+  allowDowngrade?: boolean
+}
+
+export interface UpgradeLicenseResponse {
+  success: boolean
+  new_tier_id?: string
+  stripe_subscription_id?: string
+  stripe_invoice_id?: string
+  payment_action_required?: boolean
+  client_secret?: string
+  message: string
+  audit_log_id?: string
+}
+
 export interface BillingEvent {
   id: string
   event_type: string | null
@@ -216,4 +234,42 @@ export async function getBillingHistory(organizationId: string): Promise<Billing
         description,
       } as BillingEvent
     })
+}
+
+export async function upgradeOrgLicense(
+  params: UpgradeLicenseParams,
+): Promise<UpgradeLicenseResponse> {
+  if (!USE_FAKE_DATA) {
+    ensureConfigured()
+  }
+
+  const { organizationId, targetTierId, returnUrl, allowDowngrade } = params
+  if (!organizationId || !targetTierId) {
+    throw new Error(t('errors.missingOrganization'))
+  }
+
+  if (USE_FAKE_DATA) {
+    await new Promise((r) => setTimeout(r, DEMO_TRANSACTION_DELAY_MS))
+    return {
+      success: true,
+      message: 'Upgrade completed successfully',
+      new_tier_id: targetTierId,
+      stripe_subscription_id: `demo_sub_${organizationId}`,
+    }
+  }
+
+  const { data, error } = await supabase.functions.invoke('upgrade-org-license', {
+    body: {
+      org_id: organizationId,
+      target_tier_id: targetTierId,
+      return_url: returnUrl,
+      allow_downgrade: allowDowngrade ?? false,
+    },
+  })
+
+  if (error) {
+    throw new Error(error.message || 'Failed to upgrade license')
+  }
+
+  return data as UpgradeLicenseResponse
 }

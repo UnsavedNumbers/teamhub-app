@@ -430,6 +430,21 @@ verify_jwt = false
 [functions.billing-customer-portal]
 verify_jwt = false
 
+[functions.rsvp-process-outbox]
+verify_jwt = false
+
+[functions.uniforms-process-outbox]
+verify_jwt = false
+
+[functions.travel-notify]
+verify_jwt = false
+
+[functions.resend-tickets]
+verify_jwt = false
+
+[functions.upgrade-org-license]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

@@ -5,7 +5,6 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { Card, Badge, Button } from '../../../../components/platformAdmin'
 import { supabase } from '../../../../lib/supabase'
 import { DataState } from '../../../../components/platformAdmin/DataState'
 import { safeDate } from '../../../../utils/safeAccessors'
@@ -31,23 +30,12 @@ export function RecentActivityCard({ organizationId, onViewAll }: RecentActivity
 
   useEffect(() => {
     const fetchRecentActivity = async () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RecentActivityCard.tsx:32',message:'fetchRecentActivity START',data:{organizationId,isMounted:isMountedRef.current},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C'})}).catch(()=>{});
-      // #endregion
-
       if (!organizationId) {
-        // #region agent log
-        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RecentActivityCard.tsx:38',message:'NO organizationId - returning early',data:{organizationId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         return
       }
 
       setLoading(true)
       setError(null)
-
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RecentActivityCard.tsx:48',message:'BEFORE Supabase query',data:{organizationId,loading:true},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,E'})}).catch(()=>{});
-      // #endregion
 
       try {
         const { data, error: fetchError } = await supabase
@@ -57,22 +45,11 @@ export function RecentActivityCard({ organizationId, onViewAll }: RecentActivity
           .order('created_at', { ascending: false })
           .limit(10)
 
-        // #region agent log
-        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RecentActivityCard.tsx:59',message:'AFTER Supabase query',data:{hasData:!!data,dataLength:data?.length,hasError:!!fetchError,errorCode:fetchError?.code,errorMessage:fetchError?.message,isMounted:isMountedRef.current},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B'})}).catch(()=>{});
-        // #endregion
-
         if (!isMountedRef.current) {
-          // #region agent log
-          fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RecentActivityCard.tsx:67',message:'Component unmounted - returning',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
           return
         }
 
         if (fetchError) {
-          // #region agent log
-          fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RecentActivityCard.tsx:76',message:'Query returned ERROR',data:{code:fetchError.code,message:fetchError.message,details:fetchError.details},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B'})}).catch(()=>{});
-          // #endregion
-          // Handle 404 specifically - view might not exist or migration not run
           if (fetchError.code === 'PGRST116' || fetchError.message.includes('404') || fetchError.message.includes('not found')) {
             setError('Event logs view not available. Please ensure database migrations are up to date.')
           } else {
@@ -80,27 +57,15 @@ export function RecentActivityCard({ organizationId, onViewAll }: RecentActivity
           }
           setActivities([])
         } else {
-          // #region agent log
-          fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RecentActivityCard.tsx:88',message:'Query SUCCESS',data:{dataLength:data?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
           setActivities((data || []) as AdminEventLog[])
         }
       } catch (err) {
-        // #region agent log
-        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RecentActivityCard.tsx:96',message:'EXCEPTION caught',data:{error:err instanceof Error?err.message:String(err),isMounted:isMountedRef.current},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B,E'})}).catch(()=>{});
-        // #endregion
         if (!isMountedRef.current) return
         setError(err instanceof Error ? err.message : 'Failed to load activity')
         setActivities([])
       } finally {
-        // #region agent log
-        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RecentActivityCard.tsx:105',message:'FINALLY block - before setLoading',data:{isMounted:isMountedRef.current},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
         if (isMountedRef.current) {
           setLoading(false)
-          // #region agent log
-          fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RecentActivityCard.tsx:112',message:'setLoading(false) called',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
         }
       }
     }
@@ -127,31 +92,74 @@ export function RecentActivityCard({ organizationId, onViewAll }: RecentActivity
     }
   }
 
-  const getCategoryVariant = (category: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' => {
+  const getCategoryColor = (category: string): string => {
     switch (category) {
-      case 'PAYMENT':
-        return 'success'
-      case 'ADMIN':
-        return 'warning'
-      case 'AUTH':
+      case 'EVENT':
+        return 'var(--pa-theme-action-primary)'
+      case 'SYSTEM':
+        return 'var(--pa-warning)'
       case 'ORGANIZATION':
-        return 'info'
+        return 'var(--pa-success)'
       default:
-        return 'neutral'
+        return 'var(--pa-n500)'
     }
   }
 
   return (
-    <Card
-      title="Recent Activity"
-      actions={
-        onViewAll && (
-          <Button variant="ghost" size="dense" onClick={onViewAll}>
+    <div style={{
+      background: 'var(--pa-n0)',
+      borderRadius: 'var(--pa-radius-m)',
+      boxShadow: 'var(--pa-shadow-1)',
+      padding: 'var(--pa-space-6)',
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 'var(--pa-space-5)',
+      }}>
+        <div style={{
+          fontSize: '14px',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+          display: 'flex',
+          alignItems: 'center',
+          color: 'var(--pa-n600)',
+          fontFamily: 'var(--pa-font-body)',
+        }}>
+          <span style={{
+            width: '32px',
+            height: '2px',
+            background: 'var(--pa-theme-action-primary)',
+            marginRight: 'var(--pa-space-3)',
+            display: 'block',
+          }} />
+          Recent Activity
+        </div>
+        {onViewAll && (
+          <button
+            onClick={onViewAll}
+            style={{
+              padding: 0,
+              background: 'transparent',
+              border: 'none',
+              fontSize: '13px',
+              fontWeight: 500,
+              color: 'var(--pa-theme-action-primary)',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              transition: 'text-decoration 150ms ease',
+              fontFamily: 'var(--pa-font-body)',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+            onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+          >
             View All
-          </Button>
-        )
-      }
-    >
+          </button>
+        )}
+      </div>
+
       <DataState
         data={activities}
         loading={loading}
@@ -160,32 +168,47 @@ export function RecentActivityCard({ organizationId, onViewAll }: RecentActivity
         emptyIcon="history"
       >
         {(data) => (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-3)' }}>
-            {data.map((activity) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {data.map((activity, index) => (
               <div
                 key={activity.id}
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: 'var(--pa-space-3)',
-                  padding: 'var(--pa-space-2)',
-                  borderRadius: 'var(--pa-radius-sm)',
-                  background: 'var(--pa-n50)',
+                  padding: 'var(--pa-space-3) 0',
+                  borderBottom: index < data.length - 1 ? '1px solid var(--pa-n100)' : 'none',
+                  transition: 'background-color 150ms ease',
+                  cursor: 'default',
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--pa-n50)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="pa-flex pa-items-center pa-gap-2 pa-mb-1">
-                    <Badge variant={getCategoryVariant(activity.category)} size="small">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)', marginBottom: 'var(--pa-space-2)', flexWrap: 'wrap' }}>
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      padding: 'var(--pa-space-1) var(--pa-space-2)',
+                      borderRadius: 'var(--pa-radius-pill)',
+                      background: getCategoryColor(activity.category) + '20',
+                      color: getCategoryColor(activity.category),
+                      fontFamily: 'var(--pa-font-body)',
+                    }}>
                       {activity.category}
-                    </Badge>
-                    <span className="pa-body-s pa-text-muted">{activity.event_type}</span>
+                    </span>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--pa-n900)', fontFamily: 'var(--pa-font-body)' }}>
+                      {activity.event_type}
+                    </span>
                   </div>
                   {activity.actor_email && (
-                    <div className="pa-body-s pa-text-muted">
+                    <div style={{ fontSize: '12px', color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-1)', fontFamily: 'var(--pa-font-body)' }}>
                       by {activity.actor_name || activity.actor_email}
                     </div>
                   )}
-                  <div className="pa-caption pa-text-muted" style={{ marginTop: '4px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--pa-n500)', fontFamily: 'var(--pa-font-body)' }}>
                     {formatTimeAgo(activity.created_at)}
                   </div>
                 </div>
@@ -194,6 +217,6 @@ export function RecentActivityCard({ organizationId, onViewAll }: RecentActivity
           </div>
         )}
       </DataState>
-    </Card>
+    </div>
   )
 }

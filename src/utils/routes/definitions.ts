@@ -253,6 +253,12 @@ const portal = {
         icon: 'mail',
         description: 'Contact support',
     },
+    contactOrg: {
+        path: '/portal/contact-org',
+        label: 'Contact Org Admin',
+        icon: 'support_agent',
+        description: 'Send a request to your organization admin',
+    },
 
     // Photos
     photos: {
@@ -903,6 +909,24 @@ const admin = {
         icon: 'notifications',
         description: 'Admin notifications',
         requiresOrg: true,
+    },
+
+    // Contact Requests (guardian/athlete messages to org admin)
+    contactRequests: {
+        list: {
+            path: '/admin/contact-requests',
+            label: 'Contact Requests',
+            icon: 'inbox',
+            description: 'Messages and requests from guardians and athletes',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/contact-requests/:id',
+            params: ['id'] as const,
+            label: 'Request Detail',
+            icon: 'inbox',
+            requiresOrg: true,
+        },
     },
 
     // Payments

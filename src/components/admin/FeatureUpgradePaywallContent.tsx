@@ -5,19 +5,20 @@
  * Uses org admin CSS classes and respects org theme colors.
  */
 
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
 import { useAuth } from '../../hooks/useAuth'
 import { useLoadingState } from '../../contexts/LoadingStateContext'
-import { useCheckoutSession } from '../../hooks/useCheckoutSession'
 import { hasAnyRole } from '../../utils/roleHelpers'
 import { LicensePlan } from '../../utils/licenseUtils'
 import { t } from '../../i18n'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { getActiveTiers } from '../../data/services/licenseTiersService'
+import { createCheckoutSession, upgradeOrgLicense } from '../../api/billing'
+import { getErrorMessage } from '../../utils/errorUtils'
 
 interface PlanCard {
   id: LicensePlan
@@ -35,7 +36,7 @@ export default function FeatureUpgradePaywallContent() {
   const { currentOrganization } = useOrganization()
   const { setLoading } = useLoadingState()
   const orgId = currentOrganization?.id
-  const { loading: licenseLoading, error: licenseError, summary } = useLicense(orgId)
+  const { loading: licenseLoading, error: licenseError, summary, refresh: refreshLicense } = useLicense(orgId)
   const hasSetLoadingRef = useRef(false)
 
   const isAdmin = currentOrganization ? hasAnyRole(currentOrganization, ['org_admin']) : false
@@ -59,6 +60,61 @@ export default function FeatureUpgradePaywallContent() {
   const planCards: PlanCard[] = useMemo(() => {
     if (!tiers || tiers.length === 0) return []
     
+    const isUpgrade = summary?.stripeSubscriptionId && 
+      (summary?.status === 'active' || summary?.status === 'trial')
+    
+    // Calculate prorated amount for upgrades
+    const calculateProratedPrice = (targetTier: typeof tiers[0]): string | null => {
+      if (!summary?.stripeSubscriptionId || 
+          (summary?.status !== 'active' && summary?.status !== 'trial') ||
+          !summary.currentPeriodEnd ||
+          !tiers) {
+        return null
+      }
+
+      // Find current tier
+      const currentTier = tiers.find(t => t.id === summary.tierId || t.stripe_price_id === summary.stripePriceId)
+      if (!currentTier || currentTier.id === targetTier.id) {
+        return null // No upgrade or same tier
+      }
+
+      // Calculate days remaining in billing period
+      const periodEnd = new Date(summary.currentPeriodEnd)
+      const now = new Date()
+      const daysRemaining = Math.max(0, Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+      
+      if (daysRemaining <= 0) return null
+
+      const targetPriceCents = targetTier.stripe_amount_cents || 0
+      const currentPriceCents = currentTier.stripe_amount_cents || 0
+      const priceDifferenceCents = targetPriceCents - currentPriceCents
+
+      if (priceDifferenceCents <= 0) return null // Not an upgrade
+
+      // Calculate prorated amount based on interval
+      let proratedCents = 0
+      if (targetTier.stripe_interval === 'year') {
+        // Annual: prorate based on days remaining in year (365 days)
+        proratedCents = Math.ceil((priceDifferenceCents * daysRemaining) / 365)
+      } else {
+        // Monthly: prorate based on days remaining in month (30 days)
+        proratedCents = Math.ceil((priceDifferenceCents * daysRemaining) / 30)
+      }
+
+      // Round up to nearest dollar (no cents)
+      const proratedDollars = Math.ceil(proratedCents / 100)
+
+      // Format: "$100 ~~$1,199/yr~~"
+      const proratedAmount = proratedDollars.toLocaleString('en-US')
+      const fullAmount = (targetPriceCents / 100).toLocaleString('en-US', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      })
+      const interval = targetTier.stripe_interval === 'year' ? 'yr' : 'mo'
+
+      return `$${proratedAmount} ~~$${fullAmount}/${interval}~~`
+    }
+    
     return tiers.map(tier => {
       const planId = tierKeyToPlanId(tier.tier_key)
       const baseFeatures = [
@@ -80,10 +136,18 @@ export default function FeatureUpgradePaywallContent() {
         )
       }
 
-      // Format price
-      const price = tier.stripe_amount_cents 
-        ? `$${(tier.stripe_amount_cents / 100).toLocaleString()}/${tier.stripe_interval === 'year' ? 'yr' : 'mo'}`
-        : t('plans.starter.price') // fallback
+      // Format price - show prorated amount for upgrades
+      let price: string
+      if (tier.stripe_amount_cents) {
+        if (isUpgrade) {
+          const proratedPrice = calculateProratedPrice(tier)
+          price = proratedPrice || `$${(tier.stripe_amount_cents / 100).toLocaleString()}/${tier.stripe_interval === 'year' ? 'yr' : 'mo'}`
+        } else {
+          price = `$${(tier.stripe_amount_cents / 100).toLocaleString()}/${tier.stripe_interval === 'year' ? 'yr' : 'mo'}`
+        }
+      } else {
+        price = t('plans.starter.price') // fallback
+      }
 
       return {
         id: planId,
@@ -95,7 +159,7 @@ export default function FeatureUpgradePaywallContent() {
         features,
       }
     })
-  }, [tiers])
+  }, [tiers, summary, t])
 
   // Determine current tier level to filter out downgrades
   const getCurrentTierLevel = (): number | null => {
@@ -142,11 +206,77 @@ export default function FeatureUpgradePaywallContent() {
   const successUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS)}`
   const cancelUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL)}`
 
-  const { loadingTierId, error: checkoutError, handleSelect } = useCheckoutSession({
-    organizationId: orgId || '',
-    successUrl,
-    cancelUrl,
-  })
+  const [loadingTierId, setLoadingTierId] = useState<string | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  const handleSelect = async (tierId: string) => {
+    if (!orgId) {
+      setCheckoutError(t('errors.missingOrganization'))
+      return
+    }
+
+    setCheckoutError(null)
+    setSuccessMessage(null)
+    setLoadingTierId(tierId)
+
+    try {
+      // Check if org has an active subscription (active or trial) that can be upgraded
+      const hasActiveSubscription =
+        summary?.stripeSubscriptionId && 
+        (summary?.status === 'active' || summary?.status === 'trial')
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[FeatureUpgradePaywallContent] Upgrade check:', {
+          hasActiveSubscription,
+          stripeSubscriptionId: summary?.stripeSubscriptionId,
+          status: summary?.status,
+          tierId,
+        })
+      }
+
+      if (hasActiveSubscription) {
+        const result = await upgradeOrgLicense({
+          organizationId: orgId,
+          targetTierId: tierId,
+          returnUrl: window.location.href,
+        })
+
+        if (result.payment_action_required && result.client_secret) {
+          setCheckoutError(t('billing.upgradePaymentRequired'))
+          await refreshLicense()
+          setTimeout(() => {
+            window.location.reload()
+          }, 2000)
+        } else if (result.success) {
+          setSuccessMessage(t('billing.upgradeCompleted'))
+          await refreshLicense()
+          setTimeout(() => {
+            window.location.reload()
+          }, 1500)
+        } else {
+          setCheckoutError(result.message || t('billing.errorUpgradingLicense'))
+        }
+      } else {
+        const { checkout_session_url } = await createCheckoutSession({
+          organizationId: orgId,
+          tierId,
+          successUrl,
+          cancelUrl,
+        })
+
+        if (checkout_session_url) {
+          window.location.href = checkout_session_url
+        } else {
+          setCheckoutError(t('billing.errorCreatingSession'))
+        }
+      }
+    } catch (err: unknown) {
+      setCheckoutError(getErrorMessage(err) || t('billing.errorCreatingSession'))
+    } finally {
+      setLoadingTierId(null)
+    }
+  }
 
   const canUpgrade = (isAdmin || isPlatformAdmin) && orgId
 
@@ -297,6 +427,16 @@ export default function FeatureUpgradePaywallContent() {
         </div>
       )}
 
+      {/* Success Message */}
+      {successMessage && (
+        <div style={{ maxWidth: '960px', margin: '0 auto 32px' }}>
+          <div className="oa-card" style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', borderColor: 'var(--org-status-success, #22c55e)', padding: '16px' }}>
+            <p className="oa-body-s" style={{ color: 'var(--org-status-success, #22c55e)' }}>{successMessage}</p>
+          </div>
+        </div>
+      )}
+
+
       {/* Comparison Grid */}
       <div style={{ maxWidth: '960px', margin: '0 auto 80px' }}>
         <div className="oa-card" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 0, padding: 0, overflow: 'hidden' }}>
@@ -368,6 +508,49 @@ export default function FeatureUpgradePaywallContent() {
           <h3 className="oa-h3 oa-text-center oa-mb-8" style={{ textTransform: 'uppercase', letterSpacing: '-0.01em' }}>
             {getFeatureTranslation('planSelectionTitle', 'planSelectionTitle')}
           </h3>
+          
+          {/* Proration Message */}
+          {summary?.stripeSubscriptionId && 
+            (summary?.status === 'active' || summary?.status === 'trial') && (
+            <div style={{ maxWidth: '960px', margin: '0 auto 24px' }}>
+              <div 
+                className="oa-card" 
+                style={{ 
+                  backgroundColor: 'rgba(234, 179, 8, 0.1)', 
+                  border: '2px solid rgba(234, 179, 8, 0.3)',
+                  borderRadius: '12px',
+                  padding: '20px 24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  boxShadow: '0 2px 8px rgba(234, 179, 8, 0.15)',
+                }}
+              >
+                <span 
+                  className="material-symbols-outlined" 
+                  style={{ 
+                    fontSize: '24px', 
+                    color: 'var(--org-status-warning, #eab308)',
+                    flexShrink: 0,
+                  }}
+                >
+                  info
+                </span>
+                <p 
+                  className="oa-body-m" 
+                  style={{ 
+                    color: 'var(--org-status-warning, #eab308)', 
+                    fontWeight: 500,
+                    margin: 0,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {t('billing.proratedChargeMessage')}
+                </p>
+              </div>
+            </div>
+          )}
+          
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${availablePlans.length}, 1fr)`, gap: '24px' }}>
             {availablePlans.map(plan => (
               <div
@@ -382,7 +565,13 @@ export default function FeatureUpgradePaywallContent() {
                 <div className="oa-flex oa-items-center oa-justify-between oa-mb-4">
                   <h4 className="oa-h4" style={{ textTransform: 'uppercase', letterSpacing: '-0.01em' }}>{plan.name}</h4>
                 </div>
-                <div className="oa-h2 oa-mb-4" style={{ fontWeight: 900 }}>{plan.price}</div>
+                <div 
+                  className="oa-h2 oa-mb-4" 
+                  style={{ fontWeight: 900 }}
+                  dangerouslySetInnerHTML={{ 
+                    __html: plan.price.replace(/~~(.*?)~~/g, '<span style="text-decoration: line-through; opacity: 0.6; margin-left: 8px;">$1</span>')
+                  }}
+                />
                 <p className="oa-body-s oa-mb-6" style={{ color: 'var(--org-text-secondary)' }}>{plan.description}</p>
                 <div className="oa-flex oa-flex-col oa-gap-2 oa-mb-6" style={{ flex: 1 }}>
                   {plan.features.map(feature => (

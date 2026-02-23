@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { getLink, RouteKeys } from '../../utils/routes'
+import { useFilteredNavItems } from '../../hooks/useFilteredNavigation'
 import '../../styles/fan.css'
 
 interface NavItem {
@@ -22,7 +23,7 @@ interface NavItem {
   badge?: number
 }
 
-const navItems: NavItem[] = [
+const rawNavItems: NavItem[] = [
   { key: 'home', routeKey: RouteKeys.FAN_HOME, label: 'Home', icon: 'home', iconFilled: 'home' },
   { key: 'schedule', routeKey: RouteKeys.FAN_SCHEDULE, label: 'Schedule', icon: 'calendar_month', iconFilled: 'calendar_month' },
   { key: 'tickets', routeKey: RouteKeys.FAN_TICKETS, label: 'Tickets', icon: 'confirmation_number', iconFilled: 'confirmation_number' },
@@ -37,6 +38,9 @@ export default function FanLayout() {
   const { profile } = useAuth()
   
   const [notificationCount] = useState(0)
+
+  // Filter navigation items based on feature gates (fan pages are hidden when gated)
+  const { filteredItems: navItems } = useFilteredNavItems(rawNavItems)
 
   // Determine active nav item
   const getActiveKey = (): string => {

@@ -96,6 +96,7 @@ const PortalEditEvent = lazy(() => import('./pages/portal/PortalEditEvent'))
 const FollowedOrgs = lazy(() => import('./pages/portal/FollowedOrgs'))
 const BookmarkedEvents = lazy(() => import('./pages/portal/BookmarkedEvents'))
 const PortalContactPage = lazy(() => import('./pages/portal/ContactPage'))
+const ContactOrgAdminPage = lazy(() => import('./pages/portal/ContactOrgAdminPage'))
 
 // Fan Pages - Lazy loaded
 const FanHome = lazy(() => import('./pages/fan/FanHome'))
@@ -208,6 +209,8 @@ import EventsReport from './pages/admin/reporting/EventsReport'
 import ErrorsReport from './pages/admin/reporting/ErrorsReport'
 const SportUpdate = lazy(() => import('./pages/admin/SportUpdate'))
 const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'))
+const AdminContactRequests = lazy(() => import('./pages/admin/AdminContactRequests'))
+const AdminContactRequestDetail = lazy(() => import('./pages/admin/AdminContactRequestDetail'))
 const AdminNotificationAnalytics = lazy(() => import('./pages/admin/AdminNotificationAnalytics'))
 const Programs = lazy(() => import('./pages/admin/Programs'))
 const ProgramDetail = lazy(() => import('./pages/admin/ProgramDetail'))
@@ -534,6 +537,7 @@ function AppWithTheme() {
             {/* Redirect root portal to dashboard */}
             <Route path="notifications" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><FeatureGateRoute routeKey="portal.messages"><Suspense fallback={<AdminLoadingSpinner />}><Notifications /></Suspense></FeatureGateRoute></ProtectedRoute>} />
             <Route path="contact" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><Suspense fallback={<AdminLoadingSpinner />}><PortalContactPage /></Suspense></ProtectedRoute>} />
+            <Route path="contact-org" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><Suspense fallback={<AdminLoadingSpinner />}><ContactOrgAdminPage /></Suspense></ProtectedRoute>} />
             <Route index element={<Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace />} />
 
             {/* Catch-all to prevent blank/"blue" screens on unknown portal routes */}
@@ -777,6 +781,8 @@ function AppWithTheme() {
               <Route path="users/:id" element={<EditUser />} />
               <Route path="notifications" element={<AdminNotifications />} />
               <Route path="notifications/analytics" element={<AdminNotificationAnalytics />} />
+              <Route path="contact-requests" element={<Suspense fallback={<AdminLoadingSpinner />}><AdminContactRequests /></Suspense>} />
+              <Route path="contact-requests/:id" element={<Suspense fallback={<AdminLoadingSpinner />}><AdminContactRequestDetail /></Suspense>} />
             
               {/* Organization */}
               <Route path="organization" element={<OrganizationSettings />} />

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
-import { useCheckoutSession } from '../../hooks/useCheckoutSession'
 import { t } from '../../i18n'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { useAuth } from '../../hooks/useAuth'
@@ -14,13 +13,15 @@ import {
   Button 
 } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+import { createCheckoutSession, upgradeOrgLicense } from '../../api/billing'
+import { getErrorMessage } from '../../utils/errorUtils'
 
 export default function PlanSelection() {
   const navigate = useNavigate()
   const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
-  const { summary: licenseSummary, isActive: licenseActive, isPastGracePeriod, loading: licenseLoading } = useLicense(orgId)
+  const { summary: licenseSummary, isActive: licenseActive, isPastGracePeriod, loading: licenseLoading, refresh: refreshLicense } = useLicense(orgId)
   const isPlatformAdmin = profile?.isPlatformAdmin ?? false
 
   const [tiers, setTiers] = useState<LicenseTier[]>([])
@@ -36,11 +37,69 @@ export default function PlanSelection() {
   const successUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS)}`
   const cancelUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL)}`
 
-  const { loadingTierId, error, handleSelect } = useCheckoutSession({
-    organizationId: orgId || '',
-    successUrl,
-    cancelUrl,
-  })
+  const [loadingTierId, setLoadingTierId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  const handleSelect = async (tierId: string) => {
+    if (!orgId) {
+      setError(t('errors.missingOrganization'))
+      return
+    }
+
+    setError(null)
+    setSuccessMessage(null)
+    setLoadingTierId(tierId)
+
+    try {
+      // Check if org has active subscription
+      const hasActiveSubscription =
+        licenseSummary?.stripeSubscriptionId && licenseSummary?.status === 'active'
+
+      if (hasActiveSubscription) {
+        // UPGRADE FLOW
+        const result = await upgradeOrgLicense({
+          organizationId: orgId,
+          targetTierId: tierId,
+          returnUrl: window.location.href,
+        })
+
+        if (result.payment_action_required && result.client_secret) {
+          setError(t('billing.upgradePaymentRequired'))
+          await refreshLicense()
+          setTimeout(() => {
+            window.location.reload()
+          }, 2000)
+        } else if (result.success) {
+          setSuccessMessage(t('billing.upgradeCompleted'))
+          await refreshLicense()
+          setTimeout(() => {
+            navigate(getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING))
+          }, 1500)
+        } else {
+          setError(result.message || t('billing.errorUpgradingLicense'))
+        }
+      } else {
+        // NEW SUBSCRIPTION FLOW (existing)
+        const { checkout_session_url } = await createCheckoutSession({
+          organizationId: orgId,
+          tierId,
+          successUrl,
+          cancelUrl,
+        })
+
+        if (checkout_session_url) {
+          window.location.href = checkout_session_url
+        } else {
+          setError(t('billing.errorCreatingSession'))
+        }
+      }
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || t('billing.errorCreatingSession'))
+    } finally {
+      setLoadingTierId(null)
+    }
+  }
 
   // Fetch active tiers
   useEffect(() => {
@@ -157,12 +216,29 @@ export default function PlanSelection() {
     <div className="oa-root">
       <AdminPageHeader 
         title={t('billing.planSelectionTitle')} 
-        actions={<OrgAdminButton variant="primary" onClick={() => navigate('/admin/organization/billing')}>{t('common.goBack')}</OrgAdminButton>} 
+        actions={<OrgAdminButton variant="primary" onClick={() => navigate(getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING))}>{t('common.goBack')}</OrgAdminButton>} 
       />
 
       {(error || tiersError) && (
         <div className="oa-card oa-mb-4 oa-text-danger" style={{ background: 'var(--oa-danger-bg)', border: 'none' }}>
           {error || tiersError}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="oa-card oa-mb-4" style={{ background: 'var(--oa-success-bg)', border: 'none' }}>
+          <div className="oa-flex oa-items-center oa-gap-3">
+            <span className="material-symbols-outlined oa-text-success" style={{ fontSize: '24px' }}>check_circle</span>
+            <div className="oa-body-m">{successMessage}</div>
+          </div>
+        </div>
+      )}
+
+      {licenseSummary?.stripeSubscriptionId && licenseSummary?.status === 'active' && (
+        <div className="oa-card oa-mb-4" style={{ background: 'var(--oa-info-bg)', border: 'none' }}>
+          <div className="oa-body-m">
+            {t('billing.proratedChargeMessage')}
+          </div>
         </div>
       )}
 

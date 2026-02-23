@@ -775,19 +775,52 @@ serve(async (req) => {
 
         const { data: lic, error: licErr } = await supabase
           .from("org_licenses")
-          .select("org_id")
+          .select("org_id, stripe_price_id")
           .eq("stripe_subscription_id", subId)
           .maybeSingle()
 
         if (licErr) throw licErr
         if (!lic?.org_id) break
 
+        // Check if invoice has proration (indicates upgrade)
+        const hasProration = invoice.lines.data.some(
+          (line) => line.proration === true || (line.type === "subscription" && line.amount < 0),
+        )
+
+        // Get new price from invoice (subscription line item)
+        const newPriceId = invoice.lines.data.find((line) => line.type === "subscription" && line.price)
+          ?.price?.id
+
+        // Update license with new price if changed
         await upsertLicense(supabase, lic.org_id, {
           status: "active",
           current_period_end: invoice.lines.data[0]?.period?.end ?? invoice.period_end ?? null,
           stripe_subscription_id: subId,
           stripe_latest_invoice_id: invoice.id,
+          stripe_price_id: newPriceId || lic.stripe_price_id, // Update price if changed
         })
+
+        // If this was an upgrade, update audit log
+        if (hasProration && newPriceId && newPriceId !== lic.stripe_price_id) {
+          const { data: newTier } = await supabase
+            .from("license_tiers")
+            .select("id")
+            .eq("stripe_price_id", newPriceId)
+            .eq("status", "active")
+            .maybeSingle()
+
+          if (newTier) {
+            await supabase
+              .from("license_change_log")
+              .update({
+                result_status: "succeeded",
+                stripe_invoice_id: invoice.id,
+              })
+              .eq("stripe_subscription_id", subId)
+              .eq("result_status", "pending")
+              .is("stripe_invoice_id", null)
+          }
+        }
 
         // Set webhook result for license invoice
         webhookResult.payment_type = PAYMENT_TYPES.ORG_LICENSE
@@ -820,6 +853,21 @@ serve(async (req) => {
           stripe_latest_invoice_id: invoice.id,
           grace_days: 7,
         })
+
+        // Mark upgrade as failed if pending
+        await supabase
+          .from("license_change_log")
+          .update({
+            result_status: "failed",
+            error_json: {
+              reason: "payment_failed",
+              invoice_id: invoice.id,
+              failure_reason: invoice.last_payment_error?.message,
+            },
+          })
+          .eq("stripe_subscription_id", subId)
+          .eq("result_status", "pending")
+
         break
       }
 
@@ -828,7 +876,7 @@ serve(async (req) => {
 
         const { data: lic, error: licErr } = await supabase
           .from("org_licenses")
-          .select("org_id")
+          .select("org_id, stripe_price_id")
           .eq("stripe_subscription_id", subscription.id)
           .maybeSingle()
 
@@ -852,9 +900,15 @@ serve(async (req) => {
           trial_end: subscription.trial_end,
           stripe_customer_id: subscription.customer as string,
           stripe_subscription_id: subscription.id,
-          stripe_price_id: priceId,
+          stripe_price_id: priceId, // Always update price_id
           stripe_latest_invoice_id: subscription.latest_invoice as string | null,
         })
+
+        // If price changed and subscription is active, sync tier
+        if (priceId && priceId !== lic.stripe_price_id && status === "active") {
+          await supabase.rpc("sync_org_license_summary", { org_id: lic.org_id })
+        }
+
         break
       }
 

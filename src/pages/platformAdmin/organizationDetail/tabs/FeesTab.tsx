@@ -167,7 +167,7 @@ export function FeesTab({ organizationId }: FeesTabProps) {
         {(data) => (
           <PlatformDataTable
             columns={columns}
-            rows={data}
+            rows={data.map((row) => ({ ...row, id: row.fee_id }))}
             loading={false}
             emptyMessage="No fees found"
             page={0}

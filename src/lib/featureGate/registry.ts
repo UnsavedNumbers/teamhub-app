@@ -185,6 +185,20 @@ export const ROUTE_TO_FEATURE: Record<string, FeatureKey> = {
     'portal.photosGallery': 'photos_gallery',
     'portal.photosGalleryManage': 'photos_gallery_manage',
 
+    // -------------------------------------------------------------------------
+    // Fan Routes
+    // -------------------------------------------------------------------------
+    'fan.schedule': 'event_scheduling',
+    'fan.events.detail': 'event_scheduling',
+    'fan.tickets.list': 'ticketing',
+    'fan.tickets.detail': 'ticketing',
+    'fan.photos.list': 'photos_list',
+    'fan.photos.gallery': 'photos_gallery',
+    'fan.photos.athlete': 'photos_list',
+    'fan.videos.list': 'videos_list',
+    'fan.videos.detail': 'videos_detail',
+    // fan.home, fan.following.*, fan.profile.* are ungated (public features)
+
 };
 
 // ============================================================================
@@ -302,6 +316,21 @@ export const UNGATED_ROUTES: string[] = [
     // Public/join routes
     'public.join',
     'portal.join',
+
+    // Fan public routes (home, following, profile are always accessible)
+    'fan.home',
+    'fan.following.base',
+    'fan.following.discover',
+    'fan.profiles.org',
+    'fan.profiles.team',
+    'fan.profiles.athlete',
+    'fan.profile.base',
+    'fan.profile.edit',
+    'fan.profile.notifications',
+    'fan.profile.linkedAthletes',
+    'fan.profile.privacy',
+    'fan.profile.password',
+    'fan.profile.security',
 
     // Platform Admin Routes — platform admins bypass feature gates entirely
     'platformAdmin.dashboard',

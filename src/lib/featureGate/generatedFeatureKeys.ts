@@ -67,7 +67,9 @@ export type FeatureKey =
     | 'travel_planning'
     | 'trialexpired'
     | 'tryouts'
-    | 'uniform_orders';
+    | 'uniform_orders'
+    | 'videos_detail'
+    | 'videos_list';
 
 // ============================================================================
 // Feature Key Set (runtime validation)
@@ -122,6 +124,8 @@ export const VALID_FEATURE_KEYS: ReadonlySet<string> = new Set([
     'trialexpired',
     'tryouts',
     'uniform_orders',
+    'videos_detail',
+    'videos_list',
 ]);
 
 // ============================================================================
@@ -186,6 +190,8 @@ export const FEATURE_KEY_METADATA: ReadonlyMap<FeatureKey, FeatureKeyMetadata> =
     ['reports_domain_uniforms', { key: 'reports_domain_uniforms', displayName: 'Reports Domain Uniforms', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
     ['reports_domain_communications', { key: 'reports_domain_communications', displayName: 'Reports Domain Communications', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
     ['reports_domain_operations', { key: 'reports_domain_operations', displayName: 'Reports Domain Operations', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['videos_list', { key: 'videos_list', displayName: 'Videos List', category: 'Videos', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['videos_detail', { key: 'videos_detail', displayName: 'Videos Detail', category: 'Videos', gateAction: 'overlay', rolloutStatus: 'live' }],
 ]);
 
 /**

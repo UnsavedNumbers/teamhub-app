@@ -1,6 +1,11 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { cn } from '../../utils/cn'
+import { getReasonIcon } from '../../lib/featureGate'
+import { getLink, RouteKeys } from '../../utils/routes'
+import { useOrganization } from '../../contexts/OrganizationContext'
+import { useT } from '../../i18n/useI18n'
+import { hasAnyRole } from '../../utils/roleHelpers'
 
 export interface NavLink {
   text: string
@@ -8,6 +13,11 @@ export interface NavLink {
   path: string
   description?: string
   disabled?: boolean
+  isGated?: boolean
+  gateAction?: 'hide' | 'disable' | 'modal' | 'overlay' | 'paywall' | 'custom' | null
+  gateMessage?: string
+  reasonCode?: string | null
+  featureKey?: string
 }
 
 export interface NavGroup {
@@ -36,6 +46,12 @@ interface MegaMenuProps {
 export default function MegaMenu({ isOpen, onClose, groups, wide = false, id }: MegaMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const firstLinkRef = useRef<HTMLAnchorElement>(null)
+  const { currentOrganization } = useOrganization()
+  const t = useT()
+  const [featureGateModal, setFeatureGateModal] = useState<{ open: boolean; message: string; reasonCode?: string; featureKey?: string }>({
+    open: false,
+    message: '',
+  })
 
   // Close on Escape key
   useEffect(() => {
@@ -102,14 +118,56 @@ export default function MegaMenu({ isOpen, onClose, groups, wide = false, id }: 
           {group.items.map((item) => {
             const currentIndex = linkIndex++
             const isFirst = currentIndex === 0
+            const isOrgDisabled = item.disabled
+            const isGateDisabled = item.isGated && item.gateAction === 'disable'
+            const isDisabled = isOrgDisabled || isGateDisabled
+            const isModalAction = item.isGated && item.gateAction === 'modal'
+            const disabledTitle = item.gateMessage || (item.disabled ? 'Requires organization setup' : undefined)
 
-            if (item.disabled) {
+            const handleClick = (e: React.MouseEvent) => {
+              if (isModalAction) {
+                e.preventDefault()
+                e.stopPropagation()
+                setFeatureGateModal({
+                  open: true,
+                  message: item.gateMessage || 'This feature is not available',
+                  reasonCode: item.reasonCode ?? undefined,
+                  featureKey: item.featureKey,
+                })
+                onClose()
+              }
+            }
+
+            if (isDisabled) {
               return (
                 <div
                   key={item.path}
                   className="gn-mega-link"
                   style={{ opacity: 0.4, cursor: 'not-allowed' }}
-                  title="Requires organization setup"
+                  title={disabledTitle}
+                >
+                  <span className="material-symbols-outlined">{item.icon}</span>
+                  <div className="gn-mega-link-content">
+                    <span className="gn-mega-link-title">{item.text}</span>
+                    {item.description && (
+                      <span className="gn-mega-link-desc">{item.description}</span>
+                    )}
+                  </div>
+                </div>
+              )
+            }
+
+            if (isModalAction) {
+              return (
+                <div
+                  key={item.path}
+                  ref={isFirst ? (firstLinkRef as any) : undefined}
+                  className="gn-mega-link"
+                  role="menuitem"
+                  onClick={handleClick}
+                  tabIndex={isOpen ? 0 : -1}
+                  style={{ cursor: 'pointer' }}
+                  title={item.gateMessage}
                 >
                   <span className="material-symbols-outlined">{item.icon}</span>
                   <div className="gn-mega-link-content">
@@ -144,6 +202,65 @@ export default function MegaMenu({ isOpen, onClose, groups, wide = false, id }: 
           })}
         </div>
       ))}
+      
+      {/* Feature Gate Modal */}
+      {featureGateModal.open && (() => {
+        const featureKey = featureGateModal.featureKey || 'default'
+        const isAdmin = currentOrganization ? hasAnyRole(currentOrganization, ['org_admin']) : false
+        const getFeatureTranslation = (key: string, fallbackKey: string) => {
+          const translationKey = `featureUpgrade.${featureKey}.${key}` as any
+          const fallback = `featureUpgrade.default.${fallbackKey}` as any
+          const translation = t(translationKey)
+          if (translation === translationKey) {
+            return t(fallback)
+          }
+          return translation
+        }
+        const modalTitle = getFeatureTranslation('statusTitle', 'statusTitle')
+        const modalMessage = isAdmin 
+          ? getFeatureTranslation('statusDescriptionAdmin', 'statusDescriptionAdmin')
+          : getFeatureTranslation('statusDescriptionNonAdmin', 'statusDescriptionNonAdmin')
+        
+        return (
+          <div 
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
+            onClick={() => setFeatureGateModal({ open: false, message: '' })}
+          >
+            <div 
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md mx-4 p-6"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="text-center">
+                <span className="material-symbols-rounded text-5xl text-amber-500 mb-4 block">
+                  {featureGateModal.reasonCode ? getReasonIcon(featureGateModal.reasonCode as any) : 'lock'}
+                </span>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                  {modalTitle}
+                </h3>
+                <p className="text-slate-600 dark:text-slate-400 mb-6">
+                  {modalMessage}
+                </p>
+                <div className="flex flex-col items-center gap-4">
+                  <a
+                    href={`${getLink(RouteKeys.ADMIN_FEATURE_UPGRADE)}?referrer=${encodeURIComponent(featureKey)}`}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
+                    onClick={() => setFeatureGateModal({ open: false, message: '' })}
+                  >
+                    <span className="material-symbols-rounded text-lg">workspace_premium</span>
+                    {t('common.seeMyOptions')}
+                  </a>
+                  <button
+                    onClick={() => setFeatureGateModal({ open: false, message: '' })}
+                    className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 underline bg-transparent border-none cursor-pointer p-0"
+                  >
+                    {t('common.noThanks')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

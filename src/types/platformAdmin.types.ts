@@ -44,7 +44,6 @@ export interface AdminOrganization {
     city: string | null
     state: string | null
     zip: string | null
-    logo_path: string | null
     
     // License information
     license_status: string | null
