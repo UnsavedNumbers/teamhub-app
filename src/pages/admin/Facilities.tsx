@@ -12,7 +12,7 @@ import { useT } from '../../i18n/useI18n'
 import { getLink } from '../../utils/routes'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
-import { AdminPageHeader, EmptyState, ConfirmDialog, Button, Card } from '../../components/admin'
+import { AdminPageHeader, ConfirmDialog, Button, Card } from '../../components/admin'
 import { getFacilities, deleteFacility } from '../../data/services/facilitiesService'
 import type { Facility, FacilityFilters } from '../../types/facilities'
 import FacilitiesFilters from '../../components/admin/FacilitiesFilters'
@@ -243,14 +243,18 @@ export default function Facilities() {
                     </div>
                 </div>
             ) : facilities.length === 0 ? (
-                <EmptyState
-                    title={t('admin.facilities.empty.title')}
-                    description={t('admin.facilities.empty.message')}
-                >
-                    <Button variant="primary" onClick={handleCreateFacility} icon="add">
-                        {t('admin.facilities.empty.createButton')}
-                    </Button>
-                </EmptyState>
+                <Card className="oa-border-2 oa-border-dashed">
+                    <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+                        <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>location_city</span>
+                        <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+                            <h3 className="oa-h3 oa-mb-0">{t('admin.facilities.empty.title')}</h3>
+                            <p className="oa-body-m oa-text-muted oa-mb-4">{t('admin.facilities.empty.message')}</p>
+                            <Button variant="primary" onClick={handleCreateFacility} icon="add">
+                                {t('admin.facilities.empty.createButton')}
+                            </Button>
+                        </div>
+                    </div>
+                </Card>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
                     {facilities.map((facility) => (

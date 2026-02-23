@@ -10,7 +10,8 @@
  *  - Context-aware safe targets (admin → admin dashboard, portal → portal dashboard)
  */
 
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { 
   useFeatureGate, 
   getFeatureKeyForRoute, 
@@ -21,6 +22,7 @@ import {
 } from '@/lib/featureGate';
 import { getLink, RouteKeys } from '@/utils/routes';
 import { USE_FAKE_DATA } from '@/data/config';
+import FeatureUpgradePaywallContent from './admin/FeatureUpgradePaywallContent';
 
 /** sessionStorage key for redirect-loop detection */
 const REDIRECT_COUNTER_KEY = '__fg_redirect_count';
@@ -92,11 +94,23 @@ export function FeatureGateRoute({
   fallback,
 }: FeatureGateRouteProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const featureKey = explicitFeatureKey ?? getFeatureKeyForRoute(routeKey);
   
   // IMPORTANT: Call all hooks before any conditional returns (Rules of Hooks)
   // Pass empty string to useFeatureGate if no feature key (it will handle gracefully)
   const { allowed, gate_action, reason_code, loading } = useFeatureGate(featureKey || '');
+
+  // Update URL with feature key for paywall when needed
+  useEffect(() => {
+    if (gate_action === 'paywall' && featureKey) {
+      const currentSearch = new URLSearchParams(location.search);
+      if (!currentSearch.has('referrer')) {
+        currentSearch.set('referrer', featureKey);
+        navigate({ search: currentSearch.toString() }, { replace: true });
+      }
+    }
+  }, [gate_action, featureKey, location.search, navigate]);
 
   // Ungated routes pass through
   if (!featureKey || isRouteUngated(routeKey)) {
@@ -129,13 +143,10 @@ export function FeatureGateRoute({
   // Handle gate actions
   switch (gate_action) {
     case 'paywall':
-      // Redirect to billing/plan selection
+      // Render paywall content within AdminLayout
+      clearRedirectCounter();
       return (
-        <Navigate
-          to={getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING)}
-          state={{ from: location, reason: 'feature_gate', feature: featureKey }}
-          replace
-        />
+        <FeatureUpgradePaywallContent />
       );
 
     case 'hide': {

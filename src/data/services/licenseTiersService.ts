@@ -382,9 +382,28 @@ export async function getOrganizationsUsingTier(tierKey: string): Promise<OrgUsi
       .eq('current_tier_id', tier.id)
       .order('name', { ascending: true }) as { data: OrgWithTierRow[] | null; error: Error | null }
 
-    if (error) throw error
+    if (error) {
+      console.error('[getOrganizationsUsingTier] Query error:', error)
+      throw error
+    }
+    
+    // Debug: Log query results
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[getOrganizationsUsingTier] Query results:', {
+        tierId: tier.id,
+        tierKey: tier.tier_key,
+        orgCount: data?.length ?? 0,
+        orgs: data?.map(org => ({
+          id: org.id,
+          name: org.name,
+          current_tier_id: org.current_tier_id,
+          tier_name_from_join: org.license_tiers?.tier_name,
+        })),
+      })
+    }
     
     // Map response to OrgUsingTier format
+    // Use tier.tier_name as fallback if JOIN didn't return tier_name (handles NULL tier_name in database)
     const result: OrgUsingTier[] = (data ?? []).map((org: OrgWithTierRow) => ({
       id: org.id,
       name: org.name,

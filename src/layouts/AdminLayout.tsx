@@ -21,6 +21,8 @@ import type { NavSection } from '@/types/menu'
 import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { shouldShowUpgradePrompt, getReasonIcon } from '@/lib/featureGate'
+import { hasAnyRole } from '@/utils/roleHelpers'
 
 function SubOrgBanner({ parentOrgId }: { parentOrgId: string }) {
   const { data: parentOrg } = useQuery({
@@ -62,6 +64,10 @@ export default function AdminLayout() {
     typeof window !== 'undefined' ? window.matchMedia(ADMIN_LAYOUT_MOBILE_NAV_QUERY).matches : false
   )
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [featureGateModal, setFeatureGateModal] = useState<{ open: boolean; message: string; reasonCode?: string; featureKey?: string }>({
+    open: false,
+    message: '',
+  })
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -269,12 +275,20 @@ export default function AdminLayout() {
               icon: item.icon,
               path: item.path ?? '',
               requiresOrg: originalItem.requiresOrg,
-              disabled: item.disabled || (item as any).isGated,
+              disabled: item.disabled || ((item as any).isGated && (item as any).gateAction === 'disable'),
               gateMessage: (item as any).gateMessage,
+              gateAction: (item as any).gateAction,
+              isGated: (item as any).isGated,
+              reasonCode: (item as any).reasonCode,
+              featureKey: (item as any).featureKey,
             }))
           : null,
-        disabled: firstItem.disabled || (firstItem as any).isGated,
+        disabled: firstItem.disabled || ((firstItem as any).isGated && (firstItem as any).gateAction === 'disable'),
         gateMessage: (firstItem as any).gateMessage,
+        gateAction: (firstItem as any).gateAction,
+        isGated: (firstItem as any).isGated,
+        reasonCode: (firstItem as any).reasonCode,
+        featureKey: (firstItem as any).featureKey,
       }
     }).filter(Boolean) as any[]
   }, [filteredSections, rawMenuItems])
@@ -287,6 +301,7 @@ export default function AdminLayout() {
   }
 
   const adminDashboardPath = getPath(RouteKeys.ADMIN_DASHBOARD)
+  const isPaywallRoute = location.pathname === getPath(RouteKeys.ADMIN_FEATURE_UPGRADE)
   const isActive = (path: string) => {
     if (path === adminDashboardPath) {
       return location.pathname === adminDashboardPath
@@ -418,8 +433,26 @@ export default function AdminLayout() {
                 {isExpanded && visibleChildren.length > 0 && (
                   <ul className="oa-nav-list">
                     {children.map((child: any) => {
-                      const childDisabled = child.requiresOrg && !hasOrg
+                      // Only disable if explicitly disabled OR gate action is 'disable'
+                      // For 'modal' actions, keep clickable but intercept click
+                      const isOrgDisabled = child.requiresOrg && !hasOrg
+                      const childDisabled = isOrgDisabled || child.disabled
+                      const isModalAction = child.isGated && child.gateAction === 'modal'
                       const childActive = isActiveExact(child.path ?? '')
+                      const disabledTitle = child.gateMessage || (child.requiresOrg && !hasOrg ? t('admin.navigation.requiresOrganizationSetup') : undefined)
+
+                      const handleClick = (e: React.MouseEvent) => {
+                        if (isModalAction) {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setFeatureGateModal({
+                            open: true,
+                            message: child.gateMessage || 'This feature is not available',
+                            reasonCode: (child as any).reasonCode,
+                            featureKey: (child as any).featureKey,
+                          })
+                        }
+                      }
 
                       if (childDisabled) {
                         return (
@@ -427,7 +460,24 @@ export default function AdminLayout() {
                             <div
                               className="oa-nav-link"
                               style={{ opacity: 0.4, cursor: 'not-allowed' }}
-                              title={t('admin.navigation.requiresOrganizationSetup')}
+                              title={disabledTitle}
+                            >
+                              <span className="material-symbols-outlined">{child.icon}</span>
+                              <span>{child.text}</span>
+                            </div>
+                          </li>
+                        )
+                      }
+
+                      // For modal actions, render as clickable but intercept
+                      if (isModalAction) {
+                        return (
+                          <li key={child.path ?? child.text} className="oa-nav-item">
+                            <div
+                              className={`oa-nav-link ${childActive ? 'active' : ''}`}
+                              onClick={handleClick}
+                              style={{ cursor: 'pointer' }}
+                              title={child.gateMessage}
                             >
                               <span className="material-symbols-outlined">{child.icon}</span>
                               <span>{child.text}</span>
@@ -478,11 +528,11 @@ export default function AdminLayout() {
 
       {/* Main */}
       <div className="oa-main">
-        {/* Global Navigation Header */}
-        <GlobalNav variant="admin" />
+        {/* Global Navigation Header - Hidden on paywall route */}
+        {!isPaywallRoute && <GlobalNav variant="admin" />}
 
-        {/* License Warning Banner */}
-        {summary && <LicenseWarningBanner summary={summary} />}
+        {/* License Warning Banner - Hidden on paywall route */}
+        {!isPaywallRoute && summary && <LicenseWarningBanner summary={summary} />}
 
         {/* Sub-Org Banner */}
         {isSubOrg && orgData?.parent_org_id && (
@@ -508,6 +558,73 @@ export default function AdminLayout() {
           brandSubtitle="Admin Portal"
         />
       )}
+
+      {/* Feature Gate Modal */}
+      {featureGateModal.open && (() => {
+        const featureKey = featureGateModal.featureKey || 'default'
+        const isAdmin = currentOrganization ? hasAnyRole(currentOrganization, ['org_admin']) : false
+        const getFeatureTranslation = (key: string, fallbackKey: string) => {
+          const translationKey = `featureUpgrade.${featureKey}.${key}` as any
+          const fallback = `featureUpgrade.default.${fallbackKey}` as any
+          const translation = t(translationKey)
+          if (translation === translationKey) {
+            return t(fallback)
+          }
+          return translation
+        }
+        const modalTitle = getFeatureTranslation('statusTitle', 'statusTitle')
+        const modalMessage = isAdmin 
+          ? getFeatureTranslation('statusDescriptionAdmin', 'statusDescriptionAdmin')
+          : getFeatureTranslation('statusDescriptionNonAdmin', 'statusDescriptionNonAdmin')
+        
+        return (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={() => setFeatureGateModal({ open: false, message: '' })}
+          >
+            <div 
+              className="oa-card"
+              style={{ maxWidth: '500px', width: '90%' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="text-center">
+                <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-warning)', marginBottom: '16px', display: 'block' }}>
+                  {featureGateModal.reasonCode ? getReasonIcon(featureGateModal.reasonCode as any) : 'lock'}
+                </span>
+                <h3 className="oa-h3 oa-mb-2">{modalTitle}</h3>
+                <p className="oa-body-m oa-text-muted oa-mb-6">
+                  {modalMessage}
+                </p>
+                <div className="oa-flex oa-flex-col oa-items-center oa-gap-4">
+                  <a
+                    href={`${getLink(RouteKeys.ADMIN_FEATURE_UPGRADE)}?referrer=${encodeURIComponent(featureKey)}`}
+                    className="oa-btn oa-btn--primary"
+                    onClick={() => setFeatureGateModal({ open: false, message: '' })}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px', marginRight: '8px' }}>workspace_premium</span>
+                    {t('common.seeMyOptions')}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setFeatureGateModal({ open: false, message: '' })}
+                    className="oa-body-s"
+                    style={{ 
+                      background: 'none', 
+                      border: 'none', 
+                      color: 'var(--org-text-secondary)', 
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      padding: 0
+                    }}
+                  >
+                    {t('common.noThanks')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

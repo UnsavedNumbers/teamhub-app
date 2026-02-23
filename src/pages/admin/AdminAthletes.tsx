@@ -12,7 +12,7 @@ import { useT } from '../../i18n/useI18n'
 import { getLink } from '../../utils/routes'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
-import { ConfirmDialog, AdminPageHeader, EmptyState } from '../../components/admin'
+import { ConfirmDialog, AdminPageHeader, Card } from '../../components/admin'
 import AthletesHeader from '../../components/admin/AthletesHeader'
 import AthletesFilters, { type AthletesFilters as AthletesFiltersType } from '../../components/admin/AthletesFilters'
 import AthletesGrid, { type AthleteCardData } from '../../components/admin/AthletesGrid'
@@ -342,15 +342,18 @@ export default function AdminAthletes() {
             />
 
             {athletes.length === 0 && !loading ? (
-                <EmptyState
-                    icon="person_off"
-                    title={t('admin.athletes.noAthletes')}
-                    description={t('admin.athletes.noAthletesDescription')}
-                >
-                    <button className="oa-btn oa-btn--primary" onClick={() => navigate(getLink('admin.athletes.create'))}>
-                        {t('admin.athletes.add')}
-                    </button>
-                </EmptyState>
+                <Card className="oa-border-2 oa-border-dashed">
+                    <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+                        <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>person_off</span>
+                        <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+                            <h3 className="oa-h3 oa-mb-0">{t('admin.athletes.noAthletes')}</h3>
+                            <p className="oa-body-m oa-text-muted oa-mb-4">{t('admin.athletes.noAthletesDescription')}</p>
+                            <button className="oa-btn oa-btn--primary" onClick={() => navigate(getLink('admin.athletes.create'))}>
+                                {t('admin.athletes.add')}
+                            </button>
+                        </div>
+                    </div>
+                </Card>
             ) : (
                 <AthletesGrid
                     athletes={athletes}

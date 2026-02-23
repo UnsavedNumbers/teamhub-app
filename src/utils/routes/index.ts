@@ -171,6 +171,7 @@ export const RouteKeys = {
     ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS: 'admin.organization.billing.checkoutSuccess',
     ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL: 'admin.organization.billing.checkoutCancel',
     ADMIN_TRIAL_EXPIRED: 'admin.organization.trialExpired',
+    ADMIN_FEATURE_UPGRADE: 'admin.organization.featureUpgrade',
     ADMIN_ONBOARDING: 'admin.onboarding',
     // Standardized entity routes
     ADMIN_SPORTS: 'admin.sports.list',

@@ -147,9 +147,100 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
         return
       }
 
+      // Debug: Log the raw data to help diagnose tier loading issues
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[useLicense] Raw data:', {
+          current_tier_id: data.current_tier_id,
+          license_tiers: data.license_tiers,
+          stripe_price_id: data.stripe_price_id,
+          license_status: data.license_status,
+        })
+      }
+
       // Get tier name from JOIN (no mapping needed)
-      const tierName = data.license_tiers?.tier_name ?? null
-      const tierId = data.current_tier_id ?? null
+      // If current_tier_id exists but license_tiers is null, the tier might have been archived
+      // In that case, we'll still have tierId but no tierName
+      let tierName = data.license_tiers?.tier_name ?? null
+      let tierId = data.current_tier_id ?? null
+
+      // Fallback 1: If JOIN returned tierId but no tierName, query tier directly by ID
+      // This handles cases where the JOIN failed or tier_name is NULL in the database
+      if (tierId && !tierName) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[useLicense] JOIN returned tierId but no tierName, querying tier directly:', tierId)
+        }
+        
+        try {
+          const { data: tierData, error: tierError } = await supabase
+            .from('license_tiers')
+            .select('id, tier_name, tier_key, status')
+            .eq('id', tierId)
+            .maybeSingle()
+
+          if (!tierError && tierData) {
+            // Use tier_name from database, fallback to empty string if NULL (matches platform admin behavior)
+            tierName = tierData.tier_name ?? ''
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[useLicense] Direct tier query successful:', { tierId, tierName, status: tierData.status, tier_name_from_db: tierData.tier_name })
+            }
+            
+            // If tier is archived, log a warning
+            if (tierData.status !== 'active') {
+              console.warn('[useLicense] Tier is archived:', { tierId, tierName, status: tierData.status })
+            }
+          } else if (tierError) {
+            console.error('[useLicense] Failed to query tier directly:', tierError)
+          } else {
+            // tierData is null - tier doesn't exist
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[useLicense] Tier not found in database:', tierId)
+            }
+          }
+        } catch (directQueryError) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[useLicense] Direct tier query failed:', directQueryError)
+          }
+        }
+      }
+
+      // Fallback 2: If current_tier_id is not set but stripe_price_id exists, look up tier by stripe_price_id
+      // This handles cases where the organization hasn't been migrated yet or tier wasn't set during subscription creation
+      if (!tierId && data.stripe_price_id) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[useLicense] current_tier_id not set, attempting fallback lookup by stripe_price_id:', data.stripe_price_id)
+        }
+        
+        try {
+          const { data: tierData, error: tierError } = await supabase
+            .from('license_tiers')
+            .select('id, tier_name, tier_key')
+            .eq('stripe_price_id', data.stripe_price_id)
+            .eq('status', 'active')
+            .maybeSingle()
+
+          if (!tierError && tierData) {
+            tierId = tierData.id
+            tierName = tierData.tier_name
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[useLicense] Fallback lookup successful:', { tierId, tierName })
+            }
+          }
+        } catch (fallbackError) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[useLicense] Fallback lookup failed:', fallbackError)
+          }
+        }
+      }
+
+      // Debug: Log if we still don't have tierName after all fallbacks
+      if (tierId && !tierName) {
+        console.warn('[useLicense] Organization has current_tier_id but tier_name could not be retrieved:', tierId)
+      }
+
+      // Debug: Log if we don't have tierId at all
+      if (!tierId && process.env.NODE_ENV === 'development') {
+        console.warn('[useLicense] Organization does not have current_tier_id set and fallback lookup failed. Organization ID:', effectiveOrgId)
+      }
 
       const parsed: LicenseSummary = {
         status: (data.license_status as LicenseStatus | null) ?? null,

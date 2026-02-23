@@ -15,7 +15,7 @@ import { getSports, getPrograms, deleteProgram, getSportBySlug } from '../../dat
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Sport, Program, Level, Team } from '../../data/types/organization'
-import { AdminPageHeader, Select, ConfirmDialog, Button, Card, EmptyState, Badge, InlineNotice } from '../../components/admin'
+import { AdminPageHeader, Select, ConfirmDialog, Button, Card, Badge, InlineNotice } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import './Programs.css'
@@ -443,23 +443,23 @@ export default function Programs() {
 
       <div className="oa-flex oa-flex-col oa-gap-4">
         {filteredPrograms.length === 0 ? (
-          <Card>
-            <EmptyState
-              icon="category"
-              title={filterSportId ? 'No programs for this sport' : 'No programs yet'}
-              description={
-                filterSportId 
-                  ? `Create a program for ${sportById.get(filterSportId)?.name || 'this sport'}.`
-                  : 'Start by selecting a sport or create a program from the Sports page.'
-              }
-              noCard
-            >
-              {filterSportId ? (
-                <Button onClick={() => handleNavigateToAddProgram(filterSportId)} icon="add">Add Program</Button>
-              ) : (
-                <Button onClick={handleNavigateToSports}>View Sports</Button>
-              )}
-            </EmptyState>
+          <Card className="oa-border-2 oa-border-dashed">
+            <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+              <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>category</span>
+              <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+                <h3 className="oa-h3 oa-mb-0">{filterSportId ? 'No programs for this sport' : 'No programs yet'}</h3>
+                <p className="oa-body-m oa-text-muted oa-mb-4">
+                  {filterSportId 
+                    ? `Create a program for ${sportById.get(filterSportId)?.name || 'this sport'}.`
+                    : 'Start by selecting a sport or create a program from the Sports page.'}
+                </p>
+                {filterSportId ? (
+                  <Button onClick={() => handleNavigateToAddProgram(filterSportId)} icon="add">Add Program</Button>
+                ) : (
+                  <Button onClick={handleNavigateToSports}>View Sports</Button>
+                )}
+              </div>
+            </div>
           </Card>
         ) : (
           <Card className="oa-stacked-list">

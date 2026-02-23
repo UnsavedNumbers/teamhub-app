@@ -555,6 +555,12 @@ const admin = {
             icon: 'lock',
             requiresOrg: false,
         },
+        featureUpgrade: {
+            path: '/admin/organization/feature-upgrade',
+            label: 'Feature Upgrade',
+            icon: 'workspace_premium',
+            requiresOrg: false,
+        },
     },
 
     // Onboarding (special - outside admin layout)

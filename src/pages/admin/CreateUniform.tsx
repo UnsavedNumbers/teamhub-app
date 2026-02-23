@@ -11,7 +11,7 @@ import { useT } from '../../i18n/useI18n'
 import type { TranslationKey } from '../../i18n'
 import { createUniformKit } from '../../data/services/uniformsService'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
-import { AdminPageHeader, Card, Button, EmptyState } from '../../components/admin'
+import { AdminPageHeader, Card, Button } from '../../components/admin'
 import { SportUniformForm } from '../../components/uniforms/SportUniformForm'
 import type { CreateUniformKitDTO } from '../../types/uniforms'
 import { getLink } from '../../utils/routes'
@@ -77,17 +77,17 @@ export default function CreateUniform() {
     return (
       <div className="oa-root">
         <AdminPageHeader title="Create Uniform" actions={null} />
-        <Card>
-          <EmptyState
-            icon="checkroom"
-            title={t('admin.uniforms.prerequisite.noSportsTitle')}
-            description={t('admin.uniforms.prerequisite.noSportsDescription')}
-            noCard
-          >
-            <Link to={`${getLink('admin.organization.forms')}?type=sport&returnUrl=${returnUrl}`}>
-              <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
-            </Link>
-          </EmptyState>
+        <Card className="oa-border-2 oa-border-dashed">
+          <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>checkroom</span>
+            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+              <h3 className="oa-h3 oa-mb-0">{t('admin.uniforms.prerequisite.noSportsTitle')}</h3>
+              <p className="oa-body-m oa-text-muted oa-mb-4">{t('admin.uniforms.prerequisite.noSportsDescription')}</p>
+              <Link to={`${getLink('admin.organization.forms')}?type=sport&returnUrl=${returnUrl}`}>
+                <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
+              </Link>
+            </div>
+          </div>
         </Card>
       </div>
     )

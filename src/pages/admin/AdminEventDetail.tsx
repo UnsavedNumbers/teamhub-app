@@ -12,7 +12,7 @@ import type { ReasonCode } from '@/lib/featureGate/types'
 import type { CalendarEvent, EventLocation } from '@/types/calendar'
 import { formatEventDate, formatEventTimeRange } from '@/types/calendar'
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
-import { ConfirmDialog, EmptyState } from '@/components/admin'
+import { ConfirmDialog, Card } from '@/components/admin'
 import TicketedEventDetail from '@/pages/admin/TicketedEventDetail'
 import '../../styles/orgAdmin.css'
 
@@ -697,16 +697,18 @@ export default function AdminEventDetail() {
   if (!id || error || !event) {
     return (
       <div className="oa-page-container">
-        <EmptyState
-          icon="event_busy"
-          title={t('admin.events.detailPage.empty.title')}
-          description={error || t('admin.events.detailPage.empty.description')}
-          noCard
-        >
-          <button className="oa-btn oa-btn--secondary" onClick={() => navigate(getLink('admin.events.list'))}>
-            {t('admin.events.detailPage.actions.backToEvents')}
-          </button>
-        </EmptyState>
+        <Card className="oa-border-2 oa-border-dashed">
+          <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>event_busy</span>
+            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+              <h3 className="oa-h3 oa-mb-0">{t('admin.events.detailPage.empty.title')}</h3>
+              <p className="oa-body-m oa-text-muted oa-mb-4">{error || t('admin.events.detailPage.empty.description')}</p>
+              <button className="oa-btn oa-btn--secondary" onClick={() => navigate(getLink('admin.events.list'))}>
+                {t('admin.events.detailPage.actions.backToEvents')}
+              </button>
+            </div>
+          </div>
+        </Card>
       </div>
     )
   }

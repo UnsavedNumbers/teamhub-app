@@ -13,7 +13,7 @@ import { USE_FAKE_DATA } from '../../data/config'
 import { getSports, deleteSport } from '../../data/services/sportsService'
 import { getPrograms } from '../../data/services/sportsService'
 import type { Sport } from '../../data/types/organization'
-import { AdminPageHeader, ConfirmDialog, Button, Card, EmptyState, InlineNotice } from '../../components/admin'
+import { AdminPageHeader, ConfirmDialog, Button, Card, InlineNotice } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { Tooltip } from '../../components/admin/Tooltip'
@@ -169,21 +169,21 @@ export default function Sports() {
 
       <div className="oa-flex oa-flex-col oa-gap-4">
         {sports.length === 0 ? (
-          <Card>
-            <EmptyState
-              icon="sports"
-              title="No sports added"
-              description="Start by adding a sport to your organization."
-              noCard
-            >
+          <Card className="oa-border-2 oa-border-dashed">
+            <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+              <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>sports</span>
+              <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+                <h3 className="oa-h3 oa-mb-0">No sports added</h3>
+                <p className="oa-body-m oa-text-muted oa-mb-4">Start by adding a sport to your organization.</p>
                 <Button 
-                    icon="add"
-                    onClick={() => navigate(`${formsRoute}?type=sport&returnUrl=${encodeURIComponent(sportsRoute)}`)}
-                    disabled={isOffline || USE_FAKE_DATA}
+                  icon="add"
+                  onClick={() => navigate(`${formsRoute}?type=sport&returnUrl=${encodeURIComponent(sportsRoute)}`)}
+                  disabled={isOffline || USE_FAKE_DATA}
                 >
-                    {USE_FAKE_DATA ? 'Sign in to Add Sport' : 'Add Sport'}
+                  {USE_FAKE_DATA ? 'Sign in to Add Sport' : 'Add Sport'}
                 </Button>
-            </EmptyState>
+              </div>
+            </div>
           </Card>
         ) : (
           <Card className="oa-stacked-list">

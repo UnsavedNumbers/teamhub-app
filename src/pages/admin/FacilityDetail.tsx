@@ -11,7 +11,7 @@ import { useT } from '../../i18n/useI18n'
 import { getLink } from '../../utils/routes'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
-import { AdminPageHeader, Card, Button, ConfirmDialog, EmptyState } from '../../components/admin'
+import { AdminPageHeader, Card, Button, ConfirmDialog } from '../../components/admin'
 import {
     getFacilityById,
     deleteFacility,
@@ -414,14 +414,18 @@ export default function FacilityDetail() {
                     </div>
 
                     {resources.length === 0 ? (
-                        <EmptyState
-                            title="No resources yet"
-                            description="Create your first resource for this facility"
-                        >
-                            <Button variant="primary" onClick={() => { setResourceFormEditing(null); setResourceFormOpen(true); }} icon="add">
-                                Add Resource
-                            </Button>
-                        </EmptyState>
+                        <Card className="oa-border-2 oa-border-dashed">
+                            <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+                                <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>inventory_2</span>
+                                <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+                                    <h3 className="oa-h3 oa-mb-0">No resources yet</h3>
+                                    <p className="oa-body-m oa-text-muted oa-mb-4">Create your first resource for this facility</p>
+                                    <Button variant="primary" onClick={() => { setResourceFormEditing(null); setResourceFormOpen(true); }} icon="add">
+                                        Add Resource
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
                     ) : (
                         <div style={{ display: 'grid', gap: '16px' }}>
                             {resources.map((resource) => (
@@ -511,14 +515,18 @@ export default function FacilityDetail() {
                     </div>
 
                     {blackouts.length === 0 ? (
-                        <EmptyState
-                            title="No blackouts"
-                            description="Create blackouts to block time periods"
-                        >
-                            <Button variant="primary" onClick={() => { setBlackoutFormEditing(null); setBlackoutFormOpen(true); }} icon="add">
-                                Create Blackout
-                            </Button>
-                        </EmptyState>
+                        <Card className="oa-border-2 oa-border-dashed">
+                            <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+                                <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>block</span>
+                                <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+                                    <h3 className="oa-h3 oa-mb-0">No blackouts</h3>
+                                    <p className="oa-body-m oa-text-muted oa-mb-4">Create blackouts to block time periods</p>
+                                    <Button variant="primary" onClick={() => { setBlackoutFormEditing(null); setBlackoutFormOpen(true); }} icon="add">
+                                        Create Blackout
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
                     ) : (
                         <div style={{ display: 'grid', gap: '16px' }}>
                             {blackouts.map((blackout) => (
@@ -593,14 +601,18 @@ export default function FacilityDetail() {
                     </div>
 
                     {reservations.length === 0 ? (
-                        <EmptyState
-                            title="No reservations"
-                            description="Create reservations to schedule facility usage"
-                        >
-                            <Button variant="primary" onClick={() => { setReservationFormEditing(null); setReservationFormOpen(true); }} icon="add">
-                                Create Reservation
-                            </Button>
-                        </EmptyState>
+                        <Card className="oa-border-2 oa-border-dashed">
+                            <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+                                <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>event_available</span>
+                                <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+                                    <h3 className="oa-h3 oa-mb-0">No reservations</h3>
+                                    <p className="oa-body-m oa-text-muted oa-mb-4">Create reservations to schedule facility usage</p>
+                                    <Button variant="primary" onClick={() => { setReservationFormEditing(null); setReservationFormOpen(true); }} icon="add">
+                                        Create Reservation
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
                     ) : (
                         <div style={{ display: 'grid', gap: '16px' }}>
                             {reservations.map((reservation) => (

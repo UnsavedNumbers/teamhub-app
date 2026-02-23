@@ -986,6 +986,37 @@ export default function LicenseTierDetail() {
                                 <Badge variant="info" style={{ fontSize: '11px', padding: '2px 8px' }}>
                                   {feature.rollout_status.toUpperCase()}
                                 </Badge>
+                                <a
+                                  href={getLink('platformAdmin.licenses.featureDetail', { id: feature.id })}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '24px',
+                                    height: '24px',
+                                    borderRadius: 'var(--pa-radius-sm)',
+                                    color: 'var(--pa-n600)',
+                                    textDecoration: 'none',
+                                    transition: 'all 0.2s ease',
+                                    cursor: 'pointer',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'var(--pa-n100)'
+                                    e.currentTarget.style.color = 'var(--pa-n900)'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'transparent'
+                                    e.currentTarget.style.color = 'var(--pa-n600)'
+                                  }}
+                                  title={t('platformAdmin.licenses.tierDetail.openFeatureDetail')}
+                                >
+                                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                                    open_in_new
+                                  </span>
+                                </a>
                               </div>
                               {feature.description && (
                                 <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>

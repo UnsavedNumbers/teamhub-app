@@ -14,7 +14,7 @@ import { getLevels, deleteLevel } from '../../data/services/levelsService'
 import { getPrograms } from '../../data/services/sportsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Level, Program, Team } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, Select, ConfirmDialog, EmptyState, Badge, InlineNotice } from '../../components/admin'
+import { AdminPageHeader, Card, Button, Select, ConfirmDialog, Badge, InlineNotice } from '../../components/admin'
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
@@ -388,22 +388,22 @@ export default function LevelsManagement() {
       )}
 
       {levels.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon="grade"
-            title="No levels yet"
-            description="Create programs first, then add levels to define eligibility."
-            noCard
-          >
-            <Link
-              to={`${getLink('admin.organization.forms')}?type=program&returnUrl=${encodeURIComponent(getLink('admin.organization.levels'))}`}
-              className={loading || refreshing ? 'oa-pointer-events-none oa-opacity-50' : ''}
-            >
-              <Button disabled={loading || refreshing}>
-                Add a Program
-              </Button>
-            </Link>
-          </EmptyState>
+        <Card className="oa-border-2 oa-border-dashed">
+          <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>grade</span>
+            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+              <h3 className="oa-h3 oa-mb-0">No levels yet</h3>
+              <p className="oa-body-m oa-text-muted oa-mb-4">Create programs first, then add levels to define eligibility.</p>
+              <Link
+                to={`${getLink('admin.organization.forms')}?type=program&returnUrl=${encodeURIComponent(getLink('admin.organization.levels'))}`}
+                className={loading || refreshing ? 'oa-pointer-events-none oa-opacity-50' : ''}
+              >
+                <Button disabled={loading || refreshing}>
+                  Add a Program
+                </Button>
+              </Link>
+            </div>
+          </div>
         </Card>
       ) : (
         <>

@@ -16,7 +16,7 @@ import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
 import { supabase } from '../../lib/supabase'
-import { AdminPageHeader, Button, ConfirmDialog, EmptyState, Card, Select, Badge, InlineNotice, OrgDataTable, type ColumnConfig } from '../../components/admin'
+import { AdminPageHeader, Button, ConfirmDialog, Card, Select, Badge, InlineNotice, OrgDataTable, type ColumnConfig } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
@@ -397,17 +397,17 @@ export default function TeamsManagement() {
             { label: 'Teams' },
           ]}
         />
-        <Card>
-          <EmptyState
-            icon="groups"
-            title="No programs yet"
-            description="You need to create at least one program before you can add teams. Teams require levels, and levels require programs."
-            noCard
-          >
-            <Link to={`${getLink('admin.organization.forms')}?type=program`}>
-              <OrgAdminButton variant="primary" className="w-full sm:w-auto">Add a Program</OrgAdminButton>
-            </Link>
-          </EmptyState>
+        <Card className="oa-border-2 oa-border-dashed">
+          <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>groups</span>
+            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+              <h3 className="oa-h3 oa-mb-0">No programs yet</h3>
+              <p className="oa-body-m oa-text-muted oa-mb-4">You need to create at least one program before you can add teams. Teams require levels, and levels require programs.</p>
+              <Link to={`${getLink('admin.organization.forms')}?type=program`}>
+                <OrgAdminButton variant="primary" className="w-full sm:w-auto">Add a Program</OrgAdminButton>
+              </Link>
+            </div>
+          </div>
         </Card>
       </div>
     )
@@ -425,17 +425,17 @@ export default function TeamsManagement() {
             { label: 'Teams' },
           ]}
         />
-        <Card>
-          <EmptyState
-            icon="groups"
-            title="No levels yet"
-            description="You need to create at least one level before you can add teams."
-            noCard
-          >
-            <Link to={`${getLink('admin.organization.forms')}?type=level&returnUrl=${encodeURIComponent(getLink('admin.teams.list'))}`}>
-              <OrgAdminButton variant="primary" className="w-full sm:w-auto">Add a Level</OrgAdminButton>
-            </Link>
-          </EmptyState>
+        <Card className="oa-border-2 oa-border-dashed">
+          <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>grade</span>
+            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+              <h3 className="oa-h3 oa-mb-0">No levels yet</h3>
+              <p className="oa-body-m oa-text-muted oa-mb-4">You need to create at least one level before you can add teams.</p>
+              <Link to={`${getLink('admin.organization.forms')}?type=level&returnUrl=${encodeURIComponent(getLink('admin.teams.list'))}`}>
+                <OrgAdminButton variant="primary" className="w-full sm:w-auto">Add a Level</OrgAdminButton>
+              </Link>
+            </div>
+          </div>
         </Card>
       </div>
     )

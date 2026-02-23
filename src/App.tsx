@@ -273,6 +273,7 @@ const PlanSelection = lazy(() => import('./pages/admin/PlanSelection'))
 const CheckoutSuccess = lazy(() => import('./pages/admin/CheckoutSuccess'))
 const CheckoutCancel = lazy(() => import('./pages/admin/CheckoutCancel'))
 const TrialExpired = lazy(() => import('./pages/admin/TrialExpired'))
+const FeatureUpgradePaywall = lazy(() => import('./pages/admin/FeatureUpgradePaywall'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
 const AdminContactPage = lazy(() => import('./pages/admin/ContactPage'))
 
@@ -592,7 +593,7 @@ function AppWithTheme() {
 
           {/* Trial Expired - Standalone route outside AdminLayout */}
           <Route
-            path="/admin/organization/trial-expired"
+            path={getPath(RouteKeys.ADMIN_TRIAL_EXPIRED)}
             element={
               <ProtectedRoute>
                 <Suspense fallback={<AdminLoadingSpinner />}>
@@ -601,6 +602,7 @@ function AppWithTheme() {
               </ProtectedRoute>
             }
           />
+
 
           {/* Admin Routes - Material Dashboard Layout with nested routing */}
           <Route
@@ -786,6 +788,7 @@ function AppWithTheme() {
               <Route path="organization/billing/plan-selection" element={<PlanSelection />} />
               <Route path="organization/billing/checkout/success" element={<CheckoutSuccess />} />
               <Route path="organization/billing/checkout/cancel" element={<CheckoutCancel />} />
+              <Route path="organization/feature-upgrade" element={<FeatureUpgradePaywall />} />
               
               {/* Personal Settings */}
               <Route path="settings" element={<AdminSettings />} />

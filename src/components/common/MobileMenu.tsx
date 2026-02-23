@@ -5,6 +5,11 @@ import FocusLock from 'react-focus-lock'
 import { RemoveScroll } from 'react-remove-scroll'
 import { useTheme } from '@/hooks/useTheme'
 import type { NavSection } from '@/types/menu'
+import { shouldShowUpgradePrompt, getReasonIcon } from '@/lib/featureGate'
+import { getLink, RouteKeys } from '@/utils/routes'
+import { useOrganization } from '@/contexts/OrganizationContext'
+import { useT } from '@/i18n/useI18n'
+import { hasAnyRole } from '@/utils/roleHelpers'
 import './MobileMenu.css'
 
 interface MobileMenuProps {
@@ -37,8 +42,14 @@ export default function MobileMenu({
 }: MobileMenuProps) {
   const location = useLocation()
   const { resolvedTheme } = useTheme()
+  const { currentOrganization } = useOrganization()
+  const t = useT()
   const drawerRef = useRef<HTMLDivElement>(null)
   const previousPathRef = useRef(location.pathname)
+  const [featureGateModal, setFeatureGateModal] = useState<{ open: boolean; message: string; reasonCode?: string; featureKey?: string }>({
+    open: false,
+    message: '',
+  })
   
   // Track if we should render (for close animation)
   const [shouldRender, setShouldRender] = useState(isOpen)
@@ -167,6 +178,56 @@ export default function MobileMenu({
                 if (isSingleItem && section.route) {
                   const item = allItems[0]
                   const isActive = isActivePath(item.path)
+                  const isOrgDisabled = item.disabled
+                  const isGateDisabled = (item as any).isGated && (item as any).gateAction === 'disable'
+                  const isDisabled = isOrgDisabled || isGateDisabled
+                  const isModalAction = (item as any).isGated && (item as any).gateAction === 'modal'
+                  const disabledTitle = (item as any).gateMessage || (item.disabled ? 'Coming soon' : undefined)
+
+                  const handleClick = (e: React.MouseEvent) => {
+                    if (isModalAction) {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setFeatureGateModal({
+                        open: true,
+                        message: (item as any).gateMessage || 'This feature is not available',
+                        reasonCode: (item as any).reasonCode,
+                        featureKey: (item as any).featureKey,
+                      })
+                      onClose()
+                    }
+                  }
+                  
+                  if (isDisabled) {
+                    return (
+                      <div
+                        key={`section-${sectionIdx}-${section.label}`}
+                        className="mm-item mm-item--disabled"
+                        title={disabledTitle}
+                      >
+                        <span className="material-symbols-outlined mm-item-icon">
+                          {item.icon}
+                        </span>
+                        <span className="mm-item-text">{item.text}</span>
+                      </div>
+                    )
+                  }
+
+                  if (isModalAction) {
+                    return (
+                      <div
+                        key={`section-${sectionIdx}-${section.label}`}
+                        className={`mm-item ${isActive ? 'mm-item--active' : ''}`}
+                        onClick={handleClick}
+                        title={(item as any).gateMessage}
+                      >
+                        <span className="material-symbols-outlined mm-item-icon">
+                          {item.icon}
+                        </span>
+                        <span className="mm-item-text">{item.text}</span>
+                      </div>
+                    )
+                  }
                   
                   return (
                     <Link
@@ -197,13 +258,48 @@ export default function MobileMenu({
                         
                         {group.items.map((item, itemIdx) => {
                           const isActive = isActivePath(item.path)
+                          const isOrgDisabled = item.disabled
+                          const isGateDisabled = (item as any).isGated && (item as any).gateAction === 'disable'
+                          const isDisabled = isOrgDisabled || isGateDisabled
+                          const isModalAction = (item as any).isGated && (item as any).gateAction === 'modal'
+                          const disabledTitle = (item as any).gateMessage || (item.disabled ? 'Coming soon' : undefined)
+
+                          const handleClick = (e: React.MouseEvent) => {
+                            if (isModalAction) {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              setFeatureGateModal({
+                                open: true,
+                                message: (item as any).gateMessage || 'This feature is not available',
+                                reasonCode: (item as any).reasonCode,
+                                featureKey: (item as any).featureKey,
+                              })
+                              onClose()
+                            }
+                          }
                           
-                          if (item.disabled) {
+                          if (isDisabled) {
                             return (
                               <div
                                 key={`item-${itemIdx}-${item.path}`}
                                 className="mm-item mm-item--disabled"
-                                title="Coming soon"
+                                title={disabledTitle}
+                              >
+                                <span className="material-symbols-outlined mm-item-icon">
+                                  {item.icon}
+                                </span>
+                                <span className="mm-item-text">{item.text}</span>
+                              </div>
+                            )
+                          }
+
+                          if (isModalAction) {
+                            return (
+                              <div
+                                key={`item-${itemIdx}-${item.path}`}
+                                className={`mm-item ${isActive ? 'mm-item--active' : ''}`}
+                                onClick={handleClick}
+                                title={(item as any).gateMessage}
                               >
                                 <span className="material-symbols-outlined mm-item-icon">
                                   {item.icon}
@@ -240,5 +336,67 @@ export default function MobileMenu({
   )
 
   // Render in portal to avoid z-index issues
-  return createPortal(menuContent, document.body)
+  return (
+    <>
+      {createPortal(menuContent, document.body)}
+      {/* Feature Gate Modal */}
+      {featureGateModal.open && (() => {
+        const featureKey = featureGateModal.featureKey || 'default'
+        const isAdmin = currentOrganization ? hasAnyRole(currentOrganization, ['org_admin']) : false
+        const getFeatureTranslation = (key: string, fallbackKey: string) => {
+          const translationKey = `featureUpgrade.${featureKey}.${key}` as any
+          const fallback = `featureUpgrade.default.${fallbackKey}` as any
+          const translation = t(translationKey)
+          if (translation === translationKey) {
+            return t(fallback)
+          }
+          return translation
+        }
+        const modalTitle = getFeatureTranslation('statusTitle', 'statusTitle')
+        const modalMessage = isAdmin 
+          ? getFeatureTranslation('statusDescriptionAdmin', 'statusDescriptionAdmin')
+          : getFeatureTranslation('statusDescriptionNonAdmin', 'statusDescriptionNonAdmin')
+        
+        return (
+          <div 
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
+            onClick={() => setFeatureGateModal({ open: false, message: '' })}
+          >
+            <div 
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md mx-4 p-6"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="text-center">
+                <span className="material-symbols-rounded text-5xl text-amber-500 mb-4 block">
+                  {featureGateModal.reasonCode ? getReasonIcon(featureGateModal.reasonCode as any) : 'lock'}
+                </span>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                  {modalTitle}
+                </h3>
+                <p className="text-slate-600 dark:text-slate-400 mb-6">
+                  {modalMessage}
+                </p>
+                <div className="flex flex-col items-center gap-4">
+                  <a
+                    href={`${getLink(RouteKeys.ADMIN_FEATURE_UPGRADE)}?referrer=${encodeURIComponent(featureKey)}`}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
+                    onClick={() => setFeatureGateModal({ open: false, message: '' })}
+                  >
+                    <span className="material-symbols-rounded text-lg">workspace_premium</span>
+                    {t('common.seeMyOptions')}
+                  </a>
+                  <button
+                    onClick={() => setFeatureGateModal({ open: false, message: '' })}
+                    className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 underline bg-transparent border-none cursor-pointer p-0"
+                  >
+                    {t('common.noThanks')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+    </>
+  )
 }

@@ -10,7 +10,6 @@ import {
   Card, 
   Badge,
   Button,
-  EmptyState,
   OrgDataTable,
   type ColumnConfig
 } from '../../components/admin'
@@ -131,17 +130,17 @@ export default function UniformOrders() {
     return (
       <div className="oa-root">
         <AdminPageHeader title="Uniforms" actions={null} />
-        <Card>
-          <EmptyState
-            icon="checkroom"
-            title={t('admin.uniforms.prerequisite.noSportsTitle')}
-            description={t('admin.uniforms.prerequisite.noSportsDescription')}
-            noCard
-          >
-            <Link to={`${getLink('admin.organization.forms')}?type=sport&returnUrl=${returnUrl}`}>
-              <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
-            </Link>
-          </EmptyState>
+        <Card className="oa-border-2 oa-border-dashed">
+          <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>checkroom</span>
+            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+              <h3 className="oa-h3 oa-mb-0">{t('admin.uniforms.prerequisite.noSportsTitle')}</h3>
+              <p className="oa-body-m oa-text-muted oa-mb-4">{t('admin.uniforms.prerequisite.noSportsDescription')}</p>
+              <Link to={`${getLink('admin.organization.forms')}?type=sport&returnUrl=${returnUrl}`}>
+                <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
+              </Link>
+            </div>
+          </div>
         </Card>
       </div>
     )
@@ -162,13 +161,14 @@ export default function UniformOrders() {
       />
 
       {submissions.length === 0 && !loading ? (
-        <Card>
-          <EmptyState 
-            icon="checkroom" 
-            title={t('uniforms.orders.noOrders')}
-            noCard 
-            description={t('uniforms.orders.noOrdersDesc')} 
-          />
+        <Card className="oa-border-2 oa-border-dashed">
+          <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>checkroom</span>
+            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0">
+              <h3 className="oa-h3 oa-mb-0">{t('uniforms.orders.noOrders')}</h3>
+              <p className="oa-body-m oa-text-muted oa-mb-0">{t('uniforms.orders.noOrdersDesc')}</p>
+            </div>
+          </div>
         </Card>
       ) : (
         <OrgDataTable

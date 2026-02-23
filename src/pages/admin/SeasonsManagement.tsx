@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getSeasons, deleteSeason, isSeasonEmpty } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, ConfirmDialog, EmptyState, Badge, InlineNotice } from '../../components/admin'
+import { AdminPageHeader, Card, Button, ConfirmDialog, Badge, InlineNotice } from '../../components/admin'
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
@@ -278,20 +278,20 @@ export default function SeasonsManagement() {
       )}
 
       {seasons.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon="calendar_month"
-            title="No seasons yet"
-            description="Create your first season to start organizing teams and events."
-            noCard
-          >
-             <Button 
+        <Card className="oa-border-2 oa-border-dashed">
+          <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>calendar_month</span>
+            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+              <h3 className="oa-h3 oa-mb-0">No seasons yet</h3>
+              <p className="oa-body-m oa-text-muted oa-mb-4">Create your first season to start organizing teams and events.</p>
+              <Button 
                 icon="add"
                 onClick={() => navigate(`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)}
-            >
+              >
                 Add Season
-            </Button>
-          </EmptyState>
+              </Button>
+            </div>
+          </div>
         </Card>
       ) : (
         <OrgDataTable

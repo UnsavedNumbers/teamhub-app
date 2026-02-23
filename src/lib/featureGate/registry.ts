@@ -287,6 +287,7 @@ export const UNGATED_ROUTES: string[] = [
 
     // Trial/billing routes (must be accessible to upgrade)
     'admin.trialExpired',
+    'admin.organization.featureUpgrade',
     'admin.organization.billing',
     'admin.organization.billing.checkoutSuccess',
     'admin.organization.billing.checkoutCancel',

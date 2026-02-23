@@ -10,7 +10,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
-import { AdminPageHeader, Button, EmptyState } from '../../components/admin'
+import { AdminPageHeader, Button, Card } from '../../components/admin'
 import {
     getFacilities,
     getResources,
@@ -328,14 +328,18 @@ export default function FacilitiesSchedule() {
                         )
                     })}
                     {dayReservations.length === 0 && (
-                        <EmptyState
-                            title={t('admin.facilities.schedule.noReservations')}
-                            description="Create reservations to schedule facility usage"
-                        >
-                            <Button variant="primary" onClick={handleCreateReservation} icon="add">
-                                {t('admin.facilities.schedule.createReservation')}
-                            </Button>
-                        </EmptyState>
+                        <Card className="oa-border-2 oa-border-dashed">
+                            <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+                                <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>event_available</span>
+                                <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+                                    <h3 className="oa-h3 oa-mb-0">{t('admin.facilities.schedule.noReservations')}</h3>
+                                    <p className="oa-body-m oa-text-muted oa-mb-4">Create reservations to schedule facility usage</p>
+                                    <Button variant="primary" onClick={handleCreateReservation} icon="add">
+                                        {t('admin.facilities.schedule.createReservation')}
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
                     )}
                 </div>
             )
@@ -471,14 +475,18 @@ export default function FacilitiesSchedule() {
                         ))}
                     </div>
                     {reservations.length === 0 && (
-                        <EmptyState
-                            title={t('admin.facilities.schedule.noReservations')}
-                            description="Create reservations to schedule facility usage"
-                        >
-                            <Button variant="primary" onClick={handleCreateReservation} icon="add">
-                                {t('admin.facilities.schedule.createReservation')}
-                            </Button>
-                        </EmptyState>
+                        <Card className="oa-border-2 oa-border-dashed">
+                            <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+                                <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>event_available</span>
+                                <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+                                    <h3 className="oa-h3 oa-mb-0">{t('admin.facilities.schedule.noReservations')}</h3>
+                                    <p className="oa-body-m oa-text-muted oa-mb-4">Create reservations to schedule facility usage</p>
+                                    <Button variant="primary" onClick={handleCreateReservation} icon="add">
+                                        {t('admin.facilities.schedule.createReservation')}
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
                     )}
                 </div>
             )
@@ -530,14 +538,18 @@ export default function FacilitiesSchedule() {
                         </div>
                     ))}
                     {reservations.length === 0 && (
-                        <EmptyState
-                            title={t('admin.facilities.schedule.noReservations')}
-                            description="Create reservations to schedule facility usage"
-                        >
-                            <Button variant="primary" onClick={handleCreateReservation} icon="add">
-                                {t('admin.facilities.schedule.createReservation')}
-                            </Button>
-                        </EmptyState>
+                        <Card className="oa-border-2 oa-border-dashed">
+                            <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+                                <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>event_available</span>
+                                <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+                                    <h3 className="oa-h3 oa-mb-0">{t('admin.facilities.schedule.noReservations')}</h3>
+                                    <p className="oa-body-m oa-text-muted oa-mb-4">Create reservations to schedule facility usage</p>
+                                    <Button variant="primary" onClick={handleCreateReservation} icon="add">
+                                        {t('admin.facilities.schedule.createReservation')}
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
                     )}
                 </div>
             )
