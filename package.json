@@ -24,6 +24,7 @@
     "db:next-migration-version": "node scripts/next-migration-version.mjs",
     "db:prepare-baseline": "npm run db:copy-baseline && npm run db:organize-baseline",
     "generate:feature-keys": "npx tsx scripts/generate-feature-keys.ts",
+    "export:features-for-import": "npx tsx scripts/export-features-for-import.ts",
     "demo:create-accounts": "npx tsx scripts/create-demo-accounts.ts",
     "emails:watch": "mjml -w emails/mjml -o emails/compiled",
     "demo:resize-athlete-photos": "node scripts/resize-demo-athlete-photos.mjs",

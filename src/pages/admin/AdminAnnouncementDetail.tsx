@@ -6,7 +6,6 @@ import { getAnnouncementById, updateAnnouncement, type Announcement } from '../.
 import { AdminPageHeader, Card, Button, Input, Select } from '../../components/admin'
 import { showSuccess, showError } from '../../utils/toast'
 import { getAnnouncementEmoji } from '../../utils/announcementTypes'
-import { cn } from '../../utils/cn'
 import '../../styles/orgAdmin.css'
 
 export default function AdminAnnouncementDetail() {

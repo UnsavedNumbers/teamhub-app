@@ -740,6 +740,67 @@ export function SetPlatformOnlyModal({
   )
 }
 
+// ============================================================================
+// ExcludeFromDiscoveryModal
+// ============================================================================
+
+interface ExcludeFromDiscoveryModalProps {
+  open: boolean
+  selectedFeatures: FeatureEntitlementWithCounts[]
+  onConfirm: () => void
+  onCancel: () => void
+  loading?: boolean
+}
+
+export function ExcludeFromDiscoveryModal({
+  open,
+  selectedFeatures,
+  onConfirm,
+  onCancel,
+  loading = false,
+}: ExcludeFromDiscoveryModalProps) {
+  return (
+    <BaseModal
+      open={open}
+      title="Mark as Not a Feature"
+      description={`This will mark ${selectedFeatures.length} feature${selectedFeatures.length === 1 ? '' : 's'} as "not a feature" and exclude ${selectedFeatures.length === 1 ? 'it' : 'them'} from discovery sync. These features will not reappear after running the Sync DB tool.`}
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+      confirmLabel="Mark as Not a Feature"
+      loading={loading}
+      variant="warning"
+    >
+      <div style={{ marginTop: 'var(--pa-space-4)' }}>
+        <div
+          style={{
+            padding: 'var(--pa-space-3)',
+            backgroundColor: 'var(--pa-warning-bg)',
+            border: '1px solid var(--pa-warning)',
+            borderRadius: '8px',
+            marginBottom: 'var(--pa-space-3)',
+          }}
+        >
+          <div className="pa-body-s" style={{ fontWeight: 600, color: 'var(--pa-warning)', marginBottom: 'var(--pa-space-2)' }}>
+            Important:
+          </div>
+          <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+            These features will be excluded from future discovery scans and sync operations. They will remain in the database but won't be re-discovered or re-synced.
+          </div>
+        </div>
+        <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+          <strong>Selected features:</strong>
+          <ul style={{ marginTop: 'var(--pa-space-2)', paddingLeft: 'var(--pa-space-5)' }}>
+            {selectedFeatures.slice(0, 10).map(f => (
+              <li key={f.id}>{f.display_name} ({f.feature_key})</li>
+            ))}
+            {selectedFeatures.length > 10 && <li>...and {selectedFeatures.length - 10} more</li>}
+          </ul>
+        </div>
+      </div>
+    </BaseModal>
+  )
+}
+
 const CATEGORY_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
 
 export function UpdateCategoryModal({

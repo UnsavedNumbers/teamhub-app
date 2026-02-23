@@ -17,6 +17,7 @@ interface BulkActionsToolbarProps {
   onDisableAll: () => void
   onSetSystemFeature: () => void
   onSetPlatformOnly: () => void
+  onExcludeFromDiscovery: () => void
   onClearSelection: () => void
   onSelectAllPage?: () => void
   onSelectAllResults?: () => void
@@ -35,6 +36,7 @@ export default function BulkActionsToolbar({
   onDisableAll,
   onSetSystemFeature,
   onSetPlatformOnly,
+  onExcludeFromDiscovery,
   onClearSelection,
   onSelectAllPage,
   onSelectAllResults,
@@ -175,6 +177,18 @@ export default function BulkActionsToolbar({
             admin_panel_settings
           </span>
           Set to Platform Only
+        </Button>
+
+        <Button
+          variant="secondary"
+          size="dense"
+          onClick={onExcludeFromDiscovery}
+          style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)', color: 'var(--pa-warning)' }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+            block
+          </span>
+          Not a Feature
         </Button>
 
         <div style={{ width: '1px', height: '24px', background: 'var(--pa-n300)', margin: '0 var(--pa-space-2)' }} />

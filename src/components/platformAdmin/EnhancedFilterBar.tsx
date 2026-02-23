@@ -60,6 +60,10 @@ interface EnhancedFilterBarProps {
   hierarchyFilter: 'all' | 'parents' | 'children'
   onHierarchyFilterChange: (value: 'all' | 'parents' | 'children') => void
 
+  // Add-on filter (radio)
+  addonFilter: 'all' | 'yes' | 'no'
+  onAddonFilterChange: (value: 'all' | 'yes' | 'no') => void
+
   // Clear all
   onClearAll: () => void
 }
@@ -126,6 +130,8 @@ export default function EnhancedFilterBar({
   onPlatformAdminOnlyFilterChange,
   hierarchyFilter,
   onHierarchyFilterChange,
+  addonFilter,
+  onAddonFilterChange,
   onClearAll,
 }: EnhancedFilterBarProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -221,6 +227,9 @@ export default function EnhancedFilterBar({
   if (platformAdminOnlyFilter !== 'all') {
     activeFilters.push({ key: 'platformAdminOnly', label: `Platform admin only: ${platformAdminOnlyFilter === 'yes' ? 'Yes' : 'No'}` })
   }
+  if (addonFilter !== 'all') {
+    activeFilters.push({ key: 'addon', label: `Add-on: ${addonFilter === 'yes' ? 'Yes' : 'No'}` })
+  }
 
   const handleRemoveFilter = useCallback((key: string) => {
     switch (key) {
@@ -242,8 +251,20 @@ export default function EnhancedFilterBar({
       case 'source':
         onSourceFilterChange(null)
         break
+      case 'systemFeature':
+        onSystemFeatureFilterChange('all')
+        break
+      case 'platformAdminOnly':
+        onPlatformAdminOnlyFilterChange('all')
+        break
+      case 'hierarchy':
+        onHierarchyFilterChange('all')
+        break
+      case 'addon':
+        onAddonFilterChange('all')
+        break
     }
-  }, [onStatusFilterChange, onTierFilterChange, onRoleFilterChange, onIntegrationFilterChange, onQuantifiableFilterChange, onSourceFilterChange])
+  }, [onStatusFilterChange, onTierFilterChange, onRoleFilterChange, onIntegrationFilterChange, onQuantifiableFilterChange, onSourceFilterChange, onSystemFeatureFilterChange, onPlatformAdminOnlyFilterChange, onHierarchyFilterChange, onAddonFilterChange])
 
   return (
     <div className="pa-mb-4">
@@ -571,6 +592,30 @@ export default function EnhancedFilterBar({
                 checked={hierarchyFilter === 'children'}
                 onChange={() => onHierarchyFilterChange('children')}
                 label="Children Only"
+              />
+            </div>
+          </div>
+
+          {/* Add-on Filter */}
+          <div>
+            <label className="pa-label" style={{ marginBottom: 'var(--pa-space-2)' }}>
+              Add-on
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)' }}>
+              <Checkbox
+                checked={addonFilter === 'all'}
+                onChange={() => onAddonFilterChange('all')}
+                label="All"
+              />
+              <Checkbox
+                checked={addonFilter === 'yes'}
+                onChange={() => onAddonFilterChange('yes')}
+                label="Yes"
+              />
+              <Checkbox
+                checked={addonFilter === 'no'}
+                onChange={() => onAddonFilterChange('no')}
+                label="No"
               />
             </div>
           </div>

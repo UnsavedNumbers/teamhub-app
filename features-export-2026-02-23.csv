@@ -1,487 +1,487 @@
-Name,Category,Type,Description
-Custom Permissions,Admin & Permissions,permission,Configure custom role permissions
-Multi-Role Support,Admin & Permissions,module,Users can have multiple roles across organizations
-WordPress Settings,Admin & Permissions,module,WordPress connection and sync
-Communications Report,Analytics,module,Communication analytics
-Errors Report,Analytics,module,System errors and issues
-Events & Attendance Report,Analytics,module,Events and attendance analytics
-Export History,Analytics,module,View export history
-Operations Report,Analytics,module,Operations analytics
-Participation Report,Analytics,module,Athlete participation analytics
-Registration Report,Analytics,module,Registration analytics
-Report Builder,Analytics,module,Build custom reports
-Report Viewer,Analytics,module,View report
-Reporting,Analytics,module,Service Module: reportingService.ts
-Reports Overview,Analytics,module,Organization analytics and reporting overview
-Revenue & Payments Report,Analytics,module,Revenue and payment analytics
-Saved Reports,Analytics,module,View and manage saved reports
-Scheduled Reports,Analytics,module,Manage scheduled reports
-Scheduling Report,Analytics,module,Scheduling analytics
-Ticketing & Gate Report,Analytics,module,Ticketing and gate analytics
-Travel Report,Analytics,module,Travel analytics
-Uniforms Report,Analytics,module,Uniform analytics
-Video Report,Analytics,module,Video analytics
-Fee Management,Commerce,module,Fee creation and assignment
-Payment Processing,Commerce,module,Payments and fees
-Uniform Orders,Commerce,module,Database table: uniform_orders
-Announcements,Communication,module,Database table: announcements
-Messaging,Communication,module,"Huddles, chat, and notifications"
-Create Gallery,Content,module,Create new photo gallery
-Gallery Detail,Content,module,View gallery details
-Manage Gallery,Content,module,Manage photo gallery
-Photo Detail,Content,module,View individual photo
-Photo Gallery,Content,module,View photo gallery
-Photos,Content,module,Team and athlete photos
-Photos List,Content,module,Photo galleries
-Google Calendar,Integrations,integration,Sync with Google Calendar
-Stripe Integration,Integrations,integration,Full Stripe payment integration
-Announcement,Messaging & Communication,module,
-Email Notifications,Messaging & Communication,module,Send email notifications
-Event Scheduling,Operations,module,"Calendar, events, and attendance management"
-Facilities,Operations,module,Service Module: facilitiesService.ts
-Facilities List,Operations,module,"Manage fields, courts, gyms, and availability"
-Facility Details,Operations,module,View facility details
-Facility Schedule,Operations,module,Facility scheduling calendar
-Invitations,Operations,module,Invitation management
-Roster Management,Operations,module,"Athletes, guardians, and roster operations"
-Team Management,Operations,module,"Sports, programs, levels, teams, seasons"
-Travel Planning,Operations,module,Travel plans and details
-Tryouts,Operations,module,Service Module: tryoutsService.ts
-Admin Fees Status,Payments,module,Database table: admin_fees_status
-Admin Payments,Payments,module,Database table: admin_payments
-Billing,Payments,module,Plan and billing
-Checkout Cancelled,Payments,module,
-Checkout Success,Payments,module,
-Fan Feed,Payments,module,Database table: fan_feed
-Fee Assignments,Payments,module,Database table: fee_assignments
-Fees,Payments,module,Service Module: feesService.ts
-Offline Payment Allocations,Payments,module,Database table: offline_payment_allocations
-Offline Payments,Payments,module,Database table: offline_payments
-Org Payment Policies,Payments,module,Database table: org_payment_policies
-Payment Allocations,Payments,module,Database table: payment_allocations
-Payment Cancelled,Payments,module,
-Payment Details,Payments,module,
-Payment Events,Payments,module,Database table: payment_events
-Payment Reports,Payments,module,View payment and fee reports
-Payment Success,Payments,module,
-Paymentnotifications,Payments,module,Service Module: paymentNotifications.ts
-Payments,Payments,module,Service Module: paymentsService.ts
-Paymentsettings,Payments,module,Service Module: paymentSettingsService.ts
-Paymentsservice Integration Test,Payments,module,Service Module: paymentsService.integration.test.ts
-Plan Selection,Payments,module,
-Ticket Fee,Payments,limit,Platform fee per ticket sale
-Athletephoto,Photo Galleries,module,Service Module: athletePhotoService.ts
-Create Template,Photo Galleries,module,Create new photo gallery
-Fanphotos,Photo Galleries,module,Service Module: fanPhotosService.ts
-Gallery,Photo Galleries,module,
-Gallery Photo Bookmarks,Photo Galleries,module,Database table: gallery_photo_bookmarks
-Gallery Photo Tags,Photo Galleries,module,Database table: gallery_photo_tags
-Gallery Photos,Photo Galleries,module,Database table: gallery_photos
-Manage Gallery,Photo Galleries,module,
-Photo Detail,Photo Galleries,module,
-Photo Storage Limit,Photo Galleries,limit,Storage cap for photo uploads (GB)
-Photo ZIP Downloads,Photo Galleries,permission,Allow bulk ZIP downloads of photos
-Photos Bulk Operations,Photo Galleries,module,Bulk operations on photos
-Document Uploads,Registration & Forms,module,Allow document uploads during registration
-Registration Forms,Registration & Forms,module,Create custom registration forms
-Analytics Dashboard,Reporting & Analytics,module,View advanced analytics and insights
-Basic Reports,Reporting & Analytics,module,View basic attendance and roster reports
-Communications Report,Reporting & Analytics,module,Communication analytics
-Data Export,Reporting & Analytics,module,Export data to CSV/Excel
-Export History,Reporting & Analytics,module,View export history
-Operations Report,Reporting & Analytics,module,Operations analytics
-Participation Report,Reporting & Analytics,module,Athlete participation analytics
-Report Viewer,Reporting & Analytics,module,View report
-Saved Reports,Reporting & Analytics,module,View and manage saved reports
-Scheduling Report,Reporting & Analytics,module,Scheduling analytics
-Video Report,Reporting & Analytics,module,Video analytics
-Admin Event Logs,Scheduling & Calendar,module,Database table: admin_event_logs
-All Events,Scheduling & Calendar,module,Searchable cross-org ticketed events
-Billing Events,Scheduling & Calendar,module,Database table: billing_events
-Bookmarked Events,Scheduling & Calendar,module,Events you've saved
-Calendar Sync,Scheduling & Calendar,integration,Sync events with external calendars
-Edit Event,Scheduling & Calendar,module,
-Event Attendance,Scheduling & Calendar,module,Database table: event_attendance
-Event Change History,Scheduling & Calendar,module,Database table: event_change_history
-Event Details,Scheduling & Calendar,module,
-Event General Rsvps,Scheduling & Calendar,module,Database table: event_general_rsvps
-Event Locations,Scheduling & Calendar,module,Database table: event_locations
-Event Logs,Scheduling & Calendar,module,Database table: event_logs
-Event Logs Archive,Scheduling & Calendar,module,Database table: event_logs_archive
-Event RSVP,Scheduling & Calendar,module,Allow attendees to RSVP to events
-Event Rsvps,Scheduling & Calendar,module,Database table: event_rsvps
-Event Tickets,Scheduling & Calendar,module,
-Events,Scheduling & Calendar,module,Service Module: eventsService.ts
-Eventsservice Integration Test,Scheduling & Calendar,module,Service Module: eventsService.integration.test.ts
-Eventsservice Test,Scheduling & Calendar,module,Service Module: eventsService.test.ts
-Fan Event Bookmarks,Scheduling & Calendar,module,Database table: fan_event_bookmarks
-Installment Schedules,Scheduling & Calendar,module,Database table: installment_schedules
-My Tickets,Scheduling & Calendar,module,
-My Tickets,Scheduling & Calendar,module,Your event tickets
-Order Confirmation,Scheduling & Calendar,module,
-Organization Tickets,Scheduling & Calendar,module,
-Recurring Event Instances,Scheduling & Calendar,module,Database table: recurring_event_instances
-Recurring Event Patterns,Scheduling & Calendar,module,Database table: recurring_event_patterns
-Recurring Events,Scheduling & Calendar,module,Create recurring event series
-Schedule,Scheduling & Calendar,module,View all events
-Schedule,Scheduling & Calendar,module,Facility scheduling calendar
-Scheduled Reports,Scheduling & Calendar,module,Database table: scheduled_reports
-Scheduled Reports,Scheduling & Calendar,module,Manage scheduled reports
-Support Tickets,Scheduling & Calendar,module,Create and manage support tickets
-Ticket Access,Scheduling & Calendar,module,
-Ticket Access,Scheduling & Calendar,module,
-Ticket Access Links,Scheduling & Calendar,module,Database table: ticket_access_links
-Ticket Holds,Scheduling & Calendar,module,Database table: ticket_holds
-Ticket Order,Scheduling & Calendar,module,
-Ticket Order Items,Scheduling & Calendar,module,Database table: ticket_order_items
-Ticket Orders,Scheduling & Calendar,module,Database table: ticket_orders
-Ticket Orders,Scheduling & Calendar,module,
-Ticket Reservations,Scheduling & Calendar,module,Database table: ticket_reservations
-Ticket Scanner,Scheduling & Calendar,module,
-Ticket Scans,Scheduling & Calendar,module,Database table: ticket_scans
-Ticket Staff Links,Scheduling & Calendar,module,Database table: ticket_staff_links
-Ticket Types,Scheduling & Calendar,module,Database table: ticket_types
-Ticketed Event,Scheduling & Calendar,module,
-Ticketed Events,Scheduling & Calendar,module,Database table: ticketed_events
-Ticketing,Scheduling & Calendar,module,Service Module: ticketingService.ts
-Ticketingeventsadmin,Scheduling & Calendar,module,Service Module: ticketingEventsAdminService.ts
-Ticketingordersadmin,Scheduling & Calendar,module,Service Module: ticketingOrdersAdminService.ts
-Tickets,Scheduling & Calendar,module,Database table: tickets
-Valid Event Types,Scheduling & Calendar,module,Database table: valid_event_types
-Validate Tickets,Scheduling & Calendar,module,
-Audit Logging,Security & Compliance,module,View detailed audit logs
-Data Encryption,Security & Compliance,module,Enhanced data encryption
-Addons,Support Tools,module,Service Module: addOnsService.ts
-Admin Audit Log,Support Tools,module,Database table: admin_audit_log
-Admin Entitlement Overrides List,Support Tools,module,Database table: admin_entitlement_overrides_list
-Admin Feature Entitlements List,Support Tools,module,Database table: admin_feature_entitlements_list
-Admin Feature Flag Overrides,Support Tools,module,Database table: admin_feature_flag_overrides
-Admin Feature Flags,Support Tools,module,Database table: admin_feature_flags
-Admin Feature Flags List,Support Tools,module,Database table: admin_feature_flags_list
-Admin License Metrics,Support Tools,module,Database table: admin_license_metrics
-Admin License Tiers List,Support Tools,module,Database table: admin_license_tiers_list
-Admin Organizations,Support Tools,module,Database table: admin_organizations
-Admin Platform Health,Support Tools,module,Database table: admin_platform_health
-Admin Structure,Support Tools,module,Database table: admin_structure
-Admin Users,Support Tools,module,Database table: admin_users
-Athletemedical,Support Tools,module,Service Module: athleteMedicalService.ts
-Athletenotifications,Support Tools,module,Service Module: athleteNotifications.ts
-Athleteslist,Support Tools,module,Service Module: athletesListService.ts
-Athletesportprofiles,Support Tools,module,Service Module: athleteSportProfilesService.ts
-Athletesports,Support Tools,module,Service Module: athleteSportsService.ts
-Athletesservice Integration Test,Support Tools,module,Service Module: athletesService.integration.test.ts
-Athletesservice Test,Support Tools,module,Service Module: athletesService.test.ts
-Attendance,Support Tools,module,Service Module: attendanceService.ts
-Attendance Settings,Support Tools,module,Database table: attendance_settings
-Attendanceservice Integration Test,Support Tools,module,Service Module: attendanceService.integration.test.ts
-Audit & History,Support Tools,module,
-Audit Logs Old,Support Tools,module,Database table: audit_logs_old
-Browse,Support Tools,module,Browse galleries
-Browse Organizations,Support Tools,module,Discover new teams
-Bulk Import Job Rows,Support Tools,module,Database table: bulk_import_job_rows
-Bulk Import Jobs,Support Tools,module,Database table: bulk_import_jobs
-Bulkinvite,Support Tools,module,Service Module: bulkInviteService.ts
-Category Pages,Support Tools,module,Map categories to pages
-Category Thumbnails,Support Tools,module,Upload category thumbnails
-Charges,Support Tools,module,Database table: charges
-Checkout Session Items,Support Tools,module,Database table: checkout_session_items
-Checkout Sessions,Support Tools,module,Database table: checkout_sessions
-Child Claim Tokens,Support Tools,module,Database table: child_claim_tokens
-Contact Org Admin,Support Tools,module,Send a request to your organization admin
-Contact Support,Support Tools,module,Contact support
-Contact Support,Support Tools,module,Contact support
-Contactrequests,Support Tools,module,Service Module: contactRequestsService.ts
-Contactsubmissions,Support Tools,module,Service Module: contactSubmissionsService.ts
-Content Review,Support Tools,module,Flagged content and moderation
-Create Override,Support Tools,module,
-Dashboard,Support Tools,module,Platform metrics
-Demo Account Roles,Support Tools,module,Database table: demo_account_roles
-Demo Codes,Support Tools,module,Database table: demo_codes
-Demo Insights,Support Tools,module,Demo session analytics and engagement
-Demo Org Pocs,Support Tools,module,Database table: demo_org_pocs
-Demo Organizations,Support Tools,module,Database table: demo_organizations
-Demo Sessions,Support Tools,module,Database table: demo_sessions
-Democode,Support Tools,module,Service Module: demoCodeService.ts
-Demoorg,Support Tools,module,Service Module: demoOrgService.ts
-Demosession,Support Tools,module,Service Module: demoSessionService.ts
-Discount Codes,Support Tools,module,Database table: discount_codes
-Discount Redemptions,Support Tools,module,Database table: discount_redemptions
-Discovery Errors,Support Tools,module,Database table: discovery_errors
-Distancetravelinfo,Support Tools,module,Service Module: distanceTravelInfoService.ts
-Email Preview,Support Tools,module,Email template testing
-Email Templates,Support Tools,module,Manage email templates
-Email Templates,Support Tools,module,Database table: email_templates
-Emailtemplates,Support Tools,module,Service Module: emailTemplatesService.ts
-Entitlement Overrides,Support Tools,module,Database table: entitlement_overrides
-Export History,Support Tools,module,Database table: export_history
-Facility Blackouts,Support Tools,module,Database table: facility_blackouts
-Facility Reservations,Support Tools,module,Database table: facility_reservations
-Facility Resources,Support Tools,module,Database table: facility_resources
-Families,Support Tools,module,Database table: families
-Family,Support Tools,module,Service Module: familyService.ts
-Family Members,Support Tools,module,Database table: family_members
-Fan,Support Tools,module,Service Module: fanService.ts
-Fan Calendar Cache,Support Tools,module,Database table: fan_calendar_cache
-Fan Org Follows,Support Tools,module,Database table: fan_org_follows
-Feature Catalog,Support Tools,module,
-Feature Dependencies,Support Tools,module,Database table: feature_dependencies
-Feature Dependency Cycles,Support Tools,module,Database table: feature_dependency_cycles
-Feature Details,Support Tools,module,
-Feature Discovery Cache,Support Tools,module,Database table: feature_discovery_cache
-Feature Discovery Corrections,Support Tools,module,Database table: feature_discovery_corrections
-Feature Discovery Hints,Support Tools,module,Database table: feature_discovery_hints
-Feature Entitlements,Support Tools,module,Database table: feature_entitlements
-Feature Flag Audit Log,Support Tools,module,Database table: feature_flag_audit_log
-Feature Flag Org Overrides,Support Tools,module,Database table: feature_flag_org_overrides
-Feature Flag Platform Defaults,Support Tools,module,Database table: feature_flag_platform_defaults
-Feature Flag User Overrides,Support Tools,module,Database table: feature_flag_user_overrides
-Feature Flags,Support Tools,module,Database table: feature_flags
-Feature Flags,Support Tools,module,Feature toggles
-Feature Integration Assignments,Support Tools,module,Database table: feature_integration_assignments
-Feature Integrations,Support Tools,module,Database table: feature_integrations
-Feature Upgrade,Support Tools,module,
-Featurebulkoperations,Support Tools,module,Service Module: featureBulkOperations.ts
-Featurehierarchy,Support Tools,module,Service Module: featureHierarchyService.ts
-Feenotifications,Support Tools,module,Service Module: feeNotifications.ts
-Followed Organizations,Support Tools,module,Organizations you follow
-Followed Organizations,Support Tools,module,Organizations you follow
-Forms,Support Tools,module,
-Free Trial Days,Support Tools,module,Feature Flag
-Galleries,Support Tools,module,Database table: galleries
-Gallery,Support Tools,module,Service Module: galleryService.ts
-Gallery Albums,Support Tools,module,Database table: gallery_albums
-Gallery Downloads,Support Tools,module,Database table: gallery_downloads
-Gallery Share Links,Support Tools,module,Database table: gallery_share_links
-Gallery Zip Downloads,Support Tools,module,Database table: gallery_zip_downloads
-Galleryservice Integration Test,Support Tools,module,Service Module: galleryService.integration.test.ts
-Games,Support Tools,module,Service Module: gamesService.ts
-Guardian,Support Tools,module,Service Module: guardianService.ts
-Guardian Attachment Requests,Support Tools,module,Database table: guardian_attachment_requests
-Guardian Requests,Support Tools,module,Review guardian attachment requests
-Help & Support,Support Tools,module,Knowledge base and help center
-Help Article,Support Tools,module,
-Help Article (Nested),Support Tools,module,
-Help Category,Support Tools,module,
-Help Category Page Mappings,Support Tools,module,Database table: help_category_page_mappings
-Help Documentation,Support Tools,visibility,Access to help documentation
-Help Role Category Mappings,Support Tools,module,Database table: help_role_category_mappings
-Help Section Tag Combinations,Support Tools,module,Database table: help_section_tag_combinations
-Help Sections,Support Tools,module,Database table: help_sections
-Help Wordpress Cache,Support Tools,module,Database table: help_wordpress_cache
-Help Wordpress Config,Support Tools,module,Database table: help_wordpress_config
-Helpcenterconfig,Support Tools,module,Service Module: helpCenterConfigService.ts
-Helpcenterdata,Support Tools,module,Service Module: helpCenterDataService.ts
-Helpcentermapping,Support Tools,module,Service Module: helpCenterMappingService.ts
-Helpcentersection,Support Tools,module,Service Module: helpCenterSectionService.ts
-Helpcentersync,Support Tools,module,Service Module: helpCenterSyncService.ts
-Huddle Audit Log,Support Tools,module,Database table: huddle_audit_log
-Huddle Notification Preferences,Support Tools,module,Database table: huddle_notification_preferences
-Huddle Reports,Support Tools,module,Database table: huddle_reports
-Huddles,Support Tools,module,Service Module: huddlesService.ts
-Index,Support Tools,module,Service Module: index.ts
-Index Backup,Support Tools,module,Database table: _index_backup
-Installment Plans,Support Tools,module,Database table: installment_plans
-Installments,Support Tools,module,Database table: installments
-Join a Team,Support Tools,module,Enter an invite code
-Join Links,Support Tools,module,Database table: join_links
-Join Requests,Support Tools,module,Database table: join_requests
-Joinanalytics,Support Tools,module,Service Module: joinAnalytics.ts
-Joinlinks,Support Tools,module,Service Module: joinLinksService.ts
-Level Details,Support Tools,module,
-Levels,Support Tools,module,Service Module: levelsService.ts
-License Change Log,Support Tools,module,Database table: license_change_log
-License Tiers,Support Tools,module,Database table: license_tiers
-License Tiers,Support Tools,module,
-Licensetiers,Support Tools,module,Service Module: licenseTiersService.ts
-Max Athletes,Support Tools,limit,Maximum number of athletes allowed
-Max Sub Organizations,Support Tools,limit,Maximum sub-organizations allowed
-Messages,Support Tools,module,Service Module: messagesService.ts
-Messages Archive,Support Tools,module,Database table: messages_archive
-Migration Errors,Support Tools,module,Database table: migration_errors
-Nearbyamenities,Support Tools,module,Service Module: nearbyAmenitiesService.ts
-Notification,Support Tools,module,Service Module: notificationService.ts
-Notification Digest Buffer,Support Tools,module,Database table: notification_digest_buffer
-Notification Jobs,Support Tools,module,Database table: notification_jobs
-Notificationanalytics,Support Tools,module,Service Module: notificationAnalytics.ts
-Notificationdigesthelper,Support Tools,module,Service Module: notificationDigestHelper.ts
-Notificationdistribution,Support Tools,module,Service Module: notificationDistribution.ts
-Notificationerrortracking,Support Tools,module,Service Module: notificationErrorTracking.ts
-Notificationhelpers,Support Tools,module,Service Module: notificationHelpers.ts
-Notificationjobmapper,Support Tools,module,Service Module: notificationJobMapper.ts
-Notificationpreferencesresolver,Support Tools,module,Service Module: notificationPreferencesResolver.ts
-Notificationpreferencesresolver Test,Support Tools,module,Service Module: notificationPreferencesResolver.test.ts
-Notifications,Support Tools,module,Admin notifications
-Notificationservice Test,Support Tools,module,Service Module: notificationService.test.ts
-Notificationservicecore,Support Tools,module,Service Module: notificationServiceCore.ts
-Notificationservicecore Integration Test,Support Tools,module,Service Module: notificationServiceCore.integration.test.ts
-Onboarding,Support Tools,module,
-Order Lookup,Support Tools,module,"Global order search by email, order ID, or transaction"
-Org Addon Entitlements,Support Tools,module,Database table: org_addon_entitlements
-Org Advanced Settings,Support Tools,module,The advanced tab on the Organization Settings page
-Org Contact Requests,Support Tools,module,Database table: org_contact_requests
-Org Licenses,Support Tools,module,Database table: org_licenses
-Org Settings Attendance,Support Tools,module,Attendance tab on Org Settings
-Org Slug History,Support Tools,module,Database table: org_slug_history
-Org Sport Profile Settings,Support Tools,module,Database table: org_sport_profile_settings
-Org Storage Usage,Support Tools,module,Database table: org_storage_usage
-Org User Audit Log,Support Tools,module,Database table: org_user_audit_log
-Orgadmin Advanced Personal Settings,Support Tools,module,"The Advanced tab on Personal Settings "
-Organization,Support Tools,module,Service Module: organizationService.ts
-Organization Advanced Settings,Support Tools,module,Database table: organization_advanced_settings
-Organization Attendance Settings,Support Tools,module,Database table: organization_attendance_settings
-Organization Contacts,Support Tools,module,Database table: organization_contacts
-Organization Defaults,Support Tools,module,Database table: organization_defaults
-Organization Galleries,Support Tools,module,
-Organization Invites,Support Tools,module,Database table: organization_invites
-Organization Landing,Support Tools,module,
-Organization Members,Support Tools,module,Database table: organization_members
-Organization Notification Settings,Support Tools,module,Database table: organization_notification_settings
-Organization Registration Settings,Support Tools,module,Database table: organization_registration_settings
-Organization Settings,Support Tools,module,Database table: organization_settings
-Organization Settings,Support Tools,module,Organization info
-Organization Sport Customizations,Support Tools,module,Database table: organization_sport_customizations
-Organization Sports,Support Tools,module,Database table: organization_sports
-Organization Travel Contacts,Support Tools,module,Database table: organization_travel_contacts
-Organization Visibility Settings,Support Tools,module,Database table: organization_visibility_settings
-Organizationcontacts,Support Tools,module,Service Module: organizationContactsService.ts
-Organizationcontactsservice Test,Support Tools,module,Service Module: organizationContactsService.test.ts
-Organizations,Support Tools,module,Database table: organizations
-Organizationservice Test,Support Tools,module,Service Module: organizationService.test.ts
-Organizationsettings,Support Tools,module,Service Module: organizationSettingsService.ts
-Organizationtravelcontacts,Support Tools,module,Service Module: organizationTravelContactsService.ts
-Orgsportsettings,Support Tools,module,Service Module: orgSportSettingsService.ts
-Override Details,Support Tools,module,
-Overview,Support Tools,module,Licenses overview
-Parent Invites,Support Tools,module,Database table: parent_invites
-Photo Storage (GB),Support Tools,limit,Photo storage limit in GB
-Platform Admins,Support Tools,module,Database table: platform_admins
-Platform Admins,Support Tools,module,Admin management
-Platformadmins,Support Tools,module,Service Module: platformAdminsService.ts
-Policy Consolidation Log,Support Tools,module,Database table: _policy_consolidation_log
-Preferences,Support Tools,module,Service Module: preferencesService.ts
-Program Details,Support Tools,module,
-Programs,Support Tools,module,Database table: programs
-Programs by Sport,Support Tools,module,
-Purchases,Support Tools,module,Database table: purchases
-Queryhelpers,Support Tools,module,Service Module: queryHelpers.ts
-Queryhelpers Test,Support Tools,module,Service Module: queryHelpers.test.ts
-Refunds,Support Tools,module,Database table: refunds
-Register Sub-Organization,Support Tools,module,
-Registration,Support Tools,module,Service Module: registrationService.ts
-Responsehelpers,Support Tools,module,Service Module: responseHelpers.ts
-Responsehelpers Test,Support Tools,module,Service Module: responseHelpers.test.ts
-Rls Policy Backup,Support Tools,module,Database table: _rls_policy_backup
-Rls Validation Results,Support Tools,module,Database table: _rls_validation_results
-Role Mappings,Support Tools,module,Map roles to categories
-Role Selection,Support Tools,module,
-Rsvp,Support Tools,module,Service Module: rsvpService.ts
-Rules & Overrides,Support Tools,module,
-Saved Reports,Support Tools,module,Database table: saved_reports
-Scholarship Awards,Support Tools,module,Database table: scholarship_awards
-Scholarship Programs,Support Tools,module,Database table: scholarship_programs
-Search,Support Tools,module,Search galleries
-Season Details,Support Tools,module,
-Seasons,Support Tools,module,Service Module: seasonsService.ts
-Seat Assignments,Support Tools,module,Database table: seat_assignments
-Seat Holds,Support Tools,module,Database table: seat_holds
-Seat Map Builder,Support Tools,module,
-Seat Map Sections,Support Tools,module,Database table: seat_map_sections
-Seat Map Snapshots,Support Tools,module,Database table: seat_map_snapshots
-Seat Maps,Support Tools,module,Database table: seat_maps
-Sections,Support Tools,module,Configure display sections
-Sport Details,Support Tools,module,
-Sport Field Definitions,Support Tools,module,Database table: sport_field_definitions
-Sportfielddefinitions,Support Tools,module,Service Module: sportFieldDefinitionsService.ts
-Sports,Support Tools,module,Service Module: sportsService.ts
-Sports & Programs,Support Tools,module,
-Storage Management,Support Tools,module,Quotas and retention
-Stream Channel Metadata,Support Tools,module,Database table: stream_channel_metadata
-Stream Channels,Support Tools,module,Database table: stream_channels
-Stripe Connect Transactions,Support Tools,module,Database table: stripe_connect_transactions
-Stripe Webhook Receipts,Support Tools,module,Database table: stripe_webhook_receipts
-Structure,Support Tools,module,Data model
-Sub Org Requests,Support Tools,module,Database table: sub_org_requests
-Sub Org Settings,Support Tools,module,Database table: sub_org_settings
-Sub-Organizations,Support Tools,module,Manage sub-organizations
-Suborg,Support Tools,module,Service Module: subOrgService.ts
-Tagging,Support Tools,module,Service Module: taggingService.ts
-Ticket Scanner (Event),Support Tools,module,
-Ticketingservice Checkout Integration Test,Support Tools,module,Service Module: ticketingService.checkout.integration.test.ts
-Ticketingservice Integration Test,Support Tools,module,Service Module: ticketingService.integration.test.ts
-Tier Details,Support Tools,module,
-Tier Feature Assignments,Support Tools,module,Database table: tier_feature_assignments
-Tierlimits,Support Tools,module,Service Module: tierLimitsService.ts
-Travel,Support Tools,module,Service Module: travelService.ts
-Travel Plan Contacts,Support Tools,module,Database table: travel_plan_contacts
-Travel Plans,Support Tools,module,Database table: travel_plans
-Travelnotifications,Support Tools,module,Service Module: travelNotifications.ts
-Trial Expired,Support Tools,module,
-Tryout Registration Documents,Support Tools,module,Database table: tryout_registration_documents
-Tryout Registration Staff Notes,Support Tools,module,Database table: tryout_registration_staff_notes
-Tryout Registrations,Support Tools,module,Database table: tryout_registrations
-Tryout Required Documents,Support Tools,module,Database table: tryout_required_documents
-Tryout Scores,Support Tools,module,Database table: tryout_scores
-Tryoutsservice Integration Test,Support Tools,module,Service Module: tryoutsService.integration.test.ts
-Uniforms,Support Tools,module,Service Module: uniformsService.ts
-Update Season,Support Tools,module,
-User Details,Support Tools,module,
-User Notification Preferences,Support Tools,module,Database table: user_notification_preferences
-User Notifications,Support Tools,module,Database table: user_notifications
-Users,Support Tools,module,Service Module: usersService.ts
-Usersservice Test,Support Tools,module,Service Module: usersService.test.ts
-Venue,Support Tools,module,Service Module: venueService.ts
-Venue Insights,Support Tools,module,Database table: venue_insights
-Venue Nearby Amenities Summaries,Support Tools,module,Database table: venue_nearby_amenities_summaries
-Venue Nearby Places,Support Tools,module,Database table: venue_nearby_places
-Venueinsights,Support Tools,module,Service Module: venueInsightsService.ts
-Venues,Support Tools,module,Database table: venues
-Video Details,Support Tools,module,
-Waivers,Support Tools,module,Database table: waivers
-Webhook Status,Support Tools,module,Payment processing and delivery monitoring
-Wordpressapi,Support Tools,module,Service Module: wordpressApiService.ts
-Wordpressapicache,Support Tools,module,Service Module: wordpressApiCacheService.ts
-Migration: Consolidated Feature Configuration,System,module,
-Add Athlete to Guardian,Teams & Rosters,module,
-Athlete Guardians,Teams & Rosters,module,Database table: athlete_guardians
-Athlete Imports,Teams & Rosters,module,Database table: athlete_imports
-Athlete Medical Private,Teams & Rosters,module,Database table: athlete_medical_private
-Athlete Sport Profiles,Teams & Rosters,module,Database table: athlete_sport_profiles
-Athlete Sports,Teams & Rosters,module,Database table: athlete_sports
-Athletes,Teams & Rosters,module,Service Module: athletesService.ts
-Import Athletes,Teams & Rosters,module,
-Max Players Per Team,Teams & Rosters,limit,Maximum players allowed per team
-Maximum Teams,Teams & Rosters,limit,Maximum number of teams per organization
-Request Athlete Attachment,Teams & Rosters,module,Request to attach to an existing athlete
-Team Coaches,Teams & Rosters,module,Database table: team_coaches
-Team Memberships,Teams & Rosters,module,Database table: team_memberships
-Team Roster,Teams & Rosters,module,
-Team Seasons,Teams & Rosters,module,Database table: team_seasons
-Team Seasons View,Teams & Rosters,module,Database table: team_seasons_view
-Teams,Teams & Rosters,module,Service Module: teamsService.ts
-Teams,Teams & Rosters,module,
-Teamsservice Test,Teams & Rosters,module,Service Module: teamsService.test.ts
-Edit Template,Travel,module,
-Travel Details,Travel,module,
-Travel Details,Travel,module,Access detailed travel information and itineraries
-Travel Notifications,Travel,module,Send travel-related notifications
-Tryout Decisions,Tryouts,module,Make tryout acceptance/rejection decisions
-Tryout Details,Tryouts,module,
-Tryout Scoring,Tryouts,module,Score and evaluate tryout participants
-Gear Management,Uniforms & Gear,module,Track and manage team gear
-Uniform Kit Items,Uniforms & Gear,module,Database table: uniform_kit_items
-Uniform Kit Order,Uniforms & Gear,module,
-Uniform Kits,Uniforms & Gear,module,Database table: uniform_kits
-Uniform Submission Items,Uniforms & Gear,module,Database table: uniform_submission_items
-Uniform Submissions,Uniforms & Gear,module,Database table: uniform_submissions
-Upload Video,Video Library,module,Upload new video
-Video Athlete Links,Video Library,module,Database table: video_athlete_links
-Video Bookmarks,Video Library,module,Database table: video_bookmarks
-Video Comments,Video Library,module,Database table: video_comments
-Video Favorites,Video Library,module,Database table: video_favorites
-Video Note Targets,Video Library,module,Database table: video_note_targets
-Video Notes,Video Library,module,Database table: video_notes
-Video Reviews,Video Library,module,Database table: video_reviews
-Video Shares,Video Library,module,Database table: video_shares
-Video Tag Links,Video Library,module,Database table: video_tag_links
-Video Tags,Video Library,module,Database table: video_tags
-Videos,Video Library,module,Database table: videos
+Feature Key,Name,Category,Type,Description
+custom_permissions,Custom Permissions,Admin & Permissions,permission,Configure custom role permissions
+multi_role_support,Multi-Role Support,Admin & Permissions,module,Users can have multiple roles across organizations
+settings,WordPress Settings,Admin & Permissions,module,WordPress connection and sync
+reports_domain_communications,Communications Report,Analytics,module,Communication analytics
+reports_errors,Errors Report,Analytics,module,System errors and issues
+reports_events,Events & Attendance Report,Analytics,module,Events and attendance analytics
+reports_exports,Export History,Analytics,module,View export history
+reports_domain_operations,Operations Report,Analytics,module,Operations analytics
+reports_domain_participation,Participation Report,Analytics,module,Athlete participation analytics
+reports_registration,Registration Report,Analytics,module,Registration analytics
+reports_builder,Report Builder,Analytics,module,Build custom reports
+reports_viewer,Report Viewer,Analytics,module,View report
+reporting,Reporting,Analytics,module,Service Module: reportingService.ts
+reports_overview,Reports Overview,Analytics,module,Organization analytics and reporting overview
+reports_domain_payments,Revenue & Payments Report,Analytics,module,Revenue and payment analytics
+reports_saved,Saved Reports,Analytics,module,View and manage saved reports
+reports_schedules,Scheduled Reports,Analytics,module,Manage scheduled reports
+reports_domain_scheduling,Scheduling Report,Analytics,module,Scheduling analytics
+reports_ticketing,Ticketing & Gate Report,Analytics,module,Ticketing and gate analytics
+reports_domain_travel,Travel Report,Analytics,module,Travel analytics
+reports_domain_uniforms,Uniforms Report,Analytics,module,Uniform analytics
+reports_video,Video Report,Analytics,module,Video analytics
+fee_management,Fee Management,Commerce,module,Fee creation and assignment
+payment_processing,Payment Processing,Commerce,module,Payments and fees
+uniform_orders,Uniform Orders,Commerce,module,Database table: uniform_orders
+announcements,Announcements,Communication,module,Database table: announcements
+messaging,Messaging,Communication,module,"Huddles, chat, and notifications"
+photos_create,Create Gallery,Content,module,Create new photo gallery
+photos_detail,Gallery Detail,Content,module,View gallery details
+photos_gallery_manage,Manage Gallery,Content,module,Manage photo gallery
+photos_photo,Photo Detail,Content,module,View individual photo
+photos_gallery,Photo Gallery,Content,module,View photo gallery
+photos,Photos,Content,module,Team and athlete photos
+photos_list,Photos List,Content,module,Photo galleries
+google_calendar,Google Calendar,Integrations,integration,Sync with Google Calendar
+stripe_integration,Stripe Integration,Integrations,integration,Full Stripe payment integration
+announcementdetail,Announcement,Messaging & Communication,module,
+email_notifications,Email Notifications,Messaging & Communication,module,Send email notifications
+event_scheduling,Event Scheduling,Operations,module,"Calendar, events, and attendance management"
+facilities,Facilities,Operations,module,Service Module: facilitiesService.ts
+facilities_list,Facilities List,Operations,module,"Manage fields, courts, gyms, and availability"
+facilities_detail,Facility Details,Operations,module,View facility details
+facilities_schedule,Facility Schedule,Operations,module,Facility scheduling calendar
+invitations,Invitations,Operations,module,Invitation management
+roster_management,Roster Management,Operations,module,"Athletes, guardians, and roster operations"
+team_management,Team Management,Operations,module,"Sports, programs, levels, teams, seasons"
+travel_planning,Travel Planning,Operations,module,Travel plans and details
+tryouts,Tryouts,Operations,module,Service Module: tryoutsService.ts
+admin_fees_status,Admin Fees Status,Payments,module,Database table: admin_fees_status
+admin_payments,Admin Payments,Payments,module,Database table: admin_payments
+billing,Billing,Payments,module,Plan and billing
+checkoutcancel,Checkout Cancelled,Payments,module,
+checkoutsuccess,Checkout Success,Payments,module,
+fan_feed,Fan Feed,Payments,module,Database table: fan_feed
+fee_assignments,Fee Assignments,Payments,module,Database table: fee_assignments
+fees,Fees,Payments,module,Service Module: feesService.ts
+offline_payment_allocations,Offline Payment Allocations,Payments,module,Database table: offline_payment_allocations
+offline_payments,Offline Payments,Payments,module,Database table: offline_payments
+org_payment_policies,Org Payment Policies,Payments,module,Database table: org_payment_policies
+payment_allocations,Payment Allocations,Payments,module,Database table: payment_allocations
+paymentcancel,Payment Cancelled,Payments,module,
+paymentdetail,Payment Details,Payments,module,
+payment_events,Payment Events,Payments,module,Database table: payment_events
+payment_reports,Payment Reports,Payments,module,View payment and fee reports
+paymentsuccess,Payment Success,Payments,module,
+paymentnotifications,Paymentnotifications,Payments,module,Service Module: paymentNotifications.ts
+payments,Payments,Payments,module,Service Module: paymentsService.ts
+paymentsettings,Paymentsettings,Payments,module,Service Module: paymentSettingsService.ts
+paymentsservice_integration_test,Paymentsservice Integration Test,Payments,module,Service Module: paymentsService.integration.test.ts
+planselection,Plan Selection,Payments,module,
+ticket_fee,Ticket Fee,Payments,limit,Platform fee per ticket sale
+athletephoto,Athletephoto,Photo Galleries,module,Service Module: athletePhotoService.ts
+create,Create Template,Photo Galleries,module,Create new photo gallery
+fanphotos,Fanphotos,Photo Galleries,module,Service Module: fanPhotosService.ts
+photosgallery,Gallery,Photo Galleries,module,
+gallery_photo_bookmarks,Gallery Photo Bookmarks,Photo Galleries,module,Database table: gallery_photo_bookmarks
+gallery_photo_tags,Gallery Photo Tags,Photo Galleries,module,Database table: gallery_photo_tags
+gallery_photos,Gallery Photos,Photo Galleries,module,Database table: gallery_photos
+photosgallerymanage,Manage Gallery,Photo Galleries,module,
+photo,Photo Detail,Photo Galleries,module,
+photos_storage_limit,Photo Storage Limit,Photo Galleries,limit,Storage cap for photo uploads (GB)
+photos_zip_downloads,Photo ZIP Downloads,Photo Galleries,permission,Allow bulk ZIP downloads of photos
+photos_bulk_operations,Photos Bulk Operations,Photo Galleries,module,Bulk operations on photos
+document_uploads,Document Uploads,Registration & Forms,module,Allow document uploads during registration
+registration_forms,Registration Forms,Registration & Forms,module,Create custom registration forms
+analytics_dashboard,Analytics Dashboard,Reporting & Analytics,module,View advanced analytics and insights
+basic_reports,Basic Reports,Reporting & Analytics,module,View basic attendance and roster reports
+communications,Communications Report,Reporting & Analytics,module,Communication analytics
+export_data,Data Export,Reporting & Analytics,module,Export data to CSV/Excel
+exports,Export History,Reporting & Analytics,module,View export history
+operations,Operations Report,Reporting & Analytics,module,Operations analytics
+participation,Participation Report,Reporting & Analytics,module,Athlete participation analytics
+viewer,Report Viewer,Reporting & Analytics,module,View report
+saved,Saved Reports,Reporting & Analytics,module,View and manage saved reports
+scheduling,Scheduling Report,Reporting & Analytics,module,Scheduling analytics
+video,Video Report,Reporting & Analytics,module,Video analytics
+admin_event_logs,Admin Event Logs,Scheduling & Calendar,module,Database table: admin_event_logs
+allevents,All Events,Scheduling & Calendar,module,Searchable cross-org ticketed events
+billing_events,Billing Events,Scheduling & Calendar,module,Database table: billing_events
+bookmarkedevents,Bookmarked Events,Scheduling & Calendar,module,Events you've saved
+calendar_sync,Calendar Sync,Scheduling & Calendar,integration,Sync events with external calendars
+eventedit,Edit Event,Scheduling & Calendar,module,
+event_attendance,Event Attendance,Scheduling & Calendar,module,Database table: event_attendance
+event_change_history,Event Change History,Scheduling & Calendar,module,Database table: event_change_history
+eventdetail,Event Details,Scheduling & Calendar,module,
+event_general_rsvps,Event General Rsvps,Scheduling & Calendar,module,Database table: event_general_rsvps
+event_locations,Event Locations,Scheduling & Calendar,module,Database table: event_locations
+event_logs,Event Logs,Scheduling & Calendar,module,Database table: event_logs
+event_logs_archive,Event Logs Archive,Scheduling & Calendar,module,Database table: event_logs_archive
+event_rsvp,Event RSVP,Scheduling & Calendar,module,Allow attendees to RSVP to events
+event_rsvps,Event Rsvps,Scheduling & Calendar,module,Database table: event_rsvps
+ticketeventdetail,Event Tickets,Scheduling & Calendar,module,
+events,Events,Scheduling & Calendar,module,Service Module: eventsService.ts
+eventsservice_integration_test,Eventsservice Integration Test,Scheduling & Calendar,module,Service Module: eventsService.integration.test.ts
+eventsservice_test,Eventsservice Test,Scheduling & Calendar,module,Service Module: eventsService.test.ts
+fan_event_bookmarks,Fan Event Bookmarks,Scheduling & Calendar,module,Database table: fan_event_bookmarks
+installment_schedules,Installment Schedules,Scheduling & Calendar,module,Database table: installment_schedules
+ticketaccess,My Tickets,Scheduling & Calendar,module,
+mytickets,My Tickets,Scheduling & Calendar,module,Your event tickets
+ticketordersuccess,Order Confirmation,Scheduling & Calendar,module,
+orgtickets,Organization Tickets,Scheduling & Calendar,module,
+recurring_event_instances,Recurring Event Instances,Scheduling & Calendar,module,Database table: recurring_event_instances
+recurring_event_patterns,Recurring Event Patterns,Scheduling & Calendar,module,Database table: recurring_event_patterns
+recurring_events,Recurring Events,Scheduling & Calendar,module,Create recurring event series
+calendar,Schedule,Scheduling & Calendar,module,View all events
+schedule,Schedule,Scheduling & Calendar,module,Facility scheduling calendar
+scheduled_reports,Scheduled Reports,Scheduling & Calendar,module,Database table: scheduled_reports
+schedules,Scheduled Reports,Scheduling & Calendar,module,Manage scheduled reports
+support_tickets,Support Tickets,Scheduling & Calendar,module,Create and manage support tickets
+orgticketaccesslanding,Ticket Access,Scheduling & Calendar,module,
+orgticketaccess,Ticket Access,Scheduling & Calendar,module,
+ticket_access_links,Ticket Access Links,Scheduling & Calendar,module,Database table: ticket_access_links
+ticket_holds,Ticket Holds,Scheduling & Calendar,module,Database table: ticket_holds
+orgticketorder,Ticket Order,Scheduling & Calendar,module,
+ticket_order_items,Ticket Order Items,Scheduling & Calendar,module,Database table: ticket_order_items
+ticket_orders,Ticket Orders,Scheduling & Calendar,module,Database table: ticket_orders
+ticketingorders,Ticket Orders,Scheduling & Calendar,module,
+ticket_reservations,Ticket Reservations,Scheduling & Calendar,module,Database table: ticket_reservations
+ticketingscanner,Ticket Scanner,Scheduling & Calendar,module,
+ticket_scans,Ticket Scans,Scheduling & Calendar,module,Database table: ticket_scans
+ticket_staff_links,Ticket Staff Links,Scheduling & Calendar,module,Database table: ticket_staff_links
+ticket_types,Ticket Types,Scheduling & Calendar,module,Database table: ticket_types
+orgticketevent,Ticketed Event,Scheduling & Calendar,module,
+ticketed_events,Ticketed Events,Scheduling & Calendar,module,Database table: ticketed_events
+ticketing,Ticketing,Scheduling & Calendar,module,Service Module: ticketingService.ts
+ticketingeventsadmin,Ticketingeventsadmin,Scheduling & Calendar,module,Service Module: ticketingEventsAdminService.ts
+ticketingordersadmin,Ticketingordersadmin,Scheduling & Calendar,module,Service Module: ticketingOrdersAdminService.ts
+tickets,Tickets,Scheduling & Calendar,module,Database table: tickets
+valid_event_types,Valid Event Types,Scheduling & Calendar,module,Database table: valid_event_types
+ticketvalidate,Validate Tickets,Scheduling & Calendar,module,
+audit_logging,Audit Logging,Security & Compliance,module,View detailed audit logs
+data_encryption,Data Encryption,Security & Compliance,module,Enhanced data encryption
+addons,Addons,Support Tools,module,Service Module: addOnsService.ts
+admin_audit_log,Admin Audit Log,Support Tools,module,Database table: admin_audit_log
+admin_entitlement_overrides_list,Admin Entitlement Overrides List,Support Tools,module,Database table: admin_entitlement_overrides_list
+admin_feature_entitlements_list,Admin Feature Entitlements List,Support Tools,module,Database table: admin_feature_entitlements_list
+admin_feature_flag_overrides,Admin Feature Flag Overrides,Support Tools,module,Database table: admin_feature_flag_overrides
+admin_feature_flags,Admin Feature Flags,Support Tools,module,Database table: admin_feature_flags
+admin_feature_flags_list,Admin Feature Flags List,Support Tools,module,Database table: admin_feature_flags_list
+admin_license_metrics,Admin License Metrics,Support Tools,module,Database table: admin_license_metrics
+admin_license_tiers_list,Admin License Tiers List,Support Tools,module,Database table: admin_license_tiers_list
+admin_organizations,Admin Organizations,Support Tools,module,Database table: admin_organizations
+admin_platform_health,Admin Platform Health,Support Tools,module,Database table: admin_platform_health
+admin_structure,Admin Structure,Support Tools,module,Database table: admin_structure
+admin_users,Admin Users,Support Tools,module,Database table: admin_users
+athletemedical,Athletemedical,Support Tools,module,Service Module: athleteMedicalService.ts
+athletenotifications,Athletenotifications,Support Tools,module,Service Module: athleteNotifications.ts
+athleteslist,Athleteslist,Support Tools,module,Service Module: athletesListService.ts
+athletesportprofiles,Athletesportprofiles,Support Tools,module,Service Module: athleteSportProfilesService.ts
+athletesports,Athletesports,Support Tools,module,Service Module: athleteSportsService.ts
+athletesservice_integration_test,Athletesservice Integration Test,Support Tools,module,Service Module: athletesService.integration.test.ts
+athletesservice_test,Athletesservice Test,Support Tools,module,Service Module: athletesService.test.ts
+attendance,Attendance,Support Tools,module,Service Module: attendanceService.ts
+attendance_settings,Attendance Settings,Support Tools,module,Database table: attendance_settings
+attendanceservice_integration_test,Attendanceservice Integration Test,Support Tools,module,Service Module: attendanceService.integration.test.ts
+audit,Audit & History,Support Tools,module,
+audit_logs_old,Audit Logs Old,Support Tools,module,Database table: audit_logs_old
+browse,Browse,Support Tools,module,Browse galleries
+discoverorgs,Browse Organizations,Support Tools,module,Discover new teams
+bulk_import_job_rows,Bulk Import Job Rows,Support Tools,module,Database table: bulk_import_job_rows
+bulk_import_jobs,Bulk Import Jobs,Support Tools,module,Database table: bulk_import_jobs
+bulkinvite,Bulkinvite,Support Tools,module,Service Module: bulkInviteService.ts
+categorypages,Category Pages,Support Tools,module,Map categories to pages
+thumbnails,Category Thumbnails,Support Tools,module,Upload category thumbnails
+charges,Charges,Support Tools,module,Database table: charges
+checkout_session_items,Checkout Session Items,Support Tools,module,Database table: checkout_session_items
+checkout_sessions,Checkout Sessions,Support Tools,module,Database table: checkout_sessions
+child_claim_tokens,Child Claim Tokens,Support Tools,module,Database table: child_claim_tokens
+contactorg,Contact Org Admin,Support Tools,module,Send a request to your organization admin
+helpcontact,Contact Support,Support Tools,module,Contact support
+contact,Contact Support,Support Tools,module,Contact support
+contactrequests,Contactrequests,Support Tools,module,Service Module: contactRequestsService.ts
+contactsubmissions,Contactsubmissions,Support Tools,module,Service Module: contactSubmissionsService.ts
+contentreview,Content Review,Support Tools,module,Flagged content and moderation
+overridecreate,Create Override,Support Tools,module,
+dashboard,Dashboard,Support Tools,module,Platform metrics
+demo_account_roles,Demo Account Roles,Support Tools,module,Database table: demo_account_roles
+demo_codes,Demo Codes,Support Tools,module,Database table: demo_codes
+demoinsights,Demo Insights,Support Tools,module,Demo session analytics and engagement
+demo_org_pocs,Demo Org Pocs,Support Tools,module,Database table: demo_org_pocs
+demo_organizations,Demo Organizations,Support Tools,module,Database table: demo_organizations
+demo_sessions,Demo Sessions,Support Tools,module,Database table: demo_sessions
+democode,Democode,Support Tools,module,Service Module: demoCodeService.ts
+demoorg,Demoorg,Support Tools,module,Service Module: demoOrgService.ts
+demosession,Demosession,Support Tools,module,Service Module: demoSessionService.ts
+discount_codes,Discount Codes,Support Tools,module,Database table: discount_codes
+discount_redemptions,Discount Redemptions,Support Tools,module,Database table: discount_redemptions
+discovery_errors,Discovery Errors,Support Tools,module,Database table: discovery_errors
+distancetravelinfo,Distancetravelinfo,Support Tools,module,Service Module: distanceTravelInfoService.ts
+emailpreview,Email Preview,Support Tools,module,Email template testing
+list,Email Templates,Support Tools,module,Manage email templates
+email_templates,Email Templates,Support Tools,module,Database table: email_templates
+emailtemplates,Emailtemplates,Support Tools,module,Service Module: emailTemplatesService.ts
+entitlement_overrides,Entitlement Overrides,Support Tools,module,Database table: entitlement_overrides
+export_history,Export History,Support Tools,module,Database table: export_history
+facility_blackouts,Facility Blackouts,Support Tools,module,Database table: facility_blackouts
+facility_reservations,Facility Reservations,Support Tools,module,Database table: facility_reservations
+facility_resources,Facility Resources,Support Tools,module,Database table: facility_resources
+families,Families,Support Tools,module,Database table: families
+family,Family,Support Tools,module,Service Module: familyService.ts
+family_members,Family Members,Support Tools,module,Database table: family_members
+fan,Fan,Support Tools,module,Service Module: fanService.ts
+fan_calendar_cache,Fan Calendar Cache,Support Tools,module,Database table: fan_calendar_cache
+fan_org_follows,Fan Org Follows,Support Tools,module,Database table: fan_org_follows
+features,Feature Catalog,Support Tools,module,
+feature_dependencies,Feature Dependencies,Support Tools,module,Database table: feature_dependencies
+feature_dependency_cycles,Feature Dependency Cycles,Support Tools,module,Database table: feature_dependency_cycles
+featuredetail,Feature Details,Support Tools,module,
+feature_discovery_cache,Feature Discovery Cache,Support Tools,module,Database table: feature_discovery_cache
+feature_discovery_corrections,Feature Discovery Corrections,Support Tools,module,Database table: feature_discovery_corrections
+feature_discovery_hints,Feature Discovery Hints,Support Tools,module,Database table: feature_discovery_hints
+feature_entitlements,Feature Entitlements,Support Tools,module,Database table: feature_entitlements
+feature_flag_audit_log,Feature Flag Audit Log,Support Tools,module,Database table: feature_flag_audit_log
+feature_flag_org_overrides,Feature Flag Org Overrides,Support Tools,module,Database table: feature_flag_org_overrides
+feature_flag_platform_defaults,Feature Flag Platform Defaults,Support Tools,module,Database table: feature_flag_platform_defaults
+feature_flag_user_overrides,Feature Flag User Overrides,Support Tools,module,Database table: feature_flag_user_overrides
+feature_flags,Feature Flags,Support Tools,module,Database table: feature_flags
+featureflags,Feature Flags,Support Tools,module,Feature toggles
+feature_integration_assignments,Feature Integration Assignments,Support Tools,module,Database table: feature_integration_assignments
+feature_integrations,Feature Integrations,Support Tools,module,Database table: feature_integrations
+featureupgrade,Feature Upgrade,Support Tools,module,
+featurebulkoperations,Featurebulkoperations,Support Tools,module,Service Module: featureBulkOperations.ts
+featurehierarchy,Featurehierarchy,Support Tools,module,Service Module: featureHierarchyService.ts
+feenotifications,Feenotifications,Support Tools,module,Service Module: feeNotifications.ts
+followedorgs,Followed Organizations,Support Tools,module,Organizations you follow
+following,Followed Organizations,Support Tools,module,Organizations you follow
+forms,Forms,Support Tools,module,
+free_trial_days,Free Trial Days,Support Tools,module,Feature Flag
+galleries,Galleries,Support Tools,module,Database table: galleries
+gallery,Gallery,Support Tools,module,Service Module: galleryService.ts
+gallery_albums,Gallery Albums,Support Tools,module,Database table: gallery_albums
+gallery_downloads,Gallery Downloads,Support Tools,module,Database table: gallery_downloads
+gallery_share_links,Gallery Share Links,Support Tools,module,Database table: gallery_share_links
+gallery_zip_downloads,Gallery Zip Downloads,Support Tools,module,Database table: gallery_zip_downloads
+galleryservice_integration_test,Galleryservice Integration Test,Support Tools,module,Service Module: galleryService.integration.test.ts
+games,Games,Support Tools,module,Service Module: gamesService.ts
+guardian,Guardian,Support Tools,module,Service Module: guardianService.ts
+guardian_attachment_requests,Guardian Attachment Requests,Support Tools,module,Database table: guardian_attachment_requests
+guardianrequests,Guardian Requests,Support Tools,module,Review guardian attachment requests
+help,Help & Support,Support Tools,module,Knowledge base and help center
+helparticle,Help Article,Support Tools,module,
+helparticlenested,Help Article (Nested),Support Tools,module,
+helpcategory,Help Category,Support Tools,module,
+help_category_page_mappings,Help Category Page Mappings,Support Tools,module,Database table: help_category_page_mappings
+help_documentation,Help Documentation,Support Tools,visibility,Access to help documentation
+help_role_category_mappings,Help Role Category Mappings,Support Tools,module,Database table: help_role_category_mappings
+help_section_tag_combinations,Help Section Tag Combinations,Support Tools,module,Database table: help_section_tag_combinations
+help_sections,Help Sections,Support Tools,module,Database table: help_sections
+help_wordpress_cache,Help Wordpress Cache,Support Tools,module,Database table: help_wordpress_cache
+help_wordpress_config,Help Wordpress Config,Support Tools,module,Database table: help_wordpress_config
+helpcenterconfig,Helpcenterconfig,Support Tools,module,Service Module: helpCenterConfigService.ts
+helpcenterdata,Helpcenterdata,Support Tools,module,Service Module: helpCenterDataService.ts
+helpcentermapping,Helpcentermapping,Support Tools,module,Service Module: helpCenterMappingService.ts
+helpcentersection,Helpcentersection,Support Tools,module,Service Module: helpCenterSectionService.ts
+helpcentersync,Helpcentersync,Support Tools,module,Service Module: helpCenterSyncService.ts
+huddle_audit_log,Huddle Audit Log,Support Tools,module,Database table: huddle_audit_log
+huddle_notification_preferences,Huddle Notification Preferences,Support Tools,module,Database table: huddle_notification_preferences
+huddle_reports,Huddle Reports,Support Tools,module,Database table: huddle_reports
+huddles,Huddles,Support Tools,module,Service Module: huddlesService.ts
+index,Index,Support Tools,module,Service Module: index.ts
+index_backup,Index Backup,Support Tools,module,Database table: _index_backup
+installment_plans,Installment Plans,Support Tools,module,Database table: installment_plans
+installments,Installments,Support Tools,module,Database table: installments
+join,Join a Team,Support Tools,module,Enter an invite code
+join_links,Join Links,Support Tools,module,Database table: join_links
+join_requests,Join Requests,Support Tools,module,Database table: join_requests
+joinanalytics,Joinanalytics,Support Tools,module,Service Module: joinAnalytics.ts
+joinlinks,Joinlinks,Support Tools,module,Service Module: joinLinksService.ts
+leveldetail,Level Details,Support Tools,module,
+levels,Levels,Support Tools,module,Service Module: levelsService.ts
+license_change_log,License Change Log,Support Tools,module,Database table: license_change_log
+license_tiers,License Tiers,Support Tools,module,Database table: license_tiers
+tiers,License Tiers,Support Tools,module,
+licensetiers,Licensetiers,Support Tools,module,Service Module: licenseTiersService.ts
+max_athletes,Max Athletes,Support Tools,limit,Maximum number of athletes allowed
+max_sub_orgs,Max Sub Organizations,Support Tools,limit,Maximum sub-organizations allowed
+messages,Messages,Support Tools,module,Service Module: messagesService.ts
+messages_archive,Messages Archive,Support Tools,module,Database table: messages_archive
+migration_errors,Migration Errors,Support Tools,module,Database table: migration_errors
+nearbyamenities,Nearbyamenities,Support Tools,module,Service Module: nearbyAmenitiesService.ts
+notification,Notification,Support Tools,module,Service Module: notificationService.ts
+notification_digest_buffer,Notification Digest Buffer,Support Tools,module,Database table: notification_digest_buffer
+notification_jobs,Notification Jobs,Support Tools,module,Database table: notification_jobs
+notificationanalytics,Notificationanalytics,Support Tools,module,Service Module: notificationAnalytics.ts
+notificationdigesthelper,Notificationdigesthelper,Support Tools,module,Service Module: notificationDigestHelper.ts
+notificationdistribution,Notificationdistribution,Support Tools,module,Service Module: notificationDistribution.ts
+notificationerrortracking,Notificationerrortracking,Support Tools,module,Service Module: notificationErrorTracking.ts
+notificationhelpers,Notificationhelpers,Support Tools,module,Service Module: notificationHelpers.ts
+notificationjobmapper,Notificationjobmapper,Support Tools,module,Service Module: notificationJobMapper.ts
+notificationpreferencesresolver,Notificationpreferencesresolver,Support Tools,module,Service Module: notificationPreferencesResolver.ts
+notificationpreferencesresolver_test,Notificationpreferencesresolver Test,Support Tools,module,Service Module: notificationPreferencesResolver.test.ts
+notifications,Notifications,Support Tools,module,Admin notifications
+notificationservice_test,Notificationservice Test,Support Tools,module,Service Module: notificationService.test.ts
+notificationservicecore,Notificationservicecore,Support Tools,module,Service Module: notificationServiceCore.ts
+notificationservicecore_integration_test,Notificationservicecore Integration Test,Support Tools,module,Service Module: notificationServiceCore.integration.test.ts
+onboarding,Onboarding,Support Tools,module,
+orderlookup,Order Lookup,Support Tools,module,"Global order search by email, order ID, or transaction"
+org_addon_entitlements,Org Addon Entitlements,Support Tools,module,Database table: org_addon_entitlements
+org_advanced_settings,Org Advanced Settings,Support Tools,module,The advanced tab on the Organization Settings page
+org_contact_requests,Org Contact Requests,Support Tools,module,Database table: org_contact_requests
+org_licenses,Org Licenses,Support Tools,module,Database table: org_licenses
+org_settings_attendance,Org Settings Attendance,Support Tools,module,Attendance tab on Org Settings
+org_slug_history,Org Slug History,Support Tools,module,Database table: org_slug_history
+org_sport_profile_settings,Org Sport Profile Settings,Support Tools,module,Database table: org_sport_profile_settings
+org_storage_usage,Org Storage Usage,Support Tools,module,Database table: org_storage_usage
+org_user_audit_log,Org User Audit Log,Support Tools,module,Database table: org_user_audit_log
+orgadmin_advanced_personal_settings,Orgadmin Advanced Personal Settings,Support Tools,module,"The Advanced tab on Personal Settings "
+organization,Organization,Support Tools,module,Service Module: organizationService.ts
+organization_advanced_settings,Organization Advanced Settings,Support Tools,module,Database table: organization_advanced_settings
+organization_attendance_settings,Organization Attendance Settings,Support Tools,module,Database table: organization_attendance_settings
+organization_contacts,Organization Contacts,Support Tools,module,Database table: organization_contacts
+organization_defaults,Organization Defaults,Support Tools,module,Database table: organization_defaults
+orggalleries,Organization Galleries,Support Tools,module,
+organization_invites,Organization Invites,Support Tools,module,Database table: organization_invites
+orglanding,Organization Landing,Support Tools,module,
+organization_members,Organization Members,Support Tools,module,Database table: organization_members
+organization_notification_settings,Organization Notification Settings,Support Tools,module,Database table: organization_notification_settings
+organization_registration_settings,Organization Registration Settings,Support Tools,module,Database table: organization_registration_settings
+organization_settings,Organization Settings,Support Tools,module,Database table: organization_settings
+base,Organization Settings,Support Tools,module,Organization info
+organization_sport_customizations,Organization Sport Customizations,Support Tools,module,Database table: organization_sport_customizations
+organization_sports,Organization Sports,Support Tools,module,Database table: organization_sports
+organization_travel_contacts,Organization Travel Contacts,Support Tools,module,Database table: organization_travel_contacts
+organization_visibility_settings,Organization Visibility Settings,Support Tools,module,Database table: organization_visibility_settings
+organizationcontacts,Organizationcontacts,Support Tools,module,Service Module: organizationContactsService.ts
+organizationcontactsservice_test,Organizationcontactsservice Test,Support Tools,module,Service Module: organizationContactsService.test.ts
+organizations,Organizations,Support Tools,module,Database table: organizations
+organizationservice_test,Organizationservice Test,Support Tools,module,Service Module: organizationService.test.ts
+organizationsettings,Organizationsettings,Support Tools,module,Service Module: organizationSettingsService.ts
+organizationtravelcontacts,Organizationtravelcontacts,Support Tools,module,Service Module: organizationTravelContactsService.ts
+orgsportsettings,Orgsportsettings,Support Tools,module,Service Module: orgSportSettingsService.ts
+overridedetail,Override Details,Support Tools,module,
+overview,Overview,Support Tools,module,Licenses overview
+parent_invites,Parent Invites,Support Tools,module,Database table: parent_invites
+photo_storage_gb,Photo Storage (GB),Support Tools,limit,Photo storage limit in GB
+platform_admins,Platform Admins,Support Tools,module,Database table: platform_admins
+admins,Platform Admins,Support Tools,module,Admin management
+platformadmins,Platformadmins,Support Tools,module,Service Module: platformAdminsService.ts
+policy_consolidation_log,Policy Consolidation Log,Support Tools,module,Database table: _policy_consolidation_log
+preferences,Preferences,Support Tools,module,Service Module: preferencesService.ts
+programdetail,Program Details,Support Tools,module,
+programs,Programs,Support Tools,module,Database table: programs
+bysport,Programs by Sport,Support Tools,module,
+purchases,Purchases,Support Tools,module,Database table: purchases
+queryhelpers,Queryhelpers,Support Tools,module,Service Module: queryHelpers.ts
+queryhelpers_test,Queryhelpers Test,Support Tools,module,Service Module: queryHelpers.test.ts
+refunds,Refunds,Support Tools,module,Database table: refunds
+suborgregistration,Register Sub-Organization,Support Tools,module,
+registration,Registration,Support Tools,module,Service Module: registrationService.ts
+responsehelpers,Responsehelpers,Support Tools,module,Service Module: responseHelpers.ts
+responsehelpers_test,Responsehelpers Test,Support Tools,module,Service Module: responseHelpers.test.ts
+rls_policy_backup,Rls Policy Backup,Support Tools,module,Database table: _rls_policy_backup
+rls_validation_results,Rls Validation Results,Support Tools,module,Database table: _rls_validation_results
+rolemappings,Role Mappings,Support Tools,module,Map roles to categories
+roleselection,Role Selection,Support Tools,module,
+rsvp,Rsvp,Support Tools,module,Service Module: rsvpService.ts
+overrides,Rules & Overrides,Support Tools,module,
+saved_reports,Saved Reports,Support Tools,module,Database table: saved_reports
+scholarship_awards,Scholarship Awards,Support Tools,module,Database table: scholarship_awards
+scholarship_programs,Scholarship Programs,Support Tools,module,Database table: scholarship_programs
+search,Search,Support Tools,module,Search galleries
+seasondetail,Season Details,Support Tools,module,
+seasons,Seasons,Support Tools,module,Service Module: seasonsService.ts
+seat_assignments,Seat Assignments,Support Tools,module,Database table: seat_assignments
+seat_holds,Seat Holds,Support Tools,module,Database table: seat_holds
+builder,Seat Map Builder,Support Tools,module,
+seat_map_sections,Seat Map Sections,Support Tools,module,Database table: seat_map_sections
+seat_map_snapshots,Seat Map Snapshots,Support Tools,module,Database table: seat_map_snapshots
+seat_maps,Seat Maps,Support Tools,module,Database table: seat_maps
+sections,Sections,Support Tools,module,Configure display sections
+sportdetail,Sport Details,Support Tools,module,
+sport_field_definitions,Sport Field Definitions,Support Tools,module,Database table: sport_field_definitions
+sportfielddefinitions,Sportfielddefinitions,Support Tools,module,Service Module: sportFieldDefinitionsService.ts
+sports,Sports,Support Tools,module,Service Module: sportsService.ts
+sportsprograms,Sports & Programs,Support Tools,module,
+storage,Storage Management,Support Tools,module,Quotas and retention
+stream_channel_metadata,Stream Channel Metadata,Support Tools,module,Database table: stream_channel_metadata
+stream_channels,Stream Channels,Support Tools,module,Database table: stream_channels
+stripe_connect_transactions,Stripe Connect Transactions,Support Tools,module,Database table: stripe_connect_transactions
+stripe_webhook_receipts,Stripe Webhook Receipts,Support Tools,module,Database table: stripe_webhook_receipts
+structure,Structure,Support Tools,module,Data model
+sub_org_requests,Sub Org Requests,Support Tools,module,Database table: sub_org_requests
+sub_org_settings,Sub Org Settings,Support Tools,module,Database table: sub_org_settings
+suborgs,Sub-Organizations,Support Tools,module,Manage sub-organizations
+suborg,Suborg,Support Tools,module,Service Module: subOrgService.ts
+tagging,Tagging,Support Tools,module,Service Module: taggingService.ts
+ticketingscannerevent,Ticket Scanner (Event),Support Tools,module,
+ticketingservice_checkout_integration_test,Ticketingservice Checkout Integration Test,Support Tools,module,Service Module: ticketingService.checkout.integration.test.ts
+ticketingservice_integration_test,Ticketingservice Integration Test,Support Tools,module,Service Module: ticketingService.integration.test.ts
+tierdetail,Tier Details,Support Tools,module,
+tier_feature_assignments,Tier Feature Assignments,Support Tools,module,Database table: tier_feature_assignments
+tierlimits,Tierlimits,Support Tools,module,Service Module: tierLimitsService.ts
+travel,Travel,Support Tools,module,Service Module: travelService.ts
+travel_plan_contacts,Travel Plan Contacts,Support Tools,module,Database table: travel_plan_contacts
+travel_plans,Travel Plans,Support Tools,module,Database table: travel_plans
+travelnotifications,Travelnotifications,Support Tools,module,Service Module: travelNotifications.ts
+trialexpired,Trial Expired,Support Tools,module,
+tryout_registration_documents,Tryout Registration Documents,Support Tools,module,Database table: tryout_registration_documents
+tryout_registration_staff_notes,Tryout Registration Staff Notes,Support Tools,module,Database table: tryout_registration_staff_notes
+tryout_registrations,Tryout Registrations,Support Tools,module,Database table: tryout_registrations
+tryout_required_documents,Tryout Required Documents,Support Tools,module,Database table: tryout_required_documents
+tryout_scores,Tryout Scores,Support Tools,module,Database table: tryout_scores
+tryoutsservice_integration_test,Tryoutsservice Integration Test,Support Tools,module,Service Module: tryoutsService.integration.test.ts
+uniforms,Uniforms,Support Tools,module,Service Module: uniformsService.ts
+update,Update Season,Support Tools,module,
+detail,User Details,Support Tools,module,
+user_notification_preferences,User Notification Preferences,Support Tools,module,Database table: user_notification_preferences
+user_notifications,User Notifications,Support Tools,module,Database table: user_notifications
+users,Users,Support Tools,module,Service Module: usersService.ts
+usersservice_test,Usersservice Test,Support Tools,module,Service Module: usersService.test.ts
+venue,Venue,Support Tools,module,Service Module: venueService.ts
+venue_insights,Venue Insights,Support Tools,module,Database table: venue_insights
+venue_nearby_amenities_summaries,Venue Nearby Amenities Summaries,Support Tools,module,Database table: venue_nearby_amenities_summaries
+venue_nearby_places,Venue Nearby Places,Support Tools,module,Database table: venue_nearby_places
+venueinsights,Venueinsights,Support Tools,module,Service Module: venueInsightsService.ts
+venues,Venues,Support Tools,module,Database table: venues
+videodetail,Video Details,Support Tools,module,
+waivers,Waivers,Support Tools,module,Database table: waivers
+webhookstatus,Webhook Status,Support Tools,module,Payment processing and delivery monitoring
+wordpressapi,Wordpressapi,Support Tools,module,Service Module: wordpressApiService.ts
+wordpressapicache,Wordpressapicache,Support Tools,module,Service Module: wordpressApiCacheService.ts
+migration_consolidated_config,Migration: Consolidated Feature Configuration,System,module,
+createathlete,Add Athlete to Guardian,Teams & Rosters,module,
+athlete_guardians,Athlete Guardians,Teams & Rosters,module,Database table: athlete_guardians
+athlete_imports,Athlete Imports,Teams & Rosters,module,Database table: athlete_imports
+athlete_medical_private,Athlete Medical Private,Teams & Rosters,module,Database table: athlete_medical_private
+athlete_sport_profiles,Athlete Sport Profiles,Teams & Rosters,module,Database table: athlete_sport_profiles
+athlete_sports,Athlete Sports,Teams & Rosters,module,Database table: athlete_sports
+athletes,Athletes,Teams & Rosters,module,Service Module: athletesService.ts
+import,Import Athletes,Teams & Rosters,module,
+max_players_per_team,Max Players Per Team,Teams & Rosters,limit,Maximum players allowed per team
+max_teams,Maximum Teams,Teams & Rosters,limit,Maximum number of teams per organization
+requestattachment,Request Athlete Attachment,Teams & Rosters,module,Request to attach to an existing athlete
+team_coaches,Team Coaches,Teams & Rosters,module,Database table: team_coaches
+team_memberships,Team Memberships,Teams & Rosters,module,Database table: team_memberships
+roster,Team Roster,Teams & Rosters,module,
+team_seasons,Team Seasons,Teams & Rosters,module,Database table: team_seasons
+team_seasons_view,Team Seasons View,Teams & Rosters,module,Database table: team_seasons_view
+teams,Teams,Teams & Rosters,module,Service Module: teamsService.ts
+teamsmanagement,Teams,Teams & Rosters,module,
+teamsservice_test,Teamsservice Test,Teams & Rosters,module,Service Module: teamsService.test.ts
+edit,Edit Template,Travel,module,
+traveldetail,Travel Details,Travel,module,
+travel_details,Travel Details,Travel,module,Access detailed travel information and itineraries
+travel_notifications,Travel Notifications,Travel,module,Send travel-related notifications
+tryout_decisions,Tryout Decisions,Tryouts,module,Make tryout acceptance/rejection decisions
+tryoutdetail,Tryout Details,Tryouts,module,
+tryout_scoring,Tryout Scoring,Tryouts,module,Score and evaluate tryout participants
+gear_management,Gear Management,Uniforms & Gear,module,Track and manage team gear
+uniform_kit_items,Uniform Kit Items,Uniforms & Gear,module,Database table: uniform_kit_items
+uniformkitdetail,Uniform Kit Order,Uniforms & Gear,module,
+uniform_kits,Uniform Kits,Uniforms & Gear,module,Database table: uniform_kits
+uniform_submission_items,Uniform Submission Items,Uniforms & Gear,module,Database table: uniform_submission_items
+uniform_submissions,Uniform Submissions,Uniforms & Gear,module,Database table: uniform_submissions
+upload,Upload Video,Video Library,module,Upload new video
+video_athlete_links,Video Athlete Links,Video Library,module,Database table: video_athlete_links
+video_bookmarks,Video Bookmarks,Video Library,module,Database table: video_bookmarks
+video_comments,Video Comments,Video Library,module,Database table: video_comments
+video_favorites,Video Favorites,Video Library,module,Database table: video_favorites
+video_note_targets,Video Note Targets,Video Library,module,Database table: video_note_targets
+video_notes,Video Notes,Video Library,module,Database table: video_notes
+video_reviews,Video Reviews,Video Library,module,Database table: video_reviews
+video_shares,Video Shares,Video Library,module,Database table: video_shares
+video_tag_links,Video Tag Links,Video Library,module,Database table: video_tag_links
+video_tags,Video Tags,Video Library,module,Database table: video_tags
+videos,Videos,Video Library,module,Database table: videos

@@ -72,8 +72,20 @@ export async function discoverAndReconcile(force: boolean = false): Promise<Disc
 
         const allScanned = [...routes, ...schema, ...services, ...flags];
 
+        // Fetch excluded features from database
+        const { data: excludedFeatures } = await supabase
+            .from('feature_entitlements')
+            .select('feature_key')
+            .eq('excluded_from_discovery', true)
+            .is('archived_at', null);
+
+        const excludedKeys = new Set(excludedFeatures?.map(f => f.feature_key) || []);
+
         for (const feat of allScanned) {
             if (!feat.featureKey) continue;
+            
+            // Skip excluded features
+            if (excludedKeys.has(feat.featureKey)) continue;
 
             if (featuresMap.has(feat.featureKey)) {
                 const existing = featuresMap.get(feat.featureKey)!;
