@@ -667,7 +667,7 @@ export default function AdminDashboard() {
   const props: VariantProps = { stats, recentActivity, upcomingEvents, t, navigate, orgName }
 
   return (
-    <div className="oa-root">
+    <div className="oa-root" data-testid="dashboard">
       <AdminPageHeader
         title={t('admin.dashboard.title')}
         subtitle={orgName || t('admin.dashboard.subtitle')}

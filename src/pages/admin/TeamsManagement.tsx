@@ -292,7 +292,20 @@ export default function TeamsManagement() {
         id: 'name',
         label: 'Team Name',
         sortable: true,
-        render: (row) => <div className="oa-font-bold oa-text-slate-900">{row.name}</div>
+        render: (row) => (
+          <div className="oa-font-bold oa-text-slate-900" data-testid="team-row">
+            <Link 
+              to={getLink('admin.teams.detail', { id: row.id })} 
+              data-testid="open-team"
+              onClick={(e) => {
+                e.preventDefault()
+                handleTeamClick(row.id)
+              }}
+            >
+              {row.name}
+            </Link>
+          </div>
+        )
     },
     {
         id: 'details',
