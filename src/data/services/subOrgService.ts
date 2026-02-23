@@ -380,6 +380,79 @@ export async function getSubOrgRequests(
   status?: 'pending' | 'approved' | 'rejected'
 ): Promise<{ data: SubOrgRequest[]; error: Error | null }> {
   try {
+    if (USE_FAKE_DATA) {
+      const now = new Date()
+      const fakeRequests: SubOrgRequest[] = [
+        {
+          id: 'sub-org-req-1',
+          parent_org_id: parentOrgId,
+          requested_name: 'Springfield Youth Soccer',
+          contact_email: 'admin@springfieldyouthsoccer.org',
+          contact_name: 'Sarah Johnson',
+          school_league_type: 'school',
+          requested_sport_codes: ['soccer'],
+          status: 'pending',
+          resolved_at: null,
+          resolved_by: null,
+          created_sub_org_id: null,
+          created_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 'sub-org-req-2',
+          parent_org_id: parentOrgId,
+          requested_name: 'Riverside Basketball Academy',
+          contact_email: 'info@riversidebasketball.com',
+          contact_name: 'Michael Chen',
+          school_league_type: 'club',
+          requested_sport_codes: ['basketball'],
+          status: 'pending',
+          resolved_at: null,
+          resolved_by: null,
+          created_sub_org_id: null,
+          created_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 'sub-org-req-3',
+          parent_org_id: parentOrgId,
+          requested_name: 'Westside Baseball League',
+          contact_email: 'contact@westsidebaseball.org',
+          contact_name: 'David Martinez',
+          school_league_type: 'league',
+          requested_sport_codes: ['baseball'],
+          status: 'approved',
+          resolved_at: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+          resolved_by: 'admin-user-1',
+          created_sub_org_id: 'sub-org-westside-001',
+          created_at: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 'sub-org-req-4',
+          parent_org_id: parentOrgId,
+          requested_name: 'Northside Track & Field',
+          contact_email: 'director@northsidetrack.org',
+          contact_name: 'Jennifer Williams',
+          school_league_type: 'school',
+          requested_sport_codes: ['track_and_field'],
+          status: 'approved',
+          resolved_at: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+          resolved_by: 'admin-user-1',
+          created_sub_org_id: 'sub-org-northside-001',
+          created_at: new Date(now.getTime() - 25 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+      ]
+      
+      let filtered = fakeRequests
+      if (status) {
+        filtered = fakeRequests.filter(req => req.status === status)
+      }
+      
+      return { data: filtered, error: null }
+    }
+
     let query = supabase
       .from('sub_org_requests')
       .select('*')
@@ -427,6 +500,88 @@ export async function getSubOrgs(
   parentOrgId: string
 ): Promise<{ data: SubOrgWithSettings[]; error: Error | null }> {
   try {
+    if (USE_FAKE_DATA) {
+      const now = new Date()
+      const fakeSubOrgs: SubOrgWithSettings[] = [
+        {
+          id: 'sub-org-westside-001',
+          name: 'Westside Baseball League',
+          slug: 'westside-baseball',
+          status: 'active',
+          created_at: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+          parent_org_id: parentOrgId,
+          sub_org_settings: {
+            id: 'sub-org-settings-westside-001',
+            sub_org_id: 'sub-org-westside-001',
+            enabled_sports: ['baseball'],
+            enabled_features: {
+              events: true,
+              payments: true,
+              uniforms: true,
+              photos: false,
+              videos: false,
+            },
+            branding_overrides: null,
+            status: 'active',
+            created_at: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+        },
+        {
+          id: 'sub-org-northside-001',
+          name: 'Northside Track & Field',
+          slug: 'northside-track',
+          status: 'active',
+          created_at: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+          parent_org_id: parentOrgId,
+          sub_org_settings: {
+            id: 'sub-org-settings-northside-001',
+            sub_org_id: 'sub-org-northside-001',
+            enabled_sports: ['track_and_field'],
+            enabled_features: {
+              events: true,
+              payments: true,
+              uniforms: false,
+              photos: true,
+              videos: true,
+            },
+            branding_overrides: {
+              primary_color: '#8B5CF6',
+            },
+            status: 'active',
+            created_at: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+        },
+        {
+          id: 'sub-org-eastside-001',
+          name: 'Eastside Soccer Club',
+          slug: 'eastside-soccer',
+          status: 'suspended',
+          created_at: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          parent_org_id: parentOrgId,
+          sub_org_settings: {
+            id: 'sub-org-settings-eastside-001',
+            sub_org_id: 'sub-org-eastside-001',
+            enabled_sports: ['soccer'],
+            enabled_features: {
+              events: true,
+              payments: false,
+              uniforms: false,
+              photos: false,
+              videos: false,
+            },
+            branding_overrides: null,
+            status: 'suspended',
+            created_at: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+        },
+      ]
+      
+      return { data: fakeSubOrgs, error: null }
+    }
+
     const { data, error } = await supabase
       .from('organizations')
       .select(

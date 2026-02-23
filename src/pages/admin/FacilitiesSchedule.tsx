@@ -5,11 +5,12 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
+import { getLink } from '../../utils/routes'
 import { AdminPageHeader, Button, Card, Select } from '../../components/admin'
 import { useFeatureGate } from '../../lib/featureGate'
 import {
@@ -54,7 +55,6 @@ export default function FacilitiesSchedule() {
     const [actionLoading, setActionLoading] = useState(false)
 
     const { context, isReady } = useUserContext()
-    useNavigate()
     const t = useT()
 
     // Load facilities and customers
@@ -715,6 +715,13 @@ export default function FacilitiesSchedule() {
             <AdminPageHeader
                 title={t('admin.facilities.schedule.title')}
                 subtitle={t('admin.facilities.schedule.subtitle')}
+                breadcrumbs={[
+                    { label: t('admin.facilities.title'), path: getLink('admin.facilities.list') },
+                    facilityFilter && facilities.find(f => f.id === facilityFilter) 
+                        ? { label: facilities.find(f => f.id === facilityFilter)!.name, path: getLink('admin.facilities.detail', { id: facilityFilter }) }
+                        : null,
+                    { label: t('admin.facilities.schedule.title') },
+                ].filter(Boolean) as Array<{ label: string; path?: string }>}
                 actions={
                     <div style={{ display: 'flex', gap: '12px' }}>
                         <Button variant="secondary" onClick={() => navigateDate('today')}>

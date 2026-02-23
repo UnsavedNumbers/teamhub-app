@@ -33,10 +33,81 @@ interface BulkInviteWizardProps {
 export default function BulkInviteWizard({ onComplete, onCancel }: BulkInviteWizardProps) {
   const t = useT()
   const { context } = useUserContext()
-  const [step, setStep] = useState<WizardStep>('download')
+  const [step, setStep] = useState<WizardStep>(isDemoMode() ? 'preview' : 'download')
   const [file, setFile] = useState<File | null>(null)
-  const [filePath, setFilePath] = useState<string | null>(null)
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null)
+  const [filePath, setFilePath] = useState<string | null>(isDemoMode() ? 'demo-uploaded-file.xlsx' : null)
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(
+    isDemoMode() ? {
+      valid: true,
+      blocking_errors: 0,
+      warnings: 2,
+      totals: {
+        org_admins: 2,
+        coaches: 5,
+        guardians: 15,
+        athletes: 20,
+        unique_emails: 22,
+      },
+      row_errors: [
+        {
+          sheet: 'Guardians',
+          row: 8,
+          field: 'email',
+          message: 'Duplicate email address',
+          severity: 'warning',
+        },
+        {
+          sheet: 'Athletes',
+          row: 12,
+          field: 'guardian_email',
+          message: 'Guardian email not found in Guardians sheet',
+          severity: 'warning',
+        },
+      ],
+      consolidated_preview: [
+        {
+          email: 'coach1@example.com',
+          name: 'Coach One',
+          name_source: 'coaches',
+          roles: ['coach'],
+          is_new_user: true,
+          existing_org_member: false,
+          existing_roles: [],
+          name_conflicts: [],
+        },
+        {
+          email: 'parent1@example.com',
+          name: 'Parent One',
+          name_source: 'guardians',
+          roles: ['guardian'],
+          is_new_user: true,
+          existing_org_member: false,
+          existing_roles: [],
+          name_conflicts: [],
+        },
+        {
+          email: 'athlete1@example.com',
+          name: 'Athlete One',
+          name_source: 'athletes',
+          roles: ['athlete'],
+          is_new_user: true,
+          existing_org_member: false,
+          existing_roles: [],
+          name_conflicts: [],
+        },
+      ],
+      athlete_guardian_links: [
+        {
+          athlete_email: 'athlete1@example.com',
+          athlete_name: 'Athlete One',
+          guardian_email: 'parent1@example.com',
+          guardian_name: 'Parent One',
+          guardian_source: 'new',
+          status: 'ok',
+        },
+      ],
+    } : null
+  )
   const [jobId, setJobId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -46,19 +117,6 @@ export default function BulkInviteWizard({ onComplete, onCancel }: BulkInviteWiz
   const orgId = context?.orgId
   if (!orgId) {
     return <div>{t('common.error.permissionDenied')}</div>
-  }
-
-  // Block in demo mode
-  if (isDemoMode()) {
-    return (
-      <Card>
-        <div className="p-6 text-center">
-          <h3 className="text-lg font-semibold mb-2">{t('admin.bulkInvite.demoModeBlocked.title')}</h3>
-          <p className="text-gray-600 mb-4">{t('admin.bulkInvite.demoModeBlocked.message')}</p>
-          <Button onClick={() => window.location.href = '/signup'}>{t('admin.bulkInvite.demoModeBlocked.signUp')}</Button>
-        </div>
-      </Card>
-    )
   }
 
   // Detect offline state
@@ -152,6 +210,36 @@ export default function BulkInviteWizard({ onComplete, onCancel }: BulkInviteWiz
   }, [orgId, t, isOffline])
 
   const handleStartImport = useCallback(async () => {
+    if (isDemoMode()) {
+      // Demo mode: show fake success
+      setLoading(true)
+      setError(null)
+      setStep('running')
+      
+      // Simulate import progress
+      setTimeout(() => {
+        setJobStatus({
+          id: 'demo-job-1',
+          status: 'completed',
+          progress_json: {
+            step: 'completed',
+            completed: validationResult?.totals.unique_emails || 0,
+            total: validationResult?.totals.unique_emails || 0,
+          },
+          totals_json: validationResult?.totals || null,
+          error_summary: null,
+          started_at: new Date().toISOString(),
+          finished_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          file_name: 'demo-uploaded-file.xlsx',
+        })
+        setStep('results')
+        setLoading(false)
+        showSuccess('Import completed successfully')
+      }, 2000)
+      return
+    }
+    
     assertNotDemoMode('start bulk invite import')
     if (isOffline) {
       setError(t('common.error.offline'))

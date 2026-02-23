@@ -23,6 +23,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { getReasonIcon } from '@/lib/featureGate'
 import { hasAnyRole } from '@/utils/roleHelpers'
+import { USE_FAKE_DATA } from '../data/config'
 
 function SubOrgBanner({ parentOrgId }: { parentOrgId: string }) {
   const { data: parentOrg } = useQuery({
@@ -101,6 +102,10 @@ export default function AdminLayout() {
   }, [orgData?.parent_org_id])
   
   const isParentOrg = useMemo(() => {
+    // In demo mode, always show Sub Organizations menu item
+    if (USE_FAKE_DATA) {
+      return hasOrg
+    }
     return hasOrg && !isSubOrg
   }, [hasOrg, isSubOrg])
 

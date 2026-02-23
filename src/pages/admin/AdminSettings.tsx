@@ -741,22 +741,6 @@ export default function AdminSettings() {
         </div>
       )}
       
-      {/* Mobile Select for Tabs */}
-      <div className="oa-tabs-mobile-select-container">
-        <select 
-          className="oa-tabs-mobile-select"
-          value={activeTab}
-          onChange={(e) => handleTabChange(e.target.value)}
-        >
-          <option value="profile">Profile</option>
-          <option value="roles">Role & Access</option>
-          <option value="notifications">Notifications</option>
-          <option value="workflow">Workflow</option>
-          <option value="security">Security</option>
-          {showAdvancedTab && <option value="advanced">Advanced</option>}
-        </select>
-      </div>
-
       <Tabs value={activeTab} onValueChange={handleTabChange} className="oa-tabs">
         <TabsList className="oa-mb-6">
           <TabsTrigger value="profile">Profile</TabsTrigger>

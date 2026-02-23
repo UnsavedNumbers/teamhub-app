@@ -11,6 +11,7 @@
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
+import { USE_FAKE_DATA } from '../config'
 import type {
     Guardian,
     GuardianMatch,
@@ -825,6 +826,102 @@ export async function getGuardianAttachmentRequestsForOrg(
             }
         }
 
+        if (USE_FAKE_DATA) {
+            const now = new Date()
+            const fakeRequests: GuardianAttachmentRequestEnriched[] = [
+                {
+                    id: 'guardian-req-1',
+                    org_id: orgId,
+                    athlete_id: 'demo-athlete-1',
+                    requested_by_user_id: 'demo-user-1',
+                    status: 'pending',
+                    reviewed_by_user_id: null,
+                    reviewed_at: null,
+                    decision_reason: null,
+                    expires_at: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                    created_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                    updated_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                    athlete_first_name: 'Alex',
+                    athlete_last_name: 'Johnson',
+                    athlete_birthdate: '2015-05-15',
+                    requester_email: 'parent1@example.com',
+                    requester_display_name: 'Sarah Johnson',
+                    reviewer_email: null,
+                    reviewer_display_name: null,
+                },
+                {
+                    id: 'guardian-req-2',
+                    org_id: orgId,
+                    athlete_id: 'demo-athlete-2',
+                    requested_by_user_id: 'demo-user-2',
+                    status: 'pending',
+                    reviewed_by_user_id: null,
+                    reviewed_at: null,
+                    decision_reason: null,
+                    expires_at: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+                    created_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+                    updated_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+                    athlete_first_name: 'Jordan',
+                    athlete_last_name: 'Smith',
+                    athlete_birthdate: '2016-08-22',
+                    requester_email: 'parent2@example.com',
+                    requester_display_name: 'Michael Smith',
+                    reviewer_email: null,
+                    reviewer_display_name: null,
+                },
+                {
+                    id: 'guardian-req-3',
+                    org_id: orgId,
+                    athlete_id: 'demo-athlete-3',
+                    requested_by_user_id: 'demo-user-3',
+                    status: 'approved',
+                    reviewed_by_user_id: 'admin-user-1',
+                    reviewed_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+                    decision_reason: 'Verified relationship',
+                    expires_at: '',
+                    created_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+                    updated_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+                    athlete_first_name: 'Sam',
+                    athlete_last_name: 'Davis',
+                    athlete_birthdate: '2014-11-10',
+                    requester_email: 'parent3@example.com',
+                    requester_display_name: 'Jennifer Davis',
+                    reviewer_email: 'admin@example.com',
+                    reviewer_display_name: 'Admin User',
+                },
+                {
+                    id: 'guardian-req-4',
+                    org_id: orgId,
+                    athlete_id: 'demo-athlete-4',
+                    requested_by_user_id: 'demo-user-4',
+                    status: 'denied',
+                    reviewed_by_user_id: 'admin-user-1',
+                    reviewed_at: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+                    decision_reason: 'Unable to verify relationship',
+                    expires_at: '',
+                    created_at: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+                    updated_at: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+                    athlete_first_name: 'Taylor',
+                    athlete_last_name: 'Brown',
+                    athlete_birthdate: '2015-03-18',
+                    requester_email: 'parent4@example.com',
+                    requester_display_name: 'Robert Brown',
+                    reviewer_email: 'admin@example.com',
+                    reviewer_display_name: 'Admin User',
+                },
+            ]
+            
+            let filtered = fakeRequests
+            if (status) {
+                filtered = fakeRequests.filter(req => req.status === status)
+            }
+            
+            debug.perf.end('guardianService.getGuardianAttachmentRequestsForOrg')
+            debug.data('GuardianService.getGuardianAttachmentRequestsForOrg', 'Response (fake)', { orgId, status, requestCount: filtered.length })
+            console.groupEnd()
+            return { data: filtered, error: null }
+        }
+
         const { data, error } = await supabase
             .rpc('get_guardian_attachment_requests_for_admin' as any, {
                 p_org_id: orgId,
@@ -885,6 +982,13 @@ export async function getPendingGuardianAttachmentCount(
             return {
                 data: 0,
                 error: new Error('Organization ID is required')
+            }
+        }
+
+        if (USE_FAKE_DATA) {
+            return {
+                data: 2,
+                error: null
             }
         }
 

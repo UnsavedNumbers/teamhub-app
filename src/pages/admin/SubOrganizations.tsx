@@ -53,6 +53,8 @@ import { getErrorMessage } from '../../utils/errorUtils'
 import { SPORT_NAMES, type SportCode } from '../../types/sports'
 import SubOrgInviteForm from '../../components/admin/SubOrgInviteForm'
 import { cn } from '../../utils/cn'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getSystemSports } from '../../data/services/sportsService'
 import '../../styles/orgAdmin.css'
 
 export default function SubOrganizations() {
@@ -342,47 +344,50 @@ function SubOrgsMainTab({
 
   return (
     <div className="oa-space-y-6">
-      {/* Section 1: Introduction */}
-      <Card>
-        <div className="oa-space-y-4">
-          <div>
-            <h2 className="oa-h3 oa-mb-3">{t('admin.subOrgs.intro.title')}</h2>
-            <p className="oa-body-m oa-text-muted oa-mb-3">{t('admin.subOrgs.intro.paragraph1')}</p>
-            <p className="oa-body-m oa-text-muted oa-mb-3">{t('admin.subOrgs.intro.paragraph2')}</p>
-            <p className="oa-body-m oa-text-muted">{t('admin.subOrgs.intro.paragraph3')}</p>
-          </div>
-
-          <div className="oa-space-y-3">
+      {/* Two-column layout for top cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Section 1: Introduction */}
+        <Card>
+          <div className="oa-space-y-4">
             <div>
-              <h3 className="oa-body-m oa-font-bold oa-mb-2">{t('admin.subOrgs.intro.useProgramsWhen.title')}</h3>
-              <ul className="oa-list-disc oa-list-inside oa-space-y-1 oa-text-muted">
-                <li>{t('admin.subOrgs.intro.useProgramsWhen.item1')}</li>
-                <li>{t('admin.subOrgs.intro.useProgramsWhen.item2')}</li>
-                <li>{t('admin.subOrgs.intro.useProgramsWhen.item3')}</li>
-                <li>{t('admin.subOrgs.intro.useProgramsWhen.item4')}</li>
-              </ul>
+              <h2 className="oa-h3 oa-mb-3">{t('admin.subOrgs.intro.title')}</h2>
+              <p className="oa-body-m oa-text-muted oa-mb-3">{t('admin.subOrgs.intro.paragraph1')}</p>
+              <p className="oa-body-m oa-text-muted oa-mb-3">{t('admin.subOrgs.intro.paragraph2')}</p>
+              <p className="oa-body-m oa-text-muted">{t('admin.subOrgs.intro.paragraph3')}</p>
             </div>
 
-            <div>
-              <h3 className="oa-body-m oa-font-bold oa-mb-2">{t('admin.subOrgs.intro.useSubOrgsWhen.title')}</h3>
-              <ul className="oa-list-disc oa-list-inside oa-space-y-1 oa-text-muted">
-                <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item1')}</li>
-                <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item2')}</li>
-                <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item3')}</li>
-                <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item4')}</li>
-                <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item5')}</li>
-              </ul>
-            </div>
+            <div className="oa-space-y-3">
+              <div>
+                <h3 className="oa-body-m oa-font-bold oa-mb-2">{t('admin.subOrgs.intro.useProgramsWhen.title')}</h3>
+                <ul className="oa-list-disc oa-list-inside oa-space-y-1 oa-text-muted">
+                  <li>{t('admin.subOrgs.intro.useProgramsWhen.item1')}</li>
+                  <li>{t('admin.subOrgs.intro.useProgramsWhen.item2')}</li>
+                  <li>{t('admin.subOrgs.intro.useProgramsWhen.item3')}</li>
+                  <li>{t('admin.subOrgs.intro.useProgramsWhen.item4')}</li>
+                </ul>
+              </div>
 
-            <div className="oa-pt-2 oa-border-t oa-border-default">
-              <p className="oa-body-m oa-font-medium">{t('admin.subOrgs.intro.ruleOfThumb')}</p>
+              <div>
+                <h3 className="oa-body-m oa-font-bold oa-mb-2">{t('admin.subOrgs.intro.useSubOrgsWhen.title')}</h3>
+                <ul className="oa-list-disc oa-list-inside oa-space-y-1 oa-text-muted">
+                  <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item1')}</li>
+                  <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item2')}</li>
+                  <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item3')}</li>
+                  <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item4')}</li>
+                  <li>{t('admin.subOrgs.intro.useSubOrgsWhen.item5')}</li>
+                </ul>
+              </div>
+
+              <div className="oa-pt-2 oa-border-t oa-border-default">
+                <p className="oa-body-m oa-font-medium">{t('admin.subOrgs.intro.ruleOfThumb')}</p>
+              </div>
             </div>
           </div>
-        </div>
-      </Card>
+        </Card>
 
-      {/* Section 2: Public URL Card */}
-      <PublicSubOrgUrlCard publicOrgUrl={publicOrgUrl} orgSlug={orgSlug} loading={orgSlugLoading} />
+        {/* Section 2: Public URL Card */}
+        <PublicSubOrgUrlCard publicOrgUrl={publicOrgUrl} orgSlug={orgSlug} loading={orgSlugLoading} />
+      </div>
 
       {/* Section 3: Set up a Sub-Org (Conditional) */}
       {orgSlugLoading || eligibleOtherAdminsLoading ? (
@@ -429,7 +434,7 @@ function SubOrgsMainTab({
         </Card>
       )}
 
-      {/* Existing Sub-Orgs List (if any) */}
+      {/* Existing Sub-Orgs List (if any) - Full width row */}
       {!loading && subOrgs.length > 0 && (
         <div className="oa-space-y-4">
           <h2 className="oa-h3">{t('admin.subOrgs.existing.title')}</h2>
@@ -457,6 +462,11 @@ function PublicSubOrgUrlCard({
   const navigate = useNavigate()
   const { copy, copied } = useCopyToClipboard()
 
+  // In demo mode, show a fake URL
+  const displayUrl = USE_FAKE_DATA && !publicOrgUrl 
+    ? `${window.location.origin}/o/demo-org/register-sub-org`
+    : publicOrgUrl
+
   if (loading) {
     return (
       <Card>
@@ -469,7 +479,7 @@ function PublicSubOrgUrlCard({
     )
   }
 
-  if (!orgSlug) {
+  if (!orgSlug && !USE_FAKE_DATA) {
     return (
       <Card>
         <h2 className="oa-h3 oa-mb-3">{t('admin.subOrgs.publicUrl.title')}</h2>
@@ -491,14 +501,14 @@ function PublicSubOrgUrlCard({
         <input
           type="text"
           readOnly
-          value={publicOrgUrl}
+          value={displayUrl}
           onClick={(e) => (e.target as HTMLInputElement).select()}
           className="oa-input oa-flex-1 oa-font-mono oa-text-sm"
           style={{ cursor: 'text' }}
         />
         <button
           type="button"
-          onClick={() => copy(publicOrgUrl)}
+          onClick={() => copy(displayUrl)}
           className={cn('oa-btn', copied ? 'oa-btn--success' : 'oa-btn--primary')}
           style={{ minWidth: '100px' }}
         >
@@ -663,7 +673,7 @@ function SubOrgsList({
 }
 
 function SubOrgSettingsForm({
-  subOrg: _subOrg,
+  subOrg,
   settings,
   onSave,
 }: {
@@ -675,6 +685,79 @@ function SubOrgSettingsForm({
   const [status, setStatus] = useState<'active' | 'suspended'>(settings.status)
   const [enabledSports, setEnabledSports] = useState<string[]>(settings.enabled_sports || [])
   const [previousSports, setPreviousSports] = useState<string[]>(settings.enabled_sports || [])
+
+  // Get system sports to map sport codes to sport IDs
+  const { data: systemSports } = useQuery({
+    queryKey: ['system-sports'],
+    queryFn: async () => {
+      const { data, error } = await getSystemSports()
+      if (error || !data) return []
+      return data
+    },
+    enabled: !USE_FAKE_DATA,
+  })
+
+  // Check which sports have related data (programs, levels, or teams)
+  const { data: sportsWithData } = useQuery({
+    queryKey: ['sub-org-sports-with-data', subOrg.id, systemSports],
+    queryFn: async () => {
+      if (USE_FAKE_DATA || !systemSports) {
+        // In demo mode, return empty set (all sports can be unchecked)
+        return new Set<SportCode>()
+      }
+
+      const sportsWithRelatedData = new Set<SportCode>()
+
+      try {
+        // Create mapping from sport ID to sport code
+        const sportIdToCode: Record<string, SportCode> = {}
+        systemSports.forEach((sport) => {
+          if (sport.slug) {
+            // Convert slug to code format (e.g., 'track-and-field' -> 'track_field')
+            const code = sport.slug.replace(/-/g, '_') as SportCode
+            sportIdToCode[sport.id] = code
+          }
+        })
+
+        // Check for programs
+        const { data: programs } = await supabase
+          .from('programs')
+          .select('sport_id')
+          .eq('org_id', subOrg.id)
+          .not('sport_id', 'is', null)
+
+        if (programs) {
+          programs.forEach((p: { sport_id: string }) => {
+            const code = sportIdToCode[p.sport_id]
+            if (code) sportsWithRelatedData.add(code)
+          })
+        }
+
+        // Levels don't have sport_id; sport comes from program. We already count programs above.
+
+        // Check for teams
+        const { data: teams } = await supabase
+          .from('teams')
+          .select('sport_id')
+          .eq('org_id', subOrg.id)
+          .not('sport_id', 'is', null)
+
+        if (teams) {
+          teams.forEach((t) => {
+            if (t.sport_id) {
+              const code = sportIdToCode[t.sport_id]
+              if (code) sportsWithRelatedData.add(code)
+            }
+          })
+        }
+      } catch (err) {
+        console.error('Error checking sports with data:', err)
+      }
+
+      return sportsWithRelatedData
+    },
+    enabled: !USE_FAKE_DATA && !!subOrg.id && !!systemSports,
+  })
 
   const handleSave = () => {
     // Check if sports were removed
@@ -715,21 +798,36 @@ function SubOrgSettingsForm({
           {t('admin.subOrgs.settings.enabledSports.description')}
         </p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {Object.entries(SPORT_NAMES).map(([code, name]) => (
-            <label key={code} className="flex items-center gap-2">
-              <Checkbox
-                checked={enabledSports.includes(code)}
-                onChange={(checked) => {
-                  if (checked) {
-                    setEnabledSports([...enabledSports, code])
-                  } else {
-                    setEnabledSports(enabledSports.filter((c) => c !== code))
-                  }
-                }}
-              />
-              <span className="text-sm">{name}</span>
-            </label>
-          ))}
+          {Object.entries(SPORT_NAMES).map(([code, name]) => {
+            const sportCode = code as SportCode
+            const isChecked = enabledSports.includes(sportCode)
+            const hasRelatedData = !USE_FAKE_DATA && sportsWithData?.has(sportCode)
+            const isDisabled = hasRelatedData && isChecked
+
+            return (
+              <label 
+                key={code} 
+                className={cn(
+                  "flex items-center gap-2",
+                  isDisabled && "opacity-60 cursor-not-allowed"
+                )}
+                title={isDisabled ? t('admin.subOrgs.settings.sportHasDataTooltip' as import('../../i18n').TranslationKey) : undefined}
+              >
+                <Checkbox
+                  checked={isChecked}
+                  disabled={isDisabled}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setEnabledSports([...enabledSports, sportCode])
+                    } else {
+                      setEnabledSports(enabledSports.filter((c) => c !== sportCode))
+                    }
+                  }}
+                />
+                <span className="text-sm">{name}</span>
+              </label>
+            )
+          })}
         </div>
       </div>
 

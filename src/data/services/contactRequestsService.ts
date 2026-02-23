@@ -35,10 +35,39 @@ function generateMockRequests(orgId: string): OrgContactRequest[] {
   const statuses: OrgContactRequest['status'][] = ['new', 'open', 'in_progress', 'resolved']
   const now = new Date()
 
+  const realisticMessages: Record<string, string[]> = {
+    schedule_event: [
+      'Can we reschedule the practice on Friday? My son has a school event that conflicts.',
+      'The game time changed but I didn\'t receive a notification. Can you confirm the new start time?',
+      'Is there a make-up practice scheduled for the one we missed last week due to weather?',
+      'My daughter can\'t make the away game this weekend. Should I notify the coach directly?',
+    ],
+    payments_fees: [
+      'I submitted payment last week but it still shows as pending. Can you check the status?',
+      'I need to update my payment method. How do I change the card on file?',
+      'The registration fee seems higher than what was quoted. Can someone clarify the breakdown?',
+      'I\'m having trouble accessing the payment portal. The link in the email isn\'t working.',
+    ],
+    general_question: [
+      'What equipment does my child need to bring to the first practice?',
+      'Are parents allowed to attend practices, or is it players and coaches only?',
+      'How do I update my contact information in the system?',
+      'Can you provide more information about the end-of-season tournament?',
+    ],
+    feature_request: [
+      'It would be great if we could see photos from games directly in the app.',
+      'Can we add a feature to track player statistics throughout the season?',
+      'I\'d love to be able to message other parents on the team.',
+      'Would it be possible to add a calendar sync feature so games automatically appear in my phone calendar?',
+    ],
+  }
+
   return Array.from({ length: 12 }, (_, i) => {
     const daysAgo = Math.floor(i * 1.5)
     const createdAt = new Date(now.getTime() - daysAgo * 86_400_000).toISOString()
     const category = categories[i % categories.length]
+    const messages = realisticMessages[category] || []
+    const message = messages[i % messages.length] || `I have a question about ${category.replace(/_/g, ' ')}.`
 
     return {
       id: `mock-req-${i}`,
@@ -51,7 +80,7 @@ function generateMockRequests(orgId: string): OrgContactRequest[] {
       event_id: null,
       category,
       subject: category === 'feature_request' ? 'Photo gallery request' : null,
-      message: `This is a sample ${category} message number ${i + 1}.`,
+      message,
       attachments: [],
       requested_feature_key: category === 'feature_request' ? 'photo_galleries' : null,
       requested_feature_name: category === 'feature_request' ? 'Photo Galleries' : null,
