@@ -184,6 +184,12 @@ async function captureRoute(
           throw new Error(`HTTP ${response.status()}: ${response.statusText()}`)
         }
         
+        // Check if we were redirected to login/demo (auth expired)
+        const currentUrl = page.url()
+        if (currentUrl.includes('/demo') || currentUrl.includes('/login') || currentUrl.includes('/portal/auth')) {
+          throw new Error(`Authentication expired - redirected to ${currentUrl}. Storage state may need to be refreshed.`)
+        }
+        
         navigationSuccess = true
       } catch (err) {
         retries--
@@ -283,16 +289,61 @@ export async function runCapture(config: ScreenshotConfig): Promise<ScreenshotMa
       let storageState: object | undefined
       const storageStatePath = getStorageStatePath(config, role)
 
-      if (config.authStrategy === 'storage_state' && fs.existsSync(storageStatePath)) {
-        // Load existing storage state
+      // Always check if storage state exists and is valid
+      if (fs.existsSync(storageStatePath)) {
         const { loadStorageState } = await import('./auth')
         const loadedState = loadStorageState(config, role)
         if (loadedState) {
-          storageState = loadedState
-          console.log(`[Capture] Using existing storage state for ${role}`)
+          // Verify storage state is still valid by testing it
+          const testContext = await browser.newContext({
+            viewport: VIEWPORT_SIZES.desktop,
+            timezoneId: 'America/New_York',
+            locale: 'en-US',
+            colorScheme: 'light',
+            reducedMotion: 'reduce',
+            storageState: loadedState, // Use the loaded storage state
+          })
+          
+          const testPage = await testContext.newPage()
+          // Navigate to a protected route to verify auth (use role-specific route)
+          let testRoute: string
+          if (role === 'org_admin') {
+            testRoute = '/admin/dashboard'
+          } else if (role === 'coach') {
+            testRoute = '/coach/dashboard'
+          } else if (role === 'guardian') {
+            testRoute = '/parent/home'
+          } else if (role === 'athlete') {
+            testRoute = '/athlete/home'
+          } else if (role === 'staff') {
+            testRoute = '/staff/dashboard'
+          } else {
+            testRoute = '/fan/events'
+          }
+          
+          try {
+            await testPage.goto(`${config.baseUrl}${testRoute}`, { waitUntil: 'domcontentloaded', timeout: 10000 })
+            
+            // Check if we're redirected to login/demo (auth expired)
+            const testUrl = testPage.url()
+            if (testUrl.includes('/demo') || testUrl.includes('/login') || testUrl.includes('/portal/auth')) {
+              console.warn(`[Capture] Storage state for ${role} appears expired, re-authenticating...`)
+              await testContext.close()
+              storageState = undefined // Force re-authentication
+            } else {
+              // Auth is valid
+              console.log(`[Capture] Using existing storage state for ${role}`)
+              storageState = loadedState
+              await testContext.close()
+            }
+          } catch (err) {
+            console.warn(`[Capture] Error verifying storage state for ${role}, will re-authenticate:`, err)
+            await testContext.close()
+            storageState = undefined
+          }
         } else {
           console.warn(`[Capture] Storage state file exists but is invalid, will re-authenticate`)
-          // Fall through to create new storage state
+          storageState = undefined
         }
       }
       
@@ -308,6 +359,12 @@ export async function runCapture(config: ScreenshotConfig): Promise<ScreenshotMa
 
         const page = await authContext.newPage()
         await ensureStorageState(page, authContext, config, role)
+
+        // Verify authentication worked by checking if we're logged in
+        const currentUrl = page.url()
+        if (currentUrl.includes('/demo') || currentUrl.includes('/login')) {
+          throw new Error(`Authentication failed for ${role} - still on login/demo page`)
+        }
 
         // Save and load storage state
         const { saveStorageState, loadStorageState } = await import('./auth')

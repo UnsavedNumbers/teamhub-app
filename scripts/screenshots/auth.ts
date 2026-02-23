@@ -128,7 +128,17 @@ export async function loginDemoCode(
     await page.waitForTimeout(3000)
   }
 
-  console.log(`[Auth] Successfully logged in as ${role}`)
+  // Additional wait to ensure session is fully established
+  // This helps prevent storage state from being saved before auth cookies are set
+  await page.waitForTimeout(2000)
+  
+  // Verify we're actually authenticated by checking URL
+  const finalUrl = page.url()
+  if (finalUrl.includes('/demo') || finalUrl.includes('/login')) {
+    throw new Error(`Login verification failed - still on login/demo page: ${finalUrl}`)
+  }
+
+  console.log(`[Auth] Successfully logged in as ${role} (${finalUrl})`)
 }
 
 /**
