@@ -186,10 +186,11 @@ export function AssignCoachModal({ teamId: _teamId, orgId, onClose, onSuccess }:
                 )}
 
                 <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
+                    <label htmlFor="coach-role" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
                         Role
                     </label>
                     <select
+                        id="coach-role"
                         value={selectedRole}
                         onChange={(e) => setSelectedRole(e.target.value as typeof selectedRole)}
                         style={{

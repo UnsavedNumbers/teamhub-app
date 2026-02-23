@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "test:rls": "vitest run --config vitest.config.rls.ts --env-file .env.test",
+    "test:rls": "node --env-file=.env.test ./node_modules/vitest/vitest.mjs run --config vitest.config.rls.ts",
     "test:e2e": "playwright test",
     "generate-types": "npx supabase gen types typescript --local > src/lib/database.types.ts",
     "generate-types:remote": "npx supabase gen types typescript --project-id njdeuehessdffwmmzmcs > src/lib/database.types.ts",

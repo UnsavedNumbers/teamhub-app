@@ -109,7 +109,7 @@ describe('TeamSwitcher', () => {
       await user.click(button)
       
       expect(screen.getByText('All Teams')).toBeInTheDocument()
-      expect(screen.getByText('Team Alpha')).toBeInTheDocument()
+      expect(screen.getAllByText('Team Alpha').length).toBeGreaterThan(0)
       expect(screen.getByText('Team Beta')).toBeInTheDocument()
       expect(screen.getByText('Team Gamma')).toBeInTheDocument()
     })

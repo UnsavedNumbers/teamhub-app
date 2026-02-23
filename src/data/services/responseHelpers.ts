@@ -33,8 +33,7 @@ export function createServiceResponse<T>(
     data: T | null,
     error: Error | null
 ): ServiceResponse<T> {
-    // For arrays, ensure we return empty array instead of null
-    const normalizedData = (Array.isArray(data) && data === null) ? [] as unknown as T : data
+    const normalizedData = data
     const isEmpty = normalizedData === null || (Array.isArray(normalizedData) && normalizedData.length === 0)
 
     return {

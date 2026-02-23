@@ -228,23 +228,15 @@ export async function getDemoCodeDetails(code: string): Promise<DemoCode> {
 
 export async function validateDemoCode(code: string): Promise<DemoCodeValidationResult> {
   const normalized = normalizeDemoCode(code)
-  console.log('[validateDemoCode] Starting validation:', { code, normalized, USE_FAKE_DATA })
 
   if (!normalized) {
-    console.log('[validateDemoCode] Code is empty after normalization')
     return { valid: false, reason: 'missing' }
   }
   if (!isValidDemoCode(normalized)) {
-    console.log('[validateDemoCode] Code format is invalid:', normalized)
     return { valid: false, reason: 'not_found' }
   }
 
-  // IMPORTANT: Demo code validation ALWAYS uses real Supabase, even in fake data mode
-  // Demo codes are meant to be validated against the real database
-  // Fake data mode is for other features, but demo codes themselves are real
-  console.log('[validateDemoCode] Querying Supabase for demo code (always real DB):', normalized)
-  console.log('[validateDemoCode] Supabase client URL:', supabaseAny.supabaseUrl || 'not set')
-  
+  // Demo code validation ALWAYS uses real Supabase, even in fake data mode.
   let demoCode: DemoCode | null = null
   let orgStatus: DemoOrganizationStatus | null = null
 
@@ -254,32 +246,18 @@ export async function validateDemoCode(code: string): Promise<DemoCodeValidation
     .eq('demo_code', normalized)
     .maybeSingle()
 
-  console.log('[validateDemoCode] Query result:', { data: data ? 'found' : 'not found', error })
-
   if (error) {
-    console.error('[validateDemoCode] Error querying demo_codes:', error)
-    console.error('[validateDemoCode] Error details:', {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
-    })
     throw new Error(`Failed to validate demo code: ${error.message}`)
   }
   if (data) {
-    console.log('[validateDemoCode] Found demo code, fetching org status')
     demoCode = mapDemoCodeRow(data as Record<string, unknown>)
     const { data: orgRow, error: orgError } = await supabaseAny
       .from('demo_organizations')
       .select('status, allowed_roles')
       .eq('id', demoCode.demo_org_id)
       .maybeSingle()
-    
-    console.log('[validateDemoCode] Org query result:', { orgRow, orgError })
-    
+
     if (orgError) {
-      console.error('[validateDemoCode] Error querying demo_organizations:', orgError)
-      // Don't throw here - org status check is secondary, default to active
       orgStatus = 'active'
     } else {
       orgStatus = orgRow?.status === 'inactive' ? 'inactive' : 'active'
@@ -287,33 +265,19 @@ export async function validateDemoCode(code: string): Promise<DemoCodeValidation
   }
 
   if (!demoCode) {
-    console.log('[validateDemoCode] No demo code found')
     return { valid: false, reason: 'not_found' }
   }
 
-  console.log('[validateDemoCode] Demo code found, checking status:', {
-    status: demoCode.status,
-    expires_at: demoCode.expires_at,
-    orgStatus,
-  })
-
   const withStatus = await updateCodeStatusIfExpired(demoCode)
   if (withStatus.status === 'revoked') {
-    console.log('[validateDemoCode] Code is revoked')
     return { valid: false, reason: 'revoked' }
   }
   if (withStatus.status === 'expired') {
-    console.log('[validateDemoCode] Code is expired')
     return { valid: false, reason: 'expired' }
   }
   if (orgStatus === 'inactive') {
-    console.log('[validateDemoCode] Org is inactive')
     return { valid: false, reason: 'inactive_org' }
   }
-
-  console.log('[validateDemoCode] Validation successful:', {
-    demoOrgId: withStatus.demo_org_id,
-  })
 
   return {
     valid: true,

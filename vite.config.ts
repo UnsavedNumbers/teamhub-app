@@ -38,5 +38,10 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}'],
     exclude: ['node_modules', 'backups', 'supabase'],
     css: true,
+    env: {
+      VITE_USE_FAKE_DATA: 'true',
+      VITE_SUPABASE_URL: 'https://demo.supabase.local',
+      VITE_SUPABASE_ANON_KEY: 'demo-anon-key',
+    },
   },
 })

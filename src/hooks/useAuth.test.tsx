@@ -38,6 +38,10 @@ vi.mock('@/utils/homeLocation', () => ({ geocodeZipToHomeLocation: vi.fn() }))
 vi.mock('@/utils/host', () => ({ getBaseUrl: vi.fn(() => 'http://localhost:3000') }))
 
 vi.mock('@/contexts/OrganizationContext', () => ({
+  OrganizationContext: {
+    Provider: ({ children }: { children: React.ReactNode }) => children,
+    Consumer: ({ children }: { children: () => React.ReactNode }) => children(() => ({})),
+  },
   useOrganization: () => ({
     setOrganizations: vi.fn(),
     currentOrganization: null,
