@@ -37,8 +37,15 @@ import CalendarGrid from '../components/calendar/CalendarGrid'
 import EventFilters from '../components/calendar/EventFilters'
 import RSVPButton from '../components/calendar/RSVPButton'
 import GeneralRSVPForm from '../components/calendar/GeneralRSVPForm'
+import EventCard from '../components/calendar/EventCard'
 import { type SportInfo } from '../utils/sportContext'
 import { useI18n } from '../i18n/useI18n'
+import {
+    filterByClassification,
+    countByClassification,
+    getNextUpcomingEvent,
+    getNow
+} from '../utils/eventClassification'
 
 // Default filters
 const defaultFilters: CalendarFilters = {
@@ -52,6 +59,45 @@ const defaultFilters: CalendarFilters = {
 
 // Number of events to show per page in agenda view (3x3 grid)
 const EVENTS_PER_PAGE = 9
+
+// Default date range for upcoming events (next 30 days)
+const UPCOMING_RANGE_DAYS = 30
+
+type TimeContext = 'upcoming' | 'past' | 'all'
+
+// Helper to generate calendar link
+function generateCalendarLink(event: CalendarEvent): string | null {
+    try {
+        const startDate = new Date(event.start_time)
+        const endDate = new Date(event.end_time)
+        
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            return null
+        }
+        
+        const start = startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+        const end = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+        const location = event.event_location 
+            ? `${event.event_location.venue_name || ''} ${formatEventLocation(event.event_location)}`.trim()
+            : event.location || ''
+        const title = event.title || 'Event'
+        
+        const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+DTSTART:${start}
+DTEND:${end}
+SUMMARY:${title.replace(/[,;\\]/g, '')}
+LOCATION:${location.replace(/[,;\\]/g, '')}
+END:VEVENT
+END:VCALENDAR`
+        
+        return `data:text/calendar;charset=utf8,${encodeURIComponent(icsContent)}`
+    } catch (err) {
+        console.error('Error generating calendar link:', err)
+        return null
+    }
+}
 
 export default function Calendar() {
   // Add lifecycle logging
@@ -91,9 +137,33 @@ export default function Calendar() {
   const [currentPage, setCurrentPage] = useState(1)
   const [schedulingContact, setSchedulingContact] = useState<{ name: string; email: string; phone?: string | null } | null>(null)
   
+  // Tab state - default to 'upcoming', persist user selection
+  const [timeContext, setTimeContext] = useState<TimeContext>(() => {
+    const saved = localStorage.getItem('calendar-time-context')
+    return (saved === 'past' || saved === 'all') ? saved : 'upcoming'
+  })
+  
+  // Track if user manually selected a tab (to prevent auto-switch)
+  const [userSelectedTab, setUserSelectedTab] = useState(false)
+  
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  
+  // Save time context to localStorage when it changes
+  useEffect(() => {
+    if (timeContext !== 'upcoming') {
+      localStorage.setItem('calendar-time-context', timeContext)
+    } else {
+      localStorage.removeItem('calendar-time-context')
+    }
+  }, [timeContext])
+  
+  // Handler for manual tab selection
+  const handleTimeContextChange = (newContext: TimeContext) => {
+    setUserSelectedTab(true)
+    setTimeContext(newContext)
+  }
 
   const mapSummaryToCalendarEvent = useCallback((summary: CalendarEventSummary): CalendarEvent => ({
     id: summary.id,
@@ -145,19 +215,54 @@ export default function Calendar() {
         }
       }
 
-      // Determine date range based on view
-      let start = new Date(currentDate)
-      let end = new Date(currentDate)
+      // Determine date range based on view and time context
+      const now = new Date()
+      let start: Date
+      let end: Date
+      
+      // Check if user has navigated to a specific month (not current month)
+      const isCurrentMonth = currentDate.getMonth() === now.getMonth() && 
+                             currentDate.getFullYear() === now.getFullYear()
       
       if (viewMode === 'month') {
+          // Month view: always filter to selected month
           start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
           end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+          // Set end to end of day
+          end.setHours(23, 59, 59, 999)
+      } else if (timeContext === 'upcoming') {
+          // Upcoming: next 30 days (per spec)
+          // Include grace window (2 hours back) to properly classify events that just ended
+          start = new Date(now.getTime() - 2 * 60 * 60 * 1000) // 2 hours ago
+          end = new Date(now)
+          end.setDate(end.getDate() + UPCOMING_RANGE_DAYS)
+      } else if (timeContext === 'past') {
+          // Past: filter to selected month if user navigated to a specific month
+          if (!isCurrentMonth && currentDate < now) {
+              // User navigated to a past month - filter to that month
+              start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+              end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+              end.setHours(23, 59, 59, 999)
+          } else {
+              // Default: reasonable window (1 year back)
+              // Include grace window to avoid overlap with upcoming classification
+              start = new Date(now)
+              start.setFullYear(start.getFullYear() - 1)
+              end = new Date(now.getTime() - 2 * 60 * 60 * 1000) // 2 hours ago (grace window)
+          }
       } else {
-          // Agenda view: reasonable 6-month window for performance
-          // (previously fetched all events from year 0 to 2099, causing slow queries)
-          const now = new Date()
-          start = new Date(now.getFullYear(), now.getMonth() - 1, 1) // 1 month in the past
-          end = new Date(now.getFullYear(), now.getMonth() + 6, 0)   // 6 months in the future
+          // All: filter to selected month if user navigated to a specific month
+          if (!isCurrentMonth) {
+              start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+              end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+              end.setHours(23, 59, 59, 999)
+          } else {
+              // Default: reasonable 6-month window for performance
+              // Include grace window buffer
+              start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+              start.setTime(start.getTime() - 2 * 60 * 60 * 1000) // 2 hours before start
+              end = new Date(now.getFullYear(), now.getMonth() + 6, 0)   // 6 months in the future
+          }
       }
       
       // Fetch user children for RSVP matching
@@ -466,6 +571,99 @@ export default function Calendar() {
 
   const mapUrl = selectedEvent?.event_location ? getEventLocationMapsUrl(selectedEvent.event_location) : null
 
+  // Classify and filter events based on current state
+  const now = getNow()
+  const allEvents = fanView ? [] : events // Fan events handled separately for now
+  
+  // Apply filters first (event type, team, show canceled)
+  const filteredEvents = allEvents.filter(event => {
+    // Event type filter
+    if (filters.eventTypes.length > 0 && !filters.eventTypes.includes(event.type)) {
+      return false
+    }
+    
+    // Team filter
+    if (filters.teamIds.length > 0 && event.team_id && !filters.teamIds.includes(event.team_id)) {
+      return false
+    }
+    
+    // Child filter (for guardian view)
+    if (filters.childIds.length > 0) {
+      // Check if event is related to any of the selected children's teams
+      // This is simplified - in reality you'd check athlete-team relationships
+      return true // Placeholder
+    }
+    
+    return true
+  })
+  
+  // Classify events
+  const counts = countByClassification(filteredEvents, filters.showCancelled, now)
+  const upcomingEvents = filterByClassification(filteredEvents, 'upcoming', filters.showCancelled, now)
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+  const pastEvents = filterByClassification(filteredEvents, 'past', filters.showCancelled, now)
+    .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+
+  // Get events to display based on time context
+  const getDisplayEvents = (): CalendarEvent[] => {
+    let eventsToShow: CalendarEvent[] = []
+    
+    if (timeContext === 'upcoming') {
+      eventsToShow = upcomingEvents
+    } else if (timeContext === 'past') {
+      eventsToShow = pastEvents
+    } else {
+      // All: combine upcoming and past, sorted appropriately
+      eventsToShow = [...upcomingEvents, ...pastEvents]
+    }
+    
+    // Filter to selected month if user has navigated to a specific month
+    // (and not in month view, which already filters server-side)
+    if (viewMode !== 'month') {
+      const isCurrentMonth = currentDate.getMonth() === now.getMonth() && 
+                             currentDate.getFullYear() === now.getFullYear()
+      
+      if (!isCurrentMonth) {
+        // User navigated to a specific month - filter events to that month
+        const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+        const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+        monthEnd.setHours(23, 59, 59, 999)
+        
+        eventsToShow = eventsToShow.filter(event => {
+          const eventDate = new Date(event.start_time)
+          return eventDate >= monthStart && eventDate <= monthEnd
+        })
+      }
+    }
+    
+    return eventsToShow
+  }
+  
+  const displayEvents = getDisplayEvents()
+  const nextUpcomingEvent = getNextUpcomingEvent(filteredEvents, filters.showCancelled, now)
+  
+  // Auto-switch to Past tab if no upcoming events but past events exist
+  // Only auto-switch if user hasn't manually selected a tab
+  useEffect(() => {
+    if (!userSelectedTab && timeContext === 'upcoming' && counts.upcoming === 0 && counts.past > 0 && !loading) {
+      setTimeContext('past')
+    }
+  }, [counts.upcoming, counts.past, timeContext, loading, userSelectedTab])
+  
+  // Role helpers
+  const isGuardian = context?.roles.includes('parent') ?? false
+  const isAthlete = context?.roles.includes('athlete') ?? false
+  const isCoach = context?.roles.includes('coach') ?? false
+  const isStaff = context?.roles.includes('staff') ?? false
+  const isAdmin = context?.roles.includes('org_admin') ?? false
+  const isFan = fanView
+  
+  // Check if user has tickets for an event
+  const hasTickets = (_event: CalendarEvent): boolean => {
+    // TODO: Check if user owns tickets for this event
+    return false
+  }
+
   return (
       <PortalLayout
         breadcrumbs={[
@@ -475,16 +673,18 @@ export default function Calendar() {
       >
         {/* Header Section */}
         <div className="mb-6 sm:mb-8">
-          <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 sm:gap-6">
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 sm:gap-6">
             <div className="flex-1">
-              <PageTitle>{safeT('calendar.title', 'Calendar')}</PageTitle>
-              <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
-                {currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
-              </p>
+              <PageTitle>{safeT('calendar.title', 'Events')}</PageTitle>
+              {nextUpcomingEvent && counts.upcoming > 0 && (
+                <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide mt-1">
+                  Next up: {nextUpcomingEvent.title} — {formatEventDate(nextUpcomingEvent.start_time, nextUpcomingEvent.timezone)} {formatEventTimeRange(nextUpcomingEvent.start_time, nextUpcomingEvent.end_time, nextUpcomingEvent.timezone)}
+                </p>
+              )}
             </div>
             
             <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
-              {(context?.roles.includes('org_admin') || context?.roles.includes('coach')) && (
+              {(isCoach || isAdmin || isStaff) && (
                  <Button onClick={() => navigate('/portal/calendar/new')} className="w-full sm:w-auto">
                     <Icon name="add" className="mr-2" />
                     Create Event
@@ -512,6 +712,45 @@ export default function Calendar() {
               </div>
             </div>
           </div>
+          
+          {/* Time Context Tabs */}
+          {!fanView && (
+            <div className="mb-4 flex gap-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1">
+              <button
+                onClick={() => handleTimeContextChange('upcoming')}
+                disabled={loading}
+                className={`flex-1 px-4 py-2 text-sm font-bold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  timeContext === 'upcoming'
+                    ? 'bg-[var(--org-btn-primary-bg)] text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Upcoming {counts.upcoming > 0 && `(${counts.upcoming})`}
+              </button>
+              <button
+                onClick={() => handleTimeContextChange('past')}
+                disabled={loading}
+                className={`flex-1 px-4 py-2 text-sm font-bold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  timeContext === 'past'
+                    ? 'bg-[var(--org-btn-primary-bg)] text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Past {counts.past > 0 && `(${counts.past})`}
+              </button>
+              <button
+                onClick={() => handleTimeContextChange('all')}
+                disabled={loading}
+                className={`flex-1 px-4 py-2 text-sm font-bold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  timeContext === 'all'
+                    ? 'bg-[var(--org-btn-primary-bg)] text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                All
+              </button>
+            </div>
+          )}
           
           {/* Fan View Toggle */}
           <div className="mb-4">
@@ -610,20 +849,19 @@ export default function Calendar() {
                       Retry
                     </Button>
                   </div>
-                ) : (fanView ? fanEvents : events).length === 0 ? (
-                  <Card className="text-center py-12">
-                    <Icon name="event" size="text-6xl" className="text-slate-400 mb-4" />
-                    <CardTitle className="mb-2">{safeT('calendar.noEvents.title', 'No events')}</CardTitle>
-                    <p className="text-slate-500 dark:text-slate-400">
-                      {fanView 
-                        ? 'No events from your followed organizations, bookmarks, or tickets.'
-                        : safeT('calendar.noEvents.description', 'No events scheduled across your organizations.')
-                      }
-                    </p>
-                  </Card>
-                ) : (
+                ) : fanView ? (
+                  // Fan view (existing logic)
+                  fanEvents.length === 0 ? (
+                    <Card className="text-center py-12">
+                      <Icon name="event" size="text-6xl" className="text-slate-400 mb-4" />
+                      <CardTitle className="mb-2">{safeT('calendar.noEvents.title', 'No events')}</CardTitle>
+                      <p className="text-slate-500 dark:text-slate-400">
+                        No events from your followed organizations, bookmarks, or tickets.
+                      </p>
+                    </Card>
+                  ) : (
                     <CalendarGrid 
-                        events={fanView ? fanEvents.map((fe: any) => ({
+                        events={fanEvents.map((fe: any) => ({
                           id: fe.id,
                           title: fe.title,
                           start_time: fe.start_time,
@@ -633,7 +871,7 @@ export default function Calendar() {
                           description: fe.event?.description || null,
                           rsvps: [],
                           event_location: null,
-                        })) as unknown as CalendarEvent[] : events}
+                        })) as unknown as CalendarEvent[]}
                         eventSports={eventSports}
                         viewMode={viewMode}
                         currentDate={currentDate}
@@ -643,6 +881,271 @@ export default function Calendar() {
                         onDateChange={setCurrentDate}
                         onPageChange={setCurrentPage}
                     />
+                  )
+                ) : (
+                  // Main events view with scenarios
+                  (() => {
+                    // Check if filters are hiding all events
+                    const hasActiveFilters = filters.eventTypes.length > 0 || filters.teamIds.length > 0 || filters.childIds.length > 0
+                    const filteredCount = displayEvents.length
+                    const totalCount = filteredEvents.length
+                    
+                    // Scenario 6: Filters applied and hiding all results
+                    if (hasActiveFilters && filteredCount === 0 && totalCount > 0) {
+                      return (
+                        <Card className="text-center py-12">
+                          <Icon name="filter_list" size="text-6xl" className="text-slate-400 mb-4" />
+                          <CardTitle className="mb-2">No events match your filters</CardTitle>
+                          <p className="text-slate-500 dark:text-slate-400 mb-4">
+                            Try adjusting your filters to see more events.
+                          </p>
+                          <Button
+                            variant="secondary"
+                            onClick={() => setFilters({ ...defaultFilters })}
+                          >
+                            Clear Filters
+                          </Button>
+                        </Card>
+                      )
+                    }
+                    
+                    // Scenario 4: No events at all
+                    if (totalCount === 0) {
+                      return (
+                        <Card className="text-center py-12">
+                          <Icon name="event" size="text-6xl" className="text-slate-400 mb-4" />
+                          <CardTitle className="mb-2">No events yet</CardTitle>
+                          <p className="text-slate-500 dark:text-slate-400 mb-4">
+                            Events will appear here once scheduled.
+                          </p>
+                          {(isCoach || isAdmin || isStaff) && (
+                            <Button onClick={() => navigate('/portal/calendar/new')}>
+                              <Icon name="add" className="mr-2" />
+                              Create First Event
+                            </Button>
+                          )}
+                          {isGuardian && (
+                            <Button variant="secondary" onClick={() => navigate('/portal/athletes')}>
+                              View Teams
+                            </Button>
+                          )}
+                          {isFan && (
+                            <p className="text-sm text-slate-500 mt-4">
+                              Follow organizations to see public events
+                            </p>
+                          )}
+                        </Card>
+                      )
+                    }
+                    
+                    // Scenario 2: Exactly one upcoming event (spotlight layout)
+                    if (timeContext === 'upcoming' && counts.upcoming === 1 && nextUpcomingEvent) {
+                      const calendarLink = generateCalendarLink(nextUpcomingEvent)
+                      const eventMapUrl = nextUpcomingEvent.event_location 
+                        ? getEventLocationMapsUrl(nextUpcomingEvent.event_location)
+                        : nextUpcomingEvent.location
+                          ? `https://maps.google.com/?q=${encodeURIComponent(nextUpcomingEvent.location)}`
+                          : null
+                      
+                      return (
+                        <div className="space-y-6">
+                          {/* Spotlight Card */}
+                          <Card className="p-6 border-2 border-[var(--org-btn-primary-bg)]">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-xs font-black uppercase tracking-wider text-[var(--org-btn-primary-bg)] bg-[var(--org-btn-primary-bg)]/10 px-2 py-1 rounded">
+                                    {safeT(`calendar.eventTypes.${nextUpcomingEvent.type}`, nextUpcomingEvent.type)}
+                                  </span>
+                                  {nextUpcomingEvent.ticketed_event && (
+                                    <span className="text-xs font-black uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded">
+                                      Ticketed
+                                    </span>
+                                  )}
+                                </div>
+                                <CardTitle className="text-2xl mb-2">{nextUpcomingEvent.title}</CardTitle>
+                                {nextUpcomingEvent.team && (
+                                  <p className="text-sm font-bold text-[var(--org-link-color)] mb-4">
+                                    {nextUpcomingEvent.team.name}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                                  <Icon name="event" className="text-slate-500 dark:text-slate-400" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-slate-900 dark:text-white">
+                                    {formatEventDate(nextUpcomingEvent.start_time, nextUpcomingEvent.timezone)}
+                                  </p>
+                                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    {formatEventTimeRange(nextUpcomingEvent.start_time, nextUpcomingEvent.end_time, nextUpcomingEvent.timezone)}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              {(nextUpcomingEvent.event_location?.venue_name || nextUpcomingEvent.location) && (
+                                <div className="flex items-start gap-3">
+                                  <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                                    <Icon name="location_on" className="text-slate-500 dark:text-slate-400" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="font-bold text-slate-900 dark:text-white text-sm">
+                                      {nextUpcomingEvent.event_location?.venue_name || nextUpcomingEvent.location}
+                                    </p>
+                                    {nextUpcomingEvent.event_location && (
+                                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        {formatEventLocation(nextUpcomingEvent.event_location)}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Actions */}
+                            <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
+                              {calendarLink && (isGuardian || isAthlete) && (
+                                <a
+                                  href={calendarLink}
+                                  download={`${nextUpcomingEvent.title.replace(/[^a-z0-9]/gi, '_')}.ics`}
+                                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors text-sm font-medium"
+                                >
+                                  <Icon name="event" size="text-sm" />
+                                  Add to Calendar
+                                </a>
+                              )}
+                              
+                              {eventMapUrl && (
+                                <a
+                                  href={eventMapUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors text-sm font-medium"
+                                >
+                                  <Icon name="directions" size="text-sm" />
+                                  Directions
+                                </a>
+                              )}
+                              
+                              {nextUpcomingEvent.ticketed_event && (
+                                <>
+                                  {hasTickets(nextUpcomingEvent) ? (
+                                    <Button
+                                      variant="secondary"
+                                      onClick={() => navigate(`/portal/my-tickets`)}
+                                    >
+                                      View My Tickets
+                                    </Button>
+                                  ) : (isGuardian || isFan) ? (
+                                    <Button
+                                      variant="primary"
+                                      onClick={() => navigate(`/portal/tickets/event/${nextUpcomingEvent.ticketed_event?.id}`)}
+                                    >
+                                      Buy Tickets
+                                    </Button>
+                                  ) : null}
+                                </>
+                              )}
+                              
+                              {nextUpcomingEvent.rsvp_config?.enabled && !nextUpcomingEvent.is_cancelled && (
+                                <Button
+                                  variant="secondary"
+                                  onClick={() => setSelectedEvent(nextUpcomingEvent)}
+                                >
+                                  RSVP
+                                </Button>
+                              )}
+                            </div>
+                          </Card>
+                          
+                          {/* Past Events Preview */}
+                          {counts.past > 0 && (
+                            <div>
+                              <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                                  Past Events
+                                </h3>
+                                <button
+                                  onClick={() => setTimeContext('past')}
+                                  className="text-sm text-[var(--org-link-color)] hover:underline"
+                                >
+                                  View all past ({counts.past})
+                                </button>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {pastEvents.slice(0, 5).map(event => (
+                                  <EventCard
+                                    key={event.id}
+                                    event={event}
+                                    sport={eventSports[event.id] || null}
+                                    onClick={() => setSelectedEvent(event)}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    }
+                    
+                    // Scenario 3: No upcoming events, past events exist
+                    if (timeContext === 'upcoming' && counts.upcoming === 0 && counts.past > 0) {
+                      return (
+                        <div className="space-y-4">
+                          <Card className="p-4 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+                            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                              No upcoming events scheduled. Showing past events.
+                            </p>
+                          </Card>
+                          {(isCoach || isAdmin) && (
+                            <div className="flex justify-center">
+                              <Button onClick={() => navigate('/portal/calendar/new')}>
+                                <Icon name="add" className="mr-2" />
+                                Create Event
+                              </Button>
+                            </div>
+                          )}
+                          {isGuardian && (
+                            <div className="flex justify-center">
+                              <Button variant="secondary" onClick={() => navigate('/portal/calendar')}>
+                                View Full Calendar
+                              </Button>
+                            </div>
+                          )}
+                          <CalendarGrid 
+                            events={pastEvents}
+                            eventSports={eventSports}
+                            viewMode={viewMode}
+                            currentDate={currentDate}
+                            currentPage={currentPage}
+                            eventsPerPage={EVENTS_PER_PAGE}
+                            onEventClick={setSelectedEvent}
+                            onDateChange={setCurrentDate}
+                            onPageChange={setCurrentPage}
+                          />
+                        </div>
+                      )
+                    }
+                    
+                    // Scenario 1 & default: Multiple events (grid/list view)
+                    return (
+                      <CalendarGrid 
+                        events={displayEvents}
+                        eventSports={eventSports}
+                        viewMode={viewMode}
+                        currentDate={currentDate}
+                        currentPage={currentPage}
+                        eventsPerPage={EVENTS_PER_PAGE}
+                        onEventClick={setSelectedEvent}
+                        onDateChange={setCurrentDate}
+                        onPageChange={setCurrentPage}
+                      />
+                    )
+                  })()
                 )}
             </div>
         </div>

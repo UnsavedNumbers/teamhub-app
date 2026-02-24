@@ -65,6 +65,25 @@ export const emailTemplatesService = {
     },
 
     /**
+     * Get notification_type_ids that are already linked to at least one email template.
+     * When excludeTemplateId is set, only counts templates other than that one (so the
+     * current template's type stays "available" in the dropdown).
+     */
+    async getLinkedNotificationTypeIds(excludeTemplateId?: string): Promise<string[]> {
+        let query = (supabase as any)
+            .from('email_templates')
+            .select('notification_type_id')
+            .not('notification_type_id', 'is', null);
+        if (excludeTemplateId) {
+            query = query.neq('id', excludeTemplateId);
+        }
+        const { data, error } = await query;
+        if (error) return [];
+        const ids = [...new Set((data || []).map((r: { notification_type_id: string }) => r.notification_type_id).filter(Boolean))] as string[];
+        return ids;
+    },
+
+    /**
      * Get single email template by slug
      */
     async getEmailTemplate(slug: string) {
@@ -154,45 +173,72 @@ export const emailTemplatesService = {
     },
 
     /**
-     * Toggle template active status
-     * If activating, deactivates other templates for the same notification_type_id
+     * Unlink notification_type_id from one or more templates (sets it to null).
+     * Use to resolve conflicts where multiple templates share the same notification type.
+     */
+    async unlinkNotificationType(ids: string[]) {
+        if (ids.length === 0) return;
+        const { error } = await (supabase as any)
+            .from('email_templates')
+            .update({ notification_type_id: null })
+            .in('id', ids);
+        if (error) throw error;
+    },
+
+    /**
+     * Toggle template active status.
+     * When activating: tries RPC activate_email_template first (atomic); if the
+     * function is not in the schema (migration not applied), falls back to
+     * deactivate-others then activate-this.
      */
     async toggleTemplateActive(id: string, isActive: boolean) {
         if (isActive) {
-            // 1. Get the notification_type_id of the template we are activating
-            const { data: template } = await (supabase as any)
-                .from('email_templates')
-                .select('notification_type_id')
-                .eq('id', id)
-                .single();
-            
-            if (template?.notification_type_id) {
-                // 2. Deactivate all others for this notification_type_id
-                await (supabase as any)
+            const { data: rpcData, error: rpcError } = await (supabase as any)
+                .rpc('activate_email_template', { p_template_id: id });
+            if (!rpcError) return rpcData as EmailTemplate;
+            if (rpcError?.code === 'PGRST202') {
+                // RPC not in schema cache (migration not applied) – fallback to two-step
+                const { data: template } = await (supabase as any)
                     .from('email_templates')
-                    .update({ is_active: false })
-                    .eq('notification_type_id', template.notification_type_id)
-                    .neq('id', id);
-            } else {
-                // Fallback: if no notification_type_id, use type (backward compatibility)
-                const { data: templateByType } = await (supabase as any)
-                    .from('email_templates')
-                    .select('type')
+                    .select('notification_type_id')
                     .eq('id', id)
                     .single();
-                if (templateByType) {
+                if (template?.notification_type_id) {
                     await (supabase as any)
                         .from('email_templates')
                         .update({ is_active: false })
-                        .eq('type', templateByType.type)
+                        .eq('notification_type_id', template.notification_type_id)
                         .neq('id', id);
+                } else {
+                    const { data: templateByType } = await (supabase as any)
+                        .from('email_templates')
+                        .select('type')
+                        .eq('id', id)
+                        .single();
+                    if (templateByType) {
+                        await (supabase as any)
+                            .from('email_templates')
+                            .update({ is_active: false })
+                            .eq('type', templateByType.type)
+                            .neq('id', id);
+                    }
                 }
+            } else {
+                throw rpcError;
             }
+            const { data, error } = await (supabase as any)
+                .from('email_templates')
+                .update({ is_active: true })
+                .eq('id', id)
+                .select('*')
+                .single();
+            if (error) throw error;
+            return data as EmailTemplate;
         }
 
         const { data, error } = await (supabase as any)
             .from('email_templates')
-            .update({ is_active: isActive })
+            .update({ is_active: false })
             .eq('id', id)
             .select('*')
             .single();

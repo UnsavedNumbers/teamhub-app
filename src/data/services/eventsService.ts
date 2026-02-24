@@ -769,10 +769,14 @@ export async function getEvents(
             query = query.eq('visibility', 'public')
         }
 
-        // Apply search (title, notes, venue_name)
+        // Apply search (title, notes, location, and related fields)
+        // Note: Supabase's or() doesn't support searching joined table fields directly,
+        // so we search the main event fields. For more comprehensive search including
+        // team/season names, we'd need a PostgreSQL function or client-side filtering.
         if (params.search && params.search.trim() !== '') {
-            const searchTerm = `%${params.search.trim()}%`
-            query = query.or(`title.ilike.${searchTerm},notes.ilike.${searchTerm}`)
+            const searchTerm = params.search.trim()
+            // Search title, notes, and location fields (case-insensitive)
+            query = query.or(`title.ilike.%${searchTerm}%,notes.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%`)
         }
 
         // Apply sorting

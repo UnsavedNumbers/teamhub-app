@@ -13,6 +13,7 @@ import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Icon from '../components/portal/Icon'
 import Button from '../components/portal/Button'
+import EmptyState from '../components/portal/EmptyState'
 import { cn } from '../utils/cn'
 import { useT } from '../i18n/useI18n'
 
@@ -529,11 +530,11 @@ export default function Travel() {
                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[var(--org-btn-primary-bg)]"></div>
                  </div>
             ) : filteredPlans.length === 0 ? (
-                 <div className="text-center py-20 opacity-60">
-                     <Icon name="flight_takeoff" size="text-6xl" className="mb-4 mx-auto text-slate-300" />
-                     <h3 className="text-xl font-bold text-slate-500">No travel plans found</h3>
-                     <p className="text-slate-400">Try adjusting your filters or check back later.</p>
-                 </div>
+                 <EmptyState
+                   icon="flight_takeoff"
+                   title="No travel plans found"
+                   description="Try adjusting your filters or check back later."
+                 />
             ) : (
                 <div className="space-y-8">
                     {groupedPlans.map(group => (

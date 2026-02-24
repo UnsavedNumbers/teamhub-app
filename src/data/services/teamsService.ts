@@ -1780,6 +1780,27 @@ export async function getAthleteTeamMemberships(
     }
 
     try {
+        // Verify guardian has access to this athlete
+        const isAdmin = isOrgAdmin(context)
+        if (!isAdmin) {
+            // For guardians, use get_guardian_athletes RPC to check access
+            const { data: guardianAthletes, error: guardianError } = await supabase
+                .rpc('get_guardian_athletes', {
+                    p_user_id: context.userId,
+                    p_org_id: context.orgId
+                })
+            
+            if (guardianError) {
+                console.error('Error checking guardian access:', guardianError)
+                return { data: [], error: guardianError instanceof Error ? guardianError : new Error('Access check failed') }
+            }
+            
+            const childIds = (guardianAthletes ?? []).map((a: any) => a.athlete_id)
+            if (!childIds.includes(athleteId)) {
+                return { data: [], error: null }
+            }
+        }
+
         const { data, error } = await supabase
             .from('team_memberships')
             .select(`
@@ -1790,19 +1811,14 @@ export async function getAthleteTeamMemberships(
                 jersey_number,
                 position,
                 created_at,
-                team:teams(name, program:programs(name), sport:sports(name))
+                teams!inner(name, org_id, program:programs(name), sport:sports(name))
             `)
             .eq('athlete_id', athleteId)
+            .eq('status', 'active')
+            .eq('teams.org_id', context.orgId)
             .is('deleted_at', null)
 
         if (error) throw error
-
-        const familyId = await getFamilyIdForUser(context.userId)
-        const childIds = await getAthleteIdsForFamily(familyId)
-        const isAdmin = isOrgAdmin(context)
-        if (!isAdmin && !childIds.includes(athleteId)) {
-            return { data: [], error: null }
-        }
 
         const rows = (data ?? []) as any[]
         const seasonIds = [...new Set(rows.map((r) => r.season_id).filter(Boolean))]
@@ -1818,7 +1834,7 @@ export async function getAthleteTeamMemberships(
         }
 
         const result: AthleteTeamMembershipDisplay[] = rows.map((row) => {
-            const team = row.team
+            const team = row.teams
             const program = team?.program
             const sport = team?.sport
             return {

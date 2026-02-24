@@ -6,6 +6,7 @@ import { PageHeader, PlatformDataTable, Badge, Button, ColumnConfig, Input, Sele
 import { ConfirmDialog } from '../../components/admin/ConfirmDialog';
 import { emailTemplatesService } from '../../data/services/emailTemplatesService';
 import { EmailTemplate, NotificationJobType } from '../../types/emailTemplates.types';
+import { createNotificationTypeFromTemplate } from '../../data/services/notificationTypesService';
 import { toast } from 'react-hot-toast';
 import { formatRelativeTime } from '../../utils/formatters';
 
@@ -51,9 +52,10 @@ export default function EmailTemplates() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [notificationTypeFilter, setNotificationTypeFilter] = useState('');
+  const [conflictIds, setConflictIds] = useState<Set<string>>(new Set());
   const [bulkProgress, setBulkProgress] = useState<{
     isActive: boolean;
-    action: 'activate' | 'deactivate' | 'delete' | null;
+    action: 'activate' | 'deactivate' | 'delete' | 'create_notification_types' | null;
     current: number;
     total: number;
     errors: string[];
@@ -82,6 +84,36 @@ export default function EmailTemplates() {
   const fetchTemplates = useCallback(async () => {
     try {
       setLoading(true);
+
+      // Conflict view: fetch all to find templates sharing the same notification_type_id
+      if (notificationTypeFilter === 'conflict') {
+        const allResult = await emailTemplatesService.getEmailTemplates(1, 500, {
+          search: debouncedSearch,
+          category: categoryFilter || undefined,
+          isActive: null,
+        });
+        const grouped = new Map<string, EmailTemplate[]>();
+        for (const t of allResult.data as any[]) {
+          const ntId = t.notification_type_id as string | undefined;
+          if (ntId) {
+            if (!grouped.has(ntId)) grouped.set(ntId, []);
+            grouped.get(ntId)!.push(t);
+          }
+        }
+        const newConflictIds = new Set<string>();
+        for (const [ntId, templates] of grouped.entries()) {
+          if (templates.length > 1) newConflictIds.add(ntId);
+        }
+        const conflictData = allResult.data.filter(
+          (t: any) => t.notification_type_id && newConflictIds.has(t.notification_type_id)
+        );
+        setConflictIds(newConflictIds);
+        setData(conflictData);
+        setTotalCount(conflictData.length);
+        return;
+      }
+
+      setConflictIds(new Set());
       const isActive = statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : null;
       const result = await emailTemplatesService.getEmailTemplates(page + 1, rowsPerPage, {
         search: debouncedSearch,
@@ -92,9 +124,9 @@ export default function EmailTemplates() {
       // Filter by notification type assignment status if selected (client-side filter since service doesn't support it yet)
       let filteredData = result.data;
       if (notificationTypeFilter === 'assigned') {
-        filteredData = result.data.filter((t: any) => t.notification_types?.id != null);
+        filteredData = result.data.filter((t: any) => t.notification_type_id != null);
       } else if (notificationTypeFilter === 'unassigned') {
-        filteredData = result.data.filter((t: any) => t.notification_types?.id == null);
+        filteredData = result.data.filter((t: any) => t.notification_type_id == null);
       }
       setData(filteredData);
       setTotalCount(notificationTypeFilter ? filteredData.length : result.count);
@@ -212,6 +244,7 @@ export default function EmailTemplates() {
   const selectedTemplates = data.filter((row) => selectedIds.has(row.id));
   const hasActiveSelected = selectedTemplates.some((t) => t.is_active);
   const canBulkDelete = selectedIds.size > 0 && !hasActiveSelected;
+  const selectedWithoutNotificationType = selectedTemplates.filter((t: any) => !t.notification_type_id);
 
   const handleBulkActivate = async () => {
     if (selectedIds.size === 0) return;
@@ -225,9 +258,20 @@ export default function EmailTemplates() {
     });
 
     const errors: string[] = [];
+    const skipped: string[] = [];
     try {
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i];
+        const template = data.find(t => t.id === id);
+        // Skip templates without notification_type_id
+        if (!(template as any)?.notification_type_id) {
+          skipped.push(template?.name || id);
+          setBulkProgress(prev => ({
+            ...prev,
+            current: i + 1,
+          }));
+          continue;
+        }
         try {
           await emailTemplatesService.toggleTemplateActive(id, true);
           setBulkProgress(prev => ({
@@ -235,7 +279,6 @@ export default function EmailTemplates() {
             current: i + 1,
           }));
         } catch (error: any) {
-          const template = data.find(t => t.id === id);
           errors.push(template?.name || id);
           setBulkProgress(prev => ({
             ...prev,
@@ -245,10 +288,26 @@ export default function EmailTemplates() {
         }
       }
 
-      if (errors.length === 0) {
-        toast.success(`${ids.length} template${ids.length === 1 ? '' : 's'} activated`);
-      } else {
-        toast.error(`${errors.length} template${errors.length === 1 ? '' : 's'} failed to activate`);
+      const activatedCount = ids.length - errors.length - skipped.length;
+      if (skipped.length > 0) {
+        toast.error(`${skipped.length} template${skipped.length === 1 ? '' : 's'} skipped (no notification type): ${skipped.slice(0, 3).join(', ')}${skipped.length > 3 ? ` and ${skipped.length - 3} more` : ''}`, { duration: 5000 });
+      }
+      if (errors.length > 0) {
+        toast.error(`${errors.length} template${errors.length === 1 ? '' : 's'} failed to activate: ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? ` and ${errors.length - 3} more` : ''}`, { duration: 5000 });
+      }
+      if (activatedCount > 0) {
+        toast.success(`${activatedCount} template${activatedCount === 1 ? '' : 's'} activated`);
+        // Optimistic update so row titles turn green immediately (only for successfully activated)
+        const activatedIds = ids.filter(id => {
+          const t = data.find(t => t.id === id);
+          return t && (t as any).notification_type_id && !errors.includes(t.name) && !skipped.includes(t.name);
+        });
+        setData(prev => prev.map(t => activatedIds.includes(t.id) ? { ...t, is_active: true } : t));
+        // Optimistic pagination: fewer inactive items when viewing "Inactive"
+        if (statusFilter === 'inactive') {
+          setTotalCount(prev => Math.max(0, prev - activatedIds.length));
+          if (data.length === activatedIds.length) setPage(0);
+        }
       }
 
       setSelectedIds(new Set());
@@ -270,11 +329,19 @@ export default function EmailTemplates() {
 
   const handleBulkDeactivate = async () => {
     if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
     try {
-      for (const id of selectedIds) {
+      for (const id of ids) {
         await emailTemplatesService.toggleTemplateActive(id, false);
       }
-      toast.success(`${selectedIds.size} template${selectedIds.size === 1 ? '' : 's'} deactivated`);
+      toast.success(`${ids.length} template${ids.length === 1 ? '' : 's'} deactivated`);
+      // Optimistic update so row titles turn red immediately
+      setData(prev => prev.map(t => ids.includes(t.id) ? { ...t, is_active: false } : t));
+      // Optimistic pagination: fewer active items when viewing "Active"
+      if (statusFilter === 'active') {
+        setTotalCount(prev => Math.max(0, prev - ids.length));
+        if (data.length === ids.length) setPage(0);
+      }
       setSelectedIds(new Set());
       setSelectAllMode('none');
       await fetchTemplates();
@@ -294,6 +361,143 @@ export default function EmailTemplates() {
   const handleClearSelection = () => {
     setSelectedIds(new Set());
     setSelectAllMode('none');
+  };
+
+  /** Set notification_type_id = null for selected templates to resolve sharing conflicts. */
+  const handleUnlinkSelected = async () => {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    try {
+      await emailTemplatesService.unlinkNotificationType(ids);
+      toast.success(`Notification type unlinked from ${ids.length} template${ids.length === 1 ? '' : 's'}`);
+      setSelectedIds(new Set());
+      setSelectAllMode('none');
+      await fetchTemplates();
+    } catch {
+      toast.error('Failed to unlink notification types');
+    }
+  };
+
+  /**
+   * Create notification types for selected templates that don't have one.
+   * Creates a notification type from each template's slug/name/description/category,
+   * then links the template to the new type.
+   */
+  const handleBulkCreateNotificationTypes = async () => {
+    const templatesToProcess = selectedTemplates.filter((t: any) => !t.notification_type_id);
+    if (templatesToProcess.length === 0) {
+      toast.error('No templates selected that need notification types');
+      return;
+    }
+
+    setBulkProgress({
+      isActive: true,
+      action: 'create_notification_types',
+      current: 0,
+      total: templatesToProcess.length,
+      errors: [],
+    });
+
+    const errors: string[] = [];
+    const created: string[] = [];
+    try {
+      for (let i = 0; i < templatesToProcess.length; i++) {
+        const template = templatesToProcess[i] as any;
+        try {
+          // Create notification type from template
+          const { data: newType, error: createError } = await createNotificationTypeFromTemplate(
+            template.slug,
+            template.name,
+            template.description || null,
+            template.category || null
+          );
+          if (createError || !newType) {
+            throw createError || new Error('Failed to create notification type');
+          }
+
+          // Link template to the new notification type (update only notification_type_id)
+          await emailTemplatesService.updateEmailTemplate(template.id, {
+            description: template.description || '',
+            subject_template: template.subject_template || '',
+            body_content: template.body_content || '',
+            preview_text: template.preview_text || '',
+            category: template.category || undefined,
+            notification_type_id: newType.id,
+          }, template.updated_at);
+
+          created.push(template.name);
+          setBulkProgress(prev => ({
+            ...prev,
+            current: i + 1,
+          }));
+        } catch (error: any) {
+          errors.push(template.name);
+          setBulkProgress(prev => ({
+            ...prev,
+            current: i + 1,
+            errors: [...prev.errors, template.name],
+          }));
+        }
+      }
+
+      if (created.length > 0) {
+        toast.success(`Created notification types for ${created.length} template${created.length === 1 ? '' : 's'}`);
+      }
+      if (errors.length > 0) {
+        toast.error(`${errors.length} template${errors.length === 1 ? '' : 's'} failed: ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? ` and ${errors.length - 3} more` : ''}`, { duration: 5000 });
+      }
+
+      setSelectedIds(new Set());
+      setSelectAllMode('none');
+      await fetchTemplates();
+    } catch (error) {
+      console.error('Failed to create notification types', error);
+      toast.error('Failed to create notification types');
+    } finally {
+      setBulkProgress({
+        isActive: false,
+        action: null,
+        current: 0,
+        total: 0,
+        errors: [],
+      });
+    }
+  };
+
+  /**
+   * For each conflict group, keep the active template (or the most recently updated if
+   * none are active) and unlink all others.
+   */
+  const handleFixAllConflicts = async () => {
+    if (conflictIds.size === 0) return;
+    const grouped = new Map<string, any[]>();
+    for (const t of data as any[]) {
+      const ntId = t.notification_type_id as string | undefined;
+      if (ntId && conflictIds.has(ntId)) {
+        if (!grouped.has(ntId)) grouped.set(ntId, []);
+        grouped.get(ntId)!.push(t);
+      }
+    }
+    const toUnlink: string[] = [];
+    for (const templates of grouped.values()) {
+      // Sort: active first, then by most recently updated
+      const sorted = [...templates].sort((a: any, b: any) => {
+        if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      });
+      for (let i = 1; i < sorted.length; i++) toUnlink.push(sorted[i].id);
+    }
+    if (toUnlink.length === 0) {
+      toast.success('No conflicts to auto-fix');
+      return;
+    }
+    try {
+      await emailTemplatesService.unlinkNotificationType(toUnlink);
+      toast.success(`Unlinked ${toUnlink.length} duplicate${toUnlink.length === 1 ? '' : 's'} — reassign notification types in each template editor`);
+      await fetchTemplates();
+    } catch {
+      toast.error('Failed to fix conflicts');
+    }
   };
 
   // Map template type slugs to readable labels
@@ -407,15 +611,21 @@ export default function EmailTemplates() {
       sortable: true,
       render: (row) => (
         <div>
-          <div 
-            style={{ 
-              fontWeight: 600,
-              color: row.is_active 
-                ? '#6ee7b7' // Soft green
-                : '#fca5a5' // Soft red
-            }}
-          >
-            {row.name}
+          <div className="pa-text-xs pa-text-gray-400" style={{ fontSize: '10px', marginBottom: '2px', fontFamily: 'monospace' }}>{row.slug}</div>
+          <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ color: row.is_active ? '#6ee7b7' : '#fca5a5' }}>{row.name}</span>
+            {conflictIds.has((row as any).notification_type_id) && (
+              <span style={{
+                fontSize: '10px',
+                color: '#f59e0b',
+                background: 'rgba(245, 158, 11, 0.08)',
+                padding: '1px 5px',
+                borderRadius: '4px',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+              }}>⚠ Shared</span>
+            )}
           </div>
           {row.description && (
             <div className="pa-text-xs pa-text-gray-500" style={{ fontSize: '11px', marginTop: '2px' }}>
@@ -578,6 +788,7 @@ export default function EmailTemplates() {
                 { value: '', label: 'All Types' },
                 { value: 'assigned', label: 'Assigned' },
                 { value: 'unassigned', label: 'Unassigned' },
+                { value: 'conflict', label: '⚠ Shared (Conflicts)' },
               ]}
             />
           </div>
@@ -594,6 +805,33 @@ export default function EmailTemplates() {
         </div>
       </div>
 
+      {/* Conflict fix banner */}
+      {notificationTypeFilter === 'conflict' && conflictIds.size > 0 && (
+        <div
+          className="pa-card pa-mb-4"
+          style={{
+            padding: 'var(--pa-space-3) var(--pa-space-4)',
+            borderLeft: '3px solid #f59e0b',
+            background: 'rgba(245, 158, 11, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 'var(--pa-space-3)',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div>
+            <span style={{ fontWeight: 600, color: '#f59e0b' }}>⚠ {conflictIds.size} notification type{conflictIds.size === 1 ? '' : 's'} shared by multiple templates</span>
+            <div className="pa-text-xs pa-text-gray-500" style={{ marginTop: '2px' }}>
+              Templates sharing a notification type will deactivate each other. Unlink duplicates, then reassign the correct type in each template's editor.
+            </div>
+          </div>
+          <Button variant="secondary" size="small" onClick={handleFixAllConflicts}>
+            Fix All — Keep Newest
+          </Button>
+        </div>
+      )}
+
       {selectedIds.size > 0 && (
         <div
           className="pa-card"
@@ -608,9 +846,16 @@ export default function EmailTemplates() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--pa-space-3)', marginBottom: bulkProgress.isActive ? 'var(--pa-space-3)' : 0 }}>
-            <span className="pa-body-m" style={{ fontWeight: 600 }}>
-              {selectedIds.size} template{selectedIds.size === 1 ? '' : 's'} selected
-            </span>
+            <div>
+              <span className="pa-body-m" style={{ fontWeight: 600 }}>
+                {selectedIds.size} template{selectedIds.size === 1 ? '' : 's'} selected
+              </span>
+              {selectedWithoutNotificationType.length > 0 && (
+                <div className="pa-text-xs pa-text-yellow-600 pa-mt-1">
+                  ⚠️ {selectedWithoutNotificationType.length} template{selectedWithoutNotificationType.length === 1 ? '' : 's'} without notification type will be skipped when activating
+                </div>
+              )}
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)', flexWrap: 'wrap' }}>
               <Button 
                 variant="secondary" 
@@ -638,6 +883,28 @@ export default function EmailTemplates() {
               >
                 Delete
               </Button>
+              {selectedWithoutNotificationType.length > 0 && (
+                <Button
+                  variant="secondary"
+                  size="small"
+                  disabled={bulkProgress.isActive}
+                  onClick={handleBulkCreateNotificationTypes}
+                  style={{ color: '#059669', borderColor: 'rgba(5,150,105,0.4)' }}
+                >
+                  Create Notification Types
+                </Button>
+              )}
+              {notificationTypeFilter === 'conflict' && (
+                <Button
+                  variant="secondary"
+                  size="small"
+                  disabled={bulkProgress.isActive}
+                  onClick={handleUnlinkSelected}
+                  style={{ color: '#f59e0b', borderColor: 'rgba(245,158,11,0.4)' }}
+                >
+                  Unlink Notification Type
+                </Button>
+              )}
               <Button 
                 variant="ghost" 
                 size="small" 
@@ -658,6 +925,8 @@ export default function EmailTemplates() {
                     ? `Activating templates...`
                     : bulkProgress.action === 'deactivate'
                     ? `Deactivating templates...`
+                    : bulkProgress.action === 'create_notification_types'
+                    ? `Creating notification types...`
                     : `Deleting templates...`
                 }
                 status={`${bulkProgress.current} of ${bulkProgress.total} completed${bulkProgress.errors.length > 0 ? ` (${bulkProgress.errors.length} failed)` : ''}`}

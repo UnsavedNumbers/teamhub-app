@@ -252,6 +252,58 @@ export async function getNotificationTypesByCategory(
 }
 
 /**
+ * Create a new notification type from an email template
+ */
+export async function createNotificationTypeFromTemplate(
+  slug: string,
+  displayName: string,
+  description: string | null,
+  category: string | null
+): Promise<{ data: NotificationType | null; error: Error | null }> {
+  try {
+    // Convert slug to key format (e.g., "ticket-purchase-receipt" -> "ticket_purchase_receipt")
+    const key = slug.replace(/-/g, '_')
+    
+    // Default eligible roles for email templates (common roles that receive emails)
+    const eligibleRoles = ['guardian', 'coach', 'org_admin', 'team_manager', 'athlete', 'staff']
+    
+    const { data, error } = await db
+      .from('notification_types')
+      .insert({
+        key,
+        display_name: displayName,
+        description: description || null,
+        eligible_roles: eligibleRoles,
+        supports_email: true,
+        supports_in_app: true,
+        default_in_app_enabled: true,
+        default_email_enabled: true,
+        category: category || 'Communications',
+      })
+      .select()
+      .single()
+
+    if (error) {
+      debug.error('NotificationTypesService.createNotificationTypeFromTemplate', 'Failed to create notification type', {
+        error,
+        slug,
+        displayName,
+      })
+      return { data: null, error: error as Error }
+    }
+
+    return { data: data as NotificationType, error: null }
+  } catch (err) {
+    debug.error('NotificationTypesService.createNotificationTypeFromTemplate', 'Exception creating notification type', {
+      error: err,
+      slug,
+      displayName,
+    })
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+/**
  * Get all notification types (with optional filters)
  */
 export async function getNotificationTypes(

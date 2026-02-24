@@ -22,6 +22,7 @@ export interface AthleteWithTeams extends Athlete {
  */
 export interface SearchAthletesParams {
   search?: string
+  limit?: number
   ageMin?: number
   ageMax?: number
   levelId?: string

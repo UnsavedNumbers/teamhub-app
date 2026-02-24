@@ -293,7 +293,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [logoError, setLogoError] = useState(false)
+  const [, setLogoError] = useState(false)
   const [logoVersion, setLogoVersion] = useState(0)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -333,8 +333,6 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   const logoSrc = resolvedTheme === 'dark' 
     ? '/images/logo-dark.png' 
     : '/images/logo-light.png'
-
-  // Add cache-busting query parameter to force reload on theme change
   const logoSrcWithCacheBust = `${logoSrc}?theme=${resolvedTheme}&v=${logoVersion}`
 
   // Reset logo error and increment version when theme changes to force reload
@@ -441,9 +439,6 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
     }
   }, [])
 
-  const brandPath = '/portal/dashboard'
-  const brandIcon = 'sports'
-
   // Role label for display
   const roleLabels: Record<PortalRole, string> = {
     org_admin: 'Admin',
@@ -454,11 +449,11 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
 
   return (
     <>
-    <nav className="gn-root" role="navigation" aria-label="Main navigation">
+    <nav className="gn-root" role="navigation" aria-label="Main navigation" data-logo-src={logoSrcWithCacheBust}>
       {/* Left section */}
       <div className="gn-left">
-        {/* Brand */}
-        <Link to={brandPath} className="gn-brand">
+        {/* Brand - Logo removed but code kept for potential repurposing */}
+        {/* <Link to="/portal/dashboard" className="gn-brand">
           {!logoError ? (
             <img 
               key={logoSrc}
@@ -478,7 +473,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
               <span className="gn-brand-text">YOUTH SPORTS</span>
             </>
           )}
-        </Link>
+        </Link> */}
 
         {/* Mobile toggle - only show on mobile */}
         {isMobile && (

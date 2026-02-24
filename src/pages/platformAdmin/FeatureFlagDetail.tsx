@@ -995,18 +995,18 @@ export default function FeatureFlagDetail() {
         <div className="pa-ff-env-list">
           {(['dev', 'staging', 'prod'] as const).map((env) => {
             const envFlag = flagsByEnv[env]
-            const hasValue = envFlag && (
-              (envFlag.valueType === 'boolean' && envFlag.defaultValueBoolean !== null) ||
-              (envFlag.valueType === 'integer' && envFlag.defaultValueInteger !== null) ||
-              (envFlag.valueType === 'double' && envFlag.defaultValueDouble !== null)
-            )
-            const valueText = envFlag && hasValue
+            // For boolean flags, null means false (default behavior), so they always have a value
+            // For integer/double, null means not set
+            // For boolean flags, show false even if defaultValueBoolean is null
+            const valueText = envFlag
               ? (envFlag.valueType === 'boolean'
-                  ? String(envFlag.defaultValueBoolean)
+                  ? String(envFlag.defaultValueBoolean ?? false)
                   : envFlag.valueType === 'integer'
-                    ? String(envFlag.defaultValueInteger)
-                    : String(envFlag.defaultValueDouble))
-              : null
+                    ? (envFlag.defaultValueInteger !== null ? String(envFlag.defaultValueInteger) : null)
+                    : (envFlag.defaultValueDouble !== null ? String(envFlag.defaultValueDouble) : null))
+              : flag?.valueType === 'boolean'
+                ? 'false' // Show false for boolean flags even if envFlag doesn't exist
+                : null
 
             return (
               <div key={env} className="pa-ff-env-row">

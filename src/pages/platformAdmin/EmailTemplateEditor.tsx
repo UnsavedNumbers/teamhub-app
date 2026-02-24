@@ -14,7 +14,8 @@ import { EmailTemplate, EmailTemplateFormData, NotificationJobType } from '../..
 import { EmailTemplateVariables } from '../../components/platformAdmin/EmailTemplateVariables';
 import EmailEditorErrorBoundary from '../../components/platformAdmin/EmailEditorErrorBoundary';
 import { wrapEmailContent } from '../../utils/emailTemplateWrapper';
-import { getNotificationTypes } from '../../data/services/notificationTypesService';
+import Handlebars from 'handlebars';
+import { getNotificationTypes, createNotificationTypeFromTemplate } from '../../data/services/notificationTypesService';
 import type { NotificationType } from '../../data/services/notificationTypesService';
 import { getLink } from '../../utils/routes';
 
@@ -159,10 +160,12 @@ export default function EmailTemplateEditor() {
   const [category, setCategory] = useState('');
   const [notificationTypeId, setNotificationTypeId] = useState<string>('');
   const [notificationTypes, setNotificationTypes] = useState<NotificationType[]>([]);
+  const [linkedNotificationTypeIds, setLinkedNotificationTypeIds] = useState<string[]>([]);
   
   // Preview State
   const [showPreview, setShowPreview] = useState(false);
   const [previewHtml, setPreviewHtml] = useState('');
+  const [previewSubject, setPreviewSubject] = useState('');
   const [activeToggleDialog, setActiveToggleDialog] = useState<{
     open: boolean;
     checked: boolean;
@@ -191,6 +194,16 @@ export default function EmailTemplateEditor() {
     };
     loadNotificationTypes();
   }, []);
+
+  // Load which notification types are already linked (so dropdown only shows unlinked, or current template's type)
+  useEffect(() => {
+    const excludeId = template?.id && !isCreateMode ? template.id : undefined;
+    const loadLinked = async () => {
+      const ids = await emailTemplatesService.getLinkedNotificationTypeIds(excludeId);
+      if (isMountedRef.current) setLinkedNotificationTypeIds(ids);
+    };
+    loadLinked();
+  }, [template?.id, isCreateMode]);
 
   const loadTemplate = useCallback(async () => {
     if (!slug) return;
@@ -274,18 +287,79 @@ export default function EmailTemplateEditor() {
     };
   }, [showPreview]);
 
-  // Updates preview HTML
+  // Updates preview HTML with compiled Handlebars and dummy values
   useEffect(() => {
     try {
-      const wrapped = wrapEmailContent(bodyContent);
-      // Inject dummy variables for preview if needed, or just show raw
-      // For now, just show the wrapped HTML.
-      // We could try to inject dummy values for {{variables}} to make it look real.
-      setPreviewHtml(wrapped);
+      // Extract variables from body and subject
+      const bodyVars = emailTemplatesService.extractVariablesFromHtml(bodyContent);
+      const subjectVars = emailTemplatesService.extractVariablesFromHtml(subjectTemplate);
+      const allVars = [...new Set([...bodyVars, ...subjectVars])];
+      
+      // Create dummy values for all variables
+      const dummyContext: Record<string, any> = {};
+      for (const varName of allVars) {
+        // Generate realistic dummy values based on variable name patterns
+        if (varName.includes('name') || varName.includes('Name')) {
+          dummyContext[varName] = 'John Doe';
+        } else if (varName.includes('email') || varName.includes('Email')) {
+          dummyContext[varName] = 'user@example.com';
+        } else if (varName.includes('url') || varName.includes('Url') || varName.includes('link') || varName.includes('Link')) {
+          dummyContext[varName] = 'https://example.com';
+        } else if (varName.includes('date') || varName.includes('Date') || varName.includes('time') || varName.includes('Time')) {
+          dummyContext[varName] = new Date().toLocaleDateString();
+        } else if (varName.includes('amount') || varName.includes('Amount') || varName.includes('price') || varName.includes('Price')) {
+          dummyContext[varName] = '$99.99';
+        } else if (varName.includes('subject') || varName.includes('Subject')) {
+          dummyContext[varName] = 'Sample Subject';
+        } else if (varName.includes('body') || varName.includes('Body')) {
+          dummyContext[varName] = 'Sample body content';
+        } else if (varName.includes('organization') || varName.includes('Organization') || varName.includes('org')) {
+          dummyContext[varName] = 'Sample Organization';
+        } else if (varName.includes('team') || varName.includes('Team')) {
+          dummyContext[varName] = 'Sample Team';
+        } else if (varName.includes('event') || varName.includes('Event')) {
+          dummyContext[varName] = 'Sample Event';
+        } else {
+          // Default dummy value
+          dummyContext[varName] = `[${varName}]`;
+        }
+      }
+      
+      // Compile and render body content
+      const sanitizedBody = emailTemplatesService.sanitizeHandlebarsContent(bodyContent);
+      const bodyTemplate = Handlebars.compile(sanitizedBody);
+      const renderedBody = bodyTemplate(dummyContext);
+      
+      // Compile and render subject
+      const sanitizedSubject = emailTemplatesService.sanitizeHandlebarsContent(subjectTemplate);
+      const subjectTemplateCompiled = Handlebars.compile(sanitizedSubject);
+      const renderedSubject = subjectTemplateCompiled(dummyContext);
+      setPreviewSubject(renderedSubject || subjectTemplate || '(No subject)');
+      
+      // Wrap the rendered body in the email template
+      const wrapped = wrapEmailContent(renderedBody);
+      
+      // Inject subject into the wrapped template if it has a placeholder
+      // Most email templates have the subject in the <title> tag
+      let finalHtml = wrapped;
+      if (renderedSubject) {
+        finalHtml = finalHtml.replace(/<title>.*?<\/title>/i, `<title>${renderedSubject}</title>`);
+        // Also try to inject into email_subject placeholder if it exists
+        finalHtml = finalHtml.replace(/\{\{email_subject\}\}/g, renderedSubject);
+      }
+      
+      setPreviewHtml(finalHtml);
     } catch (e) {
-      // Ignore wrap errors during typing
+      console.error('Preview generation error:', e);
+      // Fallback to raw wrapped content if compilation fails
+      try {
+        const wrapped = wrapEmailContent(bodyContent);
+        setPreviewHtml(wrapped);
+      } catch (fallbackError) {
+        setPreviewHtml('<p>Preview generation failed. Please check your template syntax.</p>');
+      }
     }
-  }, [bodyContent]);
+  }, [bodyContent, subjectTemplate]);
 
   // Handle Escape key to close preview modal
   useEffect(() => {
@@ -417,6 +491,38 @@ export default function EmailTemplateEditor() {
     }
   };
 
+  const handleCreateNotificationType = async () => {
+    if (!template) return;
+    try {
+      const { data: newType, error } = await createNotificationTypeFromTemplate(
+        template.slug,
+        template.name,
+        template.description || null,
+        template.category || null
+      );
+      if (error) throw error;
+      if (!newType) throw new Error('Failed to create notification type');
+      
+      // Reload notification types list
+      const { data: types, error: typesError } = await getNotificationTypes({ supportsEmail: true });
+      if (!typesError && types) {
+        setNotificationTypes(types);
+      }
+      
+      // Set the new notification type as selected
+      setNotificationTypeId(newType.id);
+      
+      // Reload linked IDs (exclude this template so the new type appears available)
+      const linkedIds = await emailTemplatesService.getLinkedNotificationTypeIds(template.id);
+      setLinkedNotificationTypeIds(linkedIds);
+      
+      toast.success(`Created notification type "${newType.display_name}" and linked to this template`);
+    } catch (error: any) {
+      console.error('Failed to create notification type', error);
+      toast.error(`Failed to create notification type: ${error.message || 'Unknown error'}`);
+    }
+  };
+
   const quillModules = useMemo(() => ({
     toolbar: [
       [{ 'header': [1, 2, 3, false] }],
@@ -527,21 +633,44 @@ export default function EmailTemplateEditor() {
                 <label className="pa-block pa-text-sm pa-font-medium pa-text-gray-700 pa-mb-1">
                   Notification Type <span className="pa-text-red-500">*</span>
                 </label>
-                <Select
-                  value={notificationTypeId}
-                  onChange={(e) => setNotificationTypeId(e.target.value)}
-                  options={[
-                    { value: '', label: 'Select a notification type...' },
-                    ...notificationTypes.map(nt => ({ 
-                      value: nt.id, 
-                      label: `${nt.display_name} (${nt.eligible_roles.join(', ')})` 
-                    })),
-                  ]}
-                  required
-                />
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <Select
+                      value={notificationTypeId}
+                      onChange={(e) => setNotificationTypeId(e.target.value)}
+                      options={[
+                        { value: '', label: 'Select a notification type...' },
+                        ...notificationTypes
+                          .filter(nt => !linkedNotificationTypeIds.includes(nt.id))
+                          .map(nt => ({ 
+                            value: nt.id, 
+                            label: `${nt.display_name} (${nt.eligible_roles.join(', ')})` 
+                          })),
+                      ]}
+                      required
+                    />
+                  </div>
+                  {!notificationTypeId && !isCreateMode && template && (
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      onClick={handleCreateNotificationType}
+                      style={{ 
+                        whiteSpace: 'nowrap',
+                        marginTop: '0',
+                        padding: '8px 12px',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      Create from slug
+                    </Button>
+                  )}
+                </div>
                 {!notificationTypeId && (
                   <p className="pa-text-xs pa-text-yellow-600 pa-mt-1">
                     ⚠️ Notification type is required. This links the template to a notification type.
+                    {!isCreateMode && template && ' Click "Create from slug" to auto-create one based on this template.'}
                   </p>
                 )}
                 {notificationTypeId && (
@@ -715,9 +844,18 @@ export default function EmailTemplateEditor() {
               borderBottom: '1px solid var(--pa-n100)', 
               display: 'flex', 
               justifyContent: 'space-between', 
-              alignItems: 'center' 
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 'var(--pa-space-2)',
             }}>
-              <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>Email Preview</h3>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>Email Preview</h3>
+                {previewSubject && (
+                  <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '4px' }}>
+                    Subject: <strong>{previewSubject}</strong>
+                  </div>
+                )}
+              </div>
               <Button variant="ghost" onClick={() => setShowPreview(false)}>Close</Button>
             </div>
             <div style={{ 

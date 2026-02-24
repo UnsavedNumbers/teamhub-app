@@ -98,6 +98,7 @@ export default function OrganizationSettings() {
   const { isEnabled } = useFeatureFlags(['org_advanced_settings', 'org_settings_attendance'])
   const attendanceTabEnabled = isEnabled('org_settings_attendance')
   const { allowed: hasStripeIntegration } = useFeatureGate('stripe_integration')
+  const { allowed: medicalEnabled } = useFeatureGate('medical_enabled')
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -433,7 +434,7 @@ export default function OrganizationSettings() {
         )}
 
         <TabsContent value="registration">
-           {settings && <RegistrationForm settings={settings.registration} onSave={(d) => handleSaveSettings('registration', d)} loading={saving} />}
+           {settings && <RegistrationForm settings={settings.registration} onSave={(d) => handleSaveSettings('registration', d)} loading={saving} medicalEnabled={medicalEnabled} />}
         </TabsContent>
 
         <TabsContent value="joinLinks">
@@ -1013,7 +1014,7 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
 }
 
 
-function RegistrationForm({ settings, onSave, loading }: { settings: OrgSettingsType['registration'], onSave: (d: any) => void, loading: boolean }) {
+function RegistrationForm({ settings, onSave, loading, medicalEnabled }: { settings: OrgSettingsType['registration']; onSave: (d: any) => void; loading: boolean; medicalEnabled?: boolean }) {
   const { t } = useI18n()
   const { control, handleSubmit, reset } = useForm({
     defaultValues: { ...settings }
@@ -1034,9 +1035,11 @@ function RegistrationForm({ settings, onSave, loading }: { settings: OrgSettings
            <Controller name="allow_players_without_guardians" control={control} render={({field}) => (
             <Checkbox label={t('admin.organizationSettings.registration.allowPlayersWithoutGuardians')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
-           <Controller name="medical_form_required" control={control} render={({field}) => (
-            <Checkbox label={t('admin.organizationSettings.registration.requireMedicalForm')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
-          )} />
+           {medicalEnabled && (
+             <Controller name="medical_form_required" control={control} render={({field}) => (
+               <Checkbox label={t('admin.organizationSettings.registration.requireMedicalForm')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+             )} />
+           )}
         </div>
          <div className="oa-form-actions">
           <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.registration.save')}</Button>

@@ -236,6 +236,25 @@ export function PhotoFilterBar({
           </div>
         )}
 
+        <div className="min-w-[180px]">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+            {t('photos.filters.hideEmpty')}
+          </label>
+          <div className="h-11 flex items-center">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={filters.hideEmpty ?? true}
+                onChange={(e) => onFiltersChange({ hideEmpty: e.target.checked })}
+                className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
+              />
+              <span className="text-sm text-slate-700 dark:text-slate-300">
+                {filters.hideEmpty ? 'Hide' : 'Show'}
+              </span>
+            </label>
+          </div>
+        </div>
+
         {onClear && hasActiveFilters && (
           <button
             type="button"

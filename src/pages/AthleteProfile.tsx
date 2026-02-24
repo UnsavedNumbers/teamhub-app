@@ -32,6 +32,7 @@ import { getSystemSports } from '../data/services/sportsService'
 import { supabase } from '../lib/supabase'
 import { useT } from '../i18n/useI18n'
 import { showError } from '../utils/toast'
+import { useFeatureGate } from '../lib/featureGate'
 
 export default function AthleteProfilePage() {
   const { id: athleteId } = useParams<{ id: string }>()
@@ -44,6 +45,7 @@ export default function AthleteProfilePage() {
   const { currentOrganization } = useOrganization()
   const t = useT()
   const isMountedRef = useRef(true)
+  const medicalGate = useFeatureGate('medical_enabled')
   
   // Check if user is an athlete
   const isAthlete = currentOrganization?.roles?.includes('athlete') ?? false
@@ -89,6 +91,13 @@ export default function AthleteProfilePage() {
       isMountedRef.current = false
     }
   }, [])
+
+  // Redirect away from medical tab if feature is disabled
+  useEffect(() => {
+    if (!medicalGate.loading && activeTab === 'medical' && !medicalGate.allowed) {
+      setActiveTab('universal')
+    }
+  }, [medicalGate.allowed, medicalGate.loading, activeTab])
 
   // Load system sports to map sport_id -> sport_code
   useEffect(() => {
@@ -387,17 +396,19 @@ export default function AthleteProfilePage() {
             <Icon name="sports" size="text-sm" className="mr-2 inline-block" />
             Sport Profiles
           </button>
-          <button
-            onClick={() => setActiveTab('medical')}
-            className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
-              activeTab === 'medical'
-                ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            <Icon name="medical_services" size="text-sm" className="mr-2 inline-block" />
-            Medical Info
-          </button>
+          {medicalGate.allowed && !medicalGate.loading && (
+            <button
+              onClick={() => setActiveTab('medical')}
+              className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
+                activeTab === 'medical'
+                  ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+              }`}
+            >
+              <Icon name="medical_services" size="text-sm" className="mr-2 inline-block" />
+              Medical Info
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('teams')}
             className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
@@ -407,7 +418,7 @@ export default function AthleteProfilePage() {
             }`}
           >
             <Icon name="groups" size="text-sm" className="mr-2 inline-block" />
-            {t('portal.athleteProfile.tabs.teams' as import('../i18n').TranslationKey)}
+            {t('portal.athleteProfile.tabs.teams' as any)}
           </button>
         </div>
       </div>
@@ -472,15 +483,17 @@ export default function AthleteProfilePage() {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-700 mt-6">
-                <Button
-                  variant="secondary"
-                  onClick={() => setActiveTab('medical')}
-                >
-                  <Icon name="edit" size="text-sm" className="mr-2" />
-                  Edit in Medical Info
-                </Button>
-              </div>
+              {medicalGate.allowed && !medicalGate.loading && (
+                <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-700 mt-6">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setActiveTab('medical')}
+                  >
+                    <Icon name="edit" size="text-sm" className="mr-2" />
+                    Edit in Medical Info
+                  </Button>
+                </div>
+              )}
             </Card>
           </div>
         )}
@@ -543,7 +556,7 @@ export default function AthleteProfilePage() {
           </div>
         )}
 
-        {activeTab === 'medical' && (
+        {activeTab === 'medical' && medicalGate.allowed && !medicalGate.loading && (
           <Card className="p-6">
             <CardTitle className="mb-2">Medical Information</CardTitle>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
@@ -558,9 +571,9 @@ export default function AthleteProfilePage() {
 
         {activeTab === 'teams' && (
           <Card className="p-6">
-            <CardTitle className="mb-2">{t('portal.athleteProfile.teams.title' as import('../i18n').TranslationKey)}</CardTitle>
+            <CardTitle className="mb-2">{t('portal.athleteProfile.teams.title' as any)}</CardTitle>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-              {t('portal.athleteProfile.teams.description' as import('../i18n').TranslationKey)}
+              {t('portal.athleteProfile.teams.description' as any)}
             </p>
             {teamsLoading ? (
               <div className="flex justify-center py-12">
@@ -570,10 +583,10 @@ export default function AthleteProfilePage() {
               <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">
                 <Icon name="groups" size="text-4xl" className="text-slate-400 mb-4" />
                 <p className="font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  {t('portal.athleteProfile.teams.emptyTitle' as import('../i18n').TranslationKey)}
+                  {t('portal.athleteProfile.teams.emptyTitle' as any)}
                 </p>
                 <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-                  {t('portal.athleteProfile.teams.emptyDescription' as import('../i18n').TranslationKey)}
+                  {t('portal.athleteProfile.teams.emptyDescription' as any)}
                 </p>
                 <Button
                   variant="secondary"
@@ -581,7 +594,7 @@ export default function AthleteProfilePage() {
                   onClick={() => navigate('/portal/join')}
                 >
                   <Icon name="group_add" size="text-sm" className="mr-2" />
-                  {t('portal.athleteProfile.teams.joinTeam' as import('../i18n').TranslationKey)}
+                  {t('portal.athleteProfile.teams.joinTeamCta' as any)}
                 </Button>
               </div>
             ) : (

@@ -788,7 +788,9 @@ export async function getAthletes(
                 updated_at: null,
                 deleted_at: null,
                 family_id: null,
-                has_active_guardian: a.status === 'active'
+                has_active_guardian: a.status === 'active',
+                profile_photo_updated_at: a.profile_photo_updated_at ?? null,
+                has_profile_photo: a.has_profile_photo ?? false
             }))
         }
 

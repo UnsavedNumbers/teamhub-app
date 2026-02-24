@@ -67,7 +67,7 @@ const navSections: NavSection[] = [
   {
     label: 'Emails',
     items: [
-      { text: 'Email Preview', icon: 'email', path: getLink('platformAdmin.emailPreview'), requiredAction: 'view_email_preview' },
+      { text: 'Email Settings', icon: 'settings', path: getLink('platformAdmin.emailSettings'), requiredAction: 'view_email_preview' },
       { text: 'Templates', icon: 'edit_square', path: getLink('platformAdmin.emails.list'), requiredAction: 'manage_email_templates' },
     ],
   },

@@ -18,6 +18,7 @@ import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typogr
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import EmptyState from '../components/portal/EmptyState'
 import CreateAnnouncementModal from '../components/portal/CreateAnnouncementModal'
 import { showError, showSuccess } from '../utils/toast'
 import { getAnnouncementEmoji } from '../utils/announcementTypes'
@@ -338,12 +339,12 @@ export default function Messages() {
           </p>
         </div>
         
-        <Card className="text-center py-12">
-          <Icon name="chat_bubble" size="text-6xl" className="text-slate-400 mb-4" />
-          <CardTitle className="mb-2">No Teams Available</CardTitle>
-          <p className="text-slate-500 dark:text-slate-400">
-            {error ? 'Failed to load teams. Please try again later.' : 'You are not currently associated with any teams.'}
-          </p>
+        <Card>
+          <EmptyState
+            icon="chat_bubble"
+            title="No Teams Available"
+            description={error ? 'Failed to load teams. Please try again later.' : 'You are not currently associated with any teams.'}
+          />
         </Card>
       </PortalLayout>
     )
@@ -378,9 +379,11 @@ export default function Messages() {
                   <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
                 </div>
               ) : teams.length === 0 ? (
-                <div className="text-center py-4 text-sm text-slate-500 dark:text-slate-400">
-                  {error ? 'Failed to load teams' : 'No teams available'}
-                </div>
+                <EmptyState
+                  icon="group"
+                  title={error ? 'Failed to load teams' : 'No teams available'}
+                  className="py-4"
+                />
               ) : (
                 teams.map((team) => (
                   <button
@@ -478,10 +481,12 @@ export default function Messages() {
                           <p className="text-slate-500 dark:text-slate-400">Loading announcements...</p>
                         </Card>
                       ) : announcements.length === 0 ? (
-                        <Card className="text-center py-12">
-                          <Icon name="campaign" size="text-6xl" className="text-slate-400 mb-4" />
-                          <CardTitle className="mb-2">No announcements</CardTitle>
-                          <p className="text-slate-500 dark:text-slate-400">Team announcements will appear here.</p>
+                        <Card>
+                          <EmptyState
+                            icon="campaign"
+                            title="No announcements"
+                            description="Team announcements will appear here."
+                          />
                         </Card>
                       ) : (
                         announcements.map((ann) => {
@@ -538,10 +543,12 @@ export default function Messages() {
                           <p className="text-slate-500 dark:text-slate-400 text-sm">Loading messages...</p>
                         </Card>
                       ) : messages.length === 0 ? (
-                        <Card className="text-center py-12 mb-4">
-                          <Icon name="chat" size="text-6xl" className="text-slate-400 mb-4" />
-                          <CardTitle className="mb-2">No messages yet</CardTitle>
-                          <p className="text-slate-500 dark:text-slate-400">Start a conversation with your team.</p>
+                        <Card className="mb-4">
+                          <EmptyState
+                            icon="chat"
+                            title="No messages yet"
+                            description="Start a conversation with your team."
+                          />
                         </Card>
                       ) : null}
                       {messages.map((msg) => {

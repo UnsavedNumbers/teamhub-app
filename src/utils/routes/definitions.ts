@@ -58,7 +58,21 @@ const portal = {
         icon: 'flight',
     },
 
-    // Huddles
+    // Huddles (Chat)
+    huddles: {
+        path: '/portal/huddles',
+        label: 'Huddles',
+        icon: 'forum',
+        description: 'Team chat and messaging',
+    },
+    // Announcements
+    announcements: {
+        path: '/portal/announcements',
+        label: 'Announcements',
+        icon: 'campaign',
+        description: 'Important announcements',
+    },
+    // Legacy routes (for backwards compatibility)
     messages: {
         path: '/portal/messages',
         label: 'Huddles',
@@ -1556,12 +1570,12 @@ const platformAdmin = {
         },
     },
 
-    // Email Preview
-    emailPreview: {
-        path: '/platform-admin/email-preview',
-        label: 'Email Preview',
-        icon: 'email',
-        description: 'Email template testing',
+    // Email Settings
+    emailSettings: {
+        path: '/platform-admin/email-settings',
+        label: 'Email Settings',
+        icon: 'settings',
+        description: 'Configure email branding and settings',
     },
 
     // Email Templates
