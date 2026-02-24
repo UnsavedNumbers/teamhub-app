@@ -184,10 +184,11 @@ async function captureRoute(
           throw new Error(`HTTP ${response.status()}: ${response.statusText()}`)
         }
         
-        // Check if we were redirected to login/demo (auth expired)
+        // React checks auth asynchronously after load — wait briefly for any redirect to settle
+        await page.waitForTimeout(1500)
         const currentUrl = page.url()
-        if (currentUrl.includes('/demo') || currentUrl.includes('/login') || currentUrl.includes('/portal/auth')) {
-          throw new Error(`Authentication expired - redirected to ${currentUrl}. Storage state may need to be refreshed.`)
+        if (currentUrl.includes('/login') || currentUrl.includes('/demo')) {
+          throw new Error(`Auth expired mid-run — redirected to ${currentUrl}. Re-run to refresh.`)
         }
         
         navigationSuccess = true
@@ -274,111 +275,102 @@ export async function runCapture(config: ScreenshotConfig): Promise<ScreenshotMa
   const dateStr = getDateString()
   const baseOutputDir = path.join(config.outputDir, dateStr, config.environment)
 
+  // Always start fresh: delete all storage state files
+  const storageStateDir = config.storageStateDir || path.join(process.cwd(), 'playwright', '.auth')
+  if (fs.existsSync(storageStateDir)) {
+    console.log(`[Capture] Clearing all cached storage state from ${storageStateDir}...`)
+    const clearDir = (dir: string) => {
+      if (!fs.existsSync(dir)) return
+      for (const entry of fs.readdirSync(dir)) {
+        const fullPath = path.join(dir, entry)
+        if (fs.statSync(fullPath).isDirectory()) {
+          clearDir(fullPath)
+          fs.rmdirSync(fullPath)
+        } else if (entry.endsWith('.json')) {
+          fs.unlinkSync(fullPath)
+        }
+      }
+    }
+    clearDir(storageStateDir)
+    console.log(`[Capture] ✓ Storage state cleared`)
+  }
+
   let browser: Browser | null = null
+  let previousRoleContext: BrowserContext | null = null
 
   try {
     browser = await chromium.launch({ headless: true })
 
     // Process each role sequentially
-    for (const role of config.roles) {
+    
+    for (let roleIndex = 0; roleIndex < config.roles.length; roleIndex++) {
+      const role = config.roles[roleIndex]
       console.log(`\n[Capture] Processing role: ${role}`)
       const roleOutputDir = path.join(baseOutputDir, role)
       ensureDir(roleOutputDir)
 
-      // Ensure storage state for this role (create if needed)
-      let storageState: object | undefined
+      // Always start fresh: delete any existing storage state for this role
       const storageStatePath = getStorageStatePath(config, role)
-
-      // Always check if storage state exists and is valid
       if (fs.existsSync(storageStatePath)) {
-        const { loadStorageState } = await import('./auth')
-        const loadedState = loadStorageState(config, role)
-        if (loadedState) {
-          // Verify storage state is still valid by testing it
-          const testContext = await browser.newContext({
-            viewport: VIEWPORT_SIZES.desktop,
-            timezoneId: 'America/New_York',
-            locale: 'en-US',
-            colorScheme: 'light',
-            reducedMotion: 'reduce',
-            storageState: loadedState, // Use the loaded storage state
-          })
-          
-          const testPage = await testContext.newPage()
-          // Navigate to a protected route to verify auth (use role-specific route)
-          let testRoute: string
-          if (role === 'org_admin') {
-            testRoute = '/admin/dashboard'
-          } else if (role === 'coach') {
-            testRoute = '/coach/dashboard'
-          } else if (role === 'guardian') {
-            testRoute = '/parent/home'
-          } else if (role === 'athlete') {
-            testRoute = '/athlete/home'
-          } else if (role === 'staff') {
-            testRoute = '/staff/dashboard'
-          } else {
-            testRoute = '/fan/events'
-          }
-          
+        fs.unlinkSync(storageStatePath)
+        console.log(`[Capture] Deleted existing storage state for ${role}`)
+      }
+
+      // If we have a previous role context, logout before switching
+      if (previousRoleContext && roleIndex > 0) {
+        try {
+          const prevPage = await previousRoleContext.newPage()
+          const { logout } = await import('./auth')
+          await logout(prevPage, config.baseUrl)
+          await prevPage.close()
+          await previousRoleContext.close()
+        } catch (err) {
+          console.warn(`[Capture] Error logging out previous role, continuing:`, err)
+          // Close context anyway
           try {
-            await testPage.goto(`${config.baseUrl}${testRoute}`, { waitUntil: 'domcontentloaded', timeout: 10000 })
-            
-            // Check if we're redirected to login/demo (auth expired)
-            const testUrl = testPage.url()
-            if (testUrl.includes('/demo') || testUrl.includes('/login') || testUrl.includes('/portal/auth')) {
-              console.warn(`[Capture] Storage state for ${role} appears expired, re-authenticating...`)
-              await testContext.close()
-              storageState = undefined // Force re-authentication
-            } else {
-              // Auth is valid
-              console.log(`[Capture] Using existing storage state for ${role}`)
-              storageState = loadedState
-              await testContext.close()
-            }
-          } catch (err) {
-            console.warn(`[Capture] Error verifying storage state for ${role}, will re-authenticate:`, err)
-            await testContext.close()
-            storageState = undefined
+            await previousRoleContext.close()
+          } catch {
+            // Ignore
           }
-        } else {
-          console.warn(`[Capture] Storage state file exists but is invalid, will re-authenticate`)
-          storageState = undefined
         }
+        previousRoleContext = null
       }
+
+      // Always authenticate fresh for this role
+      console.log(`[Capture] Authenticating ${role}...`)
+      const authContext = await browser.newContext({
+        viewport: VIEWPORT_SIZES.desktop, // Temporary context for auth
+        timezoneId: 'America/New_York',
+        locale: 'en-US',
+        colorScheme: 'light',
+        reducedMotion: 'reduce',
+      })
+
+      const page = await authContext.newPage()
+      await ensureStorageState(page, authContext, config, role)
       
-      if (!storageState) {
-        // Create new storage state via login
-        const authContext = await browser.newContext({
-          viewport: VIEWPORT_SIZES.desktop, // Temporary context for auth
-          timezoneId: 'America/New_York',
-          locale: 'en-US',
-          colorScheme: 'light',
-          reducedMotion: 'reduce',
-        })
+      // Store context for logout on next iteration
+      previousRoleContext = authContext
 
-        const page = await authContext.newPage()
-        await ensureStorageState(page, authContext, config, role)
-
-        // Verify authentication worked by checking if we're logged in
-        const currentUrl = page.url()
-        if (currentUrl.includes('/demo') || currentUrl.includes('/login')) {
-          throw new Error(`Authentication failed for ${role} - still on login/demo page`)
-        }
-
-        // Save and load storage state
-        const { saveStorageState, loadStorageState } = await import('./auth')
-        await saveStorageState(authContext, config, role)
-        
-        // Reload to validate it was saved correctly
-        const savedState = loadStorageState(config, role)
-        if (!savedState) {
-          throw new Error(`Failed to save storage state for ${role}`)
-        }
-        storageState = savedState
-
-        await authContext.close()
+      // Verify authentication worked by checking if we're logged in
+      const currentUrl = page.url()
+      if (currentUrl.includes('/demo') || currentUrl.includes('/login')) {
+        throw new Error(`Authentication failed for ${role} - still on login/demo page: ${currentUrl}`)
       }
+
+      // Save storage state
+      const { saveStorageState, loadStorageState } = await import('./auth')
+      await saveStorageState(authContext, config, role)
+      
+      // Load it back to use in viewport contexts
+      const storageState = loadStorageState(config, role)
+      if (!storageState) {
+        throw new Error(`Failed to save storage state for ${role}`)
+      }
+
+      // Don't close authContext yet - we'll close it after logout on next iteration
+      // (or at the end if this is the last role)
+      console.log(`[Capture] ✓ Authenticated ${role}`)
 
       // Process each viewport
       for (const viewport of config.viewports) {
@@ -428,6 +420,13 @@ export async function runCapture(config: ScreenshotConfig): Promise<ScreenshotMa
 
         await viewportContext.close()
       }
+      
+      // Close the auth context for this role (will be logged out before next role)
+      if (previousRoleContext && roleIndex === config.roles.length - 1) {
+        // Last role - close it now
+        await previousRoleContext.close()
+        previousRoleContext = null
+      }
     }
 
     // Write manifest
@@ -442,6 +441,14 @@ export async function runCapture(config: ScreenshotConfig): Promise<ScreenshotMa
       // Don't throw - manifest is nice to have but not critical
     }
   } finally {
+    // Clean up any remaining contexts
+    if (previousRoleContext) {
+      try {
+        await previousRoleContext.close()
+      } catch {
+        // Ignore
+      }
+    }
     if (browser) {
       await browser.close()
     }

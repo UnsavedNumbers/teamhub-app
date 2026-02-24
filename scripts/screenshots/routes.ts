@@ -397,94 +397,126 @@ export async function resolveDynamicSegment(
     await page.waitForLoadState('networkidle')
     await page.waitForTimeout(1000) // Give time for list to render
 
-    // Try to find first row/link
-    const selector = task.idSelector || '[data-testid*="-row"], a[href*="/"]'
-    const firstLink = page.locator(selector).first()
+    // Try to find first row
+    const rowSelector = task.idSelector || '[data-testid*="-row"], tr, [class*="row"]'
+    const firstRow = page.locator(rowSelector).first()
 
-    const isVisible = await firstLink.isVisible({ timeout: 5000 }).catch(() => false)
+    const isVisible = await firstRow.isVisible({ timeout: 5000 }).catch(() => false)
     if (!isVisible) {
       console.warn(`[Routes] No items found in list for ${task.listRouteKey}, skipping ${task.routeKey}`)
       return null
     }
 
-    // Get href attribute (prefer this over clicking to avoid navigation)
-    let href = await firstLink.getAttribute('href').catch(() => null)
+    // Look for View or Edit button within the row (prefer View for detail pages)
+    // These buttons typically navigate to detail/edit pages
+    let href: string | null = null
     
-    // If no href, try to get it from the element's onclick or data attributes
-    if (!href) {
-      href = await firstLink.evaluate((el) => {
-        // Try data attributes
-        const dataHref = el.getAttribute('data-href') || el.getAttribute('data-link')
-        if (dataHref) return dataHref
-        
-        // Try onclick handler (extract URL if possible)
-        const onclick = el.getAttribute('onclick')
-        if (onclick) {
-          const urlMatch = onclick.match(/['"]([^'"]+)['"]/)
-          if (urlMatch) return urlMatch[1]
-        }
-        
-        return null
-      }).catch(() => null)
-    }
+    // Try to find View button first (for detail pages)
+    const viewButton = firstRow.locator('button:has-text("View"), button:has-text("view")').first()
+    const viewButtonExists = await viewButton.count().catch(() => 0) > 0
     
-    // If still no href, we need to click (but this will navigate)
-    if (!href) {
-      // Store current URL to potentially go back
+    if (viewButtonExists) {
+      // Click View button and get the URL it navigates to (most reliable)
       const currentUrl = page.url()
       try {
-        await firstLink.click({ timeout: 5000 })
+        await viewButton.click({ timeout: 5000 })
         await page.waitForURL(/\/admin\/|\/portal\/|\/fan\//, { timeout: 5000 })
-        const url = page.url()
-        href = url
+        href = page.url()
         
-        // Try to go back to list page if possible
+        // Go back to list
+        await page.goBack({ waitUntil: 'domcontentloaded', timeout: 5000 })
+        await page.waitForLoadState('networkidle')
+      } catch {
+        console.warn(`[Routes] Could not navigate via View button for ${task.routeKey}`)
+      }
+    }
+    
+    // If no View button, try Edit button
+    if (!href) {
+      const editButton = firstRow.locator('button:has-text("Edit"), button:has-text("edit"), button[icon="edit"]').first()
+      const editButtonExists = await editButton.count().catch(() => 0) > 0
+      
+      if (editButtonExists) {
+        // Click Edit button and get the URL it navigates to
+        const currentUrl = page.url()
         try {
+          await editButton.click({ timeout: 5000 })
+          await page.waitForURL(/\/admin\/|\/portal\/|\/fan\//, { timeout: 5000 })
+          href = page.url()
+          
+          // Go back to list
           await page.goBack({ waitUntil: 'domcontentloaded', timeout: 5000 })
           await page.waitForLoadState('networkidle')
         } catch {
-          // If going back fails, re-navigate to list
-          const listUrl = getLink(task.listRouteKey!)
-          await page.goto(`${baseUrl}${listUrl}`, { waitUntil: 'domcontentloaded' })
-          await page.waitForLoadState('networkidle')
+          console.warn(`[Routes] Could not navigate via Edit button for ${task.routeKey}`)
         }
+      }
+    }
+    
+    // Fallback: try to get href from row link or data attributes
+    if (!href) {
+      href = await firstRow.locator('a[href*="/"]').first().getAttribute('href').catch(() => null)
+      
+      if (!href) {
+        href = await firstRow.evaluate((el) => {
+          const dataHref = el.getAttribute('data-href') || el.getAttribute('data-link')
+          if (dataHref) return dataHref
+          
+          // Try to find a link within the row
+          const link = el.querySelector('a[href]')
+          if (link) return (link as HTMLAnchorElement).href
+          
+          return null
+        }).catch(() => null)
+      }
+    }
+    
+    // Last resort: click the row itself (if clickable)
+    if (!href) {
+      const currentUrl = page.url()
+      try {
+        await firstRow.click({ timeout: 5000 })
+        await page.waitForURL(/\/admin\/|\/portal\/|\/fan\//, { timeout: 5000 })
+        href = page.url()
+        
+        // Go back to list
+        await page.goBack({ waitUntil: 'domcontentloaded', timeout: 5000 })
+        await page.waitForLoadState('networkidle')
       } catch {
         console.warn(`[Routes] Could not get href or navigate for ${task.routeKey}`)
         return null
       }
     }
 
-    // Extract ID from href/URL
-    // Match UUIDs: /admin/teams/550e8400-e29b-41d4-a716-446655440000
-    // Or numeric IDs: /admin/teams/123
-    // Handle both absolute and relative URLs
+    if (!href) {
+      console.warn(`[Routes] Could not find URL for ${task.routeKey}`)
+      return null
+    }
+
+    // Extract ID from href/URL - handle UUIDs, numeric IDs, and slugs
+    // Examples: 
+    //   /admin/teams/550e8400-e29b-41d4-a716-446655440000 (UUID)
+    //   /admin/teams/123 (numeric)
+    //   /admin/teams/team-u10-soccer-001 (slug)
+    //   /admin/videos/mock-video-2 (slug)
+    //   /portal/photos/gallery/mock-gallery-3 (nested slug)
     const urlPath = href.startsWith('http') ? new URL(href).pathname : href
-    const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
-    const numericPattern = /\/(\d+)(?:\/|$)/
-    const pathPattern = /\/([a-f0-9-]{20,})(?:\/|$)/i // Long alphanumeric IDs
     
-    let id: string | null = null
-    
-    // Try UUID first
-    const uuidMatch = urlPath.match(uuidPattern)
-    if (uuidMatch) {
-      id = uuidMatch[0]
-    } else {
-      // Try numeric
-      const numericMatch = urlPath.match(numericPattern)
-      if (numericMatch) {
-        id = numericMatch[1]
-      } else {
-        // Try path pattern (for longer IDs)
-        const pathMatch = urlPath.match(pathPattern)
-        if (pathMatch) {
-          id = pathMatch[1]
-        }
-      }
+    // Split path and get the last meaningful segment (skip empty segments)
+    const segments = urlPath.split('/').filter(Boolean)
+    if (segments.length === 0) {
+      console.warn(`[Routes] Could not extract ID from ${href} (path: ${urlPath})`)
+      return null
     }
     
-    if (!id) {
-      console.warn(`[Routes] Could not extract ID from ${href} (path: ${urlPath})`)
+    // Get the last segment as ID (works for both simple and nested paths)
+    // For nested paths like /portal/photos/gallery/mock-gallery-3, we want "mock-gallery-3"
+    const id = segments[segments.length - 1]
+    
+    // Validate it looks like an ID (not empty, not just a route name like "list" or "create")
+    const routeNames = ['list', 'create', 'new', 'edit', 'update', 'delete']
+    if (!id || id.length < 1 || routeNames.includes(id.toLowerCase())) {
+      console.warn(`[Routes] Could not extract valid ID from ${href} (path: ${urlPath}, last segment: ${id})`)
       return null
     }
     

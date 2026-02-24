@@ -190,6 +190,75 @@ export function loadStorageState(config: ScreenshotConfig, role: Role): object |
 }
 
 /**
+ * Logout by clicking logout button in UserContextDropdown
+ * This properly clears the session before switching roles
+ */
+export async function logout(page: Page, baseUrl: string): Promise<void> {
+  console.log(`[Auth] Logging out...`)
+  
+  // Navigate to a page where the user dropdown is visible (any authenticated page)
+  const currentUrl = page.url()
+  if (!currentUrl.includes('/admin') && !currentUrl.includes('/portal') && !currentUrl.includes('/fan')) {
+    // If not on an authenticated page, try navigating to dashboard
+    await page.goto(`${baseUrl}/admin/dashboard`, { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {
+      // If admin doesn't work, try portal
+      return page.goto(`${baseUrl}/portal/dashboard`, { waitUntil: 'domcontentloaded', timeout: 10000 })
+    })
+  }
+  
+  // Wait for page to settle
+  await page.waitForTimeout(1000)
+  
+  // Find and click the user avatar/dropdown button
+  // Try multiple selectors to find the dropdown trigger
+  let dropdownOpened = false
+  
+  // Try button with aria-expanded attribute
+  try {
+    const button = page.locator('button[aria-expanded]').first()
+    await button.waitFor({ state: 'visible', timeout: 3000 })
+    await button.click()
+    await page.waitForTimeout(500)
+    dropdownOpened = true
+  } catch {
+    // Try button containing rounded avatar
+    try {
+      const button = page.locator('button:has(div.rounded-full)').first()
+      await button.waitFor({ state: 'visible', timeout: 3000 })
+      await button.click()
+      await page.waitForTimeout(500)
+      dropdownOpened = true
+    } catch {
+      // Try clicking the avatar div itself (it might be clickable)
+      try {
+        const avatar = page.locator('div.rounded-full').first()
+        await avatar.waitFor({ state: 'visible', timeout: 3000 })
+        await avatar.click()
+        await page.waitForTimeout(500)
+        dropdownOpened = true
+      } catch {
+        throw new Error('Could not find user dropdown button')
+      }
+    }
+  }
+  
+  if (!dropdownOpened) {
+    throw new Error('Failed to open user dropdown')
+  }
+  
+  // Find and click the logout button
+  // Look for button with text "Log out" (case insensitive) or containing logout icon
+  const logoutButton = page.locator('button:has-text("Log out"), button:has-text("Logout"), button:has-text("log out"), button:has(.material-symbols-outlined:text("logout"))').first()
+  
+  await logoutButton.waitFor({ state: 'visible', timeout: 5000 })
+  await logoutButton.click()
+  
+  // Wait for redirect to login page
+  await page.waitForURL(/\/demo|\/login/, { timeout: 10000 })
+  console.log(`[Auth] ✓ Logged out`)
+}
+
+/**
  * Ensure storage state exists, creating it if necessary
  */
 export async function ensureStorageState(

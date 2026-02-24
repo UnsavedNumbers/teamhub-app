@@ -101,6 +101,36 @@ function applyArgsToEnv(args: Record<string, string | undefined>): void {
   }
 }
 
+/**
+ * Delete all cached storage state files to force fresh authentication.
+ * Used when --fresh-auth flag is passed.
+ */
+function clearStorageState(): void {
+  const storageStateDir = path.join(process.cwd(), 'playwright', '.auth')
+  if (!fs.existsSync(storageStateDir)) {
+    console.log('[Auth] No cached storage state to clear.')
+    return
+  }
+  const deleted: string[] = []
+  const walk = (dir: string) => {
+    for (const entry of fs.readdirSync(dir)) {
+      const full = path.join(dir, entry)
+      if (fs.statSync(full).isDirectory()) {
+        walk(full)
+      } else if (entry.endsWith('.json')) {
+        fs.unlinkSync(full)
+        deleted.push(full)
+      }
+    }
+  }
+  walk(storageStateDir)
+  if (deleted.length > 0) {
+    console.log(`[Auth] Cleared ${deleted.length} cached storage state file(s).`)
+  } else {
+    console.log('[Auth] No storage state files found to clear.')
+  }
+}
+
 // ============================================================================
 // Health check
 // ============================================================================
@@ -143,6 +173,12 @@ async function main() {
   // Parse CLI arguments
   const args = parseArgs()
   applyArgsToEnv(args)
+
+  // Note: Storage state is always cleared at the start of capture
+  // The --fresh-auth flag is no longer needed but kept for backward compatibility
+  if ('fresh-auth' in args || 'freshAuth' in args) {
+    console.log('[Info] --fresh-auth flag is no longer needed (always starting fresh)')
+  }
 
   // Load configuration
   let config
