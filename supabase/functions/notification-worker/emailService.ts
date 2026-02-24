@@ -210,6 +210,101 @@ const EMAIL_CONFIG = {
 };
 
 /**
+ * Send a notification email using a specific template from database
+ * Used by notifications_outbox system where template_id is provided
+ */
+export async function sendNotificationEmailWithTemplate(
+  job: NotificationJob,
+  template: any, // email_templates row
+  supabase?: any
+): Promise<EmailResult> {
+  try {
+    // Prepare payload with branding
+    let payload = { ...(job.payload ?? {}) }
+    
+    // Add invite URLs if needed
+    if (job.type === 'guardian_invite' || job.type === 'athlete_invite') {
+      const token = payload.invite_token
+      if (token) {
+        const platformBaseUrl = Deno.env.get('PLATFORM_APP_URL') || Deno.env.get('APP_URL') || 'https://platform.youthsports.team'
+        payload.invite_url = `${platformBaseUrl}/portal/accept-invite?token=${token}&type=${job.type === 'guardian_invite' ? 'guardian' : 'athlete'}`
+      }
+    }
+
+    let branding: OrganizationBranding | null = null
+    if (supabase && job.org_id) {
+      branding = await getOrganizationBranding(job.org_id, supabase)
+      payload = {
+        ...payload,
+        organization_logo_url: branding.logo_url || '',
+        organization_name: branding.organization_name,
+        organization_primary_color: branding.primary_color,
+        organization_secondary_color: branding.secondary_color,
+        email_footer_text: branding.email_footer_text || `© ${new Date().getFullYear()} ${branding.organization_name}. All rights reserved.`,
+        email_from_name: branding.email_from_name,
+      }
+    }
+
+    // Use template HTML content directly
+    let htmlContent = template.html_content || ''
+    htmlContent = injectVariables(htmlContent, payload, { noEscape: true })
+
+    if (branding) {
+      htmlContent = injectBrandingVariables(htmlContent, branding)
+    }
+
+    // Get subject from template
+    const subjectTemplate = template.subject_template || 'Notification'
+    const subject = injectVariables(subjectTemplate, payload, { noEscape: true })
+
+    // Generate plain text fallback
+    const textContent = generatePlainText(htmlContent)
+
+    // Send email via Resend API
+    const resendApiKey = Deno.env.get('RESEND_API_KEY')
+    if (!resendApiKey) {
+      throw new Error('RESEND_API_KEY environment variable not set')
+    }
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: payload.email_from_name
+          ? `${payload.email_from_name} <notifications@youthsports.team>`
+          : 'notifications@youthsports.team',
+        to: job.email,
+        subject,
+        html: htmlContent,
+        text: textContent,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.text()
+      throw new Error(`Resend API error: ${response.status} ${errorData}`)
+    }
+
+    const result = await response.json()
+
+    return {
+      success: true,
+      emailId: result.id
+    }
+
+  } catch (error) {
+    console.error('Failed to send notification email with template:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+/**
  * Send a notification email using the compiled MJML template
  */
 const PLACEHOLDER_IMAGE_URL = 'https://placehold.co/1x1/ffffff/ffffff.png';

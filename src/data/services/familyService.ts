@@ -592,13 +592,15 @@ export async function updateAthlete(
             .from('athletes')
             .update(updateData)
             .eq('id', athleteId)
-            .eq('org_id', context.orgId) // Ensure org scope
             .select()
             .single()
 
         if (error) {
             console.error('[updateAthlete] Supabase error:', error)
             throw error
+        }
+        if (!data) {
+            throw new Error('Update athlete failed: no row updated. You may not have permission to edit this athlete.')
         }
         
         // Convert to proper Child type

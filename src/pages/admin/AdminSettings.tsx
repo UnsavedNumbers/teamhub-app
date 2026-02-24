@@ -20,7 +20,8 @@ import { showSuccess, showError } from '../../utils/toast'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { validatePhoneFormat } from '../../utils/phoneValidation'
 import NotificationPreferences from '../../components/common/NotificationPreferences'
-import { mergeNotificationPreferences, setPreferencesForContext, canonicalRole } from '../../utils/notificationPreferencesConfig'
+import { mergeNotificationPreferences, loadNotificationGroupsFromRelational, convertNotificationGroupsToRelational } from '../../utils/notificationPreferencesConfig'
+import { updatePreferencesBatch } from '../../data/services/userNotificationPreferencesService'
 import type { NotificationGroup } from '../../types/notificationPreferences'
 import type { NotificationRole } from '../../types/notifications'
 import { useT } from '../../i18n/useI18n'
@@ -250,12 +251,20 @@ export default function AdminSettings() {
           setPhone(validatedPrefs.profile?.phone || '')
           setTimezone(validatedPrefs.profile?.timezone || '')
 
-          const orgId = currentOrganization?.id
-          const savedGroups = orgId
-            ? (prefs.notifications_v2?.[orgId]?.[canonicalRole(activeRole)] as NotificationGroup[] | undefined)
-            : undefined
-          const mergedGroups = mergeNotificationPreferences(savedGroups, activeRole, translator)
-          setNotificationGroups(mergedGroups)
+          // Load from relational service
+          if (currentOrganization?.id && user.id) {
+            try {
+              const groups = await loadNotificationGroupsFromRelational(user.id, currentOrganization.id, activeRole, translator)
+              setNotificationGroups(groups)
+            } catch (err) {
+              console.error('Error loading notification preferences:', err)
+              const mergedGroups = mergeNotificationPreferences(undefined, activeRole, translator)
+              setNotificationGroups(mergedGroups)
+            }
+          } else {
+            const mergedGroups = mergeNotificationPreferences(undefined, activeRole, translator)
+            setNotificationGroups(mergedGroups)
+          }
         } else {
           const mergedGroups = mergeNotificationPreferences(undefined, activeRole, translator)
           setNotificationGroups(mergedGroups)
@@ -391,15 +400,22 @@ export default function AdminSettings() {
       if (!user?.id || !currentOrganization?.id) return
       setSavingNotifications(true)
       try {
-        const nextPrefs = setPreferencesForContext(
-          preferencesRef.current?.notifications_v2,
-          currentOrganization.id,
-          activeRole,
-          nextGroups
-        )
-        const { error: prefsError } = await updateUserPreferences(user.id, { notifications_v2: nextPrefs })
-        if (prefsError) throw prefsError
-        preferencesRef.current = { ...(preferencesRef.current || {}), notifications_v2: nextPrefs }
+        // Convert NotificationGroups to relational preferences format
+        const preferences = await convertNotificationGroupsToRelational(nextGroups, activeRole)
+        
+        // Save to relational table
+        const { error } = await updatePreferencesBatch(user.id, currentOrganization.id, activeRole, preferences)
+        
+        if (error) {
+          if (error.message?.includes('no active template')) {
+            showError('Email notifications are not available for some notification types')
+          } else {
+            throw error
+          }
+          if (previousGroups) setNotificationGroups(previousGroups)
+          return
+        }
+        
         showSuccess(t('toast.success.notificationPreferencesUpdated'))
       } catch (err) {
         console.error('Error saving notifications:', err)
@@ -411,7 +427,7 @@ export default function AdminSettings() {
         setSavingNotifications(false)
       }
     },
-    [activeRole, currentOrganization?.id, t, updateUserPreferences, user?.id]
+    [activeRole, currentOrganization?.id, t, user?.id]
   )
 
   const handleToggleGroupAll = useCallback(

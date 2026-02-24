@@ -5,6 +5,7 @@ import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { toast } from 'react-hot-toast';
 import { Save, Eye, AlertTriangle, XCircle, ArrowLeft } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 import { PageHeader, Card, Button, Input, Select, Badge, Switch } from '../../components/platformAdmin';
 import { ConfirmDialog } from '../../components/admin/ConfirmDialog';
@@ -13,6 +14,9 @@ import { EmailTemplate, EmailTemplateFormData, NotificationJobType } from '../..
 import { EmailTemplateVariables } from '../../components/platformAdmin/EmailTemplateVariables';
 import EmailEditorErrorBoundary from '../../components/platformAdmin/EmailEditorErrorBoundary';
 import { wrapEmailContent } from '../../utils/emailTemplateWrapper';
+import { getNotificationTypes } from '../../data/services/notificationTypesService';
+import type { NotificationType } from '../../data/services/notificationTypesService';
+import { getLink } from '../../utils/routes';
 
 // Memoize ReactQuill to prevent unnecessary re-renders
 const MemoizedReactQuill = React.memo(ReactQuill);
@@ -153,6 +157,8 @@ export default function EmailTemplateEditor() {
   const [previewText, setPreviewText] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [notificationTypeId, setNotificationTypeId] = useState<string>('');
+  const [notificationTypes, setNotificationTypes] = useState<NotificationType[]>([]);
   
   // Preview State
   const [showPreview, setShowPreview] = useState(false);
@@ -175,6 +181,17 @@ export default function EmailTemplateEditor() {
     };
   }, []);
 
+  // Load notification types
+  useEffect(() => {
+    const loadNotificationTypes = async () => {
+      const { data, error } = await getNotificationTypes({ supportsEmail: true });
+      if (!error && data) {
+        setNotificationTypes(data);
+      }
+    };
+    loadNotificationTypes();
+  }, []);
+
   const loadTemplate = useCallback(async () => {
     if (!slug) return;
     try {
@@ -186,11 +203,22 @@ export default function EmailTemplateEditor() {
         setSubjectTemplate(data.subject_template || '');
         setPreviewText(data.preview_text || '');
         setDescription(data.description || '');
+        setCategory(data.category || '');
+        // Load notification_type_id if available
+        const { data: templateWithType } = await supabase
+          .from('email_templates')
+          .select('notification_type_id, notification_types(id, display_name, eligible_roles)')
+          .eq('slug', slug)
+          .single();
+        const row = templateWithType as { notification_type_id?: string } | null;
+        if (row?.notification_type_id) {
+          setNotificationTypeId(row.notification_type_id);
+        }
       }
     } catch (error) {
       console.error('Failed to load template', error);
       toast.error('Failed to load template');
-      navigate('/platform-admin/emails');
+      navigate(getLink('platformAdmin.emails.list'));
     } finally {
       if (isMountedRef.current) setLoading(false);
     }
@@ -311,6 +339,12 @@ export default function EmailTemplateEditor() {
         return;
     }
 
+    // Validate notification_type_id is required for activation
+    if (isCreateMode && !notificationTypeId) {
+        toast.error('Please select a notification type');
+        return;
+    }
+
     try {
       setSaving(true);
       const extractedVars = emailTemplatesService.extractVariablesFromHtml(bodyContent);
@@ -322,6 +356,7 @@ export default function EmailTemplateEditor() {
               name,
               slug: newSlug,
               type,
+              notification_type_id: notificationTypeId,
               body_content: emailTemplatesService.sanitizeHandlebarsContent(bodyContent), // Sanitize before saving
               subject_template: subjectTemplate,
               preview_text: previewText,
@@ -330,15 +365,16 @@ export default function EmailTemplateEditor() {
               variables: allVars
           });
           toast.success('Template created successfully');
-          navigate('/platform-admin/emails');
+          navigate(getLink('platformAdmin.emails.list'));
       } else {
-          const formData: EmailTemplateFormData = {
+          const formData: EmailTemplateFormData & { notification_type_id?: string } = {
             body_content: emailTemplatesService.sanitizeHandlebarsContent(bodyContent), // Sanitize before saving
             subject_template: subjectTemplate,
             preview_text: previewText,
             description,
             category: category || undefined,
-            variables: allVars
+            variables: allVars,
+            notification_type_id: notificationTypeId || undefined,
           };
 
           await emailTemplatesService.updateEmailTemplate(template.id, formData, template.updated_at);
@@ -403,7 +439,7 @@ export default function EmailTemplateEditor() {
         subtitle={isCreateMode ? 'Define a new email template' : `Editing ${template.slug}`}
         actions={
           <div className="pa-flex pa-gap-2">
-            <Button variant="ghost" onClick={() => navigate('/platform-admin/emails')}>
+            <Button variant="ghost" onClick={() => navigate(getLink('platformAdmin.emails.list'))}>
               <ArrowLeft className="pa-mr-2" size={18} />
               Back to Templates
             </Button>
@@ -486,6 +522,34 @@ export default function EmailTemplateEditor() {
                   ]}
                 />
               </div>
+
+              <div>
+                <label className="pa-block pa-text-sm pa-font-medium pa-text-gray-700 pa-mb-1">
+                  Notification Type <span className="pa-text-red-500">*</span>
+                </label>
+                <Select
+                  value={notificationTypeId}
+                  onChange={(e) => setNotificationTypeId(e.target.value)}
+                  options={[
+                    { value: '', label: 'Select a notification type...' },
+                    ...notificationTypes.map(nt => ({ 
+                      value: nt.id, 
+                      label: `${nt.display_name} (${nt.eligible_roles.join(', ')})` 
+                    })),
+                  ]}
+                  required
+                />
+                {!notificationTypeId && (
+                  <p className="pa-text-xs pa-text-yellow-600 pa-mt-1">
+                    ⚠️ Notification type is required. This links the template to a notification type.
+                  </p>
+                )}
+                {notificationTypeId && (
+                  <p className="pa-text-xs pa-text-gray-500 pa-mt-1">
+                    This template will be used for: {notificationTypes.find(nt => nt.id === notificationTypeId)?.display_name}
+                  </p>
+                )}
+              </div>
             </div>
           </Card>
 
@@ -544,7 +608,7 @@ export default function EmailTemplateEditor() {
                         className="pa-w-40 pa-text-sm"
                     />
                 ) : (
-                    <Badge variant="neutral">{template.type}</Badge>
+                    <span>{template.type}</span>
                 )}
               </div>
               <div className="pa-flex pa-justify-between pa-items-center">
@@ -575,14 +639,16 @@ export default function EmailTemplateEditor() {
                  <span className="pa-text-gray-700 pa-font-medium">Active Status</span>
                  <Switch 
                     checked={template.is_active}
-                    disabled={isCreateMode}
+                    disabled={isCreateMode || !notificationTypeId}
                     onCheckedChange={(checked) => {
-                        if (isCreateMode) return;
+                        if (isCreateMode || !notificationTypeId) return;
                         
                         const action = checked ? 'activate' : 'deactivate';
+                        const selectedType = notificationTypes.find(nt => nt.id === notificationTypeId);
+                        const eligibleRoles = selectedType?.eligible_roles.join(', ') || '';
                         const message = checked 
-                            ? 'Are you sure you want to activate this template? ensuring it is ready for production use?'
-                            : 'Deactivate this template? Emails will fallback to hardcoded defaults.';
+                            ? `Activate this template? This will make email notifications available for "${selectedType?.display_name}" to users with roles: ${eligibleRoles}. Only one active template per notification type is allowed.`
+                            : 'Deactivate this template? Users will no longer be able to enable email notifications for this type.';
 
                         setActiveToggleDialog({ open: true, checked, action, message });
                     }}
@@ -591,6 +657,11 @@ export default function EmailTemplateEditor() {
               {isCreateMode && (
                   <p className="pa-text-xs pa-text-gray-400 pa-mt-1">
                       Save the template first to activate it.
+                  </p>
+              )}
+              {!isCreateMode && !notificationTypeId && (
+                  <p className="pa-text-xs pa-text-yellow-600 pa-mt-1">
+                      ⚠️ Cannot activate template without a notification type. Please select a notification type and save first.
                   </p>
               )}
             </div>

@@ -149,3 +149,113 @@ export function setPreferencesForContext(
     },
   }
 }
+
+/**
+ * Convert relational preferences to NotificationGroup format
+ * This function loads preferences from the relational user_notification_preferences table
+ * and converts them to the NotificationGroup format used by the UI
+ */
+export async function loadNotificationGroupsFromRelational(
+  userId: string,
+  orgId: string,
+  role: NotificationRole,
+  t: Translator
+): Promise<NotificationGroup[]> {
+  const { getUserPreferences } = await import('../data/services/userNotificationPreferencesService')
+  const { getNotificationTypeIdFromAction } = await import('../data/services/notificationTypeMapper')
+  const { isEmailAvailable } = await import('../data/services/notificationTypesService')
+  
+  const canonical = canonicalRole(role)
+  const defaults = buildDefaultNotificationGroups(canonical, t)
+  
+  // Load user preferences from relational table
+  const { data: userPrefs } = await getUserPreferences(userId, orgId, canonical)
+  
+  // Convert relational preferences to NotificationGroup format
+  const groups = await Promise.all(
+    defaults.map(async (group) => {
+      const actions = await Promise.all(
+        group.actions.map(async (action) => {
+          const { data: typeId, error: typeError } = await getNotificationTypeIdFromAction(action.id)
+          if (typeError || !typeId) {
+            // If notification type not found, default to enabled without email
+            return { ...action, enabled: true, emailAvailable: false, emailEnabled: false } as any
+          }
+          
+          const pref = userPrefs?.find(p => p.notification_type_id === typeId)
+          const emailAvailable = await isEmailAvailable(typeId)
+          
+          return {
+            ...action,
+            enabled: pref ? pref.in_app_enabled : true,
+            emailAvailable, // Store for use in UI gating
+            emailEnabled: pref ? (pref.email_enabled && emailAvailable) : false,
+          } as any // Extend action with email info
+        })
+      )
+      
+      // Determine group-level settings
+      const allEnabled = actions.every(a => a.enabled)
+      const hasEmailAvailable = actions.some((a: any) => a.emailAvailable)
+      // Build channels list - include email only if available for at least one action
+      // Keep email in channels if any action has email available (for UI display)
+      const channels: DeliveryChannel[] = ['in_app']
+      if (hasEmailAvailable) {
+        channels.push('email')
+      }
+      
+      return {
+        ...group,
+        actions,
+        allEnabled,
+        channels, // Always include email if available, regardless of enabled state
+        digestEnabled: false, // TODO: implement digest preferences
+        digestWindow: 'daily',
+        quietHoursEnabled: false, // TODO: implement quiet hours preferences
+      } satisfies NotificationGroup
+    })
+  )
+  
+  return groups
+}
+
+/**
+ * Convert NotificationGroups back to relational preferences format
+ * Used when saving preferences
+ */
+export async function convertNotificationGroupsToRelational(
+  groups: NotificationGroup[],
+  _role: NotificationRole
+): Promise<Array<{
+  notificationTypeId: string
+  inAppEnabled: boolean
+  emailEnabled: boolean
+}>> {
+  const { getNotificationTypeIdFromAction } = await import('../data/services/notificationTypeMapper')
+  const { isEmailAvailable } = await import('../data/services/notificationTypesService')
+  
+  const preferences: Array<{
+    notificationTypeId: string
+    inAppEnabled: boolean
+    emailEnabled: boolean
+  }> = []
+  
+  for (const group of groups) {
+    for (const action of group.actions) {
+      const { data: typeId, error: typeError } = await getNotificationTypeIdFromAction(action.id)
+      if (typeError || !typeId) continue
+      
+      const emailAvailable = await isEmailAvailable(typeId)
+      // Email is enabled if: channel includes 'email', email is available, and action is enabled
+      const emailEnabled = group.channels.includes('email') && emailAvailable && action.enabled
+      
+      preferences.push({
+        notificationTypeId: typeId,
+        inAppEnabled: action.enabled,
+        emailEnabled,
+      })
+    }
+  }
+  
+  return preferences
+}

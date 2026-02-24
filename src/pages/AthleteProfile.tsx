@@ -12,7 +12,7 @@ import { useOrganization } from '../contexts/OrganizationContext'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { debug } from '../lib/debug'
 import { getAthleteById } from '../data/services/familyService'
-import { getAthleteTeamHistory } from '../data/services/teamsService'
+import { getAthleteTeamHistory, getAthleteTeamMemberships, type AthleteTeamMembershipDisplay } from '../data/services/teamsService'
 import { getDisplayName } from '../utils/athleteHelpers'
 import PortalLayout from '../components/portal/PortalLayout'
 import AthleteAvatar from '../components/portal/AthleteAvatar'
@@ -51,7 +51,9 @@ export default function AthleteProfilePage() {
   const [athlete, setAthlete] = useState<Athlete | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const [activeTab, setActiveTab] = useState<'universal' | 'physical' | 'sports' | 'medical'>('universal')
+  const [activeTab, setActiveTab] = useState<'universal' | 'physical' | 'sports' | 'medical' | 'teams'>('universal')
+  const [teamMemberships, setTeamMemberships] = useState<AthleteTeamMembershipDisplay[]>([])
+  const [teamsLoading, setTeamsLoading] = useState(false)
   const [selectedSport, setSelectedSport] = useState<SportCode | null>(null)
   const [sportIdToCode, setSportIdToCode] = useState<Record<string, SportCode>>({})
   const [activeTeamSports, setActiveTeamSports] = useState<SportCode[]>([])
@@ -200,6 +202,23 @@ export default function AthleteProfilePage() {
     loadTeamSports()
   }, [athleteId, context, sportIdToCode])
 
+  // Load team memberships for Teams tab
+  useEffect(() => {
+    if (!athleteId || !isReady) return
+
+    const loadTeams = async () => {
+      setTeamsLoading(true)
+      const { data, error } = await getAthleteTeamMemberships(context, athleteId)
+      if (!error && data) {
+        setTeamMemberships(data)
+      } else {
+        setTeamMemberships([])
+      }
+      setTeamsLoading(false)
+    }
+    loadTeams()
+  }, [athleteId, context, isReady])
+
   // Determine which sports the athlete has selected (plays or interested)
   const selectedSportCodes = useMemo(() => {
     const codes: SportCode[] = []
@@ -301,10 +320,19 @@ export default function AthleteProfilePage() {
       {/* Page Header */}
       <div className="mb-8 space-y-4">
         <div className="flex items-start gap-6">
-          {/* Athlete Photo */}
-          <div className="flex-shrink-0 w-24 h-24 rounded-full overflow-hidden border-4 border-[var(--org-btn-primary-bg, #137fec)]">
+          {/* Athlete Photo with upload/replace affordance */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('universal')}
+            className="flex-shrink-0 relative w-24 h-24 rounded-full overflow-hidden border-4 border-[var(--org-btn-primary-bg, #137fec)] group focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)] focus:ring-offset-2"
+            title={t('portal.athleteProfile.uploadOrReplacePhoto' as import('../i18n').TranslationKey)}
+            aria-label={t('portal.athleteProfile.uploadOrReplacePhoto' as import('../i18n').TranslationKey)}
+          >
             <AthleteAvatar athlete={athlete} photoSize="512" className="w-full h-full rounded-full object-cover" />
-          </div>
+            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Icon name="add_photo_alternate" size="text-2xl" className="text-white" />
+            </span>
+          </button>
 
           {/* Title */}
           <div className="flex-1">
@@ -369,6 +397,17 @@ export default function AthleteProfilePage() {
           >
             <Icon name="medical_services" size="text-sm" className="mr-2 inline-block" />
             Medical Info
+          </button>
+          <button
+            onClick={() => setActiveTab('teams')}
+            className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
+              activeTab === 'teams'
+                ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
+          >
+            <Icon name="groups" size="text-sm" className="mr-2 inline-block" />
+            {t('portal.athleteProfile.tabs.teams' as import('../i18n').TranslationKey)}
           </button>
         </div>
       </div>
@@ -514,6 +553,92 @@ export default function AthleteProfilePage() {
               athleteId={athlete.id}
               athleteName={displayName}
             />
+          </Card>
+        )}
+
+        {activeTab === 'teams' && (
+          <Card className="p-6">
+            <CardTitle className="mb-2">{t('portal.athleteProfile.teams.title' as import('../i18n').TranslationKey)}</CardTitle>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+              {t('portal.athleteProfile.teams.description' as import('../i18n').TranslationKey)}
+            </p>
+            {teamsLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white" />
+              </div>
+            ) : teamMemberships.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">
+                <Icon name="groups" size="text-4xl" className="text-slate-400 mb-4" />
+                <p className="font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  {t('portal.athleteProfile.teams.emptyTitle' as import('../i18n').TranslationKey)}
+                </p>
+                <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                  {t('portal.athleteProfile.teams.emptyDescription' as import('../i18n').TranslationKey)}
+                </p>
+                <Button
+                  variant="secondary"
+                  className="mt-4"
+                  onClick={() => navigate('/portal/join')}
+                >
+                  <Icon name="group_add" size="text-sm" className="mr-2" />
+                  {t('portal.athleteProfile.teams.joinTeam' as import('../i18n').TranslationKey)}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {teamMemberships.map((m) => (
+                  <div
+                    key={m.id}
+                    className="flex flex-wrap items-center gap-4 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-slate-900 dark:text-white truncate">
+                        {m.team_name}
+                      </p>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        <span>{t('portal.athleteProfile.teams.season' as import('../i18n').TranslationKey)}: {m.season_name}</span>
+                        {m.program_name && (
+                          <span>{t('portal.athleteProfile.teams.program' as import('../i18n').TranslationKey)}: {m.program_name}</span>
+                        )}
+                        {m.sport_name && (
+                          <span>{t('portal.athleteProfile.teams.sport' as import('../i18n').TranslationKey)}: {m.sport_name}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-slate-400 dark:text-slate-500">
+                        {m.jersey_number && (
+                          <span>{t('portal.athleteProfile.teams.jerseyNumber' as import('../i18n').TranslationKey)}: {m.jersey_number}</span>
+                        )}
+                        {m.position && (
+                          <span>{t('portal.athleteProfile.teams.position' as import('../i18n').TranslationKey)}: {m.position}</span>
+                        )}
+                        {m.joined_at && (
+                          <span>
+                            {t('portal.athleteProfile.teams.joinedAt' as import('../i18n').TranslationKey)}: {new Date(m.joined_at).toLocaleDateString()}
+                          </span>
+                        )}
+                        <span>{t('portal.athleteProfile.teams.status' as import('../i18n').TranslationKey)}: {m.status}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button
+                        variant="secondary"
+                        onClick={() => navigate('/portal/calendar')}
+                      >
+                        <Icon name="calendar_month" size="text-sm" className="mr-1" />
+                        {t('portal.athleteProfile.teams.viewSchedule' as import('../i18n').TranslationKey)}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => navigate('/portal/messages')}
+                      >
+                        <Icon name="forum" size="text-sm" className="mr-1" />
+                        {t('portal.athleteProfile.teams.viewMessages' as import('../i18n').TranslationKey)}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         )}
       </div>

@@ -19,6 +19,8 @@ import {
     getTeamMembersForSeason,
     getCoachAssignmentsForTeam,
     getTeamWithDetails,
+    getActiveTeamMembershipsForChild,
+    getSeasonById,
     type FakeTeam,
     type FakeSeason,
     type FakeTeamMember,
@@ -1716,6 +1718,127 @@ export async function removeCoachFromTeam(
     } catch (err) {
         const classifiedError = classifySupabaseError(err)
         return { error: classifiedError }
+    }
+}
+
+/**
+ * Display shape for an athlete's team membership on portal (guardian/athlete view).
+ */
+export interface AthleteTeamMembershipDisplay {
+    id: string
+    team_id: string
+    team_name: string
+    season_id: string
+    season_name: string
+    program_name: string | null
+    sport_name: string | null
+    status: string
+    jersey_number: string | null
+    position: string | null
+    joined_at: string | null
+}
+
+/**
+ * Get all team memberships for an athlete with team, season, program, and sport details.
+ * Used on Athlete Profile Teams tab for guardians and athletes.
+ */
+export async function getAthleteTeamMemberships(
+    context: UserContext,
+    athleteId: string
+): Promise<{ data: AthleteTeamMembershipDisplay[]; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const memberships = getActiveTeamMembershipsForChild(athleteId)
+            const childIds = getChildrenForUserId(context.userId)
+            const isAdmin = isOrgAdmin(context)
+            const allowed = isAdmin || childIds.includes(athleteId)
+            if (!allowed) {
+                return { data: [], error: null }
+            }
+            const out: AthleteTeamMembershipDisplay[] = memberships.map((m) => {
+                const details = getTeamWithDetails(m.team_id)
+                const season = getSeasonById(m.season_id)
+                return {
+                    id: m.id,
+                    team_id: m.team_id,
+                    team_name: details?.name ?? 'Unknown Team',
+                    season_id: m.season_id,
+                    season_name: season?.name ?? 'Unknown Season',
+                    program_name: details?.program?.name ?? null,
+                    sport_name: details?.sport?.name ?? null,
+                    status: m.status,
+                    jersey_number: m.jersey_number ?? null,
+                    position: m.position ?? null,
+                    joined_at: m.joined_at ?? null,
+                }
+            })
+            return { data: out, error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('team_memberships')
+            .select(`
+                id,
+                team_id,
+                season_id,
+                status,
+                jersey_number,
+                position,
+                created_at,
+                team:teams(name, program:programs(name), sport:sports(name))
+            `)
+            .eq('athlete_id', athleteId)
+            .is('deleted_at', null)
+
+        if (error) throw error
+
+        const familyId = await getFamilyIdForUser(context.userId)
+        const childIds = await getAthleteIdsForFamily(familyId)
+        const isAdmin = isOrgAdmin(context)
+        if (!isAdmin && !childIds.includes(athleteId)) {
+            return { data: [], error: null }
+        }
+
+        const rows = (data ?? []) as any[]
+        const seasonIds = [...new Set(rows.map((r) => r.season_id).filter(Boolean))]
+        let seasonNames: Record<string, string> = {}
+        if (seasonIds.length > 0) {
+            const { data: seasonsData } = await supabase
+                .from('seasons')
+                .select('id, name')
+                .in('id', seasonIds)
+            if (seasonsData) {
+                seasonNames = Object.fromEntries(seasonsData.map((s) => [s.id, s.name ?? '']))
+            }
+        }
+
+        const result: AthleteTeamMembershipDisplay[] = rows.map((row) => {
+            const team = row.team
+            const program = team?.program
+            const sport = team?.sport
+            return {
+                id: row.id,
+                team_id: row.team_id,
+                team_name: team?.name ?? 'Unknown Team',
+                season_id: row.season_id,
+                season_name: seasonNames[row.season_id] ?? 'Unknown Season',
+                program_name: program?.name ?? null,
+                sport_name: sport?.name ?? null,
+                status: row.status ?? 'active',
+                jersey_number: row.jersey_number ?? null,
+                position: row.position ?? null,
+                joined_at: row.created_at ?? null,
+            }
+        })
+        return { data: result, error: null }
+    } catch (err) {
+        const classifiedError = classifySupabaseError(err)
+        return { data: [], error: classifiedError }
     }
 }
 

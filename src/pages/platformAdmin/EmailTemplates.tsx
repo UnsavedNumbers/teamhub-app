@@ -50,6 +50,7 @@ export default function EmailTemplates() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [notificationTypeFilter, setNotificationTypeFilter] = useState('');
   const [bulkProgress, setBulkProgress] = useState<{
     isActive: boolean;
     action: 'activate' | 'deactivate' | 'delete' | null;
@@ -87,15 +88,23 @@ export default function EmailTemplates() {
         category: categoryFilter || undefined,
         isActive,
       });
-      setData(result.data);
-      setTotalCount(result.count);
+      
+      // Filter by notification type assignment status if selected (client-side filter since service doesn't support it yet)
+      let filteredData = result.data;
+      if (notificationTypeFilter === 'assigned') {
+        filteredData = result.data.filter((t: any) => t.notification_types?.id != null);
+      } else if (notificationTypeFilter === 'unassigned') {
+        filteredData = result.data.filter((t: any) => t.notification_types?.id == null);
+      }
+      setData(filteredData);
+      setTotalCount(notificationTypeFilter ? filteredData.length : result.count);
     } catch (error) {
       console.error('Failed to load templates', error);
       toast.error('Failed to load email templates');
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, debouncedSearch, categoryFilter, statusFilter]);
+  }, [page, rowsPerPage, debouncedSearch, categoryFilter, statusFilter, notificationTypeFilter]);
 
   useEffect(() => {
     fetchTemplates();
@@ -106,13 +115,14 @@ export default function EmailTemplates() {
     setDebouncedSearch('');
     setCategoryFilter('');
     setStatusFilter('');
+    setNotificationTypeFilter('');
     setPage(0);
   };
 
-  const hasActiveFilters = search !== '' || categoryFilter !== '' || statusFilter !== '';
+  const hasActiveFilters = search !== '' || categoryFilter !== '' || statusFilter !== '' || notificationTypeFilter !== '';
 
   const handleEdit = (slug: string) => {
-    navigate(`/platform-admin/emails/${slug}/edit`);
+    navigate(getLink('platformAdmin.emails.edit', { slug }));
   };
 
 
@@ -425,7 +435,32 @@ export default function EmailTemplates() {
       id: 'type',
       label: 'Type',
       sortable: true,
-      render: (row) => <Badge variant="neutral">{getTypeLabel(row.type)}</Badge>
+      render: (row) => <span>{getTypeLabel(row.type)}</span>
+    },
+    {
+      id: 'notification_type',
+      label: 'Notification Type',
+      sortable: false,
+      render: (row: any) => {
+        const notificationType = row.notification_types;
+        if (notificationType) {
+          return (
+            <div>
+              <span>{notificationType.display_name}</span>
+            </div>
+          );
+        }
+        return (
+          <div>
+            <span className="pa-text-gray-400">—</span>
+            {row.is_active && (
+              <div className="pa-text-xs pa-text-yellow-600 pa-mt-1">
+                ⚠️ No notification type linked
+              </div>
+            )}
+          </div>
+        );
+      }
     },
     {
       id: 'updated_at',
@@ -527,6 +562,23 @@ export default function EmailTemplates() {
                 setPage(0);
               }}
               options={STATUS_OPTIONS}
+            />
+          </div>
+
+          {/* Notification Type Filter */}
+          <div style={{ flex: '0 1 200px', minWidth: '180px' }}>
+            <label className="pa-block pa-text-sm pa-font-medium pa-mb-1">Notification Type</label>
+            <Select
+              value={notificationTypeFilter}
+              onChange={(e) => {
+                setNotificationTypeFilter(e.target.value);
+                setPage(0);
+              }}
+              options={[
+                { value: '', label: 'All Types' },
+                { value: 'assigned', label: 'Assigned' },
+                { value: 'unassigned', label: 'Unassigned' },
+              ]}
             />
           </div>
 

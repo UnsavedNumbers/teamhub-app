@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabase'
 import { useUserContext } from '../hooks/useUserContext'
 import { getAthletes } from '../data/services/familyService'
 import { getTeamsForParent } from '../data/services/teamsService'
-import { getUserPreferences, updateUserPreferences, type UserPreferences } from '../data/services/preferencesService'
 import { 
   linkGuardianToAthlete, 
   validateGuardianEmail, 
@@ -27,7 +26,8 @@ import { ThemeSelector } from '../components/portal/ThemeToggle'
 import NotificationPreferences from '../components/common/NotificationPreferences'
 import type { NotificationGroup } from '../types/notificationPreferences'
 import type { NotificationRole } from '../types/notifications'
-import { mergeNotificationPreferences, setPreferencesForContext, canonicalRole } from '../utils/notificationPreferencesConfig'
+import { mergeNotificationPreferences, canonicalRole, loadNotificationGroupsFromRelational, convertNotificationGroupsToRelational } from '../utils/notificationPreferencesConfig'
+import { updatePreferencesBatch } from '../data/services/userNotificationPreferencesService'
 import { showSuccess, showError } from '../utils/toast'
 import { CheckCircle, Mail, Loader2, AlertCircle, BellOff } from 'lucide-react'
 import { LocationAutocomplete } from '../components/common/LocationAutocomplete'
@@ -63,8 +63,6 @@ export default function Settings() {
   const { locale, setLocale } = useLocale()
   const isMountedRef = useRef(true)
   const emailInputRef = useRef<HTMLInputElement>(null)
-  const preferencesRef = useRef<UserPreferences | null>(null)
-  
   const [children, setChildren] = useState<ChildWithGuardians[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
@@ -193,39 +191,18 @@ export default function Settings() {
     setNotificationsError(null)
     
     try {
-      const { data: prefs, error: prefsError } = await getUserPreferences(user.id)
+      // Try loading from relational service first
+      const groups = await loadNotificationGroupsFromRelational(user.id, context.orgId, activeRole, translator)
       
-      if (prefsError) {
-        console.error('Error loading notification preferences:', prefsError)
-        if (isMountedRef.current) {
-          // If offline, use cached preferences if available
-          if (isOffline && preferencesRef.current) {
-            const cachedGroups = preferencesRef.current?.notifications_v2?.[context.orgId]?.[activeRole]
-            const mergedGroups = mergeNotificationPreferences(cachedGroups as NotificationGroup[] | undefined, activeRole, translator)
-            setNotificationGroups(mergedGroups)
-            setNotificationsError(null)
-          } else {
-            setNotificationsError(t('common.error.loadFailed'))
-            // Still show defaults so user can see the UI
-            const defaultGroups = mergeNotificationPreferences(undefined, activeRole, translator)
-            setNotificationGroups(defaultGroups)
-          }
-        }
-      } else {
-        preferencesRef.current = prefs || {}
-        const savedGroups = prefs?.notifications_v2?.[context.orgId]?.[activeRole]
-        const mergedGroups = mergeNotificationPreferences(savedGroups as NotificationGroup[] | undefined, activeRole, translator)
-        
-        if (isMountedRef.current) {
-          setNotificationGroups(mergedGroups)
-          setNotificationsError(null)
-        }
+      if (isMountedRef.current) {
+        setNotificationGroups(groups)
+        setNotificationsError(null)
       }
     } catch (err) {
-      console.error('Unexpected error loading notification preferences:', err)
+      console.error('Error loading notification preferences:', err)
       if (isMountedRef.current) {
+        // Fallback to defaults on error
         setNotificationsError(t('common.error.loadFailed'))
-        // Show defaults on error so UI is still usable
         const defaultGroups = mergeNotificationPreferences(undefined, activeRole, translator)
         setNotificationGroups(defaultGroups)
       }
@@ -460,31 +437,11 @@ export default function Settings() {
       setNotificationsError(null)
       
       try {
-        // Check offline status
-        if (isOffline) {
-          // In offline mode, update local state but show warning
-          preferencesRef.current = { 
-            ...(preferencesRef.current || {}), 
-            notifications_v2: setPreferencesForContext(
-              preferencesRef.current?.notifications_v2,
-              context.orgId,
-              activeRole,
-              nextGroups
-            )
-          }
-          setNotificationGroups(nextGroups)
-          showError(t('common.error.offline'))
-          return
-        }
-
-        const nextPrefs = setPreferencesForContext(
-          preferencesRef.current?.notifications_v2,
-          context.orgId,
-          activeRole,
-          nextGroups
-        )
+        // Convert NotificationGroups to relational preferences format
+        const preferences = await convertNotificationGroupsToRelational(nextGroups, activeRole)
         
-        const { error } = await updateUserPreferences(user.id, { notifications_v2: nextPrefs })
+        // Save to relational table
+        const { error } = await updatePreferencesBatch(user.id, context.orgId, activeRole, preferences)
         
         if (error) {
           // Check for specific error types
@@ -494,6 +451,9 @@ export default function Settings() {
           } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
             setNotificationsError(t('common.error.offline'))
             showError(t('common.error.offline'))
+          } else if (error.message?.includes('no active template')) {
+            setNotificationsError('Email notifications are not available for some notification types')
+            showError('Email notifications are not available for some notification types')
           } else {
             throw error
           }
@@ -505,8 +465,7 @@ export default function Settings() {
           return
         }
         
-        // Success - update ref and show success message
-        preferencesRef.current = { ...(preferencesRef.current || {}), notifications_v2: nextPrefs }
+        // Success - show success message
         showSuccess(t('toast.success.notificationPreferencesUpdated'))
         setNotificationsError(null)
       } catch (err) {
@@ -530,7 +489,7 @@ export default function Settings() {
         }
       }
     },
-    [activeRole, context.orgId, isReady, isOffline, t, updateUserPreferences, user?.id]
+    [activeRole, context.orgId, isReady, t, user?.id]
   )
 
   const handleToggleGroupAll = useCallback(
