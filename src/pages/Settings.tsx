@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, startTransition } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { useUserContext } from '../hooks/useUserContext'
@@ -57,6 +57,7 @@ export default function Settings() {
   const { profile, signOut, updatePassword, updateEmail, user, refreshProfile } = useAuth()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const t = useT()
   const translator = t as unknown as (key: string) => string
   const { locale, setLocale } = useLocale()
@@ -88,6 +89,7 @@ export default function Settings() {
   const [confirmEmail, setConfirmEmail] = useState('')
   const [changingEmail, setChangingEmail] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
+  const [showEmailRetryBanner, setShowEmailRetryBanner] = useState(false)
 
   // Invite Guardian Modal State
   const [showInviteGuardianModal, setShowInviteGuardianModal] = useState(false)
@@ -110,6 +112,19 @@ export default function Settings() {
     isMountedRef.current = true
     return () => { isMountedRef.current = false }
   }, [])
+
+  // Show friendly message when redirected with email link error (expired or already used)
+  useEffect(() => {
+    const errorCode = searchParams.get('error_code')
+    const errorParam = searchParams.get('error')
+    if (errorCode === 'otp_expired' || errorParam === 'access_denied') {
+      showError(
+        'The confirmation link is invalid or was already used. Some email tools open links automatically, which uses the link before you click. Please try changing your email again and click the new link as soon as you receive it.'
+      )
+      setShowEmailRetryBanner(true)
+      setSearchParams({}, { replace: true })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount to clear auth error from URL
 
   const fetchData = useCallback(async () => {
     if (!isReady || !user?.id) return
@@ -618,8 +633,9 @@ export default function Settings() {
       return
     }
     
-    // Check if same as current email
-    if (newEmail.toLowerCase() === profile?.email?.toLowerCase()) {
+    // Check if same as current email (use auth user email as source of truth)
+    const currentEmail = user?.email ?? profile?.email
+    if (currentEmail && newEmail.toLowerCase() === currentEmail.toLowerCase()) {
       setEmailError('New email must be different from your current email')
       return
     }
@@ -630,15 +646,20 @@ export default function Settings() {
       const { error } = await updateEmail(newEmail, '/portal/settings')
       if (error) throw error
       
-      showSuccess('Confirmation links have been sent to your current and new email addresses. Click both links to complete the change.')
+      showSuccess('A confirmation link has been sent to your new email address. Click it to complete the change.')
       setShowEmailModal(false)
+      setShowEmailRetryBanner(false)
       setNewEmail('')
       setConfirmEmail('')
     } catch (err) {
+      console.error('Error changing email:', err)
       const rawMessage = err instanceof Error ? err.message : 'Failed to change email'
       const isRateLimit = /rate limit|too many requests/i.test(rawMessage)
+      const isPendingChange = /pending|already.*change|email.*change.*pending/i.test(rawMessage)
       const errorMessage = isRateLimit
         ? 'Too many email requests. Please wait about an hour before trying again.'
+        : isPendingChange
+        ? 'An email change is already pending. Please check your email and confirm the existing change, or wait for it to expire before requesting a new one.'
         : rawMessage
       setEmailError(errorMessage)
       showError(errorMessage)
@@ -711,6 +732,32 @@ export default function Settings() {
         </div>
 
         <div className="space-y-6 sm:space-y-8">
+          {/* Email retry banner */}
+          {showEmailRetryBanner && (
+            <Card className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+              <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                    Email change confirmation link expired
+                  </p>
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    The confirmation link was invalid or already used. Some email tools open links automatically. Click below to request a new confirmation email.
+                  </p>
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setShowEmailRetryBanner(false)
+                    setShowEmailModal(true)
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  Try Again
+                </Button>
+              </div>
+            </Card>
+          )}
+
           {/* Account */}
           <section>
             <SectionHeader className="mb-4">{t('portal.settings.account.title')}</SectionHeader>
@@ -721,7 +768,7 @@ export default function Settings() {
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('portal.settings.account.email')}</p>
-                  <p className="font-black text-slate-900 dark:text-white break-words">{profile?.email}</p>
+                  <p className="font-black text-slate-900 dark:text-white break-words">{user?.email ?? profile?.email}</p>
                 </div>
                 <span className="text-[var(--org-link-color)] text-sm font-bold self-start sm:self-auto">{t('common.change')}</span>
               </div>
@@ -1063,7 +1110,7 @@ export default function Settings() {
               <div className="p-6 space-y-4">
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                    Current email: <strong className="text-slate-900 dark:text-white">{profile?.email}</strong>
+                    Current email: <strong className="text-slate-900 dark:text-white">{user?.email ?? profile?.email}</strong>
                   </p>
                 </div>
                 <div>
@@ -1104,7 +1151,7 @@ export default function Settings() {
                 )}
                 <div className="pt-2">
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Confirmation links will be sent to both your current and new email addresses. You must click both links to complete the change.
+                    A confirmation link will be sent to your new email address. Click that link to complete the change.
                   </p>
                 </div>
               </div>

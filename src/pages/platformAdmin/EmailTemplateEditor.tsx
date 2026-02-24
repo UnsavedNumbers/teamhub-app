@@ -17,6 +17,107 @@ import { wrapEmailContent } from '../../utils/emailTemplateWrapper';
 // Memoize ReactQuill to prevent unnecessary re-renders
 const MemoizedReactQuill = React.memo(ReactQuill);
 
+/** All email template types for the Type dropdown (Master Email Event Matrix + existing). */
+const EMAIL_TEMPLATE_TYPE_OPTIONS: { value: NotificationJobType; label: string }[] = [
+  { value: 'new_event', label: 'New Event' },
+  { value: 'new_message', label: 'New Message' },
+  { value: 'payment_receipt', label: 'Payment Receipt' },
+  { value: 'event_reminder', label: 'Event Reminder' },
+  { value: 'registration_confirmation', label: 'Registration Confirmation' },
+  { value: 'team_invite', label: 'Team Invite' },
+  { value: 'password_reset', label: 'Password Reset' },
+  { value: 'welcome_email', label: 'Welcome Email' },
+  { value: 'guardian_invite', label: 'Guardian Invite' },
+  { value: 'ticket_receipt', label: 'Ticket Receipt' },
+  { value: 'uniform_notification', label: 'Uniform Notification' },
+  { value: 'travel_notification', label: 'Travel Notification' },
+  { value: 'photo_moderation', label: 'Photo Moderation' },
+  { value: 'rsvp_notification', label: 'RSVP Notification' },
+  { value: 'guardian_attachment_request_submitted', label: 'Guardian Attachment Request Submitted' },
+  { value: 'guardian_attachment_request_reviewed', label: 'Guardian Attachment Request Reviewed' },
+  { value: 'org_contact_request', label: 'Org Contact Request' },
+  { value: 'platform_feature_request_signal', label: 'Platform Feature Request Signal' },
+  { value: 'welcome_org_admin', label: 'Welcome - Org Admin' },
+  { value: 'welcome_coach', label: 'Welcome - Coach' },
+  { value: 'welcome_parent', label: 'Welcome - Parent' },
+  { value: 'welcome_staff', label: 'Welcome - Staff' },
+  { value: 'welcome_fan', label: 'Welcome - Fan' },
+  { value: 'email_verification', label: 'Email Verification' },
+  { value: 'password_changed_confirmation', label: 'Password Changed Confirmation' },
+  { value: 'email_changed_confirmation', label: 'Email Address Changed Confirmation' },
+  { value: 'account_deactivated', label: 'Account Deactivated' },
+  { value: 'account_reactivated', label: 'Account Reactivated' },
+  { value: 'org_admin_invite', label: 'Org Admin Invite' },
+  { value: 'coach_invite', label: 'Coach Invite' },
+  { value: 'staff_invite', label: 'Staff Invite' },
+  { value: 'parent_invite', label: 'Parent Invite (Guardian Invite)' },
+  { value: 'role_updated_notification', label: 'Role Updated Notification' },
+  { value: 'removed_from_org', label: 'Removed From Organization' },
+  { value: 'added_to_team', label: 'Added to Team' },
+  { value: 'removed_from_team', label: 'Removed from Team' },
+  { value: 'team_assignment_athlete', label: 'Team Assignment - Athlete' },
+  { value: 'team_assignment_updated', label: 'Team Assignment Updated' },
+  { value: 'event_created', label: 'Event Created (Internal Notice)' },
+  { value: 'event_published', label: 'Event Published' },
+  { value: 'event_reminder_7d', label: 'Event Reminder - 7 Days' },
+  { value: 'event_reminder_24h', label: 'Event Reminder - 24 Hours' },
+  { value: 'event_reminder_2h', label: 'Event Reminder - 2 Hours' },
+  { value: 'event_updated', label: 'Event Updated' },
+  { value: 'event_cancelled', label: 'Event Cancelled' },
+  { value: 'rsvp_confirmation', label: 'RSVP Confirmation' },
+  { value: 'rsvp_change_confirmation', label: 'RSVP Change Confirmation' },
+  { value: 'ticket_purchase_confirmation_non_payment', label: 'Ticket Purchase Confirmation (Non-payment)' },
+  { value: 'payment_failed', label: 'Payment Failed' },
+  { value: 'refund_issued', label: 'Refund Issued' },
+  { value: 'partial_refund_issued', label: 'Partial Refund Issued' },
+  { value: 'chargeback_alert', label: 'Chargeback Alert (Internal)' },
+  { value: 'payout_summary', label: 'Payout Summary' },
+  { value: 'season_pass_confirmation', label: 'Season Pass Purchase Confirmation' },
+  { value: 'invoice_available', label: 'Invoice Available' },
+  { value: 'payment_reminder', label: 'Payment Reminder' },
+  { value: 'org_announcement', label: 'New Organization Announcement' },
+  { value: 'team_announcement', label: 'New Team Announcement' },
+  { value: 'announcement_edited', label: 'Announcement Edited' },
+  { value: 'direct_message_notification', label: 'Direct Message Notification' },
+  { value: 'comment_reply_notification', label: 'Comment Reply Notification' },
+  { value: 'guardian_linked_confirmation', label: 'Guardian Linked Confirmation' },
+  { value: 'guardian_removed', label: 'Guardian Removed Notification' },
+  { value: 'athlete_profile_updated', label: 'Athlete Profile Updated' },
+  { value: 'medical_form_submitted', label: 'Medical Form Submitted (Internal)' },
+  { value: 'medical_form_expiring_soon', label: 'Medical Form Expiring Soon' },
+  { value: 'document_uploaded_confirmation', label: 'Document Uploaded Confirmation' },
+  { value: 'new_gallery_published', label: 'New Gallery Published' },
+  { value: 'photo_tag_notification', label: 'Photo Tag Notification' },
+  { value: 'video_uploaded_internal', label: 'Video Uploaded (Internal)' },
+  { value: 'org_subscription_started', label: 'Organization Subscription Started' },
+  { value: 'org_subscription_renewed', label: 'Organization Subscription Renewed' },
+  { value: 'org_subscription_failed', label: 'Organization Subscription Failed' },
+  { value: 'org_subscription_canceled', label: 'Organization Subscription Canceled' },
+  { value: 'trial_ending_soon', label: 'Trial Ending Soon' },
+  { value: 'license_tier_changed', label: 'License Tier Changed' },
+  { value: 'billing_info_updated', label: 'Billing Info Updated Confirmation' },
+  { value: 'suspicious_login_alert', label: 'Suspicious Login Alert' },
+  { value: 'new_device_login_alert', label: 'New Device Login Alert' },
+  { value: 'data_export_ready', label: 'Data Export Ready' },
+  { value: 'privacy_policy_update', label: 'Privacy Policy Update' },
+  { value: 'terms_update', label: 'Terms of Service Update' },
+  { value: 'maintenance_notification', label: 'Maintenance Notification' },
+  { value: 'incident_notification', label: 'Incident Notification' },
+  { value: 'new_org_signup_internal', label: 'New Org Signup (Internal)' },
+  { value: 'large_purchase_alert', label: 'Large Purchase Alert' },
+  { value: 'multiple_failed_payments_alert', label: 'Multiple Failed Payments Alert' },
+  { value: 'guardian_invite_expiring_soon', label: 'Guardian Invite Expiring Soon' },
+  { value: 'event_overcapacity_warning', label: 'Event Overcapacity Warning' },
+  { value: 'season_kickoff_welcome', label: 'Season Kickoff Welcome' },
+  { value: 'mid_season_check_in', label: 'Mid-Season Check-In' },
+  { value: 'end_of_season_summary', label: 'End of Season Summary' },
+  { value: 'fan_engagement_highlight', label: 'Fan Engagement Highlight' },
+  { value: 'donation_campaign_launch', label: 'Donation Campaign Launch' },
+  { value: 'athlete_invite', label: 'Athlete Invite' },
+  { value: 'athlete_account_created', label: 'Athlete Account Created' },
+  { value: 'athlete_linked', label: 'Athlete Linked' },
+];
+
 export default function EmailTemplateEditor() {
   const { slug } = useParams<{ slug: string }>();
   const isCreateMode = !slug; // If no slug, we are creating
@@ -115,6 +216,18 @@ export default function EmailTemplateEditor() {
     }
   }, []);
 
+  // Manage body overflow when preview is open
+  useEffect(() => {
+    if (showPreview) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showPreview]);
+
   // Updates preview HTML
   useEffect(() => {
     try {
@@ -127,6 +240,32 @@ export default function EmailTemplateEditor() {
       // Ignore wrap errors during typing
     }
   }, [bodyContent]);
+
+  // Handle Escape key to close preview modal
+  useEffect(() => {
+    if (!showPreview) return;
+    
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowPreview(false);
+      }
+    };
+    
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showPreview]);
+
+  // Cleanup preview modal on unmount
+  useEffect(() => {
+    return () => {
+      if (showPreview) {
+        setShowPreview(false);
+      }
+      document.body.style.overflow = '';
+    };
+  }, []);
 
   const handleSave = async () => {
     if (!template || saving) return;
@@ -365,22 +504,7 @@ export default function EmailTemplateEditor() {
                     <Select
                         value={type}
                         onChange={(e) => setType(e.target.value as NotificationJobType)}
-                        options={[
-                            { value: 'new_event', label: 'New Event' },
-                            { value: 'new_message', label: 'New Message' },
-                            { value: 'payment_receipt', label: 'Payment Receipt' },
-                            { value: 'event_reminder', label: 'Event Reminder' },
-                            { value: 'registration_confirmation', label: 'Registration Confirmation' },
-                            { value: 'team_invite', label: 'Team Invite' },
-                            { value: 'password_reset', label: 'Password Reset' },
-                            { value: 'welcome_email', label: 'Welcome Email' },
-                            { value: 'guardian_invite', label: 'Guardian Invite' },
-                            { value: 'ticket_receipt', label: 'Ticket Receipt' },
-                            { value: 'uniform_notification', label: 'Uniform Notification' },
-                            { value: 'travel_notification', label: 'Travel Notification' },
-                            { value: 'photo_moderation', label: 'Photo Moderation' },
-                            { value: 'rsvp_notification', label: 'RSVP Notification' }
-                        ]}
+                        options={EMAIL_TEMPLATE_TYPE_OPTIONS}
                         className="pa-w-40 pa-text-sm"
                     />
                 ) : (
@@ -432,19 +556,71 @@ export default function EmailTemplateEditor() {
 
       {/* Preview Modal / Drawer (Overlay) */}
       {showPreview && (
-        <div className="pa-fixed pa-inset-0 pa-bg-black/50 pa-z-50 pa-flex pa-items-center pa-justify-center pa-p-4">
-          <div className="pa-bg-white pa-rounded-lg pa-shadow-xl pa-w-full pa-max-w-4xl pa-h-[90vh] pa-flex pa-flex-col">
-            <div className="pa-p-4 pa-border-b pa-flex pa-justify-between pa-items-center">
-              <h3 className="pa-text-lg pa-font-bold">Email Preview</h3>
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(11, 15, 20, 0.5)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 'var(--pa-space-4)',
+          }}
+          onClick={() => setShowPreview(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setShowPreview(false);
+            }
+          }}
+        >
+          <div 
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              width: '100%',
+              maxWidth: '56rem',
+              height: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ 
+              padding: 'var(--pa-space-4)', 
+              borderBottom: '1px solid var(--pa-n100)', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center' 
+            }}>
+              <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>Email Preview</h3>
               <Button variant="ghost" onClick={() => setShowPreview(false)}>Close</Button>
             </div>
-            <div className="pa-flex-1 pa-bg-gray-100 pa-p-8 pa-overflow-auto">
-              <div className="pa-bg-white pa-rounded pa-shadow pa-mx-auto pa-max-w-[600px] pa-min-h-[500px]">
+            <div style={{ 
+              flex: 1, 
+              backgroundColor: '#f3f4f6', 
+              padding: 'var(--pa-space-8)', 
+              overflow: 'auto' 
+            }}>
+              <div style={{ 
+                backgroundColor: 'white', 
+                borderRadius: '4px', 
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', 
+                margin: '0 auto', 
+                maxWidth: '600px', 
+                minHeight: '500px' 
+              }}>
                  {/* Render HTML content inside an iframe to isolate styles */}
                  <iframe 
                    srcDoc={previewHtml}
                    title="preview"
-                   className="pa-w-full pa-h-full pa-min-h-[600px] pa-border-0"
+                   style={{
+                     width: '100%',
+                     height: '100%',
+                     minHeight: '600px',
+                     border: 0,
+                   }}
                  />
               </div>
             </div>
