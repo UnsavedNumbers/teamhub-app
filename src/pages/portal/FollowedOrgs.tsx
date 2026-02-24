@@ -14,6 +14,7 @@ import { PageTitle } from '../../components/portal/Typography'
 import Card from '../../components/portal/Card'
 import Button from '../../components/portal/Button'
 import Icon from '../../components/portal/Icon'
+import EmptyState from '../../components/portal/EmptyState'
 import { getLink } from '../../utils/routes'
 import { useI18n } from '../../i18n/useI18n'
 import type { FanOrgFollow } from '../../types/staffAndFan'
@@ -129,21 +130,17 @@ export default function FollowedOrgs() {
             ))}
           </div>
         ) : (
-          <Card className="p-12 text-center">
-            <Icon name="explore" className="text-6xl text-gray-400 mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              {t('portal.fan.followedOrgs.emptyTitle')}
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-              {t('portal.fan.followedOrgs.emptyDescription')}
-            </p>
-            <Button
-              variant="primary"
-              onClick={() => navigate(getLink('portal.tickets'))}
-            >
-              <Icon name="search" className="mr-2" />
-              {t('portal.fan.followedOrgs.browseEvents')}
-            </Button>
+          <Card>
+            <EmptyState
+              icon="explore"
+              title={t('portal.fan.followedOrgs.emptyTitle')}
+              description={t('portal.fan.followedOrgs.emptyDescription')}
+              action={{
+                label: t('portal.fan.followedOrgs.browseEvents'),
+                onClick: () => navigate(getLink('portal.tickets')),
+                icon: 'search',
+              }}
+            />
           </Card>
         )}
 

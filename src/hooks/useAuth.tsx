@@ -1151,10 +1151,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ? `${baseUrl}${redirectTo}` 
       : `${baseUrl}${window.location.pathname}`
     
-    const { error } = await supabase.auth.updateUser(
+    debug.flow('Auth', 'Email change request initiated', { newEmail, redirectTo: emailRedirectTo })
+    
+    const { data, error } = await supabase.auth.updateUser(
       { email: newEmail },
       { emailRedirectTo }
     )
+    
+    if (error) {
+      debug.error('Auth', 'Email change failed', { 
+        error: error.message, 
+        errorCode: error.status,
+        newEmail,
+        // Log full error object for debugging
+        fullError: JSON.stringify(error, null, 2)
+      })
+      console.error('[Auth] Email change error details:', {
+        message: error.message,
+        status: error.status,
+        name: error.name,
+        fullError: error
+      })
+    } else {
+      debug.flow('Auth', 'Email change request sent successfully', { 
+        newEmail,
+        userId: data?.user?.id 
+      })
+      console.log('[Auth] Email change request sent:', { newEmail })
+    }
+    
     return { error }
   }
 

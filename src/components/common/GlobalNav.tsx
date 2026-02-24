@@ -20,7 +20,7 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
     <nav className={`gn-root ${variant === 'admin' ? 'gn-admin' : ''}`} role="navigation" aria-label="Main navigation">
       {/* Left section */}
       <div className="gn-left">
-        {/* Brand — admin: text only (no logo); platform-admin: icon + text */}
+        {/* Brand — admin: text only; platform-admin: icon + text */}
         <Link to={brandPath} className="gn-brand">
           {showLogo && (
             <div className="gn-logo">

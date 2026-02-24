@@ -4,12 +4,41 @@
 import { getOrganizationBranding, injectBrandingVariables, type OrganizationBranding } from './brandingService.ts'
 import Handlebars from 'npm:handlebars@4.7.7'
 
+/** All notification job types: existing + Master Email Event Matrix types. */
+export type NotificationJobType =
+  | 'new_event' | 'new_message' | 'payment_receipt' | 'event_reminder' | 'registration_confirmation'
+  | 'team_invite' | 'password_reset' | 'welcome_email' | 'guardian_invite' | 'athlete_invite'
+  | 'athlete_account_created' | 'athlete_linked' | 'ticket_receipt' | 'uniform_notification'
+  | 'travel_notification' | 'photo_moderation' | 'rsvp_notification' | 'org_contact_request'
+  | 'platform_feature_request_signal'
+  | 'welcome_org_admin' | 'welcome_coach' | 'welcome_parent' | 'welcome_staff' | 'welcome_fan'
+  | 'email_verification' | 'password_changed_confirmation' | 'email_changed_confirmation'
+  | 'account_deactivated' | 'account_reactivated' | 'org_admin_invite' | 'coach_invite' | 'staff_invite'
+  | 'parent_invite' | 'role_updated_notification' | 'removed_from_org' | 'added_to_team'
+  | 'removed_from_team' | 'team_assignment_athlete' | 'team_assignment_updated' | 'event_created'
+  | 'event_published' | 'event_reminder_7d' | 'event_reminder_24h' | 'event_reminder_2h'
+  | 'event_updated' | 'event_cancelled' | 'rsvp_confirmation' | 'rsvp_change_confirmation'
+  | 'ticket_purchase_confirmation_non_payment' | 'payment_failed' | 'refund_issued'
+  | 'partial_refund_issued' | 'chargeback_alert' | 'payout_summary' | 'season_pass_confirmation'
+  | 'invoice_available' | 'payment_reminder' | 'org_announcement' | 'team_announcement'
+  | 'announcement_edited' | 'direct_message_notification' | 'comment_reply_notification'
+  | 'guardian_linked_confirmation' | 'guardian_removed' | 'athlete_profile_updated'
+  | 'medical_form_submitted' | 'medical_form_expiring_soon' | 'document_uploaded_confirmation'
+  | 'new_gallery_published' | 'photo_tag_notification' | 'video_uploaded_internal'
+  | 'org_subscription_started' | 'org_subscription_renewed' | 'org_subscription_failed'
+  | 'org_subscription_canceled' | 'trial_ending_soon' | 'license_tier_changed' | 'billing_info_updated'
+  | 'suspicious_login_alert' | 'new_device_login_alert' | 'data_export_ready' | 'privacy_policy_update'
+  | 'terms_update' | 'maintenance_notification' | 'incident_notification' | 'new_org_signup_internal'
+  | 'large_purchase_alert' | 'multiple_failed_payments_alert' | 'guardian_invite_expiring_soon'
+  | 'event_overcapacity_warning' | 'season_kickoff_welcome' | 'mid_season_check_in'
+  | 'end_of_season_summary' | 'fan_engagement_highlight' | 'donation_campaign_launch';
+
 export interface NotificationJob {
   id: string;
   org_id: string;
   user_id?: string;
   email: string;
-  type: 'new_event' | 'new_message' | 'payment_receipt' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email' | 'guardian_invite' | 'athlete_invite' | 'athlete_account_created' | 'athlete_linked' | 'ticket_receipt' | 'uniform_notification' | 'travel_notification' | 'photo_moderation' | 'rsvp_notification' | 'org_contact_request' | 'platform_feature_request_signal';
+  type: NotificationJobType;
   payload: Record<string, any>;
   status: 'queued' | 'sent' | 'failed';
   error?: string;
@@ -100,8 +129,180 @@ const EMAIL_CONFIG = {
   platform_feature_request_signal: {
     subject: '[Feature Signal] {{feature_name}} requested at {{org_name}}',
     preview: 'A guardian or athlete has requested a feature not in their plan'
-  }
+  },
+  // Master Email Event Matrix types (subject/preview; body from DB or generic fallback)
+  welcome_org_admin: { subject: 'Welcome to YouthSports Team Hub', preview: 'Confirm account and next steps' },
+  welcome_coach: { subject: 'Welcome to {{organization_name}}', preview: 'Confirm access and role permissions' },
+  welcome_parent: { subject: 'Welcome to {{organization_name}}', preview: 'Confirm account and athlete linking' },
+  welcome_staff: { subject: 'Welcome to {{organization_name}}', preview: 'Staff account ready' },
+  welcome_fan: { subject: 'Welcome to {{organization_name}}', preview: 'Fan account created' },
+  email_verification: { subject: 'Verify your email address', preview: 'Verify email ownership' },
+  password_changed_confirmation: { subject: 'Your password was changed', preview: 'Password successfully updated' },
+  email_changed_confirmation: { subject: 'Your email address was updated', preview: 'Email updated' },
+  account_deactivated: { subject: 'Your account has been deactivated', preview: 'Admin disabled account' },
+  account_reactivated: { subject: 'Your account has been reactivated', preview: 'Admin re-enabled account' },
+  org_admin_invite: { subject: 'You are invited to be an org admin', preview: 'Invited to become org_admin' },
+  coach_invite: { subject: 'You are invited to coach at {{organization_name}}', preview: 'Invited to join as coach' },
+  staff_invite: { subject: 'You are invited to join {{organization_name}}', preview: 'Invited to join as staff' },
+  parent_invite: { subject: 'You are invited to connect with {{athlete_name}}', preview: 'Accept invite link' },
+  role_updated_notification: { subject: 'Your role was updated', preview: 'User role changed' },
+  removed_from_org: { subject: 'You were removed from {{organization_name}}', preview: 'User removed from org' },
+  added_to_team: { subject: 'You were added to {{team_name}}', preview: 'User added to team' },
+  removed_from_team: { subject: 'You were removed from {{team_name}}', preview: 'User removed from team' },
+  team_assignment_athlete: { subject: '{{athlete_name}} was assigned to {{team_name}}', preview: 'Athlete assigned to team' },
+  team_assignment_updated: { subject: 'Team assignment updated for {{athlete_name}}', preview: 'Athlete moved to different team' },
+  event_created: { subject: 'Event created: {{event_title}}', preview: 'Optional internal notice' },
+  event_published: { subject: 'Event published: {{event_title}}', preview: 'Event visible to parents/fans' },
+  event_reminder_7d: { subject: 'Reminder: {{event_title}} in 7 days', preview: '7 days before event' },
+  event_reminder_24h: { subject: 'Tomorrow: {{event_title}}', preview: '24 hours before event' },
+  event_reminder_2h: { subject: 'Soon: {{event_title}}', preview: 'Same-day reminder' },
+  event_updated: { subject: 'Event updated: {{event_title}}', preview: 'Date/time/location changed' },
+  event_cancelled: { subject: 'Event cancelled: {{event_title}}', preview: 'Event cancelled' },
+  rsvp_confirmation: { subject: 'RSVP received: {{event_title}}', preview: 'Parent RSVPs to event' },
+  rsvp_change_confirmation: { subject: 'RSVP updated: {{event_title}}', preview: 'RSVP status changed' },
+  ticket_purchase_confirmation_non_payment: { subject: 'Confirmation: {{event_title}}', preview: 'Non-payment items' },
+  payment_failed: { subject: 'Payment could not be processed', preview: 'Stripe failure' },
+  refund_issued: { subject: 'Refund processed for your order', preview: 'Refund processed' },
+  partial_refund_issued: { subject: 'Partial refund processed', preview: 'Partial refund' },
+  chargeback_alert: { subject: 'Chargeback alert', preview: 'Stripe dispute' },
+  payout_summary: { subject: 'Payout summary', preview: 'Stripe payout' },
+  season_pass_confirmation: { subject: 'Season pass confirmed', preview: 'Season pass purchase' },
+  invoice_available: { subject: 'Your invoice is ready', preview: 'If invoicing is used' },
+  payment_reminder: { subject: 'Reminder: payment due', preview: 'If unpaid registration exists' },
+  org_announcement: { subject: '{{organization_name}}: {{subject}}', preview: 'Org-wide announcement' },
+  team_announcement: { subject: '{{team_name}}: {{subject}}', preview: 'Team-level announcement' },
+  announcement_edited: { subject: 'Announcement updated: {{subject}}', preview: 'Optional' },
+  direct_message_notification: { subject: 'New message from {{sender_name}}', preview: 'If messaging exists' },
+  comment_reply_notification: { subject: 'New reply to your comment', preview: 'If comments exist' },
+  guardian_linked_confirmation: { subject: 'Guardian linked to {{athlete_name}}', preview: 'Guardian successfully linked' },
+  guardian_removed: { subject: 'Guardian access removed', preview: 'Guardian removed' },
+  athlete_profile_updated: { subject: 'Profile updated for {{athlete_name}}', preview: 'Optional' },
+  medical_form_submitted: { subject: 'Medical form submitted', preview: 'Internal notice' },
+  medical_form_expiring_soon: { subject: 'Medical form expiring for {{athlete_name}}', preview: 'Expiring soon' },
+  document_uploaded_confirmation: { subject: 'Document received', preview: 'Document upload confirmation' },
+  new_gallery_published: { subject: 'New gallery: {{gallery_title}}', preview: 'Album made public' },
+  photo_tag_notification: { subject: 'You were tagged in a photo', preview: 'Athlete tagged in photo' },
+  video_uploaded_internal: { subject: 'Video uploaded', preview: 'Internal' },
+  org_subscription_started: { subject: 'Your subscription has started', preview: 'Subscription started' },
+  org_subscription_renewed: { subject: 'Subscription renewed', preview: 'Subscription renewed' },
+  org_subscription_failed: { subject: 'Subscription payment failed', preview: 'Payment failed' },
+  org_subscription_canceled: { subject: 'Subscription canceled', preview: 'Subscription canceled' },
+  trial_ending_soon: { subject: 'Your trial ends soon', preview: 'Trial ending' },
+  license_tier_changed: { subject: 'Your plan has been updated', preview: 'License tier changed' },
+  billing_info_updated: { subject: 'Billing information updated', preview: 'Billing updated' },
+  suspicious_login_alert: { subject: 'Suspicious login detected', preview: 'Security alert' },
+  new_device_login_alert: { subject: 'New device used to sign in', preview: 'New device' },
+  data_export_ready: { subject: 'Your data export is ready', preview: 'Data export' },
+  privacy_policy_update: { subject: 'Privacy policy updated', preview: 'Policy update' },
+  terms_update: { subject: 'Terms of service updated', preview: 'Terms update' },
+  maintenance_notification: { subject: 'Scheduled maintenance', preview: 'Scheduled downtime' },
+  incident_notification: { subject: 'Service update', preview: 'Major outage' },
+  new_org_signup_internal: { subject: 'New organization signup', preview: 'Internal platform admin' },
+  large_purchase_alert: { subject: 'Large purchase alert', preview: 'Fraud threshold' },
+  multiple_failed_payments_alert: { subject: 'Multiple failed payments', preview: 'Alert' },
+  guardian_invite_expiring_soon: { subject: 'Guardian invite expiring', preview: 'Invite expiring' },
+  event_overcapacity_warning: { subject: 'Event near or over capacity', preview: 'Overcapacity' },
+  season_kickoff_welcome: { subject: 'Season kickoff at {{organization_name}}', preview: 'Season kickoff' },
+  mid_season_check_in: { subject: 'Mid-season check-in', preview: 'Check-in' },
+  end_of_season_summary: { subject: 'End of season summary', preview: 'Season summary' },
+  fan_engagement_highlight: { subject: 'Highlight from {{organization_name}}', preview: 'Engagement highlight' },
+  donation_campaign_launch: { subject: 'Support {{organization_name}}', preview: 'If applicable' }
 };
+
+/**
+ * Send a notification email using a specific template from database
+ * Used by notifications_outbox system where template_id is provided
+ */
+export async function sendNotificationEmailWithTemplate(
+  job: NotificationJob,
+  template: any, // email_templates row
+  supabase?: any
+): Promise<EmailResult> {
+  try {
+    // Prepare payload with branding
+    let payload = { ...(job.payload ?? {}) }
+    
+    // Add invite URLs if needed
+    if (job.type === 'guardian_invite' || job.type === 'athlete_invite') {
+      const token = payload.invite_token
+      if (token) {
+        const platformBaseUrl = Deno.env.get('PLATFORM_APP_URL') || Deno.env.get('APP_URL') || 'https://platform.youthsports.team'
+        payload.invite_url = `${platformBaseUrl}/portal/accept-invite?token=${token}&type=${job.type === 'guardian_invite' ? 'guardian' : 'athlete'}`
+      }
+    }
+
+    let branding: OrganizationBranding | null = null
+    if (supabase && job.org_id) {
+      branding = await getOrganizationBranding(job.org_id, supabase)
+      payload = {
+        ...payload,
+        organization_logo_url: branding.logo_url || '',
+        organization_name: branding.organization_name,
+        organization_primary_color: branding.primary_color,
+        organization_secondary_color: branding.secondary_color,
+        email_footer_text: branding.email_footer_text || `© ${new Date().getFullYear()} ${branding.organization_name}. All rights reserved.`,
+        email_from_name: branding.email_from_name,
+      }
+    }
+
+    // Use template HTML content directly
+    let htmlContent = template.html_content || ''
+    htmlContent = injectVariables(htmlContent, payload, { noEscape: true })
+
+    if (branding) {
+      htmlContent = injectBrandingVariables(htmlContent, branding)
+    }
+
+    // Get subject from template
+    const subjectTemplate = template.subject_template || 'Notification'
+    const subject = injectVariables(subjectTemplate, payload, { noEscape: true })
+
+    // Generate plain text fallback
+    const textContent = generatePlainText(htmlContent)
+
+    // Send email via Resend API
+    const resendApiKey = Deno.env.get('RESEND_API_KEY')
+    if (!resendApiKey) {
+      throw new Error('RESEND_API_KEY environment variable not set')
+    }
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: payload.email_from_name
+          ? `${payload.email_from_name} <notifications@youthsports.team>`
+          : 'notifications@youthsports.team',
+        to: job.email,
+        subject,
+        html: htmlContent,
+        text: textContent,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.text()
+      throw new Error(`Resend API error: ${response.status} ${errorData}`)
+    }
+
+    const result = await response.json()
+
+    return {
+      success: true,
+      emailId: result.id
+    }
+
+  } catch (error) {
+    console.error('Failed to send notification email with template:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
 
 /**
  * Send a notification email using the compiled MJML template
@@ -803,11 +1004,26 @@ async function loadTemplate(type: string, payload: Record<string, any>, supabase
   };
 
   const template = extendedTemplates[type];
-  if (!template) {
-    throw new Error(`Template not found for type: ${type}`);
+  if (template) {
+    return injectVariables(template, payload, type);
   }
 
-  return injectVariables(template, payload, type);
+  // Generic fallback for all Master Email Matrix types when no DB template is active
+  // and no specific hardcoded template exists. Uses common payload vars.
+  const genericFallback = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>{{email_subject}}</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  {{#if organization_logo_url}}
+  <div style="text-align: center; margin-bottom: 20px;"><img src="{{organization_logo_url}}" alt="{{organization_name}}" style="max-height: 60px; max-width: 200px;" /></div>
+  {{else}}
+  <h1 style="color: #1e293b; margin-bottom: 20px;">{{organization_name}}</h1>
+  {{/if}}
+  <p>Hi {{recipient_name}},</p>
+  {{#if body}}<p>{{body}}</p>{{/if}}
+  {{#if message}}<p>{{message}}</p>{{/if}}
+  <p style="color: #6b7280; font-size: 12px; margin-top: 24px;">{{email_footer_text}}</p>
+</body></html>`;
+  return injectVariables(genericFallback, payload, type);
 }
 
 /**

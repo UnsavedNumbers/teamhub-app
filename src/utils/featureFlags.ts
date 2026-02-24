@@ -11,7 +11,6 @@ import type {
   ResolvedFeatureFlag,
   CachedFlagValue,
 } from '../types/featureFlags.types'
-import { getFallbackValue, hasFallback } from './featureFlagFallbacks'
 
 // ============================================================================
 // Environment Detection
@@ -281,6 +280,22 @@ export async function resolveFeatureFlag(
     }
     
     if (!data) {
+      // Flag not found - default boolean flags to false
+      const isBooleanFlag = key.includes('enabled') || 
+                           key.includes('allow') || 
+                           key.includes('enable')
+      
+      if (isBooleanFlag) {
+        const defaultResolved: ResolvedFeatureFlag = {
+          value: false,
+          value_type: 'boolean',
+          resolved_from: 'platform',
+          source_id: null,
+        }
+        setCachedValue(key, defaultResolved)
+        return defaultResolved
+      }
+      
       return null
     }
     
@@ -375,6 +390,8 @@ export async function resolveFeatureFlags(
     
     // Parse and cache results
     const result: Record<string, ResolvedFeatureFlag> = {}
+    const resolvedKeys = new Set<string>()
+    
     for (const [key, value] of Object.entries(data)) {
       const resolved: ResolvedFeatureFlag = {
         value: (value as any).value as boolean | number,
@@ -384,6 +401,28 @@ export async function resolveFeatureFlags(
       }
       setCachedValue(key, resolved)
       result[key] = resolved
+      resolvedKeys.add(key)
+    }
+    
+    // For any requested keys that weren't resolved, default boolean flags to false
+    for (const key of keys) {
+      if (!resolvedKeys.has(key)) {
+        // Check if this looks like a boolean flag (common patterns)
+        const isBooleanFlag = key.includes('enabled') || 
+                             key.includes('allow') || 
+                             key.includes('enable')
+        
+        if (isBooleanFlag) {
+          const defaultResolved: ResolvedFeatureFlag = {
+            value: false,
+            value_type: 'boolean',
+            resolved_from: 'platform',
+            source_id: null,
+          }
+          setCachedValue(key, defaultResolved)
+          result[key] = defaultResolved
+        }
+      }
     }
     
     return result
@@ -424,38 +463,23 @@ export function getFeatureFlagValue(
   // simply means the hook hasn't finished yet, so return the
   // fallback.
   
-  // Use provided fallback or hardcoded fallback
+  // Use provided fallback
   if (fallback !== undefined) {
     return fallback
   }
   
-  // Try hardcoded fallback
-  // We need to know the value type, so we'll try all types
-  if (hasFallback(key)) {
-    // Try boolean first (most common)
-    const boolFallback = getFallbackValue(key, 'boolean')
-    if (boolFallback !== undefined) {
-      return boolFallback
-    }
-    
-    // Try integer
-    const intFallback = getFallbackValue(key, 'integer')
-    if (intFallback !== undefined) {
-      return intFallback
-    }
-    
-    // Try double
-    const doubleFallback = getFallbackValue(key, 'double')
-    if (doubleFallback !== undefined) {
-      return doubleFallback
-    }
-  }
-  
-  // Last resort: default based on common patterns
-  if (key.includes('enabled') || key.includes('allow')) {
+  // Last resort: default based on common patterns for boolean flags
+  // If the key suggests it's a boolean flag, default to false
+  if (key.includes('enabled') || 
+      key.includes('allow') || 
+      key.includes('enable') ||
+      key.includes('_flag') ||
+      key.endsWith('_on') ||
+      key.endsWith('_off')) {
     return false
   }
   
+  // For other types, default to 0
   return 0
 }
 
@@ -515,8 +539,8 @@ export function useFeatureFlags(flagKeys?: string[]) {
       if (keysString) {
         keysToResolve = keysString.split(',')
       } else {
-        const { FALLBACK_FLAGS } = await import('./featureFlagFallbacks')
-        keysToResolve = Object.keys(FALLBACK_FLAGS)
+        // If no keys specified, don't resolve anything
+        keysToResolve = []
       }
 
       if (keysToResolve.length === 0) {

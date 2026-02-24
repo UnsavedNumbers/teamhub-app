@@ -147,12 +147,88 @@ export async function getEventAttendance(
     try {
         if (USE_FAKE_DATA) {
             await delay()
-            // Generate mock records based on event existing
-            // This is simplified; in a real fake implementation we'd store these
+            // Generate mock attendance records
+            const fakeRecords: AttendanceRecord[] = [
+                {
+                    id: 'attendance-1',
+                    event_id: eventId,
+                    athlete_id: 'demo-athlete-1',
+                    status: 'present',
+                    notes: null,
+                    recorded_by_user_id: 'demo-user-1',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    child: {
+                        id: 'demo-athlete-1',
+                        first_name: 'Alex',
+                        last_name: 'Johnson',
+                    },
+                },
+                {
+                    id: 'attendance-2',
+                    event_id: eventId,
+                    athlete_id: 'demo-athlete-2',
+                    status: 'absent',
+                    notes: 'Family conflict',
+                    recorded_by_user_id: 'demo-user-2',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    child: {
+                        id: 'demo-athlete-2',
+                        first_name: 'Jordan',
+                        last_name: 'Smith',
+                    },
+                },
+                {
+                    id: 'attendance-3',
+                    event_id: eventId,
+                    athlete_id: 'demo-athlete-3',
+                    status: 'present',
+                    notes: 'Will confirm by Friday',
+                    recorded_by_user_id: 'demo-user-3',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    child: {
+                        id: 'demo-athlete-3',
+                        first_name: 'Sam',
+                        last_name: 'Davis',
+                    },
+                },
+                {
+                    id: 'attendance-4',
+                    event_id: eventId,
+                    athlete_id: 'demo-athlete-4',
+                    status: 'present',
+                    notes: null,
+                    recorded_by_user_id: null,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    child: {
+                        id: 'demo-athlete-4',
+                        first_name: 'Taylor',
+                        last_name: 'Brown',
+                    },
+                },
+                {
+                    id: 'attendance-5',
+                    event_id: eventId,
+                    athlete_id: 'demo-athlete-5',
+                    status: 'absent',
+                    notes: null,
+                    recorded_by_user_id: null,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    child: {
+                        id: 'demo-athlete-5',
+                        first_name: 'Casey',
+                        last_name: 'Miller',
+                    },
+                },
+            ]
             debug.perf.end('attendanceService.getEventAttendance')
-            debug.data('AttendanceService.getEventAttendance', 'Response (fake)', { eventId, recordCount: 0 })
+            debug.data('AttendanceService.getEventAttendance', 'Response (fake)', { eventId, recordCount: fakeRecords.length })
             console.groupEnd()
-            return { data: [], error: null }
+            return { data: fakeRecords, error: null }
         }
 
         // Fetch existing records joined with children
@@ -495,7 +571,82 @@ export async function getAttendancePeople(
     // This is expensive without a dedicated stats table.
     // Strategy: Fetch all relevant attendance records and aggregate in JS.
 
-    if (USE_FAKE_DATA) return { data: [], error: null }
+    if (USE_FAKE_DATA) {
+        await delay()
+        const fakePeople: AttendancePersonSummary[] = [
+            {
+                athlete_id: 'demo-athlete-1',
+                first_name: 'Alex',
+                last_name: 'Johnson',
+                team_names: ['U10 Lightning'],
+                total_events: 12,
+                present_count: 10,
+                absent_count: 1,
+                late_count: 1,
+                excused_count: 0,
+                attendance_rate: 91.7,
+                last_attended_date: new Date().toISOString(),
+                risk_level: 'good',
+            },
+            {
+                athlete_id: 'demo-athlete-2',
+                first_name: 'Jordan',
+                last_name: 'Smith',
+                team_names: ['U10 Lightning'],
+                total_events: 12,
+                present_count: 8,
+                absent_count: 3,
+                late_count: 1,
+                excused_count: 0,
+                attendance_rate: 75.0,
+                last_attended_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+                risk_level: 'watch',
+            },
+            {
+                athlete_id: 'demo-athlete-3',
+                first_name: 'Sam',
+                last_name: 'Davis',
+                team_names: ['U12 Thunder'],
+                total_events: 15,
+                present_count: 14,
+                absent_count: 0,
+                late_count: 1,
+                excused_count: 0,
+                attendance_rate: 100.0,
+                last_attended_date: new Date().toISOString(),
+                risk_level: 'good',
+            },
+            {
+                athlete_id: 'demo-athlete-4',
+                first_name: 'Taylor',
+                last_name: 'Brown',
+                team_names: ['U12 Thunder'],
+                total_events: 15,
+                present_count: 9,
+                absent_count: 5,
+                late_count: 1,
+                excused_count: 0,
+                attendance_rate: 66.7,
+                last_attended_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+                risk_level: 'at_risk',
+            },
+            {
+                athlete_id: 'demo-athlete-5',
+                first_name: 'Casey',
+                last_name: 'Miller',
+                team_names: ['U10 Hoops'],
+                total_events: 10,
+                present_count: 9,
+                absent_count: 0,
+                late_count: 1,
+                excused_count: 0,
+                attendance_rate: 100.0,
+                last_attended_date: new Date().toISOString(),
+                risk_level: 'good',
+            },
+        ]
+        return { data: fakePeople, error: null }
+    }
 
     try {
         // 1. Get all children in org (or filtered team)

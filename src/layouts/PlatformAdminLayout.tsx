@@ -67,7 +67,7 @@ const navSections: NavSection[] = [
   {
     label: 'Emails',
     items: [
-      { text: 'Email Preview', icon: 'email', path: getLink('platformAdmin.emailPreview'), requiredAction: 'view_email_preview' },
+      { text: 'Email Settings', icon: 'settings', path: getLink('platformAdmin.emailSettings'), requiredAction: 'view_email_preview' },
       { text: 'Templates', icon: 'edit_square', path: getLink('platformAdmin.emails.list'), requiredAction: 'manage_email_templates' },
     ],
   },
@@ -134,6 +134,75 @@ function LoadingSpinner() {
   )
 }
 
+// Utility to remove stuck overlays
+function removeStuckOverlays() {
+  // Remove any fixed overlays that might be stuck (backdrop-only divs)
+  const overlays = document.querySelectorAll('div[style*="position: fixed"]')
+  let removedCount = 0
+  
+  overlays.forEach((overlay) => {
+    const element = overlay as HTMLElement
+    const style = window.getComputedStyle(element)
+    const inlineStyle = element.getAttribute('style') || ''
+    
+    // Check if it's a backdrop overlay (fixed, full screen, semi-transparent background)
+    const isFixed = style.position === 'fixed'
+    const hasFullScreen = inlineStyle.includes('inset: 0') || 
+                         (style.top === '0px' && style.left === '0px' && 
+                          style.width === '100%' && style.height === '100%')
+    const hasBackdropBg = inlineStyle.includes('rgba(11, 15, 20, 0.5)') ||
+                         inlineStyle.includes('rgba(0, 0, 0') ||
+                         style.backgroundColor.includes('rgba')
+    const highZIndex = parseInt(style.zIndex) >= 1000
+    
+    // If it's a backdrop overlay
+    if (isFixed && hasFullScreen && hasBackdropBg && highZIndex) {
+      // Check if there's actual modal content (not just backdrop)
+      const hasModalContent = Array.from(element.children).some(child => {
+        const childEl = child as HTMLElement
+        const childStyle = window.getComputedStyle(childEl)
+        return childEl.classList.contains('pa-card') || 
+               childStyle.backgroundColor === 'white' ||
+               childStyle.backgroundColor === 'rgb(255, 255, 255)' ||
+               childEl.style.maxWidth !== '' ||
+               childEl.style.width !== '100%'
+      })
+      
+      // If no modal content or if it's clearly a stuck backdrop, remove it
+      if (!hasModalContent || element.children.length === 0) {
+        element.remove()
+        removedCount++
+      }
+    }
+  })
+  
+  // Also check for any divs directly under body that look like stuck overlays
+  Array.from(document.body.children).forEach((child) => {
+    if (child instanceof HTMLElement && child.tagName === 'DIV') {
+      const style = window.getComputedStyle(child)
+      const inlineStyle = child.getAttribute('style') || ''
+      if (
+        style.position === 'fixed' &&
+        inlineStyle.includes('inset: 0') &&
+        parseInt(style.zIndex) >= 1000 &&
+        child.children.length === 0
+      ) {
+        child.remove()
+        removedCount++
+      }
+    }
+  })
+  
+  // Reset body overflow in case it's stuck
+  if (document.body.style.overflow === 'hidden') {
+    document.body.style.overflow = ''
+  }
+  
+  if (removedCount > 0) {
+    console.log(`Removed ${removedCount} stuck overlay(s)`)
+  }
+}
+
 export default function PlatformAdminLayout() {
   // #region agent log
   const mountId = useRef(Math.random().toString(36).substr(2, 9))
@@ -144,6 +213,15 @@ export default function PlatformAdminLayout() {
     }
   }, [])
   // #endregion
+  
+  // Clean up any stuck overlays on mount
+  useEffect(() => {
+    removeStuckOverlays()
+    
+    // Also expose globally for manual cleanup if needed
+    ;(window as any).removeStuckOverlays = removeStuckOverlays
+  }, [])
+  
   const { loaded: themeLoaded } = usePlatformAdminTheme()
   const { resolvedTheme } = useTheme()
   const isMobile = useMobile()

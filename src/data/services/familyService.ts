@@ -592,13 +592,15 @@ export async function updateAthlete(
             .from('athletes')
             .update(updateData)
             .eq('id', athleteId)
-            .eq('org_id', context.orgId) // Ensure org scope
             .select()
             .single()
 
         if (error) {
             console.error('[updateAthlete] Supabase error:', error)
             throw error
+        }
+        if (!data) {
+            throw new Error('Update athlete failed: no row updated. You may not have permission to edit this athlete.')
         }
         
         // Convert to proper Child type
@@ -786,7 +788,9 @@ export async function getAthletes(
                 updated_at: null,
                 deleted_at: null,
                 family_id: null,
-                has_active_guardian: a.status === 'active'
+                has_active_guardian: a.status === 'active',
+                profile_photo_updated_at: a.profile_photo_updated_at ?? null,
+                has_profile_photo: a.has_profile_photo ?? false
             }))
         }
 

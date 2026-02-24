@@ -362,7 +362,7 @@ export const UNGATED_ROUTES: string[] = [
     'platformAdmin.licenses.overrides.create',
     'platformAdmin.licenses.overrides.detail',
     'platformAdmin.licenses.audit',
-    'platformAdmin.emailPreview',
+    'platformAdmin.emailSettings',
 ];
 
 // ============================================================================

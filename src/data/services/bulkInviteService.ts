@@ -9,6 +9,7 @@
 
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
+import { USE_FAKE_DATA } from '../config'
 
 /** Local types for bulk_import_jobs (table may not be in generated Database types yet) */
 export interface BulkInviteTotalsJson {
@@ -16,6 +17,7 @@ export interface BulkInviteTotalsJson {
   athletes?: number
   guardians?: number
   coaches?: number
+  org_admins?: number
 }
 
 export interface BulkInviteProgressJson {
@@ -366,6 +368,77 @@ export async function getBulkInviteJobHistory(
   try {
     if (!orgId) {
       return { data: null, error: new Error('Organization ID is required') }
+    }
+
+    if (USE_FAKE_DATA) {
+      const now = new Date()
+      const fakeJobs: ImportJobStatus[] = [
+        {
+          id: 'demo-job-1',
+          status: 'completed',
+          progress_json: {
+            step: 'completed',
+            completed: 22,
+            total: 22,
+          },
+          totals_json: {
+            unique_emails: 22,
+            athletes: 20,
+            guardians: 15,
+            coaches: 5,
+            org_admins: 2,
+          },
+          error_summary: null,
+          started_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          finished_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000 + 5000).toISOString(),
+          created_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          file_name: 'bulk-invite-import-2026-02-21.xlsx',
+        },
+        {
+          id: 'demo-job-2',
+          status: 'completed_with_errors',
+          progress_json: {
+            step: 'completed',
+            completed: 18,
+            total: 20,
+          },
+          totals_json: {
+            unique_emails: 20,
+            athletes: 18,
+            guardians: 12,
+            coaches: 3,
+            org_admins: 1,
+          },
+          error_summary: {
+            row_errors: [
+              { sheet: 'Athletes', row: 5, field: 'email', message: 'Invalid email format', severity: 'error' },
+              { sheet: 'Guardians', row: 8, field: 'email', message: 'Duplicate email', severity: 'error' },
+            ],
+          },
+          started_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          finished_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000 + 8000).toISOString(),
+          created_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          file_name: 'bulk-invite-import-2026-02-18.xlsx',
+        },
+        {
+          id: 'demo-job-3',
+          status: 'failed',
+          progress_json: {
+            step: 'validation',
+            completed: 0,
+            total: 0,
+          },
+          totals_json: null,
+          error_summary: {
+            error: 'File format not supported',
+          },
+          started_at: null,
+          finished_at: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          created_at: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          file_name: 'invalid-file.csv',
+        },
+      ]
+      return { data: fakeJobs, error: null }
     }
 
     const { data, error } = await (supabase as any)

@@ -15,6 +15,8 @@ import { getDisplayName, calculateAge, getGenderLabel, formatSports } from '../u
 import { showError } from '../utils/toast'
 import { supabase } from '../lib/supabase'
 import { USE_FAKE_DATA } from '../data/config'
+import { UserPlus, Link2, X } from 'lucide-react'
+import { createPortal } from 'react-dom'
 
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 
@@ -26,6 +28,7 @@ export default function Athletes() {
   const [athletes, setAthletes] = useState<Athlete[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showAddAthleteDialog, setShowAddAthleteDialog] = useState(false)
 
   const { context, isReady } = useUserContext()
   const { currentOrganization } = useOrganization()
@@ -271,8 +274,18 @@ export default function Athletes() {
     }
   }
 
-  const handleAddAthlete = () => {
+  const handleAddAthleteClick = () => {
     if (loading) return
+    setShowAddAthleteDialog(true)
+  }
+
+  const handleClaimAthlete = () => {
+    setShowAddAthleteDialog(false)
+    navigate('/portal/athletes/request-attachment')
+  }
+
+  const handleAddNewAthlete = () => {
+    setShowAddAthleteDialog(false)
     navigate('/portal/athletes/new')
   }
 
@@ -295,7 +308,7 @@ export default function Athletes() {
           </p>
         </div>
         {!isAthlete && (
-          <Button variant="primary" onClick={handleAddAthlete} disabled={loading} className="w-full sm:w-auto">
+          <Button variant="primary" onClick={handleAddAthleteClick} disabled={loading} className="w-full sm:w-auto">
             Add Athlete
           </Button>
         )}
@@ -317,7 +330,7 @@ export default function Athletes() {
               Retry
             </Button>
             {!isAthlete && (
-              <Button variant="secondary" onClick={handleAddAthlete} disabled={loading} className="w-full sm:w-auto">
+              <Button variant="secondary" onClick={handleAddAthleteClick} disabled={loading} className="w-full sm:w-auto">
                 Add Athlete
               </Button>
             )}
@@ -331,7 +344,7 @@ export default function Athletes() {
           <CardTitle className="mb-2">{isAthlete ? t('portal.athletes.noTeamMembers') : t('portal.children.noChildren')}</CardTitle>
           <p className="text-slate-500 dark:text-slate-400 mb-6">{isAthlete ? t('portal.athletes.noTeamMembersDescription') : t('portal.children.addChildren')}</p>
           {!isAthlete && (
-            <Button variant="primary" onClick={handleAddAthlete} disabled={loading}>
+            <Button variant="primary" onClick={handleAddAthleteClick} disabled={loading}>
               {t('portal.children.add')}
             </Button>
           )}
@@ -352,7 +365,7 @@ export default function Athletes() {
                 onClick={() => handleCardClick(athlete.id)}
               >
                 {/* Image spans full card */}
-                <div className="w-full aspect-square relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+                <div className="w-full aspect-[4/3] relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
                   <AthleteAvatar athlete={athlete} size="xl" className="w-full h-full rounded-none object-cover" />
                   {/* Gradient overlay for better text readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
@@ -411,6 +424,81 @@ export default function Athletes() {
             )
           })}
         </div>
+      )}
+
+      {/* Add Athlete Choice Dialog */}
+      {showAddAthleteDialog && typeof document !== 'undefined' && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-athlete-dialog-title"
+          onClick={() => setShowAddAthleteDialog(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-xl border-2 border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 id="add-athlete-dialog-title" className="text-xl font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">
+                Add Athlete
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowAddAthleteDialog(false)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mb-6 text-sm font-medium text-slate-600 dark:text-slate-400">
+              Choose how you want to add an athlete to your account.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handleClaimAthlete}
+                className="flex items-center gap-4 rounded-lg border-2 border-slate-200 bg-white p-4 text-left transition-all hover:border-[var(--org-link-color)]/30 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--org-btn-primary-bg)]/10">
+                  <Link2 className="h-6 w-6 text-[var(--org-link-color)]" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-base font-bold text-slate-900 dark:text-slate-100">Claim an Athlete</p>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    Request to attach to an existing athlete profile
+                  </p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={handleAddNewAthlete}
+                className="flex items-center gap-4 rounded-lg border-2 border-slate-200 bg-white p-4 text-left transition-all hover:border-[var(--org-link-color)]/30 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--org-btn-primary-bg)]/10">
+                  <UserPlus className="h-6 w-6 text-[var(--org-link-color)]" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-base font-bold text-slate-900 dark:text-slate-100">Add New Athlete</p>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    Create a new athlete profile from scratch
+                  </p>
+                </div>
+              </button>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAddAthleteDialog(false)}
+                className="rounded-lg border-2 border-slate-200 bg-white px-4 py-2 text-sm font-bold uppercase tracking-wide text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </PortalLayout>
   )

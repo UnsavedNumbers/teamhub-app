@@ -181,7 +181,8 @@ export async function fetchTicketingOrders(
     const eventFilterIds = getEventFilterIds(query)
 
     if (USE_FAKE_DATA) {
-    const baseOrders = getFakeTicketOrdersWithRelations(orgId).map((order) => ({
+    // In demo mode, use DEMO_ORG_A_ID to get fake orders regardless of actual orgId
+    const baseOrders = getFakeTicketOrdersWithRelations(DEMO_ORG_A_ID).map((order) => ({
       ...order,
       payment_processor: 'demo-card',
       payment_id: order.stripe_payment_intent_id,

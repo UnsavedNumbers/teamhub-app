@@ -332,12 +332,7 @@ export function PhotosBrowseView() {
       return
     }
     
-    if (USE_FAKE_DATA) {
-      setDemoAction(t('photos.browse.browseDeck'))
-      setShowDemoModal(true)
-      return
-    }
-    
+    // In demo mode, navigate to gallery page which has fake data support
     navigate(getLink('admin.photos.detail', { id }))
   }
 

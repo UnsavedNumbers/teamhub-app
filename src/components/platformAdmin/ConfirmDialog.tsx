@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 
 interface ConfirmDialogProps {
   open: boolean
@@ -35,6 +36,29 @@ export function ConfirmDialog({
     }
   }, [open])
 
+  // Handle Escape key to close dialog
+  React.useEffect(() => {
+    if (!open) return
+    
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !loading) {
+        onCancel()
+      }
+    }
+    
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [open, loading, onCancel])
+
+  // Cleanup on unmount - ensure body overflow is reset
+  React.useEffect(() => {
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [])
+
   if (!open) return null
 
   const handleConfirm = () => {
@@ -44,7 +68,7 @@ export function ConfirmDialog({
 
 
 
-  return (
+  const dialogContent = (
     <>
       {/* Backdrop */}
       <div
@@ -146,6 +170,9 @@ export function ConfirmDialog({
       </div>
     </>
   )
+
+  // Use portal to render dialog at document body level to avoid CSS conflicts
+  return createPortal(dialogContent, document.body)
 }
 
 export default ConfirmDialog

@@ -1,12 +1,42 @@
 import { useState, useCallback, useEffect, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 import { getLink } from '../../utils/routes';
-import { PageHeader, PlatformDataTable, Badge, Button, ColumnConfig } from '../../components/platformAdmin';
+import { PageHeader, PlatformDataTable, Badge, Button, ColumnConfig, Input, Select, ProgressBar } from '../../components/platformAdmin';
 import { ConfirmDialog } from '../../components/admin/ConfirmDialog';
 import { emailTemplatesService } from '../../data/services/emailTemplatesService';
-import { EmailTemplate } from '../../types/emailTemplates.types';
+import { EmailTemplate, NotificationJobType } from '../../types/emailTemplates.types';
+import { createNotificationTypeFromTemplate } from '../../data/services/notificationTypesService';
 import { toast } from 'react-hot-toast';
+import { formatRelativeTime } from '../../utils/formatters';
+
+type SelectAllMode = 'none' | 'page' | 'all';
+
+const EMAIL_TEMPLATE_CATEGORIES = [
+  'Authentication & Account',
+  'Invites & Role Assignments',
+  'Team Management',
+  'Events',
+  'Ticketing & Payments',
+  'Announcements & Communication',
+  'Athlete & Guardian Management',
+  'Media',
+  'Subscriptions & Billing',
+  'System & Security',
+  'Admin Alerts',
+  'Marketing & Engagement',
+];
+
+const CATEGORY_OPTIONS = [
+  { value: '', label: 'All Categories' },
+  ...EMAIL_TEMPLATE_CATEGORIES.map(cat => ({ value: cat, label: cat })),
+];
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'All Statuses' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+];
 
 export default function EmailTemplates() {
   const navigate = useNavigate();
@@ -15,62 +45,563 @@ export default function EmailTemplates() {
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectAllMode, setSelectAllMode] = useState<SelectAllMode>('none');
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [notificationTypeFilter, setNotificationTypeFilter] = useState('');
+  const [conflictIds, setConflictIds] = useState<Set<string>>(new Set());
+  const [bulkProgress, setBulkProgress] = useState<{
+    isActive: boolean;
+    action: 'activate' | 'deactivate' | 'delete' | 'create_notification_types' | null;
+    current: number;
+    total: number;
+    errors: string[];
+  }>({
+    isActive: false,
+    action: null,
+    current: 0,
+    total: 0,
+    errors: [],
+  });
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
-    action: 'duplicate' | 'delete' | null;
+    action: 'duplicate' | 'delete' | 'bulk_delete' | null;
     templateId: string | null;
-  }>({ open: false, action: null, templateId: null });
+    bulkIds: string[] | null;
+  }>({ open: false, action: null, templateId: null, bulkIds: null });
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const fetchTemplates = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await emailTemplatesService.getEmailTemplates(page + 1, rowsPerPage);
-      setData(result.data);
-      setTotalCount(result.count);
+
+      // Conflict view: fetch all to find templates sharing the same notification_type_id
+      if (notificationTypeFilter === 'conflict') {
+        const allResult = await emailTemplatesService.getEmailTemplates(1, 500, {
+          search: debouncedSearch,
+          category: categoryFilter || undefined,
+          isActive: null,
+        });
+        const grouped = new Map<string, EmailTemplate[]>();
+        for (const t of allResult.data as any[]) {
+          const ntId = t.notification_type_id as string | undefined;
+          if (ntId) {
+            if (!grouped.has(ntId)) grouped.set(ntId, []);
+            grouped.get(ntId)!.push(t);
+          }
+        }
+        const newConflictIds = new Set<string>();
+        for (const [ntId, templates] of grouped.entries()) {
+          if (templates.length > 1) newConflictIds.add(ntId);
+        }
+        const conflictData = allResult.data.filter(
+          (t: any) => t.notification_type_id && newConflictIds.has(t.notification_type_id)
+        );
+        setConflictIds(newConflictIds);
+        setData(conflictData);
+        setTotalCount(conflictData.length);
+        return;
+      }
+
+      setConflictIds(new Set());
+      const isActive = statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : null;
+      const result = await emailTemplatesService.getEmailTemplates(page + 1, rowsPerPage, {
+        search: debouncedSearch,
+        category: categoryFilter || undefined,
+        isActive,
+      });
+      
+      // Filter by notification type assignment status if selected (client-side filter since service doesn't support it yet)
+      let filteredData = result.data;
+      if (notificationTypeFilter === 'assigned') {
+        filteredData = result.data.filter((t: any) => t.notification_type_id != null);
+      } else if (notificationTypeFilter === 'unassigned') {
+        filteredData = result.data.filter((t: any) => t.notification_type_id == null);
+      }
+      setData(filteredData);
+      setTotalCount(notificationTypeFilter ? filteredData.length : result.count);
     } catch (error) {
       console.error('Failed to load templates', error);
       toast.error('Failed to load email templates');
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage]);
+  }, [page, rowsPerPage, debouncedSearch, categoryFilter, statusFilter, notificationTypeFilter]);
 
   useEffect(() => {
     fetchTemplates();
   }, [fetchTemplates]);
 
+  const handleClearFilters = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    setCategoryFilter('');
+    setStatusFilter('');
+    setNotificationTypeFilter('');
+    setPage(0);
+  };
+
+  const hasActiveFilters = search !== '' || categoryFilter !== '' || statusFilter !== '' || notificationTypeFilter !== '';
+
   const handleEdit = (slug: string) => {
-    navigate(`/platform-admin/emails/${slug}/edit`);
+    navigate(getLink('platformAdmin.emails.edit', { slug }));
   };
 
 
   const handleDuplicate = (id: string) => {
-    setConfirmDialog({ open: true, action: 'duplicate', templateId: id });
+    setConfirmDialog({ open: true, action: 'duplicate', templateId: id, bulkIds: null });
   };
 
   const handleConfirmAction = async () => {
-    if (!confirmDialog.templateId || !confirmDialog.action) return;
-    const templateId = confirmDialog.templateId;
-    const action = confirmDialog.action;
-    setConfirmDialog({ open: false, action: null, templateId: null });
+    const { action, templateId, bulkIds } = confirmDialog;
+    if (!action) return;
+    setConfirmDialog({ open: false, action: null, templateId: null, bulkIds: null });
 
     try {
-      if (action === 'duplicate') {
+      if (action === 'duplicate' && templateId) {
         await emailTemplatesService.duplicateTemplate(templateId);
         toast.success('Template duplicated');
-      } else {
+        await fetchTemplates();
+      } else if (action === 'delete' && templateId) {
         await emailTemplatesService.deleteEmailTemplate(templateId);
         toast.success('Deleted');
+        await fetchTemplates();
+      } else if (action === 'bulk_delete' && bulkIds && bulkIds.length > 0) {
+        setBulkProgress({
+          isActive: true,
+          action: 'delete',
+          current: 0,
+          total: bulkIds.length,
+          errors: [],
+        });
+
+        const errors: string[] = [];
+        try {
+          for (let i = 0; i < bulkIds.length; i++) {
+            const id = bulkIds[i];
+            try {
+              await emailTemplatesService.deleteEmailTemplate(id);
+              setBulkProgress(prev => ({
+                ...prev,
+                current: i + 1,
+              }));
+            } catch (error: any) {
+              const template = data.find(t => t.id === id);
+              errors.push(template?.name || id);
+              setBulkProgress(prev => ({
+                ...prev,
+                current: i + 1,
+                errors: [...prev.errors, template?.name || id],
+              }));
+            }
+          }
+
+          if (errors.length === 0) {
+            toast.success(`${bulkIds.length} template${bulkIds.length === 1 ? '' : 's'} deleted`);
+          } else {
+            toast.error(`${errors.length} template${errors.length === 1 ? '' : 's'} failed to delete`);
+          }
+
+          setSelectedIds(new Set());
+          setSelectAllMode('none');
+          await fetchTemplates();
+        } catch (error) {
+          console.error('Failed to delete templates', error);
+          toast.error('Failed to delete templates');
+        } finally {
+          setBulkProgress({
+            isActive: false,
+            action: null,
+            current: 0,
+            total: 0,
+            errors: [],
+          });
+        }
       }
-      await fetchTemplates();
     } catch (error) {
       if (action === 'duplicate') {
         console.error('Failed to duplicate template', error);
         toast.error('Failed to duplicate template');
-      } else {
+      } else if (action === 'delete') {
         toast.error('Failed to delete');
+      } else if (action === 'bulk_delete') {
+        console.error('Failed to delete templates', error);
+        toast.error('Failed to delete templates');
       }
     }
+  };
+
+  const selectedTemplates = data.filter((row) => selectedIds.has(row.id));
+  const hasActiveSelected = selectedTemplates.some((t) => t.is_active);
+  const canBulkDelete = selectedIds.size > 0 && !hasActiveSelected;
+  const selectedWithoutNotificationType = selectedTemplates.filter((t: any) => !t.notification_type_id);
+
+  const handleBulkActivate = async () => {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    setBulkProgress({
+      isActive: true,
+      action: 'activate',
+      current: 0,
+      total: ids.length,
+      errors: [],
+    });
+
+    const errors: string[] = [];
+    const skipped: string[] = [];
+    try {
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i];
+        const template = data.find(t => t.id === id);
+        // Skip templates without notification_type_id
+        if (!(template as any)?.notification_type_id) {
+          skipped.push(template?.name || id);
+          setBulkProgress(prev => ({
+            ...prev,
+            current: i + 1,
+          }));
+          continue;
+        }
+        try {
+          await emailTemplatesService.toggleTemplateActive(id, true);
+          setBulkProgress(prev => ({
+            ...prev,
+            current: i + 1,
+          }));
+        } catch (error: any) {
+          errors.push(template?.name || id);
+          setBulkProgress(prev => ({
+            ...prev,
+            current: i + 1,
+            errors: [...prev.errors, template?.name || id],
+          }));
+        }
+      }
+
+      const activatedCount = ids.length - errors.length - skipped.length;
+      if (skipped.length > 0) {
+        toast.error(`${skipped.length} template${skipped.length === 1 ? '' : 's'} skipped (no notification type): ${skipped.slice(0, 3).join(', ')}${skipped.length > 3 ? ` and ${skipped.length - 3} more` : ''}`, { duration: 5000 });
+      }
+      if (errors.length > 0) {
+        toast.error(`${errors.length} template${errors.length === 1 ? '' : 's'} failed to activate: ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? ` and ${errors.length - 3} more` : ''}`, { duration: 5000 });
+      }
+      if (activatedCount > 0) {
+        toast.success(`${activatedCount} template${activatedCount === 1 ? '' : 's'} activated`);
+        // Optimistic update so row titles turn green immediately (only for successfully activated)
+        const activatedIds = ids.filter(id => {
+          const t = data.find(t => t.id === id);
+          return t && (t as any).notification_type_id && !errors.includes(t.name) && !skipped.includes(t.name);
+        });
+        setData(prev => prev.map(t => activatedIds.includes(t.id) ? { ...t, is_active: true } : t));
+        // Optimistic pagination: fewer inactive items when viewing "Inactive"
+        if (statusFilter === 'inactive') {
+          setTotalCount(prev => Math.max(0, prev - activatedIds.length));
+          if (data.length === activatedIds.length) setPage(0);
+        }
+      }
+
+      setSelectedIds(new Set());
+      setSelectAllMode('none');
+      await fetchTemplates();
+    } catch (error) {
+      console.error('Failed to activate templates', error);
+      toast.error('Failed to activate templates');
+    } finally {
+      setBulkProgress({
+        isActive: false,
+        action: null,
+        current: 0,
+        total: 0,
+        errors: [],
+      });
+    }
+  };
+
+  const handleBulkDeactivate = async () => {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    try {
+      for (const id of ids) {
+        await emailTemplatesService.toggleTemplateActive(id, false);
+      }
+      toast.success(`${ids.length} template${ids.length === 1 ? '' : 's'} deactivated`);
+      // Optimistic update so row titles turn red immediately
+      setData(prev => prev.map(t => ids.includes(t.id) ? { ...t, is_active: false } : t));
+      // Optimistic pagination: fewer active items when viewing "Active"
+      if (statusFilter === 'active') {
+        setTotalCount(prev => Math.max(0, prev - ids.length));
+        if (data.length === ids.length) setPage(0);
+      }
+      setSelectedIds(new Set());
+      setSelectAllMode('none');
+      await fetchTemplates();
+    } catch (error) {
+      console.error('Failed to deactivate templates', error);
+      toast.error('Failed to deactivate templates');
+    }
+  };
+
+  const handleBulkDeleteClick = () => {
+    const ids = Array.from(selectedIds);
+    const inactive = data.filter((r) => ids.includes(r.id) && !r.is_active);
+    if (inactive.length === 0) return;
+    setConfirmDialog({ open: true, action: 'bulk_delete', templateId: null, bulkIds: inactive.map((t) => t.id) });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectAllMode('none');
+  };
+
+  /** Set notification_type_id = null for selected templates to resolve sharing conflicts. */
+  const handleUnlinkSelected = async () => {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    try {
+      await emailTemplatesService.unlinkNotificationType(ids);
+      toast.success(`Notification type unlinked from ${ids.length} template${ids.length === 1 ? '' : 's'}`);
+      setSelectedIds(new Set());
+      setSelectAllMode('none');
+      await fetchTemplates();
+    } catch {
+      toast.error('Failed to unlink notification types');
+    }
+  };
+
+  /**
+   * Create notification types for selected templates that don't have one.
+   * Creates a notification type from each template's slug/name/description/category,
+   * then links the template to the new type.
+   */
+  const handleBulkCreateNotificationTypes = async () => {
+    const templatesToProcess = selectedTemplates.filter((t: any) => !t.notification_type_id);
+    if (templatesToProcess.length === 0) {
+      toast.error('No templates selected that need notification types');
+      return;
+    }
+
+    setBulkProgress({
+      isActive: true,
+      action: 'create_notification_types',
+      current: 0,
+      total: templatesToProcess.length,
+      errors: [],
+    });
+
+    const errors: string[] = [];
+    const created: string[] = [];
+    try {
+      for (let i = 0; i < templatesToProcess.length; i++) {
+        const template = templatesToProcess[i] as any;
+        try {
+          // Create notification type from template
+          const { data: newType, error: createError } = await createNotificationTypeFromTemplate(
+            template.slug,
+            template.name,
+            template.description || null,
+            template.category || null
+          );
+          if (createError || !newType) {
+            throw createError || new Error('Failed to create notification type');
+          }
+
+          // Link template to the new notification type (update only notification_type_id)
+          await emailTemplatesService.updateEmailTemplate(template.id, {
+            description: template.description || '',
+            subject_template: template.subject_template || '',
+            body_content: template.body_content || '',
+            preview_text: template.preview_text || '',
+            category: template.category || undefined,
+            notification_type_id: newType.id,
+          }, template.updated_at);
+
+          created.push(template.name);
+          setBulkProgress(prev => ({
+            ...prev,
+            current: i + 1,
+          }));
+        } catch (error: any) {
+          errors.push(template.name);
+          setBulkProgress(prev => ({
+            ...prev,
+            current: i + 1,
+            errors: [...prev.errors, template.name],
+          }));
+        }
+      }
+
+      if (created.length > 0) {
+        toast.success(`Created notification types for ${created.length} template${created.length === 1 ? '' : 's'}`);
+      }
+      if (errors.length > 0) {
+        toast.error(`${errors.length} template${errors.length === 1 ? '' : 's'} failed: ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? ` and ${errors.length - 3} more` : ''}`, { duration: 5000 });
+      }
+
+      setSelectedIds(new Set());
+      setSelectAllMode('none');
+      await fetchTemplates();
+    } catch (error) {
+      console.error('Failed to create notification types', error);
+      toast.error('Failed to create notification types');
+    } finally {
+      setBulkProgress({
+        isActive: false,
+        action: null,
+        current: 0,
+        total: 0,
+        errors: [],
+      });
+    }
+  };
+
+  /**
+   * For each conflict group, keep the active template (or the most recently updated if
+   * none are active) and unlink all others.
+   */
+  const handleFixAllConflicts = async () => {
+    if (conflictIds.size === 0) return;
+    const grouped = new Map<string, any[]>();
+    for (const t of data as any[]) {
+      const ntId = t.notification_type_id as string | undefined;
+      if (ntId && conflictIds.has(ntId)) {
+        if (!grouped.has(ntId)) grouped.set(ntId, []);
+        grouped.get(ntId)!.push(t);
+      }
+    }
+    const toUnlink: string[] = [];
+    for (const templates of grouped.values()) {
+      // Sort: active first, then by most recently updated
+      const sorted = [...templates].sort((a: any, b: any) => {
+        if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      });
+      for (let i = 1; i < sorted.length; i++) toUnlink.push(sorted[i].id);
+    }
+    if (toUnlink.length === 0) {
+      toast.success('No conflicts to auto-fix');
+      return;
+    }
+    try {
+      await emailTemplatesService.unlinkNotificationType(toUnlink);
+      toast.success(`Unlinked ${toUnlink.length} duplicate${toUnlink.length === 1 ? '' : 's'} — reassign notification types in each template editor`);
+      await fetchTemplates();
+    } catch {
+      toast.error('Failed to fix conflicts');
+    }
+  };
+
+  // Map template type slugs to readable labels
+  const getTypeLabel = (type: NotificationJobType): string => {
+    const typeMap: Record<NotificationJobType, string> = {
+      'new_event': 'New Event',
+      'new_message': 'New Message',
+      'payment_receipt': 'Payment Receipt',
+      'event_reminder': 'Event Reminder',
+      'registration_confirmation': 'Registration Confirmation',
+      'team_invite': 'Team Invite',
+      'password_reset': 'Password Reset',
+      'welcome_email': 'Welcome Email',
+      'guardian_invite': 'Guardian Invite',
+      'athlete_invite': 'Athlete Invite',
+      'athlete_account_created': 'Athlete Account Created',
+      'athlete_linked': 'Athlete Linked',
+      'ticket_receipt': 'Ticket Receipt',
+      'uniform_notification': 'Uniform Notification',
+      'travel_notification': 'Travel Notification',
+      'photo_moderation': 'Photo Moderation',
+      'rsvp_notification': 'RSVP Notification',
+      'guardian_attachment_request_submitted': 'Guardian Attachment Request Submitted',
+      'guardian_attachment_request_reviewed': 'Guardian Attachment Request Reviewed',
+      'org_contact_request': 'Org Contact Request',
+      'platform_feature_request_signal': 'Platform Feature Request Signal',
+      'welcome_org_admin': 'Welcome - Org Admin',
+      'welcome_coach': 'Welcome - Coach',
+      'welcome_parent': 'Welcome - Parent',
+      'welcome_staff': 'Welcome - Staff',
+      'welcome_fan': 'Welcome - Fan',
+      'email_verification': 'Email Verification',
+      'password_changed_confirmation': 'Password Changed Confirmation',
+      'email_changed_confirmation': 'Email Address Changed Confirmation',
+      'account_deactivated': 'Account Deactivated',
+      'account_reactivated': 'Account Reactivated',
+      'org_admin_invite': 'Org Admin Invite',
+      'coach_invite': 'Coach Invite',
+      'staff_invite': 'Staff Invite',
+      'parent_invite': 'Parent Invite (Guardian Invite)',
+      'role_updated_notification': 'Role Updated Notification',
+      'removed_from_org': 'Removed From Organization',
+      'added_to_team': 'Added to Team',
+      'removed_from_team': 'Removed from Team',
+      'team_assignment_athlete': 'Team Assignment - Athlete',
+      'team_assignment_updated': 'Team Assignment Updated',
+      'event_created': 'Event Created (Internal Notice)',
+      'event_published': 'Event Published',
+      'event_reminder_7d': 'Event Reminder - 7 Days',
+      'event_reminder_24h': 'Event Reminder - 24 Hours',
+      'event_reminder_2h': 'Event Reminder - 2 Hours',
+      'event_updated': 'Event Updated',
+      'event_cancelled': 'Event Cancelled',
+      'rsvp_confirmation': 'RSVP Confirmation',
+      'rsvp_change_confirmation': 'RSVP Change Confirmation',
+      'ticket_purchase_confirmation_non_payment': 'Ticket Purchase Confirmation (Non-payment)',
+      'payment_failed': 'Payment Failed',
+      'refund_issued': 'Refund Issued',
+      'partial_refund_issued': 'Partial Refund Issued',
+      'chargeback_alert': 'Chargeback Alert (Internal)',
+      'payout_summary': 'Payout Summary',
+      'season_pass_confirmation': 'Season Pass Purchase Confirmation',
+      'invoice_available': 'Invoice Available',
+      'payment_reminder': 'Payment Reminder',
+      'org_announcement': 'New Organization Announcement',
+      'team_announcement': 'New Team Announcement',
+      'announcement_edited': 'Announcement Edited',
+      'direct_message_notification': 'Direct Message Notification',
+      'comment_reply_notification': 'Comment Reply Notification',
+      'guardian_linked_confirmation': 'Guardian Linked Confirmation',
+      'guardian_removed': 'Guardian Removed Notification',
+      'athlete_profile_updated': 'Athlete Profile Updated',
+      'medical_form_submitted': 'Medical Form Submitted (Internal)',
+      'medical_form_expiring_soon': 'Medical Form Expiring Soon',
+      'document_uploaded_confirmation': 'Document Uploaded Confirmation',
+      'new_gallery_published': 'New Gallery Published',
+      'photo_tag_notification': 'Photo Tag Notification',
+      'video_uploaded_internal': 'Video Uploaded (Internal)',
+      'org_subscription_started': 'Organization Subscription Started',
+      'org_subscription_renewed': 'Organization Subscription Renewed',
+      'org_subscription_failed': 'Organization Subscription Failed',
+      'org_subscription_canceled': 'Organization Subscription Canceled',
+      'trial_ending_soon': 'Trial Ending Soon',
+      'license_tier_changed': 'License Tier Changed',
+      'billing_info_updated': 'Billing Info Updated Confirmation',
+      'suspicious_login_alert': 'Suspicious Login Alert',
+      'new_device_login_alert': 'New Device Login Alert',
+      'data_export_ready': 'Data Export Ready',
+      'privacy_policy_update': 'Privacy Policy Update',
+      'terms_update': 'Terms of Service Update',
+      'maintenance_notification': 'Maintenance Notification',
+      'incident_notification': 'Incident Notification',
+      'new_org_signup_internal': 'New Org Signup (Internal)',
+      'large_purchase_alert': 'Large Purchase Alert',
+      'multiple_failed_payments_alert': 'Multiple Failed Payments Alert',
+      'guardian_invite_expiring_soon': 'Guardian Invite Expiring Soon',
+      'event_overcapacity_warning': 'Event Overcapacity Warning',
+      'season_kickoff_welcome': 'Season Kickoff Welcome',
+      'mid_season_check_in': 'Mid-Season Check-In',
+      'end_of_season_summary': 'End of Season Summary',
+      'fan_engagement_highlight': 'Fan Engagement Highlight',
+      'donation_campaign_launch': 'Donation Campaign Launch',
+    };
+    return typeMap[type] || type;
   };
 
   const columns: ColumnConfig<EmailTemplate>[] = [
@@ -80,39 +611,79 @@ export default function EmailTemplates() {
       sortable: true,
       render: (row) => (
         <div>
-          <div className="pa-font-medium">{row.name}</div>
-          <div className="pa-text-xs pa-text-gray-500">{row.description}</div>
+          <div className="pa-text-xs pa-text-gray-400" style={{ fontSize: '10px', marginBottom: '2px', fontFamily: 'monospace' }}>{row.slug}</div>
+          <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ color: row.is_active ? '#6ee7b7' : '#fca5a5' }}>{row.name}</span>
+            {conflictIds.has((row as any).notification_type_id) && (
+              <span style={{
+                fontSize: '10px',
+                color: '#f59e0b',
+                background: 'rgba(245, 158, 11, 0.08)',
+                padding: '1px 5px',
+                borderRadius: '4px',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+              }}>⚠ Shared</span>
+            )}
+          </div>
+          {row.description && (
+            <div className="pa-text-xs pa-text-gray-500" style={{ fontSize: '11px', marginTop: '2px' }}>
+              {row.description}
+            </div>
+          )}
         </div>
       )
+    },
+    {
+      id: 'category',
+      label: 'Category',
+      sortable: true,
+      render: (row) => row.category ? <Badge variant="neutral">{row.category}</Badge> : <span className="pa-text-gray-400">—</span>
     },
     {
       id: 'type',
       label: 'Type',
       sortable: true,
-      render: (row) => <Badge variant="neutral">{row.type}</Badge>
+      render: (row) => <span>{getTypeLabel(row.type)}</span>
+    },
+    {
+      id: 'notification_type',
+      label: 'Notification Type',
+      sortable: false,
+      render: (row: any) => {
+        const notificationType = row.notification_types;
+        if (notificationType) {
+          return (
+            <div>
+              <span>{notificationType.display_name}</span>
+            </div>
+          );
+        }
+        return (
+          <div>
+            <span className="pa-text-gray-400">—</span>
+            {row.is_active && (
+              <div className="pa-text-xs pa-text-yellow-600 pa-mt-1">
+                ⚠️ No notification type linked
+              </div>
+            )}
+          </div>
+        );
+      }
     },
     {
       id: 'updated_at',
       label: 'Last Modified',
       sortable: true,
-      render: (row) => new Date(row.updated_at).toLocaleString()
-    },
-    {
-      id: 'is_active',
-      label: 'Status',
-      sortable: true,
-      render: (row) => (
-        <Badge variant={row.is_active ? 'success' : 'neutral'}>
-          {row.is_active ? 'Active' : 'Inactive'}
-        </Badge>
-      )
+      render: (row) => formatRelativeTime(row.updated_at)
     },
     {
       id: 'actions',
       label: 'Actions',
-      align: 'right',
+      align: 'center',
       render: (row) => (
-        <div className="pa-flex pa-gap-2 pa-justify-end">
+        <div className="pa-flex pa-gap-2 pa-justify-center">
           <Button 
             variant="ghost" 
             size="small" 
@@ -135,7 +706,7 @@ export default function EmailTemplates() {
             title={row.is_active ? "Deactivate template to delete it" : "Delete template"}
             onClick={(e: MouseEvent) => { 
                 e.stopPropagation();
-                setConfirmDialog({ open: true, action: 'delete', templateId: row.id });
+                setConfirmDialog({ open: true, action: 'delete', templateId: row.id, bulkIds: null });
             }}
           >
             Delete
@@ -160,6 +731,218 @@ export default function EmailTemplates() {
         }
       />
 
+      {/* Search and Filter Bar */}
+      <div className="pa-card pa-mb-4" style={{ padding: 'var(--pa-space-4)' }}>
+        <div className="pa-flex pa-flex-wrap pa-gap-3 pa-items-end">
+          {/* Search */}
+          <div style={{ flex: '1 1 300px', minWidth: '250px' }}>
+            <label className="pa-block pa-text-sm pa-font-medium pa-mb-1">Search</label>
+            <div className="pa-relative">
+              <Search size={18} className="pa-absolute pa-left-3 pa-top-1/2 pa-transform -pa-translate-y-1/2 pa-text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search by name, description, slug, or type..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{ paddingLeft: '2.5rem' }}
+              />
+            </div>
+          </div>
+
+          {/* Category Filter */}
+          <div style={{ flex: '0 1 200px', minWidth: '180px' }}>
+            <label className="pa-block pa-text-sm pa-font-medium pa-mb-1">Category</label>
+            <Select
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setPage(0);
+              }}
+              options={CATEGORY_OPTIONS}
+            />
+          </div>
+
+          {/* Status Filter */}
+          <div style={{ flex: '0 1 150px', minWidth: '130px' }}>
+            <label className="pa-block pa-text-sm pa-font-medium pa-mb-1">Status</label>
+            <Select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(0);
+              }}
+              options={STATUS_OPTIONS}
+            />
+          </div>
+
+          {/* Notification Type Filter */}
+          <div style={{ flex: '0 1 200px', minWidth: '180px' }}>
+            <label className="pa-block pa-text-sm pa-font-medium pa-mb-1">Notification Type</label>
+            <Select
+              value={notificationTypeFilter}
+              onChange={(e) => {
+                setNotificationTypeFilter(e.target.value);
+                setPage(0);
+              }}
+              options={[
+                { value: '', label: 'All Types' },
+                { value: 'assigned', label: 'Assigned' },
+                { value: 'unassigned', label: 'Unassigned' },
+                { value: 'conflict', label: '⚠ Shared (Conflicts)' },
+              ]}
+            />
+          </div>
+
+          {/* Clear Filters */}
+          {hasActiveFilters && (
+            <div>
+              <Button variant="ghost" size="small" onClick={handleClearFilters}>
+                <X size={16} className="pa-mr-1" />
+                Clear
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Conflict fix banner */}
+      {notificationTypeFilter === 'conflict' && conflictIds.size > 0 && (
+        <div
+          className="pa-card pa-mb-4"
+          style={{
+            padding: 'var(--pa-space-3) var(--pa-space-4)',
+            borderLeft: '3px solid #f59e0b',
+            background: 'rgba(245, 158, 11, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 'var(--pa-space-3)',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div>
+            <span style={{ fontWeight: 600, color: '#f59e0b' }}>⚠ {conflictIds.size} notification type{conflictIds.size === 1 ? '' : 's'} shared by multiple templates</span>
+            <div className="pa-text-xs pa-text-gray-500" style={{ marginTop: '2px' }}>
+              Templates sharing a notification type will deactivate each other. Unlink duplicates, then reassign the correct type in each template's editor.
+            </div>
+          </div>
+          <Button variant="secondary" size="small" onClick={handleFixAllConflicts}>
+            Fix All — Keep Newest
+          </Button>
+        </div>
+      )}
+
+      {selectedIds.size > 0 && (
+        <div
+          className="pa-card"
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
+            marginBottom: 'var(--pa-space-4)',
+            padding: 'var(--pa-space-3) var(--pa-space-4)',
+            borderLeft: '3px solid var(--pa-primary)',
+            background: 'var(--pa-primary-bg, rgba(59, 130, 246, 0.1))',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--pa-space-3)', marginBottom: bulkProgress.isActive ? 'var(--pa-space-3)' : 0 }}>
+            <div>
+              <span className="pa-body-m" style={{ fontWeight: 600 }}>
+                {selectedIds.size} template{selectedIds.size === 1 ? '' : 's'} selected
+              </span>
+              {selectedWithoutNotificationType.length > 0 && (
+                <div className="pa-text-xs pa-text-yellow-600 pa-mt-1">
+                  ⚠️ {selectedWithoutNotificationType.length} template{selectedWithoutNotificationType.length === 1 ? '' : 's'} without notification type will be skipped when activating
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)', flexWrap: 'wrap' }}>
+              <Button 
+                variant="secondary" 
+                size="small" 
+                onClick={handleBulkActivate}
+                disabled={bulkProgress.isActive}
+              >
+                Activate
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="small" 
+                onClick={handleBulkDeactivate}
+                disabled={bulkProgress.isActive}
+              >
+                Deactivate
+              </Button>
+              <Button
+                variant="secondary"
+                size="small"
+                disabled={!canBulkDelete || bulkProgress.isActive}
+                title={hasActiveSelected ? 'Deactivate templates before deleting' : 'Delete selected templates'}
+                onClick={handleBulkDeleteClick}
+                className="pa-text-red-600 hover:pa-text-red-700 hover:pa-bg-red-50"
+              >
+                Delete
+              </Button>
+              {selectedWithoutNotificationType.length > 0 && (
+                <Button
+                  variant="secondary"
+                  size="small"
+                  disabled={bulkProgress.isActive}
+                  onClick={handleBulkCreateNotificationTypes}
+                  style={{ color: '#059669', borderColor: 'rgba(5,150,105,0.4)' }}
+                >
+                  Create Notification Types
+                </Button>
+              )}
+              {notificationTypeFilter === 'conflict' && (
+                <Button
+                  variant="secondary"
+                  size="small"
+                  disabled={bulkProgress.isActive}
+                  onClick={handleUnlinkSelected}
+                  style={{ color: '#f59e0b', borderColor: 'rgba(245,158,11,0.4)' }}
+                >
+                  Unlink Notification Type
+                </Button>
+              )}
+              <Button 
+                variant="ghost" 
+                size="small" 
+                onClick={handleClearSelection}
+                disabled={bulkProgress.isActive}
+              >
+                Clear selection
+              </Button>
+            </div>
+          </div>
+          
+          {bulkProgress.isActive && (
+            <div style={{ marginTop: 'var(--pa-space-3)' }}>
+              <ProgressBar
+                value={(bulkProgress.current / bulkProgress.total) * 100}
+                label={
+                  bulkProgress.action === 'activate'
+                    ? `Activating templates...`
+                    : bulkProgress.action === 'deactivate'
+                    ? `Deactivating templates...`
+                    : bulkProgress.action === 'create_notification_types'
+                    ? `Creating notification types...`
+                    : `Deleting templates...`
+                }
+                status={`${bulkProgress.current} of ${bulkProgress.total} completed${bulkProgress.errors.length > 0 ? ` (${bulkProgress.errors.length} failed)` : ''}`}
+                error={bulkProgress.errors.length > 0 ? undefined : undefined}
+              />
+              {bulkProgress.errors.length > 0 && (
+                <div style={{ marginTop: 'var(--pa-space-2)', fontSize: '12px', color: 'var(--pa-danger)' }}>
+                  Failed: {bulkProgress.errors.slice(0, 3).join(', ')}
+                  {bulkProgress.errors.length > 3 && ` and ${bulkProgress.errors.length - 3} more`}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <PlatformDataTable
         columns={columns}
         data={data}
@@ -168,8 +951,18 @@ export default function EmailTemplates() {
         rowsPerPage={rowsPerPage}
         totalCount={totalCount}
         onPageChange={setPage}
-        onRowsPerPageChange={setRowsPerPage}
+        onRowsPerPageChange={(newRowsPerPage) => {
+          setRowsPerPage(newRowsPerPage);
+          setPage(0); // Reset to first page when rows per page changes
+        }}
         onRowClick={(row) => handleEdit(row.slug)}
+        selectable
+        selectedIds={selectedIds}
+        onSelectionChange={(updater) => {
+          setSelectedIds(typeof updater === 'function' ? updater(selectedIds) : updater);
+        }}
+        selectAllMode={selectAllMode}
+        onSelectAllChange={setSelectAllMode}
       />
 
       <ConfirmDialog
@@ -177,18 +970,22 @@ export default function EmailTemplates() {
         title={
           confirmDialog.action === 'duplicate'
             ? 'Are you sure you want to duplicate this template?'
+            : confirmDialog.action === 'bulk_delete'
+            ? `Delete ${confirmDialog.bulkIds?.length ?? 0} template${confirmDialog.bulkIds?.length === 1 ? '' : 's'}?`
             : 'Are you sure you want to delete this template?'
         }
         description={
           confirmDialog.action === 'duplicate'
             ? 'Are you sure you want to duplicate this template?'
+            : confirmDialog.action === 'bulk_delete'
+            ? 'This action cannot be undone.'
             : 'Are you sure you want to delete this template?'
         }
         confirmLabel={confirmDialog.action === 'duplicate' ? 'Duplicate' : 'Delete'}
         cancelLabel="Cancel"
-        variant={confirmDialog.action === 'delete' ? 'danger' : 'primary'}
+        variant={confirmDialog.action === 'delete' || confirmDialog.action === 'bulk_delete' ? 'danger' : 'primary'}
         onConfirm={() => { void handleConfirmAction() }}
-        onCancel={() => setConfirmDialog({ open: false, action: null, templateId: null })}
+        onCancel={() => setConfirmDialog({ open: false, action: null, templateId: null, bulkIds: null })}
       />
     </div>
   );

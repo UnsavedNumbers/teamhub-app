@@ -54,7 +54,15 @@ export default function UniformOrders() {
       label: 'Player',
       render: (row) => {
         const athleteId = row.athlete_id ?? (row as { child_id?: string }).child_id
-        return athleteId ? `Child ${athleteId.slice(0, 8)}` : 'Child'
+        const kitId = row.kit_id
+        return (
+          <span 
+            style={{ cursor: 'pointer', color: 'var(--pa-link-color, #3b82f6)', textDecoration: 'underline' }}
+            onClick={() => navigate(`/admin/uniforms/${kitId}`)}
+          >
+            {athleteId ? `Child ${athleteId.slice(0, 8)}` : 'Child'}
+          </span>
+        )
       }
     },
     { 

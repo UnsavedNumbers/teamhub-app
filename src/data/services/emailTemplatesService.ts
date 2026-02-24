@@ -5,9 +5,17 @@ import { wrapEmailContent } from '../../utils/emailTemplateWrapper';
 
 export const emailTemplatesService = {
     /**
-     * List email templates with pagination
+     * List email templates with pagination, search, and filters
      */
-    async getEmailTemplates(page = 1, limit = 20) {
+    async getEmailTemplates(
+        page = 1,
+        limit = 20,
+        options?: {
+            search?: string;
+            category?: string;
+            isActive?: boolean | null; // null means all, true means active only, false means inactive only
+        }
+    ) {
         if (import.meta.env.MODE === 'demo') {
             return { data: [], count: 0, page, limit, totalPages: 0 };
         }
@@ -15,12 +23,35 @@ export const emailTemplatesService = {
         const from = (page - 1) * limit;
         const to = from + limit - 1;
 
-        const { data, count, error } = await (supabase as any)
+        let query = (supabase as any)
             .from('email_templates')
-            .select('*', { count: 'exact' })
+            .select(`
+                *,
+                notification_types(id, key, display_name, category)
+            `, { count: 'exact' });
+
+        // Search filter (name, description, slug only — type is enum and does not support ilike)
+        if (options?.search && options.search.length >= 2) {
+            query = query.or(`name.ilike.%${options.search}%,description.ilike.%${options.search}%,slug.ilike.%${options.search}%`);
+        }
+
+        // Category filter
+        if (options?.category) {
+            query = query.eq('category', options.category);
+        }
+
+        // Active/Inactive filter
+        if (options?.isActive !== null && options?.isActive !== undefined) {
+            query = query.eq('is_active', options.isActive);
+        }
+
+        query = query
             .order('is_active', { ascending: false })
+            .order('category', { ascending: true })
             .order('type', { ascending: true })
             .range(from, to);
+
+        const { data, count, error } = await query;
 
         if (error) throw error;
 
@@ -31,6 +62,25 @@ export const emailTemplatesService = {
             limit,
             totalPages: count ? Math.ceil(count / limit) : 0
         };
+    },
+
+    /**
+     * Get notification_type_ids that are already linked to at least one email template.
+     * When excludeTemplateId is set, only counts templates other than that one (so the
+     * current template's type stays "available" in the dropdown).
+     */
+    async getLinkedNotificationTypeIds(excludeTemplateId?: string): Promise<string[]> {
+        let query = (supabase as any)
+            .from('email_templates')
+            .select('notification_type_id')
+            .not('notification_type_id', 'is', null);
+        if (excludeTemplateId) {
+            query = query.neq('id', excludeTemplateId);
+        }
+        const { data, error } = await query;
+        if (error) return [];
+        const ids = [...new Set((data || []).map((r: { notification_type_id: string }) => r.notification_type_id).filter(Boolean))] as string[];
+        return ids;
     },
 
     /**
@@ -53,9 +103,22 @@ export const emailTemplatesService = {
      */
     async updateEmailTemplate(
         id: string,
-        data: EmailTemplateFormData,
+        data: EmailTemplateFormData & { notification_type_id?: string },
         lastUpdatedAt?: string
     ) {
+        // Validate notification_type_id exists if provided
+        if (data.notification_type_id) {
+            const { data: notificationType, error: typeError } = await (supabase as any)
+                .from('notification_types')
+                .select('id')
+                .eq('id', data.notification_type_id)
+                .single();
+
+            if (typeError || !notificationType) {
+                throw new Error('Invalid notification_type_id: notification type not found');
+            }
+        }
+
         // 1. Validate variables
         const extractedVars = this.extractVariablesFromHtml(data.body_content);
         const subjectVars = this.extractVariablesFromHtml(data.subject_template);
@@ -76,6 +139,14 @@ export const emailTemplatesService = {
 
         if (data.description !== undefined) {
             payload.description = data.description;
+        }
+
+        if (data.category !== undefined) {
+            payload.category = data.category || null;
+        }
+
+        if (data.notification_type_id !== undefined) {
+            payload.notification_type_id = data.notification_type_id;
         }
 
         // 4. Perform update with optimistic locking check
@@ -102,24 +173,72 @@ export const emailTemplatesService = {
     },
 
     /**
-     * Toggle template active status
+     * Unlink notification_type_id from one or more templates (sets it to null).
+     * Use to resolve conflicts where multiple templates share the same notification type.
+     */
+    async unlinkNotificationType(ids: string[]) {
+        if (ids.length === 0) return;
+        const { error } = await (supabase as any)
+            .from('email_templates')
+            .update({ notification_type_id: null })
+            .in('id', ids);
+        if (error) throw error;
+    },
+
+    /**
+     * Toggle template active status.
+     * When activating: tries RPC activate_email_template first (atomic); if the
+     * function is not in the schema (migration not applied), falls back to
+     * deactivate-others then activate-this.
      */
     async toggleTemplateActive(id: string, isActive: boolean) {
         if (isActive) {
-            // 1. Get the type of the template we are activating
-            const { data: template } = await (supabase as any).from('email_templates').select('type').eq('id', id).single();
-            if (template) {
-                // 2. Deactivate all others of this type
-                await (supabase as any).from('email_templates')
-                    .update({ is_active: false })
-                    .eq('type', template.type)
-                    .neq('id', id);
+            const { data: rpcData, error: rpcError } = await (supabase as any)
+                .rpc('activate_email_template', { p_template_id: id });
+            if (!rpcError) return rpcData as EmailTemplate;
+            if (rpcError?.code === 'PGRST202') {
+                // RPC not in schema cache (migration not applied) – fallback to two-step
+                const { data: template } = await (supabase as any)
+                    .from('email_templates')
+                    .select('notification_type_id')
+                    .eq('id', id)
+                    .single();
+                if (template?.notification_type_id) {
+                    await (supabase as any)
+                        .from('email_templates')
+                        .update({ is_active: false })
+                        .eq('notification_type_id', template.notification_type_id)
+                        .neq('id', id);
+                } else {
+                    const { data: templateByType } = await (supabase as any)
+                        .from('email_templates')
+                        .select('type')
+                        .eq('id', id)
+                        .single();
+                    if (templateByType) {
+                        await (supabase as any)
+                            .from('email_templates')
+                            .update({ is_active: false })
+                            .eq('type', templateByType.type)
+                            .neq('id', id);
+                    }
+                }
+            } else {
+                throw rpcError;
             }
+            const { data, error } = await (supabase as any)
+                .from('email_templates')
+                .update({ is_active: true })
+                .eq('id', id)
+                .select('*')
+                .single();
+            if (error) throw error;
+            return data as EmailTemplate;
         }
 
         const { data, error } = await (supabase as any)
             .from('email_templates')
-            .update({ is_active: isActive })
+            .update({ is_active: false })
             .eq('id', id)
             .select('*')
             .single();
@@ -199,10 +318,24 @@ export const emailTemplatesService = {
             name: string;
             slug: string;
             type: NotificationJobType;
+            notification_type_id?: string; // Optional for backward compatibility, but should be required
         }
     ) {
         if (import.meta.env.MODE === 'demo') {
             throw new Error('Cannot create in demo mode');
+        }
+
+        // Validate notification_type_id exists if provided
+        if (data.notification_type_id) {
+            const { data: notificationType, error: typeError } = await (supabase as any)
+                .from('notification_types')
+                .select('id')
+                .eq('id', data.notification_type_id)
+                .single();
+
+            if (typeError || !notificationType) {
+                throw new Error('Invalid notification_type_id: notification type not found');
+            }
         }
 
         // 1. Validate variables
@@ -218,6 +351,7 @@ export const emailTemplatesService = {
             name: data.name,
             slug: data.slug,
             type: data.type,
+            notification_type_id: data.notification_type_id || null,
             description: data.description,
             body_content: data.body_content,
             html_content: wrappedHtml,
@@ -225,7 +359,8 @@ export const emailTemplatesService = {
             preview_text: data.preview_text,
             variables: allVars,
             required_variables: [], // Can implement required vars logic if needed
-            is_active: false // Default to inactive on create
+            is_active: false, // Default to inactive on create
+            category: data.category || null
         };
 
         const { data: newTemplate, error } = await (supabase as any)
@@ -345,5 +480,40 @@ export const emailTemplatesService = {
         ];
 
         return bodyVariables.filter(v => universalVars.includes(v));
+    },
+
+    /**
+     * Get templates by notification type ID
+     */
+    async getTemplatesByNotificationType(notificationTypeId: string) {
+        const { data, error } = await (supabase as any)
+            .from('email_templates')
+            .select('*')
+            .eq('notification_type_id', notificationTypeId)
+            .order('is_active', { ascending: false })
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data as EmailTemplate[];
+    },
+
+    /**
+     * Get active template for a notification type
+     */
+    async getActiveTemplateForType(notificationTypeId: string) {
+        const { data, error } = await (supabase as any)
+            .from('email_templates')
+            .select('*')
+            .eq('notification_type_id', notificationTypeId)
+            .eq('is_active', true)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                return null; // Not found
+            }
+            throw error;
+        }
+        return data as EmailTemplate | null;
     }
 };

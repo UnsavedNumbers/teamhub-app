@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { sendNotificationEmail, type NotificationJob } from './emailService.ts'
+import { sendNotificationEmail, sendNotificationEmailWithTemplate, type NotificationJob } from './emailService.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -120,6 +120,131 @@ serve(async (req) => {
     console.log('Using platformBaseUrl for email links:', platformBaseUrl)
     const guardianInvitePath = '/portal/accept-invite'
 
+    // Process notifications_outbox entries (new unified queue)
+    const { data: outboxEntries, error: outboxError } = await supabase
+      .from('notifications_outbox')
+      .select('*')
+      .eq('channel', 'email')
+      .eq('status', 'queued')
+      .order('created_at', { ascending: true })
+      .limit(10)
+
+    if (!outboxError && outboxEntries && outboxEntries.length > 0) {
+      console.log(`Processing ${outboxEntries.length} outbox entries`)
+      for (const entry of outboxEntries) {
+        try {
+          // Load email template from template_id
+          if (!entry.template_id) {
+            // No template - mark as skipped
+            await supabase
+              .from('notifications_outbox')
+              .update({
+                status: 'skipped',
+                error_message: 'No template_id provided',
+                processed_at: new Date().toISOString(),
+              })
+              .eq('id', entry.id)
+            results.push({ id: entry.id, status: 'skipped', error: 'No template_id provided' })
+            continue
+          }
+
+          const { data: template, error: templateError } = await supabase
+            .from('email_templates')
+            .select('*')
+            .eq('id', entry.template_id)
+            .single()
+
+          if (templateError || !template || !template.is_active) {
+            // Template not found or inactive - mark as skipped
+            await supabase
+              .from('notifications_outbox')
+              .update({
+                status: 'skipped',
+                error_message: templateError ? 'Template not found' : 'Template is not active',
+                processed_at: new Date().toISOString(),
+              })
+              .eq('id', entry.id)
+            results.push({
+              id: entry.id,
+              status: 'skipped',
+              error: templateError ? 'Template not found' : 'Template is not active',
+            })
+            continue
+          }
+
+          // Get user email
+          const { data: user, error: userError } = await supabase
+            .from('users')
+            .select('email')
+            .eq('id', entry.target_user_id)
+            .single()
+
+          if (userError || !user?.email) {
+            await supabase
+              .from('notifications_outbox')
+              .update({
+                status: 'failed',
+                error_message: 'User email not found',
+                processed_at: new Date().toISOString(),
+              })
+              .eq('id', entry.id)
+            results.push({ id: entry.id, status: 'failed', error: 'User email not found' })
+            continue
+          }
+
+          // Convert outbox entry to NotificationJob format for emailService
+          const payload = { ...(entry.payload_json ?? {}) }
+          const notificationJob: NotificationJob = {
+            id: entry.id,
+            org_id: entry.org_id,
+            user_id: entry.target_user_id,
+            email: user.email,
+            type: template.type as NotificationJob['type'],
+            payload,
+            status: 'queued',
+            created_at: entry.created_at,
+          }
+
+          // Send email using template from database
+          const result = await sendNotificationEmailWithTemplate(notificationJob, template, supabase)
+
+          if (result.success) {
+            await supabase
+              .from('notifications_outbox')
+              .update({
+                status: 'sent',
+                processed_at: new Date().toISOString(),
+              })
+              .eq('id', entry.id)
+            results.push({ id: entry.id, status: 'sent', emailId: result.emailId })
+          } else {
+            await supabase
+              .from('notifications_outbox')
+              .update({
+                status: 'failed',
+                error_message: result.error || 'Email send failed',
+                processed_at: new Date().toISOString(),
+              })
+              .eq('id', entry.id)
+            results.push({ id: entry.id, status: 'failed', error: result.error })
+          }
+        } catch (error) {
+          console.error(`Failed to process outbox entry ${entry.id}:`, error)
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          await supabase
+            .from('notifications_outbox')
+            .update({
+              status: 'failed',
+              error_message: errorMessage,
+              processed_at: new Date().toISOString(),
+            })
+            .eq('id', entry.id)
+          results.push({ id: entry.id, status: 'failed', error: errorMessage })
+        }
+      }
+    }
+
+    // Process legacy notification_jobs (backward compatibility)
     for (const job of notificationJobs) {
       try {
         // Check user/org notification preferences

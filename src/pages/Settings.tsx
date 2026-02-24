@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useRef, useMemo, startTransition } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { useUserContext } from '../hooks/useUserContext'
 import { getAthletes } from '../data/services/familyService'
 import { getTeamsForParent } from '../data/services/teamsService'
-import { getUserPreferences, updateUserPreferences, type UserPreferences } from '../data/services/preferencesService'
 import { 
   linkGuardianToAthlete, 
   validateGuardianEmail, 
@@ -27,9 +26,10 @@ import { ThemeSelector } from '../components/portal/ThemeToggle'
 import NotificationPreferences from '../components/common/NotificationPreferences'
 import type { NotificationGroup } from '../types/notificationPreferences'
 import type { NotificationRole } from '../types/notifications'
-import { mergeNotificationPreferences, setPreferencesForContext, canonicalRole } from '../utils/notificationPreferencesConfig'
+import { mergeNotificationPreferences, canonicalRole, loadNotificationGroupsFromRelational, convertNotificationGroupsToRelational } from '../utils/notificationPreferencesConfig'
+import { updatePreferencesBatch } from '../data/services/userNotificationPreferencesService'
 import { showSuccess, showError } from '../utils/toast'
-import { CheckCircle, Mail, Loader2, AlertCircle } from 'lucide-react'
+import { CheckCircle, Mail, Loader2, AlertCircle, BellOff } from 'lucide-react'
 import { LocationAutocomplete } from '../components/common/LocationAutocomplete'
 import type { StructuredAddress, HomeLocation } from '../types/location'
 
@@ -57,19 +57,21 @@ export default function Settings() {
   const { profile, signOut, updatePassword, updateEmail, user, refreshProfile } = useAuth()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const t = useT()
   const translator = t as unknown as (key: string) => string
   const { locale, setLocale } = useLocale()
   const isMountedRef = useRef(true)
   const emailInputRef = useRef<HTMLInputElement>(null)
-  const preferencesRef = useRef<UserPreferences | null>(null)
-  
   const [children, setChildren] = useState<ChildWithGuardians[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
 
   const [notificationGroups, setNotificationGroups] = useState<NotificationGroup[]>([])
   const [savingNotifications, setSavingNotifications] = useState(false)
+  const [loadingNotifications, setLoadingNotifications] = useState(true)
+  const [notificationsError, setNotificationsError] = useState<string | null>(null)
+  const [isOffline, setIsOffline] = useState(false)
 
   const [homeAddressInput, setHomeAddressInput] = useState('')
   const [homeAddressDisplay, setHomeAddressDisplay] = useState('')
@@ -88,6 +90,7 @@ export default function Settings() {
   const [confirmEmail, setConfirmEmail] = useState('')
   const [changingEmail, setChangingEmail] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
+  const [showEmailRetryBanner, setShowEmailRetryBanner] = useState(false)
 
   // Invite Guardian Modal State
   const [showInviteGuardianModal, setShowInviteGuardianModal] = useState(false)
@@ -100,16 +103,45 @@ export default function Settings() {
   const [emailTouched, setEmailTouched] = useState(false)
   const [inviteActionLoading, setInviteActionLoading] = useState<string | null>(null)
 
-  const activeRole: NotificationRole = useMemo(
-    () => canonicalRole((context.roles?.[0] as NotificationRole) || 'guardian'),
-    [context.roles]
-  )
+  const activeRole: NotificationRole = useMemo(() => {
+    // Ensure we have a valid role, defaulting to guardian if none found
+    const role = context.roles?.[0] as NotificationRole | undefined
+    return canonicalRole(role || 'guardian')
+  }, [context.roles])
 
   // Cleanup ref on unmount
   useEffect(() => {
     isMountedRef.current = true
     return () => { isMountedRef.current = false }
   }, [])
+
+  // Offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false)
+    const handleOffline = () => setIsOffline(true)
+    
+    setIsOffline(!navigator.onLine)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  // Show friendly message when redirected with email link error (expired or already used)
+  useEffect(() => {
+    const errorCode = searchParams.get('error_code')
+    const errorParam = searchParams.get('error')
+    if (errorCode === 'otp_expired' || errorParam === 'access_denied') {
+      showError(
+        'The confirmation link is invalid or was already used. Some email tools open links automatically, which uses the link before you click. Please try changing your email again and click the new link as soon as you receive it.'
+      )
+      setShowEmailRetryBanner(true)
+      setSearchParams({}, { replace: true })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount to clear auth error from URL
 
   const fetchData = useCallback(async () => {
     if (!isReady || !user?.id) return
@@ -154,12 +186,31 @@ export default function Settings() {
       name: t.name,
     })))
 
-    // Load notification preferences
-    const { data: prefs } = await getUserPreferences(user.id)
-    preferencesRef.current = prefs || {}
-    const savedGroups = prefs?.notifications_v2?.[context.orgId]?.[activeRole]
-    const mergedGroups = mergeNotificationPreferences(savedGroups as NotificationGroup[] | undefined, activeRole, translator)
-    setNotificationGroups(mergedGroups)
+    // Load notification preferences with proper error handling
+    setLoadingNotifications(true)
+    setNotificationsError(null)
+    
+    try {
+      // Try loading from relational service first
+      const groups = await loadNotificationGroupsFromRelational(user.id, context.orgId, activeRole, translator)
+      
+      if (isMountedRef.current) {
+        setNotificationGroups(groups)
+        setNotificationsError(null)
+      }
+    } catch (err) {
+      console.error('Error loading notification preferences:', err)
+      if (isMountedRef.current) {
+        // Fallback to defaults on error
+        setNotificationsError(t('common.error.loadFailed'))
+        const defaultGroups = mergeNotificationPreferences(undefined, activeRole, translator)
+        setNotificationGroups(defaultGroups)
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setLoadingNotifications(false)
+      }
+    }
 
     setLoading(false)
   }, [context, isReady, user?.id, activeRole, translator])
@@ -370,30 +421,75 @@ export default function Settings() {
 
   const persistNotificationGroups = useCallback(
     async (nextGroups: NotificationGroup[], previousGroups?: NotificationGroup[]) => {
-      if (!user?.id) return
+      if (!user?.id || !isReady) {
+        showError(t('common.error.permissionDenied'))
+        return
+      }
+
+      // Validate groups before saving
+      if (!Array.isArray(nextGroups) || nextGroups.length === 0) {
+        console.error('Invalid notification groups:', nextGroups)
+        showError(t('common.error.updateFailed'))
+        return
+      }
+
       setSavingNotifications(true)
+      setNotificationsError(null)
+      
       try {
-        const nextPrefs = setPreferencesForContext(
-          preferencesRef.current?.notifications_v2,
-          context.orgId,
-          activeRole,
-          nextGroups
-        )
-        const { error } = await updateUserPreferences(user.id, { notifications_v2: nextPrefs })
-        if (error) throw error
-        preferencesRef.current = { ...(preferencesRef.current || {}), notifications_v2: nextPrefs }
+        // Convert NotificationGroups to relational preferences format
+        const preferences = await convertNotificationGroupsToRelational(nextGroups, activeRole)
+        
+        // Save to relational table
+        const { error } = await updatePreferencesBatch(user.id, context.orgId, activeRole, preferences)
+        
+        if (error) {
+          // Check for specific error types
+          if (error.message?.includes('permission') || error.message?.includes('denied')) {
+            setNotificationsError(t('common.error.permissionDenied'))
+            showError(t('common.error.permissionDenied'))
+          } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+            setNotificationsError(t('common.error.offline'))
+            showError(t('common.error.offline'))
+          } else if (error.message?.includes('no active template')) {
+            setNotificationsError('Email notifications are not available for some notification types')
+            showError('Email notifications are not available for some notification types')
+          } else {
+            throw error
+          }
+          
+          // Revert to previous state on error
+          if (previousGroups && isMountedRef.current) {
+            setNotificationGroups(previousGroups)
+          }
+          return
+        }
+        
+        // Success - show success message
         showSuccess(t('toast.success.notificationPreferencesUpdated'))
+        setNotificationsError(null)
       } catch (err) {
         console.error('Error saving notification preferences:', err)
-        if (previousGroups) {
+        const errorMessage = err instanceof Error ? err.message : t('common.error.updateFailed')
+        setNotificationsError(errorMessage)
+        
+        if (previousGroups && isMountedRef.current) {
           setNotificationGroups(previousGroups)
         }
-        showError(t('toast.error.saveFailed'))
+        
+        // Show user-friendly error
+        if (err instanceof Error && err.message?.includes('network')) {
+          showError(t('common.error.offline'))
+        } else {
+          showError(t('toast.error.saveFailed'))
+        }
       } finally {
-        setSavingNotifications(false)
+        if (isMountedRef.current) {
+          setSavingNotifications(false)
+        }
       }
     },
-    [activeRole, context.orgId, t, updateUserPreferences, user?.id]
+    [activeRole, context.orgId, isReady, t, user?.id]
   )
 
   const handleToggleGroupAll = useCallback(
@@ -618,8 +714,9 @@ export default function Settings() {
       return
     }
     
-    // Check if same as current email
-    if (newEmail.toLowerCase() === profile?.email?.toLowerCase()) {
+    // Check if same as current email (use auth user email as source of truth)
+    const currentEmail = user?.email ?? profile?.email
+    if (currentEmail && newEmail.toLowerCase() === currentEmail.toLowerCase()) {
       setEmailError('New email must be different from your current email')
       return
     }
@@ -630,15 +727,20 @@ export default function Settings() {
       const { error } = await updateEmail(newEmail, '/portal/settings')
       if (error) throw error
       
-      showSuccess('Confirmation links have been sent to your current and new email addresses. Click both links to complete the change.')
+      showSuccess('A confirmation link has been sent to your new email address. Click it to complete the change.')
       setShowEmailModal(false)
+      setShowEmailRetryBanner(false)
       setNewEmail('')
       setConfirmEmail('')
     } catch (err) {
+      console.error('Error changing email:', err)
       const rawMessage = err instanceof Error ? err.message : 'Failed to change email'
       const isRateLimit = /rate limit|too many requests/i.test(rawMessage)
+      const isPendingChange = /pending|already.*change|email.*change.*pending/i.test(rawMessage)
       const errorMessage = isRateLimit
         ? 'Too many email requests. Please wait about an hour before trying again.'
+        : isPendingChange
+        ? 'An email change is already pending. Please check your email and confirm the existing change, or wait for it to expire before requesting a new one.'
         : rawMessage
       setEmailError(errorMessage)
       showError(errorMessage)
@@ -711,6 +813,32 @@ export default function Settings() {
         </div>
 
         <div className="space-y-6 sm:space-y-8">
+          {/* Email retry banner */}
+          {showEmailRetryBanner && (
+            <Card className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+              <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                    Email change confirmation link expired
+                  </p>
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    The confirmation link was invalid or already used. Some email tools open links automatically. Click below to request a new confirmation email.
+                  </p>
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setShowEmailRetryBanner(false)
+                    setShowEmailModal(true)
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  Try Again
+                </Button>
+              </div>
+            </Card>
+          )}
+
           {/* Account */}
           <section>
             <SectionHeader className="mb-4">{t('portal.settings.account.title')}</SectionHeader>
@@ -721,7 +849,7 @@ export default function Settings() {
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('portal.settings.account.email')}</p>
-                  <p className="font-black text-slate-900 dark:text-white break-words">{profile?.email}</p>
+                  <p className="font-black text-slate-900 dark:text-white break-words">{user?.email ?? profile?.email}</p>
                 </div>
                 <span className="text-[var(--org-link-color)] text-sm font-bold self-start sm:self-auto">{t('common.change')}</span>
               </div>
@@ -993,19 +1121,105 @@ export default function Settings() {
           <section>
             <SectionHeader className="mb-3 sm:mb-4">{t('portal.settings.notifications.title')}</SectionHeader>
             <Card className="p-4 sm:p-6">
-              <NotificationPreferences
-                role={activeRole}
-                groups={notificationGroups}
-                onToggleGroupAll={handleToggleGroupAll}
-                onToggleGroupDigest={handleToggleGroupDigest}
-                onToggleAction={handleToggleAction}
-                onToggleChannel={handleToggleChannel}
-                onUpdateDigestWindow={handleUpdateDigestWindow}
-                onToggleQuietHours={handleToggleQuietHours}
-                onUpdateQuietHours={handleUpdateQuietHours}
-                onUpdateTimezone={handleUpdateTimezone}
-                saving={savingNotifications}
-              />
+              {/* Loading State */}
+              {loadingNotifications && (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {t('common.loading')}
+                  </p>
+                </div>
+              )}
+
+              {/* Error State */}
+              {!loadingNotifications && notificationsError && (
+                <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-red-900 dark:text-red-100 mb-1">
+                        {t('common.error.label')}
+                      </p>
+                      <p className="text-sm text-red-800 dark:text-red-200 mb-3">
+                        {notificationsError}
+                      </p>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setNotificationsError(null)
+                          if (isReady && user?.id) {
+                            void fetchData()
+                          }
+                        }}
+                        className="text-xs"
+                      >
+                        {t('common.retry')}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Offline Banner */}
+              {isOffline && !loadingNotifications && (
+                <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                    <p className="text-xs text-amber-800 dark:text-amber-200">
+                      {t('common.error.offline')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State - Should rarely happen as mergeNotificationPreferences returns defaults */}
+              {!loadingNotifications && !notificationsError && notificationGroups.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
+                    <BellOff className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <div className="text-center max-w-sm">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white mb-1">
+                      No notification preferences available
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                      {activeRole === 'org_admin' 
+                        ? 'Notification preferences are not available for your role.'
+                        : 'We couldn\'t load your notification preferences. Please refresh the page or contact support if this persists.'}
+                    </p>
+                    {activeRole !== 'org_admin' && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          if (isReady && user?.id) {
+                            void fetchData()
+                          }
+                        }}
+                        className="text-xs"
+                      >
+                        {t('common.retry')}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Main Content - Notification Preferences */}
+              {!loadingNotifications && notificationGroups.length > 0 && (
+                <NotificationPreferences
+                  role={activeRole}
+                  groups={notificationGroups}
+                  onToggleGroupAll={handleToggleGroupAll}
+                  onToggleGroupDigest={handleToggleGroupDigest}
+                  onToggleAction={handleToggleAction}
+                  onToggleChannel={handleToggleChannel}
+                  onUpdateDigestWindow={handleUpdateDigestWindow}
+                  onToggleQuietHours={handleToggleQuietHours}
+                  onUpdateQuietHours={handleUpdateQuietHours}
+                  onUpdateTimezone={handleUpdateTimezone}
+                  saving={savingNotifications}
+                />
+              )}
             </Card>
           </section>
 
@@ -1063,7 +1277,7 @@ export default function Settings() {
               <div className="p-6 space-y-4">
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                    Current email: <strong className="text-slate-900 dark:text-white">{profile?.email}</strong>
+                    Current email: <strong className="text-slate-900 dark:text-white">{user?.email ?? profile?.email}</strong>
                   </p>
                 </div>
                 <div>
@@ -1104,7 +1318,7 @@ export default function Settings() {
                 )}
                 <div className="pt-2">
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Confirmation links will be sent to both your current and new email addresses. You must click both links to complete the change.
+                    A confirmation link will be sent to your new email address. Click that link to complete the change.
                   </p>
                 </div>
               </div>

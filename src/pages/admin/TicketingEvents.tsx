@@ -621,7 +621,13 @@ function GridView({
                   <TicketChip label={event.status} variant={eventStatusVariant[event.status] || 'neutral'} />
                   {event.sale_status && <TicketChip label={saleStatusTone[event.sale_status].label} variant={saleStatusTone[event.sale_status].variant} />}
                 </div>
-                <h3 className="oa-ticket-card__title">{event.title}</h3>
+                <h3 
+                  className="oa-ticket-card__title" 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => onView(event.id, event.event_id)}
+                >
+                  {event.title}
+                </h3>
                 <div className="oa-ticket-card__meta">
                   <span className="material-symbols-outlined oa-ticket-card__meta-icon">calendar_month</span>
                   <span>{formatDateTimeRange(event.starts_at, event.ends_at, event.timezone)}</span>
@@ -659,9 +665,6 @@ function GridView({
               <Button variant="secondary" size="dense" icon="content_copy" onClick={() => onDuplicate(event.id)} className="oa-ticket-card__action">
                 Duplicate
               </Button>
-              <Button variant="secondary" size="dense" icon="open_in_new" onClick={() => onView(event.id, event.event_id)} className="oa-ticket-card__action">
-                Open
-              </Button>
             </div>
           </article>
         )
@@ -693,7 +696,13 @@ function ListView({
               )}
             </div>
             <div className="oa-ticket-list__titles">
-              <div className="oa-ticket-list__title">{event.title}</div>
+              <div 
+                className="oa-ticket-list__title" 
+                style={{ cursor: 'pointer' }}
+                onClick={() => onView(event.id, event.event_id)}
+              >
+                {event.title}
+              </div>
               <div className="oa-ticket-list__meta">
                 {formatDateTimeRange(event.starts_at, event.ends_at, event.timezone)}
                 {event.venue?.name ? ` | ${event.venue.name}` : ''}
@@ -710,7 +719,6 @@ function ListView({
               </div>
             )}
             <div className="oa-ticket-list__price">{formatCurrency(event.revenue_cents || 0)}</div>
-            <Button variant="secondary" size="dense" onClick={() => onView(event.id, event.event_id)} icon="visibility">View</Button>
             <Button variant="secondary" size="dense" onClick={() => onDuplicate(event.id)} icon="content_copy" />
             <Button variant="danger" size="dense" onClick={() => onDelete(event.id)} icon="delete" />
           </div>
@@ -745,7 +753,15 @@ function TableView({
 }) {
   const columns = useMemo(() => {
     const cols: any[] = [
-      { id: 'title', label: 'Event', sortable: true, render: (row: TicketedEvent) => <div className="oa-font-semibold">{row.title}</div> },
+      { id: 'title', label: 'Event', sortable: true, render: (row: TicketedEvent) => (
+        <div 
+          className="oa-font-semibold" 
+          style={{ cursor: 'pointer', color: 'var(--pa-link-color, #3b82f6)' }}
+          onClick={(e: React.MouseEvent) => { e.stopPropagation(); onView(row.id, row.event_id) }}
+        >
+          {row.title}
+        </div>
+      ) },
       { id: 'starts_at', label: 'Date', sortable: true, render: (row: TicketedEvent) => <span className="oa-text-sm oa-text-muted">{formatDateTimeRange(row.starts_at, row.ends_at, row.timezone)}</span> },
       { id: 'program', label: 'Program', render: (row: TicketedEvent) => row.program?.name || '?' },
       { id: 'season', label: 'Season', render: (row: TicketedEvent) => row.season?.name || '?' },
@@ -756,7 +772,6 @@ function TableView({
       { id: 'revenue', label: 'Revenue', sortable: true, render: (row: TicketedEvent) => formatCurrency(row.revenue_cents || 0) },
       { id: 'actions', label: '', render: (row: TicketedEvent) => (
         <div className="oa-flex oa-gap-1">
-          <Button size="dense" variant="secondary" icon="open_in_new" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onView(row.id, row.event_id) }}>Open</Button>
           <Button size="dense" variant="secondary" icon="content_copy" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDuplicate(row.id) }} />
           <Button size="dense" variant="danger" icon="delete" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDelete(row.id) }} />
         </div>

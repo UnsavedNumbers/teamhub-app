@@ -1505,6 +1505,7 @@ export async function getPhotosForGallery(
   }
 
   try {
+    debug.perf.start('galleryService.getPhotosForGallery')
     if (!isValidUUID(params.gallery_id)) {
       debug.perf.end('galleryService.getPhotosForGallery')
       debug.error('GalleryService.getPhotosForGallery', 'Invalid gallery ID', { params })

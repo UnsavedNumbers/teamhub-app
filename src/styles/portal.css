@@ -1246,3 +1246,12 @@
   color: rgba(255, 255, 255, 0.5);
   font-size: 0.625rem;
 }
+
+/* Portal workspace layout (Vimeo-style: header + sidebar + main) */
+.portal-workspace-main {
+  min-height: calc(100vh - 3.5rem);
+}
+.dark .portal-grid-bg {
+  background-image: linear-gradient(to right, rgb(30 41 59 / 0.5) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(30 41 59 / 0.5) 1px, transparent 1px);
+}

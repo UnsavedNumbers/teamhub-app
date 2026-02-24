@@ -5,7 +5,7 @@
  * Uses Supabase RPC functions for conflict checking and reservation management.
  */
 
-import { USE_FAKE_DATA } from '../config'
+import { USE_FAKE_DATA, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
 import type {
     Facility,
@@ -42,7 +42,8 @@ export async function getFacilities(
     filters?: FacilityFilters
 ): Promise<{ data: Facility[] | null; error: Error | null; isEmpty: boolean }> {
     if (USE_FAKE_DATA) {
-        let facilities = getFacilitiesForOrg(orgId)
+        // In demo mode, use DEMO_ORG_A_ID to get fake facilities regardless of actual orgId
+        let facilities = getFacilitiesForOrg(DEMO_ORG_A_ID)
         
         if (filters?.status) {
             facilities = facilities.filter(f => f.status === filters.status)
@@ -242,7 +243,8 @@ export async function getResources(
     filters?: ResourceFilters
 ): Promise<{ data: FacilityResource[] | null; error: Error | null; isEmpty: boolean }> {
     if (USE_FAKE_DATA) {
-        let resources = getResourcesForOrg(orgId)
+        // In demo mode, use DEMO_ORG_A_ID to get fake resources regardless of actual orgId
+        let resources = getResourcesForOrg(DEMO_ORG_A_ID)
         
         if (filters?.facility_id) {
             resources = resources.filter(r => r.facility_id === filters.facility_id)
@@ -445,7 +447,8 @@ export async function getBlackouts(
     resourceId?: string
 ): Promise<{ data: FacilityBlackout[] | null; error: Error | null; isEmpty: boolean }> {
     if (USE_FAKE_DATA) {
-        const blackouts = getBlackoutsForOrg(orgId, facilityId, resourceId)
+        // In demo mode, use DEMO_ORG_A_ID to get fake blackouts regardless of actual orgId
+        const blackouts = getBlackoutsForOrg(DEMO_ORG_A_ID, facilityId, resourceId)
         return createServiceResponse(blackouts, null)
     }
 
@@ -572,8 +575,9 @@ export async function getReservations(
     filters: ReservationFilters
 ): Promise<{ data: FacilityReservation[] | null; error: Error | null; isEmpty: boolean }> {
     if (USE_FAKE_DATA) {
+        // In demo mode, use DEMO_ORG_A_ID to get fake reservations regardless of actual orgId
         const reservations = getReservationsForOrg(
-            filters.org_id,
+            DEMO_ORG_A_ID,
             filters.start,
             filters.end,
             filters.facility_ids,
@@ -836,8 +840,8 @@ export async function checkReservationConflicts(
     tentativeBlocks?: boolean
 ): Promise<{ data: ConflictCheckResult | null; error: Error | null; isEmpty: boolean }> {
     if (USE_FAKE_DATA) {
-        // Check fake reservations for conflicts
-        const reservations = getReservationsForOrg(orgId, startAt, endAt, undefined, [resourceId])
+        // In demo mode, use DEMO_ORG_A_ID to check fake reservations regardless of actual orgId
+        const reservations = getReservationsForOrg(DEMO_ORG_A_ID, startAt, endAt, undefined, [resourceId])
         const conflictingReservations = reservations.filter(r => {
             if (excludeReservationId && r.id === excludeReservationId) return false
             if (r.status === 'cancelled') return false

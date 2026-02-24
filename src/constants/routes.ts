@@ -56,7 +56,7 @@ export const ROUTE_KEYS = {
   PLATFORM_FEATURE_FLAGS: 'platform.featureFlags',
   PLATFORM_ADMINS: 'platform.admins',
   PLATFORM_LICENSES: 'platform.licenses',
-  PLATFORM_EMAIL_PREVIEW: 'platform.emailPreview',
+  PLATFORM_EMAIL_SETTINGS: 'platform.emailSettings',
   PLATFORM_PHOTOS: 'platform.photos',
   PLATFORM_TICKETING: 'platform.ticketing',
 } as const
@@ -202,7 +202,7 @@ export const ROUTES = {
   PLATFORM_LICENSE_OVERRIDE_CREATE: '/platform-admin/licenses/overrides/new',
   PLATFORM_LICENSE_OVERRIDE_DETAIL: (id: string) => `/platform-admin/licenses/overrides/${id}`,
   PLATFORM_LICENSE_AUDIT: '/platform-admin/licenses/audit',
-  PLATFORM_EMAIL_PREVIEW: '/platform-admin/email-preview',
+  PLATFORM_EMAIL_SETTINGS: '/platform-admin/email-settings',
   PLATFORM_PHOTOS: '/platform-admin/photos',
   PLATFORM_PHOTOS_CONTENT_REVIEW: '/platform-admin/photos/content-review',
   PLATFORM_PHOTOS_STORAGE: '/platform-admin/photos/storage',

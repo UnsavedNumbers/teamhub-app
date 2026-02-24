@@ -233,6 +233,10 @@ export default function FacilityDetail() {
             <AdminPageHeader
                 title={facility.name}
                 subtitle={facility.formatted_address || ''}
+                breadcrumbs={[
+                    { label: t('admin.facilities.title'), path: getLink('admin.facilities.list') },
+                    { label: facility.name },
+                ]}
                 actions={
                     <div style={{ display: 'flex', gap: '12px' }}>
                         <Button

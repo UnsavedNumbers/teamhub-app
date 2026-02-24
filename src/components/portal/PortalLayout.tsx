@@ -53,7 +53,7 @@ export default function PortalLayout({ children, breadcrumbs, forceRole }: Porta
       {/* Portal Nav with Mega Menu */}
       <PortalHeader forceRole={forceRole} />
 
-      <main className="max-w-[1200px] mx-auto px-4 sm:px-6 py-4 sm:py-8">
+      <main className="w-full px-4 sm:px-6 py-4 sm:py-8">
         {/* Breadcrumbs - Hide on mobile if too many */}
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 sm:mb-6">

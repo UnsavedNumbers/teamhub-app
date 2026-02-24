@@ -23,6 +23,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { getReasonIcon } from '@/lib/featureGate'
 import { hasAnyRole } from '@/utils/roleHelpers'
+import { USE_FAKE_DATA } from '../data/config'
 
 function SubOrgBanner({ parentOrgId }: { parentOrgId: string }) {
   const { data: parentOrg } = useQuery({
@@ -101,6 +102,10 @@ export default function AdminLayout() {
   }, [orgData?.parent_org_id])
   
   const isParentOrg = useMemo(() => {
+    // In demo mode, always show Sub Organizations menu item
+    if (USE_FAKE_DATA) {
+      return hasOrg
+    }
     return hasOrg && !isSubOrg
   }, [hasOrg, isSubOrg])
 
@@ -331,8 +336,9 @@ export default function AdminLayout() {
       {showMobileNav && (
         <header className="oa-mobile-header">
           <Link to={getLink(RouteKeys.ADMIN_DASHBOARD)} className="oa-mobile-brand">
-            <img 
-              src={resolvedTheme === 'dark' ? '/images/logo-light.png' : '/images/logo-dark.png'} 
+            <img
+              key={resolvedTheme}
+              src={resolvedTheme === 'dark' ? '/images/logo-dark.png' : '/images/logo-light.png'}
               alt={currentOrganization?.name || 'Organization'}
               className="oa-mobile-logo"
               style={{ height: '28px', width: 'auto' }}
@@ -355,16 +361,7 @@ export default function AdminLayout() {
       {/* Sidebar - hidden when viewport ≤1023px */}
       {!showMobileNav && (
         <aside className="oa-sidebar">
-        {/* Brand */}
         <div className="oa-sidebar-header">
-          <Link to={getLink(RouteKeys.ADMIN_DASHBOARD)} className="oa-sidebar-brand">
-            <img 
-              src={resolvedTheme === 'dark' ? '/images/logo-light.png' : '/images/logo-dark.png'} 
-              alt="Youth Sports" 
-              className="oa-sidebar-logo-img"
-              style={{ height: '32px', width: 'auto' }}
-            />
-          </Link>
           <SidebarOrganizationSwitcher />
         </div>
 
@@ -568,7 +565,7 @@ export default function AdminLayout() {
         )}
 
         {/* Content */}
-        <main className="oa-content">
+        <main className="oa-content" data-testid="app-shell">
           <Outlet />
         </main>
       </div>

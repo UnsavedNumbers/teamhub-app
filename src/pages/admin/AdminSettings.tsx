@@ -20,7 +20,8 @@ import { showSuccess, showError } from '../../utils/toast'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { validatePhoneFormat } from '../../utils/phoneValidation'
 import NotificationPreferences from '../../components/common/NotificationPreferences'
-import { mergeNotificationPreferences, setPreferencesForContext, canonicalRole } from '../../utils/notificationPreferencesConfig'
+import { mergeNotificationPreferences, loadNotificationGroupsFromRelational, convertNotificationGroupsToRelational } from '../../utils/notificationPreferencesConfig'
+import { updatePreferencesBatch } from '../../data/services/userNotificationPreferencesService'
 import type { NotificationGroup } from '../../types/notificationPreferences'
 import type { NotificationRole } from '../../types/notifications'
 import { useT } from '../../i18n/useI18n'
@@ -171,6 +172,7 @@ export default function AdminSettings() {
   const [confirmEmail, setConfirmEmail] = useState('')
   const [changingEmail, setChangingEmail] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
+  const [showEmailRetryBanner, setShowEmailRetryBanner] = useState(false)
   
   // Timezone options
   const timezoneOptions = useRef(getTimezoneOptions())
@@ -249,12 +251,20 @@ export default function AdminSettings() {
           setPhone(validatedPrefs.profile?.phone || '')
           setTimezone(validatedPrefs.profile?.timezone || '')
 
-          const orgId = currentOrganization?.id
-          const savedGroups = orgId
-            ? (prefs.notifications_v2?.[orgId]?.[canonicalRole(activeRole)] as NotificationGroup[] | undefined)
-            : undefined
-          const mergedGroups = mergeNotificationPreferences(savedGroups, activeRole, translator)
-          setNotificationGroups(mergedGroups)
+          // Load from relational service
+          if (currentOrganization?.id && user.id) {
+            try {
+              const groups = await loadNotificationGroupsFromRelational(user.id, currentOrganization.id, activeRole, translator)
+              setNotificationGroups(groups)
+            } catch (err) {
+              console.error('Error loading notification preferences:', err)
+              const mergedGroups = mergeNotificationPreferences(undefined, activeRole, translator)
+              setNotificationGroups(mergedGroups)
+            }
+          } else {
+            const mergedGroups = mergeNotificationPreferences(undefined, activeRole, translator)
+            setNotificationGroups(mergedGroups)
+          }
         } else {
           const mergedGroups = mergeNotificationPreferences(undefined, activeRole, translator)
           setNotificationGroups(mergedGroups)
@@ -268,7 +278,8 @@ export default function AdminSettings() {
     }
     
     loadSettings()
-  }, [user, profile, currentOrganization?.id, activeRole, translator]) // Watch currentOrganization changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- use user?.id (stable) not user (new object each auth check); profile excluded to avoid loops when refreshProfile fires
+  }, [user?.id, currentOrganization?.id, activeRole, translator])
   
   // Refresh profile once when settings page mounts (so email is current after an email change). Omit refreshProfile from deps to avoid loop when profile updates.
   useEffect(() => {
@@ -278,12 +289,15 @@ export default function AdminSettings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: run only when user id is set, not when refreshProfile reference changes
   }, [user?.id])
 
-  // Show friendly message when redirected with email link error (expired or access denied)
+  // Show friendly message when redirected with email link error (expired or already used)
   useEffect(() => {
     const errorCode = searchParams.get('error_code')
     const errorParam = searchParams.get('error')
     if (errorCode === 'otp_expired' || errorParam === 'access_denied') {
-      showError('Email link is invalid or has expired. Please request a new link from the Change Email section below.')
+      showError(
+        'The confirmation link is invalid or was already used. Some email tools open links automatically, which uses the link before you click. Please try changing your email again and click the new link as soon as you receive it.'
+      )
+      setShowEmailRetryBanner(true)
       setSearchParams({}, { replace: true })
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount to clear auth error from URL
@@ -386,15 +400,22 @@ export default function AdminSettings() {
       if (!user?.id || !currentOrganization?.id) return
       setSavingNotifications(true)
       try {
-        const nextPrefs = setPreferencesForContext(
-          preferencesRef.current?.notifications_v2,
-          currentOrganization.id,
-          activeRole,
-          nextGroups
-        )
-        const { error: prefsError } = await updateUserPreferences(user.id, { notifications_v2: nextPrefs })
-        if (prefsError) throw prefsError
-        preferencesRef.current = { ...(preferencesRef.current || {}), notifications_v2: nextPrefs }
+        // Convert NotificationGroups to relational preferences format
+        const preferences = await convertNotificationGroupsToRelational(nextGroups, activeRole)
+        
+        // Save to relational table
+        const { error } = await updatePreferencesBatch(user.id, currentOrganization.id, activeRole, preferences)
+        
+        if (error) {
+          if (error.message?.includes('no active template')) {
+            showError('Email notifications are not available for some notification types')
+          } else {
+            throw error
+          }
+          if (previousGroups) setNotificationGroups(previousGroups)
+          return
+        }
+        
         showSuccess(t('toast.success.notificationPreferencesUpdated'))
       } catch (err) {
         console.error('Error saving notifications:', err)
@@ -406,7 +427,7 @@ export default function AdminSettings() {
         setSavingNotifications(false)
       }
     },
-    [activeRole, currentOrganization?.id, t, updateUserPreferences, user?.id]
+    [activeRole, currentOrganization?.id, t, user?.id]
   )
 
   const handleToggleGroupAll = useCallback(
@@ -627,8 +648,9 @@ export default function AdminSettings() {
       return
     }
     
-    // Check if same as current email
-    if (newEmail.toLowerCase() === profile?.email?.toLowerCase()) {
+    // Check if same as current email (use auth user email as source of truth)
+    const currentEmail = user?.email ?? profile?.email
+    if (currentEmail && newEmail.toLowerCase() === currentEmail.toLowerCase()) {
       setEmailError('New email must be different from your current email')
       return
     }
@@ -643,16 +665,20 @@ export default function AdminSettings() {
         if (error) throw error
       }
       
-      showSuccess('Confirmation links have been sent to your current and new email addresses. Click both links to complete the change.')
+      showSuccess('A confirmation link has been sent to your new email address. Click it to complete the change.')
       setShowEmailModal(false)
+      setShowEmailRetryBanner(false)
       setNewEmail('')
       setConfirmEmail('')
     } catch (err) {
       console.error('Error changing email:', err)
       const rawMessage = err instanceof Error ? err.message : 'Failed to change email'
       const isRateLimit = /rate limit|too many requests/i.test(rawMessage)
+      const isPendingChange = /pending|already.*change|email.*change.*pending/i.test(rawMessage)
       const errorMessage = isRateLimit
         ? 'Too many email requests. Please wait about an hour before trying again.'
+        : isPendingChange
+        ? 'An email change is already pending. Please check your email and confirm the existing change, or wait for it to expire before requesting a new one.'
         : rawMessage
       setEmailError(errorMessage)
       showError(errorMessage)
@@ -741,22 +767,31 @@ export default function AdminSettings() {
         </div>
       )}
       
-      {/* Mobile Select for Tabs */}
-      <div className="oa-tabs-mobile-select-container">
-        <select 
-          className="oa-tabs-mobile-select"
-          value={activeTab}
-          onChange={(e) => handleTabChange(e.target.value)}
-        >
-          <option value="profile">Profile</option>
-          <option value="roles">Role & Access</option>
-          <option value="notifications">Notifications</option>
-          <option value="workflow">Workflow</option>
-          <option value="security">Security</option>
-          {showAdvancedTab && <option value="advanced">Advanced</option>}
-        </select>
-      </div>
-
+      {showEmailRetryBanner && (
+        <Card className="oa-mb-4" style={{ background: '#fef3c7', borderColor: '#fbbf24', borderWidth: '1px', borderStyle: 'solid' }}>
+          <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#92400e', marginBottom: '0.25rem' }}>
+                Email change confirmation link expired
+              </p>
+              <p style={{ fontSize: '0.875rem', color: '#78350f' }}>
+                The confirmation link was invalid or already used. Some email tools open links automatically. Click below to request a new confirmation email.
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setShowEmailRetryBanner(false)
+                setShowEmailModal(true)
+              }}
+              style={{ width: '100%', maxWidth: '200px' }}
+            >
+              Try Again
+            </Button>
+          </div>
+        </Card>
+      )}
+      
       <Tabs value={activeTab} onValueChange={handleTabChange} className="oa-tabs">
         <TabsList className="oa-mb-6">
           <TabsTrigger value="profile">Profile</TabsTrigger>
@@ -871,7 +906,7 @@ export default function AdminSettings() {
             <div className="oa-modal-content" style={{ padding: '1.5rem', overflowY: 'auto', flex: '1 1 auto' }}>
               <div className="oa-form-group oa-mb-4">
                 <p className="oa-text-muted">
-                  Current email: <strong>{profile?.email}</strong>
+                  Current email: <strong>{user?.email ?? profile?.email}</strong>
                 </p>
               </div>
               <div className="oa-form-grid oa-form-grid-2">
@@ -909,7 +944,7 @@ export default function AdminSettings() {
               )}
               <div className="oa-form-group oa-mt-4">
                 <p className="oa-text-muted oa-text-sm">
-                  Confirmation links will be sent to both your current and new email addresses. You must click both links to complete the change.
+                  A confirmation link will be sent to your new email address. Click that link to complete the change.
                 </p>
               </div>
             </div>

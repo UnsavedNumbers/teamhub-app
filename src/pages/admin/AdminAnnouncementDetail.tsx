@@ -297,7 +297,9 @@ export default function AdminAnnouncementDetail() {
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               placeholder="Message"
-              className="oa-w-full oa-min-h-[200px] oa-p-3 oa-border oa-border-slate-300 dark:oa-border-slate-600 oa-rounded oa-resize-y oa-text-sm oa-leading-relaxed oa-bg-white dark:oa-bg-slate-800 oa-text-slate-900 dark:oa-text-slate-100"
+              rows={Math.max(10, Math.ceil(editContent.split('\n').length))}
+              className="oa-w-full oa-p-3 oa-border oa-border-slate-300 dark:oa-border-slate-600 oa-rounded oa-resize-y oa-text-sm oa-leading-relaxed oa-bg-white dark:oa-bg-slate-800 oa-text-slate-900 dark:oa-text-slate-100"
+              style={{ minHeight: 'auto' }}
             />
           ) : (
             <div className="oa-text-sm oa-leading-relaxed oa-whitespace-pre-wrap oa-text-slate-700 dark:oa-text-slate-300">
