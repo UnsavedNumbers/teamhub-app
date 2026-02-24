@@ -29,13 +29,7 @@ CREATE POLICY seasons__member_select ON public.seasons
             team_id IS NOT NULL AND EXISTS (
                 SELECT 1 FROM public.team_memberships tm
                 WHERE tm.team_id = public.seasons.team_id
-                  AND (
-                      user_is_guardian_of_child(auth.uid(), tm.athlete_id)
-                      OR EXISTS (
-                          SELECT 1 FROM public.athletes a 
-                          WHERE a.id = tm.athlete_id AND a.user_id = auth.uid()
-                      )
-                  )
+                  AND user_is_guardian_of_child(auth.uid(), tm.athlete_id)
                   AND tm.status = 'active'
                   AND tm.deleted_at IS NULL
             )
@@ -46,13 +40,7 @@ CREATE POLICY seasons__member_select ON public.seasons
                 SELECT 1 FROM public.team_memberships tm
                 JOIN public.team_seasons ts ON ts.season_id = public.seasons.id
                 WHERE ts.team_id = tm.team_id
-                  AND (
-                      user_is_guardian_of_child(auth.uid(), tm.athlete_id)
-                      OR EXISTS (
-                          SELECT 1 FROM public.athletes a 
-                          WHERE a.id = tm.athlete_id AND a.user_id = auth.uid()
-                      )
-                  )
+                  AND user_is_guardian_of_child(auth.uid(), tm.athlete_id)
                   AND tm.status = 'active'
                   AND tm.deleted_at IS NULL
             )

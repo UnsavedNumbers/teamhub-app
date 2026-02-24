@@ -1811,7 +1811,7 @@ export async function getAthleteTeamMemberships(
                 jersey_number,
                 position,
                 created_at,
-                teams!inner(name, org_id, program:programs(name), sport:sports(name))
+                teams!team_memberships_team_id_fkey!inner(name, org_id, program:programs(name), sport:sports(name))
             `)
             .eq('athlete_id', athleteId)
             .eq('status', 'active')
@@ -1874,7 +1874,7 @@ export async function getAthleteTeamHistory(
     try {
         const { data, error } = await supabase
             .from('team_memberships')
-            .select('team:teams(sport_id)')
+            .select('team:teams!team_memberships_team_id_fkey(sport_id)')
             .eq('athlete_id', athleteId)
 
         if (error) throw error
