@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { toast } from 'react-hot-toast';
-import { Save, Eye, AlertTriangle, XCircle } from 'lucide-react';
+import { Save, Eye, AlertTriangle, XCircle, ArrowLeft } from 'lucide-react';
 
 import { PageHeader, Card, Button, Input, Select, Badge, Switch } from '../../components/platformAdmin';
 import { ConfirmDialog } from '../../components/admin/ConfirmDialog';
@@ -16,6 +16,22 @@ import { wrapEmailContent } from '../../utils/emailTemplateWrapper';
 
 // Memoize ReactQuill to prevent unnecessary re-renders
 const MemoizedReactQuill = React.memo(ReactQuill);
+
+/** Email template categories */
+const EMAIL_TEMPLATE_CATEGORIES = [
+  'Authentication & Account',
+  'Invites & Role Assignments',
+  'Team Management',
+  'Events',
+  'Ticketing & Payments',
+  'Announcements & Communication',
+  'Athlete & Guardian Management',
+  'Media',
+  'Subscriptions & Billing',
+  'System & Security',
+  'Admin Alerts',
+  'Marketing & Engagement',
+];
 
 /** All email template types for the Type dropdown (Master Email Event Matrix + existing). */
 const EMAIL_TEMPLATE_TYPE_OPTIONS: { value: NotificationJobType; label: string }[] = [
@@ -136,6 +152,7 @@ export default function EmailTemplateEditor() {
   const [subjectTemplate, setSubjectTemplate] = useState('');
   const [previewText, setPreviewText] = useState('');
   const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
   
   // Preview State
   const [showPreview, setShowPreview] = useState(false);
@@ -193,6 +210,7 @@ export default function EmailTemplateEditor() {
             variables: [], 
             required_variables: [], 
             is_active: false, 
+            category: null,
             created_at: '', 
             updated_at: '' 
         });
@@ -308,6 +326,7 @@ export default function EmailTemplateEditor() {
               subject_template: subjectTemplate,
               preview_text: previewText,
               description,
+              category: category || undefined,
               variables: allVars
           });
           toast.success('Template created successfully');
@@ -318,6 +337,7 @@ export default function EmailTemplateEditor() {
             subject_template: subjectTemplate,
             preview_text: previewText,
             description,
+            category: category || undefined,
             variables: allVars
           };
 
@@ -383,6 +403,10 @@ export default function EmailTemplateEditor() {
         subtitle={isCreateMode ? 'Define a new email template' : `Editing ${template.slug}`}
         actions={
           <div className="pa-flex pa-gap-2">
+            <Button variant="ghost" onClick={() => navigate('/platform-admin/emails')}>
+              <ArrowLeft className="pa-mr-2" size={18} />
+              Back to Templates
+            </Button>
             <Button variant="ghost" onClick={() => setShowPreview(!showPreview)}>
               {showPreview ? <><Eye className="pa-mr-2" size={18} /> Hide Preview</> : <><Eye className="pa-mr-2" size={18} /> Show Preview</>}
             </Button>
@@ -450,6 +474,18 @@ export default function EmailTemplateEditor() {
                   placeholder="Internal description"
                 />
               </div>
+
+              <div>
+                <label className="pa-block pa-text-sm pa-font-medium pa-text-gray-700 pa-mb-1">Category</label>
+                <Select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  options={[
+                    { value: '', label: 'Select a category...' },
+                    ...EMAIL_TEMPLATE_CATEGORIES.map(cat => ({ value: cat, label: cat })),
+                  ]}
+                />
+              </div>
             </div>
           </Card>
 
@@ -509,6 +545,22 @@ export default function EmailTemplateEditor() {
                     />
                 ) : (
                     <Badge variant="neutral">{template.type}</Badge>
+                )}
+              </div>
+              <div className="pa-flex pa-justify-between pa-items-center">
+                <span className="pa-text-gray-500">Category</span>
+                {isCreateMode ? (
+                    <Select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        options={[
+                            { value: '', label: 'Select...' },
+                            ...EMAIL_TEMPLATE_CATEGORIES.map(cat => ({ value: cat, label: cat })),
+                        ]}
+                        className="pa-w-40 pa-text-sm"
+                    />
+                ) : (
+                    <Badge variant="neutral">{template.category || '—'}</Badge>
                 )}
               </div>
               <div className="pa-flex pa-justify-between">

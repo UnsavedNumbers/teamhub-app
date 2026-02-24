@@ -5,9 +5,17 @@ import { wrapEmailContent } from '../../utils/emailTemplateWrapper';
 
 export const emailTemplatesService = {
     /**
-     * List email templates with pagination
+     * List email templates with pagination, search, and filters
      */
-    async getEmailTemplates(page = 1, limit = 20) {
+    async getEmailTemplates(
+        page = 1,
+        limit = 20,
+        options?: {
+            search?: string;
+            category?: string;
+            isActive?: boolean | null; // null means all, true means active only, false means inactive only
+        }
+    ) {
         if (import.meta.env.MODE === 'demo') {
             return { data: [], count: 0, page, limit, totalPages: 0 };
         }
@@ -15,12 +23,32 @@ export const emailTemplatesService = {
         const from = (page - 1) * limit;
         const to = from + limit - 1;
 
-        const { data, count, error } = await (supabase as any)
+        let query = (supabase as any)
             .from('email_templates')
-            .select('*', { count: 'exact' })
+            .select('*', { count: 'exact' });
+
+        // Search filter
+        if (options?.search && options.search.length >= 2) {
+            query = query.or(`name.ilike.%${options.search}%,description.ilike.%${options.search}%,slug.ilike.%${options.search}%,type.ilike.%${options.search}%`);
+        }
+
+        // Category filter
+        if (options?.category) {
+            query = query.eq('category', options.category);
+        }
+
+        // Active/Inactive filter
+        if (options?.isActive !== null && options?.isActive !== undefined) {
+            query = query.eq('is_active', options.isActive);
+        }
+
+        query = query
             .order('is_active', { ascending: false })
+            .order('category', { ascending: true })
             .order('type', { ascending: true })
             .range(from, to);
+
+        const { data, count, error } = await query;
 
         if (error) throw error;
 
@@ -76,6 +104,10 @@ export const emailTemplatesService = {
 
         if (data.description !== undefined) {
             payload.description = data.description;
+        }
+
+        if (data.category !== undefined) {
+            payload.category = data.category || null;
         }
 
         // 4. Perform update with optimistic locking check
@@ -225,7 +257,8 @@ export const emailTemplatesService = {
             preview_text: data.preview_text,
             variables: allVars,
             required_variables: [], // Can implement required vars logic if needed
-            is_active: false // Default to inactive on create
+            is_active: false, // Default to inactive on create
+            category: data.category || null
         };
 
         const { data: newTemplate, error } = await (supabase as any)

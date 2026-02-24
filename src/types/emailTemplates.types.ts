@@ -113,6 +113,7 @@ export interface EmailTemplate {
     variables: string[];
     required_variables: string[];
     is_active: boolean;
+    category?: string | null;
     created_at: string;
     updated_at: string; // For optimistic locking
     updated_by_user_id?: string | null;
@@ -124,4 +125,5 @@ export interface EmailTemplateFormData {
     preview_text?: string;
     variables?: string[];
     description?: string;
+    category?: string;
 }

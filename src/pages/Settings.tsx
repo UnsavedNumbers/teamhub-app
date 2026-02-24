@@ -29,7 +29,7 @@ import type { NotificationGroup } from '../types/notificationPreferences'
 import type { NotificationRole } from '../types/notifications'
 import { mergeNotificationPreferences, setPreferencesForContext, canonicalRole } from '../utils/notificationPreferencesConfig'
 import { showSuccess, showError } from '../utils/toast'
-import { CheckCircle, Mail, Loader2, AlertCircle } from 'lucide-react'
+import { CheckCircle, Mail, Loader2, AlertCircle, BellOff } from 'lucide-react'
 import { LocationAutocomplete } from '../components/common/LocationAutocomplete'
 import type { StructuredAddress, HomeLocation } from '../types/location'
 
@@ -71,6 +71,9 @@ export default function Settings() {
 
   const [notificationGroups, setNotificationGroups] = useState<NotificationGroup[]>([])
   const [savingNotifications, setSavingNotifications] = useState(false)
+  const [loadingNotifications, setLoadingNotifications] = useState(true)
+  const [notificationsError, setNotificationsError] = useState<string | null>(null)
+  const [isOffline, setIsOffline] = useState(false)
 
   const [homeAddressInput, setHomeAddressInput] = useState('')
   const [homeAddressDisplay, setHomeAddressDisplay] = useState('')
@@ -102,15 +105,31 @@ export default function Settings() {
   const [emailTouched, setEmailTouched] = useState(false)
   const [inviteActionLoading, setInviteActionLoading] = useState<string | null>(null)
 
-  const activeRole: NotificationRole = useMemo(
-    () => canonicalRole((context.roles?.[0] as NotificationRole) || 'guardian'),
-    [context.roles]
-  )
+  const activeRole: NotificationRole = useMemo(() => {
+    // Ensure we have a valid role, defaulting to guardian if none found
+    const role = context.roles?.[0] as NotificationRole | undefined
+    return canonicalRole(role || 'guardian')
+  }, [context.roles])
 
   // Cleanup ref on unmount
   useEffect(() => {
     isMountedRef.current = true
     return () => { isMountedRef.current = false }
+  }, [])
+
+  // Offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false)
+    const handleOffline = () => setIsOffline(true)
+    
+    setIsOffline(!navigator.onLine)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
   }, [])
 
   // Show friendly message when redirected with email link error (expired or already used)
@@ -169,12 +188,52 @@ export default function Settings() {
       name: t.name,
     })))
 
-    // Load notification preferences
-    const { data: prefs } = await getUserPreferences(user.id)
-    preferencesRef.current = prefs || {}
-    const savedGroups = prefs?.notifications_v2?.[context.orgId]?.[activeRole]
-    const mergedGroups = mergeNotificationPreferences(savedGroups as NotificationGroup[] | undefined, activeRole, translator)
-    setNotificationGroups(mergedGroups)
+    // Load notification preferences with proper error handling
+    setLoadingNotifications(true)
+    setNotificationsError(null)
+    
+    try {
+      const { data: prefs, error: prefsError } = await getUserPreferences(user.id)
+      
+      if (prefsError) {
+        console.error('Error loading notification preferences:', prefsError)
+        if (isMountedRef.current) {
+          // If offline, use cached preferences if available
+          if (isOffline && preferencesRef.current) {
+            const cachedGroups = preferencesRef.current?.notifications_v2?.[context.orgId]?.[activeRole]
+            const mergedGroups = mergeNotificationPreferences(cachedGroups as NotificationGroup[] | undefined, activeRole, translator)
+            setNotificationGroups(mergedGroups)
+            setNotificationsError(null)
+          } else {
+            setNotificationsError(t('common.error.loadFailed'))
+            // Still show defaults so user can see the UI
+            const defaultGroups = mergeNotificationPreferences(undefined, activeRole, translator)
+            setNotificationGroups(defaultGroups)
+          }
+        }
+      } else {
+        preferencesRef.current = prefs || {}
+        const savedGroups = prefs?.notifications_v2?.[context.orgId]?.[activeRole]
+        const mergedGroups = mergeNotificationPreferences(savedGroups as NotificationGroup[] | undefined, activeRole, translator)
+        
+        if (isMountedRef.current) {
+          setNotificationGroups(mergedGroups)
+          setNotificationsError(null)
+        }
+      }
+    } catch (err) {
+      console.error('Unexpected error loading notification preferences:', err)
+      if (isMountedRef.current) {
+        setNotificationsError(t('common.error.loadFailed'))
+        // Show defaults on error so UI is still usable
+        const defaultGroups = mergeNotificationPreferences(undefined, activeRole, translator)
+        setNotificationGroups(defaultGroups)
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setLoadingNotifications(false)
+      }
+    }
 
     setLoading(false)
   }, [context, isReady, user?.id, activeRole, translator])
@@ -385,30 +444,93 @@ export default function Settings() {
 
   const persistNotificationGroups = useCallback(
     async (nextGroups: NotificationGroup[], previousGroups?: NotificationGroup[]) => {
-      if (!user?.id) return
+      if (!user?.id || !isReady) {
+        showError(t('common.error.permissionDenied'))
+        return
+      }
+
+      // Validate groups before saving
+      if (!Array.isArray(nextGroups) || nextGroups.length === 0) {
+        console.error('Invalid notification groups:', nextGroups)
+        showError(t('common.error.updateFailed'))
+        return
+      }
+
       setSavingNotifications(true)
+      setNotificationsError(null)
+      
       try {
+        // Check offline status
+        if (isOffline) {
+          // In offline mode, update local state but show warning
+          preferencesRef.current = { 
+            ...(preferencesRef.current || {}), 
+            notifications_v2: setPreferencesForContext(
+              preferencesRef.current?.notifications_v2,
+              context.orgId,
+              activeRole,
+              nextGroups
+            )
+          }
+          setNotificationGroups(nextGroups)
+          showError(t('common.error.offline'))
+          return
+        }
+
         const nextPrefs = setPreferencesForContext(
           preferencesRef.current?.notifications_v2,
           context.orgId,
           activeRole,
           nextGroups
         )
+        
         const { error } = await updateUserPreferences(user.id, { notifications_v2: nextPrefs })
-        if (error) throw error
+        
+        if (error) {
+          // Check for specific error types
+          if (error.message?.includes('permission') || error.message?.includes('denied')) {
+            setNotificationsError(t('common.error.permissionDenied'))
+            showError(t('common.error.permissionDenied'))
+          } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+            setNotificationsError(t('common.error.offline'))
+            showError(t('common.error.offline'))
+          } else {
+            throw error
+          }
+          
+          // Revert to previous state on error
+          if (previousGroups && isMountedRef.current) {
+            setNotificationGroups(previousGroups)
+          }
+          return
+        }
+        
+        // Success - update ref and show success message
         preferencesRef.current = { ...(preferencesRef.current || {}), notifications_v2: nextPrefs }
         showSuccess(t('toast.success.notificationPreferencesUpdated'))
+        setNotificationsError(null)
       } catch (err) {
         console.error('Error saving notification preferences:', err)
-        if (previousGroups) {
+        const errorMessage = err instanceof Error ? err.message : t('common.error.updateFailed')
+        setNotificationsError(errorMessage)
+        
+        if (previousGroups && isMountedRef.current) {
           setNotificationGroups(previousGroups)
         }
-        showError(t('toast.error.saveFailed'))
+        
+        // Show user-friendly error
+        if (err instanceof Error && err.message?.includes('network')) {
+          showError(t('common.error.offline'))
+        } else {
+          showError(t('toast.error.saveFailed'))
+        }
       } finally {
-        setSavingNotifications(false)
+        if (isMountedRef.current) {
+          setSavingNotifications(false)
+        }
       }
     },
-    [activeRole, context.orgId, t, updateUserPreferences, user?.id]
+    [activeRole, context.orgId, isReady, isOffline, t, updateUserPreferences, user?.id]
   )
 
   const handleToggleGroupAll = useCallback(
@@ -1040,19 +1162,105 @@ export default function Settings() {
           <section>
             <SectionHeader className="mb-3 sm:mb-4">{t('portal.settings.notifications.title')}</SectionHeader>
             <Card className="p-4 sm:p-6">
-              <NotificationPreferences
-                role={activeRole}
-                groups={notificationGroups}
-                onToggleGroupAll={handleToggleGroupAll}
-                onToggleGroupDigest={handleToggleGroupDigest}
-                onToggleAction={handleToggleAction}
-                onToggleChannel={handleToggleChannel}
-                onUpdateDigestWindow={handleUpdateDigestWindow}
-                onToggleQuietHours={handleToggleQuietHours}
-                onUpdateQuietHours={handleUpdateQuietHours}
-                onUpdateTimezone={handleUpdateTimezone}
-                saving={savingNotifications}
-              />
+              {/* Loading State */}
+              {loadingNotifications && (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {t('common.loading')}
+                  </p>
+                </div>
+              )}
+
+              {/* Error State */}
+              {!loadingNotifications && notificationsError && (
+                <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-red-900 dark:text-red-100 mb-1">
+                        {t('common.error.label')}
+                      </p>
+                      <p className="text-sm text-red-800 dark:text-red-200 mb-3">
+                        {notificationsError}
+                      </p>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setNotificationsError(null)
+                          if (isReady && user?.id) {
+                            void fetchData()
+                          }
+                        }}
+                        className="text-xs"
+                      >
+                        {t('common.retry')}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Offline Banner */}
+              {isOffline && !loadingNotifications && (
+                <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                    <p className="text-xs text-amber-800 dark:text-amber-200">
+                      {t('common.error.offline')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State - Should rarely happen as mergeNotificationPreferences returns defaults */}
+              {!loadingNotifications && !notificationsError && notificationGroups.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
+                    <BellOff className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <div className="text-center max-w-sm">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white mb-1">
+                      No notification preferences available
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                      {activeRole === 'org_admin' 
+                        ? 'Notification preferences are not available for your role.'
+                        : 'We couldn\'t load your notification preferences. Please refresh the page or contact support if this persists.'}
+                    </p>
+                    {activeRole !== 'org_admin' && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          if (isReady && user?.id) {
+                            void fetchData()
+                          }
+                        }}
+                        className="text-xs"
+                      >
+                        {t('common.retry')}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Main Content - Notification Preferences */}
+              {!loadingNotifications && notificationGroups.length > 0 && (
+                <NotificationPreferences
+                  role={activeRole}
+                  groups={notificationGroups}
+                  onToggleGroupAll={handleToggleGroupAll}
+                  onToggleGroupDigest={handleToggleGroupDigest}
+                  onToggleAction={handleToggleAction}
+                  onToggleChannel={handleToggleChannel}
+                  onUpdateDigestWindow={handleUpdateDigestWindow}
+                  onToggleQuietHours={handleToggleQuietHours}
+                  onUpdateQuietHours={handleUpdateQuietHours}
+                  onUpdateTimezone={handleUpdateTimezone}
+                  saving={savingNotifications}
+                />
+              )}
             </Card>
           </section>
 

@@ -445,6 +445,9 @@ verify_jwt = false
 [functions.upgrade-org-license]
 verify_jwt = false
 
+[functions.stream-token]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

@@ -28,6 +28,7 @@ CREATE INDEX IF NOT EXISTS idx_email_templates_active_type ON public.email_templ
 
 ALTER TABLE public.email_templates ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS email_templates_platform_admin_all ON public.email_templates;
 CREATE POLICY email_templates_platform_admin_all ON public.email_templates
   FOR ALL
   TO authenticated
