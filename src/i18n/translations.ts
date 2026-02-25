@@ -3856,6 +3856,7 @@ export const en = {
         facilities: {
             title: 'Facilities',
             subtitle: 'Manage fields, courts, gyms, and availability',
+            backToFacilities: 'Back to Facilities',
             create: 'Add Facility',
             edit: 'Edit Facility',
             delete: 'Delete Facility',

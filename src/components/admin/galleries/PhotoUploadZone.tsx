@@ -1,11 +1,13 @@
 import { useCallback, useRef, useState } from 'react'
 import { uploadPhotoToGallery, type GalleryPhoto, type PhotoStatus } from '@/data/services/galleryService'
 import { useUserContext } from '@/hooks/useUserContext'
+import { useOrganization } from '@/contexts/OrganizationContext'
 import { useI18n } from '@/i18n/useI18n'
 import { USE_FAKE_DATA } from '@/data/config'
 import { showError, showSuccess } from '@/utils/toast'
 import { Button, Card, ProgressBar, InlineNotice } from '@/components/platformAdmin'
 import { compressPhotoFile } from '@/utils/photoCompression'
+import { hasAnyRole } from '@/utils/roleHelpers'
 
 type UploadState = 'pending' | 'uploading' | 'success' | 'error' | 'canceled'
 
@@ -37,6 +39,7 @@ export function PhotoUploadZone({
   onComplete,
 }: PhotoUploadZoneProps) {
   const { context } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { t } = useI18n()
   const [items, setItems] = useState<UploadItem[]>([])
   const [isDragging, setIsDragging] = useState(false)
@@ -48,8 +51,8 @@ export function PhotoUploadZone({
     if (!requireApproval) return 'approved'
     
     // Coaches and org admins: auto-approve
-    const isCoach = context?.roles?.includes('coach')
-    const isOrgAdmin = context?.roles?.includes('org_admin')
+    const isCoach = hasAnyRole(currentOrganization, ['coach'])
+    const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
     
     if (isCoach || isOrgAdmin) {
       return 'approved'

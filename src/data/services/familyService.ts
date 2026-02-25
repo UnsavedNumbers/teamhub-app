@@ -27,7 +27,7 @@ import {
     type FakeFamilyMember,
 } from '../fake/fakeUsers'
 import { getChildrenForUserId, getFamiliesForUserId } from '../fake/relationships'
-import { getCoachTeamIds } from '../fake/userContext'
+import { getCoachTeamIds, getGuardianCanonicalUserId } from '../fake/userContext'
 import { getTeamMembersForSeason, getTeamById, getActiveTeamMembershipsForChild, SEASON_SPRING_CURRENT_ID } from '../fake/fakeTeams'
 import type {
     Family,
@@ -723,7 +723,8 @@ export async function getAthletes(
                 console.groupEnd()
                 return { data: results, error: null }
             }
-            const results = getChildrenForUser(context.userId).map((c) => mapFakeChild(c, context.orgId))
+            const guardianUserId = getGuardianCanonicalUserId(context)
+            const results = getChildrenForUser(guardianUserId).map((c) => mapFakeChild(c, context.orgId))
             debug.perf.end('familyService.getAthletes')
             debug.data('FamilyService.getAthletes', 'Response (fake)', { athleteCount: results.length })
             console.groupEnd()
@@ -1177,8 +1178,29 @@ export async function getAthleteById(
             
             // Check access
             if (!permissions.canViewAllOrgData) {
-                const ownedChildIds = getChildrenForUserId(context.userId)
-                if (!ownedChildIds.includes(athleteId)) {
+                let hasAccess = false
+                
+                // Check if coach can view this athlete (athlete is on coach's assigned teams)
+                if (permissions.canViewAssignedTeams && permissions.assignedTeamIds.length > 0) {
+                    const athleteIds = new Set<string>()
+                    for (const teamId of permissions.assignedTeamIds) {
+                        const members = getTeamMembersForSeason(teamId, SEASON_SPRING_CURRENT_ID)
+                        members.forEach((m) => athleteIds.add(m.athlete_id))
+                    }
+                    if (athleteIds.has(athleteId)) {
+                        hasAccess = true
+                    }
+                }
+                
+                // Check if guardian/parent can view this athlete (their own child)
+                if (!hasAccess) {
+                    const ownedChildIds = getChildrenForUserId(context.userId)
+                    if (ownedChildIds.includes(athleteId)) {
+                        hasAccess = true
+                    }
+                }
+                
+                if (!hasAccess) {
                     debug.perf.end('familyService.getAthleteById')
                     debug.error('FamilyService.getAthleteById', 'Access denied (fake)', { athleteId })
                     console.groupEnd()

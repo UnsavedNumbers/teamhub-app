@@ -66,19 +66,20 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
         const dbSession = await getDemoSession(user.id)
         if (dbSession) {
           snapshot = getCurrentDemoSessionSnapshot()
-          
-          // When USE_FAKE_DATA is true and we have a demo session, ensure fake data is generated
-          if (USE_FAKE_DATA && snapshot.is_demo_session && snapshot.demo_org_id && snapshot.demo_code) {
-            try {
-              const demoOrg = await getDemoOrg(snapshot.demo_org_id)
-              await generateDemoData(demoOrg, demoOrg.sports_sponsored, snapshot.demo_code)
-            } catch (err) {
-              console.error('[DemoSessionContext] Failed to generate demo data:', err)
-            }
-          }
         }
       } catch (err) {
         console.error('[DemoSessionContext] Failed to fetch demo session:', err)
+      }
+    }
+
+    // When USE_FAKE_DATA is true and we have a demo session, ensure fake data is generated
+    // This should happen for ALL roles (org_admin, coach, guardian, athlete, etc.)
+    if (USE_FAKE_DATA && snapshot.is_demo_session && snapshot.demo_org_id && snapshot.demo_code && user?.id) {
+      try {
+        const demoOrg = await getDemoOrg(snapshot.demo_org_id)
+        await generateDemoData(demoOrg, demoOrg.sports_sponsored, snapshot.demo_code)
+      } catch (err) {
+        console.error('[DemoSessionContext] Failed to generate demo data:', err)
       }
     }
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
 import { supabase } from '../../lib/supabase'
@@ -20,6 +21,7 @@ import { getRandomSportImagePath } from '../../utils/sportImages'
 import { cn } from '../../utils/cn'
 import { PhotoSection } from '@/components/galleries/PhotoSection'
 import { useI18n } from '../../i18n/useI18n'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
 
 type LevelRow = {
@@ -89,10 +91,12 @@ export default function ProgramDetail() {
   const programId = id?.trim() || ''
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { isOffline } = useOffline()
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useI18n()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -699,26 +703,28 @@ export default function ProgramDetail() {
                     </div>
                     <div className="oa-flex oa-justify-between oa-gap-2 oa-flex-wrap">
                       <div className="oa-flex oa-gap-2 oa-flex-wrap">
-                        <Link
-                          to={`${getLink('admin.programs.update', { id: programId })}?returnUrl=${encodeURIComponent(detailRoute)}`}
-                          onClick={(e) => {
-                            if (!programId) {
-                              e.preventDefault()
-                              setActionError('Program ID is required to edit program.')
-                            }
-                          }}
-                          className="w-full sm:w-auto"
-                        >
-                          <Button
-                            variant="ghost"
-                            icon="edit"
-                            disabled={loading || !programId}
-                            aria-label={`Edit ${program?.name || 'program'}`}
-                            className="w-full sm:w-auto min-h-[44px]"
+                        {isOrgAdmin && (
+                          <Link
+                            to={`${getLink('admin.programs.update', { id: programId })}?returnUrl=${encodeURIComponent(detailRoute)}`}
+                            onClick={(e) => {
+                              if (!programId) {
+                                e.preventDefault()
+                                setActionError('Program ID is required to edit program.')
+                              }
+                            }}
+                            className="w-full sm:w-auto"
                           >
-                            Edit Program
-                          </Button>
-                        </Link>
+                            <Button
+                              variant="ghost"
+                              icon="edit"
+                              disabled={loading || !programId}
+                              aria-label={`Edit ${program?.name || 'program'}`}
+                              className="w-full sm:w-auto min-h-[44px]"
+                            >
+                              Edit Program
+                            </Button>
+                          </Link>
+                        )}
 
                         <Link to={levelsRoute} className="w-full sm:w-auto">
                           <Button
@@ -770,41 +776,43 @@ export default function ProgramDetail() {
                           </OrgAdminButton>
                         </Link>
 
-                        <Link
-                          to={`${formsRoute}?type=team&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
-                          className="w-full sm:w-auto"
-                          onClick={(e) => {
-                            if (isOffline || USE_FAKE_DATA) {
-                              e.preventDefault()
-                              setActionError(
-                                isOffline
-                                  ? 'You appear to be offline. Please reconnect and try again.'
-                                  : 'This action is not available in demo mode. Please sign in to add teams.'
-                              )
-                            } else if (!programId || !program.sport_id) {
-                              e.preventDefault()
-                              setActionError('Program and sport information is required to add a team.')
-                            }
-                          }}
-                        >
-                          <Button
-                            variant="secondary"
-                            disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
-                            title={
-                              isOffline
-                                ? 'Offline - cannot add teams'
-                                : USE_FAKE_DATA
-                                  ? 'Sign in to add teams'
-                                  : !programId || !program.sport_id
-                                    ? 'Missing required information'
-                                    : undefined
-                            }
-                            aria-label="Add a new team to this program"
-                            className="w-full sm:w-auto min-h-[44px]"
+                        {isOrgAdmin && (
+                          <Link
+                            to={`${formsRoute}?type=team&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
+                            className="w-full sm:w-auto"
+                            onClick={(e) => {
+                              if (isOffline || USE_FAKE_DATA) {
+                                e.preventDefault()
+                                setActionError(
+                                  isOffline
+                                    ? 'You appear to be offline. Please reconnect and try again.'
+                                    : 'This action is not available in demo mode. Please sign in to add teams.'
+                                )
+                              } else if (!programId || !program.sport_id) {
+                                e.preventDefault()
+                                setActionError('Program and sport information is required to add a team.')
+                              }
+                            }}
                           >
-                            Add Team
-                          </Button>
-                        </Link>
+                            <Button
+                              variant="secondary"
+                              disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
+                              title={
+                                isOffline
+                                  ? 'Offline - cannot add teams'
+                                  : USE_FAKE_DATA
+                                    ? 'Sign in to add teams'
+                                    : !programId || !program.sport_id
+                                      ? 'Missing required information'
+                                      : undefined
+                              }
+                              aria-label="Add a new team to this program"
+                              className="w-full sm:w-auto min-h-[44px]"
+                            >
+                              Add Team
+                            </Button>
+                          </Link>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -118,6 +118,7 @@ function mapParams(params: Partial<TicketingEventsQuery>) {
     date_from: params.dateFrom ?? undefined,
     date_to: params.dateTo ?? undefined,
     date_preset: params.datePreset ?? undefined,
+    hide_past: params.hidePast !== false ? 'true' : undefined,
     page: params.page ?? undefined,
     per_page: params.perPage ?? undefined,
     program_id: params.programIds ?? [],

@@ -110,7 +110,7 @@ export default function FollowedOrgs() {
                     </h3>
                     {follow.org?.slug && (
                       <Link
-                        to={getLink('portal.orgLanding', { slug: follow.org.slug })}
+                        to={getLink('portal.orgLanding', { orgSlug: follow.org.slug })}
                         className="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium"
                       >
                         {tAny('View public page') || 'View public page'} <Icon name="arrow_forward" className="ml-1 text-base" />

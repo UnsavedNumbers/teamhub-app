@@ -627,10 +627,11 @@ export async function searchEntities(
 
   try {
     if (USE_FAKE_DATA) {
+      const result = await fakeService.searchEntities(query, entityTypes, limit)
       debug.perf.end('fanService.searchEntities')
-      debug.data('FanService.searchEntities', 'Response (fake)', { query, resultCount: 0 })
+      debug.data('FanService.searchEntities', 'Response (fake)', { query, resultCount: result.data.length })
       console.groupEnd()
-      return { data: [], error: null }
+      return result
     }
     const { data, error } = await supabaseAny.rpc('search_entities', {
       p_query: query,

@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState, type MouseEvent } from 'react'
+﻿import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUserContext } from '@/hooks/useUserContext'
+import { useOrganization } from '@/contexts/OrganizationContext'
 import { useOffline } from '@/hooks/useOffline'
 import { USE_FAKE_DATA } from '@/data/config'
+import { hasAnyRole } from '@/utils/roleHelpers'
 import {
   createSeatMap,
   deleteSeatMapAdmin,
@@ -75,6 +77,7 @@ function getSeatMapEditPath(row: AdminSeatMapListItem): string {
 }
 
 import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+import '../../styles/orgAdmin.css'
 
 export default function TicketingSeatMaps() {
   useDebugLifecycle('TicketingSeatMaps')
@@ -83,7 +86,9 @@ export default function TicketingSeatMaps() {
   const navigate = useNavigate()
   const location = useLocation()
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { isOffline } = useOffline()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
   const [search, setSearch] = useState('')
   const [selectedVenueId, setSelectedVenueId] = useState('')
@@ -333,27 +338,31 @@ export default function TicketingSeatMaps() {
           >
             {t('ticketing.seatMaps.actions.clone')}
           </button>
-          <OrgAdminButton
-            as={Link}
-            to={`${getSeatMapEditPath(row)}?returnTo=${encodeURIComponent(returnTo)}`}
-            variant="secondary"
-            size="dense"
-            onClick={(event: MouseEvent<HTMLElement>) => event.stopPropagation()}
-          >
-            {t('ticketing.seatMaps.actions.edit')}
-          </OrgAdminButton>
-          <button
-            type="button"
-            className="oa-btn oa-btn--danger oa-btn--dense"
-            disabled={isWriteBlocked || deleteMutation.isPending || row.usage_count > 0}
-            title={row.usage_count > 0 ? t('ticketing.seatMaps.actions.deleteBlockedByUsage') : undefined}
-            onClick={(event) => {
-              event.stopPropagation()
-              setDeleteTarget(row)
-            }}
-          >
-            {t('ticketing.seatMaps.actions.delete')}
-          </button>
+          {isOrgAdmin && (
+            <>
+              <OrgAdminButton
+                as={Link}
+                to={`${getSeatMapEditPath(row)}?returnTo=${encodeURIComponent(returnTo)}`}
+                variant="secondary"
+                size="dense"
+                onClick={(event: MouseEvent<HTMLElement>) => event.stopPropagation()}
+              >
+                {t('ticketing.seatMaps.actions.edit')}
+              </OrgAdminButton>
+              <button
+                type="button"
+                className="oa-btn oa-btn--danger oa-btn--dense"
+                disabled={isWriteBlocked || deleteMutation.isPending || row.usage_count > 0}
+                title={row.usage_count > 0 ? t('ticketing.seatMaps.actions.deleteBlockedByUsage') : undefined}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setDeleteTarget(row)
+                }}
+              >
+                {t('ticketing.seatMaps.actions.delete')}
+              </button>
+            </>
+          )}
         </div>
       ),
     },
@@ -464,15 +473,17 @@ export default function TicketingSeatMaps() {
           </div>
 
           <div className="oa-flex oa-items-end oa-justify-end">
-            <OrgAdminButton
-              type="submit"
-              icon="add"
-              disabled={isWriteBlocked || createMutation.isPending || !newSeatMapName.trim()}
-            >
-              {createMutation.isPending
-                ? t('ticketing.seatMaps.actions.creating')
-                : t('ticketing.seatMaps.actions.create')}
-            </OrgAdminButton>
+            {isOrgAdmin && (
+              <OrgAdminButton
+                type="submit"
+                icon="add"
+                disabled={isWriteBlocked || createMutation.isPending || !newSeatMapName.trim()}
+              >
+                {createMutation.isPending
+                  ? t('ticketing.seatMaps.actions.creating')
+                  : t('ticketing.seatMaps.actions.create')}
+              </OrgAdminButton>
+            )}
           </div>
         </form>
       </Card>

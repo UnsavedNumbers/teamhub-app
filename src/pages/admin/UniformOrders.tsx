@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useOrganizationSports } from '../../hooks/useOrganizationSports'
 import { useT } from '../../i18n/useI18n'
 import { getAllUniformSubmissions, type UniformSubmission } from '../../data/services/uniformsService'
@@ -15,6 +16,7 @@ import {
 } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
 
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
@@ -28,9 +30,11 @@ export default function UniformOrders() {
   const [rowsPerPage, setRowsPerPage] = useState(25)
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { sports, loading: sportsLoading, error: sportsError, refetch: refetchSports } = useOrganizationSports()
   const navigate = useNavigate()
   const t = useT()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
   const fetchSubmissions = useCallback(async () => {
     if (!isReady) return
@@ -160,7 +164,7 @@ export default function UniformOrders() {
         title={t('admin.uniforms.title')}
         subtitle={t('admin.uniforms.subtitle')} 
         actions={
-          (sports?.length ?? 0) > 0 ? (
+          isOrgAdmin && (sports?.length ?? 0) > 0 ? (
             <OrgAdminButton onClick={() => navigate('/admin/uniforms/new')} variant="primary" icon="add" className="w-full sm:w-auto">
               Create Uniform
             </OrgAdminButton>

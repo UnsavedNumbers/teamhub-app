@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin Contact Requests Page
  *
  * Shows all contact requests submitted by guardians/athletes in the current org.
@@ -28,6 +28,7 @@ import {
   NoOrganizationEmptyState,
 } from '../../components/admin'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 // ============================================================================
 // Helpers

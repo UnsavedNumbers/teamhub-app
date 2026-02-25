@@ -4,11 +4,8 @@ import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
 import { t } from '../../i18n'
 import { formatDate } from '../../utils/licenseUtils'
-import { 
-  AdminPageHeader, 
-  Card, 
-  Button 
-} from '../../components/admin'
+import { AdminPageHeader, Card, Button } from '../../components/admin'
+import '../../styles/orgAdmin.css'
 
 export default function CheckoutSuccess() {
   const navigate = useNavigate()

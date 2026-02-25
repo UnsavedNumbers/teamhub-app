@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
 import { getPrograms, getSportIconUrl, getSports, deleteSportIcon, updateSportCustomization, uploadSportIcon } from '../../data/services/sportsService'
@@ -10,6 +11,7 @@ import { AdminPageHeader, Button, Card } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { FileUpload } from '../../components/common/FileUpload'
 import { getLink } from '../../utils/routes'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import './SportDetail.css'
 import '../../styles/orgAdmin.css'
 
@@ -32,7 +34,11 @@ export default function SportDetail() {
   const sportSlugParam = sport_slug?.trim() || ''
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { isOffline } = useOffline()
+  const navigate = useNavigate()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
+  const isCoach = hasAnyRole(currentOrganization, ['coach'])
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -84,6 +90,11 @@ export default function SportDetail() {
         if (!found) {
           setSport(null)
           setPrograms([])
+          // If coach can't access this sport, redirect to sports list
+          if (isCoach && !isOrgAdmin) {
+            navigate(getLink('admin.sports.list'), { replace: true })
+            return
+          }
           setError('Sport not found (or you may not have access).')
           return
         }
@@ -262,11 +273,12 @@ export default function SportDetail() {
                     disabled={isOffline || USE_FAKE_DATA}
                   />
                   <div className="oa-text-sm oa-text-muted">{pendingColor}</div>
-                  <Button
-                    variant="secondary"
-                    disabled={!isColorDirty || savingColor || isOffline || USE_FAKE_DATA}
-                    loading={savingColor}
-                    onClick={async () => {
+                  {isOrgAdmin && (
+                    <Button
+                      variant="secondary"
+                      disabled={!isColorDirty || savingColor || isOffline || USE_FAKE_DATA}
+                      loading={savingColor}
+                      onClick={async () => {
                       setActionError(null)
                       setSuccessMessage(null)
 
@@ -298,6 +310,7 @@ export default function SportDetail() {
                   >
                     Save Color
                   </Button>
+                  )}
                 </div>
 
                 <div className="oa-form-group">
@@ -318,12 +331,13 @@ export default function SportDetail() {
                   />
                 </div>
 
-                <div className="oa-flex oa-flex-col sm:oa-flex-row oa-gap-2" style={{ marginTop: '12px' }}>
-                  <Button
-                    disabled={!iconFile || uploadingIcon || isOffline || USE_FAKE_DATA}
-                    loading={uploadingIcon}
-                    className="w-full sm:w-auto min-h-[44px]"
-                    onClick={async () => {
+                {isOrgAdmin && (
+                  <div className="oa-flex oa-flex-col sm:oa-flex-row oa-gap-2" style={{ marginTop: '12px' }}>
+                    <Button
+                      disabled={!iconFile || uploadingIcon || isOffline || USE_FAKE_DATA}
+                      loading={uploadingIcon}
+                      className="w-full sm:w-auto min-h-[44px]"
+                      onClick={async () => {
                       if (!iconFile) return
 
                       setActionError(null)
@@ -394,10 +408,11 @@ export default function SportDetail() {
                     Remove Icon
                   </Button>
 
-                  <Link to={`${getLink('admin.sports.update', { sport_id: sport?.id || sportId })}?returnUrl=${encodeURIComponent(detailRoute)}`} className="w-full sm:w-auto">
-                    <Button variant="secondary" className="w-full sm:w-auto min-h-[44px]">Edit Sport</Button>
-                  </Link>
-                </div>
+                    <Link to={`${getLink('admin.sports.update', { sport_id: sport?.id || sportId })}?returnUrl=${encodeURIComponent(detailRoute)}`} className="w-full sm:w-auto">
+                      <Button variant="secondary" className="w-full sm:w-auto min-h-[44px]">Edit Sport</Button>
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </div>

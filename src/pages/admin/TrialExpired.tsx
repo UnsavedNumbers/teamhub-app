@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
 import { useAuth } from '../../hooks/useAuth'
@@ -13,6 +13,7 @@ import { supabase } from '../../lib/supabase'
 import { getActiveTiers } from '../../data/services/licenseTiersService'
 import type { LicenseTier } from '../../types/licenseTiers.types'
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+import '../../styles/orgAdmin.css'
 
 export default function TrialExpired() {
   useDebugLifecycle('TrialExpired')

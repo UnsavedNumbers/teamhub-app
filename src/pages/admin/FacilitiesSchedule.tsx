@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { getErrorMessage } from '../../utils/errorUtils'
@@ -723,7 +723,12 @@ export default function FacilitiesSchedule() {
                     { label: t('admin.facilities.schedule.title') },
                 ].filter(Boolean) as Array<{ label: string; path?: string }>}
                 actions={
-                    <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        <Link to={getLink('admin.facilities.list')} style={{ textDecoration: 'none' }}>
+                            <Button variant="ghost" icon="arrow_back">
+                                {t('admin.facilities.backToFacilities')}
+                            </Button>
+                        </Link>
                         <Button variant="secondary" onClick={() => navigateDate('today')}>
                             Today
                         </Button>

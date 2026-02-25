@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
 import { getAllTravelPlansAdmin, publishTravelPlan, cancelTravelPlan } from '../../data/services/travelService'
 import { getLink } from '../../utils/routes'
@@ -14,6 +15,7 @@ import TravelList from '../../components/admin/TravelList'
 import TravelCalendar from '../../components/admin/TravelCalendar'
 import TravelAgenda from '../../components/admin/TravelAgenda'
 import TravelDetailSlideOver from '../../components/admin/TravelDetailSlideOver'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import type { TravelTimeContext, TravelViewMode, TravelFilters as TravelFiltersType } from '../../types/travelManagement'
 import type { TravelPlanWithTeam } from '../../components/admin/TravelList'
 
@@ -31,6 +33,7 @@ const DEFAULT_FILTERS: TravelFiltersType = {
 }
 
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+import '../../styles/orgAdmin.css'
 
 export default function TravelPlans() {
   useDebugLifecycle('TravelPlans')
@@ -59,8 +62,10 @@ export default function TravelPlans() {
     const [teams, setTeams] = useState<Team[]>([])
 
     const { context, isReady } = useUserContext()
+    const { currentOrganization } = useOrganization()
     const navigate = useNavigate()
     const t = useT()
+    const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
     useEffect(() => {
         if (!isReady) return
@@ -262,7 +267,7 @@ export default function TravelPlans() {
                         viewMode={viewMode}
                         onTimeContextChange={(ctx) => { setTimeContext(ctx); setPage(0) }}
                         onViewModeChange={(mode) => { setViewMode(mode); setPage(0) }}
-                        onCreateClick={() => navigate('/admin/travel/new')}
+                        onCreateClick={isOrgAdmin ? () => navigate('/admin/travel/new') : undefined}
                         upcomingCount={upcomingCount}
                     />
 
@@ -285,11 +290,13 @@ export default function TravelPlans() {
                                         <p className="oa-body-m oa-text-muted oa-mb-0">{t('travelPlans.noPlansDesc')}</p>
                                     </div>
                                 </div>
-                                <div className="flex justify-start">
-                                    <button className="oa-btn oa-btn--primary" onClick={() => navigate('/admin/travel/new')}>
-                                        {t('travelPlans.createPlan')}
-                                    </button>
-                                </div>
+                                {isOrgAdmin && (
+                                    <div className="flex justify-start">
+                                        <button className="oa-btn oa-btn--primary" onClick={() => navigate('/admin/travel/new')}>
+                                            {t('travelPlans.createPlan')}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </Card>
                     </div>

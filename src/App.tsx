@@ -98,6 +98,7 @@ const RequestAthleteAttachment = lazy(() => import('./pages/RequestAthleteAttach
 const PortalCreateEvent = lazy(() => import('./pages/portal/PortalCreateEvent'))
 const PortalEditEvent = lazy(() => import('./pages/portal/PortalEditEvent'))
 const FollowedOrgs = lazy(() => import('./pages/portal/FollowedOrgs'))
+const DiscoverOrgs = lazy(() => import('./pages/portal/DiscoverOrgs'))
 const BookmarkedEvents = lazy(() => import('./pages/portal/BookmarkedEvents'))
 const PortalContactPage = lazy(() => import('./pages/portal/ContactPage'))
 const ContactOrgAdminPage = lazy(() => import('./pages/portal/ContactOrgAdminPage'))
@@ -527,6 +528,7 @@ function AppWithTheme() {
               <Route path="account/tickets" element={<FeatureGateRoute routeKey="portal.myTickets"><MyTickets /></FeatureGateRoute>} />
               <Route path="tickets" element={<TicketEventList />} />
               <Route path="follows" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><FollowedOrgs /></Suspense></ProtectedRoute>} />
+              <Route path="discover" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><DiscoverOrgs /></Suspense></ProtectedRoute>} />
               <Route path="bookmarks" element={<Suspense fallback={<AdminLoadingSpinner />}><BookmarkedEvents /></Suspense>} />
               <Route path="notifications" element={<FeatureGateRoute routeKey="portal.messages"><Suspense fallback={<AdminLoadingSpinner />}><Notifications /></Suspense></FeatureGateRoute>} />
               <Route path="contact" element={<Suspense fallback={<AdminLoadingSpinner />}><PortalContactPage /></Suspense>} />
@@ -622,21 +624,21 @@ function AppWithTheme() {
               <Route index element={<AdminDashboard />} />
             
               {/* Standardized Entity Routes - Most specific first */}
-              <Route path="sports/:sport_slug/update" element={<FeatureGateRoute routeKey="admin.sports.update"><SportUpdate /></FeatureGateRoute>} />
+              <Route path="sports/:sport_slug/update" element={<ProtectedRoute allowedRoles={['admin', 'org_admin']}><FeatureGateRoute routeKey="admin.sports.update"><SportUpdate /></FeatureGateRoute></ProtectedRoute>} />
               <Route path="sports/:sport_slug" element={<FeatureGateRoute routeKey="admin.sports.detail"><SportDetail /></FeatureGateRoute>} />
               <Route path="sports" element={<FeatureGateRoute routeKey="admin.sports.list"><Sports /></FeatureGateRoute>} />
               <Route path="programs/sport/:sport_slug" element={<FeatureGateRoute routeKey="admin.programs.bySport"><Programs /></FeatureGateRoute>} />
-              <Route path="programs/:id/update" element={<FeatureGateRoute routeKey="admin.programs.update"><ProgramUpdate /></FeatureGateRoute>} />
+              <Route path="programs/:id/update" element={<ProtectedRoute allowedRoles={['admin', 'org_admin']}><FeatureGateRoute routeKey="admin.programs.update"><ProgramUpdate /></FeatureGateRoute></ProtectedRoute>} />
               <Route path="programs/:id" element={<FeatureGateRoute routeKey="admin.programs.detail"><ProgramDetail /></FeatureGateRoute>} />
               <Route path="programs" element={<FeatureGateRoute routeKey="admin.programs.list"><Programs /></FeatureGateRoute>} />
-              <Route path="levels/:id/update" element={<FeatureGateRoute routeKey="admin.levels.update"><LevelUpdate /></FeatureGateRoute>} />
+              <Route path="levels/:id/update" element={<ProtectedRoute allowedRoles={['admin', 'org_admin']}><FeatureGateRoute routeKey="admin.levels.update"><LevelUpdate /></FeatureGateRoute></ProtectedRoute>} />
               <Route path="levels/:id" element={<FeatureGateRoute routeKey="admin.levels.detail"><LevelDetail /></FeatureGateRoute>} />
               <Route path="levels" element={<FeatureGateRoute routeKey="admin.levels.list"><LevelsManagement /></FeatureGateRoute>} />
-              <Route path="seasons/:id/update" element={<FeatureGateRoute routeKey="admin.seasons.update"><SeasonUpdate /></FeatureGateRoute>} />
+              <Route path="seasons/:id/update" element={<ProtectedRoute allowedRoles={['admin', 'org_admin']}><FeatureGateRoute routeKey="admin.seasons.update"><SeasonUpdate /></FeatureGateRoute></ProtectedRoute>} />
               <Route path="seasons/:id" element={<FeatureGateRoute routeKey="admin.seasons.detail"><SeasonDetail /></FeatureGateRoute>} />
               <Route path="seasons" element={<FeatureGateRoute routeKey="admin.seasons.list"><SeasonsManagement /></FeatureGateRoute>} />
               <Route path="teams/:id/roster" element={<FeatureGateRoute routeKey="admin.teams.roster"><Roster /></FeatureGateRoute>} />
-              <Route path="teams/:id/update" element={<FeatureGateRoute routeKey="admin.teams.update"><TeamUpdate /></FeatureGateRoute>} />
+              <Route path="teams/:id/update" element={<ProtectedRoute allowedRoles={['admin', 'org_admin']}><FeatureGateRoute routeKey="admin.teams.update"><TeamUpdate /></FeatureGateRoute></ProtectedRoute>} />
               <Route path="teams/:id" element={<FeatureGateRoute routeKey="admin.teams.detail"><TeamDetail /></FeatureGateRoute>} />
               <Route path="teams" element={<FeatureGateRoute routeKey="admin.teams.list"><Teams /></FeatureGateRoute>} />
               <Route path="athletes/:id/edit" element={<FeatureGateRoute routeKey="admin.athletes.edit"><EditAthlete /></FeatureGateRoute>} />

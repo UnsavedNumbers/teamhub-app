@@ -80,6 +80,9 @@ export default function AdminLayout() {
   }, [])
 
   const hasOrg = !!currentOrganization?.id
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
+  const isCoach = hasAnyRole(currentOrganization, ['coach'])
+  const isStaff = hasAnyRole(currentOrganization, ['staff'])
   
   // Fetch parent_org_id for current org
   const { data: orgData } = useQuery({
@@ -136,8 +139,14 @@ export default function AdminLayout() {
         { routeKey: 'admin.levels.list', text: t('admin.navigation.organizationLevels'), icon: 'grade', path: getLink('admin.levels.list'), requiresOrg: true },
         { routeKey: 'admin.teams.list', text: t('admin.navigation.organizationTeams'), icon: 'groups', path: getLink('admin.teams.list'), requiresOrg: true },
         { routeKey: 'admin.seasons.list', text: t('admin.navigation.organizationSeasons'), icon: 'calendar_month', path: getLink('admin.seasons.list'), requiresOrg: true },
-        { routeKey: 'admin.organization.users', text: t('admin.navigation.organizationStaff'), icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
-        { routeKey: 'admin.organization.bulkInvite', text: t('admin.navigation.bulkInvites'), icon: 'upload', path: getLink(RouteKeys.ADMIN_ORGANIZATION_BULK_INVITE), requiresOrg: true },
+        ...(isOrgAdmin ? [
+          { routeKey: 'admin.organization.users', text: t('admin.navigation.organizationStaff'), icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
+          { routeKey: 'admin.organization.bulkInvite', text: t('admin.navigation.bulkInvites'), icon: 'upload', path: getLink(RouteKeys.ADMIN_ORGANIZATION_BULK_INVITE), requiresOrg: true },
+        ] : []),
+        // Coaches and staff can see organization structure but not manage it
+        ...((isCoach || isStaff) && !isOrgAdmin ? [
+          { routeKey: 'admin.organization.overview', text: t('admin.navigation.organizationOverview'), icon: 'info', path: getPath(RouteKeys.ADMIN_ORGANIZATION_STRUCTURE), requiresOrg: true },
+        ] : []),
         ...(isParentOrg ? [{ routeKey: 'admin.organization.subOrgs', text: 'Sub-Organizations', icon: 'apartment', path: getLink('admin.organization.subOrgs'), requiresOrg: false }] : []),
       ],
     },
@@ -148,8 +157,14 @@ export default function AdminLayout() {
         requiresOrg: true,
         children: [
             { routeKey: 'admin.athletes.list', text: t('admin.navigation.athletesList'), icon: 'child_care', path: getPath(RouteKeys.ADMIN_ATHLETES), requiresOrg: true },
-            { routeKey: 'admin.guardians.list', text: t('admin.navigation.guardians'), icon: 'home', path: getLink('admin.guardians.list'), requiresOrg: true },
-            { routeKey: 'admin.guardianRequests', text: t('admin.navigation.guardianRequests'), icon: 'person_add', path: getLink('admin.guardianRequests'), requiresOrg: true },
+        ...(isOrgAdmin ? [
+          { routeKey: 'admin.guardians.list', text: t('admin.navigation.guardians'), icon: 'home', path: getLink('admin.guardians.list'), requiresOrg: true },
+          { routeKey: 'admin.guardianRequests', text: t('admin.navigation.guardianRequests'), icon: 'person_add', path: getLink('admin.guardianRequests'), requiresOrg: true },
+        ] : []),
+        // Coaches can view athletes on their teams (read-only)
+        ...(isCoach && !isOrgAdmin ? [
+          { routeKey: 'admin.athletes.list', text: t('admin.navigation.athletesList'), icon: 'child_care', path: getPath(RouteKeys.ADMIN_ATHLETES), requiresOrg: true },
+        ] : []),
         ],
     },
     {
@@ -170,12 +185,16 @@ export default function AdminLayout() {
       path: getPath(RouteKeys.ADMIN_PAYMENTS),
       requiresOrg: true,
       children: [
-        { routeKey: 'admin.payments.list', text: t('admin.navigation.payments'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_PAYMENTS), requiresOrg: true },
+        ...(isOrgAdmin ? [{ routeKey: 'admin.payments.list', text: t('admin.navigation.payments'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_PAYMENTS), requiresOrg: true }] : []),
         { routeKey: 'admin.events.list', text: t('admin.navigation.events'), icon: 'event', path: getPath(RouteKeys.ADMIN_EVENTS), requiresOrg: true },
         { routeKey: 'admin.facilities.list', text: t('admin.facilities.title'), icon: 'location_city', path: getLink('admin.facilities.list'), requiresOrg: true },
         { routeKey: 'admin.attendance', text: t('admin.navigation.attendance'), icon: 'how_to_reg', path: getLink('admin.attendance'), requiresOrg: true },
         { routeKey: 'admin.notifications', text: t('admin.navigation.notifications'), icon: 'notifications', path: getLink('admin.notifications'), requiresOrg: true },
-        { routeKey: 'admin.contactRequests.list', text: t('admin.navigation.contactRequests'), icon: 'inbox', path: getLink('admin.contactRequests.list'), requiresOrg: true },
+        ...(isOrgAdmin ? [{ routeKey: 'admin.contactRequests.list', text: t('admin.navigation.contactRequests'), icon: 'inbox', path: getLink('admin.contactRequests.list'), requiresOrg: true }] : []),
+        // Staff can access gate scanning
+        ...(isStaff && !isOrgAdmin ? [
+          { routeKey: 'admin.ticketingScanner', text: t('admin.navigation.gateEntry'), icon: 'qr_code_scanner', path: getLink('admin.ticketingScanner'), requiresOrg: true },
+        ] : []),
         { routeKey: 'admin.announcements.list', text: t('admin.navigation.announcements'), icon: 'campaign', path: getPath(RouteKeys.ADMIN_ANNOUNCEMENTS), requiresOrg: true },
         { routeKey: 'admin.travel.list', text: t('admin.navigation.travel'), icon: 'flight', path: getLink('admin.travel.list'), requiresOrg: true },
         { routeKey: 'admin.uniforms.list', text: t('admin.navigation.uniforms'), icon: 'checkroom', path: getPath(RouteKeys.ADMIN_UNIFORMS), requiresOrg: true },
@@ -187,11 +206,13 @@ export default function AdminLayout() {
       path: getLink('admin.reports.overview'),
       requiresOrg: true,
       children: [
-        { routeKey: 'admin.reports.overview', text: t('admin.navigation.reportsOverview'), icon: 'dashboard', path: getLink('admin.reports.overview'), requiresOrg: true },
-        { routeKey: 'admin.reports.builder', text: t('admin.navigation.reportBuilder'), icon: 'build', path: getLink('admin.reports.builder'), requiresOrg: true },
-        { routeKey: 'admin.reports.saved', text: t('admin.navigation.savedReports'), icon: 'bookmark', path: getLink('admin.reports.saved'), requiresOrg: true },
-        { routeKey: 'admin.reports.exports', text: t('admin.navigation.exportHistory'), icon: 'download', path: getLink('admin.reports.exports'), requiresOrg: true },
-        { routeKey: 'admin.reports.schedules', text: t('admin.navigation.scheduledReports'), icon: 'schedule', path: getLink('admin.reports.schedules'), requiresOrg: true },
+        ...(isOrgAdmin ? [
+          { routeKey: 'admin.reports.overview', text: t('admin.navigation.reportsOverview'), icon: 'dashboard', path: getLink('admin.reports.overview'), requiresOrg: true },
+          { routeKey: 'admin.reports.builder', text: t('admin.navigation.reportBuilder'), icon: 'build', path: getLink('admin.reports.builder'), requiresOrg: true },
+          { routeKey: 'admin.reports.saved', text: t('admin.navigation.savedReports'), icon: 'bookmark', path: getLink('admin.reports.saved'), requiresOrg: true },
+          { routeKey: 'admin.reports.exports', text: t('admin.navigation.exportHistory'), icon: 'download', path: getLink('admin.reports.exports'), requiresOrg: true },
+          { routeKey: 'admin.reports.schedules', text: t('admin.navigation.scheduledReports'), icon: 'schedule', path: getLink('admin.reports.schedules'), requiresOrg: true },
+        ] : []),
       ],
     },
     {
@@ -220,7 +241,7 @@ export default function AdminLayout() {
       path: getPath(RouteKeys.ADMIN_SETTINGS),
       requiresOrg: false,
       children: [
-        ...(isSubOrg ? [] : [{ routeKey: 'admin.organization.billing', text: t('admin.navigation.billing'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING), requiresOrg: false }]),
+        ...(isOrgAdmin && !isSubOrg ? [{ routeKey: 'admin.organization.billing', text: t('admin.navigation.billing'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING), requiresOrg: false }] : []),
         { routeKey: 'admin.settings', text: t('admin.navigation.settings'), icon: 'settings', path: getPath(RouteKeys.ADMIN_SETTINGS), requiresOrg: false },
         { routeKey: 'admin.help', text: t('admin.navigation.helpSupport'), icon: 'help', path: getLink('admin.help'), requiresOrg: false },
         { routeKey: 'admin.contact', text: t('admin.navigation.contactSupport'), icon: 'mail', path: getLink('admin.contact'), requiresOrg: false },

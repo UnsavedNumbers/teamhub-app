@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
-import { ConfirmDialog } from '@/components/admin'
+import { ConfirmDialog, Checkbox } from '@/components/admin'
 import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
 import { QUERY_KEY_ORG_SLUG } from '@/components/admin/PublicUrlBanner'
 import EmptyState from '@/components/platformAdmin/EmptyState'
@@ -13,6 +13,7 @@ import OrgDataTable from '@/components/admin/OrgDataTable'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { getOrganizationSlug } from '@/data/services/organizationService'
+import { hasAnyRole } from '@/utils/roleHelpers'
 import {
   bulkTicketingEvents,
   deleteTicketingEvent,
@@ -41,6 +42,7 @@ interface Filters extends TicketingEventsQuery {
   venueIds: string[]
   page: number
   perPage: number
+  hidePast: boolean
 }
 
 const EVENT_STATUS_OPTIONS: Array<{ value: TicketedEvent['status']; label: string }> = [
@@ -68,6 +70,9 @@ const DATE_PRESETS = [
 
 const DEFAULT_PER_PAGE = 12
 const VIEW_STORAGE_KEY = 'admin.ticketingEvents.view'
+const HIDE_PAST_STORAGE_KEY = 'admin.ticketingEvents.hidePast'
+const PAGE_STORAGE_KEY = 'admin.ticketingEvents.page'
+const PER_PAGE_STORAGE_KEY = 'admin.ticketingEvents.perPage'
 
 const formatDateTimeRange = (start: string, end: string, timezone?: string | null) => {
   const startDate = new Date(start)
@@ -104,7 +109,7 @@ const fetchOrgSlug = async (orgId: string) => {
   return data
 }
 
-function parseFilters(params: URLSearchParams): Filters {
+function parseFilters(params: URLSearchParams): Omit<Filters, 'hidePast' | 'page' | 'perPage'> {
   const viewParam = (params.get('view') as ViewMode | null) || (typeof window !== 'undefined' ? (localStorage.getItem(VIEW_STORAGE_KEY) as ViewMode | null) : null)
   return {
     search: params.get('search') || '',
@@ -117,8 +122,6 @@ function parseFilters(params: URLSearchParams): Filters {
     dateTo: params.get('date_to'),
     datePreset: params.get('date_preset'),
     sortBy: params.get('sort_by') || 'starts_at',
-    page: Number(params.get('page') || 1),
-    perPage: Number(params.get('per_page') || DEFAULT_PER_PAGE),
     view: viewParam || 'grid',
   }
 }
@@ -135,9 +138,8 @@ function buildSearchParams(filters: Filters) {
   if (filters.dateTo) params.set('date_to', filters.dateTo)
   if (filters.datePreset) params.set('date_preset', filters.datePreset)
   if (filters.sortBy) params.set('sort_by', filters.sortBy)
-  params.set('page', String(filters.page))
-  params.set('per_page', String(filters.perPage))
   params.set('view', filters.view)
+  // Note: page, perPage, and hidePast are NOT included in URL params
   return params
 }
 
@@ -897,7 +899,29 @@ export default function TicketingEvents() {
   const orgId = currentOrganization?.id
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const filters = useMemo(() => parseFilters(searchParams), [searchParams])
+  
+  // Local state for values that should NOT be in URL
+  const [hidePast, setHidePast] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem(HIDE_PAST_STORAGE_KEY) !== 'false'
+  })
+  const [page, setPage] = useState<number>(() => {
+    if (typeof window === 'undefined') return 1
+    return Number(localStorage.getItem(PAGE_STORAGE_KEY) || '1')
+  })
+  const [perPage, setPerPage] = useState<number>(() => {
+    if (typeof window === 'undefined') return DEFAULT_PER_PAGE
+    return Number(localStorage.getItem(PER_PAGE_STORAGE_KEY) || String(DEFAULT_PER_PAGE))
+  })
+  
+  const urlFilters = useMemo(() => parseFilters(searchParams), [searchParams])
+  const filters: Filters = useMemo(() => ({
+    ...urlFilters,
+    hidePast,
+    page,
+    perPage,
+  }), [urlFilters, hidePast, page, perPage])
+  
   const [searchInput, setSearchInput] = useState(filters.search || '')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [calendarMonth, setCalendarMonth] = useState(new Date())
@@ -905,6 +929,7 @@ export default function TicketingEvents() {
   const isMobile = useIsMobile()
   const queryClient = useQueryClient()
 
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
   const baseCreateEventPath = useRouteLink('admin.events.create') || '/admin/events/new'
   const createEventPath = `${baseCreateEventPath}?ticketed=1&from=ticketing`
 
@@ -915,17 +940,56 @@ export default function TicketingEvents() {
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? (localStorage.getItem(VIEW_STORAGE_KEY) as ViewMode | null) : null
     if (saved && saved !== filters.view) {
-      setSearchParams(buildSearchParams({ ...filters, view: saved }))
+      updateFilters({ view: saved })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const updateFilters = (changes: Partial<Filters>) => {
-    const next: Filters = { ...filters, ...changes }
-    if (changes.view && typeof window !== 'undefined') {
-      localStorage.setItem(VIEW_STORAGE_KEY, changes.view as string)
+    // Handle URL-based filters
+    const urlChanges: Partial<Filters> = {}
+    if (changes.search !== undefined) urlChanges.search = changes.search
+    if (changes.programIds !== undefined) urlChanges.programIds = changes.programIds
+    if (changes.seasonIds !== undefined) urlChanges.seasonIds = changes.seasonIds
+    if (changes.venueIds !== undefined) urlChanges.venueIds = changes.venueIds
+    if (changes.status !== undefined) urlChanges.status = changes.status
+    if (changes.saleStatus !== undefined) urlChanges.saleStatus = changes.saleStatus
+    if (changes.dateFrom !== undefined) urlChanges.dateFrom = changes.dateFrom
+    if (changes.dateTo !== undefined) urlChanges.dateTo = changes.dateTo
+    if (changes.datePreset !== undefined) urlChanges.datePreset = changes.datePreset
+    if (changes.sortBy !== undefined) urlChanges.sortBy = changes.sortBy
+    if (changes.view !== undefined) {
+      urlChanges.view = changes.view
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(VIEW_STORAGE_KEY, changes.view as string)
+      }
     }
-    setSearchParams(buildSearchParams(next))
+    
+    // Handle local state filters
+    if (changes.hidePast !== undefined) {
+      setHidePast(changes.hidePast)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(HIDE_PAST_STORAGE_KEY, String(changes.hidePast))
+      }
+    }
+    if (changes.page !== undefined) {
+      setPage(changes.page)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(PAGE_STORAGE_KEY, String(changes.page))
+      }
+    }
+    if (changes.perPage !== undefined) {
+      setPerPage(changes.perPage)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(PER_PAGE_STORAGE_KEY, String(changes.perPage))
+      }
+    }
+    
+    // Update URL only for URL-based filters
+    if (Object.keys(urlChanges).length > 0) {
+      const next: Filters = { ...filters, ...urlChanges }
+      setSearchParams(buildSearchParams(next))
+    }
   }
 
   const programsQuery = useQuery({ queryKey: ['ticketing-programs', orgId], queryFn: () => fetchTicketingPrograms(orgId!), enabled: !!orgId })
@@ -1069,6 +1133,7 @@ export default function TicketingEvents() {
   }
 
   const clearAllFilters = () => {
+    // Reset URL-based filters
     updateFilters({
       search: '',
       programIds: [],
@@ -1079,8 +1144,14 @@ export default function TicketingEvents() {
       dateFrom: null,
       dateTo: null,
       datePreset: null,
-      page: 1,
     })
+    // Reset local state filters
+    setHidePast(true)
+    setPage(1)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(HIDE_PAST_STORAGE_KEY, 'true')
+      localStorage.setItem(PAGE_STORAGE_KEY, '1')
+    }
   }
 
   return (
@@ -1089,9 +1160,11 @@ export default function TicketingEvents() {
         title="Ticketed Events"
         subtitle="Search, filter, and manage every ticketed event across programs and seasons."
         actions={
-          <OrgAdminButton as={Link} to={createEventPath} icon="add">
-            Create Event
-          </OrgAdminButton>
+          isOrgAdmin ? (
+            <OrgAdminButton as={Link} to={createEventPath} icon="add">
+              Create Event
+            </OrgAdminButton>
+          ) : undefined
         }
       />
 
@@ -1128,6 +1201,13 @@ export default function TicketingEvents() {
           <Button variant="secondary" icon="tune" onClick={() => setFiltersOpen(true)} className="oa-filter-btn">
             Filters
           </Button>
+          <label className="oa-flex oa-items-center oa-gap-2 oa-cursor-pointer" style={{ fontSize: '14px', userSelect: 'none' }}>
+            <Checkbox
+              checked={filters.hidePast}
+              onChange={(e) => updateFilters({ hidePast: e.target.checked, page: 1 })}
+            />
+            <span style={{ color: 'var(--pa-text-secondary)' }}>Hide past events</span>
+          </label>
         </div>
         <div className="oa-ticketing-toolbar__right">
           <select
@@ -1191,6 +1271,17 @@ export default function TicketingEvents() {
         </div>
       )}
 
+      {/* Pagination controls at top (for grid/list views) */}
+      {meta && meta.total > 0 && filters.view !== 'calendar' && filters.view !== 'table' && (
+        <PaginationControls
+          page={filters.page}
+          perPage={filters.perPage}
+          total={meta.total}
+          onPageChange={(page) => updateFilters({ page })}
+          onPerPageChange={(size) => updateFilters({ perPage: size, page: 1 })}
+        />
+      )}
+
       <div className="oa-mt-4">
         {isLoading && (
           <div className="oa-grid oa-grid-cols-1 md:oa-grid-cols-2 xl:oa-grid-cols-3 oa-gap-3">
@@ -1210,7 +1301,7 @@ export default function TicketingEvents() {
               icon="search_off"
               title={hasActiveFilters ? 'No events match these filters' : 'No ticketed events yet'}
               description={hasActiveFilters ? 'Try adjusting filters or resetting search.' : 'Create your first ticketed event to start selling tickets.'}
-              action={hasActiveFilters ? { label: 'Clear filters', onClick: clearAllFilters } : { label: 'Create event', onClick: () => navigate(createEventPath) }}
+              action={hasActiveFilters ? { label: 'Clear filters', onClick: clearAllFilters } : isOrgAdmin ? { label: 'Create event', onClick: () => navigate(createEventPath) } : undefined}
               noCard
             />
           </div>
@@ -1295,7 +1386,7 @@ export default function TicketingEvents() {
         onConfirm={handleConfirmDelete}
       />
 
-      {isMobile && (
+      {isMobile && isOrgAdmin && (
         <button
           className="oa-btn oa-btn--primary oa-ticketing-fab"
           onClick={() => navigate(createEventPath)}

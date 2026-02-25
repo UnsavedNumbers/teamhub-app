@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams, Navigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useTeamParams } from '../../hooks/useRouteParams'
 import { getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
+import { useCoachTeamAccess } from '../../hooks/useCoachTeamAccess'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import type { FakeTeamMember } from '../../data/fake/fakeTeams'
 import { Button } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
@@ -74,8 +77,19 @@ export default function TeamDetail() {
   const [showAddExistingModal, setShowAddExistingModal] = useState(false)
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
   const isMountedRef = useRef(true)
+  const isCoach = hasAnyRole(currentOrganization, ['coach'])
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
+  
+  // For coaches, verify they can access this team
+  const { canAccess: canAccessTeam, isLoading: checkingAccess } = useCoachTeamAccess(teamId || undefined)
+  
+  // Redirect coaches who try to access teams they're not assigned to
+  if (isCoach && !isOrgAdmin && !checkingAccess && teamId && !canAccessTeam) {
+    return <Navigate to={getLink('admin.teams.list')} replace />
+  }
 
   useEffect(() => {
     isMountedRef.current = true
@@ -328,8 +342,7 @@ export default function TeamDetail() {
     }
   }, [activeSeason, fetchRoster])
 
-  // Check if user is org admin
-  const isOrgAdmin = context.roles.includes('org_admin')
+  // isOrgAdmin already defined above using hasAnyRole
 
   const handleAthleteClick = useCallback(
     (athleteId: string) => {

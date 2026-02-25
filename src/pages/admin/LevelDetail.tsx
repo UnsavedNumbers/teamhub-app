@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
 import { supabase } from '../../lib/supabase'
@@ -13,6 +14,7 @@ import { AdminPageHeader, Button, Card, Table } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
 import { getRandomSportImagePath } from '../../utils/sportImages'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
 
 type TeamRow = {
@@ -94,8 +96,10 @@ export default function LevelDetail() {
   const levelId = id?.trim() || ''
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { isOffline } = useOffline()
   const location = useLocation()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -616,44 +620,46 @@ export default function LevelDetail() {
                 </div>
 
                 <div className="oa-flex oa-items-center oa-gap-2" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  {levelId ? (
-                    <Link
-                      to={`${getLink('admin.levels.update', { id: levelId })}?returnUrl=${encodeURIComponent(detailRoute)}`}
-                      onClick={(e) => {
-                        if (!levelId) {
-                          e.preventDefault()
-                          setActionError('Level ID is required to edit')
-                        }
-                      }}
-                    >
+                  {isOrgAdmin && (
+                    levelId ? (
+                      <Link
+                        to={`${getLink('admin.levels.update', { id: levelId })}?returnUrl=${encodeURIComponent(detailRoute)}`}
+                        onClick={(e) => {
+                          if (!levelId) {
+                            e.preventDefault()
+                            setActionError('Level ID is required to edit')
+                          }
+                        }}
+                      >
+                        <Button
+                          variant="ghost"
+                          icon="edit"
+                          disabled={!levelId || loading}
+                          style={{
+                            border: '2px solid var(--oa-theme-action-primary)',
+                            color: 'var(--oa-theme-text-accent)',
+                            background: 'transparent',
+                          }}
+                          title={!levelId ? 'Level ID is required' : undefined}
+                        >
+                          Edit Level
+                        </Button>
+                      </Link>
+                    ) : (
                       <Button
                         variant="ghost"
                         icon="edit"
-                        disabled={!levelId || loading}
+                        disabled
                         style={{
                           border: '2px solid var(--oa-theme-action-primary)',
                           color: 'var(--oa-theme-text-accent)',
                           background: 'transparent',
                         }}
-                        title={!levelId ? 'Level ID is required' : undefined}
+                        title="Level ID is required"
                       >
                         Edit Level
                       </Button>
-                    </Link>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      icon="edit"
-                      disabled
-                      style={{
-                        border: '2px solid var(--oa-theme-action-primary)',
-                        color: 'var(--oa-theme-text-accent)',
-                        background: 'transparent',
-                      }}
-                      title="Level ID is required"
-                    >
-                      Edit Level
-                    </Button>
+                    )
                   )}
                   {program && program.id && program.sport_id ? (
                     <Link

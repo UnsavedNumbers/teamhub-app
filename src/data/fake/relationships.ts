@@ -23,6 +23,7 @@ import {
     TEAM_U12_SOCCER_ID,
     TEAM_U10_BASKETBALL_ID,
     TEAM_U12_BASKETBALL_ID,
+    TEAM_U14_SOCCER_ELITE_ID,
     getTeamIdsForCoach,
     getChildTeamMemberships,
 } from './fakeTeams'
@@ -76,9 +77,17 @@ export const USER_CHILDREN_MAP: Record<string, string[]> = {
 /**
  * Maps coach user IDs to their assigned team IDs
  * Used for filtering team data by coach
+ * 
+ * Demo coach should see a SELECT FEW teams from different programs to demonstrate
+ * access restrictions (not all teams, but enough to show they have limited access)
  */
 export const COACH_TEAM_MAP: Record<string, string[]> = {
-    [COACH_ONLY_ID]: [TEAM_U10_SOCCER_ID, TEAM_U12_SOCCER_ID],
+    [COACH_ONLY_ID]: [
+        TEAM_U10_SOCCER_ID,      // Soccer Rec program
+        TEAM_U12_SOCCER_ID,      // Soccer Rec program
+        TEAM_U10_BASKETBALL_ID,  // Basketball Rec program (different program)
+        TEAM_U14_SOCCER_ELITE_ID // Soccer Comp program (different program)
+    ],
     [PARENT_COACH_ID]: [TEAM_U10_BASKETBALL_ID],
 }
 
@@ -118,9 +127,17 @@ export function getChildrenForUserId(userId: string): string[] {
 
 /**
  * Get assigned team IDs for a coach user
+ * Handles both direct mapping and fakeCoachAssignments lookup
  */
 export function getAssignedTeamsForCoach(userId: string): string[] {
-    return COACH_TEAM_MAP[userId] ?? getTeamIdsForCoach(userId)
+    // First check direct mapping (COACH_TEAM_MAP is keyed by UUID strings from DEMO_USER_IDS)
+    if (COACH_TEAM_MAP[userId]) {
+        return COACH_TEAM_MAP[userId]
+    }
+    
+    // Fallback to fakeCoachAssignments lookup
+    // This will work because fakeCoachAssignments uses COACH_ONLY_ID (which is the UUID) as user_id
+    return getTeamIdsForCoach(userId)
 }
 
 /**

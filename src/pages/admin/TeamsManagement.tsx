@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Teams Management
  *
  * Table view with filtering by season, sport, program, level, and status.
@@ -7,6 +7,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useOffline } from '../../hooks/useOffline'
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import { USE_FAKE_DATA } from '../../data/config'
@@ -20,15 +21,19 @@ import { AdminPageHeader, Button, ConfirmDialog, Card, Select, Badge, InlineNoti
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
+import { hasAnyRole } from '../../utils/roleHelpers'
+import '../../styles/orgAdmin.css'
 
 export default function TeamsManagement() {
   // Add lifecycle logging
   useDebugLifecycle('TeamsManagement')
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { isOffline } = useOffline()
   const location = useLocation()
   const navigate = useNavigate()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -315,8 +320,8 @@ export default function TeamsManagement() {
             const program = programById.get(row.program_id || '')
             return (
                 <div className="oa-flex oa-flex-col">
-                    <span className="oa-text-sm oa-font-medium oa-text-slate-700">{program?.name || '—'}</span>
-                    <span className="oa-text-xs oa-text-slate-400">{sport?.name || '—'}</span>
+                    <span className="oa-text-sm oa-font-medium oa-text-slate-700">{program?.name || 'â€”'}</span>
+                    <span className="oa-text-xs oa-text-slate-400">{sport?.name || 'â€”'}</span>
                 </div>
             )
         }
@@ -329,7 +334,7 @@ export default function TeamsManagement() {
             const level = levelById.get(row.level_id ?? '')
             return (
                 <Badge variant="neutral">
-                    {level?.name || '—'}
+                    {level?.name || 'â€”'}
                 </Badge>
             )
         }
@@ -340,7 +345,7 @@ export default function TeamsManagement() {
         sortable: true,
         render: (row) => (
             <span className="oa-text-sm oa-text-slate-500 oa-font-medium">
-                {row.max_roster_size ? `${row.max_roster_size} max` : '—'}
+                {row.max_roster_size ? `${row.max_roster_size} max` : 'â€”'}
             </span>
         )
     },
@@ -397,7 +402,7 @@ export default function TeamsManagement() {
     )
   }
 
-  // Show empty state if prerequisites don't exist (check full chain: programs → levels → teams)
+  // Show empty state if prerequisites don't exist (check full chain: programs â†’ levels â†’ teams)
   if (programs.length === 0) {
     return (
       <div className="oa-root">
@@ -576,16 +581,18 @@ export default function TeamsManagement() {
               ]}
             />
           </div>
-          <div className="oa-filter-actions">
-            <Button
-              className="oa-w-full sm:oa-w-auto"
-              disabled={!canCreateTeam || navigating || loading}
-              title={!canCreateTeam ? 'Add a Level first' : undefined}
-              onClick={handleAddTeam}
-            >
-              Add Team
-            </Button>
-          </div>
+          {isOrgAdmin && (
+            <div className="oa-filter-actions">
+              <Button
+                className="oa-w-full sm:oa-w-auto"
+                disabled={!canCreateTeam || navigating || loading}
+                title={!canCreateTeam ? 'Add a Level first' : undefined}
+                onClick={handleAddTeam}
+              >
+                Add Team
+              </Button>
+            </div>
+          )}
         </div>
       </Card>
 

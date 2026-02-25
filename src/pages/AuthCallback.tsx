@@ -351,7 +351,30 @@ export default function AuthCallback() {
 
             if (orgError) {
               console.error('Error fetching demo user organizations for redirect:', orgError)
-              // Fallback to portal dashboard if org fetch fails
+              // Fallback: try to get role from demo_account_roles to determine redirect
+              try {
+                const { data: demoAccountRole } = await supabase
+                  .from('demo_account_roles')
+                  .select('role')
+                  .eq('user_id', userId)
+                  .maybeSingle()
+                
+                if (demoAccountRole?.role) {
+                  const role = demoAccountRole.role
+                  // Redirect based on role: coaches and org_admins go to /admin, others to /portal
+                  const fallbackRedirect = (role === 'coach' || role === 'org_admin') 
+                    ? '/admin' 
+                    : '/portal/dashboard'
+                  navigateWithTrace(fallbackRedirect, 'demo redirect org fetch error - using demo account role', {
+                    orgError: orgError.message,
+                    role,
+                  })
+                  return
+                }
+              } catch (roleError) {
+                console.error('Error fetching demo account role:', roleError)
+              }
+              // Final fallback to portal dashboard
               navigateWithTrace('/portal/dashboard', 'demo redirect org fetch error', {
                 orgError: orgError.message,
               })
@@ -374,6 +397,37 @@ export default function AuthCallback() {
                 get role() { return this.roles[0] ?? 'parent' }
               }
             })
+
+            // If organizations is empty, try to get role from demo_account_roles as fallback
+            if (organizations.length === 0) {
+              try {
+                const { data: demoAccountRole } = await supabase
+                  .from('demo_account_roles')
+                  .select('role')
+                  .eq('user_id', userId)
+                  .maybeSingle()
+                
+                if (demoAccountRole?.role) {
+                  const role = demoAccountRole.role
+                  // Create a minimal organization object for getLoginRedirect
+                  const fallbackOrg = {
+                    id: '',
+                    name: '',
+                    roles: role === 'coach' ? ['coach'] as OrgMemberRole[] : 
+                           role === 'org_admin' ? ['org_admin'] as OrgMemberRole[] :
+                           role === 'parent' ? ['parent'] as OrgMemberRole[] :
+                           role === 'staff' ? ['staff'] as OrgMemberRole[] : [],
+                    get role() { return this.roles[0] ?? 'parent' }
+                  }
+                  const isFan = role === 'fan'
+                  const finalRedirect = getLoginRedirect(false, [fallbackOrg], isFan)
+                  setDemoRedirect(finalRedirect)
+                  return
+                }
+              } catch (roleError) {
+                console.error('Error fetching demo account role as fallback:', roleError)
+              }
+            }
 
             // Check if user is a fan (for demo fan role)
             let isFan = false
@@ -398,6 +452,25 @@ export default function AuthCallback() {
             return
           } catch (err) {
             console.error('Exception fetching demo organizations for redirect:', err)
+            // Try to get role from demo_account_roles as final fallback
+            try {
+              const { data: demoAccountRole } = await supabase
+                .from('demo_account_roles')
+                .select('role')
+                .eq('user_id', userId)
+                .maybeSingle()
+              
+              if (demoAccountRole?.role) {
+                const role = demoAccountRole.role
+                const fallbackRedirect = (role === 'coach' || role === 'org_admin') 
+                  ? '/admin' 
+                  : '/portal/dashboard'
+                setDemoRedirect(fallbackRedirect)
+                return
+              }
+            } catch (roleError) {
+              console.error('Error fetching demo account role in catch block:', roleError)
+            }
             setDemoRedirect('/portal/dashboard')
             return
           }

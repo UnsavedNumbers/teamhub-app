@@ -10,6 +10,9 @@
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
+import type { UserContext } from '../fake/userContext'
+import { getCoachTeamIds } from '../fake/userContext'
+import { getTeamMembersForSeason, SEASON_SPRING_CURRENT_ID } from '../fake/fakeTeams'
 import { fakeChildren, fakeFamilies, fakeTeamMembers, fakeSports, fakeTeams } from '../fake'
 
 /**
@@ -45,8 +48,9 @@ async function simulateDelay() {
 /**
  * Get all athletes for an organization
  * Returns fake data if USE_FAKE_DATA is true
+ * Filters athletes for coaches based on their assigned teams
  */
-export async function getAthletes(orgId: string): Promise<OperationResult<AthleteCardData[]>> {
+export async function getAthletes(orgId: string, context?: UserContext): Promise<OperationResult<AthleteCardData[]>> {
     console.groupCollapsed(`%cgetAthletes: ${orgId}`, 'color: #666; font-weight: bold;')
     debug.data('AthletesListService.getAthletes', 'Request', { orgId })
     debug.perf.start('athletesListService.getAthletes')
@@ -58,8 +62,35 @@ export async function getAthletes(orgId: string): Promise<OperationResult<Athlet
             // Get athletes for this org using fakeChildren (same as familyService)
             // When USE_FAKE_DATA is true, use DEMO_ORG_A_ID instead of the real orgId
             const fakeOrgId = DEMO_ORG_A_ID
-            const athletesForOrg = fakeChildren
+            let athletesForOrg = fakeChildren
                 .filter(c => fakeFamilies.find(f => f.id === c.family_id)?.org_id === fakeOrgId)
+            
+            // Filter athletes for coaches - only show athletes on teams they're assigned to
+            if (context && context.roles.includes('coach') && !context.roles.includes('org_admin')) {
+                const assignedTeamIds = await getCoachTeamIds(context)
+                console.log('[AthletesListService] Coach filtering:', {
+                    userId: context.userId,
+                    roles: context.roles,
+                    assignedTeamIds,
+                    athletesBeforeFilter: athletesForOrg.length
+                })
+                
+                if (assignedTeamIds.length > 0) {
+                    const athleteIds = new Set<string>()
+                    for (const teamId of assignedTeamIds) {
+                        const members = getTeamMembersForSeason(teamId, SEASON_SPRING_CURRENT_ID)
+                        console.log(`[AthletesListService] Team ${teamId} has ${members.length} members:`, members.map(m => m.athlete_id))
+                        members.forEach((m) => athleteIds.add(m.athlete_id))
+                    }
+                    console.log('[AthletesListService] Total unique athlete IDs:', athleteIds.size, Array.from(athleteIds))
+                    athletesForOrg = athletesForOrg.filter((c) => athleteIds.has(c.id))
+                    console.log('[AthletesListService] Athletes after filter:', athletesForOrg.length)
+                } else {
+                    // Coach with no assigned teams sees no athletes
+                    console.log('[AthletesListService] Coach has no assigned teams')
+                    athletesForOrg = []
+                }
+            }
 
             // Enrich with team and sport data
             const enriched: AthleteCardData[] = athletesForOrg.map(athlete => {

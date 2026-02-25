@@ -7,11 +7,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { getTeamDetails, updateTeam } from '../../data/services/teamsService'
 import { getLink } from '../../utils/routes'
 import { Button, EmptyState, Card, Input } from '../platformAdmin'
 import { showSuccess, showError } from '../../utils/toast'
 import { useT } from '../../i18n/useI18n'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import type { Team } from '../../data/types/organization'
 
 interface TeamSettingsTabProps {
@@ -21,9 +23,10 @@ interface TeamSettingsTabProps {
 
 export function TeamSettingsTab({ teamId }: TeamSettingsTabProps) {
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
   const t = useT()
-  const isOrgAdmin = context.roles.includes('org_admin')
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
   const [inviteCode, setInviteCode] = useState<string | null>(null)
   const [minRosterSize, setMinRosterSize] = useState<string>('')
   const [maxRosterSize, setMaxRosterSize] = useState<string>('')

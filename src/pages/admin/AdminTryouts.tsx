@@ -12,6 +12,7 @@ import {
 } from '../../components/admin'
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
 
 export default function AdminTryouts() {
@@ -23,6 +24,7 @@ export default function AdminTryouts() {
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
   const t = useT()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
   const fetchTryouts = useCallback(async () => {
     if (!isReady || !currentOrganization) return
@@ -59,10 +61,12 @@ export default function AdminTryouts() {
         title={t('admin.tryouts.title')}
         subtitle={t('admin.tryouts.subtitle')}
         actions={
-          <Button variant="primary" onClick={() => navigate('/admin/tryouts/new')}>
-            <span className="material-symbols-outlined">add</span>
-            Create Tryout
-          </Button>
+          isOrgAdmin ? (
+            <Button variant="primary" onClick={() => navigate('/admin/tryouts/new')}>
+              <span className="material-symbols-outlined">add</span>
+              Create Tryout
+            </Button>
+          ) : undefined
         }
       />
       <OrgDataTable

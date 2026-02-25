@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Invitations Dashboard
  *
  * Centralized view of all pending guardian invites and join requests for the organization.
@@ -17,6 +17,7 @@ import { showSuccess, showError } from '../../utils/toast'
 import { useT } from '../../i18n/useI18n'
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import OfflineBanner from '../../components/admin/OfflineBanner'
+import '../../styles/orgAdmin.css'
 
 interface GuardianInvite {
     id: string
@@ -250,7 +251,7 @@ export default function Invitations() {
         {
             key: 'team',
             header: t('admin.invitations.team'),
-            render: (invite) => invite.team_name || '—',
+            render: (invite) => invite.team_name || 'â€”',
         },
         {
             key: 'expires',

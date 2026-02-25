@@ -367,7 +367,7 @@ html.dark .oa-nav-link-top.oa-nav-dashboard.active:hover {
 }
 
 .oa-nav-section {
-    padding: 0 var(--pa-space-4);
+    /* Removed horizontal padding - these are top-level items, not nested children */
     margin-bottom: var(--pa-space-1);
 }
 
@@ -12206,4 +12206,469 @@ html.dark .oa-text-warning {
     .oa-grid-4 {
         grid-template-columns: 1fr;
     }
+}
+
+/* =====================================================================
+   ATHLETE DETAIL DESIGN 2 - Exact Design Implementation
+   ===================================================================== */
+
+/* Athlete Header with Avatar in AdminPageHeader */
+.oa-athlete-header-with-avatar {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-4);
+}
+
+.oa-athlete-header-avatar {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 2px solid var(--org-btn-primary-bg, #136dec);
+}
+
+/* Breadcrumbs */
+.oa-athlete-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--pa-n400);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: var(--pa-space-6);
+}
+
+html.dark .oa-athlete-breadcrumbs {
+    color: var(--pa-text-muted);
+}
+
+.oa-athlete-breadcrumb-link {
+    color: var(--org-btn-primary-bg, #136dec);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    line-height: normal;
+    transition: opacity 0.2s ease;
+}
+
+.oa-athlete-breadcrumb-link:hover {
+    opacity: 0.8;
+}
+
+.oa-athlete-breadcrumb-link:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.oa-athlete-breadcrumbs-current {
+    color: var(--pa-n900);
+}
+
+html.dark .oa-athlete-breadcrumbs-current {
+    color: var(--pa-text-primary);
+}
+
+.oa-athlete-breadcrumb-chevron {
+    font-size: 14px;
+}
+
+.oa-athlete-stat-icon {
+    font-size: 14px;
+}
+
+/* Header Section */
+.oa-athlete-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-6);
+    margin-bottom: var(--pa-space-8);
+}
+
+.oa-athlete-header-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-8);
+}
+
+@media (min-width: 768px) {
+    .oa-athlete-header-row {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+}
+
+.oa-athlete-header-main {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-8);
+    flex: 1;
+}
+
+.oa-athlete-avatar {
+    width: 96px;
+    height: 96px;
+    min-width: 96px;
+    border-radius: 50%;
+    border: 4px solid var(--org-btn-primary-bg, #136dec);
+    overflow: hidden;
+    background: var(--pa-surface-panel);
+    box-shadow: 0 20px 25px -5px rgba(19, 109, 236, 0.1), 0 10px 10px -5px rgba(19, 109, 236, 0.04);
+    flex-shrink: 0;
+}
+
+html.dark .oa-athlete-avatar {
+    background: var(--pa-surface);
+    border-color: var(--org-btn-primary-bg, #136dec);
+}
+
+.oa-athlete-name-section {
+    flex: 1;
+    min-width: 0;
+}
+
+.oa-athlete-name-row {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-6);
+    flex-wrap: wrap;
+    margin-bottom: var(--pa-space-4);
+}
+
+.oa-athlete-name {
+    font-family: var(--oa-font-display);
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 900;
+    line-height: 0.9;
+    letter-spacing: -0.03em;
+    color: var(--pa-n900);
+    margin: 0;
+    text-transform: uppercase;
+}
+
+html.dark .oa-athlete-name {
+    color: var(--pa-text-primary);
+}
+
+.oa-athlete-info-row {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-4);
+    flex-wrap: wrap;
+}
+
+.oa-athlete-info-item {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--pa-n400);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+html.dark .oa-athlete-info-item {
+    color: var(--pa-text-muted);
+}
+
+.oa-athlete-info-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--pa-n300);
+}
+
+html.dark .oa-athlete-info-dot {
+    background: var(--pa-n600);
+}
+
+.oa-athlete-updated-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--pa-n400);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    background: var(--pa-n100);
+    padding: 4px 12px;
+    border-radius: 9999px;
+    margin-left: auto;
+}
+
+html.dark .oa-athlete-updated-badge {
+    background: var(--pa-surface);
+    color: var(--pa-text-muted);
+}
+
+/* Stats Grid */
+.oa-athlete-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--pa-space-6);
+    margin-bottom: var(--pa-space-8);
+}
+
+@media (min-width: 768px) {
+    .oa-athlete-stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.oa-athlete-stat-card {
+    padding: var(--pa-space-6);
+    border-radius: var(--oa-radius-xl);
+    border: 1px solid var(--pa-n200);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+html.dark .oa-athlete-stat-card {
+    border-color: var(--pa-border-subtle);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.oa-athlete-stat-card--clickable {
+    cursor: pointer;
+}
+
+.oa-athlete-stat-card--clickable:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+html.dark .oa-athlete-stat-card--clickable:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+}
+
+.oa-athlete-stat-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--pa-n400);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+html.dark .oa-athlete-stat-label {
+    color: var(--pa-text-muted);
+}
+
+.oa-athlete-stat-value {
+    font-size: 42px;
+    font-weight: 900;
+    color: var(--pa-n900);
+    line-height: 1;
+    margin: 0;
+}
+
+html.dark .oa-athlete-stat-value {
+    color: var(--pa-text-primary);
+}
+
+/* Tabs */
+.oa-athlete-tabs {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    border-bottom: 1px solid var(--pa-n200);
+    margin-bottom: var(--pa-space-8);
+    overflow-x: auto;
+    padding-bottom: 1px;
+}
+
+html.dark .oa-athlete-tabs {
+    border-bottom-color: var(--pa-border-subtle);
+}
+
+.oa-athlete-tab {
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: var(--pa-space-4) 0;
+    border-bottom: 2px solid transparent;
+    color: var(--pa-n400);
+    background: transparent;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    cursor: pointer;
+    transition: color 0.2s ease, border-bottom-color 0.2s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+}
+
+.oa-athlete-tab:hover {
+    color: var(--pa-n600);
+}
+
+html.dark .oa-athlete-tab {
+    color: var(--pa-text-muted);
+}
+
+html.dark .oa-athlete-tab:hover {
+    color: var(--pa-text-secondary);
+}
+
+.oa-athlete-tab--active {
+    border-bottom-color: var(--org-btn-primary-bg, #136dec);
+    color: var(--org-btn-primary-bg, #136dec);
+}
+
+.oa-athlete-tab-badge {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--oa-warning-500, #f59e0b);
+    display: inline-block;
+}
+
+/* Content Cards */
+.oa-athlete-content-card {
+    border-radius: var(--oa-radius-xl);
+    border: 1px solid var(--pa-n200);
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+html.dark .oa-athlete-content-card {
+    border-color: var(--pa-border-subtle);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.oa-athlete-content-card-body {
+    padding: var(--pa-space-8);
+}
+
+.oa-athlete-section-title {
+    font-size: 20px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    color: var(--pa-n900);
+    margin-bottom: var(--pa-space-8);
+}
+
+html.dark .oa-athlete-section-title {
+    color: var(--pa-text-primary);
+}
+
+.oa-athlete-info-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px 0;
+}
+
+@media (min-width: 768px) {
+    .oa-athlete-info-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.oa-athlete-info-grid-full {
+    grid-column: 1 / -1;
+}
+
+.oa-athlete-field-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--pa-n400);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+}
+
+html.dark .oa-athlete-field-label {
+    color: var(--pa-text-muted);
+}
+
+.oa-athlete-field-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--pa-n900);
+}
+
+html.dark .oa-athlete-field-value {
+    color: var(--pa-text-primary);
+}
+
+.oa-athlete-field-value--secondary {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--pa-n600);
+}
+
+html.dark .oa-athlete-field-value--secondary {
+    color: var(--pa-text-secondary);
+}
+
+/* Guardian Status Banner */
+.oa-athlete-guardian-banner {
+    background: var(--oa-blue-50, #eff6ff);
+    border: 1px solid var(--oa-blue-100, #dbeafe);
+    border-radius: var(--oa-radius-xl);
+    padding: var(--pa-space-4) var(--pa-space-6);
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-3);
+}
+
+html.dark .oa-athlete-guardian-banner {
+    background: rgba(30, 58, 138, 0.1);
+    border-color: rgba(30, 58, 138, 0.3);
+}
+
+.oa-athlete-guardian-banner-icon {
+    color: var(--org-btn-primary-bg, #136dec);
+    font-size: 20px;
+}
+
+.oa-athlete-guardian-banner-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--pa-n700);
+    margin: 0;
+}
+
+html.dark .oa-athlete-guardian-banner-text {
+    color: var(--pa-text-secondary);
+}
+
+/* Content Stack */
+.oa-athlete-content-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-6);
+}
+
+/* Grid Line Pattern for Content Cards - combines with mesh pattern */
+.oa-athlete-content-card.oa-mesh-pattern {
+    background-image: radial-gradient(at 0% 0%, rgba(19, 109, 236, 0.03) 0px, transparent 50%),
+                      radial-gradient(at 50% 0%, rgba(19, 109, 236, 0.03) 0px, transparent 50%),
+                      radial-gradient(at 100% 0%, rgba(19, 109, 236, 0.03) 0px, transparent 50%),
+                      linear-gradient(to right, var(--pa-n200) 1px, transparent 1px),
+                      linear-gradient(to bottom, var(--pa-n200) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+}
+
+html.dark .oa-athlete-content-card.oa-mesh-pattern {
+    background-image: radial-gradient(at 0% 0%, rgba(19, 109, 236, 0.05) 0px, transparent 50%),
+                      radial-gradient(at 50% 0%, rgba(19, 109, 236, 0.05) 0px, transparent 50%),
+                      radial-gradient(at 100% 0%, rgba(19, 109, 236, 0.05) 0px, transparent 50%),
+                      linear-gradient(to right, var(--pa-border-subtle) 1px, transparent 1px),
+                      linear-gradient(to bottom, var(--pa-border-subtle) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
 }

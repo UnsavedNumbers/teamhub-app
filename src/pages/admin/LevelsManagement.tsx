@@ -7,6 +7,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useOffline } from '../../hooks/useOffline'
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import { USE_FAKE_DATA } from '../../data/config'
@@ -20,6 +21,7 @@ import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import { cn } from '../../utils/cn'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
 
 export default function LevelsManagement() {
@@ -27,9 +29,11 @@ export default function LevelsManagement() {
   useDebugLifecycle('LevelsManagement')
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { isOffline } = useOffline()
   const location = useLocation()
   const navigate = useNavigate()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -277,26 +281,28 @@ export default function LevelsManagement() {
                     >
                         View
                     </Button>
-                    <Button
-                        variant="ghost"
-                        size="dense"
-                        onClick={(e: React.MouseEvent) => {
-                            e.stopPropagation()
-                            navigate(`${getLink('admin.levels.update', { id: row.id })}?returnUrl=${encodeURIComponent(getLink('admin.levels.list'))}`)
-                        }}
-                    >
-                        Edit
-                    </Button>
-                    <Button
-                        variant="danger"
-                        size="dense"
-                        icon="delete"
-                        onClick={(e: React.MouseEvent) => {
-                            handleDeleteLevel(row.id, row.name, e)
-                        }}
-                        disabled={
-                            !row.id ||
-                            deletingLevelId === row.id ||
+                    {isOrgAdmin && (
+                        <>
+                            <Button
+                                variant="ghost"
+                                size="dense"
+                                onClick={(e: React.MouseEvent) => {
+                                    e.stopPropagation()
+                                    navigate(`${getLink('admin.levels.update', { id: row.id })}?returnUrl=${encodeURIComponent(getLink('admin.levels.list'))}`)
+                                }}
+                            >
+                                Edit
+                            </Button>
+                            <Button
+                                variant="danger"
+                                size="dense"
+                                icon="delete"
+                                onClick={(e: React.MouseEvent) => {
+                                    handleDeleteLevel(row.id, row.name, e)
+                                }}
+                                disabled={
+                                    !row.id ||
+                                    deletingLevelId === row.id ||
                             isOffline ||
                             USE_FAKE_DATA ||
                             teamCount > 0 ||
@@ -323,6 +329,8 @@ export default function LevelsManagement() {
                     >
                         {deletingLevelId === row.id ? 'Removing...' : 'Remove'}
                     </Button>
+                        </>
+                    )}
                 </div>
             )
         }

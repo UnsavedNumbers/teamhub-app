@@ -8,7 +8,7 @@ interface TravelHeaderProps {
     viewMode: TravelViewMode
     onTimeContextChange: (context: TravelTimeContext) => void
     onViewModeChange: (mode: TravelViewMode) => void
-    onCreateClick: () => void
+    onCreateClick?: () => void
     upcomingCount?: number
 }
 
@@ -140,9 +140,11 @@ export default function TravelHeader({
                     })}
                 </div>
 
-                <OrgAdminButton onClick={onCreateClick} variant="primary" icon="add" className="whitespace-nowrap">
-                    Create Plan
-                </OrgAdminButton>
+                {onCreateClick && (
+                    <OrgAdminButton onClick={onCreateClick} variant="primary" icon="add" className="whitespace-nowrap">
+                        Create Plan
+                    </OrgAdminButton>
+                )}
             </div>
         </div>
     )

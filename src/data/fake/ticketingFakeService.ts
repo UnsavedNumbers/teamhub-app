@@ -403,8 +403,10 @@ function ensureFakeSeatMaps(orgId: string): FakeSeatMapRecord[] {
   return maps
 }
 
-export function getFakeVenuesForOrg(orgId: string): Venue[] {
-  return getFakeVenues(orgId)
+export function getFakeVenuesForOrg(_orgId: string): Venue[] {
+  // In demo mode, always return venues for DEMO_ORG_A_ID regardless of orgId
+  // This ensures venues are available for all demo users
+  return getFakeVenues(DEMO_ORG_A_ID)
 }
 
 export function getFakeSeatMapsForOrgAdmin(orgId: string): FakeAdminSeatMapListItem[] {

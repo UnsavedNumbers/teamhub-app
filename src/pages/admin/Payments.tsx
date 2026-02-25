@@ -18,6 +18,8 @@ import {
 } from '../../components/admin'
 import { FeatureGatedButton } from '../../components/FeatureGatedButton'
 import { cn } from '../../utils/cn'
+import { hasAnyRole } from '../../utils/roleHelpers'
+import { Navigate } from 'react-router-dom'
 import '../../styles/orgAdmin.css'
 
 interface PaymentDisplay {
@@ -68,9 +70,15 @@ export default function Payments() {
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
   const t = useT()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
   
   // Extract primitive values to avoid infinite loops in useEffect dependencies
   const orgId = context.orgId
+
+  // Coaches cannot access payments page - redirect to dashboard
+  if (!isOrgAdmin) {
+    return <Navigate to={getLink(RouteKeys.ADMIN_DASHBOARD)} replace />
+  }
 
   const fetchPayments = useCallback(async () => {
     if (!isReady) return

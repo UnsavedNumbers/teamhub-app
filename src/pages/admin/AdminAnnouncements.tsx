@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { getAnnouncements, createAnnouncement, deleteAnnouncement, type Announcement } from '../../data/services/messagesService'
 import { getTeams } from '../../data/services/teamsService'
 import { showSuccess, showError } from '../../utils/toast'
@@ -19,6 +20,7 @@ import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { cn } from '../../utils/cn'
 import CreateAnnouncementModal from '../../components/admin/CreateAnnouncementModal'
 import { getAnnouncementEmoji, type AnnouncementType } from '../../utils/announcementTypes'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
 
 interface AnnouncementDisplay {
@@ -46,6 +48,8 @@ export default function AdminAnnouncements() {
   const isMountedRef = useRef(true)
   const requestIdRef = useRef(0)
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
   const { user } = useAuth()
   
   // Extract primitive values to avoid dependency issues
@@ -466,7 +470,6 @@ export default function AdminAnnouncements() {
       render: (row) => {
         // Issue 3 Solution: Check permission in UI (defense in depth)
         const isAuthor = user?.id === row.author_id
-        const isOrgAdmin = context.roles?.includes('org_admin') ?? false
         const canDelete = isOrgAdmin || isAuthor
         const isDeleting = deletingId === row.id
 
@@ -513,14 +516,16 @@ export default function AdminAnnouncements() {
         title="Announcements" 
         subtitle={t('admin.announcements.subtitle')}
         actions={
-          <Button 
-            icon="add" 
-            onClick={() => setIsCreateModalOpen(true)}
-            disabled={isButtonDisabled}
-            title={buttonTooltip}
-          >
-            New Announcement
-          </Button>
+          isOrgAdmin ? (
+            <Button 
+              icon="add" 
+              onClick={() => setIsCreateModalOpen(true)}
+              disabled={isButtonDisabled}
+              title={buttonTooltip}
+            >
+              New Announcement
+            </Button>
+          ) : undefined
         } 
       />
 

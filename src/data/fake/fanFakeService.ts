@@ -16,11 +16,12 @@ import { supabase } from '../../lib/supabase'
 import { resolveDemoUserId } from './userContext'
 import { getFakeTicketOrdersWithRelations, getFakeTicketsForOrder } from './ticketingFakeService'
 import { getFakeTicketedEventById, getFakeTicketingEvents } from './fakeTicketingEvents'
-import { getOrganizationById, getOrganizationBySlug } from './fakeOrganizations'
-import { getTeamWithDetails } from './fakeTeams'
+import { getOrganizationById, getOrganizationBySlug, fakeOrganizations } from './fakeOrganizations'
+import { getTeamWithDetails, fakeTeams } from './fakeTeams'
 import { getChildById } from './fakeUsers'
 import { loadBookmarks, saveBookmarks, loadFollows, saveFollows } from './demoStorage'
 import { DEMO_ORG_A_ID, DEMO_TRANSACTION_DELAY_MS } from '../config'
+import type { SearchEntityResult } from '../services/fanService'
 
 // ============================================
 // HELPERS
@@ -110,7 +111,27 @@ export async function getFollowedOrgs(): Promise<{ data: FanOrgFollow[]; error: 
         const userId = await getCurrentUserId()
         if (!userId) return { data: [], error: null }
 
-        const follows = loadFollows(userId)
+        let follows = loadFollows(userId)
+        
+        // Initialize with demo data if empty (for demo mode)
+        if (follows.length === 0) {
+            // Add a few demo organizations to follow
+            const demoOrgs = fakeOrganizations.slice(0, 2) // Follow first 2 demo orgs
+            follows = demoOrgs.map((org, index) => ({
+                id: `follow-demo-${index}`,
+                user_id: userId,
+                org_id: org.id,
+                source: 'manual' as const,
+                created_at: new Date().toISOString(),
+                org: {
+                    id: org.id,
+                    name: org.name,
+                    slug: org.slug,
+                },
+            }))
+            saveFollows(userId, follows)
+        }
+        
         const enriched: FanOrgFollow[] = follows.map((f) => {
             const org = getOrganizationById(f.org_id)
             return {
@@ -501,6 +522,85 @@ export async function getAthleteProfile(athleteId: string): Promise<{ data: Enti
         return {
             data: null,
             error: err instanceof Error ? err : new Error('Failed to get athlete profile'),
+        }
+    }
+}
+
+// ============================================
+// ENTITY SEARCH
+// ============================================
+
+export async function searchEntities(
+    query: string,
+    entityTypes: ('org' | 'team' | 'athlete')[] = ['org', 'team', 'athlete'],
+    limit: number = 20
+): Promise<{ data: SearchEntityResult[]; error: Error | null }> {
+    try {
+        const userId = await getCurrentUserId()
+        const follows = userId ? loadFollows(userId) : []
+        const queryLower = query.toLowerCase().trim()
+        const results: SearchEntityResult[] = []
+
+        // Search organizations
+        if (entityTypes.includes('org')) {
+            const orgs = fakeOrganizations.filter((org) => {
+                if (!queryLower) return true
+                return (
+                    org.name.toLowerCase().includes(queryLower) ||
+                    org.city?.toLowerCase().includes(queryLower) ||
+                    org.state?.toLowerCase().includes(queryLower) ||
+                    org.slug?.toLowerCase().includes(queryLower)
+                )
+            })
+
+            for (const org of orgs.slice(0, limit)) {
+                const isFollowing = follows.some((f) => f.org_id === org.id)
+                results.push({
+                    entity_type: 'org',
+                    id: org.id,
+                    name: org.name,
+                    slug: org.slug,
+                    location_city: org.city ?? undefined,
+                    location_state: org.state ?? undefined,
+                    relevance_score: queryLower ? (org.name.toLowerCase().startsWith(queryLower) ? 1.0 : 0.7) : 0.5,
+                    isFollowing,
+                    logo_url: org.logo_url ?? undefined,
+                })
+            }
+        }
+
+        // Search teams
+        if (entityTypes.includes('team') && results.length < limit) {
+            const teams = fakeTeams.filter((team) => {
+                if (!queryLower) return true
+                return team.name.toLowerCase().includes(queryLower)
+            })
+
+            for (const team of teams.slice(0, limit - results.length)) {
+                const teamDetails = getTeamWithDetails(team.id)
+                const org = teamDetails ? getOrganizationById(teamDetails.org_id) : null
+                const isFollowing = org ? follows.some((f) => f.org_id === org.id) : false
+
+                results.push({
+                    entity_type: 'team',
+                    id: team.id,
+                    name: team.name,
+                    parent_org_name: org?.name,
+                    sport: teamDetails?.sport?.name,
+                    relevance_score: queryLower ? (team.name.toLowerCase().startsWith(queryLower) ? 0.9 : 0.6) : 0.4,
+                    isFollowing,
+                })
+            }
+        }
+
+        // Sort by relevance score (highest first)
+        results.sort((a, b) => b.relevance_score - a.relevance_score)
+
+        return { data: results.slice(0, limit), error: null }
+    } catch (err) {
+        return {
+            data: [],
+            error: err instanceof Error ? err : new Error('Failed to search entities'),
         }
     }
 }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin Athletes Page
  *
  * Lists all athletes in the organization with filtering and view options.
@@ -24,6 +24,7 @@ import { getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { AthleteViewMode } from '../../components/admin/AthletesHeader'
+import '../../styles/orgAdmin.css'
 
 interface Team {
     id: string
@@ -151,7 +152,8 @@ export default function AdminAthletes() {
         setLoading(true)
         try {
             // Use the athletes list service which handles fake data
-            const result = await athletesListService.getAthletes(context.orgId)
+            // Pass context so coaches only see athletes from their assigned teams
+            const result = await athletesListService.getAthletes(context.orgId, context)
 
             if (!result.success || !result.data) {
                 setAthletes([])

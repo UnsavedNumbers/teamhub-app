@@ -499,16 +499,18 @@ export default function AthleteProfilePage() {
         )}
 
         {activeTab === 'physical' && (
-          <Card className="p-6">
-            <CardTitle className="mb-6">Physical Information</CardTitle>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-              Basic measurements and sizes for {athlete.first_name}
-            </p>
-            <UniversalFieldsForm
-              athlete={athlete}
-              onSave={(updatedAthlete) => setAthlete(updatedAthlete)}
-            />
-          </Card>
+          <div className="space-y-6">
+            <Card className="p-6">
+              <CardTitle className="mb-6">Physical Information</CardTitle>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                Basic measurements and sizes for {athlete.first_name}
+              </p>
+              <UniversalFieldsForm
+                athlete={athlete}
+                onSave={(updatedAthlete) => setAthlete(updatedAthlete)}
+              />
+            </Card>
+          </div>
         )}
 
         {activeTab === 'sports' && (
@@ -557,102 +559,106 @@ export default function AthleteProfilePage() {
         )}
 
         {activeTab === 'medical' && medicalGate.allowed && !medicalGate.loading && (
-          <Card className="p-6">
-            <CardTitle className="mb-2">Medical Information</CardTitle>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-              Confidential health information for {displayName}
-            </p>
-            <MedicalInfoForm
-              athleteId={athlete.id}
-              athleteName={displayName}
-            />
-          </Card>
+          <div className="space-y-6">
+            <Card className="p-6">
+              <CardTitle className="mb-6">Medical Information</CardTitle>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                Confidential health information for {displayName}
+              </p>
+              <MedicalInfoForm
+                athleteId={athlete.id}
+                athleteName={displayName}
+              />
+            </Card>
+          </div>
         )}
 
         {activeTab === 'teams' && (
-          <Card className="p-6">
-            <CardTitle className="mb-2">{t('portal.athleteProfile.teams.title' as any)}</CardTitle>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-              {t('portal.athleteProfile.teams.description' as any)}
-            </p>
-            {teamsLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white" />
-              </div>
-            ) : teamMemberships.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">
-                <Icon name="groups" size="text-4xl" className="text-slate-400 mb-4" />
-                <p className="font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  {t('portal.athleteProfile.teams.emptyTitle' as any)}
-                </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-                  {t('portal.athleteProfile.teams.emptyDescription' as any)}
-                </p>
-                <Button
-                  variant="secondary"
-                  className="mt-4"
-                  onClick={() => navigate('/portal/join')}
-                >
-                  <Icon name="group_add" size="text-sm" className="mr-2" />
-                  {t('portal.athleteProfile.teams.joinTeamCta' as any)}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {teamMemberships.map((m) => (
-                  <div
-                    key={m.id}
-                    className="flex flex-wrap items-center gap-4 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30"
+          <div className="space-y-6">
+            <Card className="p-6">
+              <CardTitle className="mb-6">{t('portal.athleteProfile.teams.title' as any)}</CardTitle>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                {t('portal.athleteProfile.teams.description' as any)}
+              </p>
+              {teamsLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white" />
+                </div>
+              ) : teamMemberships.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">
+                  <Icon name="groups" size="text-4xl" className="text-slate-400 mb-4" />
+                  <p className="font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    {t('portal.athleteProfile.teams.emptyTitle' as any)}
+                  </p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                    {t('portal.athleteProfile.teams.emptyDescription' as any)}
+                  </p>
+                  <Button
+                    variant="secondary"
+                    className="mt-4"
+                    onClick={() => navigate('/portal/join')}
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-900 dark:text-white truncate">
-                        {m.team_name}
-                      </p>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        <span>{t('portal.athleteProfile.teams.season' as import('../i18n').TranslationKey)}: {m.season_name}</span>
-                        {m.program_name && (
-                          <span>{t('portal.athleteProfile.teams.program' as import('../i18n').TranslationKey)}: {m.program_name}</span>
-                        )}
-                        {m.sport_name && (
-                          <span>{t('portal.athleteProfile.teams.sport' as import('../i18n').TranslationKey)}: {m.sport_name}</span>
-                        )}
+                    <Icon name="group_add" size="text-sm" className="mr-2" />
+                    {t('portal.athleteProfile.teams.joinTeamCta' as any)}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {teamMemberships.map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex flex-wrap items-center gap-4 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-slate-900 dark:text-white truncate">
+                          {m.team_name}
+                        </p>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-slate-500 dark:text-slate-400">
+                          <span>{t('portal.athleteProfile.teams.season' as import('../i18n').TranslationKey)}: {m.season_name}</span>
+                          {m.program_name && (
+                            <span>{t('portal.athleteProfile.teams.program' as import('../i18n').TranslationKey)}: {m.program_name}</span>
+                          )}
+                          {m.sport_name && (
+                            <span>{t('portal.athleteProfile.teams.sport' as import('../i18n').TranslationKey)}: {m.sport_name}</span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-slate-400 dark:text-slate-500">
+                          {m.jersey_number && (
+                            <span>{t('portal.athleteProfile.teams.jerseyNumber' as import('../i18n').TranslationKey)}: {m.jersey_number}</span>
+                          )}
+                          {m.position && (
+                            <span>{t('portal.athleteProfile.teams.position' as import('../i18n').TranslationKey)}: {m.position}</span>
+                          )}
+                          {m.joined_at && (
+                            <span>
+                              {t('portal.athleteProfile.teams.joinedAt' as import('../i18n').TranslationKey)}: {new Date(m.joined_at).toLocaleDateString()}
+                            </span>
+                          )}
+                          <span>{t('portal.athleteProfile.teams.status' as import('../i18n').TranslationKey)}: {m.status}</span>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-slate-400 dark:text-slate-500">
-                        {m.jersey_number && (
-                          <span>{t('portal.athleteProfile.teams.jerseyNumber' as import('../i18n').TranslationKey)}: {m.jersey_number}</span>
-                        )}
-                        {m.position && (
-                          <span>{t('portal.athleteProfile.teams.position' as import('../i18n').TranslationKey)}: {m.position}</span>
-                        )}
-                        {m.joined_at && (
-                          <span>
-                            {t('portal.athleteProfile.teams.joinedAt' as import('../i18n').TranslationKey)}: {new Date(m.joined_at).toLocaleDateString()}
-                          </span>
-                        )}
-                        <span>{t('portal.athleteProfile.teams.status' as import('../i18n').TranslationKey)}: {m.status}</span>
+                      <div className="flex gap-4 flex-shrink-0">
+                        <Button
+                          variant="secondary"
+                          onClick={() => navigate('/portal/calendar')}
+                        >
+                          <Icon name="calendar_month" size="text-sm" className="mr-1" />
+                          {t('portal.athleteProfile.teams.viewSchedule' as import('../i18n').TranslationKey)}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => navigate('/portal/messages')}
+                        >
+                          <Icon name="forum" size="text-sm" className="mr-1" />
+                          {t('portal.athleteProfile.teams.viewMessages' as import('../i18n').TranslationKey)}
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-2 flex-shrink-0">
-                      <Button
-                        variant="secondary"
-                        onClick={() => navigate('/portal/calendar')}
-                      >
-                        <Icon name="calendar_month" size="text-sm" className="mr-1" />
-                        {t('portal.athleteProfile.teams.viewSchedule' as import('../i18n').TranslationKey)}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        onClick={() => navigate('/portal/messages')}
-                      >
-                        <Icon name="forum" size="text-sm" className="mr-1" />
-                        {t('portal.athleteProfile.teams.viewMessages' as import('../i18n').TranslationKey)}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
         )}
       </div>
     </PortalLayout>

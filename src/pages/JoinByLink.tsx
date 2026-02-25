@@ -12,6 +12,8 @@ import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import { useT } from '../i18n/useI18n'
 import { supabase } from '../lib/supabase'
+import { USE_FAKE_DATA } from '../data/config'
+import { getSeasonsForOrg } from '../data/fake/fakeTeams'
 
 // Minimal layout for unauthenticated users
 function MinimalLayout({ children }: { children: React.ReactNode }) {
@@ -126,24 +128,32 @@ export default function JoinByLink() {
       return
     }
 
-    // Fetch seasons if team is specified
-    if (linkData.team_id) {
-      try {
-        const { data: seasonsData, error: seasonsError } = await supabase
+    // Fetch seasons - always fetch for org (team_id is optional)
+    try {
+      let seasonsData: Season[] = []
+      
+      if (USE_FAKE_DATA) {
+        // Use fake seasons for demo mode
+        const fakeSeasons = getSeasonsForOrg(linkData.org_id)
+        seasonsData = fakeSeasons.map(s => ({ id: s.id, name: s.name }))
+      } else {
+        const { data, error: seasonsError } = await supabase
           .from('seasons')
           .select('id, name')
           .eq('org_id', linkData.org_id)
           .order('start_date', { ascending: false })
 
-        if (!seasonsError && seasonsData) {
-          setSeasons(seasonsData.map(s => ({ id: s.id, name: s.name })))
-          if (seasonsData.length > 0) {
-            setSelectedSeason(seasonsData[0].id)
-          }
+        if (!seasonsError && data) {
+          seasonsData = data.map(s => ({ id: s.id, name: s.name }))
         }
-      } catch (err) {
-        console.error('Failed to fetch seasons:', err)
       }
+      
+      if (seasonsData.length > 0) {
+        setSeasons(seasonsData)
+        setSelectedSeason(seasonsData[0].id)
+      }
+    } catch (err) {
+      console.error('Failed to fetch seasons:', err)
     }
 
     setStep('select')

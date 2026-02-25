@@ -438,18 +438,20 @@ function seedTicketingCatalog() {
     cursor += 1
   }
 
+  // Completed events - use future dates but mark as completed status
   for (let i = 0; i < 15; i += 1) {
-    const startsAt = toIsoFromNow(-170 + i * 9, 17)
-    const endsAt = toIsoFromNow(-170 + i * 9, 20)
+    const startsAt = toIsoFromNow(30 + i * 9, 17)
+    const endsAt = toIsoFromNow(30 + i * 9, 20)
     const seeded = buildEvent(cursor, 'completed', 'hidden', startsAt, endsAt)
     seededEvents.push(seeded.event)
     seededOrdersByEvent[seeded.event.id] = { ticketsSold: seeded.ticketsSold, revenueCents: seeded.revenueCents }
     cursor += 1
   }
 
+  // Cancelled events - use future dates
   for (let i = 0; i < 5; i += 1) {
-    const startsAt = toIsoFromNow(-25 + i * 15, 18)
-    const endsAt = toIsoFromNow(-25 + i * 15, 21)
+    const startsAt = toIsoFromNow(10 + i * 15, 18)
+    const endsAt = toIsoFromNow(10 + i * 15, 21)
     const seeded = buildEvent(cursor, 'cancelled', 'hidden', startsAt, endsAt)
     seededEvents.push(seeded.event)
     seededOrdersByEvent[seeded.event.id] = { ticketsSold: seeded.ticketsSold, revenueCents: seeded.revenueCents }
@@ -559,6 +561,7 @@ export interface TicketingEventsQuery {
   sortBy?: string | null
   page?: number
   perPage?: number
+  hidePast?: boolean
 }
 
 export function getFakePrograms(orgId: string): TicketingProgram[] {

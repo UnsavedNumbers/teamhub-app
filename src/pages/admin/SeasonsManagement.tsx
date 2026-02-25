@@ -7,6 +7,7 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { getSeasons, deleteSeason, isSeasonEmpty } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
 import { AdminPageHeader, Card, Button, ConfirmDialog, Badge, InlineNotice } from '../../components/admin'
@@ -15,6 +16,7 @@ import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
 
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
@@ -23,7 +25,9 @@ export default function SeasonsManagement() {
   useDebugLifecycle('SeasonsManagement')
   
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [seasons, setSeasons] = useState<Season[]>([])
@@ -196,29 +200,33 @@ export default function SeasonsManagement() {
       align: 'right',
       render: (row) => (
         <div className="oa-flex oa-items-center oa-justify-end oa-gap-2">
-          <Button 
-            variant="ghost" 
-            size="dense" 
-            icon="edit"
-            onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                navigate(`${getLink('admin.seasons.update', { id: row.id })}?returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)
-            }}
-          >
-            Edit
-          </Button>
-          {emptySeasons.has(row.id) && (
-            <Button
-              variant="ghost"
-              size="dense"
-              icon="delete"
-              disabled={deleting}
-              onClick={(e: React.MouseEvent) => handleDeleteClick(row, e)}
-              className="oa-text-danger hover:oa-bg-danger-surface"
-              title="Delete empty season"
-            >
-              Delete
-            </Button>
+          {isOrgAdmin && (
+            <>
+              <Button 
+                variant="ghost" 
+                size="dense" 
+                icon="edit"
+                onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    navigate(`${getLink('admin.seasons.update', { id: row.id })}?returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)
+                }}
+              >
+                Edit
+              </Button>
+              {emptySeasons.has(row.id) && (
+                <Button
+                  variant="ghost"
+                  size="dense"
+                  icon="delete"
+                  disabled={deleting}
+                  onClick={(e: React.MouseEvent) => handleDeleteClick(row, e)}
+                  className="oa-text-danger hover:oa-bg-danger-surface"
+                  title="Delete empty season"
+                >
+                  Delete
+                </Button>
+              )}
+            </>
           )}
         </div>
       )
