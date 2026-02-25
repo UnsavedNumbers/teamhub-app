@@ -29,8 +29,8 @@ jobs:
       - name: Lint app
         run: npm run lint
 
-      - name: Build app
-        run: npm run build
+      - name: Build app (demo mode)
+        run: npm run build:demo
 
   test:
     if: github.ref_name != 'demo' && github.base_ref != 'demo'
