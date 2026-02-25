@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --mode dev",
     "dev:demo": "vite --mode demo",
-    "build": "tsc --noEmit --skipLibCheck && vite build --mode prod",
+    "build": "node scripts/build.js",
+    "build:prod": "tsc --noEmit --skipLibCheck && vite build --mode prod",
     "build:demo": "tsc --noEmit --skipLibCheck && vite build --mode demo",
     "lint": "eslint .",
     "preview": "vite preview",
