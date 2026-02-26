@@ -38,6 +38,10 @@ interface DemoEnterResponse {
   message?: string
 }
 
+const DEMO_APP_URL_LOCAL = "http://localhost:5173"
+const DEMO_APP_URL_PROD = "https://demo.youthsports.team"
+const DEMO_AUTH_CALLBACK_PATH = "/portal/auth/callback"
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -186,16 +190,16 @@ serve(async (req) => {
     }
 
     // Generate magic link for the shared demo user to sign them in
-    // Construct proper redirect URL - prefer SITE_URL, fallback to localhost for dev
-    let siteUrl = Deno.env.get("SITE_URL")
-    if (!siteUrl) {
-      // For local development, use localhost
-      // In production, SITE_URL should be set in Edge Function secrets
-      siteUrl = "http://localhost:5173"
-    }
+    // Resolve per-environment URL from env vars only (no request-origin inference)
+    const explicitDemoUrl = Deno.env.get("DEMO_APP_URL")
+    const fallbackEnvUrl = Deno.env.get("SITE_URL") || Deno.env.get("APP_URL")
+    const isLocalEnvironment = supabaseUrl.includes("localhost") || supabaseUrl.includes("127.0.0.1")
+    let siteUrl = explicitDemoUrl || fallbackEnvUrl || (isLocalEnvironment
+      ? DEMO_APP_URL_LOCAL
+      : DEMO_APP_URL_PROD)
     // Ensure siteUrl doesn't end with a slash
     siteUrl = siteUrl.replace(/\/$/, "")
-    const redirectTo = `${siteUrl}/portal/auth/callback?demo=true`
+    const redirectTo = `${siteUrl}${DEMO_AUTH_CALLBACK_PATH}?demo=true`
 
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "magiclink",
