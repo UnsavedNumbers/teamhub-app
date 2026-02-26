@@ -125,6 +125,8 @@ export default function UserContextDropdown() {
       let destination: string
       if (role === 'org_admin' || role === 'coach') {
         destination = getLink(RouteKeys.ADMIN_DASHBOARD)
+      } else if (role === 'fan') {
+        destination = getLink(RouteKeys.FAN_HOME)
       } else {
         destination = getLink(RouteKeys.PORTAL_DASHBOARD)
       }
@@ -158,6 +160,8 @@ export default function UserContextDropdown() {
     { role: 'parent', label: 'Payments', path: getLink(RouteKeys.PORTAL_PAYMENTS), icon: 'receipt_long' as const },
     { role: 'coach', label: 'My Athletes', path: getLink(RouteKeys.PORTAL_ATHLETES), icon: 'sports_soccer' as const },
     { role: 'org_admin', label: 'Organization Settings', path: getLink(RouteKeys.ADMIN_ORGANIZATION), icon: 'admin_panel_settings' as const },
+    { role: 'fan', label: 'Fan Home', path: getLink(RouteKeys.FAN_HOME), icon: 'home' as const },
+    { role: 'fan', label: 'Following', path: getLink(RouteKeys.FAN_FOLLOWING), icon: 'favorite' as const },
   ]
 
   // Filter links based on current roles

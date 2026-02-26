@@ -228,6 +228,28 @@ function getOrgAdminActionState(
   }
 }
 
+function resolveOrgAdminNotificationHref(notification: NotificationRecord): string {
+  const paymentActions: NotificationRecord['action'][] = [
+    'fee_created',
+    'fee_assigned',
+    'fee_updated',
+    'fee_removed',
+    'fee_payment_partial',
+    'fee_payment_completed',
+    'fee_payment_failed',
+    'fee_overdue',
+  ]
+
+  if (paymentActions.includes(notification.action)) {
+    if (notification.entity_id) {
+      return getLink('admin.payments.detail', { id: notification.entity_id })
+    }
+    return getLink('admin.payments.list')
+  }
+
+  return notification.link_url ?? getLink('admin.notifications')
+}
+
 interface UpcomingEvent {
   id: string
   title: string
@@ -533,7 +555,12 @@ function StadiumDashboard({ stats, recentActivity, upcomingEvents, t, navigate, 
           </div>
 
           <div className="dash-panel">
-            <h2 className="dash-section-title">{t('admin.dashboard.recentActivity')}</h2>
+            <div className="dash-panel-header">
+              <h2 className="dash-section-title" style={{ margin: 0 }}>{t('admin.dashboard.recentActivity')}</h2>
+              <Button variant="ghost" size="dense" onClick={() => navigate(getLink('admin.notifications'))}>
+                {t('admin.dashboard.viewAll')}
+              </Button>
+            </div>
             {recentActivity.length === 0 ? (
               <p className="dash-empty">{t('admin.dashboard.noRecentActivity')}</p>
             ) : (
@@ -666,7 +693,12 @@ function EditorialDashboard({ stats, recentActivity, upcomingEvents, t, navigate
       {/* ── RECENT ACTIVITY BAR ──────────────────────── */}
       {recentActivity.length > 0 && (
         <div className="dash-editorial-activity-bar">
-          <h2 className="dash-section-title" style={{ margin: '0 0 20px' }}>{t('admin.dashboard.recentActivity')}</h2>
+          <div className="dash-panel-header" style={{ marginBottom: 20 }}>
+            <h2 className="dash-section-title" style={{ margin: 0 }}>{t('admin.dashboard.recentActivity')}</h2>
+            <Button variant="ghost" size="dense" onClick={() => navigate(getLink('admin.notifications'))}>
+              {t('admin.dashboard.viewAll')}
+            </Button>
+          </div>
           <div className="dash-activity-list">
             {recentActivity.map(a => (
               <ActivityRow key={a.id} item={a} />
@@ -785,7 +817,12 @@ function AthleteDashboard({ stats, recentActivity, upcomingEvents, t, navigate, 
 
         {/* Activity feed */}
         <div className="dash-panel">
-          <h2 className="dash-section-title">{t('admin.dashboard.recentActivity')}</h2>
+          <div className="dash-panel-header">
+            <h2 className="dash-section-title" style={{ margin: 0 }}>{t('admin.dashboard.recentActivity')}</h2>
+            <Button variant="ghost" size="dense" onClick={() => navigate(getLink('admin.notifications'))}>
+              {t('admin.dashboard.viewAll')}
+            </Button>
+          </div>
           {recentActivity.length === 0 ? (
             <p className="dash-empty">{t('admin.dashboard.noRecentActivity')}</p>
           ) : (
@@ -881,7 +918,7 @@ export default function AdminDashboard() {
             icon: getOrgAdminNotificationIcon(n.action),
             actionState: state?.label,
             actionStateTone: state?.tone,
-            href: n.link_url ?? undefined,
+            href: resolveOrgAdminNotificationHref(n),
           }
         },
       )

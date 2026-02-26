@@ -17,7 +17,7 @@ import { resolveDemoUserId } from './userContext'
 import { getFakeTicketOrdersWithRelations, getFakeTicketsForOrder } from './ticketingFakeService'
 import { getFakeTicketedEventById, getFakeTicketingEvents } from './fakeTicketingEvents'
 import { getOrganizationById, getOrganizationBySlug, fakeOrganizations } from './fakeOrganizations'
-import { getTeamWithDetails, fakeTeams } from './fakeTeams'
+import { getTeamWithDetails, getTeamById, getSportById, fakeTeams, fakeTeamMembers } from './fakeTeams'
 import { getChildById } from './fakeUsers'
 import { loadBookmarks, saveBookmarks, loadFollows, saveFollows } from './demoStorage'
 import { DEMO_ORG_A_ID, DEMO_TRANSACTION_DELAY_MS } from '../config'
@@ -585,11 +585,54 @@ export async function searchEntities(
                     entity_type: 'team',
                     id: team.id,
                     name: team.name,
+                    parent_org_id: org?.id,
                     parent_org_name: org?.name,
                     sport: teamDetails?.sport?.name,
                     relevance_score: queryLower ? (team.name.toLowerCase().startsWith(queryLower) ? 0.9 : 0.6) : 0.4,
                     isFollowing,
                 })
+            }
+        }
+
+        // Search athletes
+        if (entityTypes.includes('athlete') && results.length < limit) {
+            const seenAthletes = new Set<string>()
+            for (const member of fakeTeamMembers) {
+                if (seenAthletes.has(member.athlete_id)) continue
+                seenAthletes.add(member.athlete_id)
+
+                const athlete = getChildById(member.athlete_id)
+                const team = getTeamById(member.team_id)
+                if (!athlete || !team) continue
+
+                const fullName = `${athlete.first_name} ${athlete.last_name}`.trim()
+                const teamDetails = getTeamWithDetails(team.id)
+                const org = getOrganizationById(team.org_id)
+                const sport = teamDetails?.sport ?? (team.sport_id ? getSportById(team.sport_id) : undefined)
+
+                if (queryLower) {
+                    const matchesQuery =
+                        fullName.toLowerCase().includes(queryLower) ||
+                        team.name.toLowerCase().includes(queryLower) ||
+                        (sport?.name?.toLowerCase().includes(queryLower) ?? false)
+                    if (!matchesQuery) continue
+                }
+
+                const isFollowing = follows.some((f) => f.org_id === team.org_id)
+                results.push({
+                    entity_type: 'athlete',
+                    id: athlete.id,
+                    name: fullName,
+                    parent_org_id: org?.id,
+                    parent_org_name: org?.name,
+                    sport: sport?.name,
+                    relevance_score: queryLower
+                        ? (fullName.toLowerCase().startsWith(queryLower) ? 0.95 : 0.55)
+                        : 0.35,
+                    isFollowing,
+                })
+
+                if (results.length >= limit) break
             }
         }
 

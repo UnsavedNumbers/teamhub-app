@@ -316,6 +316,16 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   }, [forceRole, isOrgAdmin, hasAnyRole])
 
   const currentRole = determineRole()
+  const registrationHubPath = getLink('portal.registrationHub')
+
+  const resolvePathForRouteKey = useCallback((routeKey?: string): string | undefined => {
+    if (!routeKey) return undefined
+    try {
+      return getLink(routeKey as any)
+    } catch {
+      return undefined
+    }
+  }, [])
 
   // Select navigation based on role
   const rawNavSections = currentRole === 'org_admin' 
@@ -326,9 +336,56 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         ? athleteNavSections
         : parentNavSections
 
+  const navSectionsWithRegistration = useMemo(() => {
+    const sectionsWithPaths = rawNavSections.map((section) => ({
+      ...section,
+      groups: section.groups.map((group) => ({
+        ...group,
+        items: group.items.map((item) => ({
+          ...item,
+          path: (item as any).path ?? resolvePathForRouteKey(item.routeKey),
+        })),
+      })),
+    }))
+
+    const hasRegistrationHub = sectionsWithPaths.some((section) =>
+      section.groups.some((group) =>
+        group.items.some((item) =>
+          (item as any).path === registrationHubPath
+        )
+      )
+    )
+
+    if (hasRegistrationHub) {
+      return sectionsWithPaths
+    }
+
+    return [
+      ...sectionsWithPaths,
+      {
+        label: 'Portal Registration Hub',
+        route: registrationHubPath,
+        groups: [
+          {
+            label: '',
+            items: [
+              {
+                routeKey: 'portal.registrationHub',
+                text: 'Portal Registration Hub',
+                icon: 'app_registration',
+                path: registrationHubPath,
+                description: 'Open your role-based portal registration workspace',
+              },
+            ],
+          },
+        ],
+      },
+    ]
+  }, [rawNavSections, registrationHubPath, resolvePathForRouteKey])
+
   // Apply feature gate filtering - wait for org context to avoid warnings
   const { filteredSections: navSections } = useFilteredNavigation(
-    isOrgLoading ? [] : rawNavSections
+    isOrgLoading ? [] : navSectionsWithRegistration
   )
 
   // Logo based on theme

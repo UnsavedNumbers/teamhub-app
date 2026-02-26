@@ -127,6 +127,7 @@ export const RouteKeys = {
     PORTAL_ATHLETES: 'portal.athletes',
     PORTAL_ATHLETES_REQUEST_ATTACHMENT: 'portal.athletes.requestAttachment',
     PORTAL_JOIN: 'portal.join',
+    PORTAL_REGISTRATION_HUB: 'portal.registrationHub',
     PORTAL_TRYOUTS: 'portal.tryouts',
     PORTAL_UNIFORMS: 'portal.uniforms',
     PORTAL_SETTINGS: 'portal.settings',

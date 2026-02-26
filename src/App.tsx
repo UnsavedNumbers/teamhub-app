@@ -103,6 +103,7 @@ const DiscoverOrgs = lazy(() => import('./pages/portal/DiscoverOrgs'))
 const BookmarkedEvents = lazy(() => import('./pages/portal/BookmarkedEvents'))
 const PortalContactPage = lazy(() => import('./pages/portal/ContactPage'))
 const ContactOrgAdminPage = lazy(() => import('./pages/portal/ContactOrgAdminPage'))
+const RegistrationHub = lazy(() => import('./pages/portal/RegistrationHub'))
 
 // Fan Pages - Lazy loaded
 const FanHome = lazy(() => import('./pages/fan/FanHome'))
@@ -500,13 +501,13 @@ function AppWithTheme() {
             <Route path="unauthorized" element={<Unauthorized />} />
 
             <Route path="role-selection" element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><RoleSelection /></ProtectedRoute>} />
-            {/* Join route is public - handles auth internally */}
-            <Route path="join" element={<JoinTeam />} />
             <Route path="complete-profile" element={<ProtectedRoute><CompleteProfile /></ProtectedRoute>} />
 
             {/* Protected Portal Routes - Workspace layout (header + sidebar + main) */}
             <Route element={<ProtectedRoute allowedRoles={['parent', 'athlete']}><PortalWorkspaceLayout /></ProtectedRoute>}>
               <Route path="dashboard" element={<Dashboard />} />
+              <Route path="join" element={<JoinTeam />} />
+              <Route path="registration-hub" element={<Suspense fallback={<AdminLoadingSpinner />}><RegistrationHub /></Suspense>} />
               <Route path="settings" element={<Settings />} />
               <Route path="athletes" element={<FeatureGateRoute routeKey="portal.athletes"><Athletes /></FeatureGateRoute>} />
               <Route path="athletes/new" element={<ProtectedRoute allowedRoles={['parent']}><Suspense fallback={<AdminLoadingSpinner />}><CreateAthletePortal /></Suspense></ProtectedRoute>} />

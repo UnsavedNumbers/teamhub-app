@@ -541,7 +541,7 @@ export default function FanHome() {
                           <button
                             key={follow.id}
                             className="fan-following-item"
-                            onClick={() => org?.slug && navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { slug: org.slug }))}
+                            onClick={() => org?.slug && navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { orgId: org.slug }))}
                           >
                             <div className="fan-following-avatar">
                               {org?.name?.[0] || 'O'}

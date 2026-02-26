@@ -209,6 +209,7 @@ export default function PortalSidebar({
         { path: '/portal/follows', label: t('nav.whoIFollow'), routeKey: 'portal.following', icon: Heart },
         { path: '/portal/discover', label: t('nav.browseOrgs'), routeKey: 'portal.discoverOrgs', icon: Search },
         { path: getLink('portal.join'), label: t('nav.joinTeam'), routeKey: 'portal.join', icon: UserPlus },
+        { path: getLink('portal.registrationHub'), label: 'Portal Registration Hub', routeKey: 'portal.registrationHub', icon: FileText },
         { path: getLink('portal.bookmarkedEvents'), label: t('nav.bookmarks'), routeKey: 'portal.bookmarkedEvents', icon: Bookmark },
       ],
     },

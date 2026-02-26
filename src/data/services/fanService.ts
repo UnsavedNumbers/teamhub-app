@@ -668,6 +668,7 @@ export interface SearchEntityResult {
   id: string
   name: string
   slug?: string
+  parent_org_id?: string
   location_city?: string
   location_state?: string
   parent_org_name?: string

@@ -10,7 +10,13 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { followOrg, unfollowOrg } from '../../data/services/fanService'
+import { followOrg, getAthleteProfile, unfollowOrg } from '../../data/services/fanService'
+import { USE_FAKE_DATA } from '../../data/config'
+import { fakeEvents } from '../../data/fake/fakeEvents'
+import { getMockGalleriesForOrg, getMockPhotosForGallery } from '../../data/fake/mockGalleries'
+import { getOrganizationById } from '../../data/fake/fakeOrganizations'
+import { getChildById } from '../../data/fake/fakeUsers'
+import { getActiveTeamMembershipsForChild, getTeamWithDetails } from '../../data/fake/fakeTeams'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import AthleteAvatar from '../../components/portal/AthleteAvatar'
@@ -37,7 +43,7 @@ interface AthleteProfile {
   org_name: string
   org_slug?: string
   sport: string
-  privacy_level: 'public' | 'private' | 'followers_only'
+  privacy_level: 'public' | 'private' | 'followers_only' | 'unlisted'
   is_following: boolean
   follower_count: number
 }
@@ -47,7 +53,8 @@ import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycl
 export default function FanAthleteProfile() {
   useDebugLifecycle('FanAthleteProfile')
   
-  const { id } = useParams<{ id: string }>()
+  const { id, athleteId } = useParams<{ id?: string; athleteId?: string }>()
+  const resolvedAthleteId = athleteId || id
   const navigate = useNavigate()
   
   const { context } = useUserContext()
@@ -58,43 +65,120 @@ export default function FanAthleteProfile() {
   const [followLoading, setFollowLoading] = useState(false)
   
   // Related content
-  const [upcomingEvents] = useState<any[]>([])
-  const [stats] = useState<any[]>([])
-  const [taggedPhotos] = useState<any[]>([])
-  const [achievements] = useState<any[]>([])
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([])
+  const [stats, setStats] = useState<any[]>([])
+  const [taggedPhotos, setTaggedPhotos] = useState<any[]>([])
+  const [achievements, setAchievements] = useState<any[]>([])
 
   useEffect(() => {
-    if (!id) {
+    if (!resolvedAthleteId) {
       setError('Athlete not found')
       setLoading(false)
       return
     }
 
     loadProfile()
-  }, [id])
+  }, [resolvedAthleteId])
 
   const loadProfile = async () => {
-    if (!id) return
+    if (!resolvedAthleteId) return
 
     setLoading(true)
     setError(null)
 
-    // In production: call getAthleteProfile(id)
-    // For now, simulate with placeholder
-    setTimeout(() => {
+    const { data, error: profileError } = await getAthleteProfile(resolvedAthleteId)
+
+    if (profileError || !data) {
       setProfile(null)
-      setError('Athlete not found')
+      setError(profileError?.message || 'Athlete not found')
       setLoading(false)
-    }, 500)
+      return
+    }
+
+    const child = USE_FAKE_DATA ? getChildById(resolvedAthleteId) : undefined
+    const membership = USE_FAKE_DATA ? getActiveTeamMembershipsForChild(resolvedAthleteId)[0] : undefined
+    const team = membership ? getTeamWithDetails(membership.team_id) : undefined
+    const org = team ? getOrganizationById(team.org_id) : undefined
+
+    const mappedProfile: AthleteProfile = {
+      id: data.id,
+      first_name: child?.first_name || data.name.split(' ')[0] || 'Athlete',
+      last_name: child?.last_name || data.name.split(' ').slice(1).join(' ') || '',
+      photo_url: child?.photo_url || data.logo_url,
+      cover_url: data.cover_url,
+      jersey_number: data.jersey_number || membership?.jersey_number || child?.jersey_number || undefined,
+      position: data.position || membership?.position || undefined,
+      height: child?.height_cm ? `${Math.round(child.height_cm / 2.54)} in` : undefined,
+      weight: child?.weight_kg ? `${Math.round(child.weight_kg * 2.20462)} lbs` : undefined,
+      graduation_year: child?.date_of_birth ? new Date(child.date_of_birth).getFullYear() + 18 : undefined,
+      bio: data.description || undefined,
+      team_id: team?.id || '',
+      team_name: team?.name || 'Team',
+      org_id: team?.org_id || '',
+      org_name: org?.name || data.parent_org_name || 'Organization',
+      org_slug: org?.slug,
+      sport: team?.sport?.name || data.position || 'Sports',
+      privacy_level: data.privacy_level === 'unlisted' ? 'followers_only' : data.privacy_level,
+      is_following: data.is_following,
+      follower_count: data.follower_count || 0,
+    }
+
+    setProfile(mappedProfile)
+    setIsFollowing(Boolean(data.is_following))
+
+    if (USE_FAKE_DATA && team) {
+      const now = Date.now()
+      const teamEvents = fakeEvents
+        .filter((event) => event.team_id === team.id)
+        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+
+      const nextEvents = teamEvents.filter((event) => new Date(event.start_time).getTime() >= now).slice(0, 8)
+      setUpcomingEvents(nextEvents)
+
+      const photos = getMockGalleriesForOrg(team.org_id)
+        .filter((gallery) => gallery.fans_can_see)
+        .flatMap((gallery) => getMockPhotosForGallery(gallery.id))
+        .slice(0, 12)
+      setTaggedPhotos(photos)
+
+      setStats([
+        { label: 'Games Played', value: String(Math.max(1, Math.min(24, teamEvents.length))) },
+        { label: 'Upcoming Events', value: String(nextEvents.length) },
+        { label: 'Team', value: team.name },
+      ])
+
+      const recentAchievements = teamEvents
+        .filter((event) => new Date(event.start_time).getTime() < now)
+        .slice(-3)
+        .reverse()
+        .map((event, index) => ({
+          icon: index === 0 ? 'emoji_events' : 'military_tech',
+          title: index === 0 ? 'Game Day Recognition' : 'Strong Performance',
+          description: `Participated in ${event.title}`,
+          date: event.start_time,
+        }))
+      setAchievements(recentAchievements)
+    } else {
+      setUpcomingEvents([])
+      setTaggedPhotos([])
+      setStats([])
+      setAchievements([])
+    }
+
+    setLoading(false)
   }
 
   const handleFollowToggle = async () => {
     if (!profile) return
+    if (!profile.org_id) {
+      showError('Unable to update follow status for this athlete')
+      return
+    }
     
     setFollowLoading(true)
     
     if (isFollowing) {
-      const { error } = await unfollowOrg(profile.id)
+      const { error } = await unfollowOrg(profile.org_id)
       if (error) {
         showError('Failed to unfollow')
       } else {
@@ -102,7 +186,7 @@ export default function FanAthleteProfile() {
         showSuccess(`Unfollowed ${profile.first_name} ${profile.last_name}`)
       }
     } else {
-      const { error } = await followOrg(profile.id)
+      const { error } = await followOrg(profile.org_id)
       if (error) {
         showError('Failed to follow')
       } else {
@@ -178,7 +262,7 @@ export default function FanAthleteProfile() {
             <div className="fan-athlete-team-info">
               <button 
                 className="fan-entity-parent"
-                onClick={() => navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { id: profile.team_id }))}
+                onClick={() => navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { teamId: profile.team_id }))}
               >
                 <span className="material-symbols-outlined">groups</span>
                 {profile.team_name}
@@ -186,7 +270,7 @@ export default function FanAthleteProfile() {
               <span className="fan-athlete-separator">•</span>
               <button 
                 className="fan-entity-parent"
-                onClick={() => profile.org_slug && navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { slug: profile.org_slug }))}
+                onClick={() => profile.org_slug && navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { orgId: profile.org_slug }))}
               >
                 {profile.org_name}
               </button>

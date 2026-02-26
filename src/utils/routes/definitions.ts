@@ -179,6 +179,12 @@ const portal = {
         icon: 'group_add',
         description: 'Enter an invite code',
     },
+    registrationHub: {
+        path: '/portal/registration-hub',
+        label: 'Registration Hub',
+        icon: 'app_registration',
+        description: 'Role-based registration actions',
+    },
 
     // Tryouts
     tryouts: {

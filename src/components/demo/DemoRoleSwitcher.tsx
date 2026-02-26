@@ -6,7 +6,6 @@ import { getDemoRoleLabel, type DemoSwitcherRole } from '@/demo/demoUsers'
 import { useDemoRoleSwitch } from '@/demo/useDemoRoleSwitch'
 
 const ROLE_ORDER: DemoSwitcherRole[] = [
-  'platform_admin',
   'org_admin',
   'coach',
   'staff',
@@ -46,11 +45,13 @@ export function DemoRoleSwitcher() {
   const { demoUsers, isSwitching, currentRole, switchDemoRole } = useDemoRoleSwitch()
 
   const [open, setOpen] = useState(false)
-  const [selectedRole, setSelectedRole] = useState<DemoSwitcherRole>(currentRole ?? 'guardian')
+  const [selectedRole, setSelectedRole] = useState<DemoSwitcherRole>(
+    currentRole && currentRole !== 'platform_admin' ? currentRole : 'org_admin',
+  )
 
   useEffect(() => {
     if (currentRole) {
-      setSelectedRole(currentRole)
+      setSelectedRole(currentRole !== 'platform_admin' ? currentRole : 'org_admin')
     }
   }, [currentRole])
 

@@ -103,6 +103,27 @@ export default function GuardianDashboardContent() {
     }
   }
 
+  const resolveNotificationHref = (notification: NotificationRecord): string => {
+    const isPaymentNotification = notification.action.startsWith('fee_') || notification.action.startsWith('payout_')
+    if (isPaymentNotification) {
+      if (notification.entity_id) {
+        return getLink('portal.paymentDetail', { id: notification.entity_id })
+      }
+      return getLink('portal.payments')
+    }
+
+    const fallbackHref =
+      notification.entity_type === 'event' || notification.entity_type === 'travel'
+        ? getLink('portal.calendar')
+        : notification.entity_type === 'announcement'
+          ? getLink('portal.announcements')
+          : notification.entity_type === 'message'
+            ? getLink('portal.messages')
+            : getLink('portal.dashboard')
+
+    return notification.link_url && notification.link_url.startsWith('/') ? notification.link_url : fallbackHref
+  }
+
   useEffect(() => {
     if (!isReady || !context?.orgId) return
     getPrimarySportForUser(context).then(setSport).catch(() => setSport(null))
@@ -257,16 +278,6 @@ export default function GuardianDashboardContent() {
 
   const notificationActivityItems: Array<{ item: RecentActivityItem; sortMs: number }> = (notifications ?? []).map((n) => {
     const state = getActionState(n)
-    const fallbackHref =
-      n.entity_type === 'event' || n.entity_type === 'travel'
-        ? getLink('portal.calendar')
-        : n.entity_type === 'fee'
-          ? getLink('portal.payments')
-          : n.entity_type === 'announcement'
-            ? getLink('portal.announcements')
-            : n.entity_type === 'message'
-              ? getLink('portal.messages')
-              : getLink('portal.dashboard')
 
     return {
       sortMs: new Date(n.created_at).getTime(),
@@ -274,7 +285,7 @@ export default function GuardianDashboardContent() {
         id: `notif-${n.id}`,
         title: n.title,
         subtitle: trimText(n.body, 90),
-        href: n.link_url && n.link_url.startsWith('/') ? n.link_url : fallbackHref,
+        href: resolveNotificationHref(n),
         icon: getNotificationIcon(n.action),
         timestamp: formatTimeAgo(new Date(n.created_at)),
         contextLabel: n.team_id ? teamNameById.get(n.team_id) : undefined,
@@ -350,7 +361,7 @@ export default function GuardianDashboardContent() {
         <div className="lg:col-span-2">
           <RecentActivityList
             title="Recent activity"
-            viewAllHref={getLink('portal.calendar')}
+            viewAllHref={getLink('portal.notifications')}
             items={activityItems}
             emptyMessage="You're all caught up! Check back soon for updates from your teams."
           />

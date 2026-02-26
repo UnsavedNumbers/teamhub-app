@@ -15,6 +15,13 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { USE_FAKE_DATA, DEMO_ORG_A_ID } from '@/data/config'
+import { getFollowedOrgs } from '@/data/services/fanService'
+import { getMockVideosForOrg } from '@/data/fake/mockVideos'
+import { getMockVideoAthleteLinks } from '@/data/fake/mockVideoInteractions'
+import { getOrganizationById } from '@/data/fake/fakeOrganizations'
+import { getChildById } from '@/data/fake/fakeUsers'
+import { getTeamById } from '@/data/fake/fakeTeams'
 import { getLink, RouteKeys } from '@/utils/routes'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import { showError } from '@/utils/toast'
@@ -49,6 +56,8 @@ interface FanVideoGroup {
   org_name: string
   videos: FanVideo[]
 }
+
+type TaggedAthlete = NonNullable<FanVideo['tagged_athletes']>[number]
 
 const PAGE_SIZE = 24
 
@@ -97,6 +106,83 @@ export default function FanVideos() {
     }
 
     try {
+      if (USE_FAKE_DATA) {
+        const followsResult = await getFollowedOrgs()
+        const followedOrgIds = (followsResult.data || []).map((follow) => follow.org_id)
+        const scopedOrgIds = selectedOrgId
+          ? [selectedOrgId]
+          : (followedOrgIds.length > 0 ? followedOrgIds : [DEMO_ORG_A_ID])
+
+        let scopedVideos: FanVideo[] = scopedOrgIds
+          .flatMap((orgId) => getMockVideosForOrg(orgId))
+          .filter((video) => video.status === 'ready')
+          .map((video) => ({
+            id: video.id,
+            title: video.title,
+            description: video.description || null,
+            thumbnail_url: video.thumbnail_url || null,
+            duration_seconds: video.duration_seconds || null,
+            created_at: video.created_at,
+            org_id: video.org_id,
+            team_id: video.team_id || null,
+            category: video.category || null,
+            view_count: video.view_count || 0,
+            mux_playback_id: video.mux_playback_id || null,
+            org_name: getOrganizationById(video.org_id)?.name || 'Organization',
+            team_name: video.team_id ? getTeamById(video.team_id)?.name : undefined,
+            tagged_athletes: getMockVideoAthleteLinks(video.id).reduce<TaggedAthlete[]>(
+              (acc, link) => {
+                const child = getChildById(link.athlete_id)
+                if (!child) return acc
+                acc.push({
+                  id: child.id,
+                  name: `${child.first_name} ${child.last_name}`.trim(),
+                  ...(child.photo_url ? { avatar_url: child.photo_url } : {}),
+                })
+                return acc
+              },
+              [],
+            ),
+          }))
+
+        if (searchQuery) {
+          const search = searchQuery.toLowerCase()
+          scopedVideos = scopedVideos.filter((video) =>
+            video.title.toLowerCase().includes(search) ||
+            (video.description || '').toLowerCase().includes(search)
+          )
+        }
+
+        scopedVideos.sort((a, b) => {
+          if (sortOrder === 'popular') return b.view_count - a.view_count
+          if (sortOrder === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        })
+
+        const startIndex = reset ? 0 : videos.length
+        const nextSlice = scopedVideos.slice(startIndex, startIndex + PAGE_SIZE)
+        const mergedVideos = reset ? nextSlice : [...videos, ...nextSlice]
+
+        setVideos(mergedVideos)
+
+        const groupMap = new Map<string, FanVideoGroup>()
+        mergedVideos.forEach((video) => {
+          if (!groupMap.has(video.org_id)) {
+            groupMap.set(video.org_id, {
+              org_id: video.org_id,
+              org_name: video.org_name || 'Organization',
+              videos: [],
+            })
+          }
+          groupMap.get(video.org_id)?.videos.push(video)
+        })
+        setGrouped(Array.from(groupMap.values()))
+
+        setCursor(nextSlice[nextSlice.length - 1]?.created_at || null)
+        setHasMore(startIndex + nextSlice.length < scopedVideos.length)
+        return
+      }
+
       // Get fan's followed entities
       const { data: follows, error: followsError } = await (supabase as any)
         .from('fan_follows')
@@ -217,10 +303,12 @@ export default function FanVideos() {
               return {
                 id,
                 name: `${videoAthlete.athletes?.profiles?.first_name || ''} ${videoAthlete.athletes?.profiles?.last_name || ''}`.trim(),
-                avatar_url: videoAthlete.athletes?.profiles?.avatar_url,
+                ...(videoAthlete.athletes?.profiles?.avatar_url
+                  ? { avatar_url: videoAthlete.athletes.profiles.avatar_url }
+                  : {}),
               }
             })
-            .filter((a): a is { id: string; name: string; avatar_url: string | undefined } => Boolean(a)) || [],
+            .filter((a): a is { id: string; name: string; avatar_url?: string } => Boolean(a)) || [],
       }))
 
       if (reset) {

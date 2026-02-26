@@ -7,6 +7,8 @@
 
 import { supabase } from '../lib/supabase'
 import { CACHE_TTL } from '../constants/api'
+import { USE_FAKE_DATA } from '../data/config'
+import { getOrganizationBySlug as getFakeOrganizationBySlug } from '../data/fake/fakeOrganizations'
 
 export interface OrgContext {
   id: string
@@ -111,6 +113,33 @@ export async function resolveOrgFromSlug(slug: string): Promise<OrgResolutionRes
       org: cached.org,
       redirectToSlug: cached.org.slug === normalizedSlug ? null : cached.org.slug,
       error: null,
+    }
+  }
+
+  if (USE_FAKE_DATA) {
+    const fakeOrg = getFakeOrganizationBySlug(normalizedSlug)
+
+    if (!fakeOrg) {
+      return { org: null, redirectToSlug: null, error: 'not_found' }
+    }
+
+    const status: OrgContext['status'] = fakeOrg.status === 'suspended' ? 'suspended' : 'active'
+    const org: OrgContext = {
+      id: fakeOrg.id,
+      slug: fakeOrg.slug,
+      name: fakeOrg.name,
+      status,
+    }
+
+    slugCache.set(normalizedSlug, {
+      org,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    })
+
+    return {
+      org: status === 'suspended' ? null : org,
+      redirectToSlug: null,
+      error: status === 'suspended' ? 'suspended' : null,
     }
   }
 

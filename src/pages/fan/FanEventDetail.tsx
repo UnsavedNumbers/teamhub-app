@@ -11,6 +11,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { USE_FAKE_DATA } from '../../data/config'
+import { fakeEvents } from '../../data/fake/fakeEvents'
+import { getOrganizationById } from '../../data/fake/fakeOrganizations'
+import { getSeasonById, getTeamById } from '../../data/fake/fakeTeams'
+import { getFakeTicketedEventByCalendarEventId, getFakeTicketTypesForEvent, getFakeTicketedEventById } from '../../data/fake/fakeTicketingEvents'
+import { followOrg, getBookmarkedEvents, getFollowedOrgs } from '../../data/services/fanService'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import BookmarkButton from '../../components/fan/BookmarkButton'
 import NearbyAmenities from '../../components/portal/NearbyAmenities'
@@ -67,6 +73,71 @@ interface EventDetail {
   // Relationships
   team_name: string | null
   season_name: string | null
+}
+
+function buildFakeEventDetail(eventId: string): EventDetail | null {
+  const calendarEvent = fakeEvents.find((entry) => entry.id === eventId)
+  const ticketedFromCalendar = calendarEvent
+    ? getFakeTicketedEventByCalendarEventId(calendarEvent.id)
+    : null
+  const standaloneTicketedEvent = getFakeTicketedEventById(eventId)
+  const ticketedEvent = ticketedFromCalendar || standaloneTicketedEvent
+
+  if (!calendarEvent && !ticketedEvent) return null
+
+  const teamId = calendarEvent?.team_id || ticketedEvent?.team_id || null
+  const team = teamId ? getTeamById(teamId) : null
+  const orgId = calendarEvent?.team?.org_id || ticketedEvent?.org_id || team?.org_id || ''
+  const org = orgId ? getOrganizationById(orgId) : undefined
+  const season = calendarEvent?.season_id ? getSeasonById(calendarEvent.season_id) : null
+
+  const ticketTypes = ticketedEvent ? getFakeTicketTypesForEvent(ticketedEvent.id, ticketedEvent.org_id) : []
+  const ticketPrices = ticketTypes.map((type) => type.price_cents / 100)
+
+  const minPrice = ticketPrices.length > 0 ? Math.min(...ticketPrices) : null
+  const maxPrice = ticketPrices.length > 0 ? Math.max(...ticketPrices) : null
+
+  return {
+    id: calendarEvent?.id || ticketedEvent?.id || eventId,
+    title: calendarEvent?.title || ticketedEvent?.title || 'Event',
+    description: ticketedEvent?.description || calendarEvent?.notes || null,
+    start_time: calendarEvent?.start_time || ticketedEvent?.starts_at || new Date().toISOString(),
+    end_time: calendarEvent?.end_time || ticketedEvent?.ends_at || new Date().toISOString(),
+    arrival_time: calendarEvent?.arrival_time || null,
+    timezone: calendarEvent?.timezone || ticketedEvent?.timezone || org?.timezone || 'America/New_York',
+    location: calendarEvent?.location || ticketedEvent?.venue_name || null,
+    type: String(calendarEvent?.type || ticketedEvent?.event_type || 'event'),
+    is_cancelled: calendarEvent?.is_cancelled || false,
+    visibility: (calendarEvent as any)?.visibility || 'public',
+    weather_dependent: Boolean(calendarEvent?.weather_dependent),
+    external_link: calendarEvent?.external_link || null,
+    notes: calendarEvent?.notes || null,
+    uniform_notes: calendarEvent?.uniform_notes || null,
+    equipment_notes: calendarEvent?.equipment_notes || null,
+    org_id: orgId,
+    org_name: org?.name || 'Organization',
+    org_slug: org?.slug || '',
+    org_logo_url: org?.logo_url || null,
+    org_public_description: org?.website || null,
+    venue_name: ticketedEvent?.venue_name || calendarEvent?.location || null,
+    venue_address: null,
+    venue_city: org?.city || null,
+    venue_state: org?.state || null,
+    venue_zip: org?.postal_code || null,
+    place_id: null,
+    latitude: null,
+    longitude: null,
+    is_ticketed: Boolean(ticketedEvent),
+    ticket_event_id: ticketedEvent?.id || null,
+    ticket_price_min: minPrice,
+    ticket_price_max: maxPrice,
+    tickets_available: ticketedEvent ? ticketedEvent.status === 'published' : false,
+    weather_temp: null,
+    weather_condition: null,
+    weather_icon: null,
+    team_name: calendarEvent?.team?.name || team?.name || null,
+    season_name: calendarEvent?.season?.name || season?.name || null,
+  }
 }
 
 // Weather icon mapping
@@ -147,6 +218,23 @@ export default function FanEventDetail() {
     setError(null)
 
     try {
+      if (USE_FAKE_DATA) {
+        const fakeEvent = buildFakeEventDetail(id)
+        if (!fakeEvent) {
+          setError('Event not found')
+          setLoading(false)
+          return
+        }
+
+        setEvent(fakeEvent)
+        if (fakeEvent.org_id) {
+          checkFollowStatus(fakeEvent.org_id)
+        }
+        checkBookmarkStatus(id)
+        setLoading(false)
+        return
+      }
+
       // First check if user is authenticated
       const { data: { user } } = await supabase.auth.getUser()
       
@@ -271,6 +359,12 @@ export default function FanEventDetail() {
 
   const checkFollowStatus = async (orgId: string) => {
     try {
+      if (USE_FAKE_DATA) {
+        const { data } = await getFollowedOrgs()
+        setIsFollowingOrg((data || []).some((follow) => follow.org_id === orgId))
+        return
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
@@ -289,6 +383,12 @@ export default function FanEventDetail() {
 
   const checkBookmarkStatus = async (eventIdParam: string) => {
     try {
+      if (USE_FAKE_DATA) {
+        const { data } = await getBookmarkedEvents()
+        setIsBookmarked((data || []).some((bookmark) => bookmark.event_id === eventIdParam))
+        return
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
@@ -790,14 +890,7 @@ export default function FanEventDetail() {
                 className="fan-btn fan-btn-primary"
                 onClick={async () => {
                   try {
-                    const { data: { user } } = await supabase.auth.getUser()
-                    if (!user) {
-                      showError('Please sign in to follow organizations')
-                      return
-                    }
-                    const { error } = await supabase
-                      .from('fan_org_follows')
-                      .insert({ user_id: user.id, org_id: event.org_id })
+                    const { error } = await followOrg(event.org_id)
                     if (error) {
                       showError('Failed to follow organization')
                     } else {
