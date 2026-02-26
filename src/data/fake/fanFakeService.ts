@@ -19,7 +19,7 @@ import { getFakeTicketedEventById, getFakeTicketingEvents } from './fakeTicketin
 import { getOrganizationById, getOrganizationBySlug, fakeOrganizations } from './fakeOrganizations'
 import { getTeamWithDetails, getTeamById, getSportById, fakeTeams, fakeTeamMembers } from './fakeTeams'
 import { getChildById } from './fakeUsers'
-import { loadBookmarks, saveBookmarks, loadFollows, saveFollows } from './demoStorage'
+import { loadBookmarks, saveBookmarks } from './demoStorage'
 import { DEMO_ORG_A_ID, DEMO_TRANSACTION_DELAY_MS } from '../config'
 import type { SearchEntityResult } from '../services/fanService'
 
@@ -51,6 +51,38 @@ function getDefaultBookmarks(userId: string): FanEventBookmark[] {
     }))
 }
 
+// Keep fan follows in memory so demo interactions feel real during a session
+// but reset on browser refresh back to seeded demo data.
+const runtimeFollowsByUser = new Map<string, FanOrgFollow[]>()
+
+function getSeededFollows(userId: string): FanOrgFollow[] {
+    return fakeOrganizations.slice(0, 2).map((org, index) => ({
+        id: `follow-demo-${index}`,
+        user_id: userId,
+        org_id: org.id,
+        source: 'manual' as const,
+        created_at: new Date().toISOString(),
+        org: {
+            id: org.id,
+            name: org.name,
+            slug: org.slug,
+        },
+    }))
+}
+
+function getRuntimeFollows(userId: string): FanOrgFollow[] {
+    const existing = runtimeFollowsByUser.get(userId)
+    if (existing) return [...existing]
+
+    const seeded = getSeededFollows(userId)
+    runtimeFollowsByUser.set(userId, seeded)
+    return [...seeded]
+}
+
+function setRuntimeFollows(userId: string, follows: FanOrgFollow[]): void {
+    runtimeFollowsByUser.set(userId, [...follows])
+}
+
 // ============================================
 // FAN FOLLOWS (persisted)
 // ============================================
@@ -63,7 +95,7 @@ export async function followOrg(
         const userId = await getCurrentUserId()
         if (!userId) return { data: false, error: new Error('Not authenticated') }
 
-        const follows = loadFollows(userId)
+        const follows = getRuntimeFollows(userId)
         const exists = follows.find((f) => f.org_id === orgId)
         if (exists) return { data: true, error: null }
 
@@ -80,7 +112,7 @@ export async function followOrg(
                 slug: org?.slug ?? 'demo-org',
             },
         })
-        saveFollows(userId, follows)
+        setRuntimeFollows(userId, follows)
         return { data: true, error: null }
     } catch (err) {
         return {
@@ -95,8 +127,8 @@ export async function unfollowOrg(orgId: string): Promise<{ data: boolean; error
         const userId = await getCurrentUserId()
         if (!userId) return { data: false, error: new Error('Not authenticated') }
 
-        const follows = loadFollows(userId).filter((f) => f.org_id !== orgId)
-        saveFollows(userId, follows)
+        const follows = getRuntimeFollows(userId).filter((f) => f.org_id !== orgId)
+        setRuntimeFollows(userId, follows)
         return { data: true, error: null }
     } catch (err) {
         return {
@@ -111,26 +143,7 @@ export async function getFollowedOrgs(): Promise<{ data: FanOrgFollow[]; error: 
         const userId = await getCurrentUserId()
         if (!userId) return { data: [], error: null }
 
-        let follows = loadFollows(userId)
-        
-        // Initialize with demo data if empty (for demo mode)
-        if (follows.length === 0) {
-            // Add a few demo organizations to follow
-            const demoOrgs = fakeOrganizations.slice(0, 2) // Follow first 2 demo orgs
-            follows = demoOrgs.map((org, index) => ({
-                id: `follow-demo-${index}`,
-                user_id: userId,
-                org_id: org.id,
-                source: 'manual' as const,
-                created_at: new Date().toISOString(),
-                org: {
-                    id: org.id,
-                    name: org.name,
-                    slug: org.slug,
-                },
-            }))
-            saveFollows(userId, follows)
-        }
+        const follows = getRuntimeFollows(userId)
         
         const enriched: FanOrgFollow[] = follows.map((f) => {
             const org = getOrganizationById(f.org_id)
@@ -425,7 +438,7 @@ export async function getUserPurchases(): Promise<{ data: Purchase[]; error: Err
 export async function getOrgProfile(orgIdOrSlug: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
     try {
         const userId = await getCurrentUserId()
-        const follows = userId ? loadFollows(userId) : []
+        const follows = userId ? getRuntimeFollows(userId) : []
 
         let org = getOrganizationById(orgIdOrSlug)
         if (!org) org = getOrganizationBySlug(orgIdOrSlug)
@@ -468,7 +481,7 @@ export async function getOrgProfileBySlug(slug: string): Promise<{ data: EntityP
 export async function getTeamProfile(teamId: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
     try {
         const userId = await getCurrentUserId()
-        const follows = userId ? loadFollows(userId) : []
+        const follows = userId ? getRuntimeFollows(userId) : []
 
         const teamWithDetails = getTeamWithDetails(teamId)
         if (!teamWithDetails) return { data: null, error: null }
@@ -537,7 +550,7 @@ export async function searchEntities(
 ): Promise<{ data: SearchEntityResult[]; error: Error | null }> {
     try {
         const userId = await getCurrentUserId()
-        const follows = userId ? loadFollows(userId) : []
+        const follows = userId ? getRuntimeFollows(userId) : []
         const queryLower = query.toLowerCase().trim()
         const results: SearchEntityResult[] = []
 

@@ -27,10 +27,11 @@ import type {
   StaffLinkExchangeResponse,
 } from '../../types/ticketing'
 import { normalizeSupabaseResponse, createServiceResponse } from './responseHelpers'
-import { assertNotDemoMode } from '@/utils/demoMode'
+import { assertNotDemoMode, isInDemoSession } from '@/utils/demoMode'
 import { classifySupabaseError, ValidationError } from '@/utils/supabaseErrorHandler'
 import { getLink, RouteKeys } from '@/utils/routes'
 import { debug } from '../../lib/debug'
+import { resolveDemoUserId } from '../fake/userContext'
 import {
   createFakeCheckoutSession,
   getFakeSeatMapWithSeats,
@@ -53,6 +54,23 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
 const FUNCTIONS_URL = `${SUPABASE_URL.replace('/rest/v1', '')}/functions/v1`
 const FAN_VISIBLE_EVENT_OR_FILTER = 'visibility.eq.public,visibility.is.null'
 const SEAT_MAP_CHART_BUCKET = 'ticketing-seat-maps'
+
+async function shouldUseFakeTicketReads(): Promise<boolean> {
+  if (USE_FAKE_DATA || isInDemoSession()) return true
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    const email = session?.user?.email ?? null
+    const metadata = (session?.user?.user_metadata ?? {}) as Record<string, unknown>
+    if (resolveDemoUserId(email)) return true
+    if (metadata.is_demo_session === true) return true
+    if (typeof metadata.demo_code === 'string' && metadata.demo_code.trim().length > 0) return true
+  } catch {
+    // Fall through to false.
+  }
+
+  return false
+}
 
 function isFanVisibleEvent(
   event:
@@ -2211,7 +2229,7 @@ export async function getTicketOrderByIdAdmin(orderId: string) {
 // (stripe_connect_account_id, platform_fee_cents, org_revenue_cents, stripe_charge_id, stripe_application_fee_id, processed_at)
 
 export async function getMyTicketOrders() {
-  if (USE_FAKE_DATA) {
+  if (await shouldUseFakeTicketReads()) {
     const { data: { session } } = await supabase.auth.getSession()
     const userId = session?.user?.id ?? null
     return createServiceResponse<TicketOrder[]>(getFakeMyTicketOrders(userId), null)
@@ -2246,7 +2264,7 @@ export async function getMyTicketOrders() {
 // ============================================================================
 
 export async function getTicketsForOrder(orderId: string) {
-  if (USE_FAKE_DATA) {
+  if (await shouldUseFakeTicketReads()) {
     return getFakeTicketsForOrder(orderId)
   }
 

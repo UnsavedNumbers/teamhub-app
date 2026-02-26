@@ -44,16 +44,10 @@ export function DemoRoleSwitcher() {
   const { profile } = useAuth()
   const { demoUsers, isSwitching, currentRole, switchDemoRole } = useDemoRoleSwitch()
 
-  const [open, setOpen] = useState(false)
-  const [selectedRole, setSelectedRole] = useState<DemoSwitcherRole>(
-    currentRole && currentRole !== 'platform_admin' ? currentRole : 'org_admin',
-  )
+  const currentNonPlatformRole = currentRole && currentRole !== 'platform_admin' ? currentRole : null
 
-  useEffect(() => {
-    if (currentRole) {
-      setSelectedRole(currentRole !== 'platform_admin' ? currentRole : 'org_admin')
-    }
-  }, [currentRole])
+  const [open, setOpen] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<DemoSwitcherRole>('org_admin')
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -78,6 +72,27 @@ export function DemoRoleSwitcher() {
     return map
   }, [demoUsers])
 
+  const chipRoles = useMemo(
+    () => ROLE_ORDER.filter((role) => role !== currentNonPlatformRole),
+    [currentNonPlatformRole],
+  )
+
+  const availableRoles = useMemo(
+    () => chipRoles.filter((role) => usersByRole.get(role)?.seeded),
+    [chipRoles, usersByRole],
+  )
+
+  useEffect(() => {
+    if (availableRoles.length === 0) {
+      setSelectedRole(currentNonPlatformRole ?? 'org_admin')
+      return
+    }
+
+    setSelectedRole((previous) => (
+      availableRoles.includes(previous) ? previous : availableRoles[0]
+    ))
+  }, [availableRoles, currentNonPlatformRole])
+
   if (!shouldShowDemoRoleSwitcher(location.pathname, Boolean(profile?.id))) {
     return null
   }
@@ -85,8 +100,10 @@ export function DemoRoleSwitcher() {
   const pathWithSearchAndHash = `${location.pathname}${location.search}${location.hash}`
   const currentRoleLabel = getDemoRoleLabel(currentRole ?? 'guardian')
   const currentEmail = profile?.email ?? 'No active user'
+  const hasSwitchTarget = availableRoles.length > 0
 
   const onSwitch = async () => {
+    if (!hasSwitchTarget || selectedRole === currentNonPlatformRole) return
     await switchDemoRole(selectedRole, pathWithSearchAndHash)
     setOpen(false)
   }
@@ -130,32 +147,9 @@ export function DemoRoleSwitcher() {
             </div>
 
             <div>
-              <label htmlFor="demo-role-select" className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                Switch role
-              </label>
-              <select
-                id="demo-role-select"
-                className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-2 text-sm"
-                value={selectedRole}
-                onChange={(event) => setSelectedRole(event.target.value as DemoSwitcherRole)}
-                disabled={isSwitching}
-              >
-                {ROLE_ORDER.map((role) => {
-                  const roleUser = usersByRole.get(role)
-                  const disabled = !roleUser?.seeded
-                  return (
-                    <option key={role} value={role} disabled={disabled} title={disabled ? 'Not seeded' : undefined}>
-                      {getDemoRoleLabel(role)}{disabled ? ' (Not seeded)' : ''}
-                    </option>
-                  )
-                })}
-              </select>
-            </div>
-
-            <div>
               <p className="text-[11px] uppercase tracking-wide text-slate-500 mb-2">View as</p>
               <div className="flex flex-wrap gap-2">
-                {ROLE_ORDER.map((role) => {
+                {chipRoles.map((role) => {
                   const roleUser = usersByRole.get(role)
                   const disabled = !roleUser?.seeded
                   const active = selectedRole === role
@@ -177,16 +171,19 @@ export function DemoRoleSwitcher() {
                   )
                 })}
               </div>
+              {!hasSwitchTarget && (
+                <p className="mt-2 text-xs text-slate-500">No alternative demo roles are seeded.</p>
+              )}
             </div>
 
             <button
               type="button"
               onClick={onSwitch}
-              disabled={isSwitching}
+              disabled={isSwitching || !hasSwitchTarget || selectedRole === currentNonPlatformRole}
               className="w-full inline-flex justify-center items-center gap-2 rounded-md bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white text-sm font-medium px-3 py-2"
             >
               <span className="material-symbols-rounded text-base">switch_account</span>
-              {isSwitching ? 'Switching…' : `Switch to ${getDemoRoleLabel(selectedRole)}`}
+              {isSwitching ? 'Switching...' : `Switch to ${getDemoRoleLabel(selectedRole)}`}
             </button>
           </div>
         </div>

@@ -6,7 +6,7 @@ import { useOrganization } from '@/contexts/OrganizationContext'
 import { USE_FAKE_DATA } from '@/data/config'
 import { showError, showWarning } from '@/utils/toast'
 import { canAccessPath, getHomeRouteForRole, type PathAccessContext } from '@/lib/routeGuard'
-import { getDemoRoleLabel, getDemoUser, listDemoUsers, type DemoSwitcherRole } from './demoUsers'
+import { getDemoRoleLabel, getDemoUser, getDemoUserByEmail, listDemoUsers, type DemoSwitcherRole } from './demoUsers'
 
 const DEMO_RETURN_TO_KEY = 'DEMO_RETURN_TO'
 const DEMO_RETURN_TS_KEY = 'DEMO_RETURN_TS'
@@ -57,11 +57,14 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-function inferCurrentDemoRole(profile: ReturnType<typeof useAuth>['profile']): DemoSwitcherRole | null {
-  if (!profile) return null
-  if (profile.isPlatformAdmin) return 'platform_admin'
+function inferCurrentDemoRole(
+  profile: ReturnType<typeof useAuth>['profile'],
+  user: ReturnType<typeof useAuth>['user'],
+): DemoSwitcherRole | null {
+  if (!profile && !user) return null
+  if (profile?.isPlatformAdmin) return 'platform_admin'
 
-  const roles = profile.organizations.flatMap((org) => org.roles)
+  const roles = profile?.organizations.flatMap((org) => org.roles) ?? []
 
   if (roles.includes('org_admin')) return 'org_admin'
   if (roles.includes('coach')) return 'coach'
@@ -70,6 +73,19 @@ function inferCurrentDemoRole(profile: ReturnType<typeof useAuth>['profile']): D
   if (roles.includes('parent')) return 'guardian'
   if (roles.includes('athlete')) return 'athlete'
   if (roles.includes('fan')) return 'fan'
+
+  const signupMode = (user?.user_metadata as { signup_mode?: string } | undefined)?.signup_mode
+  if (signupMode === 'fan') return 'fan'
+
+  const email = profile?.email ?? user?.email ?? null
+  if (email) {
+    const mappedDemoUser = getDemoUserByEmail(email)
+    if (mappedDemoUser) {
+      return mappedDemoUser.role
+    }
+
+    if (email.toLowerCase().includes('fan')) return 'fan'
+  }
 
   return 'guardian'
 }
@@ -303,7 +319,7 @@ export function useDemoRoleSwitch() {
       while (nowTs() - started < AUTH_SETTLE_TIMEOUT_MS) {
         const snapshot = snapshotRef.current
         const activeEmail = snapshot.profile?.email?.trim().toLowerCase() ?? snapshot.user?.email?.trim().toLowerCase() ?? null
-        const activeRole = inferCurrentDemoRole(snapshot.profile)
+        const activeRole = inferCurrentDemoRole(snapshot.profile, snapshot.user)
 
         if (!snapshot.loading && snapshot.user && snapshot.profile && activeEmail === normalizedTargetEmail && activeRole === targetRole) {
           return true
@@ -329,7 +345,7 @@ export function useDemoRoleSwitch() {
       }
 
       const snapshot = snapshotRef.current
-      const previousRole = inferCurrentDemoRole(snapshot.profile)
+      const previousRole = inferCurrentDemoRole(snapshot.profile, snapshot.user)
       const target = getDemoUser(targetRole, snapshot.currentOrganization?.id)
 
       if (!target || !target.seeded || !target.email) {
@@ -385,7 +401,7 @@ export function useDemoRoleSwitch() {
           setCurrentOrganization(null)
         }
 
-        const activeRole = inferCurrentDemoRole(postAuth.profile) ?? targetRole
+        const activeRole = inferCurrentDemoRole(postAuth.profile, postAuth.user) ?? targetRole
 
         const context: PathAccessContext = {
           isAuthenticated: Boolean(postAuth.user),
@@ -433,7 +449,7 @@ export function useDemoRoleSwitch() {
   return {
     demoUsers,
     isSwitching,
-    currentRole: inferCurrentDemoRole(profile),
+    currentRole: inferCurrentDemoRole(profile, user),
     switchDemoRole,
   }
 }

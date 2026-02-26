@@ -31,6 +31,8 @@ interface FanTicket {
   event_name: string
   event_location: string | null
   venue_name?: string
+  venue_city?: string
+  venue_state?: string
   order_confirmation_code: string | null
   ticket_type_name: string
   seat_info?: string
@@ -46,10 +48,69 @@ interface FanTicket {
   status: TicketStatus
 }
 
+type FanTranslate = ReturnType<typeof useT>
+
 // QR code refresh interval (30 seconds)
 const QR_REFRESH_INTERVAL = 30000
 
 const generateQRPayload = (qrCodeData: string, _timestamp: number): string => qrCodeData
+
+const isActiveUpcomingTicket = (ticket: FanTicket, now: Date): boolean => {
+  const eventDate = new Date(ticket.event_start_time)
+  return eventDate >= now && ticket.status === 'valid'
+}
+
+const isPastTicket = (ticket: FanTicket, now: Date): boolean => {
+  const eventDate = new Date(ticket.event_start_time)
+  return eventDate < now
+}
+
+const mapRawTicketToFanTicket = (rawTicket: any, t: FanTranslate): FanTicket => {
+  const event = rawTicket.ticketed_events
+  const ticketType = rawTicket.ticket_types
+  const eventLocation = [event?.venue_name, event?.venue_city, event?.venue_state]
+    .filter(Boolean)
+    .join(', ')
+
+  const now = new Date()
+  const eventDate = new Date(event?.starts_at || '')
+  const usedAt = rawTicket.used_at ? new Date(rawTicket.used_at) : null
+  const hasValidUsedAt = usedAt !== null && !Number.isNaN(usedAt.getTime()) && usedAt <= now
+  const isUsed = hasValidUsedAt && eventDate <= now
+  const isPast = eventDate < now
+
+  let status: TicketStatus = 'valid'
+  if (isUsed) status = 'used'
+  else if (isPast) status = 'expired'
+
+  return {
+    ticket_id: rawTicket.id,
+    event_id: event?.id || '',
+    event_start_time: event?.starts_at || '',
+    event_name: event?.title || 'Event',
+    event_location: eventLocation || null,
+    venue_name: event?.venue_name || undefined,
+    venue_city: event?.venue_city || undefined,
+    venue_state: event?.venue_state || undefined,
+    order_confirmation_code: rawTicket.entry_code || null,
+    ticket_type_name: ticketType?.name || 'General Admission',
+    seat_info: rawTicket.seat_info
+      ? t('ticketing.reservedSeating.seatDisplay', {
+        section: rawTicket.seat_info.section,
+        row: rawTicket.seat_info.row,
+        seat: rawTicket.seat_info.seat,
+      })
+      : undefined,
+    seat_section: rawTicket.seat_info?.section,
+    seat_row: rawTicket.seat_info?.row,
+    seat_number: rawTicket.seat_info?.seat,
+    seat_attributes: rawTicket.seat_info?.attributes,
+    scanned_at: rawTicket.used_at || null,
+    qr_code_data: rawTicket.entry_code || '',
+    purchase_date: rawTicket.created_at,
+    status,
+  }
+}
 
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 
@@ -94,48 +155,7 @@ export default function FanTickets() {
       const ticketsByOrder = await Promise.all(orders.map((order) => getTicketsForOrder(order.id)))
       const flatTickets = ticketsByOrder.flat()
 
-      const mappedTickets: FanTicket[] = flatTickets.map((ticket: any) => {
-        const event = ticket.ticketed_events
-        const ticketType = ticket.ticket_types
-        const eventLocation = [event?.venue_name, event?.venue_city, event?.venue_state]
-          .filter(Boolean)
-          .join(', ')
-
-        const now = new Date()
-        const eventDate = new Date(event?.starts_at || '')
-        const isUsed = !!ticket.used_at
-        const isPast = eventDate < now
-        
-        let status: TicketStatus = 'valid'
-        if (isUsed) status = 'used'
-        else if (isPast) status = 'expired'
-
-        return {
-          ticket_id: ticket.id,
-          event_id: event?.id || '',
-          event_start_time: event?.starts_at || '',
-          event_name: event?.title || 'Event',
-          event_location: eventLocation || null,
-          venue_name: event?.venue_name || undefined,
-          order_confirmation_code: ticket.entry_code || null,
-          ticket_type_name: ticketType?.name || 'General Admission',
-          seat_info: ticket.seat_info
-            ? t('ticketing.reservedSeating.seatDisplay', {
-              section: ticket.seat_info.section,
-              row: ticket.seat_info.row,
-              seat: ticket.seat_info.seat,
-            })
-            : undefined,
-          seat_section: ticket.seat_info?.section,
-          seat_row: ticket.seat_info?.row,
-          seat_number: ticket.seat_info?.seat,
-          seat_attributes: ticket.seat_info?.attributes,
-          scanned_at: ticket.used_at || null,
-          qr_code_data: ticket.entry_code || '',
-          purchase_date: ticket.created_at,
-          status,
-        }
-      })
+      const mappedTickets: FanTicket[] = flatTickets.map((ticket: any) => mapRawTicketToFanTicket(ticket, t))
 
       setTickets(mappedTickets)
     } catch (err) {
@@ -147,13 +167,14 @@ export default function FanTickets() {
 
   // Filter tickets by tab and search
   const filteredTickets = tickets.filter(ticket => {
-    const eventDate = new Date(ticket.event_start_time)
     const now = new Date()
-    
+    const isActive = isActiveUpcomingTicket(ticket, now)
+    const isPast = isPastTicket(ticket, now)
+
     // Tab filter
-    const matchesTab = 
-      (activeTab === 'upcoming' && eventDate >= now) ||
-      (activeTab === 'past' && eventDate < now)
+    const matchesTab =
+      (activeTab === 'upcoming' && isActive) ||
+      (activeTab === 'past' && isPast)
     
     // Search filter
     const matchesSearch = searchQuery === '' || 
@@ -193,9 +214,7 @@ export default function FanTickets() {
   }
 
   // Count tickets for wallet display
-  const totalActiveTickets = tickets.filter(t => 
-    new Date(t.event_start_time) >= new Date() && t.status === 'valid'
-  ).length
+  const totalActiveTickets = tickets.filter(t => isActiveUpcomingTicket(t, new Date())).length
 
   if (loading) {
     return (
@@ -334,99 +353,56 @@ interface TicketCardProps {
 }
 
 function TicketCard({ ticket, onClick }: TicketCardProps) {
-  const [showQR, setShowQR] = useState(false)
-  const [qrTimestamp, setQrTimestamp] = useState(Date.now())
-  const [refreshCountdown, setRefreshCountdown] = useState(30)
-  const qrIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  const countdownRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Dynamic QR code refresh
-  useEffect(() => {
-    if (showQR && ticket.status === 'valid') {
-      // Start QR refresh interval
-      qrIntervalRef.current = setInterval(() => {
-        setQrTimestamp(Date.now())
-        setRefreshCountdown(30)
-      }, QR_REFRESH_INTERVAL)
-
-      // Countdown timer
-      countdownRef.current = setInterval(() => {
-        setRefreshCountdown(prev => Math.max(0, prev - 1))
-      }, 1000)
-
-      return () => {
-        if (qrIntervalRef.current) clearInterval(qrIntervalRef.current)
-        if (countdownRef.current) clearInterval(countdownRef.current)
-      }
-    }
-  }, [showQR, ticket.status])
-
-  const qrPayload = generateQRPayload(ticket.qr_code_data, qrTimestamp)
+  const venueLine1 = ticket.venue_name || ticket.event_location || 'Venue TBA'
+  const venueLine2 = ticket.venue_name
+    ? [ticket.venue_city, ticket.venue_state].filter(Boolean).join(', ')
+    : null
 
   return (
     <div className="fan-ticket-card-horizontal">
-      <div className="fan-ticket-date-sidebar" onClick={onClick}>
-        <span className="fan-ticket-month">{formatMonth(ticket.event_start_time)}</span>
-        <span className="fan-ticket-day">{formatDay(ticket.event_start_time)}</span>
-        <span className="fan-ticket-weekday">{formatWeekday(ticket.event_start_time)}</span>
-      </div>
-      
-      <div className="fan-ticket-card-content" onClick={onClick}>
-        <div className="fan-ticket-card-main">
-          {/* Event Info */}
-          <div className="fan-ticket-info">
-            <p className="fan-ticket-category">{ticket.ticket_type_name}</p>
-            <h3 className="fan-ticket-event-name">{ticket.event_name}</h3>
-            <div className="fan-ticket-details">
-              {ticket.event_location && (
-                <span className="fan-ticket-detail">
+      <div className="fan-ticket-card-top-row">
+        <div className="fan-ticket-date-sidebar" onClick={onClick}>
+          <span className="fan-ticket-month">{formatMonth(ticket.event_start_time)}</span>
+          <span className="fan-ticket-day">{formatDay(ticket.event_start_time)}</span>
+          <span className="fan-ticket-weekday">{formatWeekday(ticket.event_start_time)}</span>
+        </div>
+        
+        <div className="fan-ticket-card-content">
+          <div className="fan-ticket-card-main">
+            {/* Event Info */}
+            <div className="fan-ticket-info">
+              <p className="fan-ticket-category">{ticket.ticket_type_name}</p>
+              <h3 className="fan-ticket-event-name" onClick={onClick}>{ticket.event_name}</h3>
+              <div className="fan-ticket-details">
+                <div className="fan-ticket-location-block">
                   <span className="material-symbols-outlined">location_on</span>
-                  {ticket.event_location}
-                </span>
-              )}
-              {ticket.seat_info && (
-                <span className="fan-ticket-detail">
-                  <span className="material-symbols-outlined">event_seat</span>
-                  {ticket.seat_info}
-                </span>
-              )}
+                  <div className="fan-ticket-location-lines">
+                    <span className="fan-ticket-venue-name">{venueLine1}</span>
+                    {venueLine2 && (
+                      <span className="fan-ticket-venue-city-state">{venueLine2}</span>
+                    )}
+                  </div>
+                </div>
+                {ticket.seat_info && (
+                  <span className="fan-ticket-detail">
+                    <span className="material-symbols-outlined">event_seat</span>
+                    {ticket.seat_info}
+                  </span>
+                )}
+              </div>
+              <div className="fan-ticket-card-actions-inline">
+                <button 
+                  className="fan-btn fan-btn-primary"
+                  onClick={(e) => { e.stopPropagation(); onClick() }}
+                >
+                  <span className="material-symbols-outlined">confirmation_number</span>
+                  View Ticket
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      <div className="fan-ticket-card-actions">
-        <button 
-          className="fan-btn fan-btn-primary"
-          onClick={(e) => { e.stopPropagation(); setShowQR(!showQR); }}
-        >
-          <span className="material-symbols-outlined">qr_code_2</span>
-          View QR Code
-        </button>
-      </div>
-
-      {/* Expandable QR Section */}
-      {showQR && (
-        <div className="fan-ticket-qr-expanded">
-          <div className="fan-qr-container">
-            <QRCodeSVG
-              value={qrPayload}
-              size={200}
-              level="H"
-              includeMargin={true}
-            />
-            {ticket.status === 'valid' && (
-              <div className="fan-qr-refresh-indicator">
-                <span className="material-symbols-outlined">refresh</span>
-                Refreshes in {refreshCountdown}s
-              </div>
-            )}
-          </div>
-          <p className="fan-qr-instructions">
-            Show this QR code at the venue for entry
-          </p>
-        </div>
-      )}
     </div>
   )
 }
@@ -451,15 +427,17 @@ export function FanTicketDetail() {
   const t = useT()
   const { ticketId } = useParams<{ ticketId: string }>()
   const navigate = useNavigate()
-  const [ticket, setTicket] = useState<FanTicket | null>(null)
+  const [eventTickets, setEventTickets] = useState<FanTicket[]>([])
+  const [activeTicketIndex, setActiveTicketIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [qrTimestamp, setQrTimestamp] = useState(Date.now())
   const [refreshCountdown, setRefreshCountdown] = useState(30)
   const [showTransferModal, setShowTransferModal] = useState(false)
+  const carouselRef = useRef<HTMLDivElement | null>(null)
+  const activeTicket = eventTickets[activeTicketIndex] ?? null
 
-  // QR code auto-refresh
   useEffect(() => {
-    if (ticket?.status === 'valid') {
+    if (activeTicket?.status === 'valid') {
       const qrInterval = setInterval(() => {
         setQrTimestamp(Date.now())
         setRefreshCountdown(30)
@@ -474,20 +452,26 @@ export function FanTicketDetail() {
         clearInterval(countdownInterval)
       }
     }
-  }, [ticket?.status])
+  }, [activeTicket?.status, activeTicket?.ticket_id])
 
   useEffect(() => {
     loadTicketDetail()
   }, [ticketId])
 
+  useEffect(() => {
+    const carousel = carouselRef.current
+    if (!carousel) return
+    const offset = activeTicketIndex * carousel.clientWidth
+    carousel.scrollTo({ left: offset, behavior: 'smooth' })
+  }, [activeTicketIndex])
+
   const loadTicketDetail = async () => {
     setLoading(true)
-    // In a real implementation, fetch the specific ticket
-    // For now, we'll load all tickets and find the one we need
+
     try {
       const ordersResponse = await getMyTicketOrders()
       let orders: TicketOrder[] = []
-      
+
       if (Array.isArray(ordersResponse)) {
         orders = ordersResponse
       } else if (!ordersResponse.error) {
@@ -496,55 +480,31 @@ export function FanTicketDetail() {
 
       const ticketsByOrder = await Promise.all(orders.map((order) => getTicketsForOrder(order.id)))
       const flatTickets = ticketsByOrder.flat()
-      
-      const foundTicket = flatTickets.find((t: any) => t.id === ticketId)
-      
-      if (foundTicket) {
-        const event = foundTicket.ticketed_events
-        const ticketType = foundTicket.ticket_types
-        const eventLocation = [event?.venue_name, event?.venue_city, event?.venue_state]
-          .filter(Boolean)
-          .join(', ')
+      const mappedTickets: FanTicket[] = flatTickets.map((rawTicket: any) => mapRawTicketToFanTicket(rawTicket, t))
+      const foundTicket = mappedTickets.find((candidate) => candidate.ticket_id === ticketId)
 
-        const now = new Date()
-        const eventDate = new Date(event?.starts_at || '')
-        const isUsed = !!foundTicket.used_at
-        const isPast = eventDate < now
-        
-        let status: TicketStatus = 'valid'
-        if (isUsed) status = 'used'
-        else if (isPast) status = 'expired'
-
-        setTicket({
-          ticket_id: foundTicket.id,
-          event_id: event?.id || '',
-          event_start_time: event?.starts_at || '',
-          event_name: event?.title || 'Event',
-          event_location: eventLocation || null,
-          venue_name: event?.venue_name || undefined,
-          order_confirmation_code: foundTicket.entry_code || null,
-          ticket_type_name: ticketType?.name || 'General Admission',
-          seat_info: foundTicket.seat_info
-            ? t('ticketing.reservedSeating.seatDisplay', {
-              section: foundTicket.seat_info.section,
-              row: foundTicket.seat_info.row,
-              seat: foundTicket.seat_info.seat,
-            })
-            : undefined,
-          seat_section: foundTicket.seat_info?.section,
-          seat_row: foundTicket.seat_info?.row,
-          seat_number: foundTicket.seat_info?.seat,
-          seat_attributes: foundTicket.seat_info?.attributes,
-          scanned_at: foundTicket.used_at || null,
-          qr_code_data: foundTicket.entry_code || '',
-          purchase_date: foundTicket.created_at,
-          status,
-        })
+      if (!foundTicket) {
+        setEventTickets([])
+        setActiveTicketIndex(0)
+        return
       }
+
+      const siblingTickets = mappedTickets
+        .filter((candidate) => candidate.event_id === foundTicket.event_id)
+        .sort((a, b) => {
+          const seatA = `${a.seat_section || ''}-${a.seat_row || ''}-${a.seat_number || ''}`.toLowerCase()
+          const seatB = `${b.seat_section || ''}-${b.seat_row || ''}-${b.seat_number || ''}`.toLowerCase()
+          return seatA.localeCompare(seatB)
+        })
+
+      const initialIndex = Math.max(0, siblingTickets.findIndex((candidate) => candidate.ticket_id === foundTicket.ticket_id))
+      setEventTickets(siblingTickets)
+      setActiveTicketIndex(initialIndex)
     } catch (err) {
       showError('Failed to load ticket details')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const handleTransfer = async (ticketId: string, recipientEmail: string, recipientName?: string) => {
@@ -553,7 +513,7 @@ export function FanTicketDetail() {
       holder_email: recipientEmail,
       holder_name: recipientName,
     })
-    
+
     if (error) {
       showError(error.message)
     } else {
@@ -561,6 +521,30 @@ export function FanTicketDetail() {
       setShowTransferModal(false)
       navigate(getLink(RouteKeys.FAN_TICKETS))
     }
+  }
+
+  const handleCarouselScroll = () => {
+    const carousel = carouselRef.current
+    if (!carousel) return
+
+    const width = carousel.clientWidth || 1
+    const nextIndex = Math.round(carousel.scrollLeft / width)
+    if (nextIndex !== activeTicketIndex && nextIndex >= 0 && nextIndex < eventTickets.length) {
+      setActiveTicketIndex(nextIndex)
+    }
+  }
+
+  const scrollToTicket = (index: number) => {
+    const carousel = carouselRef.current
+    const boundedIndex = Math.max(0, Math.min(index, eventTickets.length - 1))
+    setActiveTicketIndex(boundedIndex)
+    if (!carousel) return
+    const offset = boundedIndex * carousel.clientWidth
+    carousel.scrollTo({ left: offset, behavior: 'smooth' })
+  }
+
+  const formatTicketStatus = (status: TicketStatus): string => {
+    return status.charAt(0).toUpperCase() + status.slice(1)
   }
 
   if (loading) {
@@ -571,13 +555,13 @@ export function FanTicketDetail() {
     )
   }
 
-  if (!ticket) {
+  if (!activeTicket) {
     return (
       <div className="fan-empty-state">
         <span className="material-symbols-outlined">error</span>
         <h3>Ticket not found</h3>
         <p>This ticket may have been transferred or deleted</p>
-        <button 
+        <button
           className="fan-btn fan-btn-primary"
           onClick={() => navigate(getLink(RouteKeys.FAN_TICKETS))}
         >
@@ -587,145 +571,221 @@ export function FanTicketDetail() {
     )
   }
 
-  const qrPayload = generateQRPayload(ticket.qr_code_data, qrTimestamp)
+  const qrPayload = generateQRPayload(activeTicket.qr_code_data, qrTimestamp)
+  const directionsUrl = activeTicket.event_location
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeTicket.event_location)}`
+    : null
 
   return (
-    <>
-      {/* Back Button */}
-      <button 
-        className="fan-back-btn"
+    <div className="fan-ticket-detail-page">
+      <button
+        className="fan-ticket-back-btn"
         onClick={() => navigate(getLink(RouteKeys.FAN_TICKETS))}
       >
         <span className="material-symbols-outlined">arrow_back</span>
         Back to Tickets
       </button>
 
-      {/* Large QR Code */}
-      <div className="fan-ticket-detail-qr">
-        <div className="fan-qr-large">
-          <QRCodeSVG
-            value={qrPayload}
-            size={280}
-            level="H"
-            includeMargin={true}
-          />
-        </div>
-        {ticket.status === 'valid' && (
-          <div className="fan-qr-refresh-indicator">
-            <span className="material-symbols-outlined">refresh</span>
-            Refreshes in {refreshCountdown}s
-          </div>
-        )}
-      </div>
-
-      {/* Event Details */}
-      <div className="fan-ticket-detail-info">
-        <h1 className="fan-ticket-detail-title">{ticket.event_name}</h1>
-        
-        <div className="fan-ticket-detail-section">
-          <h3>Event Information</h3>
-          <div className="fan-ticket-detail-row">
+      <header className="fan-ticket-detail-header">
+        <span className="fan-ticket-detail-eyebrow">Mobile Ticketing</span>
+        <h1 className="fan-ticket-detail-title">{activeTicket.event_name}</h1>
+        <div className="fan-ticket-detail-meta">
+          <span>
             <span className="material-symbols-outlined">event</span>
-            <span>
-              {new Date(ticket.event_start_time).toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </span>
-          </div>
-          <div className="fan-ticket-detail-row">
+            {new Date(activeTicket.event_start_time).toLocaleDateString('en-US', {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric',
+              year: 'numeric',
+            })}
+          </span>
+          <span>
             <span className="material-symbols-outlined">schedule</span>
-            <span>
-              {new Date(ticket.event_start_time).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                timeZoneName: 'short',
-              })}
-            </span>
+            {new Date(activeTicket.event_start_time).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              timeZoneName: 'short',
+            })}
+          </span>
+        </div>
+      </header>
+
+      {eventTickets.length > 1 && (
+        <section className="fan-ticket-carousel-shell">
+          <div className="fan-ticket-carousel-header">
+            <p className="fan-ticket-carousel-title">Event Passes</p>
+            <p className="fan-ticket-carousel-subtitle">Swipe to move between tickets for this event</p>
           </div>
-          {ticket.event_location && (
+          <div
+            className="fan-ticket-carousel-viewport"
+            ref={carouselRef}
+            onScroll={handleCarouselScroll}
+          >
+            {eventTickets.map((eventTicket, index) => (
+              <article key={eventTicket.ticket_id} className="fan-ticket-carousel-slide">
+                <div className="fan-ticket-carousel-card">
+                  <div className="fan-ticket-carousel-row">
+                    <span className="fan-ticket-chip">Ticket {index + 1} of {eventTickets.length}</span>
+                    <span className={`fan-ticket-status-pill fan-ticket-status-${eventTicket.status}`}>
+                      {formatTicketStatus(eventTicket.status)}
+                    </span>
+                  </div>
+                  <h3>{eventTicket.ticket_type_name}</h3>
+                  <p>{eventTicket.seat_info || 'General Admission'}</p>
+                  <p className="fan-ticket-carousel-code">
+                    Confirmation {eventTicket.order_confirmation_code || 'N/A'}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="fan-ticket-carousel-controls">
+            <button
+              className="fan-ticket-carousel-nav"
+              onClick={() => scrollToTicket(activeTicketIndex - 1)}
+              disabled={activeTicketIndex <= 0}
+            >
+              <span className="material-symbols-outlined">arrow_back</span>
+              Prev
+            </button>
+            <div className="fan-ticket-carousel-dots">
+              {eventTickets.map((_, index) => (
+                <button
+                  key={`ticket-dot-${index}`}
+                  className={`fan-ticket-carousel-dot ${index === activeTicketIndex ? 'active' : ''}`}
+                  onClick={() => scrollToTicket(index)}
+                  aria-label={`View ticket ${index + 1}`}
+                />
+              ))}
+            </div>
+            <button
+              className="fan-ticket-carousel-nav"
+              onClick={() => scrollToTicket(activeTicketIndex + 1)}
+              disabled={activeTicketIndex >= eventTickets.length - 1}
+            >
+              Next
+              <span className="material-symbols-outlined">arrow_forward</span>
+            </button>
+          </div>
+        </section>
+      )}
+
+      <div className="fan-ticket-detail-layout">
+        <section className="fan-ticket-pass-card">
+          <div className="fan-ticket-pass-header">
+            <span className="fan-ticket-pass-label">Entry QR</span>
+            <span className="fan-ticket-pass-index">{activeTicketIndex + 1}/{eventTickets.length}</span>
+          </div>
+          <div className="fan-ticket-pass-qr">
+            <QRCodeSVG
+              value={qrPayload}
+              size={240}
+              level="H"
+              includeMargin={true}
+            />
+          </div>
+          {activeTicket.status === 'valid' && (
+            <div className="fan-qr-refresh-indicator">
+              <span className="material-symbols-outlined">refresh</span>
+              Refreshes in {refreshCountdown}s
+            </div>
+          )}
+          {activeTicket.status !== 'valid' && (
+            <div className={`fan-ticket-status-pill fan-ticket-status-${activeTicket.status}`}>
+              {formatTicketStatus(activeTicket.status)}
+            </div>
+          )}
+          <p className="fan-ticket-pass-note">Present this pass at the gate for admission.</p>
+        </section>
+
+        <section className="fan-ticket-detail-panels">
+          <article className="fan-ticket-detail-section">
+            <h3>Event Information</h3>
             <div className="fan-ticket-detail-row">
               <span className="material-symbols-outlined">location_on</span>
-              <span>{ticket.event_location}</span>
+              <span>{activeTicket.event_location || 'Venue TBA'}</span>
             </div>
-          )}
-          <button className="fan-link-btn">
-            <span className="material-symbols-outlined">directions</span>
-            Get Directions
-          </button>
-        </div>
+            {directionsUrl && (
+              <a href={directionsUrl} target="_blank" rel="noreferrer" className="fan-link-btn">
+                <span className="material-symbols-outlined">directions</span>
+                Get Directions
+              </a>
+            )}
+          </article>
 
-        <div className="fan-ticket-detail-section">
-          <h3>Ticket Information</h3>
-          <div className="fan-ticket-detail-row">
-            <span className="fan-ticket-detail-label">Type</span>
-            <span>{ticket.ticket_type_name}</span>
-          </div>
-          {ticket.holder_name && (
+          <article className="fan-ticket-detail-section">
+            <h3>Ticket Information</h3>
             <div className="fan-ticket-detail-row">
-              <span className="fan-ticket-detail-label">Holder</span>
-              <span>{ticket.holder_name}</span>
+              <span className="fan-ticket-detail-label">Type</span>
+              <span>{activeTicket.ticket_type_name}</span>
             </div>
-          )}
-          <div className="fan-ticket-detail-row">
-            <span className="fan-ticket-detail-label">Confirmation</span>
-            <span className="fan-ticket-confirmation-code">{ticket.order_confirmation_code}</span>
-          </div>
-          <div className="fan-ticket-detail-row">
-            <span className="fan-ticket-detail-label">Status</span>
-            <span className={`fan-status-badge fan-status-${ticket.status}`}>
-              {ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1)}
-            </span>
-          </div>
-        </div>
-
-        {ticket.purchase_date && (
-          <div className="fan-ticket-detail-section">
-            <h3>Purchase Details</h3>
-            <div className="fan-ticket-detail-row">
-              <span className="fan-ticket-detail-label">Purchased</span>
-              <span>{new Date(ticket.purchase_date).toLocaleDateString()}</span>
-            </div>
-            {ticket.amount_paid !== undefined && (
+            {activeTicket.holder_name && (
               <div className="fan-ticket-detail-row">
-                <span className="fan-ticket-detail-label">Amount</span>
-                <span>${(ticket.amount_paid / 100).toFixed(2)}</span>
+                <span className="fan-ticket-detail-label">Holder</span>
+                <span>{activeTicket.holder_name}</span>
               </div>
             )}
-            <button className="fan-link-btn">View Receipt</button>
-          </div>
-        )}
+            {activeTicket.seat_info && (
+              <div className="fan-ticket-detail-row">
+                <span className="fan-ticket-detail-label">Seat</span>
+                <span>{activeTicket.seat_info}</span>
+              </div>
+            )}
+            <div className="fan-ticket-detail-row">
+              <span className="fan-ticket-detail-label">Confirmation</span>
+              <span className="fan-ticket-confirmation-code">{activeTicket.order_confirmation_code}</span>
+            </div>
+            <div className="fan-ticket-detail-row">
+              <span className="fan-ticket-detail-label">Status</span>
+              <span className={`fan-ticket-status-pill fan-ticket-status-${activeTicket.status}`}>
+                {formatTicketStatus(activeTicket.status)}
+              </span>
+            </div>
+          </article>
 
-        {/* Actions */}
-        <div className="fan-ticket-detail-actions">
-          <button className="fan-btn fan-btn-primary">
-            <span className="material-symbols-outlined">add_to_photos</span>
-            Add to Wallet
-          </button>
-          
-          {ticket.status === 'valid' && (
-            <button 
-              className="fan-btn fan-btn-secondary"
-              onClick={() => setShowTransferModal(true)}
-            >
-              <span className="material-symbols-outlined">send</span>
-              Transfer Ticket
-            </button>
+          {activeTicket.purchase_date && (
+            <article className="fan-ticket-detail-section">
+              <h3>Purchase Details</h3>
+              <div className="fan-ticket-detail-row">
+                <span className="fan-ticket-detail-label">Purchased</span>
+                <span>{new Date(activeTicket.purchase_date).toLocaleDateString()}</span>
+              </div>
+              {activeTicket.amount_paid !== undefined && (
+                <div className="fan-ticket-detail-row">
+                  <span className="fan-ticket-detail-label">Amount</span>
+                  <span>${(activeTicket.amount_paid / 100).toFixed(2)}</span>
+                </div>
+              )}
+              <button className="fan-link-btn">View Receipt</button>
+            </article>
           )}
-        </div>
+
+          <article className="fan-ticket-detail-section fan-ticket-detail-actions">
+            <button className="fan-btn fan-btn-primary">
+              <span className="material-symbols-outlined">add_to_photos</span>
+              Add to Wallet
+            </button>
+            {activeTicket.status === 'valid' && (
+              <button
+                className="fan-btn fan-ticket-btn-secondary"
+                onClick={() => setShowTransferModal(true)}
+              >
+                <span className="material-symbols-outlined">send</span>
+                Transfer Ticket
+              </button>
+            )}
+          </article>
+        </section>
       </div>
 
-      {/* Transfer Modal */}
       {showTransferModal && (
         <TransferModal
-          ticket={ticket}
+          ticket={activeTicket}
           onClose={() => setShowTransferModal(false)}
           onTransfer={handleTransfer}
         />
       )}
-    </>
+    </div>
   )
 }
 
@@ -812,7 +872,7 @@ function TransferModal({ ticket, onClose, onTransfer }: TransferModalProps) {
             </p>
 
             <div className="fan-modal-actions">
-              <button type="button" onClick={onClose} className="fan-btn fan-btn-secondary">
+              <button type="button" onClick={onClose} className="fan-btn fan-ticket-btn-secondary">
                 Cancel
               </button>
               <button type="submit" disabled={loading} className="fan-btn fan-btn-primary">
@@ -825,3 +885,4 @@ function TransferModal({ ticket, onClose, onTransfer }: TransferModalProps) {
     </div>
   )
 }
+

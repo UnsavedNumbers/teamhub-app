@@ -42,9 +42,11 @@ const DemoSessionContext = createContext<DemoSessionContextValue | undefined>(un
 function mapRoleToDemoRole(role: string | null | undefined): DemoAllowedRole {
   if (role === 'org_admin') return 'org_admin'
   if (role === 'coach') return 'coach'
+  if (role === 'guardian') return 'parent'
   if (role === 'parent') return 'parent'
   if (role === 'athlete') return 'athlete'
   if (role === 'staff') return 'staff'
+  if (role === 'fan') return 'fan'
   return 'parent' // Default fallback
 }
 

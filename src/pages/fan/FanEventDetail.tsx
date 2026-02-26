@@ -75,6 +75,71 @@ interface EventDetail {
   season_name: string | null
 }
 
+function hashSeed(value: string): number {
+  let hash = 0
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+function formatDurationFromMinutes(totalMinutes: number): string {
+  const safeMinutes = Math.max(1, Math.round(totalMinutes))
+  const hours = Math.floor(safeMinutes / 60)
+  const minutes = safeMinutes % 60
+
+  if (hours <= 0) return `${minutes} min`
+  if (minutes === 0) return `${hours} hour`
+  return `${hours} hour ${minutes} min`
+}
+
+function buildFakeWeather(startTime: string, seedInput: string): { temp: number; condition: string } {
+  const seed = hashSeed(`${seedInput}|${startTime}`)
+  const month = new Date(startTime).getMonth()
+  const isWinter = month === 11 || month <= 1
+  const isSummer = month >= 5 && month <= 8
+
+  const baseTemp = 58 + (seed % 20)
+  const seasonalAdjustment = isWinter ? -12 : isSummer ? 14 : 0
+  const temperature = clamp(baseTemp + seasonalAdjustment, 25, 102)
+
+  const warmConditions = ['Sunny', 'Partly Cloudy', 'Cloudy', 'Windy', 'Light Rain']
+  const coolConditions = ['Cloudy', 'Windy', 'Light Rain', 'Foggy', 'Overcast']
+  const winterConditions = ['Cloudy', 'Windy', 'Light Snow', 'Cold Rain', 'Partly Cloudy']
+  const conditionPool = isWinter ? winterConditions : isSummer ? warmConditions : coolConditions
+
+  return {
+    temp: temperature,
+    condition: conditionPool[seed % conditionPool.length],
+  }
+}
+
+function buildFakeCommuteSummary(origin: string, destination: string, startTime: string): {
+  distance: string
+  duration: string
+  durationInTraffic: string
+} {
+  const seed = hashSeed(`${origin}|${destination}`)
+  const distanceMiles = 3 + (seed % 280) / 10 // 3.0 - 30.9 mi
+  const baseMinutes = distanceMiles * (1.9 + ((seed >> 3) % 7) / 10)
+
+  const startDate = new Date(startTime)
+  const startHour = startDate.getHours()
+  const rushHour = (startHour >= 7 && startHour <= 9) || (startHour >= 16 && startHour <= 18)
+  const trafficPenaltyMinutes = rushHour ? 12 + (seed % 14) : 4 + (seed % 9)
+
+  return {
+    distance: `${distanceMiles >= 10 ? Math.round(distanceMiles) : distanceMiles.toFixed(1)} mi`,
+    duration: formatDurationFromMinutes(baseMinutes),
+    durationInTraffic: formatDurationFromMinutes(baseMinutes + trafficPenaltyMinutes),
+  }
+}
+
 function buildFakeEventDetail(eventId: string): EventDetail | null {
   const calendarEvent = fakeEvents.find((entry) => entry.id === eventId)
   const ticketedFromCalendar = calendarEvent
@@ -93,6 +158,10 @@ function buildFakeEventDetail(eventId: string): EventDetail | null {
 
   const ticketTypes = ticketedEvent ? getFakeTicketTypesForEvent(ticketedEvent.id, ticketedEvent.org_id) : []
   const ticketPrices = ticketTypes.map((type) => type.price_cents / 100)
+  const fakeWeather = buildFakeWeather(
+    calendarEvent?.start_time || ticketedEvent?.starts_at || new Date().toISOString(),
+    `${orgId}|${teamId || 'org'}|${ticketedEvent?.venue_city || org?.city || ''}`,
+  )
 
   const minPrice = ticketPrices.length > 0 ? Math.min(...ticketPrices) : null
   const maxPrice = ticketPrices.length > 0 ? Math.max(...ticketPrices) : null
@@ -120,10 +189,10 @@ function buildFakeEventDetail(eventId: string): EventDetail | null {
     org_logo_url: org?.logo_url || null,
     org_public_description: org?.website || null,
     venue_name: ticketedEvent?.venue_name || calendarEvent?.location || null,
-    venue_address: null,
-    venue_city: org?.city || null,
-    venue_state: org?.state || null,
-    venue_zip: org?.postal_code || null,
+    venue_address: ticketedEvent?.venue_address_line1 || null,
+    venue_city: ticketedEvent?.venue_city || org?.city || null,
+    venue_state: ticketedEvent?.venue_state || org?.state || null,
+    venue_zip: ticketedEvent?.venue_postal_code || org?.postal_code || null,
     place_id: null,
     latitude: null,
     longitude: null,
@@ -132,9 +201,9 @@ function buildFakeEventDetail(eventId: string): EventDetail | null {
     ticket_price_min: minPrice,
     ticket_price_max: maxPrice,
     tickets_available: ticketedEvent ? ticketedEvent.status === 'published' : false,
-    weather_temp: null,
-    weather_condition: null,
-    weather_icon: null,
+    weather_temp: fakeWeather.temp,
+    weather_condition: fakeWeather.condition,
+    weather_icon: getWeatherIcon(fakeWeather.condition),
     team_name: calendarEvent?.team?.name || team?.name || null,
     season_name: calendarEvent?.season?.name || season?.name || null,
   }
@@ -414,7 +483,8 @@ export default function FanEventDetail() {
   // Fetch commute summary when we have both start and destination
   useEffect(() => {
     const fetchCommuteSummary = async () => {
-      if (!commuteStartLocation || !event?.venue_address) {
+      const destination = getFullAddress()
+      if (!commuteStartLocation || !destination) {
         setCommuteSummary(null)
         return
       }
@@ -423,8 +493,13 @@ export default function FanEventDetail() {
       setCommuteSummary(null)
       
       try {
+        if (USE_FAKE_DATA && event) {
+          setCommuteSummary(buildFakeCommuteSummary(commuteStartLocation, destination, event.start_time))
+          return
+        }
+
         const origins = encodeURIComponent(commuteStartLocation)
-        const destinations = encodeURIComponent(getFullAddress())
+        const destinations = encodeURIComponent(destination)
         
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/distance-matrix?origins=${origins}&destinations=${destinations}`
         const { data } = await supabase.auth.getSession()
@@ -462,7 +537,7 @@ export default function FanEventDetail() {
     }
     
     fetchCommuteSummary()
-  }, [commuteStartLocation, event?.venue_address])
+  }, [commuteStartLocation, event?.start_time, event?.venue_address, event?.venue_city, event?.venue_state, event?.venue_zip])
 
   // Helper functions for commute info
   const handleSaveCommuteLocation = () => {

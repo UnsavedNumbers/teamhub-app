@@ -16,6 +16,8 @@
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA, DEMO_ORG_A_ID, DEMO_ORG_B_ID } from '../config'
+import { isInDemoSession } from '../../utils/demoMode'
+import { resolveDemoUserId } from '../fake/userContext'
 import { t } from '../../i18n'
 import type {
   FanOrgFollow,
@@ -33,6 +35,28 @@ import * as fakeService from '../fake/fanFakeService'
 
 const supabaseAny = supabase as any
 
+function shouldUseFakeData(): boolean {
+  return USE_FAKE_DATA || isInDemoSession()
+}
+
+async function shouldUseFakeDataAsync(): Promise<boolean> {
+  if (shouldUseFakeData()) return true
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    const email = session?.user?.email ?? null
+    const metadata = (session?.user?.user_metadata ?? {}) as Record<string, unknown>
+
+    if (resolveDemoUserId(email)) return true
+    if (metadata.is_demo_session === true) return true
+    if (typeof metadata.demo_code === 'string' && metadata.demo_code.trim().length > 0) return true
+  } catch {
+    // Fall through to false.
+  }
+
+  return false
+}
+
 // ============================================
 // FAN FOLLOWS
 // ============================================
@@ -49,7 +73,7 @@ export async function followOrg(
   debug.perf.start('fanService.followOrg')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.followOrg(orgId, source)
       debug.perf.end('fanService.followOrg')
       debug.flow('FanService.followOrg', 'Organization followed (fake)', { orgId, source })
@@ -87,7 +111,7 @@ export async function unfollowOrg(orgId: string): Promise<{ data: boolean; error
   debug.perf.start('fanService.unfollowOrg')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.unfollowOrg(orgId)
       debug.perf.end('fanService.unfollowOrg')
       debug.flow('FanService.unfollowOrg', 'Organization unfollowed (fake)', { orgId })
@@ -123,7 +147,7 @@ export async function getFollowedOrgs(): Promise<{ data: FanOrgFollow[]; error: 
   debug.perf.start('fanService.getFollowedOrgs')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.getFollowedOrgs()
       debug.perf.end('fanService.getFollowedOrgs')
       debug.data('FanService.getFollowedOrgs', 'Response (fake)', { orgCount: result.data.length })
@@ -172,7 +196,7 @@ export async function bookmarkEvent(eventId: string): Promise<{ data: boolean; e
   debug.perf.start('fanService.bookmarkEvent')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.bookmarkEvent(eventId)
       debug.perf.end('fanService.bookmarkEvent')
       debug.flow('FanService.bookmarkEvent', 'Event bookmarked (fake)', { eventId })
@@ -209,7 +233,7 @@ export async function removeBookmark(eventId: string): Promise<{ data: boolean; 
   debug.perf.start('fanService.removeBookmark')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.removeBookmark(eventId)
       debug.perf.end('fanService.removeBookmark')
       debug.flow('FanService.removeBookmark', 'Bookmark removed (fake)', { eventId })
@@ -245,7 +269,7 @@ export async function getBookmarkedEvents(): Promise<{ data: FanEventBookmark[];
   debug.perf.start('fanService.getBookmarkedEvents')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.getBookmarkedEvents()
       debug.perf.end('fanService.getBookmarkedEvents')
       debug.data('FanService.getBookmarkedEvents', 'Response (fake)', { bookmarkCount: result.data.length })
@@ -293,7 +317,7 @@ export async function getFanCalendar(
   debug.perf.start('fanService.getFanCalendar')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.getFanCalendar(request)
       debug.perf.end('fanService.getFanCalendar')
       debug.data('FanService.getFanCalendar', 'Response (fake)', { eventCount: result.data?.events?.length || 0 })
@@ -378,7 +402,7 @@ export async function transferTicket(
   debug.perf.start('fanService.transferTicket')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.transferTicket(request)
       debug.perf.end('fanService.transferTicket')
       debug.flow('FanService.transferTicket', 'Ticket transferred (fake)', { ticketId: request.ticket_id })
@@ -423,7 +447,7 @@ export async function transferTicket(
 export async function reserveTickets(
   request: ReserveTicketsRequest
 ): Promise<{ data: ReserveTicketsResponse | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.reserveTickets(request)
+  if (await shouldUseFakeDataAsync()) return fakeService.reserveTickets(request)
 
   try {
     const expiresAt = new Date()
@@ -472,7 +496,7 @@ export async function getUserPurchases(): Promise<{ data: Purchase[]; error: Err
   debug.perf.start('fanService.getUserPurchases')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.getUserPurchases()
       debug.perf.end('fanService.getUserPurchases')
       debug.data('FanService.getUserPurchases', 'Response (fake)', { purchaseCount: result.data.length })
@@ -536,7 +560,7 @@ export async function getFanFeed(): Promise<{ data: FanFeedItem[]; error: Error 
   debug.perf.start('fanService.getFanFeed')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const now = new Date()
       const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString()
       const fakeFeed: FanFeedItem[] = [
@@ -637,7 +661,7 @@ export async function getFanFeed(): Promise<{ data: FanFeedItem[]; error: Error 
  * Mark feed item as read
  */
 export async function markFeedItemRead(feedItemId: string): Promise<{ data: boolean; error: Error | null }> {
-  if (USE_FAKE_DATA) return { data: true, error: null }
+  if (await shouldUseFakeDataAsync()) return { data: true, error: null }
 
   try {
     const { error } = await supabaseAny.from('fan_feed')
@@ -691,7 +715,7 @@ export async function searchEntities(
   debug.perf.start('fanService.searchEntities')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.searchEntities(query, entityTypes, limit)
       debug.perf.end('fanService.searchEntities')
       debug.data('FanService.searchEntities', 'Response (fake)', { query, resultCount: result.data.length })
@@ -766,7 +790,7 @@ export async function getOrgProfile(orgId: string): Promise<{ data: EntityProfil
   debug.perf.start('fanService.getOrgProfile')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.getOrgProfile(orgId)
       debug.perf.end('fanService.getOrgProfile')
       debug.data('FanService.getOrgProfile', 'Response (fake)', { orgId, found: !!result.data })
@@ -802,7 +826,7 @@ export async function getOrgProfileBySlug(slug: string): Promise<{ data: EntityP
   debug.perf.start('fanService.getOrgProfileBySlug')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.getOrgProfileBySlug(slug)
       debug.perf.end('fanService.getOrgProfileBySlug')
       debug.data('FanService.getOrgProfileBySlug', 'Response (fake)', { slug, found: !!result.data })
@@ -832,7 +856,7 @@ export async function getOrgProfileBySlug(slug: string): Promise<{ data: EntityP
  * Get team profile
  */
 export async function getTeamProfile(teamId: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.getTeamProfile(teamId)
+  if (await shouldUseFakeDataAsync()) return fakeService.getTeamProfile(teamId)
 
   try {
     const { data, error } = await supabaseAny.rpc('get_team_profile', {
@@ -865,7 +889,7 @@ export async function getAthleteProfile(athleteId: string): Promise<{ data: Enti
   debug.perf.start('fanService.getAthleteProfile')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.getAthleteProfile(athleteId)
       debug.perf.end('fanService.getAthleteProfile')
       debug.data('FanService.getAthleteProfile', 'Response (fake)', { athleteId, found: !!result.data })
@@ -913,7 +937,7 @@ export interface NotificationPreferences {
  * Get user notification preferences
  */
 export async function getNotificationPreferences(): Promise<{ data: NotificationPreferences | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return { data: null, error: null }
+  if (await shouldUseFakeDataAsync()) return { data: null, error: null }
 
   try {
     const { data, error } = await supabaseAny.from('user_notification_preferences')
@@ -949,7 +973,7 @@ export async function updateNotificationPreferences(
   debug.perf.start('fanService.updateNotificationPreferences')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       debug.perf.end('fanService.updateNotificationPreferences')
       debug.flow('FanService.updateNotificationPreferences', 'Preferences updated (fake)')
       console.groupEnd()

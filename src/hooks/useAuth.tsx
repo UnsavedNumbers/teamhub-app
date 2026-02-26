@@ -102,7 +102,13 @@ function readFakeAuthState(): FakeAuthState | null {
     const roles = Array.isArray(parsed.roles)
       ? parsed.roles.filter(
           (role): role is OrgMemberRole =>
-            role === 'parent' || role === 'coach' || role === 'org_admin' || role === 'staff' || role === 'athlete',
+            role === 'parent' ||
+            role === 'guardian' ||
+            role === 'coach' ||
+            role === 'org_admin' ||
+            role === 'staff' ||
+            role === 'athlete' ||
+            role === 'fan',
         )
       : []
 
@@ -348,7 +354,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const roles = Array.isArray(o.roles)
                 ? o.roles.filter(
                   (r: unknown): r is OrgMemberRole =>
-                    r === 'parent' || r === 'coach' || r === 'org_admin' || r === 'staff' || r === 'athlete'
+                    r === 'parent' || r === 'guardian' || r === 'coach' || r === 'org_admin' || r === 'staff' || r === 'athlete' || r === 'fan'
                 )
                 : []
 
@@ -635,7 +641,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               roles: Array.isArray(org.roles)
                 ? org.roles.filter(
                     (r: unknown): r is OrgMemberRole =>
-                      r === 'parent' || r === 'coach' || r === 'org_admin' || r === 'staff' || r === 'athlete'
+                      r === 'parent' || r === 'guardian' || r === 'coach' || r === 'org_admin' || r === 'staff' || r === 'athlete' || r === 'fan'
                   )
                 : [],
             }))
