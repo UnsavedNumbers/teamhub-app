@@ -17,6 +17,7 @@ import { I18nProvider } from './i18n/I18nProvider'
 import { Toaster } from './components/Toaster'
 import { ConditionalRouteLogger } from './lib/debug/integrations/RouteLogger'
 import { DemoPageViewTracker } from './components/demo/DemoPageViewTracker'
+import { DemoRoleSwitcher } from './components/demo/DemoRoleSwitcher'
 import { USE_FAKE_DATA } from './data/config'
 
 // Marketing Page
@@ -58,8 +59,8 @@ import Travel from './pages/Travel'
 import TravelDetail from './pages/TravelDetail'
 import Tryouts from './pages/Tryouts'
 import TryoutDetail from './pages/TryoutDetail'
+import Messages from './pages/Messages'
 import Huddles from './pages/Huddles'
-import AnnouncementDetail from './pages/AnnouncementDetail'
 import Announcements from './pages/portal/Announcements'
 import { RoleSelection } from './pages/RoleSelection'
 import AthleteProfile from './pages/AthleteProfile'
@@ -357,6 +358,15 @@ function RedirectWithParams({ to, paramKey = 'id', suffix = '' }: { to: string; 
   return <Navigate to={redirectTo} replace />
 }
 
+function LegacyAnnouncementDetailRedirect() {
+  const { announcementId } = useParams<{ announcementId: string }>()
+  const location = useLocation()
+  if (!announcementId) {
+    return <Navigate to={getLink('portal.announcements')} replace />
+  }
+  return <Navigate to={`/portal/announcements/${announcementId}${location.search || ''}`} replace />
+}
+
 function HostGateLayout() {
   const appContext = getHostAppContext()
   const location = useLocation()
@@ -437,6 +447,7 @@ function AppWithTheme() {
       <FullScreenLoader />
       <ConditionalRouteLogger />
       <DemoPageViewTracker />
+      <DemoRoleSwitcher />
       <Routes>
           {/* Marketing Landing Page - Public */}
           <Route path="/" element={<HostHomeRoute />} />
@@ -516,10 +527,11 @@ function AppWithTheme() {
               <Route path="travel/:id" element={<FeatureGateRoute routeKey="portal.travel.detail"><TravelDetail /></FeatureGateRoute>} />
               <Route path="tryouts" element={<FeatureGateRoute routeKey="portal.tryouts"><Tryouts /></FeatureGateRoute>} />
               <Route path="tryouts/:tryoutId" element={<FeatureGateRoute routeKey="portal.tryouts.detail"><TryoutDetail /></FeatureGateRoute>} />
-              <Route path="messages" element={<Navigate to="/portal/announcements" replace />} />
-              <Route path="messages/:announcementId" element={<FeatureGateRoute routeKey="portal.messages"><AnnouncementDetail /></FeatureGateRoute>} />
+              <Route path="messages" element={<FeatureGateRoute routeKey="portal.messages"><Messages /></FeatureGateRoute>} />
+              <Route path="messages/:announcementId" element={<LegacyAnnouncementDetailRedirect />} />
               <Route path="huddles" element={<FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute>} />
               <Route path="announcements" element={<FeatureGateRoute routeKey="portal.messages"><Announcements /></FeatureGateRoute>} />
+              <Route path="announcements/:announcementId" element={<FeatureGateRoute routeKey="portal.messages"><Announcements /></FeatureGateRoute>} />
               <Route path="photos" element={<FeatureGateRoute routeKey="portal.photos"><Photos /></FeatureGateRoute>} />
               <Route path="photos/gallery/:id" element={<FeatureGateRoute routeKey="portal.photosGallery"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute>} />
               <Route path="photos/gallery/:id/manage" element={<ProtectedRoute allowedRoles={['parent']}><FeatureGateRoute routeKey="portal.photosGalleryManage"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute></ProtectedRoute>} />

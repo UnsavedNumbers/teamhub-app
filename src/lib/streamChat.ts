@@ -28,7 +28,7 @@ export interface StreamUser {
  */
 export interface ChannelMember {
   user_id: string
-  role: 'coach' | 'guardian' | 'org_admin'
+  role: 'coach' | 'guardian' | 'org_admin' | 'staff' | 'parent' | 'athlete_minor' | 'athlete_adult'
   name?: string
   email?: string
   image?: string
@@ -141,16 +141,27 @@ export async function getOrgChannel(
  */
 export async function getDMChannel(
   userId1: string,
-  userId2: string
+  userId2: string,
+  options?: {
+    name?: string
+    image?: string
+    members?: string[]
+    channelId?: string
+    data?: Record<string, unknown>
+  }
 ): Promise<Channel> {
   const client = getStreamClient()
   
   // Sort user IDs to ensure consistent channel ID
   const [user1, user2] = [userId1, userId2].sort()
-  const channelId = `dm:${user1}:${user2}`
+  const channelId = options?.channelId || `dm:${user1}:${user2}`
+  const members = Array.from(new Set([user1, user2, ...(options?.members || [])]))
   
   const channel = client.channel('messaging', channelId, {
-    members: [user1, user2],
+    members,
+    ...(options?.name ? { name: options.name } : {}),
+    ...(options?.image ? { image: options.image } : {}),
+    ...(options?.data || {}),
   })
   
   await channel.watch()

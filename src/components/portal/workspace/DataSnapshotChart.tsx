@@ -17,6 +17,7 @@ interface DataSnapshotChartProps {
   title: string
   data: DataPoint[]
   valueLabel?: string
+  hideTitle?: boolean
   className?: string
 }
 
@@ -29,13 +30,14 @@ export function DataSnapshotChart({
   title,
   data,
   valueLabel = 'Count',
+  hideTitle = false,
   className,
 }: DataSnapshotChartProps) {
   const color = 'var(--org-btn-primary-bg)'
   const id = gradientId(title)
   return (
-    <section className={cn('rounded-xl border-2 border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900', className)}>
-      <h3 className="mb-4 text-base font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">{title}</h3>
+    <section className={cn('rounded-xl bg-slate-50 p-5 dark:bg-slate-900/70', className)}>
+      {!hideTitle && <h3 className="mb-4 text-base font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">{title}</h3>}
       <div className="h-[160px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
@@ -62,7 +64,10 @@ export function DataSnapshotChart({
               contentStyle={{
                 fontSize: 12,
                 borderRadius: 8,
-                border: '1px solid var(--tw-slate-200)',
+                border: 'none',
+                backgroundColor: 'rgba(248, 250, 252, 0.95)',
+                color: 'rgb(15 23 42)',
+                boxShadow: '0 6px 24px rgba(15, 23, 42, 0.08)',
               }}
               formatter={(value) => [value ?? 0, valueLabel]}
               labelFormatter={(label) => label}

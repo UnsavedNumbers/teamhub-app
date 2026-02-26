@@ -78,7 +78,9 @@ export const parentNavSections: NavigationSection[] = [
             {
                 label: 'Messages',
                 items: [
-                    { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team chat and announcements' },
+                    { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', description: 'Direct user-to-user messages' },
+                    { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team and organization chat channels' },
+                    { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', description: 'Team announcements and updates' },
                 ],
             },
         ],
@@ -178,12 +180,12 @@ export const athleteNavSections: NavigationSection[] = [
     },
     {
         label: 'Announcements',
-        route: '/portal/messages',
+        route: '/portal/announcements',
         groups: [
             {
                 label: 'Announcements',
                 items: [
-                    { routeKey: 'portal.messages', text: 'Announcements', icon: 'forum', description: 'Team announcements' },
+                    { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', description: 'Team announcements and updates' },
                 ],
             },
         ],
@@ -283,7 +285,9 @@ export const coachNavSections: NavigationSection[] = [
                 items: [
                     { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
                     { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', description: 'Trip details' },
-                    { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team chat' },
+                    { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', description: 'Direct user-to-user messages' },
+                    { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team and organization chat channels' },
+                    { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', description: 'Team announcements and updates' },
                     { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', description: 'Preferences' },
                 ],
             },

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { debug } from '../lib/debug'
@@ -14,7 +14,6 @@ import { getAnnouncementEmoji } from '../utils/announcementTypes'
 
 export default function AnnouncementDetail() {
   const { announcementId } = useParams<{ announcementId: string }>()
-  const [searchParams] = useSearchParams()
 
   useDebugLifecycle('AnnouncementDetail', { announcementId })
   const [loading, setLoading] = useState(true)
@@ -84,7 +83,7 @@ export default function AnnouncementDetail() {
     if (!announcementId) {
       debug.error('AnnouncementDetail', 'No announcementId — redirecting', {})
       setLoading(false)
-      navigate('/portal/messages', { replace: true })
+      navigate('/portal/announcements', { replace: true })
       return
     }
 
@@ -152,7 +151,7 @@ export default function AnnouncementDetail() {
           'color:#f43f5e',
           { error }
         )
-        navigate('/portal/messages', { replace: true })
+        navigate('/portal/announcements', { replace: true })
         return
       }
 
@@ -164,7 +163,7 @@ export default function AnnouncementDetail() {
       debug.error('AnnouncementDetail', 'Unexpected error in fetchData', { err, attempt, announcementId })
       console.error('%c[AnnouncementDetail] Unexpected error', 'color:#f43f5e;font-weight:bold', err)
       setLoading(false)
-      navigate('/portal/messages', { replace: true })
+      navigate('/portal/announcements', { replace: true })
     }
   }, [announcementId, context, isReady, navigate])
 
@@ -175,8 +174,7 @@ export default function AnnouncementDetail() {
   }, [isReady, announcementId, fetchData])
 
   // Get team context from query parameter for back navigation
-  const teamId = searchParams.get('team')
-  const backUrl = `/portal/messages${teamId ? `?team=${teamId}` : ''}`
+  const backUrl = '/portal/announcements'
 
   if (loading) {
     return (
@@ -219,7 +217,7 @@ export default function AnnouncementDetail() {
         <Card className="text-center py-12">
           <CardTitle>Announcement not found</CardTitle>
           <Button variant="primary" onClick={() => navigate(backUrl)} className="mt-4">
-            Back to Messages
+            Back to Announcements
           </Button>
         </Card>
       </PortalLayout>
@@ -253,7 +251,7 @@ export default function AnnouncementDetail() {
     <PortalLayout
       breadcrumbs={[
         { label: 'Home', path: '/portal/dashboard' },
-        { label: 'Messages', path: '/portal/messages' },
+        { label: 'Announcements', path: '/portal/announcements' },
         { label: announcement.title },
       ]}
     >
@@ -331,7 +329,7 @@ export default function AnnouncementDetail() {
       </Card>
 
       <Button variant="primary" onClick={() => navigate(backUrl)}>
-        Back to Messages
+        Back to Announcements
       </Button>
     </PortalLayout>
   )

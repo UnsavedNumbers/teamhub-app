@@ -180,7 +180,9 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
           items: [
             { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', path: getLink('portal.tryouts'), description: 'Tryout sessions' },
             { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', path: getLink('portal.travel'), description: 'Trip details' },
-            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: getLink('portal.messages'), description: 'Communications' },
+            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: getLink('portal.messages'), description: 'Direct user-to-user messages' },
+            { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', path: getLink('portal.huddles'), description: 'Team and organization chat channels' },
+            { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', path: getLink('portal.announcements'), description: 'Team announcements and updates' },
             { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', path: getLink('portal.photos'), description: 'Team photos' },
             { routeKey: 'portal.videos', text: 'Videos', icon: 'smart_display', path: getLink('portal.videos'), description: 'Video library & feedback' },
             { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: getLink('portal.settings'), description: 'Preferences' },
@@ -250,7 +252,9 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Messages',
           items: [
-            { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', path: getLink('portal.messages'), description: 'Team chat and announcements' },
+            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: getLink('portal.messages'), description: 'Direct user-to-user messages' },
+            { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', path: getLink('portal.huddles'), description: 'Team and organization chat channels' },
+            { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', path: getLink('portal.announcements'), description: 'Team announcements and updates' },
           ],
         },
       ],

@@ -8,7 +8,9 @@ import { getAthletes } from '../data/services/familyService'
 import { getTeamsForParent } from '../data/services/teamsService'
 import { NotificationRecord } from '../types/notifications'
 import type { NotificationCursor } from '../data/services/messagesService'
-import PortalHeader from '../components/portal/PortalHeader'
+import PortalLayout from '../components/portal/PortalLayout'
+import { PageTitle } from '../components/portal/Typography'
+import EmptyState from '../components/portal/EmptyState'
 import NotificationErrorBoundary from '../components/common/NotificationErrorBoundary'
 import { showError, showSuccess } from '../utils/toast'
 import { cn } from '../utils/cn'
@@ -315,7 +317,7 @@ export default function Notifications() {
 
       let label = dateStr
       if (dateStr === todayStr) label = 'Today'
-      else if (dateStr === yesterdayStr) label = `Yesterday — ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
+      else if (dateStr === yesterdayStr) label = `Yesterday - ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
       else label = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()
 
       if (label !== lastDate) {
@@ -409,15 +411,33 @@ export default function Notifications() {
 
   return (
     <NotificationErrorBoundary>
-      <div className="min-h-screen bg-white dark:bg-slate-900 font-sans text-slate-900 dark:text-white">
-        <PortalHeader />
-      
-      <main className="max-w-[1400px] mx-auto flex flex-col lg:flex-row min-h-screen gap-6 p-6">
+      <PortalLayout
+        breadcrumbs={[
+          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Notifications' },
+        ]}
+      >
+        <div className="mb-6 sm:mb-8">
+          <PageTitle>Notifications</PageTitle>
+          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide mt-1">
+            Stay on top of team, athlete, and program updates.
+          </p>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-280px)] lg:min-h-[600px]">
         
         {/* Sidebar Navigation */}
-        <aside className="w-full lg:w-72 flex flex-col gap-6 bg-white dark:bg-slate-900 p-6 rounded-xl h-fit border border-gray-100 dark:border-slate-800">
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-4">Filters</h3>
+        <aside className="w-full lg:w-[320px] lg:flex-shrink-0 flex flex-col border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-slate-900 dark:text-white">Filters</h3>
+              <button
+                onClick={clearFilters}
+                className="text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-[var(--org-link-color)] transition-colors"
+              >
+                Clear
+              </button>
+            </div>
             <div className="flex flex-col gap-2">
               <div 
                 onClick={() => setFilterByType(filterByType === 'athlete' ? 'all' : 'athlete')}
@@ -481,68 +501,72 @@ export default function Notifications() {
             </div>
           </div>
 
-          {filterByType === 'athlete' && athletes.length > 0 && (
-            <FilterSection 
-              title="Active Athletes" 
-              items={athletes.map(a => ({ id: a.id, name: `${a.first_name} ${a.last_name}` }))}
-              selectedIds={selectedAthleteIds}
-              onToggle={(id) => handleToggle(id, selectedAthleteIds, setSelectedAthleteIds)}
-              onSelectAll={() => handleSelectAll(athletes, selectedAthleteIds, setSelectedAthleteIds)}
-            />
-          )}
+          <div className="flex-1 overflow-y-auto p-4">
+            {filterByType === 'athlete' && athletes.length > 0 && (
+              <FilterSection 
+                title="Active Athletes" 
+                items={athletes.map(a => ({ id: a.id, name: `${a.first_name} ${a.last_name}` }))}
+                selectedIds={selectedAthleteIds}
+                onToggle={(id) => handleToggle(id, selectedAthleteIds, setSelectedAthleteIds)}
+                onSelectAll={() => handleSelectAll(athletes, selectedAthleteIds, setSelectedAthleteIds)}
+              />
+            )}
 
-          {filterByType === 'team' && teams.length > 0 && (
-            <FilterSection 
-              title="Active Teams" 
-              items={teams.map(t => ({ id: t.id, name: t.name }))}
-              selectedIds={selectedTeamIds}
-              onToggle={(id) => handleToggle(id, selectedTeamIds, setSelectedTeamIds)}
-              onSelectAll={() => handleSelectAll(teams, selectedTeamIds, setSelectedTeamIds)}
-            />
-          )}
+            {filterByType === 'team' && teams.length > 0 && (
+              <FilterSection 
+                title="Active Teams" 
+                items={teams.map(t => ({ id: t.id, name: t.name }))}
+                selectedIds={selectedTeamIds}
+                onToggle={(id) => handleToggle(id, selectedTeamIds, setSelectedTeamIds)}
+                onSelectAll={() => handleSelectAll(teams, selectedTeamIds, setSelectedTeamIds)}
+              />
+            )}
 
-          {filterByType === 'program' && (
-            <FilterSection 
-              title="Programs" 
-              items={programs}
-              selectedIds={selectedProgramIds}
-              onToggle={(id) => handleToggle(id, selectedProgramIds, setSelectedProgramIds)}
-              onSelectAll={() => handleSelectAll(programs, selectedProgramIds, setSelectedProgramIds)}
-            />
-          )}
+            {filterByType === 'program' && (
+              <FilterSection 
+                title="Programs" 
+                items={programs}
+                selectedIds={selectedProgramIds}
+                onToggle={(id) => handleToggle(id, selectedProgramIds, setSelectedProgramIds)}
+                onSelectAll={() => handleSelectAll(programs, selectedProgramIds, setSelectedProgramIds)}
+              />
+            )}
 
-          {filterByType === 'sport' && (
-            <FilterSection 
-              title="Sports" 
-              items={sports}
-              selectedIds={selectedSportIds}
-              onToggle={(id) => handleToggle(id, selectedSportIds, setSelectedSportIds)}
-              onSelectAll={() => handleSelectAll(sports, selectedSportIds, setSelectedSportIds)}
-            />
-          )}
+            {filterByType === 'sport' && (
+              <FilterSection 
+                title="Sports" 
+                items={sports}
+                selectedIds={selectedSportIds}
+                onToggle={(id) => handleToggle(id, selectedSportIds, setSelectedSportIds)}
+                onSelectAll={() => handleSelectAll(sports, selectedSportIds, setSelectedSportIds)}
+              />
+            )}
+          </div>
 
-          <button 
-            onClick={clearFilters}
-            className="mt-4 flex w-full items-center justify-center rounded-lg h-10 px-4 bg-gray-100 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-bold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
-          >
-            Clear All Filters
-          </button>
+          <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+            <button 
+              onClick={clearFilters}
+              className="flex w-full items-center justify-center rounded-lg h-10 px-4 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            >
+              Clear All Filters
+            </button>
+          </div>
         </aside>
 
         {/* Notification Feed Content */}
-        <section className="flex-1 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
+        <section className="flex-1 flex flex-col border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50">
           
           {/* Feed Header */}
-          <div className="p-8 border-b border-gray-100 dark:border-slate-800 flex flex-wrap justify-between items-end gap-4">
+          <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-wrap justify-between items-end gap-4">
             <div className="flex flex-col gap-2">
-              <h1 className="text-slate-900 dark:text-white text-3xl sm:text-5xl font-black leading-none tracking-tight">Notifications</h1>
+              <h2 className="text-slate-900 dark:text-white text-xl sm:text-2xl font-bold leading-none tracking-tight">Activity Feed</h2>
               <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">
                 {filteredNotifications.length} updates
               </p>
             </div>
             <button 
               onClick={handleMarkAllRead}
-              className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-[var(--org-btn-primary-bg)] transition-colors mb-2"
+              className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-[var(--org-link-color)] transition-colors mb-2"
             >
               <span className="material-symbols-outlined text-lg">done_all</span>
               Mark all as read
@@ -550,11 +574,11 @@ export default function Notifications() {
           </div>
 
           {/* Tabs */}
-          <div className="px-8 border-b border-gray-100 dark:border-slate-800">
-            <div className="flex gap-10 overflow-x-auto">
+          <div className="px-4 sm:px-6 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex gap-8 overflow-x-auto">
               <button 
                 onClick={() => setActiveTab('all')}
-                className={`border-b-4 py-4 text-sm font-bold transition-colors whitespace-nowrap ${
+                className={`border-b-2 py-3 text-sm font-semibold transition-colors whitespace-nowrap ${
                   activeTab === 'all' 
                     ? 'border-[var(--org-btn-primary-bg)] text-slate-900 dark:text-white' 
                     : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
@@ -564,7 +588,7 @@ export default function Notifications() {
               </button>
               <button 
                 onClick={() => setActiveTab('unread')}
-                className={`border-b-4 py-4 text-sm font-bold transition-colors whitespace-nowrap ${
+                className={`border-b-2 py-3 text-sm font-semibold transition-colors whitespace-nowrap ${
                   activeTab === 'unread' 
                     ? 'border-[var(--org-btn-primary-bg)] text-slate-900 dark:text-white' 
                     : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
@@ -574,7 +598,7 @@ export default function Notifications() {
               </button>
               <button 
                 onClick={() => setActiveTab('archived')}
-                className={`border-b-4 py-4 text-sm font-bold transition-colors whitespace-nowrap ${
+                className={`border-b-2 py-3 text-sm font-semibold transition-colors whitespace-nowrap ${
                   activeTab === 'archived' 
                     ? 'border-[var(--org-btn-primary-bg)] text-slate-900 dark:text-white' 
                     : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
@@ -586,23 +610,27 @@ export default function Notifications() {
           </div>
 
           {/* Notification List (The Stream) */}
-          <div className="flex flex-col min-h-[400px]">
+          <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <div className="flex items-center justify-center p-20">
-                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[var(--org-btn-primary-bg)]"></div>
+              <div className="p-4 space-y-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="h-24 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                ))}
               </div>
             ) : filteredNotifications.length === 0 ? (
-               <div className="flex flex-col items-center justify-center p-20 text-center">
-                 <span className="material-symbols-outlined text-6xl text-slate-200 dark:text-slate-700 mb-4">notifications_off</span>
-                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">No notifications found</h3>
-                 <p className="text-slate-500 mt-2">You're all caught up!</p>
-               </div>
+              <div className="p-8">
+                <EmptyState
+                  icon="notifications_off"
+                  title="No notifications found"
+                  description="You are all caught up."
+                />
+              </div>
             ) : (
               groupedNotifications.map((group, groupIdx) => (
                 <div key={groupIdx}>
                   {/* Date Header */}
                   {group.label !== 'Today' && (
-                    <div className="bg-gray-50 dark:bg-slate-800/30 px-8 py-4 border-b border-gray-100 dark:border-slate-800">
+                    <div className="bg-slate-50 dark:bg-slate-800/40 px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-slate-700">
                       <span className="tracking-[0.15em] text-xs font-bold text-slate-400 uppercase">{group.label}</span>
                     </div>
                   )}
@@ -615,15 +643,15 @@ export default function Notifications() {
                     return (
                       <div 
                         key={notification.id} 
-                        className={`group flex flex-col md:flex-row md:items-center p-8 border-b border-gray-100 dark:border-slate-800 transition-colors ${
-                          isUnread ? 'bg-white dark:bg-slate-900' : 'bg-gray-50/50 dark:bg-slate-900/50'
-                        } hover:bg-gray-50 dark:hover:bg-slate-800/50`}
+                        className={`group flex flex-col md:flex-row md:items-center p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 transition-colors ${
+                          isUnread ? 'bg-white dark:bg-slate-900/40' : 'bg-slate-50/60 dark:bg-slate-900/20'
+                        } hover:bg-slate-50 dark:hover:bg-slate-800/50`}
                       >
                        <div className="flex items-start md:items-center w-full gap-4 md:gap-8">
                           
                           {/* Time Column */}
-                          <div className="min-w-[100px] md:min-w-[120px] pt-1 md:pt-0">
-                             <h2 className={`text-2xl md:text-3xl font-black tabular-nums whitespace-nowrap ${isUnread ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
+                          <div className="min-w-[84px] md:min-w-[108px] pt-1 md:pt-0">
+                             <h2 className={`text-xl md:text-2xl font-bold tabular-nums whitespace-nowrap ${isUnread ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
                                {timeStr}
                              </h2>
                           </div>
@@ -633,37 +661,37 @@ export default function Notifications() {
                             
                             {/* Icon Column */}
                             <div className="flex flex-col items-center pt-1 md:pt-0">
-                               <span className={`material-symbols-outlined text-3xl md:text-4xl font-light ${isUnread ? getColorClass(notification.action) : 'text-slate-400'}`}>
+                               <span className={`material-symbols-outlined text-2xl md:text-3xl font-light ${isUnread ? getColorClass(notification.action) : 'text-slate-400'}`}>
                                  {getIcon(notification.action)}
                                </span>
                                {isUnread && (
-                                 <span className="tracking-[0.15em] text-[0.65rem] font-bold text-[var(--org-btn-primary-bg)] mt-1 uppercase">NEW</span>
+                                 <span className="tracking-[0.15em] text-[0.65rem] font-bold text-[var(--org-btn-primary-bg)] mt-1 uppercase">New</span>
                                )}
                             </div>
 
                             {/* Text Content */}
                             <div className={`flex flex-col ${!isUnread && 'opacity-60'}`}>
                                <div className="flex flex-wrap gap-2 items-center mb-1">
-                                <h3 className={`text-lg md:text-xl font-bold ${isUnread ? 'text-slate-900 dark:text-white' : 'line-through text-slate-900 dark:text-white'}`}>
+                                <h3 className={`text-base md:text-lg font-semibold ${isUnread ? 'text-slate-900 dark:text-white' : 'line-through text-slate-900 dark:text-white'}`}>
                                   {notification.title}
                                 </h3>
                                 {/* Mobile-only status chips could go here */}
                                </div>
-                               <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-sm md:text-base">
+                               <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-sm">
                                   {notification.body}
                                </p>
                                {/* Actions */}
-                               <div className="flex gap-4 mt-3">
+                               <div className="flex flex-wrap gap-4 mt-3 items-center">
                                  {notification.link_url && (
-                                   <Link to={notification.link_url} className="text-sm font-bold text-[var(--org-link-color)] hover:underline flex items-center gap-1">
-                                      View Details <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                    <Link to={notification.link_url} className="text-sm font-semibold text-[var(--org-link-color)] hover:underline flex items-center gap-1">
+                                       View details <span className="material-symbols-outlined text-sm">arrow_forward</span>
                                    </Link>
                                  )}
                                  {/* Actions */}
                                  {isUnread && (
                                     <button 
                                       onClick={() => handleMarkRead(notification.id)}
-                                      className="text-sm font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                      className="text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white"
                                     >
                                       Dismiss
                                     </button>
@@ -671,7 +699,7 @@ export default function Notifications() {
                                  {!notification.archived_at && activeTab !== 'archived' && (
                                     <button 
                                       onClick={() => handleArchive(notification.id)}
-                                      className="text-sm font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                      className="text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white"
                                     >
                                       Archive
                                     </button>
@@ -700,7 +728,7 @@ export default function Notifications() {
 
           {/* Offline Indicator */}
           {isOffline && (
-            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800">
+            <div className="px-4 sm:px-6 py-3 bg-yellow-50 dark:bg-yellow-900/20 border-t border-yellow-200 dark:border-yellow-800">
               <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
                 <span className="material-symbols-outlined">wifi_off</span>
                 <span className="text-sm font-medium">You're offline. Some features may be unavailable.</span>
@@ -710,11 +738,11 @@ export default function Notifications() {
 
           {/* Load More Footer - only if we have data and next cursor */}
           {!loading && filteredNotifications.length > 0 && nextCursor && (
-            <div className="p-8 flex justify-center">
+            <div className="p-4 sm:p-6 border-t border-slate-200 dark:border-slate-700 flex justify-center">
               <button 
                 onClick={handleLoadMore}
                 disabled={loadingMore || isOffline}
-                className="org-btn-secondary flex items-center gap-2 px-8 py-3 rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="org-btn-secondary flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loadingMore ? (
                   <>
@@ -732,19 +760,8 @@ export default function Notifications() {
           )}
         </section>
 
-      </main>
-
-      {/* Help Center Sticky */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <button 
-          onClick={() => window.open('/help', '_blank')}
-          className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-xl rounded-full px-6 py-3 flex items-center gap-3 hover:scale-105 transition-transform"
-        >
-          <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]">contact_support</span>
-          <span className="text-sm font-bold text-slate-900 dark:text-white">Help Center</span>
-        </button>
-      </div>
-      </div>
+        </div>
+      </PortalLayout>
     </NotificationErrorBoundary>
   )
 }

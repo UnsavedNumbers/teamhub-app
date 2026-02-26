@@ -17,6 +17,33 @@ import { getLoginRedirect } from '../utils/loginRedirect'
 import { mapAuthError } from '../utils/authErrorMapper'
 import type { SupabaseExtended as Database } from '../lib/supabase.extended.types'
 import type { OrgMemberRole } from '../contexts/OrganizationContext'
+import type { DemoAllowedRole } from '../types/demoManagement'
+
+const DEMO_ENTRY_SELECTED_ROLE_KEY = 'demo_entry_selected_role'
+
+function getRedirectForDemoEntryRole(role: DemoAllowedRole): string {
+  if (role === 'org_admin' || role === 'coach') return '/admin'
+  if (role === 'fan') return '/fan'
+  return '/portal/dashboard'
+}
+
+function consumeDemoEntryRoleRedirect(): string | null {
+  if (typeof window === 'undefined' || typeof window.sessionStorage === 'undefined') {
+    return null
+  }
+
+  const raw = window.sessionStorage.getItem(DEMO_ENTRY_SELECTED_ROLE_KEY)
+  if (!raw) return null
+
+  window.sessionStorage.removeItem(DEMO_ENTRY_SELECTED_ROLE_KEY)
+  const normalized = raw.trim().toLowerCase()
+  const allowedRoles: DemoAllowedRole[] = ['org_admin', 'coach', 'parent', 'staff', 'athlete', 'fan']
+  if (!allowedRoles.includes(normalized as DemoAllowedRole)) {
+    return null
+  }
+
+  return getRedirectForDemoEntryRole(normalized as DemoAllowedRole)
+}
 
 export default function AuthCallback() {
   useDebugLifecycle('AuthCallback')
@@ -246,6 +273,17 @@ export default function AuthCallback() {
 
             console.log('[AuthCallback] Session set. isDemoCallback:', isDemoCallback, 'userId:', userId)
 
+            if (isDemoCallback) {
+              const roleRedirect = consumeDemoEntryRoleRedirect()
+              if (roleRedirect) {
+                logAuthCallback('Demo callback using selected role redirect', {
+                  roleRedirect,
+                })
+                setDemoRedirect(roleRedirect)
+                return
+              }
+            }
+
             // For demo callbacks, wait a moment for auth state to propagate before redirecting
             // This prevents a race condition where RouteGuard sees no user and redirects to login
             if (isDemoCallback) {
@@ -342,6 +380,15 @@ export default function AuthCallback() {
         // Priority -2: Check if this is a demo session callback
         const isDemoCallback = searchParams.get('demo') === 'true'
         if (isDemoCallback) {
+          const roleRedirect = consumeDemoEntryRoleRedirect()
+          if (roleRedirect) {
+            logAuthCallback('Demo callback using selected role redirect', {
+              roleRedirect,
+            })
+            setDemoRedirect(roleRedirect)
+            return
+          }
+
           // For demo sessions, fetch organizations and use getLoginRedirect to determine correct destination
           // This ensures org_admin goes to /admin, coach goes to /admin, parent/athlete go to /portal/dashboard, etc.
           try {

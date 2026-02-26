@@ -5,6 +5,7 @@ import {
   Users,
   Megaphone,
   MessageSquare,
+  Mail,
   Image,
   Video,
   Ticket,
@@ -189,6 +190,7 @@ export default function PortalSidebar({
         { path: getLink('portal.uniforms'), label: t('nav.uniforms'), routeKey: 'portal.uniforms', icon: Shirt },
       ],
     },
+    { path: getLink('portal.messages'), label: 'Messages', icon: Mail, routeKey: 'portal.messages' },
     { path: getLink('portal.announcements'), label: t('nav.announcements'), icon: Megaphone, routeKey: 'portal.messages' },
     { path: getLink('portal.huddles'), label: t('nav.huddles'), icon: MessageSquare, routeKey: 'portal.huddles' },
     {

@@ -13,6 +13,7 @@ import type { OrgMemberRole } from '../../contexts/OrganizationContext'
 import { getUserByEmail, getUserOrganizations } from './fakeUsers'
 import { getAssignedTeamsForCoach, getChildrenForUserId, getTeamsForStaff, ATHLETE_USER_SELF_MAP } from './relationships'
 import { supabase } from '../../lib/supabase'
+import { getDemoUserByEmail } from '@/demo/demoUsers'
 
 // ============================================================================
 // Types
@@ -548,6 +549,27 @@ export async function waitForUserContext(
  */
 export function getDemoUserContext(email: string): UserContext | null {
     const normalizedEmail = email.toLowerCase().trim()
+    const registryUser = getDemoUserByEmail(normalizedEmail)
+    if (registryUser?.seeded) {
+        const rolesByRegistryRole: Record<string, OrgMemberRole[]> = {
+            org_admin: ['org_admin'],
+            coach: ['coach'],
+            staff: ['staff'],
+            guardian: ['guardian', 'parent'],
+            athlete: ['athlete'],
+            fan: ['fan'],
+            platform_admin: [],
+        }
+
+        return {
+            userId: registryUser.userId ?? resolveDemoUserId(normalizedEmail) ?? normalizedEmail,
+            email: normalizedEmail,
+            orgId: registryUser.defaultOrgId ?? DEMO_ORG_A_ID,
+            roles: rolesByRegistryRole[registryUser.role] ?? ['parent'],
+            isPlatformAdmin: registryUser.role === 'platform_admin',
+        }
+    }
+
     const userId = resolveDemoUserId(normalizedEmail)
 
     if (userId) {

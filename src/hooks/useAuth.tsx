@@ -582,6 +582,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setOrganizations(organizations)
         }
         setLoading(false)
+        return () => {
+          mountedRef.current = false
+        }
       } else {
         // No fake auth state, but check for real Supabase session (from demo entry flow)
         clearFakeAuthState()
@@ -672,6 +675,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mountedRef.current) return
+
+      if (USE_FAKE_DATA) {
+        const persistedFakeAuth = readFakeAuthState()
+        if (persistedFakeAuth && event !== 'SIGNED_OUT') {
+          debug.flow('Auth', 'Ignoring Supabase auth event because fake auth is authoritative', {
+            event,
+            persistedEmail: persistedFakeAuth.email,
+            eventUserId: session?.user?.id ?? null,
+            currentUserId: latestUserRef.current?.id ?? null,
+            ...getAuthRouteContext(),
+          })
+          return
+        }
+      }
 
       const currentUser = latestUserRef.current
       const currentProfile = latestProfileRef.current
@@ -1095,6 +1112,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } else {
             clearStoredDemoCode()
             refreshSession()
+          }
+          try {
+            await supabase.auth.signOut()
+          } catch (err) {
+            debug.error('Auth', 'Underlying Supabase signOut failed in demo mode', {
+              userId: user?.id,
+              error: err,
+            })
           }
           clearFakeAuthState()
           setUser(null)

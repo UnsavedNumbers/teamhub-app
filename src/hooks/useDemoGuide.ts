@@ -117,8 +117,15 @@ export function useDemoGuide(pageId?: string, autoShow: boolean = true): UseDemo
       return 'portal-payments'
     }
     if (path.startsWith('/portal/uniforms')) return 'portal-uniforms'
+    if (path.startsWith('/portal/announcements')) {
+      if (path.match(/\/announcements\/[^/]+$/)) return 'portal-announcementDetail'
+      return 'portal-messages'
+    }
+    if (path.startsWith('/portal/huddles')) {
+      return 'portal-messages'
+    }
+    if (path.match(/^\/portal\/messages\/[^/]+$/)) return 'portal-announcementDetail'
     if (path.startsWith('/portal/messages')) {
-      if (path.match(/\/messages\/[^/]+$/)) return 'portal-announcementDetail'
       return 'portal-messages'
     }
     if (path.startsWith('/portal/following')) return 'portal-following'

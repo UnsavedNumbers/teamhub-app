@@ -63,7 +63,7 @@ const portal = {
         path: '/portal/huddles',
         label: 'Huddles',
         icon: 'forum',
-        description: 'Team chat and messaging',
+        description: 'Team and organization chat channels',
     },
     // Announcements
     announcements: {
@@ -72,15 +72,15 @@ const portal = {
         icon: 'campaign',
         description: 'Important announcements',
     },
-    // Legacy routes (for backwards compatibility)
+    // Direct messages
     messages: {
         path: '/portal/messages',
-        label: 'Huddles',
-        icon: 'forum',
-        description: 'Team chat and announcements',
+        label: 'Messages',
+        icon: 'mail',
+        description: 'Direct user-to-user messages',
     },
     announcementDetail: {
-        path: '/portal/messages/:announcementId',
+        path: '/portal/announcements/:announcementId',
         params: ['announcementId'] as const,
         label: 'Announcement',
         icon: 'mail',

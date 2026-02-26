@@ -2,35 +2,45 @@ import { Link } from 'react-router-dom'
 import {
   Calendar,
   MessageSquare,
-  Ticket,
+  Users,
   CreditCard,
+  FileText,
+  Image,
   HandHelping,
+  Award,
+  Ticket,
+  ShieldAlert,
+  Settings,
+  MapPin,
   Receipt,
   Megaphone,
-  Image,
+  type LucideIcon,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
 import { getLink } from '../../utils/routes'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getUpcomingEventsForUser } from '../../data/services/eventsService'
-import { getAnnouncements } from '../../data/services/messagesService'
+import { getAnnouncements, getNotifications } from '../../data/services/messagesService'
 import { getUnpaidFeeAssignments } from '../../data/services/paymentsService'
 import { getTeamsForParent } from '../../data/services/teamsService'
 import { getPrimarySportForUser } from '../../utils/sportContext'
+import { getAnnouncementEmoji } from '../../utils/announcementTypes'
 import type { Announcement } from '../../data/services/messagesService'
 import type { CalendarEvent } from '../../types/calendar'
+import type { NotificationRecord } from '../../types/notifications'
 import type { SportInfo } from '../../utils/sportContext'
-import { ActionCard, ContextHero, RecentActivityList, DataSnapshotChart } from '../../components/portal/workspace'
+import { ContextHero, RecentActivityList } from '../../components/portal/workspace'
+import { SportCardImage } from '../../components/portal/SportCardImage'
 import type { RecentActivityItem } from '../../components/portal/workspace'
 import { QUERY_CONFIG } from '../../constants/api'
 
 const GUARDIAN_ACTIONS = [
-  { to: getLink('portal.calendar'), icon: Calendar, label: 'View Schedule', subtext: 'Upcoming events' },
-  { to: getLink('portal.messages'), icon: MessageSquare, label: 'Message Coach', subtext: 'Huddles & announcements' },
-  { to: getLink('portal.myTickets'), icon: Ticket, label: 'View Tickets', subtext: 'Event tickets' },
-  { to: getLink('portal.payments'), icon: CreditCard, label: 'Manage Registrations', subtext: 'Fees & payments' },
-  { to: getLink('portal.calendar'), icon: HandHelping, label: 'Volunteer Signup', subtext: 'Find opportunities' },
+  { to: getLink('portal.calendar'), label: 'View Schedule', subtext: 'Upcoming events' },
+  { to: getLink('portal.messages'), label: 'Message Coach', subtext: 'Direct messages' },
+  { to: getLink('portal.myTickets'), label: 'View Tickets', subtext: 'Event tickets' },
+  { to: getLink('portal.payments'), label: 'Manage Registrations', subtext: 'Fees & payments' },
+  { to: getLink('portal.calendar'), label: 'Volunteer Signup', subtext: 'Find opportunities' },
 ]
 
 function formatTimeAgo(date: Date): string {
@@ -52,6 +62,47 @@ export default function GuardianDashboardContent() {
   const { context, isReady } = useUserContext()
   const [sport, setSport] = useState<SportInfo | null>(null)
 
+  const getNotificationIcon = (action: NotificationRecord['action']): LucideIcon => {
+    if (action === 'event_rsvp_required') return Ticket
+    if (action.startsWith('event_')) return Calendar
+    if (action.startsWith('message_') || action === 'huddle_created' || action === 'user_mentioned') return MessageSquare
+    if (action.startsWith('travel_')) return MapPin
+    if (action.startsWith('fee_') || action.startsWith('payout_')) return CreditCard
+    if (action === 'announcement_created' || action === 'announcement_urgent') return Megaphone
+    if (action === 'announcement_updated') return Image
+    if (action === 'announcement_deleted') return FileText
+    if (action.startsWith('uniform_')) return Award
+    if (action.startsWith('athlete_') || action.startsWith('guardian_') || action.startsWith('team_')) return Users
+    if (action.startsWith('invite_') || action === 'role_assigned' || action === 'role_removed' || action === 'access_revoked') return HandHelping
+    if (action.startsWith('license_') || action.startsWith('feature_')) return Settings
+    if (action === 'system_generated_notice') return ShieldAlert
+    return FileText
+  }
+
+  const getActionState = (
+    notification: NotificationRecord,
+  ): { label?: string; tone?: RecentActivityItem['actionStateTone'] } => {
+    switch (notification.action) {
+      case 'fee_overdue':
+        return { label: 'Overdue', tone: 'urgent' }
+      case 'fee_payment_failed':
+        return { label: 'Action needed', tone: 'urgent' }
+      case 'event_rsvp_required':
+        return { label: 'RSVP needed', tone: 'warning' }
+      case 'event_canceled':
+        return { label: 'Canceled', tone: 'urgent' }
+      case 'event_rescheduled':
+      case 'event_time_changed':
+      case 'event_location_updated':
+        return { label: 'Updated', tone: 'warning' }
+      case 'fee_payment_completed':
+        return { label: 'Paid', tone: 'success' }
+      default:
+        if (!notification.read_at) return { label: 'New', tone: 'default' }
+        return {}
+    }
+  }
+
   useEffect(() => {
     if (!isReady || !context?.orgId) return
     getPrimarySportForUser(context).then(setSport).catch(() => setSport(null))
@@ -67,10 +118,20 @@ export default function GuardianDashboardContent() {
     staleTime: QUERY_CONFIG.STALE_TIME_MS,
   })
 
-  const { data: announcements } = useQuery({
-    queryKey: ['portal-announcements', context?.orgId],
+  const { data: parentTeams } = useQuery({
+    queryKey: ['portal-parent-teams', context?.orgId],
     queryFn: async () => {
       const { data: teams } = await getTeamsForParent(context!)
+      return teams ?? []
+    },
+    enabled: isReady && !!context?.orgId && !!context?.userId,
+    staleTime: QUERY_CONFIG.STALE_TIME_MS,
+  })
+
+  const { data: announcements } = useQuery({
+    queryKey: ['portal-announcements', context?.orgId, (parentTeams ?? []).map((team: any) => team.id).join('|')],
+    queryFn: async () => {
+      const teams = parentTeams ?? []
       if (!teams?.length) return [] as Announcement[]
       const all: Announcement[] = []
       for (const t of teams.slice(0, 3)) {
@@ -79,7 +140,17 @@ export default function GuardianDashboardContent() {
       }
       return all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5)
     },
-    enabled: isReady && !!context?.orgId,
+    enabled: isReady && !!context?.orgId && !!context?.userId,
+    staleTime: QUERY_CONFIG.STALE_TIME_MS,
+  })
+
+  const { data: notifications } = useQuery({
+    queryKey: ['portal-recent-notifications', context?.orgId, context?.userId],
+    queryFn: async () => {
+      const { data } = await getNotifications(context!, { limit: 20 })
+      return data ?? []
+    },
+    enabled: isReady && !!context?.orgId && !!context?.userId,
     staleTime: QUERY_CONFIG.STALE_TIME_MS,
   })
 
@@ -92,6 +163,25 @@ export default function GuardianDashboardContent() {
     enabled: isReady && !!context?.orgId,
     staleTime: QUERY_CONFIG.STALE_TIME_MS,
   })
+
+  const normalizeAssignment = (assignment: any) => {
+    const rawAmount = assignment?.amount_cents ?? assignment?.amount_due_cents ?? 0
+    const rawPaid = assignment?.paid_cents_total ?? assignment?.amount_paid_cents ?? 0
+    const rawBalance = assignment?.balance_cents
+
+    const amountCents = Number(rawAmount) || 0
+    const paidCentsTotal = Number(rawPaid) || 0
+    const balanceCents = rawBalance !== undefined && rawBalance !== null
+      ? Number(rawBalance) || 0
+      : Math.max(0, amountCents - paidCentsTotal)
+
+    return {
+      ...assignment,
+      amountCents,
+      paidCentsTotal,
+      balanceCents,
+    }
+  }
 
   const events = (upcomingEvents ?? []) as CalendarEvent[]
   const eventCountThisWeek = events.filter((e) => {
@@ -110,72 +200,145 @@ export default function GuardianDashboardContent() {
     ? `${firstEvent.type === 'practice' ? 'Practice' : 'Game'} ${firstEvent.title} • ${new Date(firstEvent.start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`
     : 'Add events to your calendar.'
 
+  const normalizedUnpaid = (unpaid ?? []).map(normalizeAssignment)
+  const teamNameById = new Map(
+    (parentTeams ?? []).map((team: any) => [
+      team.id,
+      team.name ?? team.team_name ?? team.display_name ?? team.title,
+    ]),
+  )
+
   const badges: { label: string; href?: string }[] = []
-  if (announcements && announcements.length > 0) badges.push({ label: `${announcements.length} unread`, href: getLink('portal.messages') })
-  const balance = unpaid?.reduce((sum: number, a: any) => sum + (a.balance_cents ?? (a.amount_cents - (a.paid_cents_total ?? 0)) ?? 0), 0) ?? 0
+  if (announcements && announcements.length > 0) badges.push({ label: `${announcements.length} unread`, href: getLink('portal.announcements') })
+  const balance = normalizedUnpaid.reduce((sum: number, a: any) => sum + (a.balanceCents ?? 0), 0)
   if (balance > 0) badges.push({ label: 'Outstanding balance', href: getLink('portal.payments') })
   badges.push({ label: 'RSVP needed', href: getLink('portal.calendar') })
 
-  const activityItems: RecentActivityItem[] = []
+  const trimText = (value: string | null | undefined, maxLength: number): string | undefined => {
+    if (!value) return undefined
+    return value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value
+  }
+
+  const manualActivityItems: Array<{ item: RecentActivityItem; sortMs: number }> = []
   announcements?.slice(0, 3).forEach((a) => {
-    activityItems.push({
+    const createdAtMs = new Date(a.created_at).getTime()
+    const isRecent = Date.now() - createdAtMs < 24 * 60 * 60 * 1000
+    const teamId = (a as any).team_id as string | null | undefined
+    manualActivityItems.push({
+      sortMs: createdAtMs,
+      item: {
       id: a.id,
       title: a.title,
       subtitle: a.content?.slice(0, 60),
-      href: `/portal/messages/${a.id}`,
+      contextLabel: teamId ? teamNameById.get(teamId) : undefined,
+      actionState: isRecent ? 'New' : undefined,
+      actionStateTone: isRecent ? 'default' : undefined,
+      href: `/portal/announcements/${a.id}`,
       icon: Megaphone,
       timestamp: formatTimeAgo(new Date(a.created_at)),
+      },
     })
   })
-  unpaid?.slice(0, 2).forEach((a: any) => {
-    activityItems.push({
-      id: a.id,
-      title: a.fee?.title ?? 'Fee due',
-      subtitle: a.balance_cents ? `$${(a.balance_cents / 100).toFixed(2)}` : undefined,
-      href: getLink('portal.payments'),
-      icon: Receipt,
-      timestamp: 'Due soon',
+  normalizedUnpaid.slice(0, 2).forEach((a: any, index: number) => {
+    manualActivityItems.push({
+      sortMs: Date.now() - (2 + index) * 60 * 1000,
+      item: {
+        id: a.id,
+        title: a.fee?.title ?? 'Fee due',
+        subtitle: a.balanceCents > 0 ? `$${(a.balanceCents / 100).toFixed(2)}` : undefined,
+        actionState: a.balanceCents > 0 ? 'Due soon' : undefined,
+        actionStateTone: a.balanceCents > 0 ? 'warning' : undefined,
+        href: getLink('portal.payments'),
+        icon: Receipt,
+        timestamp: 'Due soon',
+      },
     })
   })
 
-  const chartData = events.length
-    ? [
-        { label: 'Mon', value: events.filter((e) => new Date(e.start_time).getDay() === 1).length },
-        { label: 'Tue', value: events.filter((e) => new Date(e.start_time).getDay() === 2).length },
-        { label: 'Wed', value: events.filter((e) => new Date(e.start_time).getDay() === 3).length },
-        { label: 'Thu', value: events.filter((e) => new Date(e.start_time).getDay() === 4).length },
-        { label: 'Fri', value: events.filter((e) => new Date(e.start_time).getDay() === 5).length },
-        { label: 'Sat', value: events.filter((e) => new Date(e.start_time).getDay() === 6).length },
-        { label: 'Sun', value: events.filter((e) => new Date(e.start_time).getDay() === 0).length },
-      ]
-    : [
-        { label: 'Mon', value: 0 },
-        { label: 'Tue', value: 0 },
-        { label: 'Wed', value: 0 },
-        { label: 'Thu', value: 0 },
-        { label: 'Fri', value: 0 },
-        { label: 'Sat', value: 0 },
-        { label: 'Sun', value: 0 },
-      ]
+  const notificationActivityItems: Array<{ item: RecentActivityItem; sortMs: number }> = (notifications ?? []).map((n) => {
+    const state = getActionState(n)
+    const fallbackHref =
+      n.entity_type === 'event' || n.entity_type === 'travel'
+        ? getLink('portal.calendar')
+        : n.entity_type === 'fee'
+          ? getLink('portal.payments')
+          : n.entity_type === 'announcement'
+            ? getLink('portal.announcements')
+            : n.entity_type === 'message'
+              ? getLink('portal.messages')
+              : getLink('portal.dashboard')
+
+    return {
+      sortMs: new Date(n.created_at).getTime(),
+      item: {
+        id: `notif-${n.id}`,
+        title: n.title,
+        subtitle: trimText(n.body, 90),
+        href: n.link_url && n.link_url.startsWith('/') ? n.link_url : fallbackHref,
+        icon: getNotificationIcon(n.action),
+        timestamp: formatTimeAgo(new Date(n.created_at)),
+        contextLabel: n.team_id ? teamNameById.get(n.team_id) : undefined,
+        actionState: state.label,
+        actionStateTone: state.tone,
+      },
+    }
+  })
+
+  const dedupe = new Set<string>()
+  const activityItems = [...manualActivityItems, ...notificationActivityItems]
+    .sort((a, b) => b.sortMs - a.sortMs)
+    .filter(({ item }) => {
+      const normalizedKey = `${item.title.trim().toLowerCase()}|${item.href.trim().toLowerCase()}|${(item.contextLabel ?? '').trim().toLowerCase()}`
+      if (dedupe.has(normalizedKey)) return false
+      dedupe.add(normalizedKey)
+      return true
+    })
+    .slice(0, 10)
+    .map(({ item }) => item)
+
+  const unpaidAssignments = normalizedUnpaid
+  const unpaidCount = unpaidAssignments.length
+  const upcomingPaymentItems = unpaidAssignments
+    .map((a: any) => {
+      const itemBalance = a.balanceCents ?? 0
+      return {
+        id: a.id,
+        title: a.fee?.title ?? 'Registration fee',
+        amountLabel: `$${(Math.max(itemBalance, 0) / 100).toFixed(2)}`,
+      }
+    })
+    .filter((item) => Number(item.amountLabel.replace('$', '')) > 0)
+    .slice(0, 2)
+  const paymentHeadline = balance > 0 ? `$${(balance / 100).toFixed(2)}` : 'All caught up'
+  const paymentSubtext = balance > 0
+    ? `${unpaidCount} payment${unpaidCount === 1 ? '' : 's'} due`
+    : 'No upcoming payments due'
+  const nextEventDate = firstEvent
+    ? new Date(firstEvent.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    : null
 
   return (
     <div className="space-y-8">
       <section>
         <h1 className="sr-only">Guardian dashboard</h1>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-900/70">
           {GUARDIAN_ACTIONS.map((action) => (
-            <ActionCard
+            <Link
               key={action.to + action.label}
               to={action.to}
-              icon={action.icon}
-              label={action.label}
-              subtext={action.subtext}
-            />
+              className="group text-sm font-bold uppercase tracking-wide text-slate-700 transition-colors hover:text-slate-950 dark:text-slate-300 dark:hover:text-white"
+            >
+              {action.label}
+              <span className="ml-2 hidden text-[11px] font-medium normal-case tracking-normal text-slate-500 dark:text-slate-400 lg:inline">
+                {action.subtext}
+              </span>
+            </Link>
           ))}
         </div>
       </section>
 
       <ContextHero
+        className="-mx-4 sm:-mx-6"
         headline={headline}
         subtext={subtext}
         badges={badges}
@@ -189,25 +352,109 @@ export default function GuardianDashboardContent() {
             title="Recent activity"
             viewAllHref={getLink('portal.calendar')}
             items={activityItems}
-            emptyMessage="No recent activity. Check calendar and messages."
+            emptyMessage="You're all caught up! Check back soon for updates from your teams."
           />
         </div>
         <div>
-          <DataSnapshotChart
-            title="Events this week"
-            data={chartData}
-            valueLabel="Events"
-          />
-          <div className="mt-4 rounded-xl border-2 border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
-            <h3 className="text-sm font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">Upcoming</h3>
-            <p className="mt-2 text-4xl font-black text-slate-900 dark:text-slate-100">{events.length}</p>
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">events scheduled</p>
-            <Link
-              to={getLink('portal.payments')}
-              className="mt-4 block text-sm font-bold uppercase tracking-wide text-[var(--org-link-color)] hover:underline"
-            >
-              Payment summary →
-            </Link>
+          <div className="space-y-4">
+            <section className="rounded-xl bg-slate-50 p-5 dark:bg-slate-900/70">
+              <div className="mb-4 flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Events</p>
+                  <p className="mt-1 text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">{eventCountThisWeek}</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">this week</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{events.length} total</p>
+                  {nextEventDate && <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">Next {nextEventDate}</p>}
+                </div>
+              </div>
+              <div className="space-y-2.5">
+                {events.length === 0 ? (
+                  <p className="rounded-xl bg-slate-100/70 px-3 py-3 text-sm font-medium text-slate-600 dark:bg-slate-800/70 dark:text-slate-400">
+                    No upcoming events scheduled.
+                  </p>
+                ) : (
+                  events.slice(0, 3).map((event) => {
+                    const normalizedEventType = event.type ? event.type.replace(/_/g, ' ') : 'event'
+                    const eventTypeLabel = normalizedEventType
+                      ? `${normalizedEventType.charAt(0).toUpperCase()}${normalizedEventType.slice(1)}`
+                      : 'Event'
+                    const formattedDate = new Date(event.start_time).toLocaleString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                    })
+                    const ticketBannerUrl = event.ticketed_event?.ticket_banner_url
+                    const formattedArrivalTime = event.arrival_time
+                      ? new Date(event.arrival_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                      : null
+
+                    return (
+                      <Link
+                        key={event.id}
+                        to={`/portal/calendar/events/${event.id}`}
+                        className="group flex items-center gap-3 rounded-xl bg-slate-100/70 p-2.5 transition-colors hover:bg-slate-200/70 dark:bg-slate-800/60 dark:hover:bg-slate-800"
+                      >
+                        {ticketBannerUrl ? (
+                          <img
+                            src={ticketBannerUrl}
+                            alt={event.title}
+                            className="h-14 w-20 shrink-0 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <SportCardImage
+                            sport={sport}
+                            height="h-14"
+                            className="w-20 shrink-0 !rounded-lg"
+                          />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">{event.title}</p>
+                          <p className="mt-0.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{eventTypeLabel}</p>
+                          {formattedArrivalTime && (
+                            <p className="mt-0.5 text-[11px] font-black uppercase tracking-wide text-rose-600 dark:text-rose-400">
+                              Arrive by {formattedArrivalTime}
+                            </p>
+                          )}
+                        </div>
+                        <span className="shrink-0 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          {formattedDate}
+                        </span>
+                      </Link>
+                    )
+                  })
+                )}
+                <Link
+                  to={getLink('portal.calendar')}
+                  className="block pt-1 text-sm font-bold uppercase tracking-wide text-[var(--org-link-color)] hover:underline"
+                >
+                  View all events →
+                </Link>
+              </div>
+            </section>
+
+            <section className="rounded-xl bg-slate-50 p-5 dark:bg-slate-900/70">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Upcoming payments</p>
+              <p className="mt-2 text-4xl font-black tracking-tight text-slate-900 dark:text-slate-100">{paymentHeadline}</p>
+              <p className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">{paymentSubtext}</p>
+              {upcomingPaymentItems.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {upcomingPaymentItems.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="truncate font-semibold text-slate-700 dark:text-slate-300">{item.title}</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100">{item.amountLabel}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Link
+                to={getLink('portal.payments')}
+                className="mt-4 block text-sm font-bold uppercase tracking-wide text-[var(--org-link-color)] hover:underline"
+              >
+                Payment summary →
+              </Link>
+            </section>
           </div>
         </div>
       </div>
@@ -219,15 +466,17 @@ export default function GuardianDashboardContent() {
             View all →
           </Link>
         </div>
-        <div className="flex gap-4 overflow-x-auto pb-3">
+        <div className="grid grid-cols-1 gap-3 sm:flex sm:gap-4 sm:overflow-x-auto sm:pb-3">
           {announcements?.slice(0, 4).map((a) => (
             <Link
               key={a.id}
-              to={`/portal/messages/${a.id}`}
-              className="group flex min-w-[240px] flex-col rounded-xl border-2 border-slate-200 bg-white p-5 transition-all hover:border-[var(--org-link-color)]/30 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+              to={`/portal/announcements/${a.id}`}
+              className="group flex flex-col rounded-xl bg-slate-50 p-5 transition-colors hover:bg-slate-100 sm:min-w-[240px] dark:bg-slate-900/70 dark:hover:bg-slate-900"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--org-btn-primary-bg)]/10 group-hover:bg-[var(--org-btn-primary-bg)]/20">
-                <Megaphone className="h-6 w-6 text-[var(--org-link-color)]" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-800">
+                <span className="text-base leading-none" aria-hidden>
+                  {getAnnouncementEmoji(a.type)}
+                </span>
               </div>
               <p className="mt-3 truncate text-sm font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">{a.title}</p>
               <p className="mt-2 line-clamp-2 text-xs font-medium text-slate-600 dark:text-slate-400">{a.content}</p>
@@ -235,10 +484,9 @@ export default function GuardianDashboardContent() {
           ))}
           <Link
             to={getLink('portal.photos')}
-            className="flex min-w-[240px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-8 text-slate-500 transition-all hover:border-slate-400 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800/50 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="flex flex-col items-center justify-center rounded-xl bg-slate-50 p-8 text-slate-500 transition-colors hover:bg-slate-100 sm:min-w-[240px] dark:bg-slate-900/70 dark:text-slate-400 dark:hover:bg-slate-900"
           >
-            <Image className="h-10 w-10" />
-            <span className="mt-3 text-sm font-bold uppercase tracking-wide">Photos</span>
+            <span className="text-sm font-bold uppercase tracking-wide">Photos</span>
           </Link>
         </div>
       </section>

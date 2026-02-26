@@ -11,6 +11,30 @@ import { getLink, getPath, RouteKeys } from '@/utils/routes'
 import { isTrialExpired } from '@/utils/licenseUtils'
 import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 
+const DEMO_SWITCH_IN_PROGRESS_KEY = 'DEMO_SWITCH_IN_PROGRESS'
+const DEMO_SWITCH_GRACE_MS = 20_000
+
+function isDemoRoleSwitchInProgress(): boolean {
+  if (typeof window === 'undefined') return false
+
+  const rawValue = window.sessionStorage.getItem(DEMO_SWITCH_IN_PROGRESS_KEY)
+  if (!rawValue) return false
+
+  const switchTimestamp = Number(rawValue)
+  if (!Number.isFinite(switchTimestamp)) return false
+
+  const ageMs = Date.now() - switchTimestamp
+  return ageMs >= 0 && ageMs < DEMO_SWITCH_GRACE_MS
+}
+
+function DemoRoleSwitchingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
+      <div className="text-sm text-slate-600 dark:text-slate-300">Switching role...</div>
+    </div>
+  )
+}
+
 interface ProtectedRouteProps {
   children: React.ReactNode
   // UX-only role checking - RLS handles actual authorization
@@ -36,6 +60,7 @@ export function ProtectedRoute({
     { requireOrganization: isAdminRoute && !isPlatformAdmin }
   )
   const hasIdentity = !!user && !!profile
+  const demoRoleSwitching = isDemoRoleSwitchInProgress()
 
   // Track whether we've set loading to true using a ref (survives through cleanup)
   const hasSetLoadingRef = useRef(false)
@@ -110,6 +135,10 @@ export function ProtectedRoute({
 
   // Redirect to login if not authenticated
   if (!user) {
+    if (demoRoleSwitching) {
+      logDecision('Hold render: demo role switching (suppress login redirect)')
+      return <DemoRoleSwitchingScreen />
+    }
     logDecision('Redirect: unauthenticated -> login')
     return <Navigate to={getLink(RouteKeys.AUTH_LOGIN)} state={{ from: location }} replace />
   }
@@ -198,6 +227,15 @@ export function ProtectedRoute({
     )
     
     if (!hasAllowedRole && !hasLegacyRole) {
+      if (demoRoleSwitching) {
+        logDecision('Hold render: demo role switching (suppress unauthorized redirect)', {
+          allowedRoles,
+          normalizedRoles,
+          hasAllowedRole,
+          hasLegacyRole,
+        })
+        return <DemoRoleSwitchingScreen />
+      }
       logDecision('Redirect: role unauthorized', {
         allowedRoles,
         normalizedRoles,

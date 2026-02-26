@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
@@ -52,9 +53,11 @@ export default function Announcements() {
   useDebugLifecycle('Announcements')
   const { context, isReady } = useUserContext()
   const { t } = useI18n()
+  const navigate = useNavigate()
+  const { announcementId } = useParams<{ announcementId?: string }>()
   
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
-  const [selectedAnnouncementId, setSelectedAnnouncementId] = useState<string | null>(null)
+  const selectedAnnouncementId = announcementId || null
 
   // Fetch teams
   const { data: teams } = useQuery({
@@ -81,14 +84,17 @@ export default function Announcements() {
     enabled: isReady && !!context.orgId,
   })
 
-  const announcements = (announcementsResponse?.data || []) as Announcement[]
+  const announcements = useMemo(
+    () => (announcementsResponse?.data || []) as Announcement[],
+    [announcementsResponse]
+  )
 
-  // Auto-select first announcement if none selected
+  // Auto-select first announcement in the URL if none selected
   useEffect(() => {
     if (!selectedAnnouncementId && announcements.length > 0) {
-      setSelectedAnnouncementId(announcements[0].id)
+      navigate(`/portal/announcements/${announcements[0].id}`, { replace: true })
     }
-  }, [announcements, selectedAnnouncementId])
+  }, [announcements, selectedAnnouncementId, navigate])
 
   // Fetch selected announcement details
   const { data: selectedAnnouncementResponse } = useQuery({
@@ -187,7 +193,7 @@ export default function Announcements() {
                   return (
                     <button
                       key={ann.id}
-                      onClick={() => setSelectedAnnouncementId(ann.id)}
+                      onClick={() => navigate(`/portal/announcements/${ann.id}`)}
                       className={`w-full text-left p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${
                         isSelected ? 'bg-slate-100 dark:bg-slate-800' : ''
                       }`}

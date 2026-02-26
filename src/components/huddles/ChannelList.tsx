@@ -17,6 +17,7 @@ interface ChannelListProps {
   orgChannels: Channel[]
   dmChannels: Channel[]
   loading?: boolean
+  resolveChannelName?: (channel: Channel, fallbackName: string, type: 'team' | 'org' | 'dm') => string
 }
 
 export default function ChannelList({
@@ -26,6 +27,7 @@ export default function ChannelList({
   orgChannels,
   dmChannels,
   loading = false,
+  resolveChannelName,
 }: ChannelListProps) {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({})
 
@@ -63,7 +65,13 @@ export default function ChannelList({
   const renderChannel = (channel: Channel, type: 'team' | 'org' | 'dm') => {
     const isSelected = selectedChannel?.id === channel.id
     const unreadCount = unreadCounts[channel.id!] || 0
-    const channelName = channel.data?.name || 'Unnamed Channel'
+    const channelData = channel.data as Record<string, unknown> | undefined
+    const fallbackName = (channelData?.name as string | undefined) || 'Unnamed Channel'
+    const channelName = resolveChannelName?.(channel, fallbackName, type) || fallbackName
+    const threadRole = typeof channelData?.created_by_role_context === 'string'
+      ? channelData.created_by_role_context
+      : null
+    const guardianVisible = channelData?.requires_parental_copy_notice === true
     
     let icon = 'forum'
     if (type === 'team') icon = 'groups'
@@ -86,7 +94,23 @@ export default function ChannelList({
             size="text-lg" 
             className={isSelected ? 'text-[var(--org-link-color)]' : 'text-slate-400'} 
           />
-          <span className="truncate">{channelName}</span>
+          <div className="min-w-0 flex-1">
+            <span className="truncate block">{channelName}</span>
+            {(threadRole || guardianVisible) && (
+              <div className="mt-0.5 flex items-center gap-1">
+                {threadRole && (
+                  <span className="inline-flex rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                    {threadRole}
+                  </span>
+                )}
+                {guardianVisible && (
+                  <span className="inline-flex rounded bg-amber-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-amber-700">
+                    Guardian Visible
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         {unreadCount > 0 && (
           <span className="bg-[var(--org-btn-primary-bg)] text-white text-xs font-bold rounded-full px-2 py-0.5 ml-2">

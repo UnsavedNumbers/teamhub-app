@@ -647,7 +647,7 @@ export default function AthleteProfilePage() {
                         </Button>
                         <Button
                           variant="secondary"
-                          onClick={() => navigate('/portal/messages')}
+                          onClick={() => navigate('/portal/huddles')}
                         >
                           <Icon name="forum" size="text-sm" className="mr-1" />
                           {t('portal.athleteProfile.teams.viewMessages' as import('../i18n').TranslationKey)}

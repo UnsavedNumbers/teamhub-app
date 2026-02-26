@@ -5,7 +5,21 @@
  * Implements strict namespace restrictions as defined in the audit requirements.
  */
 
-type UserRole = 'parent' | 'org_admin' | 'coach' | 'platform_admin' | 'fan' | 'athlete';
+import { findRouteKeyByPath, requiresOrganization, getLink, RouteKeys } from '@/utils/routes';
+import { getFeatureKeyForRoute } from '@/lib/featureGate/registry';
+import { canAccessFeature } from '@/lib/featureGate/api';
+
+export type UserRole = 'parent' | 'org_admin' | 'coach' | 'platform_admin' | 'fan' | 'athlete';
+
+export interface PathAccessContext {
+  isAuthenticated: boolean;
+  role: UserRole;
+  isPlatformAdmin: boolean;
+  hasOrganization: boolean;
+  orgId?: string | null;
+  userId?: string | null;
+  organizationRoles?: string[];
+}
 
 interface RouteNamespaceConfig {
   namespace: string;
@@ -157,4 +171,107 @@ export function getNamespaceForRole(role: UserRole): string {
  */
 export function getProtectedNamespaces(): string[] {
   return ROUTE_NAMESPACE_CONFIG.map(config => config.namespace);
+}
+
+function sanitizePath(inputPath: string): string {
+  const base = (inputPath || '/').trim();
+  if (!base) return '/';
+
+  if (/^https?:\/\//i.test(base)) {
+    try {
+      const url = new URL(base);
+      return `${url.pathname}${url.search}${url.hash}`;
+    } catch {
+      return '/';
+    }
+  }
+
+  return base.startsWith('/') ? base : `/${base}`;
+}
+
+function splitPathParts(path: string): { pathname: string; search: string; hash: string } {
+  const hashIndex = path.indexOf('#');
+  const searchIndex = path.indexOf('?');
+
+  const endOfPath = [searchIndex, hashIndex].filter((i) => i >= 0).sort((a, b) => a - b)[0] ?? path.length;
+  const pathname = path.slice(0, endOfPath) || '/';
+
+  const search =
+    searchIndex >= 0
+      ? path.slice(searchIndex, hashIndex >= 0 && hashIndex > searchIndex ? hashIndex : path.length)
+      : '';
+  const hash = hashIndex >= 0 ? path.slice(hashIndex) : '';
+
+  return { pathname, search, hash };
+}
+
+/**
+ * Returns the safest default homepage for a role.
+ */
+export function getHomeRouteForRole(role: UserRole): string {
+  switch (role) {
+    case 'platform_admin':
+      return getLink(RouteKeys.PLATFORM_DASHBOARD);
+    case 'org_admin':
+    case 'coach':
+      return getLink(RouteKeys.ADMIN_DASHBOARD);
+    case 'fan':
+      return getLink(RouteKeys.FAN_HOME);
+    case 'athlete':
+    case 'parent':
+    default:
+      return getLink(RouteKeys.PORTAL_DASHBOARD);
+  }
+}
+
+/**
+ * Evaluate whether a user context can access a path using the same route + feature systems.
+ */
+export async function canAccessPath(
+  context: PathAccessContext,
+  path: string,
+): Promise<boolean> {
+  if (!context.isAuthenticated) {
+    return false;
+  }
+
+  const normalized = sanitizePath(path);
+  const { pathname } = splitPathParts(normalized);
+
+  if (!isRouteAllowedForRole(pathname, context.role)) {
+    return false;
+  }
+
+  const routeKey = findRouteKeyByPath(pathname);
+  if (!routeKey) {
+    return true;
+  }
+
+  if (requiresOrganization(routeKey) && !context.hasOrganization && !context.isPlatformAdmin) {
+    return false;
+  }
+
+  const featureKey = getFeatureKeyForRoute(routeKey);
+  if (!featureKey || context.isPlatformAdmin) {
+    return true;
+  }
+
+  if (!context.userId) {
+    return false;
+  }
+
+  const featureAllowed = await canAccessFeature(featureKey, {
+    org_id: context.orgId ?? null,
+    user_id: context.userId,
+    role:
+      context.role === 'org_admin'
+        ? 'org_admin'
+        : context.role === 'coach'
+          ? 'coach'
+          : 'parent',
+    license_tier: null,
+    is_platform_admin: context.isPlatformAdmin,
+  });
+
+  return featureAllowed;
 }

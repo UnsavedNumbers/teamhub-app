@@ -8,6 +8,16 @@ import { validateDemoCode } from '@/data/services/demoCodeService'
 import { getDemoOrg } from '@/data/services/demoOrgService'
 import { AUTH_PAGE_HERO_IMAGES } from '@/utils/authImages'
 
+const DEMO_ENTRY_SELECTED_ROLE_KEY = 'demo_entry_selected_role'
+
+const STALE_DEMO_SWITCH_KEYS = [
+  'DEMO_RETURN_TO',
+  'DEMO_RETURN_TS',
+  'DEMO_PREV_ROLE',
+  'DEMO_TARGET_ROLE',
+  'DEMO_SWITCH_IN_PROGRESS',
+]
+
 // Global role enablement - can be controlled via config/feature flags
 const GLOBALLY_ENABLED_ROLES: DemoAllowedRole[] = ['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan']
 
@@ -167,6 +177,13 @@ export default function DemoEntry() {
       // Set a flag in sessionStorage to indicate this is a demo callback
       // This helps HostHomeRoute detect demo callbacks even if redirect URL doesn't preserve query params
       sessionStorage.setItem('demo_entry_initiated', 'true')
+      sessionStorage.setItem(DEMO_ENTRY_SELECTED_ROLE_KEY, selectedRole)
+
+      // Clear stale in-app role-switch intent from previous sessions.
+      // Demo entry should always honor the selected entry role.
+      for (const key of STALE_DEMO_SWITCH_KEYS) {
+        sessionStorage.removeItem(key)
+      }
 
       // Redirect to the magic link which will sign the user in
       window.location.href = result.redirect_url
