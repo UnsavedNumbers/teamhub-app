@@ -84,40 +84,200 @@ function toPathAccessRole(role: DemoSwitcherRole): PathAccessContext['role'] {
   return 'parent'
 }
 
+interface RouteRewriteRule {
+  pattern: RegExp
+  rewrite: (...segments: string[]) => string
+}
+
+function splitPathWithSuffix(path: string): { pathname: string; suffix: string } {
+  const safePath = path || '/'
+  const searchIndex = safePath.indexOf('?')
+  const hashIndex = safePath.indexOf('#')
+  const cutAt = [searchIndex, hashIndex]
+    .filter((index) => index >= 0)
+    .sort((a, b) => a - b)[0] ?? safePath.length
+
+  return {
+    pathname: safePath.slice(0, cutAt) || '/',
+    suffix: safePath.slice(cutAt),
+  }
+}
+
+function applyRouteRewrites(pathname: string, rules: RouteRewriteRule[]): string | null {
+  for (const rule of rules) {
+    const match = pathname.match(rule.pattern)
+    if (!match) continue
+    return rule.rewrite(...match.slice(1))
+  }
+
+  return null
+}
+
+const TO_ADMIN_REWRITES: RouteRewriteRule[] = [
+  { pattern: /^\/portal$/, rewrite: () => '/admin' },
+  { pattern: /^\/portal\/dashboard$/, rewrite: () => '/admin' },
+  { pattern: /^\/portal\/announcements$/, rewrite: () => '/admin/announcements' },
+  { pattern: /^\/portal\/(?:announcements|messages)\/([^/]+)$/, rewrite: (id) => `/admin/announcements/${id}` },
+  { pattern: /^\/portal\/notifications$/, rewrite: () => '/admin/notifications' },
+  { pattern: /^\/portal\/athletes$/, rewrite: () => '/admin/athletes' },
+  { pattern: /^\/portal\/athletes\/new$/, rewrite: () => '/admin/athletes/new' },
+  { pattern: /^\/portal\/athletes\/([^/]+)\/profile$/, rewrite: (id) => `/admin/athletes/${id}` },
+  { pattern: /^\/portal\/athletes\/([^/]+)\/edit$/, rewrite: (id) => `/admin/athletes/${id}/edit` },
+  { pattern: /^\/portal\/calendar$/, rewrite: () => '/admin/events' },
+  { pattern: /^\/portal\/calendar\/new$/, rewrite: () => '/admin/events/new' },
+  { pattern: /^\/portal\/calendar\/events\/([^/]+)$/, rewrite: (id) => `/admin/events/${id}` },
+  { pattern: /^\/portal\/calendar\/events\/([^/]+)\/edit$/, rewrite: (id) => `/admin/events/${id}/edit` },
+  { pattern: /^\/portal\/payments$/, rewrite: () => '/admin/payments' },
+  { pattern: /^\/portal\/payments\/([^/]+)$/, rewrite: (id) => `/admin/payments/${id}` },
+  { pattern: /^\/portal\/uniforms$/, rewrite: () => '/admin/uniforms' },
+  { pattern: /^\/portal\/uniforms\/([^/]+)$/, rewrite: (id) => `/admin/uniforms/${id}` },
+  { pattern: /^\/portal\/travel$/, rewrite: () => '/admin/travel' },
+  { pattern: /^\/portal\/travel\/([^/]+)$/, rewrite: (id) => `/admin/travel/${id}` },
+  { pattern: /^\/portal\/tryouts$/, rewrite: () => '/admin/tryouts' },
+  { pattern: /^\/portal\/tryouts\/([^/]+)$/, rewrite: (id) => `/admin/tryouts/${id}` },
+  { pattern: /^\/portal\/photos$/, rewrite: () => '/admin/photos' },
+  { pattern: /^\/portal\/photos\/gallery\/([^/]+)(?:\/manage)?$/, rewrite: (id) => `/admin/photos/${id}` },
+  { pattern: /^\/portal\/videos$/, rewrite: () => '/admin/videos' },
+  { pattern: /^\/portal\/videos\/([^/]+)$/, rewrite: (id) => `/admin/videos/${id}` },
+  { pattern: /^\/portal\/settings$/, rewrite: () => '/admin/settings' },
+  { pattern: /^\/portal\/contact$/, rewrite: () => '/admin/contact' },
+  { pattern: /^\/portal\/contact-org$/, rewrite: () => '/admin/contact-requests' },
+  { pattern: /^\/portal\/tickets(?:\/.*)?$/, rewrite: () => '/admin/ticketing/events' },
+  { pattern: /^\/portal\/account\/tickets$/, rewrite: () => '/admin/ticketing/orders' },
+  { pattern: /^\/fan$/, rewrite: () => '/admin' },
+  { pattern: /^\/fan\/home$/, rewrite: () => '/admin' },
+  { pattern: /^\/fan\/schedule$/, rewrite: () => '/admin/events' },
+  { pattern: /^\/fan\/events\/([^/]+)$/, rewrite: (id) => `/admin/events/${id}` },
+  { pattern: /^\/fan\/photos$/, rewrite: () => '/admin/photos' },
+  { pattern: /^\/fan\/photos\/gallery\/([^/]+)$/, rewrite: (id) => `/admin/photos/${id}` },
+  { pattern: /^\/fan\/videos$/, rewrite: () => '/admin/videos' },
+  { pattern: /^\/fan\/videos\/([^/]+)$/, rewrite: (id) => `/admin/videos/${id}` },
+  { pattern: /^\/fan\/tickets(?:\/.*)?$/, rewrite: () => '/admin/ticketing/events' },
+  { pattern: /^\/fan\/profile\/notifications$/, rewrite: () => '/admin/notifications' },
+  { pattern: /^\/fan\/profile(?:\/.*)?$/, rewrite: () => '/admin/settings' },
+]
+
+const TO_PORTAL_REWRITES: RouteRewriteRule[] = [
+  { pattern: /^\/admin$/, rewrite: () => '/portal/dashboard' },
+  { pattern: /^\/admin\/announcements$/, rewrite: () => '/portal/announcements' },
+  { pattern: /^\/admin\/announcements\/([^/]+)$/, rewrite: (id) => `/portal/announcements/${id}` },
+  { pattern: /^\/admin\/notifications(?:\/analytics)?$/, rewrite: () => '/portal/notifications' },
+  { pattern: /^\/admin\/athletes$/, rewrite: () => '/portal/athletes' },
+  { pattern: /^\/admin\/athletes\/new$/, rewrite: () => '/portal/athletes/new' },
+  { pattern: /^\/admin\/athletes\/import$/, rewrite: () => '/portal/athletes' },
+  { pattern: /^\/admin\/athletes\/([^/]+)$/, rewrite: (id) => `/portal/athletes/${id}/profile` },
+  { pattern: /^\/admin\/athletes\/([^/]+)\/edit$/, rewrite: (id) => `/portal/athletes/${id}/edit` },
+  { pattern: /^\/admin\/guardians(?:\/.*)?$/, rewrite: () => '/portal/athletes' },
+  { pattern: /^\/admin\/events$/, rewrite: () => '/portal/calendar' },
+  { pattern: /^\/admin\/events\/new$/, rewrite: () => '/portal/calendar/new' },
+  { pattern: /^\/admin\/events\/([^/]+)$/, rewrite: (id) => `/portal/calendar/events/${id}` },
+  { pattern: /^\/admin\/events\/([^/]+)\/edit$/, rewrite: (id) => `/portal/calendar/events/${id}/edit` },
+  { pattern: /^\/admin\/events\/([^/]+)\/attendance$/, rewrite: (id) => `/portal/calendar/events/${id}` },
+  { pattern: /^\/admin\/payments$/, rewrite: () => '/portal/payments' },
+  { pattern: /^\/admin\/payments\/new$/, rewrite: () => '/portal/payments' },
+  { pattern: /^\/admin\/payments\/([^/]+)$/, rewrite: (id) => `/portal/payments/${id}` },
+  { pattern: /^\/admin\/uniforms$/, rewrite: () => '/portal/uniforms' },
+  { pattern: /^\/admin\/uniforms\/new$/, rewrite: () => '/portal/uniforms' },
+  { pattern: /^\/admin\/uniforms\/([^/]+)$/, rewrite: (id) => `/portal/uniforms/${id}` },
+  { pattern: /^\/admin\/uniforms\/([^/]+)\/edit$/, rewrite: (id) => `/portal/uniforms/${id}` },
+  { pattern: /^\/admin\/travel$/, rewrite: () => '/portal/travel' },
+  { pattern: /^\/admin\/travel\/new$/, rewrite: () => '/portal/travel' },
+  { pattern: /^\/admin\/travel\/([^/]+)$/, rewrite: (id) => `/portal/travel/${id}` },
+  { pattern: /^\/admin\/tryouts$/, rewrite: () => '/portal/tryouts' },
+  { pattern: /^\/admin\/tryouts\/new$/, rewrite: () => '/portal/tryouts' },
+  { pattern: /^\/admin\/tryouts\/([^/]+)$/, rewrite: (id) => `/portal/tryouts/${id}` },
+  { pattern: /^\/admin\/photos$/, rewrite: () => '/portal/photos' },
+  { pattern: /^\/admin\/photos\/([^/]+)$/, rewrite: (id) => `/portal/photos/gallery/${id}` },
+  { pattern: /^\/admin\/photos\/([^/]+)\/photo\/([^/]+)$/, rewrite: (galleryId) => `/portal/photos/gallery/${galleryId}` },
+  { pattern: /^\/admin\/photos\/.*$/, rewrite: () => '/portal/photos' },
+  { pattern: /^\/admin\/videos$/, rewrite: () => '/portal/videos' },
+  { pattern: /^\/admin\/videos\/([^/]+)$/, rewrite: (id) => `/portal/videos/${id}` },
+  { pattern: /^\/admin\/settings$/, rewrite: () => '/portal/settings' },
+  { pattern: /^\/admin\/organization(?:\/.*)?$/, rewrite: () => '/portal/settings' },
+  { pattern: /^\/admin\/contact$/, rewrite: () => '/portal/contact' },
+  { pattern: /^\/admin\/contact-requests(?:\/.*)?$/, rewrite: () => '/portal/contact-org' },
+  { pattern: /^\/admin\/ticketing\/orders(?:\/.*)?$/, rewrite: () => '/portal/account/tickets' },
+  { pattern: /^\/admin\/ticketing\/events(?:\/.*)?$/, rewrite: () => '/portal/tickets' },
+  { pattern: /^\/fan$/, rewrite: () => '/portal/dashboard' },
+  { pattern: /^\/fan\/home$/, rewrite: () => '/portal/dashboard' },
+  { pattern: /^\/fan\/schedule$/, rewrite: () => '/portal/calendar' },
+  { pattern: /^\/fan\/events\/([^/]+)$/, rewrite: (id) => `/portal/calendar/events/${id}` },
+  { pattern: /^\/fan\/photos$/, rewrite: () => '/portal/photos' },
+  { pattern: /^\/fan\/photos\/gallery\/([^/]+)$/, rewrite: (id) => `/portal/photos/gallery/${id}` },
+  { pattern: /^\/fan\/videos$/, rewrite: () => '/portal/videos' },
+  { pattern: /^\/fan\/videos\/([^/]+)$/, rewrite: (id) => `/portal/videos/${id}` },
+  { pattern: /^\/fan\/tickets(?:\/.*)?$/, rewrite: () => '/portal/account/tickets' },
+  { pattern: /^\/fan\/following$/, rewrite: () => '/portal/follows' },
+  { pattern: /^\/fan\/discover$/, rewrite: () => '/portal/discover' },
+  { pattern: /^\/fan\/profile\/notifications$/, rewrite: () => '/portal/notifications' },
+  { pattern: /^\/fan\/profile(?:\/.*)?$/, rewrite: () => '/portal/settings' },
+]
+
+const TO_FAN_REWRITES: RouteRewriteRule[] = [
+  { pattern: /^\/portal$/, rewrite: () => '/fan/home' },
+  { pattern: /^\/portal\/dashboard$/, rewrite: () => '/fan/home' },
+  { pattern: /^\/admin$/, rewrite: () => '/fan/home' },
+  { pattern: /^\/platform-admin(?:\/.*)?$/, rewrite: () => '/fan/home' },
+  { pattern: /^\/portal\/calendar$/, rewrite: () => '/fan/schedule' },
+  { pattern: /^\/admin\/events$/, rewrite: () => '/fan/schedule' },
+  { pattern: /^\/portal\/calendar\/events\/([^/]+)$/, rewrite: (id) => `/fan/events/${id}` },
+  { pattern: /^\/admin\/events\/([^/]+)$/, rewrite: (id) => `/fan/events/${id}` },
+  { pattern: /^\/portal\/photos$/, rewrite: () => '/fan/photos' },
+  { pattern: /^\/admin\/photos(?:\/.*)?$/, rewrite: () => '/fan/photos' },
+  { pattern: /^\/portal\/photos\/gallery\/([^/]+)(?:\/manage)?$/, rewrite: (id) => `/fan/photos/gallery/${id}` },
+  { pattern: /^\/admin\/photos\/([^/]+)$/, rewrite: (id) => `/fan/photos/gallery/${id}` },
+  { pattern: /^\/portal\/videos$/, rewrite: () => '/fan/videos' },
+  { pattern: /^\/admin\/videos$/, rewrite: () => '/fan/videos' },
+  { pattern: /^\/portal\/videos\/([^/]+)$/, rewrite: (id) => `/fan/videos/${id}` },
+  { pattern: /^\/admin\/videos\/([^/]+)$/, rewrite: (id) => `/fan/videos/${id}` },
+  { pattern: /^\/portal\/notifications$/, rewrite: () => '/fan/profile/notifications' },
+  { pattern: /^\/admin\/notifications(?:\/analytics)?$/, rewrite: () => '/fan/profile/notifications' },
+  { pattern: /^\/portal\/follows$/, rewrite: () => '/fan/following' },
+  { pattern: /^\/portal\/discover$/, rewrite: () => '/fan/discover' },
+  { pattern: /^\/portal\/tickets(?:\/.*)?$/, rewrite: () => '/fan/tickets' },
+  { pattern: /^\/portal\/account\/tickets$/, rewrite: () => '/fan/tickets' },
+  { pattern: /^\/admin\/ticketing\/(?:events|orders)(?:\/.*)?$/, rewrite: () => '/fan/tickets' },
+]
+
+const TO_PLATFORM_REWRITES: RouteRewriteRule[] = [
+  { pattern: /^\/portal(?:\/dashboard)?$/, rewrite: () => '/platform-admin' },
+  { pattern: /^\/admin$/, rewrite: () => '/platform-admin' },
+  { pattern: /^\/fan(?:\/home)?$/, rewrite: () => '/platform-admin' },
+  { pattern: /^\/portal\/photos(?:\/.*)?$/, rewrite: () => '/platform-admin/photos' },
+  { pattern: /^\/admin\/photos(?:\/.*)?$/, rewrite: () => '/platform-admin/photos' },
+  { pattern: /^\/fan\/photos(?:\/.*)?$/, rewrite: () => '/platform-admin/photos' },
+  { pattern: /^\/portal\/payments(?:\/.*)?$/, rewrite: () => '/platform-admin/payments' },
+  { pattern: /^\/admin\/payments(?:\/.*)?$/, rewrite: () => '/platform-admin/payments' },
+  { pattern: /^\/portal\/tickets(?:\/.*)?$/, rewrite: () => '/platform-admin/ticketing/events' },
+  { pattern: /^\/portal\/account\/tickets$/, rewrite: () => '/platform-admin/ticketing/orders' },
+  { pattern: /^\/fan\/tickets(?:\/.*)?$/, rewrite: () => '/platform-admin/ticketing/events' },
+  { pattern: /^\/admin\/ticketing\/events(?:\/.*)?$/, rewrite: () => '/platform-admin/ticketing/events' },
+  { pattern: /^\/admin\/ticketing\/orders(?:\/.*)?$/, rewrite: () => '/platform-admin/ticketing/orders' },
+  { pattern: /^\/admin\/organization\/users$/, rewrite: () => '/platform-admin/users' },
+  { pattern: /^\/admin\/organization(?:\/.*)?$/, rewrite: () => '/platform-admin/organizations' },
+]
+
 function getRoleCompatiblePath(targetRole: DemoSwitcherRole, currentPath: string): string {
   const path = currentPath || '/'
+  const { pathname, suffix } = splitPathWithSuffix(path)
 
-  if (targetRole === 'org_admin' || targetRole === 'coach') {
-    if (path === '/portal/notifications') {
-      return '/admin/notifications'
-    }
+  const isAdminTarget = targetRole === 'org_admin' || targetRole === 'coach'
+  const isPortalTarget = targetRole === 'guardian' || targetRole === 'athlete' || targetRole === 'staff'
 
-    if (path === '/portal/announcements') {
-      return '/admin/announcements'
-    }
+  const rewrites = isAdminTarget
+    ? TO_ADMIN_REWRITES
+    : isPortalTarget
+      ? TO_PORTAL_REWRITES
+      : targetRole === 'fan'
+        ? TO_FAN_REWRITES
+        : targetRole === 'platform_admin'
+          ? TO_PLATFORM_REWRITES
+          : []
 
-    const portalAnnouncementMatch = path.match(/^\/portal\/(?:announcements|messages)\/([^/?#]+)(.*)$/)
-    if (portalAnnouncementMatch) {
-      return `/admin/announcements/${portalAnnouncementMatch[1]}${portalAnnouncementMatch[2] ?? ''}`
-    }
-  }
+  const rewrittenPath = applyRouteRewrites(pathname, rewrites)
+  if (!rewrittenPath) return path
 
-  if (targetRole === 'guardian' || targetRole === 'athlete') {
-    if (path === '/admin/notifications') {
-      return '/portal/notifications'
-    }
-
-    if (path === '/admin/announcements') {
-      return '/portal/announcements'
-    }
-
-    const adminAnnouncementMatch = path.match(/^\/admin\/announcements\/([^/?#]+)(.*)$/)
-    if (adminAnnouncementMatch) {
-      return `/portal/announcements/${adminAnnouncementMatch[1]}${adminAnnouncementMatch[2] ?? ''}`
-    }
-  }
-
-  return path
+  return `${rewrittenPath}${suffix}`
 }
 
 export function useDemoRoleSwitch() {
