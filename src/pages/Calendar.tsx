@@ -16,6 +16,8 @@ import { getFanCalendar } from '../data/services/fanService'
 import type { CalendarEventSummary } from '../data/services/eventsService'
 import type { CalendarEvent as FanCalendarEvent } from '../types/staffAndFan'
 import { getContactForCategory } from '../data/services/organizationContactsService'
+import { USE_FAKE_DATA } from '../data/config'
+import { getTeamById as getFakeTeamById } from '../data/fake/fakeTeams'
 import { 
     CalendarEvent, 
     CalendarViewMode, 
@@ -355,7 +357,24 @@ export default function Calendar() {
                 nextEventSports[event.id] = null
                 continue
               }
-              nextEventSports[event.id] = teamSportById.get(event.team_id) || null
+              const mappedSport = teamSportById.get(event.team_id) || null
+              if (mappedSport) {
+                nextEventSports[event.id] = mappedSport
+                continue
+              }
+
+              // Demo safety net: if permission-filtered team queries return empty,
+              // resolve team->sport directly from static fake data.
+              if (USE_FAKE_DATA) {
+                const fallbackTeam = getFakeTeamById(event.team_id)
+                const fallbackSportId = fallbackTeam?.sport_id
+                if (fallbackSportId) {
+                  nextEventSports[event.id] = sportById.get(fallbackSportId) || null
+                  continue
+                }
+              }
+
+              nextEventSports[event.id] = null
             }
 
             setEventSports(nextEventSports)

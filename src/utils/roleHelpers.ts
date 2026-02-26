@@ -90,15 +90,18 @@ export function formatRoleName(role: OrgMemberRole): string {
       return 'Admin'
     case 'parent':
       return 'Parent'
+    case 'guardian':
+      return 'Guardian'
     case 'coach':
       return 'Coach'
     case 'staff':
       return 'Staff'
     case 'athlete':
       return 'Athlete'
+    case 'fan':
+      return 'Fan'
     default:
       // TypeScript exhaustiveness check - this should never happen
-       
       const _exhaustive: never = role
       void _exhaustive
       return String(role).charAt(0).toUpperCase() + String(role).slice(1)
@@ -148,11 +151,13 @@ export function mapDbRoleToFrontendRole(role: DbRole): FrontendRole {
     case 'coach':
       return 'coach'
     case 'parent':
+    case 'guardian':
       return 'parent'
     case 'staff':
       return 'admin'
     case 'athlete':
-      return 'parent' // Athlete maps to parent for legacy frontend role
+    case 'fan':
+      return 'parent' // Athlete/fan maps to parent for legacy frontend role
     default:
       // TypeScript exhaustiveness check
       const _exhaustive: never = role

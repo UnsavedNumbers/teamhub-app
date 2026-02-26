@@ -4,7 +4,7 @@
  * the role/action mapping documented in notification_action_role_mapping.md.
  */
 
-export type NotificationRole = 'guardian' | 'parent' | 'coach' | 'org_admin' | 'team_manager' | 'athlete' | 'staff' | 'platform_admin'
+export type NotificationRole = 'guardian' | 'parent' | 'coach' | 'org_admin' | 'team_manager' | 'athlete' | 'staff' | 'platform_admin' | 'fan'
 export type NotificationPresentation = 'info' | 'warning' | 'urgent'
 export type NotificationEntityType =
   | 'event'

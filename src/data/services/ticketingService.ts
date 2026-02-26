@@ -2212,7 +2212,9 @@ export async function getTicketOrderByIdAdmin(orderId: string) {
 
 export async function getMyTicketOrders() {
   if (USE_FAKE_DATA) {
-    return createServiceResponse<TicketOrder[]>(getFakeMyTicketOrders(), null)
+    const { data: { session } } = await supabase.auth.getSession()
+    const userId = session?.user?.id ?? null
+    return createServiceResponse<TicketOrder[]>(getFakeMyTicketOrders(userId), null)
   }
 
   const {

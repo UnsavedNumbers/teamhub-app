@@ -11,7 +11,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { UserContext, PermissionSet } from '../fake/userContext'
-import { getCoachTeamIds } from '../fake/userContext'
+import { getCoachTeamIds, getGuardianCanonicalUserId } from '../fake/userContext'
 import { getChildrenForUserId, getFamiliesForUserId } from '../fake/relationships'
 import { logSportEvent } from '../../utils/eventLogger'
 import { debug } from '../../lib/debug'
@@ -169,13 +169,14 @@ export async function getSports(
             
             // Filter sports for coaches - only show sports used by teams they're assigned to
             if (context.roles.includes('coach') && !context.roles.includes('org_admin')) {
+                const guardianUserId = getGuardianCanonicalUserId(context)
                 const permissions: PermissionSet = {
                     canViewAllOrgData: false,
                     canViewAssignedTeams: true,
                     canViewOwnChildrenData: false,
                     assignedTeamIds: await getCoachTeamIds(context),
-                    ownedChildIds: getChildrenForUserId(context.userId),
-                    ownedFamilyIds: getFamiliesForUserId(context.userId),
+                    ownedChildIds: getChildrenForUserId(guardianUserId),
+                    ownedFamilyIds: getFamiliesForUserId(guardianUserId),
                 }
                 
                 if (permissions.assignedTeamIds.length > 0) {
@@ -1243,13 +1244,14 @@ export async function getPrograms(
         
         // Filter programs for coaches - only show programs used by teams they're assigned to
         if (context.roles.includes('coach') && !context.roles.includes('org_admin')) {
+            const guardianUserId = getGuardianCanonicalUserId(context)
             const permissions: PermissionSet = {
                 canViewAllOrgData: false,
                 canViewAssignedTeams: true,
                 canViewOwnChildrenData: false,
                 assignedTeamIds: await getCoachTeamIds(context),
-                ownedChildIds: getChildrenForUserId(context.userId),
-                ownedFamilyIds: getFamiliesForUserId(context.userId),
+                ownedChildIds: getChildrenForUserId(guardianUserId),
+                ownedFamilyIds: getFamiliesForUserId(guardianUserId),
             }
             
             if (permissions.assignedTeamIds.length > 0) {

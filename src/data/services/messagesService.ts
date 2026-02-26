@@ -1080,10 +1080,56 @@ export async function getMessages(
 
     try {
         if (USE_FAKE_DATA) {
+            const COACH_ID = DEMO_USER_IDS['coach-only@example.com']
+            const PARENT_ID = DEMO_USER_IDS['parent-only@example.com']
+            const now = new Date()
+            const minutesAgo = (m: number) => new Date(now.getTime() - m * 60000).toISOString()
+            const fakeMessages: Message[] = [
+                {
+                    id: `msg-team-${teamId}-001`,
+                    team_id: teamId,
+                    author_id: COACH_ID,
+                    content: 'Hey team! Great practice yesterday. Remember to hydrate well before Saturday\'s game. See everyone at 8am sharp! 🏆',
+                    created_at: minutesAgo(180),
+                    author: { email: 'coach-only@example.com', role: 'coach' },
+                },
+                {
+                    id: `msg-team-${teamId}-002`,
+                    team_id: teamId,
+                    author_id: PARENT_ID,
+                    content: 'Thanks Coach! Will Emma need to bring her own snacks or is the team providing them?',
+                    created_at: minutesAgo(150),
+                    author: { email: 'parent-only@example.com', role: 'parent' },
+                },
+                {
+                    id: `msg-team-${teamId}-003`,
+                    team_id: teamId,
+                    author_id: COACH_ID,
+                    content: 'Team is handling snacks this week! Just bring water bottles. Also, parents are welcome to warm up drills if you arrive early.',
+                    created_at: minutesAgo(120),
+                    author: { email: 'coach-only@example.com', role: 'coach' },
+                },
+                {
+                    id: `msg-team-${teamId}-004`,
+                    team_id: teamId,
+                    author_id: DEMO_USER_IDS['parent-admin@example.com'] ?? PARENT_ID,
+                    content: 'Quick reminder: the facility parking lot is under construction. Use the side entrance on Oak Street.',
+                    created_at: minutesAgo(60),
+                    author: { email: 'parent-admin@example.com', role: 'org_admin' },
+                },
+                {
+                    id: `msg-team-${teamId}-005`,
+                    team_id: teamId,
+                    author_id: COACH_ID,
+                    content: 'Thanks for the heads up Robert! I\'ll add that to the event details too.',
+                    created_at: minutesAgo(30),
+                    author: { email: 'coach-only@example.com', role: 'coach' },
+                },
+            ]
             debug.perf.end('messagesService.getMessages')
-            debug.data('MessagesService.getMessages', 'Response (fake)', { teamId, messageCount: 0 })
+            debug.data('MessagesService.getMessages', 'Response (fake)', { teamId, messageCount: fakeMessages.length })
             console.groupEnd()
-            return { data: [], error: null }
+            return { data: fakeMessages, error: null }
         }
         const { data, error } = await supabase
             .from('messages' as any)

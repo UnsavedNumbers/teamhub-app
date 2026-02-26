@@ -12,7 +12,7 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext, PermissionSet } from '../fake/userContext'
-import { calculatePermissions, filterEventsByRole } from '../fake/userContext'
+import { calculatePermissions, filterEventsByRole, getGuardianCanonicalUserId } from '../fake/userContext'
 import type { CalendarEvent, EventRSVP, EventLocation, RSVPStatus, EventType, EventFormData, TicketedEventStatus } from '../../types/calendar'
 import {
     getEventById as getFakeEventById,
@@ -30,7 +30,7 @@ import {
     getFakeTicketedEventById,
     getFakeTicketingEvents,
 } from '../fake/fakeTicketingEvents'
-import { getChildrenForUserId, getChildTeamMemberships } from '../fake/relationships'
+import { getChildrenForUserId, getChildTeamMemberships, getFamiliesForUserId } from '../fake/relationships'
 import { getCoachTeamIds } from '../fake/userContext'
 import { t } from '@/i18n'
 import { buildEventQuery, buildCalendarEventQuery } from './queryHelpers'
@@ -52,12 +52,16 @@ async function simulateDelay(): Promise<void> {
 }
 
 async function buildPermissions(context: UserContext): Promise<PermissionSet> {
-    const childIds = getChildrenForUserId(context.userId)
+    // In demo mode the Supabase auth user ID may not match the canonical fake data IDs.
+    // Use guardian canonical mapping so parents/guardians keep seeing their demo children.
+    const guardianUserId = getGuardianCanonicalUserId(context)
+    const childIds = getChildrenForUserId(guardianUserId)
+    const familyIds = getFamiliesForUserId(guardianUserId)
     const assignedTeamIds = context.roles.includes('coach')
         ? await getCoachTeamIds(context)
         : []
 
-    return calculatePermissions(context, assignedTeamIds, childIds, [])
+    return calculatePermissions(context, assignedTeamIds, childIds, familyIds)
 }
 
 // ============================================================================

@@ -15,6 +15,9 @@ import {
     CHILD_SOPHIA_CHEN_ID,
     CHILD_MASON_RODRIGUEZ_ID,
     CHILD_ISABELLA_RODRIGUEZ_ID,
+    STAFF_ONLY_ID,
+    ATHLETE_ONLY_ID,
+    FAN_ONLY_ID,
     getChildIdsForUser,
     getFamilyIdsForUser,
 } from './fakeUsers'
@@ -50,8 +53,11 @@ export const USER_FAMILY_MAP: Record<string, string[]> = {
     [PARENT_ONLY_ID]: [FAMILY_JOHNSON_ID],
     [PARENT_ADMIN_ID]: [FAMILY_CHEN_ID],
     [PARENT_COACH_ID]: [FAMILY_RODRIGUEZ_ID],
-    [COACH_ONLY_ID]: [], // Coaches don't have families in demo
-    [ADMIN_ONLY_ID]: [], // Admins don't have families in demo
+    [COACH_ONLY_ID]: [],
+    [ADMIN_ONLY_ID]: [],
+    [STAFF_ONLY_ID]: [],
+    [ATHLETE_ONLY_ID]: [FAMILY_JOHNSON_ID], // athlete user is part of the Johnson family
+    [FAN_ONLY_ID]: [],
 }
 
 // ============================================================================
@@ -68,6 +74,37 @@ export const USER_CHILDREN_MAP: Record<string, string[]> = {
     [PARENT_COACH_ID]: [CHILD_MASON_RODRIGUEZ_ID, CHILD_ISABELLA_RODRIGUEZ_ID],
     [COACH_ONLY_ID]: [],
     [ADMIN_ONLY_ID]: [],
+    [STAFF_ONLY_ID]: [],
+    // athlete-only user IS Emma Johnson: her own athlete record is returned as self
+    [ATHLETE_ONLY_ID]: [CHILD_EMMA_JOHNSON_ID],
+    [FAN_ONLY_ID]: [],
+}
+
+/**
+ * Maps athlete-role user IDs to the child record ID that represents them.
+ * Enables the athlete portal to find "self" in demo mode.
+ */
+export const ATHLETE_USER_SELF_MAP: Record<string, string> = {
+    [ATHLETE_ONLY_ID]: CHILD_EMMA_JOHNSON_ID,
+}
+
+/**
+ * Maps staff user IDs to the team IDs they have operational access to.
+ */
+export const STAFF_TEAM_MAP: Record<string, string[]> = {
+    [STAFF_ONLY_ID]: [
+        TEAM_U10_SOCCER_ID,
+        TEAM_U12_SOCCER_ID,
+        TEAM_U10_BASKETBALL_ID,
+        TEAM_U14_SOCCER_ELITE_ID,
+    ],
+}
+
+/**
+ * Get team IDs a staff user has operational access to.
+ */
+export function getTeamsForStaff(userId: string): string[] {
+    return STAFF_TEAM_MAP[userId] ?? []
 }
 
 // ============================================================================

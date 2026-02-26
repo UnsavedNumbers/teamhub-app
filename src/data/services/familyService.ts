@@ -60,8 +60,9 @@ async function simulateDelay(): Promise<void> {
 }
 
 async function buildPermissions(context: UserContext): Promise<PermissionSet> {
-    const ownedChildIds = getChildrenForUserId(context.userId)
-    const ownedFamilyIds = getFamiliesForUserId(context.userId)
+    const guardianUserId = getGuardianCanonicalUserId(context)
+    const ownedChildIds = getChildrenForUserId(guardianUserId)
+    const ownedFamilyIds = getFamiliesForUserId(guardianUserId)
     const assignedTeamIds = context.roles.includes('coach')
         ? await getCoachTeamIds(context)
         : []
@@ -554,7 +555,8 @@ export async function updateAthlete(
         
         // Check access
         if (!permissions.canViewAllOrgData) {
-            const ownedChildIds = getChildrenForUserId(context.userId)
+            const guardianUserId = getGuardianCanonicalUserId(context)
+            const ownedChildIds = getChildrenForUserId(guardianUserId)
             if (!ownedChildIds.includes(athleteId)) {
                 return { data: null, error: new Error('Access denied') }
             }
@@ -1194,7 +1196,8 @@ export async function getAthleteById(
                 
                 // Check if guardian/parent can view this athlete (their own child)
                 if (!hasAccess) {
-                    const ownedChildIds = getChildrenForUserId(context.userId)
+                    const guardianUserId = getGuardianCanonicalUserId(context)
+                    const ownedChildIds = getChildrenForUserId(guardianUserId)
                     if (ownedChildIds.includes(athleteId)) {
                         hasAccess = true
                     }

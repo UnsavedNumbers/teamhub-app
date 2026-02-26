@@ -1,7 +1,7 @@
 
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_USER_IDS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { debug } from '../../lib/debug'
 import { collectTeamManagers } from './notificationHelpers'
@@ -12,6 +12,9 @@ import type {
     AttendancePersonSummary,
     AttendanceStatus
 } from '../../types/attendance'
+import { fakeEvents } from '../fake/fakeEvents'
+import { getTeamMembersForSeason, SEASON_SPRING_CURRENT_ID } from '../fake/fakeTeams'
+import { fakeChildren } from '../fake/fakeUsers'
 
 // Fake data stores (internal to module for demo mode)
 let FAKE_SETTINGS: AttendanceSettings = {
@@ -147,84 +150,66 @@ export async function getEventAttendance(
     try {
         if (USE_FAKE_DATA) {
             await delay()
-            // Generate mock attendance records
-            const fakeRecords: AttendanceRecord[] = [
-                {
-                    id: 'attendance-1',
-                    event_id: eventId,
-                    athlete_id: 'demo-athlete-1',
-                    status: 'present',
-                    notes: null,
-                    recorded_by_user_id: 'demo-user-1',
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    child: {
-                        id: 'demo-athlete-1',
-                        first_name: 'Alex',
-                        last_name: 'Johnson',
-                    },
-                },
-                {
-                    id: 'attendance-2',
-                    event_id: eventId,
-                    athlete_id: 'demo-athlete-2',
-                    status: 'absent',
-                    notes: 'Family conflict',
-                    recorded_by_user_id: 'demo-user-2',
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    child: {
-                        id: 'demo-athlete-2',
-                        first_name: 'Jordan',
-                        last_name: 'Smith',
-                    },
-                },
-                {
-                    id: 'attendance-3',
-                    event_id: eventId,
-                    athlete_id: 'demo-athlete-3',
-                    status: 'present',
-                    notes: 'Will confirm by Friday',
-                    recorded_by_user_id: 'demo-user-3',
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    child: {
-                        id: 'demo-athlete-3',
-                        first_name: 'Sam',
-                        last_name: 'Davis',
-                    },
-                },
-                {
-                    id: 'attendance-4',
-                    event_id: eventId,
-                    athlete_id: 'demo-athlete-4',
-                    status: 'present',
-                    notes: null,
-                    recorded_by_user_id: null,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    child: {
-                        id: 'demo-athlete-4',
-                        first_name: 'Taylor',
-                        last_name: 'Brown',
-                    },
-                },
-                {
-                    id: 'attendance-5',
-                    event_id: eventId,
-                    athlete_id: 'demo-athlete-5',
-                    status: 'absent',
-                    notes: null,
-                    recorded_by_user_id: null,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    child: {
-                        id: 'demo-athlete-5',
-                        first_name: 'Casey',
-                        last_name: 'Miller',
-                    },
-                },
+            const coachId = DEMO_USER_IDS['coach-only@example.com']
+            const recordedAt = new Date().toISOString()
+
+            // Find the event to get its team_id
+            const event = fakeEvents.find((e) => e.id === eventId)
+            const teamId = event?.team_id ?? null
+
+            // Build attendance from team roster when we have a team
+            const ATTENDANCE_STATUSES: AttendanceStatus[] = [
+                'present', 'present', 'present', 'present', 'present',
+                'present', 'present', 'absent', 'absent', 'late',
             ]
+            const ABSENCE_NOTES = ['Family conflict', 'Sick', null, 'Out of town', null]
+
+            let fakeRecords: AttendanceRecord[] = []
+
+            if (teamId) {
+                const members = getTeamMembersForSeason(teamId, SEASON_SPRING_CURRENT_ID)
+                fakeRecords = members.map((member, idx) => {
+                    const child = fakeChildren.find((c) => c.id === member.athlete_id)
+                    const status = ATTENDANCE_STATUSES[idx % ATTENDANCE_STATUSES.length]
+                    const isAbsent = status === 'absent' || status === 'late'
+                    return {
+                        id: `attendance-${eventId}-${member.athlete_id}`,
+                        event_id: eventId,
+                        athlete_id: member.athlete_id,
+                        status,
+                        notes: isAbsent ? ABSENCE_NOTES[idx % ABSENCE_NOTES.length] : null,
+                        recorded_by_user_id: idx < 8 ? coachId : null,
+                        created_at: recordedAt,
+                        updated_at: recordedAt,
+                        child: child
+                            ? { id: child.id, first_name: child.first_name, last_name: child.last_name }
+                            : { id: member.athlete_id, first_name: 'Athlete', last_name: `#${idx + 1}` },
+                    }
+                })
+            }
+
+            // Fallback: generic records when no team found
+            if (fakeRecords.length === 0) {
+                const fallbackAthletes = [
+                    { id: 'child-emma-johnson-001', first_name: 'Emma', last_name: 'Johnson' },
+                    { id: 'child-liam-johnson-002', first_name: 'Liam', last_name: 'Johnson' },
+                    { id: 'child-sophia-chen-007', first_name: 'Sophia', last_name: 'Chen' },
+                    { id: 'child-mason-rodriguez-008', first_name: 'Mason', last_name: 'Rodriguez' },
+                    { id: 'child-aiden-patel-010', first_name: 'Aiden', last_name: 'Patel' },
+                ]
+                fakeRecords = fallbackAthletes.map((athlete, idx) => ({
+                    id: `attendance-${eventId}-${athlete.id}`,
+                    event_id: eventId,
+                    athlete_id: athlete.id,
+                    status: ATTENDANCE_STATUSES[idx % ATTENDANCE_STATUSES.length],
+                    notes: idx === 1 ? 'Family conflict' : null,
+                    recorded_by_user_id: coachId,
+                    created_at: recordedAt,
+                    updated_at: recordedAt,
+                    child: athlete,
+                }))
+            }
+
             debug.perf.end('attendanceService.getEventAttendance')
             debug.data('AttendanceService.getEventAttendance', 'Response (fake)', { eventId, recordCount: fakeRecords.length })
             console.groupEnd()

@@ -576,9 +576,17 @@ export function getFakeTicketsForOrder(orderId: string) {
   }))
 }
 
-export function getFakeMyTicketOrders() {
+export function getFakeMyTicketOrders(userId?: string | null) {
   ensureSeededOrderHistory()
-  return [...fakeOrders]
+  if (!userId) return [...fakeOrders]
+  // Return orders for the specific user only
+  const userOrders = fakeOrders.filter((o) => o.purchaser_user_id === userId)
+  // Ensure at least a couple of orders so the fan always sees something
+  if (userOrders.length === 0) {
+    // Fallback: first 3 orders belonging to any user
+    return fakeOrders.slice(0, 3)
+  }
+  return userOrders
 }
 
 export function getFakeTicketOrdersWithRelations(orgId?: string): Array<TicketOrder & {

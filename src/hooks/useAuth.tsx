@@ -30,7 +30,7 @@ import { debug } from '../lib/debug'
 import { captureEvent, identifyUser, resetAnalytics } from '../lib/analytics/analytics'
 
 // Role types - now per organization (must match OrganizationContext.OrgMemberRole)
-type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff' | 'athlete'
+type OrgMemberRole = 'parent' | 'guardian' | 'coach' | 'org_admin' | 'staff' | 'athlete' | 'fan'
 type LegacyUserRole = 'parent' | 'coach' | 'admin'
 
 interface UserProfile {

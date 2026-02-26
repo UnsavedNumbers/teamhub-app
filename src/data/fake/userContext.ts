@@ -11,7 +11,7 @@
 import { DEMO_USER_IDS, DEMO_ORG_A_ID, USER_CONTEXT_TIMEOUT_MS, USE_FAKE_DATA } from '../config'
 import type { OrgMemberRole } from '../../contexts/OrganizationContext'
 import { getUserByEmail, getUserOrganizations } from './fakeUsers'
-import { getAssignedTeamsForCoach, getChildrenForUserId } from './relationships'
+import { getAssignedTeamsForCoach, getChildrenForUserId, getTeamsForStaff, ATHLETE_USER_SELF_MAP } from './relationships'
 import { supabase } from '../../lib/supabase'
 
 // ============================================================================
@@ -207,12 +207,65 @@ export function getGuardianCanonicalUserId(context: UserContext): string {
         const canonicalId = DEMO_USER_IDS[context.email.toLowerCase().trim()]
         if (canonicalId && getChildrenForUserId(canonicalId).length > 0) return canonicalId
     }
-    const isGuardian = context.roles.includes('parent')
+    const isGuardian = context.roles.includes('parent') || context.roles.includes('guardian')
     if (isGuardian) {
         const defaultParentId = DEMO_USER_IDS['parent-only@example.com']
         if (defaultParentId) return defaultParentId
     }
     return context.userId
+}
+
+/**
+ * Resolve the athlete record ID for an athlete-role user.
+ * In demo mode, maps the athlete user's session ID to their own child record.
+ */
+export function getAthleteCanonicalChildId(context: UserContext): string | null {
+    if (!USE_FAKE_DATA) return null
+
+    // Direct mapping
+    if (ATHLETE_USER_SELF_MAP[context.userId]) return ATHLETE_USER_SELF_MAP[context.userId]
+
+    // Email-based fallback
+    if (context.email) {
+        const canonicalId = DEMO_USER_IDS[context.email.toLowerCase().trim()]
+        if (canonicalId && ATHLETE_USER_SELF_MAP[canonicalId]) return ATHLETE_USER_SELF_MAP[canonicalId]
+    }
+
+    // Role-based fallback: any athlete user gets Emma Johnson's record
+    if (context.roles.includes('athlete')) {
+        const defaultAthleteId = DEMO_USER_IDS['athlete-only@example.com']
+        if (defaultAthleteId && ATHLETE_USER_SELF_MAP[defaultAthleteId]) {
+            return ATHLETE_USER_SELF_MAP[defaultAthleteId]
+        }
+    }
+
+    return null
+}
+
+/**
+ * Get staff team IDs for a staff-role user in demo mode.
+ */
+export function getStaffTeamIds(context: UserContext): string[] {
+    if (!USE_FAKE_DATA) return []
+
+    const byId = getTeamsForStaff(context.userId)
+    if (byId.length > 0) return byId
+
+    if (context.email) {
+        const canonicalId = DEMO_USER_IDS[context.email.toLowerCase().trim()]
+        if (canonicalId) {
+            const byEmail = getTeamsForStaff(canonicalId)
+            if (byEmail.length > 0) return byEmail
+        }
+    }
+
+    // Any staff role user gets default staff teams
+    if (context.roles.includes('staff')) {
+        const defaultStaffId = DEMO_USER_IDS['staff-only@example.com']
+        if (defaultStaffId) return getTeamsForStaff(defaultStaffId)
+    }
+
+    return []
 }
 
 // ============================================================================
@@ -388,7 +441,7 @@ const VALID_EVENT_TYPES = [
 
 const VALID_RSVP_STATUSES = ['going', 'late', 'not_going', 'unknown'] as const
 
-const VALID_ORG_MEMBER_ROLES = ['parent', 'coach', 'org_admin', 'staff', 'athlete'] as const
+const VALID_ORG_MEMBER_ROLES = ['parent', 'guardian', 'coach', 'org_admin', 'staff', 'athlete', 'fan'] as const
 
 const VALID_ORG_TYPES = ['school', 'club', 'league', 'academy', 'aau'] as const
 

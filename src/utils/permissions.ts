@@ -67,8 +67,9 @@ export function canAccess(
   const isOrgAdmin = roles.includes('org_admin')
   const isCoach = roles.includes('coach')
   const isStaff = roles.includes('staff')
-  const isParent = roles.includes('parent')
+  const isParent = roles.includes('parent') || roles.includes('guardian')
   const isAthlete = roles.includes('athlete')
+  const isFan = roles.includes('fan')
 
   // Platform admins have full access (handled separately)
   // Org admins have full access within their org
@@ -94,6 +95,11 @@ export function canAccess(
   // Athletes: self-scoped access only
   if (isAthlete) {
     return canAthleteAccess(context, resourceType, action)
+  }
+
+  // Fans: public content only (events read, ticketing read)
+  if (isFan) {
+    return (resourceType === 'event' || resourceType === 'ticketing') && action === 'read'
   }
 
   return false
@@ -401,7 +407,7 @@ export function getAllowedMenuItems(
   const isOrgAdmin = roles.includes('org_admin')
   const isCoach = roles.includes('coach')
   const isStaff = roles.includes('staff')
-  const isParent = roles.includes('parent')
+  const isParent = roles.includes('parent') || roles.includes('guardian')
   const isAthlete = roles.includes('athlete')
 
   const allowed: string[] = []

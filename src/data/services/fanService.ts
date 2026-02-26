@@ -15,7 +15,7 @@
 
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
-import { USE_FAKE_DATA } from '../config'
+import { USE_FAKE_DATA, DEMO_ORG_A_ID, DEMO_ORG_B_ID } from '../config'
 import { t } from '../../i18n'
 import type {
   FanOrgFollow,
@@ -537,9 +537,73 @@ export async function getFanFeed(): Promise<{ data: FanFeedItem[]; error: Error 
 
   try {
     if (USE_FAKE_DATA) {
+      const now = new Date()
+      const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString()
+      const fakeFeed: FanFeedItem[] = [
+        {
+          id: 'feed-001',
+          content_type: 'event',
+          content_id: 'event-u10-soccer-game-001',
+          source_entity_type: 'org',
+          source_entity_id: DEMO_ORG_A_ID,
+          source_entity_name: 'Riverside Youth Athletics',
+          created_at: daysAgo(1),
+          read: false,
+        },
+        {
+          id: 'feed-002',
+          content_type: 'announcement',
+          content_id: 'msg-001',
+          source_entity_type: 'org',
+          source_entity_id: DEMO_ORG_A_ID,
+          source_entity_name: 'Riverside Youth Athletics',
+          created_at: daysAgo(3),
+          read: false,
+        },
+        {
+          id: 'feed-003',
+          content_type: 'event',
+          content_id: 'event-u12-soccer-tournament-001',
+          source_entity_type: 'org',
+          source_entity_id: DEMO_ORG_A_ID,
+          source_entity_name: 'Riverside Youth Athletics',
+          created_at: daysAgo(5),
+          read: true,
+        },
+        {
+          id: 'feed-004',
+          content_type: 'photo',
+          content_id: 'gallery-summer-camp-2024',
+          source_entity_type: 'org',
+          source_entity_id: DEMO_ORG_B_ID,
+          source_entity_name: 'Lincoln High School',
+          created_at: daysAgo(7),
+          read: true,
+        },
+        {
+          id: 'feed-005',
+          content_type: 'announcement',
+          content_id: 'msg-002',
+          source_entity_type: 'org',
+          source_entity_id: DEMO_ORG_A_ID,
+          source_entity_name: 'Riverside Youth Athletics',
+          created_at: daysAgo(8),
+          read: true,
+        },
+        {
+          id: 'feed-006',
+          content_type: 'event',
+          content_id: 'event-u10-bb-game-001',
+          source_entity_type: 'org',
+          source_entity_id: DEMO_ORG_A_ID,
+          source_entity_name: 'Riverside Youth Athletics',
+          created_at: daysAgo(10),
+          read: true,
+        },
+      ]
       debug.perf.end('fanService.getFanFeed')
-      debug.data('FanService.getFanFeed', 'Response (fake)', { itemCount: 0 })
-      return { data: [], error: null }
+      debug.data('FanService.getFanFeed', 'Response (fake)', { itemCount: fakeFeed.length })
+      return { data: fakeFeed, error: null }
     }
     const { data, error } = await supabaseAny.from('fan_feed')
       .select(`

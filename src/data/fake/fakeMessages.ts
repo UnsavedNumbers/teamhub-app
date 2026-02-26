@@ -16,6 +16,8 @@ import {
     TEAM_U10_SOCCER_ID,
     TEAM_U12_SOCCER_ID,
     TEAM_U10_BASKETBALL_ID,
+    TEAM_U12_BASKETBALL_ID,
+    TEAM_U14_SOCCER_ELITE_ID,
 } from './fakeTeams'
 
 // ============================================================================
@@ -83,6 +85,9 @@ function daysAgo(days: number): string {
 const ADMIN_ONLY_ID = DEMO_USER_IDS['admin-only@example.com']
 const COACH_ONLY_ID = DEMO_USER_IDS['coach-only@example.com']
 const PARENT_ONLY_ID = DEMO_USER_IDS['parent-only@example.com']
+const STAFF_ONLY_ID = DEMO_USER_IDS['staff-only@example.com']
+const ATHLETE_ONLY_ID = DEMO_USER_IDS['athlete-only@example.com']
+const FAN_ONLY_ID = DEMO_USER_IDS['fan-only@example.com']
 
 // ============================================================================
 // Fake Announcements Data
@@ -258,6 +263,89 @@ Let's go Hawks! 🦅`,
         updated_at: daysAgo(2),
     },
 
+    // U12 Basketball announcement
+    {
+        id: 'msg-008',
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U12_BASKETBALL_ID,
+        title: 'Practice Schedule Update — New Time Slot',
+        body: `Eagles Families,
+
+Starting next week, our Tuesday practices will shift to 5:30 PM instead of 6:00 PM to accommodate gym scheduling.
+
+Please update your calendars!
+
+— Coach Thompson`,
+        type: 'announcement',
+        audience: 'team',
+        status: 'sent',
+        is_pinned: false,
+        sent_at: daysAgo(2),
+        scheduled_for: null,
+        created_by_user_id: DEMO_USER_IDS['coach.thompson@example.com'] ?? COACH_ONLY_ID,
+        created_at: daysAgo(2),
+        updated_at: daysAgo(2),
+    },
+    // U14 Elite Soccer announcement
+    {
+        id: 'msg-009',
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U14_SOCCER_ELITE_ID,
+        title: '🏆 State Cup Qualifier — Travel Details',
+        body: `Elite Storm Players & Families,
+
+We have confirmed our spot in the State Cup Qualifier! Here are the travel details:
+
+📅 Dates: May 17-19
+📍 Destination: Sacramento Regional Sports Complex
+🚌 Team Bus departs Friday 5:00 PM from the main facility
+
+Please complete the travel permission form in the app by May 10th.
+
+Hotel block is reserved at Holiday Inn Express (link in travel plans).
+
+Let's make history! 🌟
+
+— Coach Davis`,
+        type: 'announcement',
+        audience: 'team',
+        status: 'sent',
+        is_pinned: true,
+        sent_at: daysAgo(4),
+        scheduled_for: null,
+        created_by_user_id: COACH_ONLY_ID,
+        created_at: daysAgo(4),
+        updated_at: daysAgo(4),
+    },
+    // Org-wide scheduled announcement (future)
+    {
+        id: 'msg-010',
+        org_id: DEMO_ORG_A_ID,
+        team_id: null,
+        title: 'Picture Day - All Teams',
+        body: `Mark your calendars! Team picture day is coming up.
+
+📅 Date: March 15th
+📍 Location: Main Gymnasium
+⏰ Schedule: See below by team
+
+U10 Soccer Lightning: 9:00 AM
+U10 Basketball Hawks: 9:30 AM
+U12 Soccer Thunder: 10:00 AM
+U12 Basketball Eagles: 10:30 AM
+U14 Soccer Elite Storm: 11:00 AM
+
+Please arrive 10 minutes early and wear your HOME jersey.`,
+        type: 'announcement',
+        audience: 'all',
+        status: 'scheduled',
+        is_pinned: false,
+        sent_at: null,
+        scheduled_for: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        created_by_user_id: ADMIN_ONLY_ID,
+        created_at: daysAgo(1),
+        updated_at: daysAgo(1),
+    },
     // Draft message
     {
         id: 'msg-007',
@@ -486,6 +574,226 @@ export const fakeNotifications: FakeNotification[] = [
         dedupe_key: 'demo:notif-admin-006',
         read_at: null,
         created_at: daysAgo(2),
+    },
+    // ── Coach notifications ──────────────────────────────────────────────────
+    {
+        id: 'notif-coach-001',
+        user_id: COACH_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U10_SOCCER_ID,
+        action: 'event_attendance_updated',
+        role_context: 'coach',
+        title: 'Attendance Reminder',
+        body: 'Please submit attendance for yesterday\'s U10 Lightning practice.',
+        presentation_type: 'warning',
+        entity_type: 'event',
+        entity_id: 'event-u10-soccer-practice-001',
+        link_url: '/admin/attendance',
+        metadata: null,
+        dedupe_key: 'demo:notif-coach-001',
+        read_at: null,
+        created_at: hoursAgo(3),
+    },
+    {
+        id: 'notif-coach-002',
+        user_id: COACH_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U14_SOCCER_ELITE_ID,
+        action: 'event_rsvp_required',
+        role_context: 'coach',
+        title: 'Tournament Roster Due',
+        body: 'Please finalize the tournament roster for U14 Elite Storm by Friday.',
+        presentation_type: 'info',
+        entity_type: 'event',
+        entity_id: 'event-u14-soccer-travel-001',
+        link_url: '/admin/events/event-u14-soccer-travel-001',
+        metadata: null,
+        dedupe_key: 'demo:notif-coach-002',
+        read_at: null,
+        created_at: hoursAgo(6),
+    },
+    {
+        id: 'notif-coach-003',
+        user_id: COACH_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U12_SOCCER_ID,
+        action: 'announcement_created',
+        role_context: 'coach',
+        title: 'New Parent Message',
+        body: 'A parent on U12 Thunder replied to your tournament announcement.',
+        presentation_type: 'info',
+        entity_type: 'announcement',
+        entity_id: 'msg-005',
+        link_url: '/admin/communications',
+        metadata: null,
+        dedupe_key: 'demo:notif-coach-003',
+        read_at: daysAgo(1),
+        created_at: daysAgo(1),
+    },
+    // ── Staff notifications ──────────────────────────────────────────────────
+    {
+        id: 'notif-staff-001',
+        user_id: STAFF_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: null,
+        action: 'event_attendance_updated',
+        role_context: 'staff',
+        title: 'Gate Shift Starting Soon',
+        body: 'Your gate scanning shift for the U10 Soccer game starts in 90 minutes.',
+        presentation_type: 'info',
+        entity_type: 'event',
+        entity_id: 'event-u10-soccer-game-001',
+        link_url: '/admin/ticketing/scanner/event-u10-soccer-game-001',
+        metadata: null,
+        dedupe_key: 'demo:notif-staff-001',
+        read_at: null,
+        created_at: hoursAgo(1),
+    },
+    {
+        id: 'notif-staff-002',
+        user_id: STAFF_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: null,
+        action: 'announcement_created',
+        role_context: 'staff',
+        title: 'Field Assignment Updated',
+        body: 'Field assignments for this weekend have been updated. Please review before your shift.',
+        presentation_type: 'warning',
+        entity_type: 'event',
+        entity_id: null,
+        link_url: '/admin/facilities',
+        metadata: null,
+        dedupe_key: 'demo:notif-staff-002',
+        read_at: null,
+        created_at: hoursAgo(5),
+    },
+    {
+        id: 'notif-staff-003',
+        user_id: STAFF_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: null,
+        action: 'fee_payment_completed',
+        role_context: 'staff',
+        title: 'Ticket Sales Update',
+        body: '47 tickets sold for Saturday\'s tournament. 28 seats remaining.',
+        presentation_type: 'info',
+        entity_type: 'fee',
+        entity_id: null,
+        link_url: '/admin/ticketing/events',
+        metadata: null,
+        dedupe_key: 'demo:notif-staff-003',
+        read_at: daysAgo(1),
+        created_at: daysAgo(1),
+    },
+    // ── Athlete notifications ────────────────────────────────────────────────
+    {
+        id: 'notif-athlete-001',
+        user_id: ATHLETE_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U10_SOCCER_ID,
+        action: 'event_rsvp_required',
+        role_context: 'athlete',
+        title: 'Upcoming Game This Saturday',
+        body: 'You have a soccer game on Saturday at 10am. Please confirm your attendance.',
+        presentation_type: 'info',
+        entity_type: 'event',
+        entity_id: 'event-u10-soccer-game-001',
+        link_url: '/portal/calendar',
+        metadata: null,
+        dedupe_key: 'demo:notif-athlete-001',
+        read_at: null,
+        created_at: hoursAgo(2),
+    },
+    {
+        id: 'notif-athlete-002',
+        user_id: ATHLETE_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U10_SOCCER_ID,
+        action: 'announcement_created',
+        role_context: 'athlete',
+        title: 'New Team Message',
+        body: 'Coach Davis posted an update about practice for U10 Lightning.',
+        presentation_type: 'info',
+        entity_type: 'announcement',
+        entity_id: 'msg-004',
+        link_url: '/portal/messages',
+        metadata: null,
+        dedupe_key: 'demo:notif-athlete-002',
+        read_at: hoursAgo(1),
+        created_at: hoursAgo(2),
+    },
+    {
+        id: 'notif-athlete-003',
+        user_id: ATHLETE_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U12_SOCCER_ID,
+        action: 'athlete_created',
+        role_context: 'athlete',
+        title: 'Tournament Registration Confirmed',
+        body: 'Your registration for the Spring Tournament has been confirmed.',
+        presentation_type: 'info',
+        entity_type: 'athlete',
+        entity_id: 'child-emma-johnson-001',
+        link_url: '/portal',
+        metadata: null,
+        dedupe_key: 'demo:notif-athlete-003',
+        read_at: daysAgo(2),
+        created_at: daysAgo(3),
+    },
+    // ── Fan notifications ────────────────────────────────────────────────────
+    {
+        id: 'notif-fan-001',
+        user_id: FAN_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: null,
+        action: 'announcement_created',
+        role_context: 'fan',
+        title: 'New Event: Spring Tournament',
+        body: 'Riverside Youth Athletics has posted a new public event: Spring Soccer Tournament.',
+        presentation_type: 'info',
+        entity_type: 'event',
+        entity_id: 'event-u12-soccer-tournament-001',
+        link_url: '/fan/events/event-u12-soccer-tournament-001',
+        metadata: null,
+        dedupe_key: 'demo:notif-fan-001',
+        read_at: null,
+        created_at: hoursAgo(4),
+    },
+    {
+        id: 'notif-fan-002',
+        user_id: FAN_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: null,
+        action: 'fee_payment_completed',
+        role_context: 'fan',
+        title: 'Ticket Purchase Confirmed',
+        body: 'Your 2 tickets for the U10 Soccer Championship have been confirmed.',
+        presentation_type: 'info',
+        entity_type: 'fee',
+        entity_id: 'ticket-order-fan-001',
+        link_url: '/fan/tickets',
+        metadata: { ticket_count: 2 },
+        dedupe_key: 'demo:notif-fan-002',
+        read_at: daysAgo(1),
+        created_at: daysAgo(2),
+    },
+    {
+        id: 'notif-fan-003',
+        user_id: FAN_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: null,
+        action: 'event_location_updated',
+        role_context: 'fan',
+        title: 'Event Reminder: Tomorrow',
+        body: 'The Spring Soccer Tournament is tomorrow. Gates open at 8am.',
+        presentation_type: 'info',
+        entity_type: 'event',
+        entity_id: 'event-u12-soccer-tournament-001',
+        link_url: '/fan/events/event-u12-soccer-tournament-001',
+        metadata: null,
+        dedupe_key: 'demo:notif-fan-003',
+        read_at: null,
+        created_at: hoursAgo(12),
     },
     // Parent-admin notifications (union of parent and admin)
     {

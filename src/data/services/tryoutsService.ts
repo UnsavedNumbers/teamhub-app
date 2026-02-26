@@ -5,6 +5,7 @@ import { debug } from '../../lib/debug'
 import { fakeTryouts, fakeTryoutRegistrations } from '../fake/fakeTryouts'
 import { getChildById } from '../fake/fakeUsers'
 import { getChildrenForUserId } from '../fake/relationships'
+import { getGuardianCanonicalUserId } from '../fake/userContext'
 
 export interface Tryout {
     id: string
@@ -224,7 +225,8 @@ let fakeTryoutsStore: Tryout[] = fakeTryouts.map(mapFakeTryoutToServiceModel)
 let fakeTryoutRegistrationsStore: TryoutRegistration[] = fakeTryoutRegistrations.map(mapFakeRegistrationToServiceModel)
 
 function getFakeRegistrationsForContext(context: UserContext): TryoutRegistration[] {
-    const childIds = new Set(getChildrenForUserId(context.userId))
+    const guardianUserId = getGuardianCanonicalUserId(context)
+    const childIds = new Set(getChildrenForUserId(guardianUserId))
     return fakeTryoutRegistrationsStore.filter((registration) => childIds.has(registration.child_id))
 }
 

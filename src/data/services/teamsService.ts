@@ -10,7 +10,7 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import type { UserContext, PermissionSet } from '../fake/userContext'
-import { calculatePermissions } from '../fake/userContext'
+import { calculatePermissions, getGuardianCanonicalUserId } from '../fake/userContext'
 import {
     getTeamById,
     getTeamsForOrg,
@@ -28,7 +28,6 @@ import {
 } from '../fake/fakeTeams'
 import {
     getChildrenForUserId,
-    getAssignedTeamsForCoach,
     getTeamsForUserChildren,
 } from '../fake/relationships'
 import { getCoachTeamIds } from '../fake/userContext'
@@ -88,7 +87,9 @@ async function simulateDelay(): Promise<void> {
 }
 
 async function buildPermissions(context: UserContext): Promise<PermissionSet> {
-    const childIds = getChildrenForUserId(context.userId)
+    // Align fake-data permissions with canonical guardian ID so demo users see their teams/children
+    const guardianUserId = getGuardianCanonicalUserId(context)
+    const childIds = getChildrenForUserId(guardianUserId)
     const assignedTeamIds = context.roles.includes('coach')
         ? await getCoachTeamIds(context)
         : []
@@ -309,6 +310,7 @@ export async function getTeams(
             // Non-admin users only see teams they have access to
             if (!permissions.canViewAllOrgData) {
                 const accessibleTeamIds = new Set<string>()
+                const guardianUserId = getGuardianCanonicalUserId(context)
 
                 // Add coached teams
                 if (permissions.canViewAssignedTeams) {
@@ -317,7 +319,7 @@ export async function getTeams(
 
                 // Add children's teams
                 if (permissions.canViewOwnChildrenData) {
-                    getTeamsForUserChildren(context.userId).forEach((id) => accessibleTeamIds.add(id))
+                    getTeamsForUserChildren(guardianUserId).forEach((id) => accessibleTeamIds.add(id))
                 }
 
                 teams = teams.filter((t) => accessibleTeamIds.has(t.id))
@@ -1418,7 +1420,8 @@ export async function getTeamRoster(
             }
 
             const members = getTeamMembersForSeason(teamId, seasonId)
-            const childIds = getChildrenForUserId(context.userId)
+            const guardianUserId = getGuardianCanonicalUserId(context)
+            const childIds = getChildrenForUserId(guardianUserId)
             const filtered = members.filter((m) => childIds.includes((m as { athlete_id?: string }).athlete_id ?? (m as { child_id?: string }).child_id ?? ''))
 
             return { data: filtered, error: null }
@@ -1523,7 +1526,8 @@ export async function getTeamsForParent(
         try {
             await simulateDelay()
 
-            const teamIds = getTeamsForUserChildren(context.userId)
+            const guardianUserId = getGuardianCanonicalUserId(context)
+            const teamIds = getTeamsForUserChildren(guardianUserId)
             const teams = teamIds
                 .map((id) => getTeamById(id))
                 .filter((t): t is FakeTeam => t !== undefined)
@@ -1594,7 +1598,7 @@ export async function getTeamsForCoach(
         try {
             await simulateDelay()
 
-            const teamIds = getAssignedTeamsForCoach(context.userId)
+            const teamIds = await getCoachTeamIds(context)
             const teams = teamIds
                 .map((id) => getTeamById(id))
                 .filter((t): t is FakeTeam => t !== undefined)
@@ -1750,7 +1754,8 @@ export async function getAthleteTeamMemberships(
         try {
             await simulateDelay()
             const memberships = getActiveTeamMembershipsForChild(athleteId)
-            const childIds = getChildrenForUserId(context.userId)
+            const guardianUserId = getGuardianCanonicalUserId(context)
+            const childIds = getChildrenForUserId(guardianUserId)
             const isAdmin = isOrgAdmin(context)
             const allowed = isAdmin || childIds.includes(athleteId)
             if (!allowed) {
