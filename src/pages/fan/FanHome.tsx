@@ -209,6 +209,7 @@ export default function FanHome() {
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
+    if (diffMins < 1) return 'Just now'
     if (diffMins < 60) return `${diffMins} Minutes Ago`
     if (diffHours < 24) return `${diffHours} Hours Ago`
     return `${diffDays} Days Ago`

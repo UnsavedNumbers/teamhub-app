@@ -12,7 +12,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { followOrg, getTeamProfile, unfollowOrg } from '../../data/services/fanService'
 import { USE_FAKE_DATA } from '../../data/config'
-import { fakeEvents } from '../../data/fake/fakeEvents'
+import { getFakeTicketingEvents } from '../../data/fake/fakeTicketingEvents'
 import { getMockGalleriesForOrg, getMockPhotosForGallery } from '../../data/fake/mockGalleries'
 import { getOrganizationById } from '../../data/fake/fakeOrganizations'
 import { getTeamMembersForSeason, getTeamWithDetails } from '../../data/fake/fakeTeams'
@@ -34,6 +34,7 @@ interface TeamProfile {
   org_id: string
   org_name: string
   org_slug?: string
+  org_logo_url?: string | null
   sport: string
   season?: string
   level?: string
@@ -104,6 +105,7 @@ export default function FanTeamProfile() {
       org_id: fakeTeam?.org_id || '',
       org_name: data.parent_org_name || fallbackOrg?.name || 'Organization',
       org_slug: fallbackOrg?.slug,
+      org_logo_url: fallbackOrg?.logo_url || null,
       sport: data.sport || fakeTeam?.sport?.name || 'Sports',
       season: data.season || fakeTeam?.activeSeason?.name,
       level: fakeTeam?.level?.name || undefined,
@@ -120,15 +122,28 @@ export default function FanTeamProfile() {
 
     if (USE_FAKE_DATA && fakeTeam) {
       const now = Date.now()
-      const teamEvents = fakeEvents
-        .filter((event) => event.team_id === fakeTeam.id)
+      const orgTicketedEvents = getFakeTicketingEvents(fakeTeam.org_id, {
+        page: 1,
+        perPage: 60,
+        fanVisibleOnly: true,
+      }).data
+      const teamEvents = orgTicketedEvents
+        .map((event) => ({
+          id: event.id,
+          title: event.title,
+          start_time: event.starts_at,
+          end_time: event.ends_at || event.starts_at,
+          location: [event.venue_name, event.venue_city, event.venue_state].filter(Boolean).join(', ') || null,
+          event_type: event.event_type,
+          status: event.status,
+        }))
         .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
 
       const nextEvents = teamEvents.filter((event) => new Date(event.start_time).getTime() >= now).slice(0, 8)
       setUpcomingEvents(nextEvents)
 
       const pastResults = teamEvents
-        .filter((event) => new Date(event.start_time).getTime() < now && ['game', 'tournament'].includes(String((event as any).type || '')))
+        .filter((event) => new Date(event.start_time).getTime() < now && ['game', 'tournament'].includes(String(event.event_type || '')))
         .slice(-5)
         .reverse()
         .map((event, index) => ({
@@ -269,7 +284,11 @@ export default function FanTeamProfile() {
               className="fan-entity-parent"
               onClick={() => profile.org_slug && navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { orgId: profile.org_slug }))}
             >
-              <span className="material-symbols-outlined">business</span>
+              {profile.org_logo_url ? (
+                <img src={profile.org_logo_url} alt={profile.org_name} className="size-4 rounded-full object-cover" />
+              ) : (
+                <span className="material-symbols-outlined">business</span>
+              )}
               {profile.org_name}
             </button>
             <div className="fan-entity-tags">

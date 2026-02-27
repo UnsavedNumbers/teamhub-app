@@ -12,7 +12,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { USE_FAKE_DATA } from '../../data/config'
-import { fakeEvents } from '../../data/fake/fakeEvents'
 import { getOrganizationById } from '../../data/fake/fakeOrganizations'
 import { getSeasonById, getTeamById } from '../../data/fake/fakeTeams'
 import { getFakeTicketedEventByCalendarEventId, getFakeTicketTypesForEvent, getFakeTicketedEventById } from '../../data/fake/fakeTicketingEvents'
@@ -141,25 +140,22 @@ function buildFakeCommuteSummary(origin: string, destination: string, startTime:
 }
 
 function buildFakeEventDetail(eventId: string): EventDetail | null {
-  const calendarEvent = fakeEvents.find((entry) => entry.id === eventId)
-  const ticketedFromCalendar = calendarEvent
-    ? getFakeTicketedEventByCalendarEventId(calendarEvent.id)
-    : null
+  const ticketedFromCalendar = getFakeTicketedEventByCalendarEventId(eventId)
   const standaloneTicketedEvent = getFakeTicketedEventById(eventId)
   const ticketedEvent = ticketedFromCalendar || standaloneTicketedEvent
 
-  if (!calendarEvent && !ticketedEvent) return null
+  if (!ticketedEvent) return null
 
-  const teamId = calendarEvent?.team_id || ticketedEvent?.team_id || null
+  const teamId = ticketedEvent.team_id || null
   const team = teamId ? getTeamById(teamId) : null
-  const orgId = calendarEvent?.team?.org_id || ticketedEvent?.org_id || team?.org_id || ''
+  const orgId = ticketedEvent.org_id || team?.org_id || ''
   const org = orgId ? getOrganizationById(orgId) : undefined
-  const season = calendarEvent?.season_id ? getSeasonById(calendarEvent.season_id) : null
+  const season = ticketedEvent.season_id ? getSeasonById(ticketedEvent.season_id) : null
 
-  const ticketTypes = ticketedEvent ? getFakeTicketTypesForEvent(ticketedEvent.id, ticketedEvent.org_id) : []
+  const ticketTypes = getFakeTicketTypesForEvent(ticketedEvent.id, ticketedEvent.org_id)
   const ticketPrices = ticketTypes.map((type) => type.price_cents / 100)
   const fakeWeather = buildFakeWeather(
-    calendarEvent?.start_time || ticketedEvent?.starts_at || new Date().toISOString(),
+    ticketedEvent.starts_at || new Date().toISOString(),
     `${orgId}|${teamId || 'org'}|${ticketedEvent?.venue_city || org?.city || ''}`,
   )
 
@@ -167,28 +163,28 @@ function buildFakeEventDetail(eventId: string): EventDetail | null {
   const maxPrice = ticketPrices.length > 0 ? Math.max(...ticketPrices) : null
 
   return {
-    id: calendarEvent?.id || ticketedEvent?.id || eventId,
-    title: calendarEvent?.title || ticketedEvent?.title || 'Event',
-    description: ticketedEvent?.description || calendarEvent?.notes || null,
-    start_time: calendarEvent?.start_time || ticketedEvent?.starts_at || new Date().toISOString(),
-    end_time: calendarEvent?.end_time || ticketedEvent?.ends_at || new Date().toISOString(),
-    arrival_time: calendarEvent?.arrival_time || null,
-    timezone: calendarEvent?.timezone || ticketedEvent?.timezone || org?.timezone || 'America/New_York',
-    location: calendarEvent?.location || ticketedEvent?.venue_name || null,
-    type: String(calendarEvent?.type || ticketedEvent?.event_type || 'event'),
-    is_cancelled: calendarEvent?.is_cancelled || false,
-    visibility: (calendarEvent as any)?.visibility || 'public',
-    weather_dependent: Boolean(calendarEvent?.weather_dependent),
-    external_link: calendarEvent?.external_link || null,
-    notes: calendarEvent?.notes || null,
-    uniform_notes: calendarEvent?.uniform_notes || null,
-    equipment_notes: calendarEvent?.equipment_notes || null,
+    id: ticketedEvent.id || eventId,
+    title: ticketedEvent.title || 'Event',
+    description: ticketedEvent.description || ticketedEvent.event_description || null,
+    start_time: ticketedEvent.starts_at || new Date().toISOString(),
+    end_time: ticketedEvent.ends_at || ticketedEvent.starts_at || new Date().toISOString(),
+    arrival_time: null,
+    timezone: ticketedEvent.timezone || org?.timezone || 'America/New_York',
+    location: ticketedEvent.venue_name || null,
+    type: String(ticketedEvent.event_type || 'event'),
+    is_cancelled: ticketedEvent.status === 'cancelled',
+    visibility: ticketedEvent.visibility || 'public',
+    weather_dependent: false,
+    external_link: null,
+    notes: ticketedEvent.event_description || null,
+    uniform_notes: null,
+    equipment_notes: null,
     org_id: orgId,
     org_name: org?.name || 'Organization',
     org_slug: org?.slug || '',
     org_logo_url: org?.logo_url || null,
     org_public_description: org?.website || null,
-    venue_name: ticketedEvent?.venue_name || calendarEvent?.location || null,
+    venue_name: ticketedEvent?.venue_name || null,
     venue_address: ticketedEvent?.venue_address_line1 || null,
     venue_city: ticketedEvent?.venue_city || org?.city || null,
     venue_state: ticketedEvent?.venue_state || org?.state || null,
@@ -196,16 +192,16 @@ function buildFakeEventDetail(eventId: string): EventDetail | null {
     place_id: null,
     latitude: null,
     longitude: null,
-    is_ticketed: Boolean(ticketedEvent),
-    ticket_event_id: ticketedEvent?.id || null,
+    is_ticketed: true,
+    ticket_event_id: ticketedEvent.id,
     ticket_price_min: minPrice,
     ticket_price_max: maxPrice,
     tickets_available: ticketedEvent ? ticketedEvent.status === 'published' : false,
     weather_temp: fakeWeather.temp,
     weather_condition: fakeWeather.condition,
     weather_icon: getWeatherIcon(fakeWeather.condition),
-    team_name: calendarEvent?.team?.name || team?.name || null,
-    season_name: calendarEvent?.season?.name || season?.name || null,
+    team_name: team?.name || null,
+    season_name: season?.name || null,
   }
 }
 
@@ -585,6 +581,11 @@ export default function FanEventDetail() {
       hour12: true,
       ...(event?.timezone ? { timeZone: event.timezone } : {}),
     }) + (tz ? ` ${tz}` : '')
+  }
+
+  const formatEventClockWithZone = (dateInput: string | Date): string => {
+    const value = typeof dateInput === 'string' ? dateInput : dateInput.toISOString()
+    return formatEventTime(value)
   }
 
   // Get full address
@@ -1067,22 +1068,14 @@ export default function FanEventDetail() {
                             if (totalMinutes > 0) {
                               const targetDate = new Date(targetTime)
                               const leaveByDate = new Date(targetDate.getTime() - totalMinutes * 60 * 1000)
-                              const leaveByTime = leaveByDate.toLocaleTimeString('en-US', {
-                                hour: 'numeric',
-                                minute: '2-digit',
-                                ...(event.timezone ? { timeZone: event.timezone } : {}),
-                              })
+                              const leaveByTime = formatEventClockWithZone(leaveByDate)
                               
                               return (
                                 <div className="fan-commute-leave-by">
                                   <p className="fan-commute-label">Need to Leave By</p>
                                   <p className="fan-commute-leave-time">{leaveByTime}</p>
                                   <p className="fan-commute-leave-note">
-                                    To arrive by {new Date(targetTime).toLocaleTimeString('en-US', {
-                                      hour: 'numeric',
-                                      minute: '2-digit',
-                                      ...(event.timezone ? { timeZone: event.timezone } : {}),
-                                    })}
+                                    To arrive by {formatEventClockWithZone(targetTime)}
                                     {' (start time)'}
                                   </p>
                                 </div>

@@ -43,6 +43,7 @@ interface FanVideo {
   view_count: number
   mux_playback_id: string | null
   org_name?: string
+  org_logo_url?: string | null
   team_name?: string
   tagged_athletes?: Array<{
     id: string
@@ -54,6 +55,7 @@ interface FanVideo {
 interface FanVideoGroup {
   org_id: string
   org_name: string
+  org_logo_url?: string | null
   videos: FanVideo[]
 }
 
@@ -129,6 +131,7 @@ export default function FanVideos() {
             view_count: video.view_count || 0,
             mux_playback_id: video.mux_playback_id || null,
             org_name: getOrganizationById(video.org_id)?.name || 'Organization',
+            org_logo_url: getOrganizationById(video.org_id)?.logo_url || null,
             team_name: video.team_id ? getTeamById(video.team_id)?.name : undefined,
             tagged_athletes: getMockVideoAthleteLinks(video.id).reduce<TaggedAthlete[]>(
               (acc, link) => {
@@ -171,6 +174,7 @@ export default function FanVideos() {
             groupMap.set(video.org_id, {
               org_id: video.org_id,
               org_name: video.org_name || 'Organization',
+              org_logo_url: video.org_logo_url || null,
               videos: [],
             })
           }
@@ -220,7 +224,7 @@ export default function FanVideos() {
           category,
           view_count,
           mux_playback_id,
-          organizations!inner(name),
+          organizations!inner(name, logo_url),
           teams(name),
           video_athlete_links(
             athletes(
@@ -291,6 +295,7 @@ export default function FanVideos() {
         view_count: v.view_count || 0,
         mux_playback_id: v.mux_playback_id,
         org_name: (v.organizations as Record<string, unknown>)?.name as string | undefined,
+        org_logo_url: (v.organizations as Record<string, unknown>)?.logo_url as string | undefined,
         team_name: (v.teams as Record<string, unknown>)?.name as string | undefined,
         tagged_athletes:
           ((v.video_athlete_links as unknown[]) || [])
@@ -326,6 +331,7 @@ export default function FanVideos() {
           groupMap.set(video.org_id, {
             org_id: video.org_id,
             org_name: video.org_name || 'Unknown',
+            org_logo_url: video.org_logo_url || null,
             videos: []
           })
         }
@@ -490,7 +496,14 @@ export default function FanVideos() {
               {/* Group Header */}
               {!selectedOrgId && (
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-gray-900">
+                  <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <span className="size-7 rounded-full bg-gray-100 border border-gray-200 overflow-hidden inline-flex items-center justify-center">
+                      {group.org_logo_url ? (
+                        <img src={group.org_logo_url} alt={group.org_name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Icon name="business" size="text-base" className="text-gray-500" />
+                      )}
+                    </span>
                     {group.org_name}
                   </h2>
                   <button

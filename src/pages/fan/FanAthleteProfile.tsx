@@ -12,7 +12,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { followOrg, getAthleteProfile, unfollowOrg } from '../../data/services/fanService'
 import { USE_FAKE_DATA } from '../../data/config'
-import { fakeEvents } from '../../data/fake/fakeEvents'
+import { getFakeTicketingEvents } from '../../data/fake/fakeTicketingEvents'
 import { getMockGalleriesForOrg, getMockPhotosForGallery } from '../../data/fake/mockGalleries'
 import { getOrganizationById } from '../../data/fake/fakeOrganizations'
 import { getChildById } from '../../data/fake/fakeUsers'
@@ -42,6 +42,7 @@ interface AthleteProfile {
   org_id: string
   org_name: string
   org_slug?: string
+  org_logo_url?: string | null
   sport: string
   privacy_level: 'public' | 'private' | 'followers_only' | 'unlisted'
   is_following: boolean
@@ -117,6 +118,7 @@ export default function FanAthleteProfile() {
       org_id: team?.org_id || '',
       org_name: org?.name || data.parent_org_name || 'Organization',
       org_slug: org?.slug,
+      org_logo_url: org?.logo_url || null,
       sport: team?.sport?.name || data.position || 'Sports',
       privacy_level: data.privacy_level === 'unlisted' ? 'followers_only' : data.privacy_level,
       is_following: data.is_following,
@@ -128,8 +130,19 @@ export default function FanAthleteProfile() {
 
     if (USE_FAKE_DATA && team) {
       const now = Date.now()
-      const teamEvents = fakeEvents
-        .filter((event) => event.team_id === team.id)
+      const teamEvents = getFakeTicketingEvents(team.org_id, {
+        page: 1,
+        perPage: 60,
+        fanVisibleOnly: true,
+      }).data
+        .map((event) => ({
+          id: event.id,
+          title: event.title,
+          start_time: event.starts_at,
+          end_time: event.ends_at || event.starts_at,
+          location: [event.venue_name, event.venue_city, event.venue_state].filter(Boolean).join(', ') || null,
+          event_type: event.event_type,
+        }))
         .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
 
       const nextEvents = teamEvents.filter((event) => new Date(event.start_time).getTime() >= now).slice(0, 8)
@@ -272,6 +285,11 @@ export default function FanAthleteProfile() {
                 className="fan-entity-parent"
                 onClick={() => profile.org_slug && navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { orgId: profile.org_slug }))}
               >
+                {profile.org_logo_url ? (
+                  <img src={profile.org_logo_url} alt={profile.org_name} className="size-4 rounded-full object-cover" />
+                ) : (
+                  <span className="material-symbols-outlined">business</span>
+                )}
                 {profile.org_name}
               </button>
             </div>
