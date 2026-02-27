@@ -79,6 +79,7 @@ const HelpContactPage = lazy(() => import('./pages/help/ContactPage'))
 import TicketEventList from './pages/ticketing/TicketEventList'
 import TicketEventDetail from './pages/ticketing/TicketEventDetail'
 import TicketOrderSuccess from './pages/ticketing/TicketOrderSuccess'
+import DemoTicketCheckout from './pages/ticketing/DemoTicketCheckout'
 import MyTickets from './pages/ticketing/MyTickets'
 import TicketAccess from './pages/ticketing/TicketAccess'
 import TicketAccessPage from './pages/ticketing/TicketAccessPage'
@@ -464,6 +465,7 @@ function AppWithTheme() {
           
           {/* Public Ticketing Routes - Some routes remain public, tickets list is protected */}
           <Route path="/portal/tickets/events/:eventId" element={<TicketEventDetail />} />
+          <Route path="/portal/tickets/checkout/demo" element={<DemoTicketCheckout />} />
           <Route path="/portal/tickets/order/:orderId" element={<TicketOrderSuccess />} />
           <Route path="/portal/tickets/access" element={<TicketAccessPage />} />
           <Route path="/portal/tickets/access/:token" element={<TicketAccess />} />

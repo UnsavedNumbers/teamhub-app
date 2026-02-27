@@ -44,6 +44,9 @@ interface AthleteProfile {
   org_slug?: string
   org_logo_url?: string | null
   sport: string
+  sports: string[]
+  current_teams: string[]
+  quick_summary: string
   privacy_level: 'public' | 'private' | 'followers_only' | 'unlisted'
   is_following: boolean
   follower_count: number
@@ -64,6 +67,7 @@ export default function FanAthleteProfile() {
   const [error, setError] = useState<string | null>(null)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
+  const [selectedSportBadge, setSelectedSportBadge] = useState<string | null>(null)
   
   // Related content
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([])
@@ -120,6 +124,17 @@ export default function FanAthleteProfile() {
       org_slug: org?.slug,
       org_logo_url: org?.logo_url || null,
       sport: team?.sport?.name || data.position || 'Sports',
+      sports: Array.isArray((data as any).sports) ? ((data as any).sports as string[]).filter(Boolean) : (team?.sport?.name ? [team.sport.name] : []),
+      current_teams: Array.isArray((data as any).current_teams) ? ((data as any).current_teams as string[]).filter(Boolean) : (team?.name ? [team.name] : []),
+      quick_summary: (() => {
+        const sports = Array.isArray((data as any).sports) ? ((data as any).sports as string[]).filter(Boolean) : []
+        if (sports.length <= 1) {
+          const role = data.position ? ` • ${data.position}` : ''
+          const jersey = data.jersey_number ? ` • #${data.jersey_number}` : ''
+          return `${sports[0] || team?.sport?.name || 'Athlete'}${role}${jersey}`
+        }
+        return `${sports.length} sports • unified profile`
+      })(),
       privacy_level: data.privacy_level === 'unlisted' ? 'followers_only' : data.privacy_level,
       is_following: data.is_following,
       follower_count: data.follower_count || 0,
@@ -236,6 +251,8 @@ export default function FanAthleteProfile() {
   }
 
   const fullName = `${profile.first_name} ${profile.last_name}`
+  const sportBadges = profile.sports.length > 0 ? profile.sports : (profile.sport ? [profile.sport] : [])
+  const currentTeamLabels = profile.current_teams.length > 0 ? profile.current_teams : (profile.team_name ? [profile.team_name] : [])
 
   return (
     <div className="fan-athlete-profile-page">
@@ -273,13 +290,20 @@ export default function FanAthleteProfile() {
           <div className="fan-entity-details fan-athlete-identity">
             <h1 className="fan-entity-name">{fullName}</h1>
             <div className="fan-athlete-team-info fan-athlete-location-row">
-              <button 
-                className="fan-entity-parent"
-                onClick={() => navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { teamId: profile.team_id }))}
-              >
-                <span className="material-symbols-outlined">groups</span>
-                {profile.team_name}
-              </button>
+              {profile.team_id && currentTeamLabels.length <= 1 ? (
+                <button
+                  className="fan-entity-parent"
+                  onClick={() => navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { teamId: profile.team_id }))}
+                >
+                  <span className="material-symbols-outlined">groups</span>
+                  {currentTeamLabels[0]}
+                </button>
+              ) : (
+                <span className="fan-entity-parent">
+                  <span className="material-symbols-outlined">groups</span>
+                  {currentTeamLabels.length > 1 ? `${currentTeamLabels.length} current teams` : 'No active team'}
+                </span>
+              )}
               <span className="fan-athlete-separator">•</span>
               <button 
                 className="fan-entity-parent"
@@ -294,10 +318,24 @@ export default function FanAthleteProfile() {
               </button>
             </div>
             <div className="fan-entity-tags fan-athlete-tags">
-              {profile.sport && <span className="fan-entity-tag">{profile.sport}</span>}
+              {sportBadges.map((sport) => (
+                <button
+                  key={sport}
+                  type="button"
+                  className={`fan-entity-tag ${selectedSportBadge === sport ? 'ring-2 ring-offset-1 ring-slate-700' : ''}`}
+                  onClick={() => setSelectedSportBadge((prev) => (prev === sport ? null : sport))}
+                  title={`Filter to ${sport}`}
+                >
+                  {sport}
+                </button>
+              ))}
               {profile.position && <span className="fan-entity-tag">{profile.position}</span>}
               {profile.graduation_year && <span className="fan-entity-tag">Class of {profile.graduation_year}</span>}
             </div>
+            <p className="fan-entity-description">{profile.quick_summary}</p>
+            {selectedSportBadge && (
+              <p className="fan-entity-description">Filtered sport: {selectedSportBadge}</p>
+            )}
             <div className="fan-athlete-action-row">
               <button 
                 className={`fan-follow-btn fan-athlete-follow-btn ${isFollowing ? 'following' : 'not-following'}`}
@@ -325,6 +363,18 @@ export default function FanAthleteProfile() {
 
       {/* Quick Info */}
       <div className="fan-athlete-quick-info">
+        {sportBadges.length > 0 && (
+          <div className="fan-athlete-info-item">
+            <span className="fan-athlete-info-label">Sports</span>
+            <span className="fan-athlete-info-value">{sportBadges.length}</span>
+          </div>
+        )}
+        {currentTeamLabels.length > 0 && (
+          <div className="fan-athlete-info-item">
+            <span className="fan-athlete-info-label">Current Teams</span>
+            <span className="fan-athlete-info-value">{currentTeamLabels.length}</span>
+          </div>
+        )}
         {profile.height && (
           <div className="fan-athlete-info-item">
             <span className="fan-athlete-info-label">Height</span>

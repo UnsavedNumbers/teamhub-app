@@ -64,16 +64,6 @@ function inferCurrentDemoRole(
   if (!profile && !user) return null
   if (profile?.isPlatformAdmin) return 'platform_admin'
 
-  const roles = profile?.organizations.flatMap((org) => org.roles) ?? []
-
-  if (roles.includes('org_admin')) return 'org_admin'
-  if (roles.includes('coach')) return 'coach'
-  if (roles.includes('staff')) return 'staff'
-  if (roles.includes('guardian')) return 'guardian'
-  if (roles.includes('parent')) return 'guardian'
-  if (roles.includes('athlete')) return 'athlete'
-  if (roles.includes('fan')) return 'fan'
-
   const signupMode = (user?.user_metadata as { signup_mode?: string } | undefined)?.signup_mode
   if (signupMode === 'fan') return 'fan'
 
@@ -86,6 +76,16 @@ function inferCurrentDemoRole(
 
     if (email.toLowerCase().includes('fan')) return 'fan'
   }
+
+  const roles = profile?.organizations.flatMap((org) => org.roles) ?? []
+
+  if (roles.includes('org_admin')) return 'org_admin'
+  if (roles.includes('coach')) return 'coach'
+  if (roles.includes('staff')) return 'staff'
+  if (roles.includes('guardian')) return 'guardian'
+  if (roles.includes('parent')) return 'guardian'
+  if (roles.includes('athlete')) return 'athlete'
+  if (roles.includes('fan')) return 'fan'
 
   return 'guardian'
 }

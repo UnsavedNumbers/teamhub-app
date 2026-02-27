@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getTicketOrderById, getTicketsForOrder } from '@/data/services'
 import TicketCard from '@/components/ticketing/TicketCard'
@@ -15,6 +15,8 @@ import { OrgScopedRoute } from '@/components/OrgScopedRoute'
 import type { TicketOrder, TicketOrderItem, TicketType, TicketedEvent, Ticket } from '@/types/ticketing'
 import { getLink, RouteKeys } from '@/utils/routes'
 import { captureEvent } from '@/lib/analytics/analytics'
+import { resolveTicketCheckoutRole } from '@/utils/ticketCheckoutRole'
+import { useOptionalAuth } from '@/hooks/useAuth'
 
 type TicketOrderWithRelations = TicketOrder & {
   ticket_order_items?: Array<TicketOrderItem & {
@@ -35,6 +37,16 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
   useDebugLifecycle('TicketOrderSuccessContent')
   
   const { orderId, orgSlug } = useParams<{ orderId: string; orgSlug: string }>()
+  const [searchParams] = useSearchParams()
+  const auth = useOptionalAuth()
+  const profileRoles = auth?.profile?.organizations?.flatMap((organization) => organization.roles ?? []) ?? []
+  const checkoutRole = resolveTicketCheckoutRole(searchParams.get('role'), {
+    profileRoles,
+    fallbackRole: 'guardian',
+  })
+  const myTicketsLink = checkoutRole === 'fan'
+    ? getLink(RouteKeys.FAN_TICKETS)
+    : getLink(RouteKeys.PORTAL_MY_TICKETS)
   const scrollToTicket = useCallback((ticketId: string) => {
     const target = document.getElementById(`ticket-${ticketId}`)
     if (target) {
@@ -212,7 +224,7 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
             {/* For logged-in users, link to portal */}
             {order.purchaser_user_id && (
               <Link
-                to={getLink(RouteKeys.PORTAL_MY_TICKETS)}
+                to={myTicketsLink}
                 className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
               >
                 <span className="material-symbols-outlined">confirmation_number</span>

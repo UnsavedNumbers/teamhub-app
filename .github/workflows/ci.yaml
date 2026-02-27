@@ -41,6 +41,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Schema preflight contract
+        run: npm run schema:preflight-contract
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest

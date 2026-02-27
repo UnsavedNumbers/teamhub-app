@@ -7,7 +7,8 @@ import { supabase } from '../lib/supabase'
 import { getEventDetails, updateRSVP, getAthletes, deleteEvent } from '../data/services'
 import { useOrganization } from '../contexts/OrganizationContext'
 import type { RSVPStatus } from '../types/calendar'
-import { getSportFromEvent } from '../utils/sportContext'
+import { getSportFromEvent, type SportInfo } from '../utils/sportContext'
+import { getSportImagePath } from '../utils/sportImages'
 import { getDisplayLocation } from '../utils/homeLocation'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
@@ -241,6 +242,7 @@ export default function EventDetail() {
   // Add lifecycle logging
   useDebugLifecycle('EventDetail', { eventId })
   const [event, setEvent] = useState<Event | null>(null)
+  const [eventSport, setEventSport] = useState<SportInfo | null>(null)
   const [children, setChildren] = useState<Child[]>([])
   const [attendance, setAttendance] = useState<Record<string, Attendance>>({})
   const [loading, setLoading] = useState(true)
@@ -445,6 +447,7 @@ export default function EventDetail() {
     if (!isReady || !eventId) return
     
     setLoading(true)
+    setEventSport(null)
     
     try {
       // Fetch event details
@@ -538,7 +541,10 @@ export default function EventDetail() {
       }
 
       if (eventId) {
-        await getSportFromEvent(context, eventId)
+        const sport = await getSportFromEvent(context, eventId)
+        if (isMountedRef.current) {
+          setEventSport(sport)
+        }
       }
     } catch (err) {
       console.error('Error fetching event details:', err)
@@ -702,8 +708,12 @@ export default function EventDetail() {
   const hoursSinceEventEnded = (now.getTime() - eventEndDate.getTime()) / (1000 * 60 * 60)
   const isEventOver24HoursAgo = hoursSinceEventEnded > 24
 
-  // Check if we have a banner image
-  const bannerUrl = event.ticketed_event?.ticket_banner_url
+  // Custom ticket banner first, then sport travel fallback for ticketed events.
+  const customBannerUrl = event.ticketed_event?.ticket_banner_url?.trim() || null
+  const sportTravelBannerUrl = eventSport?.name
+    ? getSportImagePath(eventSport.name, 'travel', false)
+    : null
+  const bannerUrl = customBannerUrl || (event.ticketed_event ? sportTravelBannerUrl : null)
   const timezoneLabel = formatTimezoneDisplay(event.timezone, event.start_time)
   
   return (

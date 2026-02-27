@@ -222,6 +222,7 @@ export default function AthleteDashboardContent() {
                         ) : (
                           <SportCardImage
                             sport={sport}
+                            type="travel"
                             height="h-14"
                             className="w-20 shrink-0 !rounded-lg"
                           />

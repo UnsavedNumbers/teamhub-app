@@ -21,6 +21,7 @@ import BookmarkButton from '../../components/fan/BookmarkButton'
 import NearbyAmenities from '../../components/portal/NearbyAmenities'
 import { showError, showSuccess } from '../../utils/toast'
 import { getLink, RouteKeys } from '../../utils/routes'
+import { appendTicketCheckoutRole } from '../../utils/ticketCheckoutRole'
 import '../../styles/fan.css'
 import '../../styles/fan-layouts.css'
 
@@ -646,7 +647,8 @@ export default function FanEventDetail() {
   // Handle get tickets
   const handleGetTickets = () => {
     if (event?.ticket_event_id) {
-      navigate(`/portal/tickets/events/${event.ticket_event_id}`)
+      const ticketEventPath = getLink(RouteKeys.PORTAL_TICKET_EVENT_DETAIL, { eventId: event.ticket_event_id })
+      navigate(appendTicketCheckoutRole(ticketEventPath, 'fan'))
     }
   }
 

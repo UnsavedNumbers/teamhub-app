@@ -28,6 +28,7 @@ import {
 import { DEMO_RESERVED_SEAT_MAP_ID } from './ticketingFakeConstants'
 import { createServiceResponse } from '../services/responseHelpers'
 import { getLink, RouteKeys } from '@/utils/routes'
+import { appendTicketCheckoutRole, resolveTicketCheckoutRole } from '@/utils/ticketCheckoutRole'
 import { fakeUsers } from './fakeUsers'
 import { generateOrderNumber } from './generators'
 import { loadTicketingState, saveTicketingState } from './demoStorage'
@@ -983,11 +984,21 @@ export async function createFakeCheckoutSession(
   fakeTickets.push(...tickets)
   persistTicketingState()
 
-  const baseUrl = request.return_base_url || (typeof window !== 'undefined' ? window.location.origin : '')
+  const baseUrlRaw = request.return_base_url || (typeof window !== 'undefined' ? window.location.origin : '')
+  const normalizedBaseUrl = baseUrlRaw.trim().replace(/\/$/, '')
+  const checkoutRole = resolveTicketCheckoutRole(request.purchaser_role, { fallbackRole: 'guardian' })
   const orderPath = request.org_slug
     ? getLink(RouteKeys.PORTAL_ORG_TICKET_ORDER, { orgSlug: request.org_slug, orderId })
     : getLink(RouteKeys.PORTAL_TICKET_ORDER_SUCCESS, { orderId })
-  const checkoutUrl = baseUrl ? `${baseUrl}${orderPath}` : orderPath
+  const cancelPath = request.org_slug
+    ? getLink(RouteKeys.PORTAL_ORG_TICKET_EVENT, { orgSlug: request.org_slug, eventId: event.id })
+    : getLink(RouteKeys.PORTAL_TICKET_EVENT_DETAIL, { eventId: event.id })
+  const successPathWithRole = appendTicketCheckoutRole(orderPath, checkoutRole)
+  const cancelPathWithRole = appendTicketCheckoutRole(cancelPath, checkoutRole)
+  const successTarget = normalizedBaseUrl ? `${normalizedBaseUrl}${successPathWithRole}` : successPathWithRole
+  const cancelTarget = normalizedBaseUrl ? `${normalizedBaseUrl}${cancelPathWithRole}` : cancelPathWithRole
+  const demoCheckoutPath = `/portal/tickets/checkout/demo?success=${encodeURIComponent(successTarget)}&cancel=${encodeURIComponent(cancelTarget)}`
+  const checkoutUrl = normalizedBaseUrl ? `${normalizedBaseUrl}${demoCheckoutPath}` : demoCheckoutPath
 
   return createServiceResponse({ checkout_url: checkoutUrl, order_id: orderId }, null)
 }

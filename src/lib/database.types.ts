@@ -224,6 +224,347 @@ export type Database = {
           },
         ]
       }
+      athlete_availability_rules_v2: {
+        Row: {
+          athlete_id: string
+          availability_status: string
+          created_at: string
+          end_time: string | null
+          id: string
+          org_id: string
+          scope_type: string
+          sport_id: string | null
+          start_time: string | null
+          updated_at: string
+          weekday: number
+        }
+        Insert: {
+          athlete_id: string
+          availability_status: string
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          org_id: string
+          scope_type: string
+          sport_id?: string | null
+          start_time?: string | null
+          updated_at?: string
+          weekday: number
+        }
+        Update: {
+          athlete_id?: string
+          availability_status?: string
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          org_id?: string
+          scope_type?: string
+          sport_id?: string | null
+          start_time?: string | null
+          updated_at?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_availability_rules_v2_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "admin_payments"
+            referencedColumns: ["athlete_id"]
+          },
+          {
+            foreignKeyName: "athlete_availability_rules_v2_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_availability_rules_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_availability_rules_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_availability_rules_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_availability_rules_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_availability_rules_v2_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athlete_document_requirements_v2: {
+        Row: {
+          created_at: string
+          document_key: string
+          document_label: string
+          effective_end_date: string | null
+          effective_start_date: string | null
+          id: string
+          is_required: boolean
+          org_id: string | null
+          reason: string
+          scope_type: string
+          sport_id: string | null
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_key: string
+          document_label: string
+          effective_end_date?: string | null
+          effective_start_date?: string | null
+          id?: string
+          is_required?: boolean
+          org_id?: string | null
+          reason: string
+          scope_type: string
+          sport_id?: string | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_key?: string
+          document_label?: string
+          effective_end_date?: string | null
+          effective_start_date?: string | null
+          id?: string
+          is_required?: boolean
+          org_id?: string | null
+          reason?: string
+          scope_type?: string
+          sport_id?: string | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_document_requirements_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_document_requirements_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_document_requirements_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_document_requirements_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_document_requirements_v2_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_document_requirements_v2_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "athlete_document_requirements_v2_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athlete_documents_v2: {
+        Row: {
+          athlete_id: string
+          athlete_identity_id: string | null
+          created_at: string
+          deleted_at: string | null
+          document_key: string
+          document_label: string
+          expires_at: string | null
+          file_path: string | null
+          id: string
+          metadata: Json
+          org_id: string | null
+          reason: string | null
+          scope_type: string
+          sport_id: string | null
+          status: string
+          team_id: string | null
+          updated_at: string
+          uploaded_by_user_id: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          athlete_id: string
+          athlete_identity_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          document_key: string
+          document_label: string
+          expires_at?: string | null
+          file_path?: string | null
+          id?: string
+          metadata?: Json
+          org_id?: string | null
+          reason?: string | null
+          scope_type: string
+          sport_id?: string | null
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+          uploaded_by_user_id?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          athlete_id?: string
+          athlete_identity_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          document_key?: string
+          document_label?: string
+          expires_at?: string | null
+          file_path?: string | null
+          id?: string
+          metadata?: Json
+          org_id?: string | null
+          reason?: string | null
+          scope_type?: string
+          sport_id?: string | null
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+          uploaded_by_user_id?: string | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_documents_v2_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "admin_payments"
+            referencedColumns: ["athlete_id"]
+          },
+          {
+            foreignKeyName: "athlete_documents_v2_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_documents_v2_athlete_identity_id_fkey"
+            columns: ["athlete_identity_id"]
+            isOneToOne: false
+            referencedRelation: "athlete_identities_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_documents_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_documents_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_documents_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_documents_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_documents_v2_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_documents_v2_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "athlete_documents_v2_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_documents_v2_uploaded_by_user_id_fkey"
+            columns: ["uploaded_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_documents_v2_uploaded_by_user_id_fkey"
+            columns: ["uploaded_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       athlete_guardians: {
         Row: {
           athlete_id: string
@@ -305,6 +646,391 @@ export type Database = {
           {
             foreignKeyName: "athlete_guardians_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athlete_identities_v2: {
+        Row: {
+          canonical_athlete_id: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          primary_org_id: string | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          canonical_athlete_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          primary_org_id?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          canonical_athlete_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          primary_org_id?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_identities_v2_canonical_athlete_id_fkey"
+            columns: ["canonical_athlete_id"]
+            isOneToOne: false
+            referencedRelation: "admin_payments"
+            referencedColumns: ["athlete_id"]
+          },
+          {
+            foreignKeyName: "athlete_identities_v2_canonical_athlete_id_fkey"
+            columns: ["canonical_athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identities_v2_primary_org_id_fkey"
+            columns: ["primary_org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_identities_v2_primary_org_id_fkey"
+            columns: ["primary_org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identities_v2_primary_org_id_fkey"
+            columns: ["primary_org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_identities_v2_primary_org_id_fkey"
+            columns: ["primary_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athlete_identity_backfill_checkpoints_v2: {
+        Row: {
+          created_at: string
+          id: number
+          last_athlete_id: string | null
+          last_error: string | null
+          org_id: string | null
+          processed_count: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          last_athlete_id?: string | null
+          last_error?: string | null
+          org_id?: string | null
+          processed_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          last_athlete_id?: string | null
+          last_error?: string | null
+          org_id?: string | null
+          processed_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_identity_backfill_checkpoints_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_backfill_checkpoints_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_backfill_checkpoints_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_backfill_checkpoints_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athlete_identity_links_v2: {
+        Row: {
+          athlete_id: string
+          confidence_score: number
+          created_at: string
+          id: string
+          identity_id: string
+          is_primary: boolean
+          is_reversible: boolean
+          link_status: string
+          linked_at: string
+          linked_by_user_id: string | null
+          match_signals: Json
+          org_id: string | null
+          source: string
+          unlinked_at: string | null
+          unlinked_reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          confidence_score?: number
+          created_at?: string
+          id?: string
+          identity_id: string
+          is_primary?: boolean
+          is_reversible?: boolean
+          link_status?: string
+          linked_at?: string
+          linked_by_user_id?: string | null
+          match_signals?: Json
+          org_id?: string | null
+          source?: string
+          unlinked_at?: string | null
+          unlinked_reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          confidence_score?: number
+          created_at?: string
+          id?: string
+          identity_id?: string
+          is_primary?: boolean
+          is_reversible?: boolean
+          link_status?: string
+          linked_at?: string
+          linked_by_user_id?: string | null
+          match_signals?: Json
+          org_id?: string | null
+          source?: string
+          unlinked_at?: string | null
+          unlinked_reason?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_identity_links_v2_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "admin_payments"
+            referencedColumns: ["athlete_id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_links_v2_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_links_v2_identity_id_fkey"
+            columns: ["identity_id"]
+            isOneToOne: false
+            referencedRelation: "athlete_identities_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_links_v2_linked_by_user_id_fkey"
+            columns: ["linked_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_links_v2_linked_by_user_id_fkey"
+            columns: ["linked_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_links_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_links_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_links_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_links_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athlete_identity_merge_inbox_v2: {
+        Row: {
+          candidate_athlete_id: string
+          confidence_score: number
+          created_at: string
+          decision: string | null
+          decision_notes: string | null
+          id: string
+          identity_id: string | null
+          match_signals: Json
+          org_id: string
+          owner_user_id: string | null
+          resolved_at: string | null
+          resolved_by_user_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_athlete_id: string
+          confidence_score?: number
+          created_at?: string
+          decision?: string | null
+          decision_notes?: string | null
+          id?: string
+          identity_id?: string | null
+          match_signals?: Json
+          org_id: string
+          owner_user_id?: string | null
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_athlete_id?: string
+          confidence_score?: number
+          created_at?: string
+          decision?: string | null
+          decision_notes?: string | null
+          id?: string
+          identity_id?: string | null
+          match_signals?: Json
+          org_id?: string
+          owner_user_id?: string | null
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_identity_merge_inbox_v2_candidate_athlete_id_fkey"
+            columns: ["candidate_athlete_id"]
+            isOneToOne: false
+            referencedRelation: "admin_payments"
+            referencedColumns: ["athlete_id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_merge_inbox_v2_candidate_athlete_id_fkey"
+            columns: ["candidate_athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_merge_inbox_v2_identity_id_fkey"
+            columns: ["identity_id"]
+            isOneToOne: false
+            referencedRelation: "athlete_identities_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_merge_inbox_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_merge_inbox_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_merge_inbox_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_merge_inbox_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_merge_inbox_v2_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_merge_inbox_v2_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_merge_inbox_v2_resolved_by_user_id_fkey"
+            columns: ["resolved_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_identity_merge_inbox_v2_resolved_by_user_id_fkey"
+            columns: ["resolved_by_user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -507,6 +1233,284 @@ export type Database = {
           },
         ]
       }
+      athlete_messaging_preferences: {
+        Row: {
+          athlete_id: string
+          athlete_user_id: string | null
+          created_at: string
+          effective_season_id: string | null
+          maintain_parent_visibility_until_season_end: boolean
+          parent_visibility_opt_out_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          athlete_user_id?: string | null
+          created_at?: string
+          effective_season_id?: string | null
+          maintain_parent_visibility_until_season_end?: boolean
+          parent_visibility_opt_out_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          athlete_user_id?: string | null
+          created_at?: string
+          effective_season_id?: string | null
+          maintain_parent_visibility_until_season_end?: boolean
+          parent_visibility_opt_out_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_messaging_preferences_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: true
+            referencedRelation: "admin_payments"
+            referencedColumns: ["athlete_id"]
+          },
+          {
+            foreignKeyName: "athlete_messaging_preferences_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: true
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_messaging_preferences_athlete_user_id_fkey"
+            columns: ["athlete_user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_messaging_preferences_athlete_user_id_fkey"
+            columns: ["athlete_user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_messaging_preferences_effective_season_id_fkey"
+            columns: ["effective_season_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["season_id"]
+          },
+          {
+            foreignKeyName: "athlete_messaging_preferences_effective_season_id_fkey"
+            columns: ["effective_season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_messaging_preferences_effective_season_id_fkey"
+            columns: ["effective_season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
+          },
+        ]
+      }
+      athlete_sport_evaluations_v2: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          evaluated_at: string
+          evaluation_type: string
+          evaluator_user_id: string | null
+          id: string
+          notes: string | null
+          org_id: string
+          ratings: Json
+          season_id: string | null
+          sport_code: string | null
+          sport_id: string | null
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          evaluated_at?: string
+          evaluation_type: string
+          evaluator_user_id?: string | null
+          id?: string
+          notes?: string | null
+          org_id: string
+          ratings?: Json
+          season_id?: string | null
+          sport_code?: string | null
+          sport_id?: string | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          evaluated_at?: string
+          evaluation_type?: string
+          evaluator_user_id?: string | null
+          id?: string
+          notes?: string | null
+          org_id?: string
+          ratings?: Json
+          season_id?: string | null
+          sport_code?: string | null
+          sport_id?: string | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_sport_evaluations_v2_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "admin_payments"
+            referencedColumns: ["athlete_id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_evaluations_v2_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_evaluations_v2_evaluator_user_id_fkey"
+            columns: ["evaluator_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_evaluations_v2_evaluator_user_id_fkey"
+            columns: ["evaluator_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_evaluations_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_evaluations_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_evaluations_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_evaluations_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_evaluations_v2_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["season_id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_evaluations_v2_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_evaluations_v2_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_evaluations_v2_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_evaluations_v2_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_evaluations_v2_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athlete_sport_filter_preferences_v2: {
+        Row: {
+          context: Json
+          context_key: string
+          created_at: string
+          last_idempotency_key: string | null
+          sport_filter: string
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          context?: Json
+          context_key: string
+          created_at?: string
+          last_idempotency_key?: string | null
+          sport_filter?: string
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          context?: Json
+          context_key?: string
+          created_at?: string
+          last_idempotency_key?: string | null
+          sport_filter?: string
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_sport_filter_preferences_v2_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_filter_preferences_v2_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       athlete_sport_profiles: {
         Row: {
           athlete_id: string
@@ -619,6 +1623,133 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athlete_sport_stats_v2: {
+        Row: {
+          athlete_id: string
+          captured_at: string
+          created_at: string
+          id: string
+          org_id: string
+          season_id: string | null
+          sport_code: string | null
+          sport_id: string | null
+          stats: Json
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          captured_at?: string
+          created_at?: string
+          id?: string
+          org_id: string
+          season_id?: string | null
+          sport_code?: string | null
+          sport_id?: string | null
+          stats?: Json
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          captured_at?: string
+          created_at?: string
+          id?: string
+          org_id?: string
+          season_id?: string | null
+          sport_code?: string | null
+          sport_id?: string | null
+          stats?: Json
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_sport_stats_v2_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "admin_payments"
+            referencedColumns: ["athlete_id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_stats_v2_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_stats_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_stats_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_stats_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_stats_v2_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_stats_v2_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["season_id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_stats_v2_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_stats_v2_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_stats_v2_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_stats_v2_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "athlete_sport_stats_v2_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -1637,6 +2768,88 @@ export type Database = {
           },
         ]
       }
+      customers: {
+        Row: {
+          billing_address: Json | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          notes: string | null
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          billing_address?: Json | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          billing_address?: Json | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "customers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "customers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       demo_account_roles: {
         Row: {
           created_at: string
@@ -2156,15 +3369,107 @@ export type Database = {
         }
         Relationships: []
       }
+      dm_user_blocks: {
+        Row: {
+          blocked_user_id: string
+          blocker_user_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          org_id: string
+          reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          blocked_user_id: string
+          blocker_user_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          org_id: string
+          reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blocked_user_id?: string
+          blocker_user_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          org_id?: string
+          reason?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dm_user_blocks_blocked_user_id_fkey"
+            columns: ["blocked_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dm_user_blocks_blocked_user_id_fkey"
+            columns: ["blocked_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dm_user_blocks_blocker_user_id_fkey"
+            columns: ["blocker_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dm_user_blocks_blocker_user_id_fkey"
+            columns: ["blocker_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dm_user_blocks_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "dm_user_blocks_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dm_user_blocks_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "dm_user_blocks_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_templates: {
         Row: {
           body_content: string
+          category: string | null
           created_at: string | null
           description: string | null
           html_content: string
           id: string
           is_active: boolean | null
           name: string
+          notification_type_id: string | null
           preview_text: string | null
           required_variables: Json | null
           slug: string
@@ -2176,12 +3481,14 @@ export type Database = {
         }
         Insert: {
           body_content: string
+          category?: string | null
           created_at?: string | null
           description?: string | null
           html_content: string
           id?: string
           is_active?: boolean | null
           name: string
+          notification_type_id?: string | null
           preview_text?: string | null
           required_variables?: Json | null
           slug: string
@@ -2193,12 +3500,14 @@ export type Database = {
         }
         Update: {
           body_content?: string
+          category?: string | null
           created_at?: string | null
           description?: string | null
           html_content?: string
           id?: string
           is_active?: boolean | null
           name?: string
+          notification_type_id?: string | null
           preview_text?: string | null
           required_variables?: Json | null
           slug?: string
@@ -2208,7 +3517,15 @@ export type Database = {
           updated_by_user_id?: string | null
           variables?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_notification_type_id_fkey"
+            columns: ["notification_type_id"]
+            isOneToOne: false
+            referencedRelation: "notification_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       entitlement_overrides: {
         Row: {
@@ -3291,8 +4608,10 @@ export type Database = {
       }
       facility_reservations: {
         Row: {
+          cancellation_reason: string | null
           created_at: string
           created_by: string | null
+          customer_id: string | null
           end_at: string
           event_id: string | null
           facility_id: string
@@ -3310,8 +4629,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cancellation_reason?: string | null
           created_at?: string
           created_by?: string | null
+          customer_id?: string | null
           end_at: string
           event_id?: string | null
           facility_id: string
@@ -3329,8 +4650,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cancellation_reason?: string | null
           created_at?: string
           created_by?: string | null
+          customer_id?: string | null
           end_at?: string
           event_id?: string | null
           facility_id?: string
@@ -3348,6 +4671,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "facility_reservations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "facility_reservations_event_id_fkey"
             columns: ["event_id"]
@@ -3982,7 +5312,7 @@ export type Database = {
         Row: {
           addon_display_order: number | null
           addon_eligibility_rules: Json | null
-          addon_external_bullets: string[] | null
+          addon_external_bullets: Json | null
           addon_external_cta_label: string | null
           addon_external_description: string | null
           addon_external_name: string | null
@@ -3995,6 +5325,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           display_name: string
+          excluded_from_discovery: boolean
           feature_key: string
           feature_type: string
           id: string
@@ -4012,7 +5343,7 @@ export type Database = {
         Insert: {
           addon_display_order?: number | null
           addon_eligibility_rules?: Json | null
-          addon_external_bullets?: string[] | null
+          addon_external_bullets?: Json | null
           addon_external_cta_label?: string | null
           addon_external_description?: string | null
           addon_external_name?: string | null
@@ -4025,6 +5356,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           display_name: string
+          excluded_from_discovery?: boolean
           feature_key: string
           feature_type: string
           id?: string
@@ -4042,7 +5374,7 @@ export type Database = {
         Update: {
           addon_display_order?: number | null
           addon_eligibility_rules?: Json | null
-          addon_external_bullets?: string[] | null
+          addon_external_bullets?: Json | null
           addon_external_cta_label?: string | null
           addon_external_description?: string | null
           addon_external_name?: string | null
@@ -4055,6 +5387,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           display_name?: string
+          excluded_from_discovery?: boolean
           feature_key?: string
           feature_type?: string
           id?: string
@@ -5576,33 +6909,62 @@ export type Database = {
       }
       huddle_audit_log: {
         Row: {
+          access_reason: string | null
           action: string
+          actor_role_context: string | null
           created_at: string
+          decision_id: string | null
           id: string
           metadata: Json | null
+          reason_code: string | null
           stream_channel_id: string | null
           stream_message_id: string | null
+          subject_athlete_id: string | null
           user_id: string | null
         }
         Insert: {
+          access_reason?: string | null
           action: string
+          actor_role_context?: string | null
           created_at?: string
+          decision_id?: string | null
           id?: string
           metadata?: Json | null
+          reason_code?: string | null
           stream_channel_id?: string | null
           stream_message_id?: string | null
+          subject_athlete_id?: string | null
           user_id?: string | null
         }
         Update: {
+          access_reason?: string | null
           action?: string
+          actor_role_context?: string | null
           created_at?: string
+          decision_id?: string | null
           id?: string
           metadata?: Json | null
+          reason_code?: string | null
           stream_channel_id?: string | null
           stream_message_id?: string | null
+          subject_athlete_id?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "huddle_audit_log_subject_athlete_id_fkey"
+            columns: ["subject_athlete_id"]
+            isOneToOne: false
+            referencedRelation: "admin_payments"
+            referencedColumns: ["athlete_id"]
+          },
+          {
+            foreignKeyName: "huddle_audit_log_subject_athlete_id_fkey"
+            columns: ["subject_athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "huddle_audit_log_user_id_fkey"
             columns: ["user_id"]
@@ -6265,6 +7627,146 @@ export type Database = {
           },
         ]
       }
+      license_change_log: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string | null
+          error_json: Json | null
+          feature_key: string | null
+          from_tier_id: string | null
+          id: string
+          initiated_at: string | null
+          org_id: string
+          result_status: string
+          stripe_invoice_id: string | null
+          stripe_subscription_id: string | null
+          stripe_subscription_item_id: string | null
+          to_tier_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string | null
+          error_json?: Json | null
+          feature_key?: string | null
+          from_tier_id?: string | null
+          id?: string
+          initiated_at?: string | null
+          org_id: string
+          result_status: string
+          stripe_invoice_id?: string | null
+          stripe_subscription_id?: string | null
+          stripe_subscription_item_id?: string | null
+          to_tier_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string | null
+          error_json?: Json | null
+          feature_key?: string | null
+          from_tier_id?: string | null
+          id?: string
+          initiated_at?: string | null
+          org_id?: string
+          result_status?: string
+          stripe_invoice_id?: string | null
+          stripe_subscription_id?: string | null
+          stripe_subscription_item_id?: string | null
+          to_tier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "license_change_log_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "license_change_log_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "license_change_log_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "admin_entitlement_overrides_list"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "license_change_log_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "admin_feature_entitlements_list"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "license_change_log_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "feature_entitlements"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "license_change_log_from_tier_id_fkey"
+            columns: ["from_tier_id"]
+            isOneToOne: false
+            referencedRelation: "admin_license_tiers_list"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "license_change_log_from_tier_id_fkey"
+            columns: ["from_tier_id"]
+            isOneToOne: false
+            referencedRelation: "license_tiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "license_change_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "license_change_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "license_change_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "license_change_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "license_change_log_to_tier_id_fkey"
+            columns: ["to_tier_id"]
+            isOneToOne: false
+            referencedRelation: "admin_license_tiers_list"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "license_change_log_to_tier_id_fkey"
+            columns: ["to_tier_id"]
+            isOneToOne: false
+            referencedRelation: "license_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       license_tiers: {
         Row: {
           created_at: string | null
@@ -6586,6 +8088,170 @@ export type Database = {
           },
         ]
       }
+      notification_types: {
+        Row: {
+          category: string
+          created_at: string
+          default_email_enabled: boolean
+          default_in_app_enabled: boolean
+          description: string | null
+          display_name: string
+          eligible_roles: string[]
+          id: string
+          key: string
+          supports_email: boolean
+          supports_in_app: boolean
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          default_email_enabled?: boolean
+          default_in_app_enabled?: boolean
+          description?: string | null
+          display_name: string
+          eligible_roles?: string[]
+          id?: string
+          key: string
+          supports_email?: boolean
+          supports_in_app?: boolean
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          default_email_enabled?: boolean
+          default_in_app_enabled?: boolean
+          description?: string | null
+          display_name?: string
+          eligible_roles?: string[]
+          id?: string
+          key?: string
+          supports_email?: boolean
+          supports_in_app?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notifications_outbox: {
+        Row: {
+          actor_user_id: string | null
+          channel: Database["public"]["Enums"]["notification_channel"]
+          created_at: string
+          error_message: string | null
+          id: string
+          idempotency_key: string
+          notification_type_id: string
+          org_id: string
+          payload_json: Json
+          processed_at: string | null
+          status: Database["public"]["Enums"]["notification_outbox_status"]
+          target_user_id: string
+          template_id: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          channel: Database["public"]["Enums"]["notification_channel"]
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          idempotency_key: string
+          notification_type_id: string
+          org_id: string
+          payload_json?: Json
+          processed_at?: string | null
+          status?: Database["public"]["Enums"]["notification_outbox_status"]
+          target_user_id: string
+          template_id?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          channel?: Database["public"]["Enums"]["notification_channel"]
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string
+          notification_type_id?: string
+          org_id?: string
+          payload_json?: Json
+          processed_at?: string | null
+          status?: Database["public"]["Enums"]["notification_outbox_status"]
+          target_user_id?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_outbox_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_outbox_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_outbox_notification_type_id_fkey"
+            columns: ["notification_type_id"]
+            isOneToOne: false
+            referencedRelation: "notification_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_outbox_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "notifications_outbox_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_outbox_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "notifications_outbox_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_outbox_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_outbox_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_outbox_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offline_payment_allocations: {
         Row: {
           amount_cents: number
@@ -6761,6 +8427,255 @@ export type Database = {
           },
         ]
       }
+      org_addon_entitlements: {
+        Row: {
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          feature_key: string
+          id: string
+          org_id: string
+          status: string
+          stripe_price_id: string
+          stripe_subscription_id: string
+          stripe_subscription_item_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          feature_key: string
+          id?: string
+          org_id: string
+          status: string
+          stripe_price_id: string
+          stripe_subscription_id: string
+          stripe_subscription_item_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          feature_key?: string
+          id?: string
+          org_id?: string
+          status?: string
+          stripe_price_id?: string
+          stripe_subscription_id?: string
+          stripe_subscription_item_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_addon_entitlements_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "admin_entitlement_overrides_list"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "org_addon_entitlements_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "admin_feature_entitlements_list"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "org_addon_entitlements_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "feature_entitlements"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "org_addon_entitlements_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "org_addon_entitlements_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_addon_entitlements_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "org_addon_entitlements_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_contact_requests: {
+        Row: {
+          admin_notes: string | null
+          assigned_to_user_id: string | null
+          athlete_id: string | null
+          attachments: Json
+          category: string
+          created_at: string
+          event_id: string | null
+          id: string
+          message: string
+          org_id: string
+          requested_feature_key: string | null
+          requested_feature_name: string | null
+          requested_feature_reason: string | null
+          requested_feature_use_case: string | null
+          requester_role: string
+          requester_user_id: string
+          season_id: string | null
+          status: string
+          subject: string | null
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          assigned_to_user_id?: string | null
+          athlete_id?: string | null
+          attachments?: Json
+          category: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          message: string
+          org_id: string
+          requested_feature_key?: string | null
+          requested_feature_name?: string | null
+          requested_feature_reason?: string | null
+          requested_feature_use_case?: string | null
+          requester_role: string
+          requester_user_id: string
+          season_id?: string | null
+          status?: string
+          subject?: string | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          assigned_to_user_id?: string | null
+          athlete_id?: string | null
+          attachments?: Json
+          category?: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          message?: string
+          org_id?: string
+          requested_feature_key?: string | null
+          requested_feature_name?: string | null
+          requested_feature_reason?: string | null
+          requested_feature_use_case?: string | null
+          requester_role?: string
+          requester_user_id?: string
+          season_id?: string | null
+          status?: string
+          subject?: string | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_contact_requests_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "admin_payments"
+            referencedColumns: ["athlete_id"]
+          },
+          {
+            foreignKeyName: "org_contact_requests_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_contact_requests_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_contact_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "org_contact_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_contact_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "org_contact_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_contact_requests_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["season_id"]
+          },
+          {
+            foreignKeyName: "org_contact_requests_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_contact_requests_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
+          },
+          {
+            foreignKeyName: "org_contact_requests_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "org_contact_requests_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_licenses: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -6776,6 +8691,7 @@ export type Database = {
           stripe_price_id: string | null
           stripe_subscription_id: string | null
           trial_ends_at: string | null
+          trial_start: string | null
           updated_at: string | null
         }
         Insert: {
@@ -6792,6 +8708,7 @@ export type Database = {
           stripe_price_id?: string | null
           stripe_subscription_id?: string | null
           trial_ends_at?: string | null
+          trial_start?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -6808,6 +8725,7 @@ export type Database = {
           stripe_price_id?: string | null
           stripe_subscription_id?: string | null
           trial_ends_at?: string | null
+          trial_start?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -7625,6 +9543,83 @@ export type Database = {
           },
         ]
       }
+      organization_messaging_settings: {
+        Row: {
+          created_at: string
+          effective_from: string
+          enable_admin_audit_access: boolean
+          enable_minor_group_parent_visibility: boolean
+          enable_minor_to_minor_dms: boolean
+          enable_parent_to_parent_dms: boolean
+          org_id: string
+          precedence_contract: Json
+          require_parent_approval_for_minor_dm: boolean
+          require_read_receipts_safety_critical: boolean
+          retention_days: number
+          settings_version: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          effective_from?: string
+          enable_admin_audit_access?: boolean
+          enable_minor_group_parent_visibility?: boolean
+          enable_minor_to_minor_dms?: boolean
+          enable_parent_to_parent_dms?: boolean
+          org_id: string
+          precedence_contract?: Json
+          require_parent_approval_for_minor_dm?: boolean
+          require_read_receipts_safety_critical?: boolean
+          retention_days?: number
+          settings_version?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          enable_admin_audit_access?: boolean
+          enable_minor_group_parent_visibility?: boolean
+          enable_minor_to_minor_dms?: boolean
+          enable_parent_to_parent_dms?: boolean
+          org_id?: string
+          precedence_contract?: Json
+          require_parent_approval_for_minor_dm?: boolean
+          require_read_receipts_safety_critical?: boolean
+          retention_days?: number
+          settings_version?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_messaging_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "organization_messaging_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_messaging_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "organization_messaging_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_notification_settings: {
         Row: {
           attendance_reminders_enabled: boolean
@@ -8087,6 +10082,7 @@ export type Database = {
           license_grace_ends_at: string | null
           license_status: Database["public"]["Enums"]["license_status"] | null
           license_trial_ends_at: string | null
+          license_trial_start: string | null
           logo_url: string | null
           longitude: number | null
           name: string
@@ -8123,6 +10119,7 @@ export type Database = {
           sub_org_require_approval: boolean | null
           ticket_terms: string | null
           ticketing_enabled: boolean | null
+          trial_used_at: string | null
           updated_at: string | null
           website: string | null
           zip: string | null
@@ -8155,6 +10152,7 @@ export type Database = {
           license_grace_ends_at?: string | null
           license_status?: Database["public"]["Enums"]["license_status"] | null
           license_trial_ends_at?: string | null
+          license_trial_start?: string | null
           logo_url?: string | null
           longitude?: number | null
           name: string
@@ -8191,6 +10189,7 @@ export type Database = {
           sub_org_require_approval?: boolean | null
           ticket_terms?: string | null
           ticketing_enabled?: boolean | null
+          trial_used_at?: string | null
           updated_at?: string | null
           website?: string | null
           zip?: string | null
@@ -8223,6 +10222,7 @@ export type Database = {
           license_grace_ends_at?: string | null
           license_status?: Database["public"]["Enums"]["license_status"] | null
           license_trial_ends_at?: string | null
+          license_trial_start?: string | null
           logo_url?: string | null
           longitude?: number | null
           name?: string
@@ -8259,6 +10259,7 @@ export type Database = {
           sub_org_require_approval?: boolean | null
           ticket_terms?: string | null
           ticketing_enabled?: boolean | null
+          trial_used_at?: string | null
           updated_at?: string | null
           website?: string | null
           zip?: string | null
@@ -8727,54 +10728,88 @@ export type Database = {
       }
       programs: {
         Row: {
+          activity_end_date: string | null
+          activity_start_date: string | null
           age_max: number | null
           age_min: number | null
           color: string | null
           created_at: string | null
+          default_location_id: string | null
           description: string | null
           gender_category: string
           id: string
           is_active: boolean | null
+          is_public: boolean | null
           name: string
           org_id: string
+          program_code: string | null
+          registration_end_date: string | null
+          registration_mode: Database["public"]["Enums"]["registration_mode"]
+          registration_start_date: string | null
           slug: string | null
+          sponsor: string | null
           sport: string | null
           sport_id: string
           updated_at: string | null
         }
         Insert: {
+          activity_end_date?: string | null
+          activity_start_date?: string | null
           age_max?: number | null
           age_min?: number | null
           color?: string | null
           created_at?: string | null
+          default_location_id?: string | null
           description?: string | null
           gender_category?: string
           id?: string
           is_active?: boolean | null
+          is_public?: boolean | null
           name: string
           org_id: string
+          program_code?: string | null
+          registration_end_date?: string | null
+          registration_mode?: Database["public"]["Enums"]["registration_mode"]
+          registration_start_date?: string | null
           slug?: string | null
+          sponsor?: string | null
           sport?: string | null
           sport_id: string
           updated_at?: string | null
         }
         Update: {
+          activity_end_date?: string | null
+          activity_start_date?: string | null
           age_max?: number | null
           age_min?: number | null
           color?: string | null
           created_at?: string | null
+          default_location_id?: string | null
           description?: string | null
           gender_category?: string
           id?: string
           is_active?: boolean | null
+          is_public?: boolean | null
           name?: string
           org_id?: string
+          program_code?: string | null
+          registration_end_date?: string | null
+          registration_mode?: Database["public"]["Enums"]["registration_mode"]
+          registration_start_date?: string | null
           slug?: string | null
+          sponsor?: string | null
           sport?: string | null
           sport_id?: string
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "programs_default_location_id_fkey"
+            columns: ["default_location_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "programs_org_id_fkey"
             columns: ["org_id"]
@@ -9906,33 +11941,54 @@ export type Database = {
           avatar_url: string | null
           channel_id: string
           created_at: string
+          created_by_role_context: string | null
           description: string | null
+          effective_settings_hash: string | null
           event_id: string | null
+          guardian_copy_mode: string
           last_activity_at: string | null
           name: string | null
           pinned_message_ids: string[] | null
+          policy_version: string
+          requires_parental_copy_notice: boolean
+          rule_id_at_creation: string | null
+          subject_athlete_user_id: string | null
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
           channel_id: string
           created_at?: string
+          created_by_role_context?: string | null
           description?: string | null
+          effective_settings_hash?: string | null
           event_id?: string | null
+          guardian_copy_mode?: string
           last_activity_at?: string | null
           name?: string | null
           pinned_message_ids?: string[] | null
+          policy_version?: string
+          requires_parental_copy_notice?: boolean
+          rule_id_at_creation?: string | null
+          subject_athlete_user_id?: string | null
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
           channel_id?: string
           created_at?: string
+          created_by_role_context?: string | null
           description?: string | null
+          effective_settings_hash?: string | null
           event_id?: string | null
+          guardian_copy_mode?: string
           last_activity_at?: string | null
           name?: string | null
           pinned_message_ids?: string[] | null
+          policy_version?: string
+          requires_parental_copy_notice?: boolean
+          rule_id_at_creation?: string | null
+          subject_athlete_user_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -9950,12 +12006,28 @@ export type Database = {
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "stream_channel_metadata_subject_athlete_user_id_fkey"
+            columns: ["subject_athlete_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stream_channel_metadata_subject_athlete_user_id_fkey"
+            columns: ["subject_athlete_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       stream_channels: {
         Row: {
           channel_type: string
           created_at: string
+          dm_idempotency_key: string | null
+          dm_key: string | null
           id: string
           org_id: string
           stream_channel_id: string
@@ -9967,6 +12039,8 @@ export type Database = {
         Insert: {
           channel_type: string
           created_at?: string
+          dm_idempotency_key?: string | null
+          dm_key?: string | null
           id?: string
           org_id: string
           stream_channel_id: string
@@ -9978,6 +12052,8 @@ export type Database = {
         Update: {
           channel_type?: string
           created_at?: string
+          dm_idempotency_key?: string | null
+          dm_key?: string | null
           id?: string
           org_id?: string
           stream_channel_id?: string
@@ -10055,6 +12131,62 @@ export type Database = {
             columns: ["user_id_2"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stream_membership_reconciliation_log: {
+        Row: {
+          created_at: string
+          details: Json
+          id: string
+          org_id: string
+          status: string
+          stream_channel_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          id?: string
+          org_id: string
+          status: string
+          stream_channel_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          id?: string
+          org_id?: string
+          status?: string
+          stream_channel_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stream_membership_reconciliation_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "stream_membership_reconciliation_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stream_membership_reconciliation_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "stream_membership_reconciliation_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -10410,36 +12542,196 @@ export type Database = {
           },
         ]
       }
+      team_membership_audit: {
+        Row: {
+          action: string
+          athlete_id: string
+          changed_by: string | null
+          created_at: string
+          from_team_id: string | null
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          season_id: string
+          team_membership_id: string
+          to_team_id: string
+          transfer_reason: string | null
+        }
+        Insert: {
+          action: string
+          athlete_id: string
+          changed_by?: string | null
+          created_at?: string
+          from_team_id?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          season_id: string
+          team_membership_id: string
+          to_team_id: string
+          transfer_reason?: string | null
+        }
+        Update: {
+          action?: string
+          athlete_id?: string
+          changed_by?: string | null
+          created_at?: string
+          from_team_id?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          season_id?: string
+          team_membership_id?: string
+          to_team_id?: string
+          transfer_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_membership_audit_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "admin_payments"
+            referencedColumns: ["athlete_id"]
+          },
+          {
+            foreignKeyName: "team_membership_audit_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_membership_audit_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_membership_audit_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_membership_audit_from_team_id_fkey"
+            columns: ["from_team_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "team_membership_audit_from_team_id_fkey"
+            columns: ["from_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_membership_audit_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["season_id"]
+          },
+          {
+            foreignKeyName: "team_membership_audit_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_membership_audit_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
+          },
+          {
+            foreignKeyName: "team_membership_audit_team_membership_id_fkey"
+            columns: ["team_membership_id"]
+            isOneToOne: false
+            referencedRelation: "team_memberships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_membership_audit_to_team_id_fkey"
+            columns: ["to_team_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "team_membership_audit_to_team_id_fkey"
+            columns: ["to_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_memberships: {
         Row: {
           athlete_id: string
           created_at: string | null
           deleted_at: string | null
           id: string
+          jersey_number: string | null
+          joined_at: string | null
+          left_at: string | null
+          position: string | null
+          registration_status: string | null
+          role: string | null
           season_id: string
           status: Database["public"]["Enums"]["membership_status"]
           team_id: string
+          transfer_reason: string | null
+          transferred_at: string | null
+          transferred_from_team_id: string | null
           updated_at: string | null
+          updated_by_user_id: string | null
         }
         Insert: {
           athlete_id: string
           created_at?: string | null
           deleted_at?: string | null
           id?: string
+          jersey_number?: string | null
+          joined_at?: string | null
+          left_at?: string | null
+          position?: string | null
+          registration_status?: string | null
+          role?: string | null
           season_id: string
           status?: Database["public"]["Enums"]["membership_status"]
           team_id: string
+          transfer_reason?: string | null
+          transferred_at?: string | null
+          transferred_from_team_id?: string | null
           updated_at?: string | null
+          updated_by_user_id?: string | null
         }
         Update: {
           athlete_id?: string
           created_at?: string | null
           deleted_at?: string | null
           id?: string
+          jersey_number?: string | null
+          joined_at?: string | null
+          left_at?: string | null
+          position?: string | null
+          registration_status?: string | null
+          role?: string | null
           season_id?: string
           status?: Database["public"]["Enums"]["membership_status"]
           team_id?: string
+          transfer_reason?: string | null
+          transferred_at?: string | null
+          transferred_from_team_id?: string | null
           updated_at?: string | null
+          updated_by_user_id?: string | null
         }
         Relationships: [
           {
@@ -10489,6 +12781,34 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_transferred_from_team_id_fkey"
+            columns: ["transferred_from_team_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "team_memberships_transferred_from_team_id_fkey"
+            columns: ["transferred_from_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_updated_by_user_id_fkey"
+            columns: ["updated_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_updated_by_user_id_fkey"
+            columns: ["updated_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -10563,6 +12883,7 @@ export type Database = {
           is_active: boolean
           level_id: string | null
           max_roster_size: number | null
+          min_roster_size: number | null
           name: string
           org_id: string
           privacy_level: Database["public"]["Enums"]["entity_privacy_level"]
@@ -10580,6 +12901,7 @@ export type Database = {
           is_active?: boolean
           level_id?: string | null
           max_roster_size?: number | null
+          min_roster_size?: number | null
           name: string
           org_id: string
           privacy_level?: Database["public"]["Enums"]["entity_privacy_level"]
@@ -10597,6 +12919,7 @@ export type Database = {
           is_active?: boolean
           level_id?: string | null
           max_roster_size?: number | null
+          min_roster_size?: number | null
           name?: string
           org_id?: string
           privacy_level?: Database["public"]["Enums"]["entity_privacy_level"]
@@ -12603,6 +14926,92 @@ export type Database = {
       }
       user_notification_preferences: {
         Row: {
+          created_at: string
+          email_enabled: boolean
+          id: string
+          in_app_enabled: boolean
+          notification_type_id: string
+          org_id: string | null
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_enabled?: boolean
+          id?: string
+          in_app_enabled?: boolean
+          notification_type_id: string
+          org_id?: string | null
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_enabled?: boolean
+          id?: string
+          in_app_enabled?: boolean
+          notification_type_id?: string
+          org_id?: string | null
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notification_preferences_notification_type_id_fkey"
+            columns: ["notification_type_id"]
+            isOneToOne: false
+            referencedRelation: "notification_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_notification_preferences_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "user_notification_preferences_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_notification_preferences_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "user_notification_preferences_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_notification_preferences_user_id_fkey1"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_notification_preferences_user_id_fkey1"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_notification_preferences_legacy: {
+        Row: {
           announcements_channel: string | null
           created_at: string | null
           email_enabled: boolean | null
@@ -12910,6 +15319,141 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v2_write_outbox: {
+        Row: {
+          aggregate_id: string | null
+          aggregate_type: string | null
+          athlete_identity_id: string | null
+          attempt_count: number
+          available_at: string
+          created_at: string
+          id: string
+          idempotency_key: string | null
+          last_error: string | null
+          org_id: string | null
+          payload: Json
+          processed_at: string | null
+          status: string
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          aggregate_id?: string | null
+          aggregate_type?: string | null
+          athlete_identity_id?: string | null
+          attempt_count?: number
+          available_at?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string | null
+          last_error?: string | null
+          org_id?: string | null
+          payload?: Json
+          processed_at?: string | null
+          status?: string
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          aggregate_id?: string | null
+          aggregate_type?: string | null
+          athlete_identity_id?: string | null
+          attempt_count?: number
+          available_at?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string | null
+          last_error?: string | null
+          org_id?: string | null
+          payload?: Json
+          processed_at?: string | null
+          status?: string
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v2_write_outbox_athlete_identity_id_fkey"
+            columns: ["athlete_identity_id"]
+            isOneToOne: false
+            referencedRelation: "athlete_identities_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v2_write_outbox_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "v2_write_outbox_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v2_write_outbox_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "v2_write_outbox_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v2_write_reconciliation_runs: {
+        Row: {
+          created_by_user_id: string | null
+          failed_count: number
+          finished_at: string | null
+          id: string
+          metadata: Json
+          processed_count: number
+          started_at: string
+        }
+        Insert: {
+          created_by_user_id?: string | null
+          failed_count?: number
+          finished_at?: string | null
+          id?: string
+          metadata?: Json
+          processed_count?: number
+          started_at?: string
+        }
+        Update: {
+          created_by_user_id?: string | null
+          failed_count?: number
+          finished_at?: string | null
+          id?: string
+          metadata?: Json
+          processed_count?: number
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v2_write_reconciliation_runs_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v2_write_reconciliation_runs_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -14257,6 +16801,7 @@ export type Database = {
           description: string | null
           discovery_source: string | null
           display_name: string | null
+          excluded_from_discovery: boolean | null
           feature_key: string | null
           feature_type: string | null
           id: string | null
@@ -14285,6 +16830,7 @@ export type Database = {
           description?: string | null
           discovery_source?: never
           display_name?: string | null
+          excluded_from_discovery?: boolean | null
           feature_key?: string | null
           feature_type?: string | null
           id?: string | null
@@ -14313,6 +16859,7 @@ export type Database = {
           description?: string | null
           discovery_source?: never
           display_name?: string | null
+          excluded_from_discovery?: boolean | null
           feature_key?: string | null
           feature_type?: string | null
           id?: string | null
@@ -14532,23 +17079,46 @@ export type Database = {
       }
       admin_organizations: {
         Row: {
+          address: string | null
+          billing_mode: Database["public"]["Enums"]["billing_mode"] | null
+          city: string | null
+          contact_email: string | null
           created_at: string | null
+          currency: string | null
           current_tier_id: string | null
           id: string | null
+          license_cancel_at_period_end: boolean | null
           license_current_period_end: string | null
+          license_current_period_start: string | null
+          license_grace_ends_at: string | null
           license_status: Database["public"]["Enums"]["license_status"] | null
           license_trial_ends_at: string | null
           name: string | null
           org_type: Database["public"]["Enums"]["org_type"] | null
           payout_account_id: string | null
+          payout_descriptor: string | null
+          payout_onboarding_status:
+            | Database["public"]["Enums"]["payout_onboarding_status"]
+            | null
           payouts_enabled: boolean | null
+          phone: string | null
+          primary_city: string | null
+          primary_region_radius_miles: number | null
+          primary_state: string | null
+          slug: string | null
           sport_count: number | null
+          state: string | null
           status: Database["public"]["Enums"]["org_status"] | null
           stripe_connected: boolean | null
+          stripe_customer_id: string | null
+          stripe_price_id: string | null
+          stripe_subscription_id: string | null
           team_count: number | null
           tier_name: string | null
           updated_at: string | null
           user_count: number | null
+          website: string | null
+          zip: string | null
         }
         Relationships: [
           {
@@ -14862,6 +17432,12 @@ export type Database = {
       }
     }
     Functions: {
+      _v2_ensure_identity_for_athlete: {
+        Args: { p_athlete_id: string; p_org_id?: string; p_source?: string }
+        Returns: string
+      }
+      _v2_try_parse_timestamptz: { Args: { p_value: string }; Returns: string }
+      _v2_try_parse_uuid: { Args: { p_value: string }; Returns: string }
       accept_organization_invite: {
         Args: { p_token: string }
         Returns: {
@@ -14880,6 +17456,34 @@ export type Database = {
           organization_id: string
           success: boolean
         }[]
+      }
+      activate_email_template: {
+        Args: { p_template_id: string }
+        Returns: {
+          body_content: string
+          category: string | null
+          created_at: string | null
+          description: string | null
+          html_content: string
+          id: string
+          is_active: boolean | null
+          name: string
+          notification_type_id: string | null
+          preview_text: string | null
+          required_variables: Json | null
+          slug: string
+          subject_template: string
+          type: Database["public"]["Enums"]["notification_job_type"]
+          updated_at: string | null
+          updated_by_user_id: string | null
+          variables: Json | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "email_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       add_org_role: {
         Args: {
@@ -15216,6 +17820,7 @@ export type Database = {
           has_conflict: boolean
         }[]
       }
+      check_trial_eligibility: { Args: { p_org_id: string }; Returns: Json }
       check_video_notes_insert_policy: {
         Args: { p_author_id: string; p_video_id: string }
         Returns: Json
@@ -15242,6 +17847,10 @@ export type Database = {
         Returns: boolean
       }
       coach_team_ids: { Args: { check_user_id: string }; Returns: string[] }
+      compare_tier_levels: {
+        Args: { tier_key_1: string; tier_key_2: string }
+        Returns: number
+      }
       complete_payment_processing: {
         Args: { p_checkout_session_id: string; p_payment_id: string }
         Returns: undefined
@@ -15278,6 +17887,18 @@ export type Database = {
       }
       create_fee_with_assignments: {
         Args: { p_assignments: Json; p_fee_data: Json }
+        Returns: Json
+      }
+      create_identity_link_v2: {
+        Args: {
+          p_athlete_id: string
+          p_confidence_score?: number
+          p_identity_id: string
+          p_is_reversible?: boolean
+          p_match_signals?: Json
+          p_org_id?: string
+          p_source?: string
+        }
         Returns: Json
       }
       create_join_link: {
@@ -15320,6 +17941,7 @@ export type Database = {
       create_reservation: {
         Args: {
           p_allow_conflict?: boolean
+          p_customer_id?: string
           p_end_at: string
           p_event_id?: string
           p_facility_id: string
@@ -15350,6 +17972,18 @@ export type Database = {
       decrement_ticket_capacity: {
         Args: { p_quantity: number; p_ticket_type_id: string }
         Returns: undefined
+      }
+      enqueue_v2_write_outbox_event: {
+        Args: {
+          p_aggregate_id?: string
+          p_aggregate_type?: string
+          p_athlete_identity_id?: string
+          p_idempotency_key?: string
+          p_org_id?: string
+          p_payload: Json
+          p_topic: string
+        }
+        Returns: string
       }
       ensure_entity_gallery: {
         Args: {
@@ -15437,6 +18071,10 @@ export type Database = {
         }[]
       }
       get_athlete_profile: { Args: { p_athlete_id: string }; Returns: Json }
+      get_athlete_profile_v2_fan: {
+        Args: { p_athlete_identity_id: string }
+        Returns: Json
+      }
       get_athletes_with_guardian_status: {
         Args: { p_limit?: number; p_offset?: number; p_org_id: string }
         Returns: {
@@ -15451,12 +18089,18 @@ export type Database = {
           first_name: string
           gender: string
           has_active_guardian: boolean
+          has_profile_photo: boolean
           jersey_number: string
           last_name: string
           medical_notes: string
           preferred_name: string
+          profile_photo_updated_at: string
           updated_at: string
         }[]
+      }
+      get_attendance_summary: {
+        Args: { date_range?: Json; org_id: string; team_ids?: string[] }
+        Returns: Json
       }
       get_channel_members: {
         Args: { channel_uuid: string }
@@ -15464,6 +18108,19 @@ export type Database = {
           role: string
           user_id: string
         }[]
+      }
+      get_coach_sport_profile_insights: {
+        Args: {
+          coach_user_id: string
+          filters?: Json
+          org_id: string
+          sport_key: string
+        }
+        Returns: Json
+      }
+      get_coach_team_kpis: {
+        Args: { coach_user_id: string; org_id: string }
+        Returns: Json
       }
       get_communication_metrics: {
         Args: {
@@ -15537,6 +18194,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_facilities_utilization: {
+        Args: { date_range?: Json; org_id: string }
+        Returns: Json
+      }
       get_family_athletes_via_guardians: {
         Args: { p_athlete_id: string; p_org_id: string }
         Returns: {
@@ -15572,6 +18233,15 @@ export type Database = {
         Args: { p_feature_keys: string[]; p_org_id: string; p_user_id: string }
         Returns: Json
       }
+      get_features_not_in_org: {
+        Args: { p_org_id: string }
+        Returns: {
+          description: string
+          display_name: string
+          feature_key: string
+          recommended_action: string
+        }[]
+      }
       get_gallery_photo_counts: {
         Args: { p_gallery_ids: string[] }
         Returns: {
@@ -15587,7 +18257,9 @@ export type Database = {
           birthdate: string
           first_name: string
           gender: string
+          has_profile_photo: boolean
           last_name: string
+          profile_photo_updated_at: string
           relationship_type: string
           status: Database["public"]["Enums"]["athlete_guardian_status"]
         }[]
@@ -15653,6 +18325,7 @@ export type Database = {
         }
         Returns: string
       }
+      get_org_dashboard_kpis: { Args: { org_id: string }; Returns: Json }
       get_org_health_metrics: {
         Args: {
           p_date_end?: string
@@ -15847,6 +18520,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_ticketing_summary: {
+        Args: { date_range?: Json; org_id: string }
+        Returns: Json
+      }
       get_travel_events_for_team: {
         Args: { p_team_id: string; p_upcoming_only?: boolean }
         Returns: {
@@ -15872,6 +18549,18 @@ export type Database = {
           p_sub_org_id?: string
           p_team_id?: string
         }
+        Returns: Json
+      }
+      get_unified_athlete_documents_v2: {
+        Args: { p_context?: Json }
+        Returns: Json
+      }
+      get_unified_athlete_profile_v2: {
+        Args: { p_context?: Json }
+        Returns: Json
+      }
+      get_unified_athlete_schedule_v2: {
+        Args: { p_context?: Json }
         Returns: Json
       }
       get_uniform_kit_roster: {
@@ -15940,6 +18629,30 @@ export type Database = {
         Returns: Json
       }
       get_video_notes_policies: { Args: never; Returns: Json }
+      guardian_has_level_access: {
+        Args: { p_level_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      guardian_has_org_season_access: {
+        Args: { p_season_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      guardian_has_program_access: {
+        Args: { p_program_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      guardian_has_sport_access: {
+        Args: { p_sport_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      guardian_has_team_access: {
+        Args: { p_team_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      guardian_has_team_season_access: {
+        Args: { p_team_id: string; p_user_id: string }
+        Returns: boolean
+      }
       import_athletes_from_spreadsheet: {
         Args: {
           p_assign_teams_from_spreadsheet?: boolean
@@ -15996,6 +18709,10 @@ export type Database = {
           p_org_id: string
           p_relationship_type?: string
         }
+        Returns: Json
+      }
+      list_identity_merge_inbox_v2: {
+        Args: { p_org_id: string }
         Returns: Json
       }
       lock_and_hold_reserved_seats: {
@@ -16076,6 +18793,16 @@ export type Database = {
         Returns: boolean
       }
       resend_guardian_invite: { Args: { p_invite_id: string }; Returns: Json }
+      resolve_athlete_identity_link_v2: {
+        Args: {
+          p_candidate_id: string
+          p_decision: string
+          p_identity_id: string
+          p_notes?: string
+          p_org_id?: string
+        }
+        Returns: Json
+      }
       resolve_feature_flag: {
         Args: {
           p_environment?: Database["public"]["Enums"]["feature_flag_environment"]
@@ -16116,6 +18843,10 @@ export type Database = {
         Args: { p_plan_id: string }
         Returns: Json
       }
+      resolve_unified_athlete_id_v2: {
+        Args: { p_context?: Json }
+        Returns: string
+      }
       review_guardian_attachment_request: {
         Args: {
           p_approve: boolean
@@ -16143,6 +18874,14 @@ export type Database = {
       revoke_staff_access: {
         Args: { p_org_id: string; p_reason?: string; p_user_id: string }
         Returns: string
+      }
+      run_identity_backfill_chunk_v2: {
+        Args: { p_chunk_size?: number; p_org_id?: string }
+        Returns: Json
+      }
+      run_v2_write_outbox_reconciliation: {
+        Args: { p_batch_size?: number }
+        Returns: Json
       }
       sanitize_metadata: { Args: { p_metadata: Json }; Returns: Json }
       search_athletes_for_guardian: {
@@ -16266,6 +19005,8 @@ export type Database = {
       update_reservation: {
         Args: {
           p_allow_conflict?: boolean
+          p_cancellation_reason?: string
+          p_customer_id?: string
           p_end_at?: string
           p_notes?: string
           p_reservation_id: string
@@ -16281,6 +19022,16 @@ export type Database = {
       update_staff_permissions: {
         Args: { p_org_id: string; p_permissions: Json; p_user_id: string }
         Returns: string
+      }
+      upsert_sport_filter_preference_v2: {
+        Args: {
+          p_client_updated_at?: string
+          p_context: Json
+          p_idempotency_key?: string
+          p_sport_filter: string
+          p_user_id: string
+        }
+        Returns: Json
       }
       user_can_access_athlete: {
         Args: { p_athlete_id: string; p_user_id: string }
@@ -16583,6 +19334,7 @@ export type Database = {
         | "feature_enabled"
         | "feature_disabled"
         | "system_generated_notice"
+      notification_channel: "in_app" | "email" | "push"
       notification_job_status: "queued" | "sent" | "failed"
       notification_job_type:
         | "new_event"
@@ -16677,6 +19429,7 @@ export type Database = {
         | "end_of_season_summary"
         | "fan_engagement_highlight"
         | "donation_campaign_launch"
+      notification_outbox_status: "queued" | "sent" | "failed" | "skipped"
       notification_presentation: "info" | "warning" | "urgent"
       offline_payment_method: "cash" | "check" | "external_processor" | "other"
       offline_payment_status: "recorded" | "voided"
@@ -16752,6 +19505,7 @@ export type Database = {
         | "finance_admin"
         | "ops_admin"
       recurrence_frequency: "weekly" | "custom"
+      registration_mode: "individual_only" | "team_only" | "both"
       rsvp_status: "going" | "late" | "not_going" | "unknown"
       scan_method: "qr" | "manual"
       scholarship_funding_source:
@@ -17272,6 +20026,7 @@ export const Constants = {
         "feature_disabled",
         "system_generated_notice",
       ],
+      notification_channel: ["in_app", "email", "push"],
       notification_job_status: ["queued", "sent", "failed"],
       notification_job_type: [
         "new_event",
@@ -17367,6 +20122,7 @@ export const Constants = {
         "fan_engagement_highlight",
         "donation_campaign_launch",
       ],
+      notification_outbox_status: ["queued", "sent", "failed", "skipped"],
       notification_presentation: ["info", "warning", "urgent"],
       offline_payment_method: ["cash", "check", "external_processor", "other"],
       offline_payment_status: ["recorded", "voided"],
@@ -17448,6 +20204,7 @@ export const Constants = {
         "ops_admin",
       ],
       recurrence_frequency: ["weekly", "custom"],
+      registration_mode: ["individual_only", "team_only", "both"],
       rsvp_status: ["going", "late", "not_going", "unknown"],
       scan_method: ["qr", "manual"],
       scholarship_funding_source: [

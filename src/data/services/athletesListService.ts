@@ -154,9 +154,9 @@ export async function getAthletes(orgId: string, context?: UserContext): Promise
         const enrichedAthletes = await Promise.all(
             (data || []).map(async (d: any) => {
                 // Get primary team
-                const { data: teamMembership } = await supabase
+                const { data: teamMembership } = await (supabase as any)
                     .from('team_memberships')
-                    .select('team:teams(id, name)')
+                    .select('team:teams!team_memberships_team_id_fkey(id, name)')
                     .eq('athlete_id', d.athlete_id)
                     .eq('status', 'active')
                     .order('created_at', { ascending: false })
@@ -164,13 +164,25 @@ export async function getAthletes(orgId: string, context?: UserContext): Promise
                     .maybeSingle()
 
                 // Get primary sport
-                const { data: athleteSport } = await supabase
+                const { data: athleteSport } = await (supabase as any)
                     .from('athlete_sports')
                     .select('sport:sports(id, name)')
                     .eq('athlete_id', d.athlete_id)
                     .eq('is_primary', true)
                     .limit(1)
                     .maybeSingle()
+
+                const primaryTeam = teamMembership?.team &&
+                    typeof teamMembership.team.id === 'string' &&
+                    typeof teamMembership.team.name === 'string'
+                    ? { id: teamMembership.team.id, name: teamMembership.team.name }
+                    : null
+
+                const primarySport = athleteSport?.sport &&
+                    typeof athleteSport.sport.id === 'string' &&
+                    typeof athleteSport.sport.name === 'string'
+                    ? { id: athleteSport.sport.id, name: athleteSport.sport.name }
+                    : null
 
                 return {
                     id: d.athlete_id,
@@ -182,9 +194,9 @@ export async function getAthletes(orgId: string, context?: UserContext): Promise
                     photo_url: null,
                     has_profile_photo: d.has_profile_photo,
                     org_id: orgId,
-                    primary_team: teamMembership?.team,
-                    primary_sport: athleteSport?.sport,
-                } as AthleteCardData
+                    primary_team: primaryTeam,
+                    primary_sport: primarySport,
+                }
             })
         )
 

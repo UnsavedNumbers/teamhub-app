@@ -13,6 +13,7 @@ import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { debug } from '../lib/debug'
 import { getAthleteById } from '../data/services/familyService'
 import { getAthleteTeamHistory, getAthleteTeamMemberships, type AthleteTeamMembershipDisplay } from '../data/services/teamsService'
+import { debouncedUpsertSportFilterPreferenceV2, getUnifiedAthleteProfileV2 } from '../data/services/unifiedAthleteProfileV2Service'
 import { getDisplayName } from '../utils/athleteHelpers'
 import PortalLayout from '../components/portal/PortalLayout'
 import AthleteAvatar from '../components/portal/AthleteAvatar'
@@ -60,6 +61,12 @@ export default function AthleteProfilePage() {
   const [sportIdToCode, setSportIdToCode] = useState<Record<string, SportCode>>({})
   const [activeTeamSports, setActiveTeamSports] = useState<SportCode[]>([])
   const [customSportNames, setCustomSportNames] = useState<Record<string, string>>({})
+  const [sportPreferenceLoaded, setSportPreferenceLoaded] = useState(false)
+  const lastSportPreferenceWriteAtRef = useRef<string | null>(null)
+  const sportPreferenceContextKey = useMemo(
+    () => (athleteId ? `portal-athlete-profile:${context.orgId}:${athleteId}` : ''),
+    [athleteId, context.orgId]
+  )
 
   const refreshAthlete = async () => {
     if (!athleteId || !isReady) return
@@ -91,6 +98,11 @@ export default function AthleteProfilePage() {
       isMountedRef.current = false
     }
   }, [])
+
+  useEffect(() => {
+    setSportPreferenceLoaded(false)
+    lastSportPreferenceWriteAtRef.current = null
+  }, [athleteId, sportPreferenceContextKey])
 
   // Redirect away from medical tab if feature is disabled
   useEffect(() => {
@@ -270,6 +282,81 @@ export default function AthleteProfilePage() {
     if (selectedSport && selectedSportCodes.includes(selectedSport)) return
     setSelectedSport(selectedSportCodes[0] ?? null)
   }, [selectedSport, selectedSportCodes])
+
+  // Load persisted sport filter preference once sports are known.
+  useEffect(() => {
+    if (!isReady || !athleteId || selectedSportCodes.length === 0 || sportPreferenceLoaded || !sportPreferenceContextKey) {
+      return
+    }
+
+    let cancelled = false
+    const loadPreference = async () => {
+      const { data } = await getUnifiedAthleteProfileV2({
+        athlete_id: athleteId,
+        org_id: context.orgId,
+        role_scope: 'parent',
+        context_key: sportPreferenceContextKey,
+      })
+
+      if (cancelled) return
+
+      const preference = (data?.user_preference as Record<string, unknown> | undefined)?.sport_filter
+      if (typeof preference === 'string' && preference !== 'all' && selectedSportCodes.includes(preference as SportCode)) {
+        setSelectedSport(preference as SportCode)
+      }
+      setSportPreferenceLoaded(true)
+    }
+
+    void loadPreference()
+    return () => {
+      cancelled = true
+    }
+  }, [
+    athleteId,
+    context.orgId,
+    isReady,
+    selectedSportCodes,
+    sportPreferenceContextKey,
+    sportPreferenceLoaded,
+  ])
+
+  // Debounced preference persistence for multi-sport athletes.
+  useEffect(() => {
+    if (!isReady || !athleteId || !context.userId || !sportPreferenceLoaded || !sportPreferenceContextKey) {
+      return
+    }
+    if (selectedSportCodes.length <= 1 || !selectedSport) return
+
+    const idempotencyKey = `${sportPreferenceContextKey}:${selectedSport}`
+    void debouncedUpsertSportFilterPreferenceV2(
+      context.userId,
+      {
+        athlete_id: athleteId,
+        org_id: context.orgId,
+        role_scope: 'parent',
+        context_key: sportPreferenceContextKey,
+      },
+      selectedSport,
+      {
+        idempotencyKey,
+        clientUpdatedAt: lastSportPreferenceWriteAtRef.current,
+      }
+    ).then(({ data }) => {
+      const updatedAt = (data?.updated_at ?? null) as string | null
+      if (typeof updatedAt === 'string') {
+        lastSportPreferenceWriteAtRef.current = updatedAt
+      }
+    })
+  }, [
+    athleteId,
+    context.orgId,
+    context.userId,
+    isReady,
+    selectedSport,
+    selectedSportCodes.length,
+    sportPreferenceContextKey,
+    sportPreferenceLoaded,
+  ])
 
   if (loading) {
     return (
@@ -515,20 +602,24 @@ export default function AthleteProfilePage() {
 
         {activeTab === 'sports' && (
           <div className="space-y-6">
-            {/* Sport Selector */}
-            <Card className="p-6">
-              <CardTitle className="mb-4">Select Sport</CardTitle>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                Choose a sport to view and edit profile and equipment information
-              </p>
-              {selectedSportCodes.length === 0 ? (
+            {selectedSportCodes.length === 0 && (
+              <Card className="p-6">
+                <CardTitle className="mb-4">Sport Profiles</CardTitle>
                 <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-6 text-center">
                   <Icon name="info" size="text-3xl" className="text-slate-400 mb-2" />
                   <p className="text-sm text-slate-600 dark:text-slate-400">
                     No sports selected yet. Add sports in <strong>Basic Info &gt; Sports Interests</strong> to enable sport-specific profiles.
                   </p>
                 </div>
-              ) : (
+              </Card>
+            )}
+
+            {selectedSportCodes.length > 1 && (
+              <Card className="p-6">
+                <CardTitle className="mb-4">Select Sport</CardTitle>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                  Choose a sport to view and edit profile and equipment information.
+                </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {selectedSportCodes.map((sport) => (
                     <button
@@ -545,8 +636,8 @@ export default function AthleteProfilePage() {
                     </button>
                   ))}
                 </div>
-              )}
-            </Card>
+              </Card>
+            )}
 
             {/* Sport Profile Card */}
             {selectedSport && (

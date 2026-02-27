@@ -7,19 +7,30 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getPublicOrderWithTickets, resendTickets, type PublicOrderResponse } from '@/data/services'
-import { useRouteLink } from '@/utils/routes'
+import { getLink, RouteKeys } from '@/utils/routes'
 import TicketCard from '@/components/ticketing/TicketCard'
 import { captureEvent } from '@/lib/analytics/analytics'
 import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+import { resolveTicketCheckoutRole } from '@/utils/ticketCheckoutRole'
+import { useOptionalAuth } from '@/hooks/useAuth'
 
 export default function TicketOrderSuccess() {
   useDebugLifecycle('TicketOrderSuccess')
   
   const { orderId } = useParams<{ orderId: string }>()
-  const myTicketsLink = useRouteLink('portal.myTickets')
+  const [searchParams] = useSearchParams()
+  const auth = useOptionalAuth()
+  const profileRoles = auth?.profile?.organizations?.flatMap((organization) => organization.roles ?? []) ?? []
+  const checkoutRole = resolveTicketCheckoutRole(searchParams.get('role'), {
+    profileRoles,
+    fallbackRole: 'guardian',
+  })
+  const myTicketsLink = checkoutRole === 'fan'
+    ? getLink(RouteKeys.FAN_TICKETS)
+    : getLink(RouteKeys.PORTAL_MY_TICKETS)
   const [isResending, setIsResending] = useState(false)
   const [resendMessage, setResendMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 

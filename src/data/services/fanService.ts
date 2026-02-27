@@ -22,6 +22,7 @@ import { t } from '../../i18n'
 import { getFakeTicketingEvents } from '../fake/fakeTicketingEvents'
 import { getMockGalleriesForOrg } from '../fake/mockGalleries'
 import { getOrganizationById } from '../fake/fakeOrganizations'
+import { getAthleteProfileV2Fan } from './unifiedAthleteProfileV2Service'
 import type {
   FanOrgFollow,
   FanEventBookmark,
@@ -827,6 +828,9 @@ export interface EntityProfile {
   jersey_number?: string
   position?: string
   current_teams?: string[]
+  sports?: string[]
+  org_id?: string
+  org_name?: string
 }
 
 /**
@@ -942,17 +946,28 @@ export async function getAthleteProfile(athleteId: string): Promise<{ data: Enti
       debug.data('FanService.getAthleteProfile', 'Response (fake)', { athleteId, found: !!result.data })
       return result
     }
-    const { data, error } = await supabaseAny.rpc('get_athlete_profile', {
-      p_athlete_id: athleteId,
-    })
-
-    if (error) throw error
-
-    return {
-      data: data as EntityProfile,
-      error: null,
+    // Prefer v2 fan RPC (supports identity IDs and athlete IDs), then fallback to legacy.
+    const v2Result = await getAthleteProfileV2Fan(athleteId)
+    if (v2Result.data && !v2Result.error) {
+      const payload = v2Result.data as Record<string, any>
+      if (!payload.error) {
+        debug.perf.end('fanService.getAthleteProfile')
+        debug.data('FanService.getAthleteProfile', 'Response (v2)', { athleteId, found: true })
+        return {
+          data: payload as EntityProfile,
+          error: null,
+        }
+      }
     }
+
+    const { data, error } = await supabaseAny.rpc('get_athlete_profile', { p_athlete_id: athleteId })
+    if (error) throw error
+    debug.perf.end('fanService.getAthleteProfile')
+    debug.data('FanService.getAthleteProfile', 'Response (legacy)', { athleteId, found: !!data })
+    return { data: data as EntityProfile, error: null }
   } catch (err) {
+    debug.perf.end('fanService.getAthleteProfile')
+    debug.error('FanService.getAthleteProfile', 'Failed to get athlete profile', { athleteId, error: err })
     return {
       data: null,
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.getEntityProfileFailed')),

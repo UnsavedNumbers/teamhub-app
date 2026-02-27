@@ -61,6 +61,12 @@ describe('TicketOrderSuccess', () => {
     expect(screen.getByRole('button', { name: /Resend Email/i })).toBeInTheDocument()
   })
 
+  test('routes fan checkouts to fan ticket wallet when role=fan', async () => {
+    renderPage('/portal/tickets/order/order-abc123?role=fan')
+
+    expect(await screen.findByRole('link', { name: /View All My Tickets/i })).toHaveAttribute('href', '/fan/tickets')
+  })
+
   test('[TE-E2E-014] supports resend receipt success and failure outcomes', async () => {
     renderPage()
     const resendButton = await screen.findByRole('button', { name: /Resend Email/i })
