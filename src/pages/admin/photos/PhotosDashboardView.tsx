@@ -8,14 +8,12 @@ import {
 } from '@/components/platformAdmin'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
-import { USE_FAKE_DATA } from '@/data/config'
 import { 
   getGalleriesForUser, 
   checkStorageCap,
   getRecentGalleryActivity,
   type RecentActivityItem 
 } from '@/data/services/galleryService'
-import { getMockGalleriesForOrg, getMockRecentActivity, getMockStorageUsage } from '@/data/fake/mockGalleries'
 import { getLink } from '@/utils/routes'
 import './PhotosDashboardView.css'
 
@@ -43,17 +41,6 @@ export function PhotosDashboardView() {
     let mounted = true
     const load = async () => {
       if (!context?.orgId) {
-        setLoading(false)
-        return
-      }
-
-      if (USE_FAKE_DATA) {
-        const mockGalleries = getMockGalleriesForOrg(context.orgId)
-        const mockActivity = getMockRecentActivity(10)
-        const mockStorage = getMockStorageUsage()
-        setGalleries(mockGalleries)
-        setRecentActivity(mockActivity as RecentActivityItem[])
-        setStorageInfo(mockStorage)
         setLoading(false)
         return
       }

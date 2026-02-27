@@ -7,7 +7,7 @@ import {
   TicketingSeason,
   TicketingVenue,
 } from '@/types/ticketing'
-import { DEMO_ORG_A_ID } from '../config'
+import { DEMO_ORG_A_ID, DEMO_ORG_B_ID } from '../config'
 import { DEMO_TICKETING_EVENT_IMAGES } from '@/utils/demoImagePlaceholders'
 import { DEMO_RESERVED_SEAT_MAP_ID } from './ticketingFakeConstants'
 
@@ -94,6 +94,36 @@ export const DEMO_SOCIAL_RESERVED_TICKETED_EVENT_ID = 'evt-social-family-night-0
 export const DEMO_SOCIAL_RESERVED_CALENDAR_EVENT_ID = 'event-ticketing-social-family-night-001'
 
 const DEFAULT_TIMEZONE = 'America/Chicago'
+const ORG_B_EVENT_ID_PREFIX = 'orgb-event-'
+const ORG_B_CALENDAR_EVENT_ID_PREFIX = 'orgb-calendar-'
+const ORG_B_TICKET_TYPE_ID_PREFIX = 'orgb-ticket-type-'
+
+function toOrgBEventId(baseEventId: string): string {
+  return `${ORG_B_EVENT_ID_PREFIX}${baseEventId}`
+}
+
+function toOrgBCalendarEventId(baseEventId: string): string {
+  return `${ORG_B_CALENDAR_EVENT_ID_PREFIX}${baseEventId}`
+}
+
+function toOrgBTicketTypeId(baseTicketTypeId: string): string {
+  return `${ORG_B_TICKET_TYPE_ID_PREFIX}${baseTicketTypeId}`
+}
+
+function fromOrgBEventId(eventId: string): string | null {
+  if (!eventId.startsWith(ORG_B_EVENT_ID_PREFIX)) return null
+  return eventId.slice(ORG_B_EVENT_ID_PREFIX.length)
+}
+
+function fromOrgBCalendarEventId(calendarEventId: string): string | null {
+  if (!calendarEventId.startsWith(ORG_B_CALENDAR_EVENT_ID_PREFIX)) return null
+  return calendarEventId.slice(ORG_B_CALENDAR_EVENT_ID_PREFIX.length)
+}
+
+function fromOrgBTicketTypeId(ticketTypeId: string): string | null {
+  if (!ticketTypeId.startsWith(ORG_B_TICKET_TYPE_ID_PREFIX)) return null
+  return ticketTypeId.slice(ORG_B_TICKET_TYPE_ID_PREFIX.length)
+}
 
 function pad(value: number): string {
   return String(value).padStart(2, '0')
@@ -509,9 +539,15 @@ function deriveEvent(event: TicketingEventWithDerived): TicketedEvent {
   const orderMetrics = fakeOrdersByEvent[event.id] || { ticketsSold: capacityTotal - capacityRemaining, revenueCents: 0 }
   const ticketsSold = orderMetrics.ticketsSold ?? 0
   const sale_status = computeSaleStatus(event, ticketsSold, capacityTotal || null)
-  const program = programs.find((entry) => entry.id === event.program_id) || null
-  const season = seasons.find((entry) => entry.id === event.season_id) || null
-  const venue = venues.find((entry) => entry.id === event.venue_id) || null
+  const program = programs.find((entry) => entry.id === event.program_id && entry.org_id === event.org_id)
+    || programs.find((entry) => entry.id === event.program_id)
+    || null
+  const season = seasons.find((entry) => entry.id === event.season_id && entry.org_id === event.org_id)
+    || seasons.find((entry) => entry.id === event.season_id)
+    || null
+  const venue = venues.find((entry) => entry.id === event.venue_id && entry.org_id === event.org_id)
+    || venues.find((entry) => entry.id === event.venue_id)
+    || null
 
   return {
     ...event,
@@ -547,6 +583,118 @@ function recalculateMetricsForEvent(eventId: string): void {
   fakeOrdersByEvent[eventId] = { ticketsSold, revenueCents }
 }
 
+function shiftIsoByDays(iso: string | null | undefined, dayOffset: number): string | null {
+  if (!iso) return null
+  const parsed = new Date(iso)
+  if (Number.isNaN(parsed.getTime())) return iso
+  parsed.setUTCDate(parsed.getUTCDate() + dayOffset)
+  return parsed.toISOString()
+}
+
+function cloneProgramForOrg(program: TicketingProgram, orgId: string): TicketingProgram {
+  if (orgId === DEMO_ORG_A_ID) return program
+  return {
+    ...program,
+    org_id: orgId,
+    name: program.name.replace('Premier', 'Varsity').replace('Elite', 'Cardinal'),
+    slug: `${program.slug}-${orgId.replace(/[^a-z0-9-]/gi, '').toLowerCase()}`,
+  }
+}
+
+function cloneSeasonForOrg(season: TicketingSeason, orgId: string): TicketingSeason {
+  if (orgId === DEMO_ORG_A_ID) return season
+  return {
+    ...season,
+    org_id: orgId,
+  }
+}
+
+function cloneVenueForOrg(venue: TicketingVenue, orgId: string): TicketingVenue {
+  if (orgId === DEMO_ORG_A_ID) return venue
+  return {
+    ...venue,
+    org_id: orgId,
+    name: venue.name.replace('Riverside', 'Lincoln').replace('Youth', 'School'),
+    city: 'Lincoln',
+    state: 'CA',
+    postal_code: '95648',
+  }
+}
+
+function cloneOrgBEventFromBase(baseEvent: TicketingEventWithDerived, index: number): TicketingEventWithDerived {
+  const shiftedStart = shiftIsoByDays(baseEvent.starts_at, 1 + (index % 3)) || baseEvent.starts_at
+  const shiftedEnd = shiftIsoByDays(baseEvent.ends_at, 1 + (index % 3)) || baseEvent.ends_at
+  const shiftedSalesStart = shiftIsoByDays(baseEvent.sales_start_at, 1 + (index % 2))
+  const shiftedSalesEnd = shiftIsoByDays(baseEvent.sales_end_at, 1 + (index % 2))
+
+  return {
+    ...baseEvent,
+    id: toOrgBEventId(baseEvent.id),
+    org_id: DEMO_ORG_B_ID,
+    event_id: toOrgBCalendarEventId(baseEvent.event_id || baseEvent.id),
+    title: `Lincoln HS - ${baseEvent.title}`,
+    description: baseEvent.description ? `Lincoln HS Athletics: ${baseEvent.description}` : baseEvent.description,
+    starts_at: shiftedStart,
+    ends_at: shiftedEnd,
+    sales_start_at: shiftedSalesStart,
+    sales_end_at: shiftedSalesEnd,
+    venue_name: `Lincoln HS - ${baseEvent.venue_name || 'Athletics Complex'}`,
+    venue_city: 'Lincoln',
+    venue_state: 'CA',
+    venue_postal_code: '95648',
+    venue_address_line1: baseEvent.venue_address_line1 || '500 Education Blvd',
+    created_at: shiftIsoByDays(baseEvent.created_at, 1 + (index % 4)) || baseEvent.created_at,
+    updated_at: shiftIsoByDays(baseEvent.updated_at, 1 + (index % 4)) || baseEvent.updated_at,
+    ticket_types: (baseEvent.ticket_types || []).map((ticketType) => ({
+      ...ticketType,
+      id: toOrgBTicketTypeId(ticketType.id),
+    })),
+  }
+}
+
+function getOrgBVirtualEvents(): TicketingEventWithDerived[] {
+  const publishedVisible = events
+    .filter(
+      (event) => event.org_id === DEMO_ORG_A_ID && event.status === 'published' && (event.visibility === 'visible' || event.visibility == null),
+    )
+    .slice(0, 14)
+  const completed = events
+    .filter((event) => event.org_id === DEMO_ORG_A_ID && event.status === 'completed')
+    .slice(0, 6)
+  const curated = [...publishedVisible, ...completed]
+  return curated.map((event, index) => cloneOrgBEventFromBase(event, index))
+}
+
+function getEventsForOrg(orgId: string): TicketingEventWithDerived[] {
+  if (orgId === DEMO_ORG_B_ID) {
+    return getOrgBVirtualEvents()
+  }
+  return events.filter((event) => event.org_id === orgId)
+}
+
+function resolveEventById(eventId: string, orgId?: string | null): TicketingEventWithDerived | null {
+  if (orgId === DEMO_ORG_B_ID) {
+    const orgBEvents = getOrgBVirtualEvents()
+    const directMatch = orgBEvents.find((event) => event.id === eventId)
+    if (directMatch) return directMatch
+    const fallbackBaseId = fromOrgBEventId(eventId) || eventId
+    return orgBEvents.find((event) => fromOrgBEventId(event.id) === fallbackBaseId) || null
+  }
+
+  if (!orgId) {
+    const directMatch = events.find((event) => event.id === eventId)
+    if (directMatch) return directMatch
+    const orgBBaseId = fromOrgBEventId(eventId)
+    if (orgBBaseId) {
+      const orgBEvents = getOrgBVirtualEvents()
+      return orgBEvents.find((event) => fromOrgBEventId(event.id) === orgBBaseId) || null
+    }
+    return null
+  }
+
+  return events.find((event) => event.id === eventId && event.org_id === orgId) || null
+}
+
 export interface TicketingEventsQuery {
   search?: string | null
   programIds?: string[]
@@ -565,21 +713,30 @@ export interface TicketingEventsQuery {
 }
 
 export function getFakePrograms(orgId: string): TicketingProgram[] {
-  return programs.filter((entry) => entry.org_id === orgId)
+  const sourcePrograms = programs.filter((entry) => entry.org_id === DEMO_ORG_A_ID)
+  if (orgId === DEMO_ORG_A_ID) return sourcePrograms
+  if (orgId === DEMO_ORG_B_ID) return sourcePrograms.map((program) => cloneProgramForOrg(program, DEMO_ORG_B_ID))
+  return []
 }
 
 export function getFakeSeasons(orgId: string): TicketingSeason[] {
-  return seasons.filter((entry) => entry.org_id === orgId)
+  const sourceSeasons = seasons.filter((entry) => entry.org_id === DEMO_ORG_A_ID)
+  if (orgId === DEMO_ORG_A_ID) return sourceSeasons
+  if (orgId === DEMO_ORG_B_ID) return sourceSeasons.map((season) => cloneSeasonForOrg(season, DEMO_ORG_B_ID))
+  return []
 }
 
 export function getFakeVenues(orgId: string): TicketingVenue[] {
-  return venues.filter((entry) => entry.org_id === orgId)
+  const sourceVenues = venues.filter((entry) => entry.org_id === DEMO_ORG_A_ID)
+  if (orgId === DEMO_ORG_A_ID) return sourceVenues
+  if (orgId === DEMO_ORG_B_ID) return sourceVenues.map((venue) => cloneVenueForOrg(venue, DEMO_ORG_B_ID))
+  return []
 }
 
 export function getFakeTicketingEvents(orgId: string, params: TicketingEventsQuery) {
   const page = params.page ?? 1
   const perPage = params.perPage ?? 20
-  let data = events.filter((event) => event.org_id === orgId).map(deriveEvent)
+  let data = getEventsForOrg(orgId).map(deriveEvent)
 
   if (params.search) {
     const query = params.search.toLowerCase()
@@ -788,35 +945,53 @@ export function bulkFakeTicketingEvents(orgId: string, ids: string[], action: st
 }
 
 export function getFakeTicketedEventById(eventId: string, orgId?: string | null): TicketedEvent | null {
-  const match = events.find((event) => event.id === eventId && (!orgId || event.org_id === orgId))
+  const match = resolveEventById(eventId, orgId)
   return match ? deriveEvent(match) : null
 }
 
 export function getFakeTicketedEventByCalendarEventId(calendarEventId: string, orgId?: string | null): TicketedEvent | null {
+  if (orgId === DEMO_ORG_B_ID) {
+    const normalizedCalendarId = fromOrgBCalendarEventId(calendarEventId) || calendarEventId
+    const match = getOrgBVirtualEvents().find((event) => {
+      const eventCalendarId = fromOrgBCalendarEventId(event.event_id || '')
+      return eventCalendarId === normalizedCalendarId
+    })
+    return match ? deriveEvent(match) : null
+  }
+
+  const orgBCalendarId = fromOrgBCalendarEventId(calendarEventId)
+  if (!orgId && orgBCalendarId) {
+    const match = getOrgBVirtualEvents().find((event) => fromOrgBCalendarEventId(event.event_id || '') === orgBCalendarId)
+    return match ? deriveEvent(match) : null
+  }
+
   const match = events.find((event) => event.event_id === calendarEventId && (!orgId || event.org_id === orgId))
   return match ? deriveEvent(match) : null
 }
 
 export function getFakeTicketTypesForEvent(eventId: string, orgId?: string | null): TicketType[] {
-  const match = events.find((event) => event.id === eventId && (!orgId || event.org_id === orgId))
+  const match = resolveEventById(eventId, orgId)
   if (!match || !match.ticket_types) return []
   return match.ticket_types.map((ticketType, index) => mapTicketType(match, ticketType, index))
 }
 
 export function adjustFakeTicketTypeCapacity(eventId: string, ticketTypeId: string, delta: number): boolean {
-  const eventIndex = events.findIndex((event) => event.id === eventId)
+  const normalizedEventId = fromOrgBEventId(eventId) || eventId
+  const normalizedTicketTypeId = fromOrgBTicketTypeId(ticketTypeId) || ticketTypeId
+
+  const eventIndex = events.findIndex((event) => event.id === normalizedEventId)
   if (eventIndex === -1) return false
 
   const event = events[eventIndex]
   if (!event.ticket_types) return false
 
-  const ticketType = event.ticket_types.find((entry) => entry.id === ticketTypeId)
+  const ticketType = event.ticket_types.find((entry) => entry.id === normalizedTicketTypeId)
   if (!ticketType) return false
 
   const nextRemaining = (ticketType.capacity_remaining ?? 0) + delta
   if (nextRemaining < 0) return false
 
   ticketType.capacity_remaining = nextRemaining
-  recalculateMetricsForEvent(eventId)
+  recalculateMetricsForEvent(normalizedEventId)
   return true
 }

@@ -19,7 +19,7 @@ import {
   type EntityProfile 
 } from '../../data/services/fanService'
 import { USE_FAKE_DATA } from '../../data/config'
-import { fakeEvents } from '../../data/fake/fakeEvents'
+import { getFakeTicketingEvents } from '../../data/fake/fakeTicketingEvents'
 import { getMockGalleriesForOrg } from '../../data/fake/mockGalleries'
 import { getTeamsForOrg, getTeamWithDetails } from '../../data/fake/fakeTeams'
 import type { CalendarEvent } from '../../types/staffAndFan'
@@ -143,16 +143,18 @@ export default function FanOrgProfile() {
       })
     setOrgTeams(teams)
 
-    const orgTeamIds = new Set(teams.map((team) => team.id))
-    const eventHighlights = fakeEvents
-      .filter((event) => event.team_id && orgTeamIds.has(event.team_id))
-      .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+    const eventHighlights = getFakeTicketingEvents(orgId, {
+      page: 1,
+      perPage: 12,
+      fanVisibleOnly: true,
+      sortBy: 'created_at',
+    }).data
       .slice(0, 8)
       .map((event) => ({
         id: event.id,
         title: event.title,
-        summary: event.location || event.type || 'Event update',
-        date: event.start_time,
+        summary: event.venue_name || event.event_type || 'Ticketed event update',
+        date: event.starts_at,
       }))
     setHighlights(eventHighlights)
 

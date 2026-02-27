@@ -32,6 +32,7 @@ import { getSeasons } from '../../data/services/seasonsService'
 import { getNotifications } from '../../data/services/messagesService'
 import type { NotificationRecord } from '../../types/notifications'
 import { USE_FAKE_DATA } from '../../data/config'
+import { getOrgDashboardKpis } from '../../services/reportingService'
 import { STORAGE_KEYS } from '../../constants/storage'
 import {
   AdminPageHeader,
@@ -862,12 +863,13 @@ export default function AdminDashboard() {
   const fetchDashboardData = useCallback(async () => {
     if (!isReady) { setLoading(false); return }
     try {
-      const [teamsR, childrenR, unpaidR, eventsR, seasonsR] = await Promise.all([
+      const [teamsR, childrenR, unpaidR, eventsR, seasonsR, kpisR] = await Promise.all([
         getTeams(context, { activeOnly: false }),
         getAthletes(context),
         getUnpaidFeeAssignmentsForOrg(context),
         getUpcomingEventsForUser(context, 100),
         getSeasons(context, { activeOnly: true }),
+        getOrgDashboardKpis(context.orgId),
       ])
       
       if (unpaidR.error) {
@@ -888,17 +890,30 @@ export default function AdminDashboard() {
         const amountPaid = assignment.amount_paid_cents || 0
         return sum + (amountDue - amountPaid)
       }, 0) / 100
-      
+
       console.log('[Dashboard] Total unpaid amount:', totalUnpaidAmount)
-      
-      setStats({
+
+      const fallbackStats: DashboardStats = {
         totalTeams: teamsR.data.length,
         totalPlayers: childrenR.data.length,
         activeSeasons: seasonsR.data.length,
         outstandingPayments: totalUnpaidAmount,
         upcomingEvents: eventsR.data.length,
         pendingUniformOrders: 0,
-      })
+      }
+
+      const unifiedStats: DashboardStats = kpisR.data
+        ? {
+            totalTeams: kpisR.data.totalTeams,
+            totalPlayers: kpisR.data.totalAthletes,
+            activeSeasons: kpisR.data.activeSeasons,
+            outstandingPayments: kpisR.data.outstandingBalanceCents / 100,
+            upcomingEvents: kpisR.data.upcomingEvents,
+            pendingUniformOrders: kpisR.data.pendingUniformOrders,
+          }
+        : fallbackStats
+
+      setStats(unifiedStats)
       setUpcomingEvents(
         eventsR.data.slice(0, 10).map((e: { id: string; title?: string; name?: string; start_time?: string; start_date?: string; event_type?: string }) => ({
           id: e.id, title: e.title || e.name || '', start_time: e.start_time || e.start_date || '', event_type: e.event_type,

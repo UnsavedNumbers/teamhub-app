@@ -17,7 +17,6 @@ import { usePhotoFilters } from '../../hooks/usePhotoFilters'
 import { USE_FAKE_DATA } from '@/data/config'
 import { GalleryManagementSection } from '@/components/admin/galleries/GalleryManagementSection'
 import { getGalleriesForUser, type Gallery } from '@/data/services/galleryService'
-import { getMockGalleriesForOrg } from '@/data/fake/mockGalleries'
 import { getLink } from '@/utils/routes'
 import './Photos.css'
 import '../../styles/orgAdmin.css'
@@ -79,18 +78,6 @@ export default function AdminPhotos() {
       
       if (!context?.orgId) {
         console.log('[Photos] No context.orgId, returning early')
-        setLoading(false)
-        return
-      }
-
-      // Demo mode: use mock data
-      if (USE_FAKE_DATA) {
-        console.log('[Photos] USE_FAKE_DATA is true, using mock data')
-        const mockGalleriesDb = getMockGalleriesForOrg(context.orgId)
-        const mockGalleries = mockGalleriesDb.map(
-          (g) => ({ ...g, can_download: g.can_download ?? undefined }) as unknown as Gallery,
-        )
-        setGalleries(mockGalleries)
         setLoading(false)
         return
       }

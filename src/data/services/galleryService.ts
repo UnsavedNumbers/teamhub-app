@@ -409,13 +409,12 @@ function buildFakeGallery(mockGallery: any): Gallery {
 }
 
 function getFakeGalleriesForParams(context: UserContext, params: GetGalleriesParams): Gallery[] {
-  const effectiveOrgId = params.org_id || context.orgId || DEMO_ORG_A_ID
+  const requestedOrgIds =
+    params.org_ids && params.org_ids.length > 0
+      ? Array.from(new Set(params.org_ids))
+      : [params.org_id || context.orgId || DEMO_ORG_A_ID]
 
-  if (params.org_ids && params.org_ids.length > 0 && !params.org_ids.includes(effectiveOrgId)) {
-    return []
-  }
-
-  let galleries = getMockGalleriesForOrg(effectiveOrgId).map(buildFakeGallery)
+  let galleries = requestedOrgIds.flatMap((orgId) => getMockGalleriesForOrg(orgId).map(buildFakeGallery))
 
   if (params.gallery_type) {
     galleries = galleries.filter((gallery) => gallery.gallery_type === params.gallery_type)

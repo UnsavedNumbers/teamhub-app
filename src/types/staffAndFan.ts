@@ -86,6 +86,9 @@ export interface FanOrgFollow {
     id: string
     name: string
     slug: string | null
+    logo_url?: string | null
+    location_city?: string | null
+    location_state?: string | null
   }
 }
 
@@ -194,6 +197,7 @@ export interface CalendarEvent {
   org_id: string
   org_name: string
   org_slug?: string
+  org_logo_url?: string | null
   visibility: EventVisibility | string
   event_type?: string
   description?: string | null

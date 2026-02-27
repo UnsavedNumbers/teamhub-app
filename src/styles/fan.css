@@ -945,6 +945,12 @@
   background-color: var(--color-accent);
 }
 
+.fan-post-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .fan-post-meta h4 {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
@@ -4024,6 +4030,531 @@
   flex-shrink: 0;
   font-size: 0.875rem;
   color: var(--color-zinc-300);
+}
+
+/* ----------------------------------------------------------------------------
+   FAN ATHLETE PROFILE PAGE
+   ---------------------------------------------------------------------------- */
+
+.fan-athlete-profile-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.fan-athlete-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: fit-content;
+  padding: 0.25rem 0;
+  border: none;
+  background: none;
+  color: #111111;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.fan-athlete-back-btn .material-symbols-outlined {
+  font-size: 1.2rem;
+}
+
+.fan-athlete-profile-page .fan-athlete-hero-card {
+  border: 1px solid #e4e4e7;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.fan-following-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fan-athlete-profile-page .fan-entity-cover {
+  height: 196px;
+  background: #fafafa;
+  border-bottom: 1px solid #f4f4f5;
+}
+
+.fan-athlete-profile-page .fan-entity-cover-gradient {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(120deg, #f4f4f5 0%, #e4e4e7 100%);
+}
+
+.fan-athlete-profile-page .fan-entity-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fan-athlete-profile-page .fan-athlete-hero-content {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  align-items: start;
+  gap: 1.75rem;
+  padding: 1.75rem;
+}
+
+.fan-athlete-profile-page .fan-athlete-photo-large {
+  width: 132px;
+  height: 132px;
+  border: 1px solid #e4e4e7;
+  background: #fafafa;
+  overflow: hidden;
+}
+
+.fan-athlete-profile-page .fan-athlete-identity {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fan-athlete-profile-page .fan-entity-name {
+  margin: 0;
+  font-size: clamp(1.9rem, 4vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #111111;
+  text-transform: none;
+  line-height: 1.1;
+}
+
+.fan-athlete-profile-page .fan-athlete-location-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem 0.7rem;
+  flex-wrap: wrap;
+}
+
+.fan-athlete-profile-page .fan-entity-parent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: none;
+  background: none;
+  padding: 0;
+  color: #52525b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.fan-athlete-profile-page .fan-entity-parent:hover {
+  color: #111111;
+}
+
+.fan-athlete-profile-page .fan-entity-parent .material-symbols-outlined {
+  font-size: 1rem;
+  color: #a1a1aa;
+}
+
+.fan-athlete-profile-page .fan-athlete-separator {
+  color: #a1a1aa;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.fan-athlete-profile-page .fan-athlete-tags {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.fan-athlete-profile-page .fan-entity-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 1.5rem;
+  padding: 0 0.6rem;
+  border: 1px solid #e4e4e7;
+  background: #fafafa;
+  color: #71717a;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.fan-athlete-profile-page .fan-athlete-action-row {
+  padding-top: 0.5rem;
+}
+
+.fan-athlete-profile-page .fan-athlete-follow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  align-self: flex-start;
+  width: auto;
+  min-width: 170px;
+  min-height: 2.75rem;
+  padding: 0.8rem 1.15rem;
+  border: 1px solid #111111;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.fan-athlete-profile-page .fan-athlete-follow-btn .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+.fan-athlete-profile-page .fan-athlete-follow-btn.not-following {
+  background: #111111;
+  color: #ffffff;
+  border-color: #111111;
+}
+
+.fan-athlete-profile-page .fan-athlete-follow-btn.not-following:hover {
+  background: #27272a;
+  border-color: #27272a;
+}
+
+.fan-athlete-profile-page .fan-athlete-follow-btn.following {
+  background: #ffffff;
+  color: #111111;
+  border-color: #d4d4d8;
+}
+
+.fan-athlete-profile-page .fan-athlete-follow-btn.following:hover {
+  background: #f4f4f5;
+  border-color: #a1a1aa;
+}
+
+.fan-athlete-profile-page .fan-athlete-follow-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.fan-athlete-profile-page .fan-athlete-quick-info,
+.fan-athlete-profile-page .fan-entity-stats {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.fan-athlete-profile-page .fan-athlete-info-item,
+.fan-athlete-profile-page .fan-entity-stat {
+  border: 1px solid #e4e4e7;
+  background: #ffffff;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.fan-athlete-profile-page .fan-athlete-info-label,
+.fan-athlete-profile-page .fan-entity-stat-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+}
+
+.fan-athlete-profile-page .fan-athlete-info-value,
+.fan-athlete-profile-page .fan-entity-stat-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #111111;
+}
+
+.fan-athlete-profile-page .fan-entity-section {
+  border: 1px solid #e4e4e7;
+  background: #ffffff;
+  padding: 1.4rem;
+}
+
+.fan-athlete-profile-page .fan-entity-section-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #71717a;
+}
+
+.fan-athlete-profile-page .fan-section-header {
+  margin-bottom: 1.2rem;
+}
+
+.fan-athlete-profile-page .fan-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: none;
+  background: none;
+  padding: 0;
+  color: #71717a;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.fan-athlete-profile-page .fan-link-btn:hover {
+  color: #111111;
+}
+
+.fan-athlete-profile-page .fan-entity-description {
+  color: #3f3f46;
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.fan-athlete-profile-page .fan-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.9rem;
+}
+
+.fan-athlete-profile-page .fan-stat-card {
+  border: 1px solid #f4f4f5;
+  background: #fafafa;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fan-athlete-profile-page .fan-stat-value {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #111111;
+  text-transform: none;
+}
+
+.fan-athlete-profile-page .fan-stat-label {
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  color: #71717a;
+  text-transform: uppercase;
+}
+
+.fan-athlete-profile-page .fan-achievements-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.fan-athlete-profile-page .fan-achievement-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border: 1px solid #f4f4f5;
+  background: #fafafa;
+  padding: 0.9rem;
+}
+
+.fan-athlete-profile-page .fan-achievement-icon {
+  font-size: 1.15rem;
+  color: #71717a;
+  margin-top: 0.05rem;
+}
+
+.fan-athlete-profile-page .fan-achievement-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.fan-athlete-profile-page .fan-achievement-info h4 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.fan-athlete-profile-page .fan-achievement-info p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #71717a;
+}
+
+.fan-athlete-profile-page .fan-achievement-date {
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+}
+
+.fan-athlete-profile-page .fan-events-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.fan-athlete-profile-page .fan-event-card-compact {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 0.9rem;
+  border: 1px solid #f4f4f5;
+  background: #fafafa;
+  padding: 0.8rem;
+}
+
+.fan-athlete-profile-page .fan-event-date {
+  border-right: 1px solid #e4e4e7;
+  padding-right: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.fan-athlete-profile-page .fan-event-month {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+}
+
+.fan-athlete-profile-page .fan-event-day {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #111111;
+  line-height: 1;
+}
+
+.fan-athlete-profile-page .fan-event-info {
+  min-width: 0;
+}
+
+.fan-athlete-profile-page .fan-event-card-compact h4 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #18181b;
+  text-transform: none;
+}
+
+.fan-athlete-profile-page .fan-event-card-compact p {
+  margin: 0;
+  color: #71717a;
+  font-size: 0.78rem;
+}
+
+.fan-athlete-profile-page .fan-photos-preview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.fan-athlete-profile-page .fan-entity-empty {
+  border: 1px dashed #e4e4e7;
+  background: #fafafa;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #71717a;
+  font-size: 0.82rem;
+}
+
+.fan-athlete-profile-page .fan-entity-empty .material-symbols-outlined {
+  font-size: 1.1rem;
+  color: #a1a1aa;
+}
+
+.fan-athlete-profile-page .fan-entity-empty p {
+  margin: 0;
+}
+
+.fan-athlete-profile-page .fan-photo-thumb {
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border: 1px solid #f4f4f5;
+}
+
+.fan-athlete-profile-page .fan-photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 980px) {
+  .fan-athlete-profile-page .fan-athlete-hero-content {
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: 1.2rem;
+    padding: 1.4rem;
+  }
+
+  .fan-athlete-profile-page .fan-athlete-photo-large {
+    width: 104px;
+    height: 104px;
+  }
+
+  .fan-athlete-profile-page .fan-athlete-follow-btn {
+    min-width: 158px;
+  }
+
+  .fan-athlete-profile-page .fan-athlete-quick-info,
+  .fan-athlete-profile-page .fan-entity-stats {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .fan-athlete-profile-page {
+    gap: 1.5rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .fan-athlete-profile-page .fan-entity-cover {
+    height: 140px;
+  }
+
+  .fan-athlete-profile-page .fan-athlete-hero-content {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 1.1rem;
+  }
+
+  .fan-athlete-profile-page .fan-athlete-photo-large {
+    width: 84px;
+    height: 84px;
+  }
+
+  .fan-athlete-profile-page .fan-athlete-action-row {
+    padding-top: 0.35rem;
+  }
+
+  .fan-athlete-profile-page .fan-athlete-follow-btn {
+    width: 100%;
+  }
+
+  .fan-athlete-profile-page .fan-entity-section {
+    padding: 1rem;
+  }
+
+  .fan-athlete-profile-page .fan-athlete-quick-info,
+  .fan-athlete-profile-page .fan-entity-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .fan-athlete-profile-page .fan-photos-preview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* ----------------------------------------------------------------------------

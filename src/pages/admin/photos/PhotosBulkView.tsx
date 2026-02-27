@@ -9,9 +9,7 @@ import {
 } from '@/components/platformAdmin'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
-import { USE_FAKE_DATA } from '@/data/config'
 import { getGalleriesForUser, deleteGallery, type Gallery, type GalleryType } from '@/data/services/galleryService'
-import { getMockGalleriesForOrg } from '@/data/fake/mockGalleries'
 import { showSuccess, showError } from '@/utils/toast'
 import './PhotosBulkView.css'
 
@@ -39,16 +37,6 @@ export function PhotosBulkView() {
     let mounted = true
     const load = async () => {
       if (!context?.orgId) {
-        setLoading(false)
-        return
-      }
-
-      if (USE_FAKE_DATA) {
-        const mockGalleriesDb = getMockGalleriesForOrg(context.orgId)
-        const mockGalleries = mockGalleriesDb.map(
-          (g) => ({ ...g, can_download: g.can_download ?? undefined }) as unknown as Gallery,
-        )
-        setGalleries(mockGalleries)
         setLoading(false)
         return
       }

@@ -15,7 +15,7 @@ import type {
   ValidateScanResponse,
   Venue,
 } from '@/types/ticketing'
-import { DEMO_ORG_A_ID, DEMO_TRANSACTION_DELAY_MS } from '../config'
+import { DEMO_ORG_A_ID, DEMO_ORG_B_ID, DEMO_TRANSACTION_DELAY_MS, DEMO_USER_IDS } from '../config'
 import {
   adjustFakeTicketTypeCapacity,
   DEMO_SOCIAL_RESERVED_TICKETED_EVENT_ID,
@@ -136,7 +136,10 @@ function ensureSeededOrderHistory() {
   }
 
   const purchasers = getDemoPurchasers()
-  const allEvents = getFakeTicketedEvents({ org_id: DEMO_ORG_A_ID })
+  const allEvents = [
+    ...getFakeTicketedEvents({ org_id: DEMO_ORG_A_ID }),
+    ...getFakeTicketedEvents({ org_id: DEMO_ORG_B_ID }),
+  ]
   const paidEvents = allEvents.filter((event) => event.status === 'published' || event.status === 'completed')
   const pendingEvents = allEvents.filter((event) => event.status === 'published' && new Date(event.starts_at) > new Date())
   const refundedEvents = allEvents.filter((event) => event.status === 'completed' || event.status === 'cancelled' || event.status === 'published')
@@ -403,10 +406,8 @@ function ensureFakeSeatMaps(orgId: string): FakeSeatMapRecord[] {
   return maps
 }
 
-export function getFakeVenuesForOrg(_orgId: string): Venue[] {
-  // In demo mode, always return venues for DEMO_ORG_A_ID regardless of orgId
-  // This ensures venues are available for all demo users
-  return getFakeVenues(DEMO_ORG_A_ID)
+export function getFakeVenuesForOrg(orgId: string): Venue[] {
+  return getFakeVenues(orgId || DEMO_ORG_A_ID)
 }
 
 export function getFakeSeatMapsForOrgAdmin(orgId: string): FakeAdminSeatMapListItem[] {
@@ -486,7 +487,7 @@ export function getFakeSeatMapWithSeats(seatMapId: string): SeatMapWithSections 
     }
   }
 
-  for (const orgId of [DEMO_ORG_A_ID]) {
+  for (const orgId of [DEMO_ORG_A_ID, DEMO_ORG_B_ID]) {
     const seatMaps = ensureFakeSeatMaps(orgId)
     const seatMap = seatMaps.find((entry) => entry.id === seatMapId)
     if (seatMap) {
@@ -579,13 +580,31 @@ export function getFakeTicketsForOrder(orderId: string) {
 export function getFakeMyTicketOrders(userId?: string | null) {
   ensureSeededOrderHistory()
   if (!userId) return [...fakeOrders]
-  // Return orders for the specific user only
   const userOrders = fakeOrders.filter((o) => o.purchaser_user_id === userId)
-  // Ensure at least a couple of orders so the fan always sees something
+  const demoFanId = DEMO_USER_IDS['fan-only@example.com']
+  const requiredOrgIds = [DEMO_ORG_A_ID, DEMO_ORG_B_ID]
+
+  const withCrossOrgCoverage = (orders: TicketOrder[]): TicketOrder[] => {
+    const normalized = [...orders]
+    const existingOrgIds = new Set(normalized.map((order) => order.org_id))
+    for (const orgId of requiredOrgIds) {
+      if (existingOrgIds.has(orgId)) continue
+      const fallbackOrder = fakeOrders.find((order) => order.org_id === orgId)
+      if (!fallbackOrder) continue
+      normalized.push(fallbackOrder)
+      existingOrgIds.add(orgId)
+    }
+    return normalized
+  }
+
+  if (userId === demoFanId) {
+    return withCrossOrgCoverage(userOrders.length > 0 ? userOrders : fakeOrders.slice(0, 6))
+  }
+
   if (userOrders.length === 0) {
-    // Fallback: first 3 orders belonging to any user
     return fakeOrders.slice(0, 3)
   }
+
   return userOrders
 }
 

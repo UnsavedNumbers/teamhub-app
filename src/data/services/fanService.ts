@@ -15,10 +15,13 @@
 
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
-import { USE_FAKE_DATA, DEMO_ORG_A_ID, DEMO_ORG_B_ID } from '../config'
+import { USE_FAKE_DATA } from '../config'
 import { isInDemoSession } from '../../utils/demoMode'
 import { resolveDemoUserId } from '../fake/userContext'
 import { t } from '../../i18n'
+import { getFakeTicketingEvents } from '../fake/fakeTicketingEvents'
+import { getMockGalleriesForOrg } from '../fake/mockGalleries'
+import { getOrganizationById } from '../fake/fakeOrganizations'
 import type {
   FanOrgFollow,
   FanEventBookmark,
@@ -161,16 +164,30 @@ export async function getFollowedOrgs(): Promise<{ data: FanOrgFollow[]; error: 
         org_id,
         source,
         created_at,
-        org:organizations(id, name, slug)
+        org:organizations(id, name, slug, logo_url, city, state)
       `)
       .order('created_at', { ascending: false })
 
     if (error) throw error
 
+    const normalized = (data || []).map((follow: any) => ({
+      ...follow,
+      org: follow.org
+        ? {
+          id: follow.org.id,
+          name: follow.org.name,
+          slug: follow.org.slug,
+          logo_url: follow.org.logo_url ?? null,
+          location_city: follow.org.city ?? null,
+          location_state: follow.org.state ?? null,
+        }
+        : undefined,
+    }))
+
     debug.perf.end('fanService.getFollowedOrgs')
-    debug.data('FanService.getFollowedOrgs', 'Response', { orgCount: data?.length || 0 })
+    debug.data('FanService.getFollowedOrgs', 'Response', { orgCount: normalized.length })
     return {
-      data: (data || []) as FanOrgFollow[],
+      data: normalized as FanOrgFollow[],
       error: null,
     }
   } catch (err) {
@@ -548,6 +565,7 @@ export interface FanFeedItem {
   source_entity_type: 'org' | 'team' | 'athlete'
   source_entity_id: string
   source_entity_name: string
+  source_entity_logo_url?: string | null
   created_at: string
   read: boolean
 }
@@ -563,68 +581,73 @@ export async function getFanFeed(): Promise<{ data: FanFeedItem[]; error: Error 
     if (await shouldUseFakeDataAsync()) {
       const now = new Date()
       const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString()
-      const fakeFeed: FanFeedItem[] = [
-        {
-          id: 'feed-001',
-          content_type: 'event',
-          content_id: 'event-u10-soccer-game-001',
-          source_entity_type: 'org',
-          source_entity_id: DEMO_ORG_A_ID,
-          source_entity_name: 'Riverside Youth Athletics',
-          created_at: daysAgo(1),
-          read: false,
-        },
-        {
-          id: 'feed-002',
+      const normalizePastIso = (iso: string | null | undefined, fallbackDaysAgo: number): string => {
+        if (!iso) return daysAgo(fallbackDaysAgo)
+        const parsed = new Date(iso)
+        if (Number.isNaN(parsed.getTime())) return daysAgo(fallbackDaysAgo)
+        if (parsed.getTime() > now.getTime()) return now.toISOString()
+        return parsed.toISOString()
+      }
+      const followsResult = await fakeService.getFollowedOrgs()
+      const followedOrgs = followsResult.data || []
+      const fakeFeed: FanFeedItem[] = []
+
+      followedOrgs.forEach((follow, followIndex) => {
+        const orgId = follow.org_id
+        const org = getOrganizationById(orgId)
+        const orgName = org?.name || follow.org?.name || 'Organization'
+
+        const ticketedEvents = getFakeTicketingEvents(orgId, {
+          page: 1,
+          perPage: 4,
+          fanVisibleOnly: true,
+          sortBy: 'created_at',
+        }).data
+
+        ticketedEvents.slice(0, 2).forEach((event, eventIndex) => {
+          fakeFeed.push({
+            id: `feed-${orgId}-event-${event.id}`,
+            content_type: 'event',
+            content_id: event.id,
+            source_entity_type: 'org',
+            source_entity_id: orgId,
+            source_entity_name: orgName,
+            source_entity_logo_url: org?.logo_url ?? null,
+            created_at: normalizePastIso(event.updated_at || event.created_at, 1 + followIndex + eventIndex),
+            read: eventIndex > 0,
+          })
+        })
+
+        const galleries = getMockGalleriesForOrg(orgId).filter((gallery) => gallery.fans_can_see && (gallery.photo_count || 0) > 0)
+        if (galleries.length > 0) {
+          const gallery = galleries[0]
+          fakeFeed.push({
+            id: `feed-${orgId}-photo-${gallery.id}`,
+            content_type: 'photo',
+            content_id: gallery.id,
+            source_entity_type: 'org',
+            source_entity_id: orgId,
+            source_entity_name: orgName,
+            source_entity_logo_url: org?.logo_url ?? null,
+            created_at: normalizePastIso(gallery.updated_at, 2 + followIndex),
+            read: false,
+          })
+        }
+
+        fakeFeed.push({
+          id: `feed-${orgId}-announcement`,
           content_type: 'announcement',
-          content_id: 'msg-001',
+          content_id: `announcement-${orgId}`,
           source_entity_type: 'org',
-          source_entity_id: DEMO_ORG_A_ID,
-          source_entity_name: 'Riverside Youth Athletics',
-          created_at: daysAgo(3),
-          read: false,
-        },
-        {
-          id: 'feed-003',
-          content_type: 'event',
-          content_id: 'event-u12-soccer-tournament-001',
-          source_entity_type: 'org',
-          source_entity_id: DEMO_ORG_A_ID,
-          source_entity_name: 'Riverside Youth Athletics',
-          created_at: daysAgo(5),
-          read: true,
-        },
-        {
-          id: 'feed-004',
-          content_type: 'photo',
-          content_id: 'gallery-summer-camp-2024',
-          source_entity_type: 'org',
-          source_entity_id: DEMO_ORG_B_ID,
-          source_entity_name: 'Lincoln High School',
-          created_at: daysAgo(7),
-          read: true,
-        },
-        {
-          id: 'feed-005',
-          content_type: 'announcement',
-          content_id: 'msg-002',
-          source_entity_type: 'org',
-          source_entity_id: DEMO_ORG_A_ID,
-          source_entity_name: 'Riverside Youth Athletics',
-          created_at: daysAgo(8),
-          read: true,
-        },
-        {
-          id: 'feed-006',
-          content_type: 'event',
-          content_id: 'event-u10-bb-game-001',
-          source_entity_type: 'org',
-          source_entity_id: DEMO_ORG_A_ID,
-          source_entity_name: 'Riverside Youth Athletics',
-          created_at: daysAgo(10),
-          read: true,
-        },
-      ]
+          source_entity_id: orgId,
+          source_entity_name: orgName,
+          source_entity_logo_url: org?.logo_url ?? null,
+          created_at: daysAgo(3 + followIndex),
+          read: followIndex > 0,
+        })
+      })
+
+      fakeFeed.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       debug.perf.end('fanService.getFanFeed')
       debug.data('FanService.getFanFeed', 'Response (fake)', { itemCount: fakeFeed.length })
       return { data: fakeFeed, error: null }
@@ -645,8 +668,32 @@ export async function getFanFeed(): Promise<{ data: FanFeedItem[]; error: Error 
 
     if (error) throw error
 
+    const feedItems = (data || []) as FanFeedItem[]
+    const orgIds = Array.from(
+      new Set(
+        feedItems
+          .filter((item) => item.source_entity_type === 'org')
+          .map((item) => item.source_entity_id),
+      ),
+    )
+
+    let orgLogoById = new Map<string, string | null>()
+    if (orgIds.length > 0) {
+      const followsResult = await getFollowedOrgs()
+      orgLogoById = new Map(
+        (followsResult.data || [])
+          .map((follow) => [follow.org_id, follow.org?.logo_url ?? null]),
+      )
+    }
+
     return {
-      data: (data || []) as FanFeedItem[],
+      data: feedItems.map((item) => ({
+        ...item,
+        source_entity_logo_url:
+          item.source_entity_type === 'org'
+            ? (orgLogoById.get(item.source_entity_id) ?? null)
+            : item.source_entity_logo_url ?? null,
+      })),
       error: null,
     }
   } catch (err) {

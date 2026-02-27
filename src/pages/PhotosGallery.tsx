@@ -45,8 +45,6 @@ import { buildPhotoQuery } from '../utils/buildPhotoQuery'
 import { showError } from '../utils/toast'
 import { getLink } from '../utils/routes'
 import { useI18n } from '../i18n/useI18n'
-import { USE_FAKE_DATA } from '../data/config'
-import { getMockGalleryById, getMockPhotosForGallery } from '../data/fake/mockGalleries'
 
 const GRID_PAGE_SIZE_MOBILE = 30
 const GRID_PAGE_SIZE_DESKTOP = 48
@@ -184,7 +182,7 @@ export default function PhotosGallery() {
 
   const showingLabel = displayPhotos.length === 1 ? t('photos.photo') : t('photos.photos')
   const selectedLabel = selectedPhotos.size === 1 ? t('photos.selection.photo') : t('photos.selection.photos')
-  const canLoadGalleryData = Boolean(id && (isReady || USE_FAKE_DATA))
+  const canLoadGalleryData = Boolean(id && isReady)
 
 
 
@@ -195,20 +193,6 @@ export default function PhotosGallery() {
     debug.perf.start('photosGallery.loadGallery')
 
     setError(null)
-
-    if (USE_FAKE_DATA) {
-      const mockGallery = getMockGalleryById(id)
-      if (!mountedRef.current) return
-      if (mockGallery) {
-        setGallery({ ...mockGallery, can_download: mockGallery.can_download ?? undefined } as Gallery)
-        setCanModerate(true)
-        setCanUpload(true)
-      } else {
-        setGallery(null)
-      }
-      debug.perf.end('photosGallery.loadGallery')
-      return
-    }
 
     const galleryResult = await getGalleryById(context, id)
 
@@ -235,10 +219,6 @@ export default function PhotosGallery() {
 
   const loadAlbums = useCallback(async () => {
     if (!canLoadGalleryData || !id) return
-    if (USE_FAKE_DATA) {
-      setAlbums([])
-      return
-    }
     const { data, error: albumsError } = await getAlbumsForGallery(context, id)
     if (!mountedRef.current) return
     if (albumsError) {
@@ -254,9 +234,6 @@ export default function PhotosGallery() {
   }, [context, canLoadGalleryData, id])
 
   const loadPhotos = useCallback(async (reset: boolean): Promise<GalleryPhoto[] | null> => {
-    // #region agent log
-    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PhotosGallery.tsx:loadPhotos',message:'loadPhotos called',data:{reset,canLoadGalleryData,id,isContextLoading},timestamp:Date.now(),hypothesisId:'H1-H3'})}).catch(()=>{});
-    // #endregion
     if (!canLoadGalleryData || !id) {
       if (reset && !isContextLoading) {
         setLoading(false)
@@ -268,40 +245,18 @@ export default function PhotosGallery() {
     debug.data('PhotosGallery', 'Loading photos', { galleryId: id, reset, filters })
     debug.perf.start(`photosGallery.loadPhotos-${reset ? 'reset' : 'more'}`)
 
-    if (reset && !USE_FAKE_DATA) {
+    if (reset) {
       setLoading(true)
     }
     if (reset) {
       cursorRef.current = null
       setHasMore(true)
-    } else if (!USE_FAKE_DATA) {
+    } else {
       loadingMoreRef.current = true
       setLoadingMore(true)
     }
 
     try {
-      if (USE_FAKE_DATA) {
-        // #region agent log
-        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PhotosGallery.tsx:USE_FAKE_DATA',message:'USE_FAKE_DATA branch',data:{id,mockCount:getMockPhotosForGallery(id).length},timestamp:Date.now(),hypothesisId:'H6'})}).catch(()=>{});
-        // #endregion
-        const mockPhotosDb = getMockPhotosForGallery(id)
-        const mockPhotos = mockPhotosDb.map(
-          (p) => ({ ...p, can_download: p.can_download ?? undefined } as GalleryPhoto),
-        )
-        if (!mountedRef.current) return null
-        if (reset) {
-          setPhotos(mockPhotos)
-        } else {
-          setPhotos((prev) => [...prev, ...mockPhotos])
-        }
-        setHasMore(false)
-        setLoading(false)
-        loadingMoreRef.current = false
-        setLoadingMore(false)
-        debug.perf.end(`photosGallery.loadPhotos-${reset ? 'reset' : 'more'}`)
-        return mockPhotos
-      }
-
       const albumId = filters.album && filters.album !== 'favorites' ? filters.album : undefined
       const statusFilter = canModerate && filters.status !== 'all' ? (filters.status as any) : undefined
 
@@ -319,9 +274,6 @@ export default function PhotosGallery() {
 
       if (!mountedRef.current) return null
 
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PhotosGallery.tsx:afterGetPhotos',message:'getPhotosForGallery returned',data:{photoCount:data?.length,error:photosError?.message},timestamp:Date.now(),hypothesisId:'H5',runId:'post-fix-2'})}).catch(()=>{});
-      // #endregion
       if (photosError) {
         setError(photosError.message)
         return null
@@ -363,9 +315,6 @@ export default function PhotosGallery() {
       debug.error('PhotosGallery', 'Unexpected error while loading photos', { galleryId: id, error: err })
       return null
     } finally {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PhotosGallery.tsx:finally',message:'loadPhotos finally',data:{mounted:mountedRef.current,photoCount:photos.length},timestamp:Date.now(),hypothesisId:'H5',runId:'post-fix-2'})}).catch(()=>{});
-      // #endregion
       if (mountedRef.current) {
         setLoading(false)
         loadingMoreRef.current = false
@@ -381,24 +330,18 @@ export default function PhotosGallery() {
       setError(t('photos.errors.galleryNotFound'))
       return
     }
-    if (!USE_FAKE_DATA && !hasOrganization) {
+    if (!hasOrganization) {
       setError('No organization assigned to your account.')
     }
   }, [canLoadGalleryData, hasOrganization, id, isContextLoading, t])
 
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PhotosGallery.tsx:336',message:'loadGallery effect fired',data:{id,canLoadGalleryData,contextUserId:context?.userId,contextOrgId:context?.orgId},timestamp:Date.now(),hypothesisId:'H1-H2',runId:'post-fix'})}).catch(()=>{});
-    // #endregion
     loadGallery()
     loadAlbums()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, context?.userId, context?.orgId, isReady])
 
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PhotosGallery.tsx:345',message:'loadPhotos effect fired',data:{id,canLoadGalleryData,loading},timestamp:Date.now(),hypothesisId:'H1',runId:'post-fix'})}).catch(()=>{});
-    // #endregion
     loadPhotos(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, context?.userId, context?.orgId, isReady, filters.q, filters.album, filters.athlete, filters.sort, filters.status, filters.from, filters.to, gridPageSize])
@@ -414,9 +357,6 @@ export default function PhotosGallery() {
   })
 
   if (loading) {
-    // #region agent log
-    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PhotosGallery.tsx:skeleton',message:'rendering skeleton',data:{loading,hasGallery:!!gallery,photoCount:photos.length,canLoadGalleryData},timestamp:Date.now(),hypothesisId:'H6'})}).catch(()=>{});
-    // #endregion
     return (
       <PortalLayout
         breadcrumbs={[

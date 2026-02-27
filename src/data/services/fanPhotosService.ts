@@ -9,6 +9,8 @@ import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
 import { getMockGalleriesForOrg } from '../fake/mockGalleries'
+import { getFollowedOrgs as getFakeFollowedOrgs } from '../fake/fanFakeService'
+import { fakeOrganizations } from '../fake/fakeOrganizations'
 import { getGalleriesForUser, getGalleryById, getPhotosForGallery, type Gallery, type GalleryPhoto, type GetPhotosParams, type KeysetCursor } from './galleryService'
 import type { UserContext } from '../fake/userContext'
 
@@ -50,8 +52,17 @@ export async function getFanGalleries(
                 isPlatformAdmin: false,
             }
 
-            const fallbackOrgIds = Array.from(new Set(getMockGalleriesForOrg().map((gallery) => gallery.org_id)))
-            const orgIds = options?.org_ids && options.org_ids.length > 0 ? options.org_ids : fallbackOrgIds
+            const followsResult = await getFakeFollowedOrgs()
+            const followedOrgIds = Array.from(new Set((followsResult.data || []).map((follow) => follow.org_id)))
+            const fallbackOrgIds = followedOrgIds.length > 0
+                ? followedOrgIds
+                : Array.from(new Set(fakeOrganizations.slice(0, 2).map((org) => org.id)))
+
+            const orgIds = options?.org_ids && options.org_ids.length > 0
+                ? options.org_ids
+                : fallbackOrgIds.length > 0
+                    ? fallbackOrgIds
+                    : Array.from(new Set(getMockGalleriesForOrg().map((gallery) => gallery.org_id)))
 
             const { data: allGalleries, error } = await getGalleriesForUser(context, {
                 org_ids: orgIds.length > 0 ? orgIds : undefined,

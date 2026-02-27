@@ -610,7 +610,16 @@ function EventCard({ event, compact = false, onClick }: EventCardProps) {
         </div>
 
         {event.org_name && !compact && (
-          <span className="fan-event-card-org">{event.org_name}</span>
+          <span className="fan-event-card-org">
+            <span className="fan-event-card-org-avatar">
+              {event.org_logo_url ? (
+                <img src={event.org_logo_url} alt={event.org_name} />
+              ) : (
+                <span className="material-symbols-outlined">business</span>
+              )}
+            </span>
+            {event.org_name}
+          </span>
         )}
       </div>
 

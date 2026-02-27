@@ -225,10 +225,10 @@ export default function FanAthleteProfile() {
   const fullName = `${profile.first_name} ${profile.last_name}`
 
   return (
-    <>
+    <div className="fan-athlete-profile-page">
       {/* Back Button */}
       <button 
-        className="fan-back-btn"
+        className="fan-athlete-back-btn"
         onClick={() => navigate(-1)}
       >
         <span className="material-symbols-outlined">arrow_back</span>
@@ -236,7 +236,7 @@ export default function FanAthleteProfile() {
       </button>
 
       {/* Athlete Header */}
-      <div className="fan-entity-header fan-athlete-header">
+      <div className="fan-entity-header fan-athlete-header fan-athlete-hero-card">
         <div className="fan-entity-cover">
           {profile.cover_url ? (
             <img src={profile.cover_url} alt="" />
@@ -245,7 +245,7 @@ export default function FanAthleteProfile() {
           )}
         </div>
         
-        <div className="fan-entity-info">
+        <div className="fan-entity-info fan-athlete-hero-content">
           <div className="fan-athlete-photo-large">
             <AthleteAvatar
               athlete={{ id: profile.id, first_name: profile.first_name, last_name: profile.last_name, org_id: profile.org_id ?? context?.orgId, has_profile_photo: !!profile.photo_url, profile_photo_updated_at: null } as unknown as Athlete}
@@ -257,9 +257,9 @@ export default function FanAthleteProfile() {
             )}
           </div>
           
-          <div className="fan-entity-details">
+          <div className="fan-entity-details fan-athlete-identity">
             <h1 className="fan-entity-name">{fullName}</h1>
-            <div className="fan-athlete-team-info">
+            <div className="fan-athlete-team-info fan-athlete-location-row">
               <button 
                 className="fan-entity-parent"
                 onClick={() => navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { teamId: profile.team_id }))}
@@ -275,32 +275,33 @@ export default function FanAthleteProfile() {
                 {profile.org_name}
               </button>
             </div>
-            <div className="fan-entity-tags">
+            <div className="fan-entity-tags fan-athlete-tags">
               {profile.sport && <span className="fan-entity-tag">{profile.sport}</span>}
               {profile.position && <span className="fan-entity-tag">{profile.position}</span>}
               {profile.graduation_year && <span className="fan-entity-tag">Class of {profile.graduation_year}</span>}
             </div>
+            <div className="fan-athlete-action-row">
+              <button 
+                className={`fan-follow-btn fan-athlete-follow-btn ${isFollowing ? 'following' : 'not-following'}`}
+                onClick={handleFollowToggle}
+                disabled={followLoading}
+              >
+                {followLoading ? (
+                  <LoadingSpinner size="small" />
+                ) : isFollowing ? (
+                  <>
+                    <span className="material-symbols-outlined">check</span>
+                    Following
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined">add</span>
+                    Follow
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-          
-          <button 
-            className={`fan-follow-btn ${isFollowing ? 'following' : ''}`}
-            onClick={handleFollowToggle}
-            disabled={followLoading}
-          >
-            {followLoading ? (
-              <LoadingSpinner size="small" />
-            ) : isFollowing ? (
-              <>
-                <span className="material-symbols-outlined">check</span>
-                Following
-              </>
-            ) : (
-              <>
-                <span className="material-symbols-outlined">add</span>
-                Follow
-              </>
-            )}
-          </button>
         </div>
       </div>
 
@@ -467,6 +468,6 @@ export default function FanAthleteProfile() {
           </div>
         )}
       </section>
-    </>
+    </div>
   )
 }

@@ -235,20 +235,14 @@ const formatTimezoneDisplay = (timeZone: string | null | undefined, referenceDat
   if (Number.isNaN(parsedDate.getTime())) return timeZone
 
   try {
-    const longParts = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      timeZoneName: 'long',
-    }).formatToParts(parsedDate)
     const shortParts = new Intl.DateTimeFormat('en-US', {
       timeZone,
       timeZoneName: 'short',
     }).formatToParts(parsedDate)
 
-    const longName = longParts.find(part => part.type === 'timeZoneName')?.value
     const shortName = shortParts.find(part => part.type === 'timeZoneName')?.value
 
-    if (longName && shortName) return `${longName} (${shortName})`
-    return longName || shortName || timeZone
+    return shortName || timeZone
   } catch {
     return timeZone
   }
@@ -584,12 +578,13 @@ export default function FanEventDetail() {
   // Format time
   const formatEventTime = (dateStr: string): string => {
     const date = new Date(dateStr)
+    const tz = formatTimezoneDisplay(event?.timezone, dateStr)
     return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
       ...(event?.timezone ? { timeZone: event.timezone } : {}),
-    })
+    }) + (tz ? ` ${tz}` : '')
   }
 
   // Get full address
@@ -691,8 +686,6 @@ export default function FanEventDetail() {
 
   const status = getEventStatus()
   const fullAddress = getFullAddress()
-  const timezoneLabel = formatTimezoneDisplay(event.timezone, event.start_time)
-
   return (
     <div className="fan-event-detail">
       {/* Breadcrumb */}
@@ -749,12 +742,6 @@ export default function FanEventDetail() {
                   {event.end_time && ` - ${formatEventTime(event.end_time)}`}
                 </span>
               </div>
-              {timezoneLabel && (
-                <div className="fan-event-meta-item">
-                  <span className="material-symbols-outlined">public</span>
-                  <span>{timezoneLabel}</span>
-                </div>
-              )}
               {(event.venue_name || event.location) && (
                 <div className="fan-event-meta-item">
                   <span className="material-symbols-outlined">location_on</span>
