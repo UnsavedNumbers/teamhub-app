@@ -45,8 +45,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Schema preflight contract
-        run: npm run schema:preflight-contract
+      - name: Install dependencies
+        run: npm ci
 
       - uses: supabase/setup-cli@v1
         with:
@@ -75,6 +75,14 @@ jobs:
       # Make the local DB state deterministic for lint/tests
       - name: Reset local DB (reapply migrations)
         run: supabase db reset
+
+      - name: Schema preflight contract
+        env:
+          PREFLIGHT_STRICT: "true"
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          STRIPE_SECRET_KEY: ci_preflight_dummy_key
+          STRIPE_WEBHOOK_SECRET: ci_preflight_dummy_webhook
+        run: npm run schema:preflight-contract
 
       - name: Lint database
         run: supabase db lint

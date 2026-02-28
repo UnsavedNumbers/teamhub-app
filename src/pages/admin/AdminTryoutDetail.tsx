@@ -1,109 +1,286 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
-import { getTryoutById, getAdminTryoutRegistrations } from '../../data/services/tryoutsService'
-import type { Tryout, TryoutRegistration } from '../../data/services/tryoutsService'
-import { 
-  AdminPageHeader,
-  Card, 
-  Badge,
-} from '../../components/admin'
+import { useT } from '../../i18n/useI18n'
+import type { TranslationKey } from '../../i18n'
+import {
+  getAdminTryoutRegistrations,
+  getTryoutById,
+  getTryoutEvaluations,
+  getTryoutEvaluators,
+  type Tryout,
+  type TryoutEvaluation,
+  type TryoutEvaluator,
+  type TryoutRegistration,
+} from '../../data/services/tryoutsService'
+import { AdminPageHeader, Badge, Button, Card } from '../../components/admin'
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import '../../styles/orgAdmin.css'
 
+type DetailTab = 'overview' | 'registrations' | 'evaluators' | 'evaluations' | 'results'
+
+const DETAIL_TABS: DetailTab[] = ['overview', 'registrations', 'evaluators', 'evaluations', 'results']
+
 export default function AdminTryoutDetail() {
   const { tryoutId } = useParams<{ tryoutId: string }>()
-  const [tryout, setTryout] = useState<Tryout | null>(null)
-  const [registrations, setRegistrations] = useState<TryoutRegistration[]>([])
-  const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(10)
-  
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const t = useT()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const [tryout, setTryout] = useState<Tryout | null>(null)
+  const [registrations, setRegistrations] = useState<TryoutRegistration[]>([])
+  const [evaluators, setEvaluators] = useState<TryoutEvaluator[]>([])
+  const [evaluations, setEvaluations] = useState<TryoutEvaluation[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
+
+  const activeTab = (searchParams.get('tab') as DetailTab | null) ?? 'overview'
 
   const fetchData = useCallback(async () => {
     if (!isReady || !tryoutId) return
     setLoading(true)
-    const [tRes, rRes] = await Promise.all([
+    setError(null)
+
+    const [tryoutResponse, registrationsResponse, evaluatorsResponse, evaluationsResponse] = await Promise.all([
       getTryoutById(context, tryoutId),
-      getAdminTryoutRegistrations(context, tryoutId)
+      getAdminTryoutRegistrations(context, tryoutId),
+      getTryoutEvaluators(context, tryoutId),
+      getTryoutEvaluations(context, tryoutId),
     ])
-    if (!tRes.data) {
-      navigate('/admin/tryouts')
+
+    if (tryoutResponse.error || !tryoutResponse.data) {
+      setError(tryoutResponse.error?.message ?? t('common.error.notFound'))
+      setLoading(false)
       return
     }
-    setTryout(tRes.data)
-    setRegistrations(rRes.data)
+
+    setTryout(tryoutResponse.data)
+    setRegistrations(registrationsResponse.data ?? [])
+    setEvaluators(evaluatorsResponse.data ?? [])
+    setEvaluations(evaluationsResponse.data ?? [])
+
+    const firstError = registrationsResponse.error ?? evaluatorsResponse.error ?? evaluationsResponse.error
+    if (firstError) setError(firstError.message)
+
     setLoading(false)
-  }, [context, isReady, tryoutId, navigate])
+  }, [context, isReady, t, tryoutId])
 
   useEffect(() => {
-    if (isReady && tryoutId) fetchData()
-  }, [isReady, tryoutId, fetchData])
+    void fetchData()
+  }, [fetchData])
 
   const columns: ColumnConfig<TryoutRegistration>[] = [
-    { id: 'child', label: 'Athlete', render: (row) => row.child ? `${row.child.first_name} ${row.child.last_name}` : 'Unknown' },
-    { id: 'status', label: 'Status', render: (row) => <Badge variant="neutral">{row.status.toUpperCase()}</Badge> },
-    { id: 'notes', label: 'Notes', render: (row) => row.notes || '—' }
+    {
+      id: 'child',
+      label: t('admin.tryouts.registrations.columns.athlete' as TranslationKey),
+      render: (row: TryoutRegistration) => row.child ? `${row.child.first_name} ${row.child.last_name}` : t('common.unknown'),
+    },
+    {
+      id: 'status',
+      label: t('admin.tryouts.registrations.columns.status' as TranslationKey),
+      render: (row: TryoutRegistration) => <Badge variant="neutral">{t(`admin.tryouts.registrations.statuses.${row.status}` as TranslationKey)}</Badge>,
+    },
+    {
+      id: 'notes',
+      label: t('admin.tryouts.registrations.columns.notes' as TranslationKey),
+      render: (row: TryoutRegistration) => row.notes || t('common.table.emptyValue'),
+    },
   ]
+
+  const completionRate = useMemo(() => {
+    if (registrations.length === 0) return 0
+    const evaluatedRegistrationIds = new Set(evaluations.map((item) => item.registration_id))
+    const completed = registrations.filter((registration) => evaluatedRegistrationIds.has(registration.id)).length
+    return Math.round((completed / registrations.length) * 100)
+  }, [evaluations, registrations])
+
+  const setActiveTab = (tab: DetailTab) => {
+    if (!DETAIL_TABS.includes(tab)) return
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      if (tab === 'overview') {
+        next.delete('tab')
+      } else {
+        next.set('tab', tab)
+      }
+      return next
+    })
+  }
 
   if (loading) {
     return (
       <div className="oa-root">
-        <div style={{ padding: '24px' }}>
-          <div className="oa-skeleton" style={{ height: '60px', marginBottom: '24px' }} />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="oa-skeleton" style={{ height: '120px' }} />
-            ))}
-          </div>
-          <div className="oa-skeleton" style={{ height: '400px', borderRadius: '8px' }} />
-        </div>
+        <div className="oa-skeleton" style={{ height: '60px', marginBottom: '20px' }} />
+        <div className="oa-skeleton" style={{ height: '300px' }} />
+      </div>
+    )
+  }
+
+  if (!tryout) {
+    return (
+      <div className="oa-root">
+        <Card className="oa-text-danger">{error || t('common.error.notFound')}</Card>
       </div>
     )
   }
 
   return (
     <div className="oa-root">
-      <AdminPageHeader 
-        title={tryout?.title || 'Tryout Details'} 
+      <AdminPageHeader
+        title={tryout.title}
         breadcrumbs={[
-          { label: 'Tryouts', path: '/admin/tryouts' },
-          { label: tryout?.title || '' }
+          { label: t('admin.tryouts.title'), path: '/admin/tryouts' },
+          { label: tryout.title },
         ]}
+        actions={
+          <div className="oa-flex oa-gap-2">
+            <Button variant="ghost" onClick={() => navigate('/admin/tryouts')}>
+              {t('common.back')}
+            </Button>
+            <Button variant="secondary" onClick={() => navigate(`/admin/tryouts/${tryout.id}/registrations`)}>
+              {t('admin.tryouts.registrations.title' as TranslationKey)}
+            </Button>
+          </div>
+        }
       />
-      
-      <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-2 lg:oa-grid-cols-3 oa-gap-4 oa-mb-6">
+
+      {error && <Card className="oa-text-danger oa-mb-4">{error}</Card>}
+
+      <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-2 lg:oa-grid-cols-4 oa-gap-4 oa-mb-6">
         <Card>
-          <div className="oa-stat-label">Date</div>
-          <div className="oa-stat-value">{new Date(tryout?.tryout_date || '').toLocaleDateString()}</div>
+          <div className="oa-stat-label">{t('admin.tryouts.detail.stats.date' as TranslationKey)}</div>
+          <div className="oa-stat-value">{tryout.tryout_date ?? t('common.tbd')}</div>
         </Card>
         <Card>
-          <div className="oa-stat-label">Registrations</div>
+          <div className="oa-stat-label">{t('admin.tryouts.detail.stats.registrations' as TranslationKey)}</div>
           <div className="oa-stat-value">{registrations.length}</div>
         </Card>
         <Card>
-          <div className="oa-stat-label">Status</div>
-          <div className="oa-stat-value">{tryout?.status.toUpperCase()}</div>
+          <div className="oa-stat-label">{t('admin.tryouts.detail.stats.evaluators' as TranslationKey)}</div>
+          <div className="oa-stat-value">{evaluators.length}</div>
+        </Card>
+        <Card>
+          <div className="oa-stat-label">{t('admin.tryouts.detail.stats.completion' as TranslationKey)}</div>
+          <div className="oa-stat-value">{completionRate}%</div>
         </Card>
       </div>
 
-      <Card>
-        <h3 className="oa-h3 oa-mb-4">Registrations</h3>
-        <OrgDataTable
-          columns={columns}
-          rows={registrations}
-          loading={loading}
-          emptyMessage="No registrations yet."
-          page={page}
-          rowsPerPage={rowsPerPage}
-          totalCount={registrations.length}
-          onPageChange={setPage}
-          onRowsPerPageChange={setRowsPerPage}
-        />
-      </Card>
+      <div className="oa-segmented oa-mb-4" role="tablist" aria-label={t('admin.tryouts.detail.tabs.ariaLabel' as TranslationKey)}>
+        {DETAIL_TABS.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
+            className={`oa-segmented-item ${activeTab === tab ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {t(`admin.tryouts.detail.tabs.${tab}` as TranslationKey)}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'overview' && (
+        <Card>
+          <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-2 oa-gap-4">
+            <div>
+              <p className="oa-label">{t('portal.tryouts.detail.fields.location' as TranslationKey)}</p>
+              <p className="oa-body-m">{tryout.location ?? t('common.tbd')}</p>
+            </div>
+            <div>
+              <p className="oa-label">{t('portal.tryouts.detail.fields.fee' as TranslationKey)}</p>
+              <p className="oa-body-m">${((tryout.entry_fee || 0) / 100).toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="oa-label">{t('portal.tryouts.detail.fields.ageGroup' as TranslationKey)}</p>
+              <p className="oa-body-m">{tryout.age_group}</p>
+            </div>
+            <div>
+              <p className="oa-label">{t('admin.tryouts.registrations.columns.status' as TranslationKey)}</p>
+              <p className="oa-body-m">{t(`admin.tryouts.status.${tryout.status}` as TranslationKey)}</p>
+            </div>
+          </div>
+          <div className="oa-mt-4">
+            <p className="oa-label">{t('portal.tryouts.detail.descriptionTitle' as TranslationKey)}</p>
+            <p className="oa-body-m">{tryout.description || t('portal.tryouts.detail.defaultDescription' as TranslationKey)}</p>
+          </div>
+        </Card>
+      )}
+
+      {activeTab === 'registrations' && (
+        <Card>
+          <OrgDataTable
+            columns={columns}
+            rows={registrations}
+            loading={loading}
+            emptyMessage={t('admin.tryouts.registrations.empty' as TranslationKey)}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            totalCount={registrations.length}
+            onPageChange={setPage}
+            onRowsPerPageChange={setRowsPerPage}
+          />
+        </Card>
+      )}
+
+      {activeTab === 'evaluators' && (
+        <Card>
+          <div className="oa-flex oa-justify-between oa-items-center oa-mb-3">
+            <h3 className="oa-h3">{t('admin.tryouts.evaluators.assignedTitle' as TranslationKey)}</h3>
+            <Button variant="secondary" onClick={() => navigate(`/admin/tryouts/${tryout.id}/evaluators`)}>
+              {t('admin.tryouts.evaluators.manage' as TranslationKey)}
+            </Button>
+          </div>
+          {evaluators.length === 0 ? (
+            <p className="oa-body-m oa-text-muted">{t('admin.tryouts.evaluators.empty' as TranslationKey)}</p>
+          ) : (
+            <div className="oa-flex oa-flex-col oa-gap-2">
+              {evaluators.map((evaluator) => (
+                <div key={evaluator.id} className="oa-card oa-flex oa-justify-between">
+                  <span>{evaluator.coach ? `${evaluator.coach.first_name} ${evaluator.coach.last_name}` : evaluator.coach_id}</span>
+                  <Badge variant="info">{t('admin.tryouts.evaluators.assignedBadge' as TranslationKey)}</Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {activeTab === 'evaluations' && (
+        <Card>
+          <div className="oa-flex oa-justify-between oa-items-center oa-mb-3">
+            <h3 className="oa-h3">{t('admin.tryouts.evaluation.title' as TranslationKey)}</h3>
+            <Button variant="secondary" onClick={() => navigate(`/admin/tryouts/${tryout.id}/evaluation`)}>
+              {t('admin.tryouts.evaluation.actions.open' as TranslationKey)}
+            </Button>
+          </div>
+          <p className="oa-body-m">
+            {t('admin.tryouts.detail.evaluationSummary' as TranslationKey, {
+              completed: evaluations.length,
+              total: registrations.length,
+            })}
+          </p>
+        </Card>
+      )}
+
+      {activeTab === 'results' && (
+        <Card>
+          <h3 className="oa-h3 oa-mb-3">{t('admin.tryouts.detail.resultsTitle' as TranslationKey)}</h3>
+          <p className="oa-body-m oa-mb-4">{t('admin.tryouts.detail.resultsBody' as TranslationKey)}</p>
+          <div className="oa-flex oa-gap-2">
+            <Button variant="secondary" onClick={() => navigate(`/admin/tryouts/${tryout.id}/evaluation`)}>
+              {t('admin.tryouts.evaluation.actions.open' as TranslationKey)}
+            </Button>
+            <Button variant="secondary" onClick={() => navigate('/portal/tryouts/registrations')}>
+              {t('portal.tryouts.registrations.title' as TranslationKey)}
+            </Button>
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

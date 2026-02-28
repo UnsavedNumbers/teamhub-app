@@ -199,6 +199,11 @@ const portal = {
         label: 'Tryout Details',
         icon: 'emoji_events',
     },
+    tryoutRegistrations: {
+        path: '/portal/tryouts/registrations',
+        label: 'My Tryout Registrations',
+        icon: 'assignment',
+    },
 
     // Uniforms
     uniforms: {
@@ -1277,6 +1282,13 @@ const admin = {
             description: 'Registration and evaluation',
             requiresOrg: true,
         },
+        assigned: {
+            path: '/admin/tryouts/assigned',
+            label: 'My Tryouts',
+            icon: 'assignment_ind',
+            description: 'Assigned evaluator tryouts',
+            requiresOrg: true,
+        },
         create: {
             path: '/admin/tryouts/new',
             label: 'Create Tryout',
@@ -1288,6 +1300,27 @@ const admin = {
             params: ['tryoutId'] as const,
             label: 'Tryout Details',
             icon: 'emoji_events',
+            requiresOrg: true,
+        },
+        registrations: {
+            path: '/admin/tryouts/:tryoutId/registrations',
+            params: ['tryoutId'] as const,
+            label: 'Tryout Registrations',
+            icon: 'groups',
+            requiresOrg: true,
+        },
+        evaluators: {
+            path: '/admin/tryouts/:tryoutId/evaluators',
+            params: ['tryoutId'] as const,
+            label: 'Tryout Evaluators',
+            icon: 'badge',
+            requiresOrg: true,
+        },
+        evaluation: {
+            path: '/admin/tryouts/:tryoutId/evaluation',
+            params: ['tryoutId'] as const,
+            label: 'Tryout Evaluation',
+            icon: 'fact_check',
             requiresOrg: true,
         },
     },

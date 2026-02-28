@@ -8,11 +8,12 @@ const mockContext = {
   permissions: {},
 } as never
 
-const { state, createChain, mockFrom } = vi.hoisted(() => {
+const { state, mockFrom } = vi.hoisted(() => {
   const state = { chainResult: { data: [] as unknown, error: null as unknown } }
   function createChain(res: { data: unknown; error: unknown }) {
     const c = {
       eq: () => c,
+      in: () => c,
       order: () => c,
       then: (fn: (val: unknown) => unknown) => Promise.resolve(res).then(fn),
     }
@@ -21,7 +22,7 @@ const { state, createChain, mockFrom } = vi.hoisted(() => {
   const mockFrom = vi.fn(() => ({
     select: vi.fn(() => createChain(state.chainResult)),
   }))
-  return { state, createChain, mockFrom }
+  return { state, mockFrom }
 })
 
 vi.mock('@/lib/supabase', () => ({

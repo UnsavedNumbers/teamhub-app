@@ -1,32 +1,63 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
-import { getTryoutById } from '../data/services/tryoutsService'
-import type { Tryout } from '../data/services/tryoutsService'
+import { useT } from '../i18n/useI18n'
+import type { TranslationKey } from '../i18n'
+import { getTryoutById, getTryoutSessions, type Tryout, type TryoutSession } from '../data/services/tryoutsService'
 import PortalLayout from '../components/portal/PortalLayout'
 import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
+import TryoutRegistrationForm from '../components/tryouts/TryoutRegistrationForm'
+
+function formatDate(dateValue: string | null, fallback: string): string {
+  if (!dateValue) return fallback
+  return new Date(dateValue).toLocaleDateString()
+}
 
 export default function TryoutDetail() {
   const { tryoutId } = useParams<{ tryoutId: string }>()
-  const [loading, setLoading] = useState(true)
-  const [tryout, setTryout] = useState<Tryout | null>(null)
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const t = useT()
+
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
+  const [tryout, setTryout] = useState<Tryout | null>(null)
+  const [sessions, setSessions] = useState<TryoutSession[]>([])
 
   const fetchData = useCallback(async () => {
     if (!isReady || !tryoutId) return
     setLoading(true)
-    const { data } = await getTryoutById(context, tryoutId)
-    setTryout(data)
+    setError(null)
+
+    const [tryoutResponse, sessionsResponse] = await Promise.all([
+      getTryoutById(context, tryoutId),
+      getTryoutSessions(context, tryoutId),
+    ])
+
+    if (tryoutResponse.error || !tryoutResponse.data) {
+      setError(tryoutResponse.error?.message ?? t('common.error.notFound'))
+      setTryout(null)
+      setSessions([])
+      setLoading(false)
+      return
+    }
+
+    setTryout(tryoutResponse.data)
+    if (sessionsResponse.error) {
+      setError(sessionsResponse.error.message)
+      setSessions([])
+    } else {
+      setSessions(sessionsResponse.data ?? [])
+    }
     setLoading(false)
-  }, [context, isReady, tryoutId])
+  }, [context, isReady, t, tryoutId])
 
   useEffect(() => {
-    if (isReady) fetchData()
-  }, [isReady, fetchData])
+    void fetchData()
+  }, [fetchData])
 
   if (loading) {
     return (
@@ -47,9 +78,9 @@ export default function TryoutDetail() {
         <PortalHeader />
         <PortalLayout>
           <Card className="text-center py-12">
-            <CardTitle>Tryout not found</CardTitle>
+            <CardTitle>{error || t('common.error.notFound')}</CardTitle>
             <Button variant="primary" onClick={() => navigate('/portal/tryouts')} className="mt-4">
-              Back to Tryouts
+              {t('common.back')}
             </Button>
           </Card>
         </PortalLayout>
@@ -58,46 +89,84 @@ export default function TryoutDetail() {
   }
 
   return (
-      <PortalLayout
-        breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Tryouts', path: '/portal/tryouts' },
-          { label: tryout.title },
-        ]}
-      >
-        <div className="mb-12">
-          <PageTitle>{tryout.title}</PageTitle>
-        </div>
+    <PortalLayout
+      breadcrumbs={[
+        { label: t('common.home'), path: '/portal/dashboard' },
+        { label: t('admin.tryouts.title'), path: '/portal/tryouts' },
+        { label: tryout.title },
+      ]}
+    >
+      <div className="mb-10">
+        <PageTitle>{tryout.title}</PageTitle>
+      </div>
 
-        <Card className="p-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+      {error && (
+        <Card className="mb-4 border border-amber-200 text-amber-800 dark:border-amber-800/50 dark:text-amber-300">
+          {error}
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <Card className="p-6 xl:col-span-2">
+          <h3 className="text-lg font-black mb-4">{t('portal.tryouts.detail.infoTitle' as TranslationKey)}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <h3 className="text-lg font-bold mb-4">Details</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-bold uppercase text-slate-400">Date</label>
-                  <p className="font-bold">{new Date(tryout.tryout_date || '').toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-bold uppercase text-slate-400">Location</label>
-                  <p className="font-bold">{tryout.location}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-bold uppercase text-slate-400">Age Group</label>
-                  <p className="font-bold">{tryout.age_group}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-bold uppercase text-slate-400">Entry Fee</label>
-                  <p className="font-bold">${((tryout.entry_fee || 0)/100).toFixed(2)}</p>
-                </div>
-              </div>
+              <label className="text-xs font-bold uppercase text-slate-400">{t('common.date')}</label>
+              <p className="font-bold">{formatDate(tryout.tryout_date, t('common.tbd'))}</p>
             </div>
             <div>
-              <h3 className="text-lg font-bold mb-4">Description</h3>
-              <p className="text-slate-600 dark:text-slate-300">{tryout.description || 'No description provided.'}</p>
+              <label className="text-xs font-bold uppercase text-slate-400">{t('portal.tryouts.detail.fields.time' as TranslationKey)}</label>
+              <p className="font-bold">{tryout.start_time ?? t('common.tbd')}</p>
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase text-slate-400">{t('portal.tryouts.detail.fields.location' as TranslationKey)}</label>
+              <p className="font-bold">{tryout.location ?? t('common.tbd')}</p>
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase text-slate-400">{t('portal.tryouts.detail.fields.ageGroup' as TranslationKey)}</label>
+              <p className="font-bold">{tryout.age_group}</p>
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase text-slate-400">{t('portal.tryouts.detail.fields.fee' as TranslationKey)}</label>
+              <p className="font-bold">${((tryout.entry_fee || 0) / 100).toFixed(2)}</p>
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase text-slate-400">{t('admin.tryouts.registrations.columns.status' as TranslationKey)}</label>
+              <p className="font-bold">{t(`admin.tryouts.status.${tryout.status}` as TranslationKey)}</p>
             </div>
           </div>
+
+          <div className="mt-6">
+            <h4 className="text-sm font-black uppercase tracking-wide text-slate-400 mb-2">
+              {t('portal.tryouts.detail.descriptionTitle' as TranslationKey)}
+            </h4>
+            <p className="text-slate-600 dark:text-slate-300">
+              {tryout.description || t('portal.tryouts.detail.defaultDescription' as TranslationKey)}
+            </p>
+          </div>
+
+          {sessions.length > 0 && (
+            <div className="mt-6">
+              <h4 className="text-sm font-black uppercase tracking-wide text-slate-400 mb-2">
+                {t('portal.tryouts.detail.sessionsTitle' as TranslationKey)}
+              </h4>
+              <div className="space-y-2">
+                {sessions.map((session) => (
+                  <div key={session.id} className="rounded-lg bg-slate-50 dark:bg-slate-800/60 p-3 text-sm">
+                    <p className="font-bold">{session.session_date} {session.start_time}</p>
+                    <p className="text-slate-500 dark:text-slate-400">{session.location || t('common.unknown')}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </Card>
-      </PortalLayout>
+
+        <Card className="p-6">
+          <h3 className="text-lg font-black mb-4">{t('portal.tryouts.form.title' as TranslationKey)}</h3>
+          <TryoutRegistrationForm tryout={tryout} onRegistered={fetchData} />
+        </Card>
+      </div>
+    </PortalLayout>
   )
 }

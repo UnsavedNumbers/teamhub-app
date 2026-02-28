@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { useUserContext } from '../hooks/useUserContext'
 import { useOrganization } from '../contexts/OrganizationContext'
@@ -32,10 +33,13 @@ export default function Tryouts() {
   const [selectedChild, setSelectedChild] = useState('')
   const [registrationContact, setRegistrationContact] = useState<{ name: string; email: string; phone?: string | null } | null>(null)
   const [statusActioningId, setStatusActioningId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [ageFilter, setAgeFilter] = useState<'all' | string>('all')
 
 
   const { context, isReady } = useUserContext()
   const { currentOrganization } = useOrganization()
+  const navigate = useNavigate()
 
   const fetchData = useCallback(async () => {
     if (!isReady || !currentOrganization) return
@@ -47,8 +51,8 @@ export default function Tryouts() {
       getAthletes(context)
     ])
 
-    setTryouts(tryoutsRes.data)
-    setRegistrations(regsRes.data)
+    setTryouts(tryoutsRes.data ?? [])
+    setRegistrations(regsRes.data ?? [])
     setChildren(childrenRes.data.map(c => ({ id: c.id, first_name: c.first_name, last_name: c.last_name })))
 
     // Fetch registration contact
@@ -124,6 +128,16 @@ export default function Tryouts() {
   function isRegistered(tryoutId: string) {
     return registrations.some(r => r.tryout_id === tryoutId)
   }
+
+  const filteredTryouts = tryouts.filter((tryout) => {
+    const normalizedSearch = search.trim().toLowerCase()
+    if (normalizedSearch.length > 0) {
+      const haystack = `${tryout.title} ${tryout.location ?? ''} ${tryout.age_group ?? ''}`.toLowerCase()
+      if (!haystack.includes(normalizedSearch)) return false
+    }
+    if (ageFilter !== 'all' && tryout.age_group !== ageFilter) return false
+    return true
+  })
 
   function getStatusMeta(status: TryoutRegistration['status']) {
     if (status === 'registered') return { label: 'Registered', tone: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' }
@@ -238,7 +252,33 @@ export default function Tryouts() {
             )}
 
             <SectionHeader className="mb-4 sm:mb-6">Upcoming Tryouts</SectionHeader>
-            {tryouts.length === 0 ? (
+            <Card className="p-4 sm:p-5 mb-4 sm:mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="form-label">Search</label>
+                  <input
+                    className="form-input"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search by title or location"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Age Group</label>
+                  <select
+                    className="form-select"
+                    value={ageFilter}
+                    onChange={(event) => setAgeFilter(event.target.value)}
+                  >
+                    <option value="all">All</option>
+                    {Array.from(new Set(tryouts.map((item) => item.age_group))).filter(Boolean).map((group) => (
+                      <option key={group} value={group}>{group}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </Card>
+            {filteredTryouts.length === 0 ? (
               <Card className="text-center py-8 sm:py-12">
                 <Icon name="sports_soccer" size="text-5xl sm:text-6xl" className="text-slate-400 mb-4" />
                 <CardTitle className="mb-2">No upcoming tryouts</CardTitle>
@@ -246,7 +286,7 @@ export default function Tryouts() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                {tryouts.map((tryout) => (
+                {filteredTryouts.map((tryout) => (
                   <Card key={tryout.id} className="overflow-hidden hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300">
                     <div className="h-24 sm:h-32 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
                       <Icon name="sports_soccer" size="text-4xl sm:text-5xl" className="text-slate-400" />
@@ -277,6 +317,13 @@ export default function Tryouts() {
                         className="w-full"
                       >
                         {isRegistered(tryout.id) ? 'Registered' : 'Register Now'}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        className="w-full mt-2"
+                        onClick={() => navigate(`/portal/tryouts/${tryout.id}`)}
+                      >
+                        View Details
                       </Button>
                     </div>
                   </Card>

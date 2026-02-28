@@ -429,6 +429,9 @@ export function getAllowedMenuItems(
       'admin.notifications',
       'admin.teams.list', // Can view teams they're assigned to
       'admin.athletes.list', // Can view athletes on their teams
+      'admin.tryouts.assigned',
+      'admin.tryouts.detail',
+      'admin.tryouts.evaluation',
     )
   }
 
@@ -453,6 +456,7 @@ export function getAllowedMenuItems(
       'portal.uniforms',
       'portal.travel',
       'portal.tryouts',
+      'portal.tryoutRegistrations',
       'portal.messages',
       'portal.photos',
       'portal.videos',

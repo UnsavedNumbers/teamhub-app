@@ -105,6 +105,7 @@ const BookmarkedEvents = lazy(() => import('./pages/portal/BookmarkedEvents'))
 const PortalContactPage = lazy(() => import('./pages/portal/ContactPage'))
 const ContactOrgAdminPage = lazy(() => import('./pages/portal/ContactOrgAdminPage'))
 const RegistrationHub = lazy(() => import('./pages/portal/RegistrationHub'))
+const TryoutRegistrations = lazy(() => import('./pages/portal/TryoutRegistrations'))
 
 // Fan Pages - Lazy loaded
 const FanHome = lazy(() => import('./pages/fan/FanHome'))
@@ -262,6 +263,10 @@ const EditTravelPlan = lazy(() => import('./pages/admin/EditTravelPlan'))
 const AdminTryouts = lazy(() => import('./pages/admin/AdminTryouts'))
 const AdminTryoutDetail = lazy(() => import('./pages/admin/AdminTryoutDetail'))
 const CreateTryout = lazy(() => import('./pages/admin/CreateTryout'))
+const AdminTryoutRegistrations = lazy(() => import('./pages/admin/AdminTryoutRegistrations'))
+const AdminTryoutEvaluators = lazy(() => import('./pages/admin/AdminTryoutEvaluators'))
+const CoachTryouts = lazy(() => import('./pages/admin/CoachTryouts'))
+const TryoutEvaluation = lazy(() => import('./pages/admin/TryoutEvaluation'))
 const AdminPhotosLayout = lazy(() => import('./pages/admin/photos/AdminPhotosLayout').then(m => ({ default: m.AdminPhotosLayout })))
 const PhotosDashboardView = lazy(() => import('./pages/admin/photos/PhotosDashboardView').then(m => ({ default: m.PhotosDashboardView })))
 const PhotosBrowseView = lazy(() => import('./pages/admin/photos/PhotosBrowseView').then(m => ({ default: m.PhotosBrowseView })))
@@ -529,7 +534,8 @@ function AppWithTheme() {
               <Route path="travel" element={<FeatureGateRoute routeKey="portal.travel"><Travel /></FeatureGateRoute>} />
               <Route path="travel/:id" element={<FeatureGateRoute routeKey="portal.travel.detail"><TravelDetail /></FeatureGateRoute>} />
               <Route path="tryouts" element={<FeatureGateRoute routeKey="portal.tryouts"><Tryouts /></FeatureGateRoute>} />
-              <Route path="tryouts/:tryoutId" element={<FeatureGateRoute routeKey="portal.tryouts.detail"><TryoutDetail /></FeatureGateRoute>} />
+              <Route path="tryouts/registrations" element={<FeatureGateRoute routeKey="portal.tryoutRegistrations"><TryoutRegistrations /></FeatureGateRoute>} />
+              <Route path="tryouts/:tryoutId" element={<FeatureGateRoute routeKey="portal.tryoutDetail"><TryoutDetail /></FeatureGateRoute>} />
               <Route path="messages" element={<FeatureGateRoute routeKey="portal.messages"><Messages /></FeatureGateRoute>} />
               <Route path="messages/:announcementId" element={<LegacyAnnouncementDetailRedirect />} />
               <Route path="huddles" element={<FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute>} />
@@ -778,8 +784,12 @@ function AppWithTheme() {
             
               {/* Tryouts */}
               <Route path="tryouts" element={<FeatureGateRoute routeKey="admin.tryouts.list"><AdminTryouts /></FeatureGateRoute>} />
+              <Route path="tryouts/assigned" element={<FeatureGateRoute routeKey="admin.tryouts.assigned"><CoachTryouts /></FeatureGateRoute>} />
               <Route path="tryouts/new" element={<FeatureGateRoute routeKey="admin.tryouts.create"><CreateTryout /></FeatureGateRoute>} />
               <Route path="tryouts/:tryoutId" element={<FeatureGateRoute routeKey="admin.tryouts.detail"><AdminTryoutDetail /></FeatureGateRoute>} />
+              <Route path="tryouts/:tryoutId/registrations" element={<FeatureGateRoute routeKey="admin.tryouts.registrations"><AdminTryoutRegistrations /></FeatureGateRoute>} />
+              <Route path="tryouts/:tryoutId/evaluators" element={<FeatureGateRoute routeKey="admin.tryouts.evaluators"><AdminTryoutEvaluators /></FeatureGateRoute>} />
+              <Route path="tryouts/:tryoutId/evaluation" element={<FeatureGateRoute routeKey="admin.tryouts.evaluation"><TryoutEvaluation /></FeatureGateRoute>} />
             
               {/* Photos */}
               <Route path="photos" element={<FeatureGateRoute routeKey="admin.photos.list"><Suspense fallback={<AdminLoadingSpinner />}><AdminPhotosLayout /></Suspense></FeatureGateRoute>}>

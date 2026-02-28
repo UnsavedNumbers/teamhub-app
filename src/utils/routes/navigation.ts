@@ -108,6 +108,7 @@ export const parentNavSections: NavigationSection[] = [
                         { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', description: 'Team galleries' },
                         { routeKey: 'portal.videos', text: 'Video Library', icon: 'smart_display', description: 'Watch team and athlete videos' },
                         { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
+                        { routeKey: 'portal.tryoutRegistrations', text: 'My Tryout Registrations', icon: 'assignment', description: 'Track tryout status' },
                     ],
                 },
                 {
@@ -444,6 +445,17 @@ export const adminMenuItems: MenuItemDefinition[] = [
             { text: 'Facilities', icon: 'location_city', routeKey: 'admin.facilities.list', requiresOrg: true },
             { text: 'Attendance', icon: 'how_to_reg', routeKey: 'admin.attendance', requiresOrg: true },
             { text: 'Uniforms', icon: 'checkroom', routeKey: 'admin.uniforms.list', requiresOrg: true },
+        ],
+    },
+    {
+        label: 'Tryouts',
+        icon: 'emoji_events',
+        routeKey: 'admin.tryouts.list',
+        requiresOrg: true,
+        children: [
+            { text: 'All Tryouts', icon: 'list', routeKey: 'admin.tryouts.list', requiresOrg: true },
+            { text: 'Create Tryout', icon: 'add', routeKey: 'admin.tryouts.create', requiresOrg: true },
+            { text: 'My Assignments', icon: 'assignment_ind', routeKey: 'admin.tryouts.assigned', requiresOrg: true },
         ],
     },
     {

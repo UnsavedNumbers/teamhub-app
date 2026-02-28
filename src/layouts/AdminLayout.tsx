@@ -9,6 +9,7 @@ import { useOrgAdminTheme } from '../hooks/useOrgAdminTheme'
 import { useOrganizationTheme } from '../hooks/useOrganizationTheme'
 import { useTheme } from '../hooks/useTheme'
 import { useT } from '../i18n/useI18n'
+import type { TranslationKey } from '../i18n'
 import { useSidebar } from '../contexts/SidebarContext'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import { ADMIN_LAYOUT_MOBILE_NAV_QUERY } from '@/config/breakpoints'
@@ -191,6 +192,8 @@ export default function AdminLayout() {
         { routeKey: 'admin.attendance', text: t('admin.navigation.attendance'), icon: 'how_to_reg', path: getLink('admin.attendance'), requiresOrg: true },
         { routeKey: 'admin.notifications', text: t('admin.navigation.notifications'), icon: 'notifications', path: getLink('admin.notifications'), requiresOrg: true },
         ...(isOrgAdmin ? [{ routeKey: 'admin.contactRequests.list', text: t('admin.navigation.contactRequests'), icon: 'inbox', path: getLink('admin.contactRequests.list'), requiresOrg: true }] : []),
+        { routeKey: isOrgAdmin ? 'admin.tryouts.list' : 'admin.tryouts.assigned', text: isOrgAdmin ? t('admin.navigation.tryouts' as TranslationKey) : t('admin.navigation.myTryouts' as TranslationKey), icon: 'emoji_events', path: isOrgAdmin ? getLink('admin.tryouts.list') : getLink('admin.tryouts.assigned'), requiresOrg: true },
+        ...(isOrgAdmin ? [{ routeKey: 'admin.tryouts.create', text: t('admin.navigation.createTryout' as TranslationKey), icon: 'add', path: getLink('admin.tryouts.create'), requiresOrg: true }] : []),
         // Staff can access gate scanning
         ...(isStaff && !isOrgAdmin ? [
           { routeKey: 'admin.ticketingScanner', text: t('admin.navigation.gateEntry'), icon: 'qr_code_scanner', path: getLink('admin.ticketingScanner'), requiresOrg: true },

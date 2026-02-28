@@ -19288,6 +19288,16 @@ export type Database = {
         | "payout_account_connected"
         | "payout_account_issue"
         | "payout_processed"
+        | "tryout_registration_confirmed"
+        | "tryout_payment_received"
+        | "tryout_waitlisted"
+        | "tryout_promoted_from_waitlist"
+        | "tryout_reminder_x_days"
+        | "tryout_reminder_day_before"
+        | "tryout_day_of_reminder"
+        | "tryout_results_published"
+        | "tryout_evaluator_assigned"
+        | "tryout_evaluation_due"
         | "athlete_created"
         | "athlete_updated"
         | "athlete_removed"
@@ -19979,6 +19989,16 @@ export const Constants = {
         "payout_account_connected",
         "payout_account_issue",
         "payout_processed",
+        "tryout_registration_confirmed",
+        "tryout_payment_received",
+        "tryout_waitlisted",
+        "tryout_promoted_from_waitlist",
+        "tryout_reminder_x_days",
+        "tryout_reminder_day_before",
+        "tryout_day_of_reminder",
+        "tryout_results_published",
+        "tryout_evaluator_assigned",
+        "tryout_evaluation_due",
         "athlete_created",
         "athlete_updated",
         "athlete_removed",
