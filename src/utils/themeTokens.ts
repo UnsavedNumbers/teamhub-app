@@ -36,6 +36,7 @@ export interface ThemeTokens {
   '--org-btn-primary-text': string
   '--org-btn-secondary-bg': string
   '--org-btn-secondary-hover': string
+  '--org-btn-secondary-active': string
   '--org-btn-secondary-text': string
   '--org-btn-secondary-border': string
   '--org-link-color': string
@@ -62,9 +63,11 @@ export interface ThemeTokens {
   '--org-surface-card-header': string
   '--org-surface-hover': string
   '--org-surface-active': string
+  '--org-surface-tint': string
   '--org-border-default': string
   '--org-border-subtle': string
   '--org-border-active': string
+  '--org-border-strong': string
   '--org-btn-disabled-bg': string
   '--org-btn-disabled-text': string
   '--org-status-success': string
@@ -92,6 +95,7 @@ export const THEME_TOKEN_NAMES = [
   '--org-btn-primary-text',
   '--org-btn-secondary-bg',
   '--org-btn-secondary-hover',
+  '--org-btn-secondary-active',
   '--org-btn-secondary-text',
   '--org-btn-secondary-border',
   '--org-link-color',
@@ -116,9 +120,11 @@ export const THEME_TOKEN_NAMES = [
   '--org-surface-card-header',
   '--org-surface-hover',
   '--org-surface-active',
+  '--org-surface-tint',
   '--org-border-default',
   '--org-border-subtle',
   '--org-border-active',
+  '--org-border-strong',
   '--org-btn-disabled-bg',
   '--org-btn-disabled-text',
   '--org-status-success',
@@ -144,8 +150,9 @@ export function getPlatformAdminFixedTokens(): ThemeTokens {
   const primary = '#003A8F'
   const primaryHover = '#0052C7'
   const primaryActive = '#002866'
+  const secondary = '#5C6773'
+  const tertiary = '#8A94A6'
   const surfaceAccent = 'rgba(182, 201, 226, 0.1)'
-  const surfaceHighlight = 'rgba(0, 58, 143, 0.15)'
   const textOnAction = '#FFFFFF'
   const borderAccent = 'rgba(0, 58, 143, 0.3)'
   const focusRing = 'rgba(0, 58, 143, 0.5)'
@@ -158,22 +165,21 @@ export function getPlatformAdminFixedTokens(): ThemeTokens {
   const surfaceCard = '#FFFFFF'
   const surfaceCardHeader = '#F3F4F6'
   const surfaceHover = '#F9FAFB'
-  const surfaceActive = '#F3F4F6'
   const borderSubtle = '#F3F4F6'
   const disabledBg = '#E1E6ED'
   const disabledText = '#9AA4B2'
 
   return {
     '--org-color-primary': primary,
-    '--org-color-secondary': primaryHover,
-    '--org-color-tertiary': '#6B7280',
+    '--org-color-secondary': secondary,
+    '--org-color-tertiary': tertiary,
 
     '--pa-theme-action-primary': primary,
     '--pa-theme-action-hover': primaryHover,
     '--pa-theme-action-active': primaryActive,
-    '--pa-theme-surface-accent': surfaceAccent,
-    '--pa-theme-surface-highlight': surfaceHighlight,
-    '--pa-theme-text-accent': primary,
+    '--pa-theme-surface-accent': 'rgba(182, 201, 226, 0.12)',
+    '--pa-theme-surface-highlight': 'rgba(138, 148, 166, 0.14)',
+    '--pa-theme-text-accent': secondary,
     '--pa-theme-text-on-action': textOnAction,
     '--pa-theme-border-accent': borderAccent,
     '--pa-theme-focus-ring': focusRing,
@@ -182,19 +188,20 @@ export function getPlatformAdminFixedTokens(): ThemeTokens {
     '--org-btn-primary-hover': primaryHover,
     '--org-btn-primary-active': primaryActive,
     '--org-btn-primary-text': textOnAction,
-    '--org-btn-secondary-bg': 'transparent',
-    '--org-btn-secondary-hover': 'rgba(0,0,0,0.05)',
-    '--org-btn-secondary-text': textPrimary,
-    '--org-btn-secondary-border': borderDefault,
-    '--org-link-color': primary,
-    '--org-link-hover': primaryHover,
+    '--org-btn-secondary-bg': 'rgba(182, 201, 226, 0.16)',
+    '--org-btn-secondary-hover': 'rgba(182, 201, 226, 0.28)',
+    '--org-btn-secondary-active': 'rgba(182, 201, 226, 0.36)',
+    '--org-btn-secondary-text': secondary,
+    '--org-btn-secondary-border': 'rgba(182, 201, 226, 0.72)',
+    '--org-link-color': secondary,
+    '--org-link-hover': tertiary,
     '--org-link-muted': '#6b7280',
     '--org-badge-primary-bg': surfaceAccent,
     '--org-badge-primary-text': primary,
-    '--org-card-accent-border': borderAccent,
-    '--org-card-accent-bg': surfaceAccent,
-    '--org-highlight-bg': surfaceHighlight,
-    '--org-focus-ring': focusRing,
+    '--org-card-accent-border': 'rgba(182, 201, 226, 0.72)',
+    '--org-card-accent-bg': 'rgba(182, 201, 226, 0.14)',
+    '--org-highlight-bg': 'rgba(138, 148, 166, 0.14)',
+    '--org-focus-ring': 'rgba(138, 148, 166, 0.34)',
 
     '--org-text-primary': textPrimary,
     '--org-text-secondary': textSecondary,
@@ -207,11 +214,13 @@ export function getPlatformAdminFixedTokens(): ThemeTokens {
     '--org-surface-section': surfaceSection,
     '--org-surface-card': surfaceCard,
     '--org-surface-card-header': surfaceCardHeader,
-    '--org-surface-hover': surfaceHover,
-    '--org-surface-active': surfaceActive,
+    '--org-surface-hover': 'rgba(138, 148, 166, 0.08)',
+    '--org-surface-active': 'rgba(182, 201, 226, 0.16)',
+    '--org-surface-tint': 'rgba(182, 201, 226, 0.12)',
     '--org-border-default': borderDefault,
     '--org-border-subtle': borderSubtle,
-    '--org-border-active': primary,
+    '--org-border-active': 'rgba(182, 201, 226, 0.72)',
+    '--org-border-strong': secondary,
     '--org-btn-disabled-bg': disabledBg,
     '--org-btn-disabled-text': disabledText,
     '--org-status-success': '#10B981',
@@ -273,6 +282,70 @@ function safeParseColor(color: string, fallback: string): Colord {
   }
 }
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const normalized = hex.replace('#', '')
+  const value = normalized.length === 3
+    ? normalized.split('').map((part) => `${part}${part}`).join('')
+    : normalized
+
+  return {
+    r: parseInt(value.slice(0, 2), 16),
+    g: parseInt(value.slice(2, 4), 16),
+    b: parseInt(value.slice(4, 6), 16),
+  }
+}
+
+function getRelativeLuminance(hex: string): number {
+  const { r, g, b } = hexToRgb(hex)
+  const channelToLinear = (channel: number) => {
+    const normalized = channel / 255
+    return normalized <= 0.03928
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4
+  }
+
+  const red = channelToLinear(r)
+  const green = channelToLinear(g)
+  const blue = channelToLinear(b)
+
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+}
+
+function getContrastRatio(foreground: string, background: string): number {
+  const foregroundLuminance = getRelativeLuminance(foreground)
+  const backgroundLuminance = getRelativeLuminance(background)
+  const lighter = Math.max(foregroundLuminance, backgroundLuminance)
+  const darker = Math.min(foregroundLuminance, backgroundLuminance)
+
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+function ensureAccessibleTextColor(color: Colord, backgroundHex: string, minimumContrast = 4.5): Colord {
+  let candidate = color
+  const background = colord(backgroundHex)
+  const backgroundIsLight = background.isLight()
+
+  for (let index = 0; index < 12; index++) {
+    if (getContrastRatio(candidate.toHex(), backgroundHex) >= minimumContrast) {
+      return candidate
+    }
+    candidate = backgroundIsLight ? candidate.darken(0.08) : candidate.lighten(0.08)
+  }
+
+  return candidate
+}
+
+function resolveTertiaryColor(primary: Colord, secondary: Colord, tertiary: Colord, isDark: boolean): Colord {
+  const { s, l } = tertiary.toHsl()
+  void primary
+
+  if (s < 0.12 || l > 0.94 || l < 0.08) {
+    return isDark ? secondary.lighten(0.08) : secondary.darken(0.08)
+  }
+
+  return tertiary
+}
+
 /**
  * Generate default tokens safely (fallback)
  */
@@ -306,21 +379,22 @@ function generateDefaultTokens(isDark: boolean): ThemeTokens {
       '--org-btn-primary-hover': '#0d6bc2',
       '--org-btn-primary-active': '#0b5ba0',
       '--org-btn-primary-text': fallbackTextOnAction,
-      '--org-btn-secondary-bg': 'transparent',
-      '--org-btn-secondary-hover': isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-      '--org-btn-secondary-text': fallbackText,
-      '--org-btn-secondary-border': fallbackBorder,
+      '--org-btn-secondary-bg': isDark ? 'rgba(148, 163, 184, 0.14)' : 'rgba(100, 116, 139, 0.12)',
+      '--org-btn-secondary-hover': isDark ? 'rgba(148, 163, 184, 0.24)' : 'rgba(100, 116, 139, 0.18)',
+      '--org-btn-secondary-active': isDark ? 'rgba(148, 163, 184, 0.32)' : 'rgba(100, 116, 139, 0.24)',
+      '--org-btn-secondary-text': isDark ? '#E2E8F0' : '#475569',
+      '--org-btn-secondary-border': isDark ? '#64748B' : '#94A3B8',
       '--org-btn-disabled-bg': '#E1E6ED',
       '--org-btn-disabled-text': '#9AA4B2',
-      '--org-link-color': fallbackColor,
-      '--org-link-hover': '#0d6bc2',
+      '--org-link-color': isDark ? '#CBD5E1' : '#475569',
+      '--org-link-hover': isDark ? '#94A3B8' : '#64748B',
       '--org-link-muted': '#6b7280',
       '--org-badge-primary-bg': 'rgba(19, 127, 236, 0.1)',
       '--org-badge-primary-text': fallbackColor,
       '--org-card-accent-border': 'rgba(19, 127, 236, 0.3)',
       '--org-card-accent-bg': 'rgba(19, 127, 236, 0.1)',
       '--org-highlight-bg': 'rgba(19, 127, 236, 0.15)',
-      '--org-focus-ring': 'rgba(19, 127, 236, 0.5)',
+      '--org-focus-ring': isDark ? 'rgba(148, 163, 184, 0.38)' : 'rgba(100, 116, 139, 0.28)',
 
       '--org-text-primary': fallbackText,
       '--org-text-secondary': isDark ? '#9CA3AF' : '#6B7280',
@@ -333,11 +407,13 @@ function generateDefaultTokens(isDark: boolean): ThemeTokens {
       '--org-surface-section': isDark ? '#111827' : '#EEF2F7',
       '--org-surface-card': isDark ? '#1F2937' : '#FFFFFF',
       '--org-surface-card-header': isDark ? '#374151' : '#F3F4F6',
-      '--org-surface-hover': isDark ? '#374151' : '#F9FAFB',
-      '--org-surface-active': isDark ? '#4B5563' : '#F3F4F6',
+      '--org-surface-hover': isDark ? 'rgba(148, 163, 184, 0.10)' : 'rgba(100, 116, 139, 0.06)',
+      '--org-surface-active': isDark ? 'rgba(148, 163, 184, 0.16)' : 'rgba(100, 116, 139, 0.10)',
+      '--org-surface-tint': isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(100, 116, 139, 0.08)',
       '--org-border-default': fallbackBorder,
       '--org-border-subtle': isDark ? '#1F2937' : '#F3F4F6',
-      '--org-border-active': fallbackColor,
+      '--org-border-active': isDark ? '#94A3B8' : '#64748B',
+      '--org-border-strong': isDark ? '#CBD5E1' : '#475569',
       '--org-status-success': '#10B981',
       '--org-status-warning': '#F59E0B',
       '--org-status-error': '#EF4444',
@@ -394,14 +470,19 @@ export function generateTokens(theme: Theme, isDark: boolean): ThemeTokens {
     const shouldAdjust = isDark && !theme.darkModeOverrides
     const adjustedPrimary = shouldAdjust ? adjustForDarkMode(primary) : primary
     const adjustedSecondary = shouldAdjust ? adjustForDarkMode(secondary) : secondary
-    const adjustedTertiary = shouldAdjust ? adjustForDarkMode(tertiary) : tertiary
+    const tertiaryBase = shouldAdjust ? adjustForDarkMode(tertiary) : tertiary
+    const adjustedTertiary = resolveTertiaryColor(adjustedPrimary, adjustedSecondary, tertiaryBase, isDark)
     
     // Generate derived colors for compatibility tokens
     const actionActive = adjustedPrimary.darken(0.1)
-    const surfaceAccent = secondary.alpha(0.1)
-    const surfaceHighlight = adjustedPrimary.alpha(0.15)
-    const borderAccent = adjustedPrimary.alpha(0.3)
-    const focusRing = adjustedPrimary.alpha(0.5)
+    const secondaryText = ensureAccessibleTextColor(adjustedSecondary, colors.surface.card)
+    const tertiaryText = ensureAccessibleTextColor(adjustedTertiary, colors.surface.card, 3.8)
+    const surfaceAccent = adjustedSecondary.alpha(isDark ? 0.18 : 0.14)
+    const surfaceHighlight = adjustedTertiary.alpha(isDark ? 0.20 : 0.12)
+    const surfaceHover = adjustedTertiary.alpha(isDark ? 0.16 : 0.08)
+    const surfaceActive = adjustedSecondary.alpha(isDark ? 0.20 : 0.14)
+    const borderAccent = adjustedSecondary.alpha(isDark ? 0.42 : 0.34)
+    const focusRing = adjustedTertiary.alpha(isDark ? 0.42 : 0.28)
 
     const tokens: ThemeTokens = {
       // -- Explicit Color Roles --
@@ -415,7 +496,7 @@ export function generateTokens(theme: Theme, isDark: boolean): ThemeTokens {
       '--pa-theme-action-active': actionActive.toHex(),
       '--pa-theme-surface-accent': surfaceAccent.toRgbString(),
       '--pa-theme-surface-highlight': surfaceHighlight.toRgbString(),
-      '--pa-theme-text-accent': isDark ? colors.text.primary : ui.text.primary,
+      '--pa-theme-text-accent': secondaryText.toHex(),
       '--pa-theme-text-on-action': button.primary.text,
       '--pa-theme-border-accent': borderAccent.toRgbString(),
       '--pa-theme-focus-ring': focusRing.toRgbString(),
@@ -426,22 +507,23 @@ export function generateTokens(theme: Theme, isDark: boolean): ThemeTokens {
       '--org-btn-primary-active': actionActive.toHex(),
       '--org-btn-primary-text': button.primary.text,
 
-      '--org-btn-secondary-bg': button.secondary.bg,
-      '--org-btn-secondary-hover': button.secondary.hover,
-      '--org-btn-secondary-text': button.secondary.text,
-      '--org-btn-secondary-border': colors.border.default,
+      '--org-btn-secondary-bg': surfaceAccent.toRgbString(),
+      '--org-btn-secondary-hover': surfaceActive.toRgbString(),
+      '--org-btn-secondary-active': adjustedSecondary.alpha(isDark ? 0.26 : 0.18).toRgbString(),
+      '--org-btn-secondary-text': secondaryText.toHex(),
+      '--org-btn-secondary-border': borderAccent.toRgbString(),
 
       '--org-btn-disabled-bg': button.disabled.bg,
       '--org-btn-disabled-text': button.disabled.text,
 
       // -- Link Tokens --
-      '--org-link-color': isDark ? colors.text.primary : ui.text.primary,
-      '--org-link-hover': button.primary.hover,
+      '--org-link-color': secondaryText.toHex(),
+      '--org-link-hover': tertiaryText.toHex(),
       '--org-link-muted': isDark ? colors.text.secondary : ui.text.muted,
 
       // -- Badge Tokens --
       '--org-badge-primary-bg': surfaceAccent.toRgbString(),
-      '--org-badge-primary-text': isDark ? colors.text.primary : ui.text.primary,
+      '--org-badge-primary-text': adjustedPrimary.toHex(),
 
       // -- Card Tokens --
       '--org-card-accent-border': borderAccent.toRgbString(),
@@ -464,12 +546,14 @@ export function generateTokens(theme: Theme, isDark: boolean): ThemeTokens {
       '--org-surface-section': colors.surface.section,
       '--org-surface-card': colors.surface.card,
       '--org-surface-card-header': colors.surface.cardHeader,
-      '--org-surface-hover': colors.surface.hover,
-      '--org-surface-active': colors.surface.active,
+      '--org-surface-hover': surfaceHover.toRgbString(),
+      '--org-surface-active': surfaceActive.toRgbString(),
+      '--org-surface-tint': surfaceAccent.toRgbString(),
 
       '--org-border-default': colors.border.default,
       '--org-border-subtle': colors.border.subtle,
-      '--org-border-active': colors.border.active,
+      '--org-border-active': borderAccent.toRgbString(),
+      '--org-border-strong': secondaryText.toHex(),
 
       '--org-status-success': ui.status.success,
       '--org-status-warning': ui.status.warning,

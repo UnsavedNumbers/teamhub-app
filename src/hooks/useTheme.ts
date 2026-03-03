@@ -21,6 +21,8 @@ interface ThemeState {
   error: Error | null
 }
 
+const THEME_CHANGE_EVENT = 'app-theme-change'
+
 /**
  * Get system preference (light/dark)
  */
@@ -45,7 +47,7 @@ function getStoredTheme(): ThemeMode | null {
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
       return stored as ThemeMode
     }
-  } catch (error) {
+  } catch (_error) {
     // Silently fail
   }
   
@@ -60,9 +62,14 @@ function setStoredTheme(theme: ThemeMode): void {
   
   try {
     localStorage.setItem('theme-preference', theme)
-  } catch (error) {
+  } catch (_error) {
     // Silently fail
   }
+}
+
+function emitThemeChange(mode: ThemeMode): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent(THEME_CHANGE_EVENT, { detail: { mode } }))
 }
 
 /**
@@ -180,6 +187,40 @@ export function useTheme() {
     }
   }, [user, profile])
 
+  // Keep all hook instances in sync within the same tab and across tabs.
+  useEffect(() => {
+    const syncTheme = (nextMode: ThemeMode) => {
+      const resolved = resolveTheme(nextMode)
+      applyTheme(resolved)
+      setState((prev) => ({
+        ...prev,
+        mode: nextMode,
+        resolvedTheme: resolved,
+        loading: false,
+      }))
+    }
+
+    const handleThemeChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ mode?: ThemeMode }>
+      if (!customEvent.detail?.mode) return
+      syncTheme(customEvent.detail.mode)
+    }
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== 'theme-preference') return
+      const stored = getStoredTheme()
+      if (!stored) return
+      syncTheme(stored)
+    }
+
+    window.addEventListener(THEME_CHANGE_EVENT, handleThemeChange)
+    window.addEventListener('storage', handleStorage)
+    return () => {
+      window.removeEventListener(THEME_CHANGE_EVENT, handleThemeChange)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [])
+
   // Listen to system preference changes (when mode is 'system')
   useEffect(() => {
     if (state.mode !== 'system') return
@@ -209,6 +250,7 @@ export function useTheme() {
     const resolved = resolveTheme(mode)
     applyTheme(resolved)
     setStoredTheme(mode)
+    emitThemeChange(mode)
     
     setState({
       mode,

@@ -144,10 +144,6 @@ export default function AdminLayout() {
           { routeKey: 'admin.organization.users', text: t('admin.navigation.organizationStaff'), icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
           { routeKey: 'admin.organization.bulkInvite', text: t('admin.navigation.bulkInvites'), icon: 'upload', path: getLink(RouteKeys.ADMIN_ORGANIZATION_BULK_INVITE), requiresOrg: true },
         ] : []),
-        // Coaches and staff can see organization structure but not manage it
-        ...((isCoach || isStaff) && !isOrgAdmin ? [
-          { routeKey: 'admin.organization.overview', text: t('admin.navigation.organizationOverview'), icon: 'info', path: getPath(RouteKeys.ADMIN_ORGANIZATION_STRUCTURE), requiresOrg: true },
-        ] : []),
         ...(isParentOrg ? [{ routeKey: 'admin.organization.subOrgs', text: 'Sub-Organizations', icon: 'apartment', path: getLink('admin.organization.subOrgs'), requiresOrg: false }] : []),
       ],
     },
@@ -161,10 +157,6 @@ export default function AdminLayout() {
         ...(isOrgAdmin ? [
           { routeKey: 'admin.guardians.list', text: t('admin.navigation.guardians'), icon: 'home', path: getLink('admin.guardians.list'), requiresOrg: true },
           { routeKey: 'admin.guardianRequests', text: t('admin.navigation.guardianRequests'), icon: 'person_add', path: getLink('admin.guardianRequests'), requiresOrg: true },
-        ] : []),
-        // Coaches can view athletes on their teams (read-only)
-        ...(isCoach && !isOrgAdmin ? [
-          { routeKey: 'admin.athletes.list', text: t('admin.navigation.athletesList'), icon: 'child_care', path: getPath(RouteKeys.ADMIN_ATHLETES), requiresOrg: true },
         ] : []),
         ],
     },
@@ -203,21 +195,19 @@ export default function AdminLayout() {
         { routeKey: 'admin.uniforms.list', text: t('admin.navigation.uniforms'), icon: 'checkroom', path: getPath(RouteKeys.ADMIN_UNIFORMS), requiresOrg: true },
       ],
     },
-    {
+    ...(isOrgAdmin ? [{
       label: t('admin.navigation.reporting'),
       icon: 'analytics',
       path: getLink('admin.reports.overview'),
       requiresOrg: true,
       children: [
-        ...(isOrgAdmin ? [
-          { routeKey: 'admin.reports.overview', text: t('admin.navigation.reportsOverview'), icon: 'dashboard', path: getLink('admin.reports.overview'), requiresOrg: true },
-          { routeKey: 'admin.reports.builder', text: t('admin.navigation.reportBuilder'), icon: 'build', path: getLink('admin.reports.builder'), requiresOrg: true },
-          { routeKey: 'admin.reports.saved', text: t('admin.navigation.savedReports'), icon: 'bookmark', path: getLink('admin.reports.saved'), requiresOrg: true },
-          { routeKey: 'admin.reports.exports', text: t('admin.navigation.exportHistory'), icon: 'download', path: getLink('admin.reports.exports'), requiresOrg: true },
-          { routeKey: 'admin.reports.schedules', text: t('admin.navigation.scheduledReports'), icon: 'schedule', path: getLink('admin.reports.schedules'), requiresOrg: true },
-        ] : []),
+        { routeKey: 'admin.reports.overview', text: t('admin.navigation.reportsOverview'), icon: 'dashboard', path: getLink('admin.reports.overview'), requiresOrg: true },
+        { routeKey: 'admin.reports.builder', text: t('admin.navigation.reportBuilder'), icon: 'build', path: getLink('admin.reports.builder'), requiresOrg: true },
+        { routeKey: 'admin.reports.saved', text: t('admin.navigation.savedReports'), icon: 'bookmark', path: getLink('admin.reports.saved'), requiresOrg: true },
+        { routeKey: 'admin.reports.exports', text: t('admin.navigation.exportHistory'), icon: 'download', path: getLink('admin.reports.exports'), requiresOrg: true },
+        { routeKey: 'admin.reports.schedules', text: t('admin.navigation.scheduledReports'), icon: 'schedule', path: getLink('admin.reports.schedules'), requiresOrg: true },
       ],
-    },
+    }] : []),
     {
       label: t('admin.navigation.photos'),
       icon: 'photo_library',
@@ -250,7 +240,7 @@ export default function AdminLayout() {
         { routeKey: 'admin.contact', text: t('admin.navigation.contactSupport'), icon: 'mail', path: getLink('admin.contact'), requiresOrg: false },
       ],
     },
-  ], [t])
+  ], [t, isOrgAdmin, isCoach, isStaff, isParentOrg, isSubOrg])
 
   // Convert to NavigationSection format for feature gate filtering
   const navSections = useMemo(() => {
@@ -289,7 +279,7 @@ export default function AdminLayout() {
   // Convert filtered sections back to menu item format
   const menuItems = useMemo(() => {
     return filteredSections.map((section, index) => {
-      const originalItem = rawMenuItems[index]
+      const originalItem = rawMenuItems.find((item) => item.label === section.label) ?? rawMenuItems[index]
       if (!section.groups[0]?.items.length) return null
 
       const firstItem = section.groups[0].items[0]

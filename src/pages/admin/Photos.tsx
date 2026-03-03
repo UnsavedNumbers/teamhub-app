@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import {
   Card,
   PageHeader,
-  StatCard,
   Button,
   Badge,
   Input,
@@ -16,6 +15,7 @@ import { useI18n } from '../../i18n/useI18n'
 import { usePhotoFilters } from '../../hooks/usePhotoFilters'
 import { USE_FAKE_DATA } from '@/data/config'
 import { GalleryManagementSection } from '@/components/admin/galleries/GalleryManagementSection'
+import { TopLevelStats } from '@/components/common/TopLevelStats'
 import { getGalleriesForUser, type Gallery } from '@/data/services/galleryService'
 import { getLink } from '@/utils/routes'
 import './Photos.css'
@@ -28,6 +28,8 @@ interface CachedData {
   galleries: Gallery[]
   timestamp: number
 }
+
+type GalleryTypeFilter = 'all' | Gallery['gallery_type']
 
 function setCachedGalleries(galleries: Gallery[]) {
   try {
@@ -61,7 +63,7 @@ export default function AdminPhotos() {
   const [galleries, setGalleries] = useState<Gallery[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeType, setActiveType] = useState<'all' | Gallery['gallery_type']>('all')
+  const [activeType, setActiveType] = useState<GalleryTypeFilter>('all')
   const [showManagement] = useState(false)
   const [showDemoModal, setShowDemoModal] = useState(false)
   const { filters, setFilters } = usePhotoFilters({
@@ -139,6 +141,15 @@ export default function AdminPhotos() {
     }
   }, [galleries])
 
+  const galleryTypeOptions: Array<{ label: string; value: GalleryTypeFilter }> = [
+    { label: t('photos.filters.all'), value: 'all' },
+    { label: t('photos.galleryType.event'), value: 'event' },
+    { label: t('photos.galleryType.team'), value: 'team' },
+    { label: t('photos.galleryType.athlete'), value: 'athlete' },
+    { label: t('photos.galleryType.season'), value: 'season' },
+    { label: t('photos.galleryType.organization'), value: 'org' },
+  ]
+
   const handleCardClick = useCallback(
     (id: string) => {
       navigate(getLink('admin.photos.detail', { id }))
@@ -214,15 +225,8 @@ export default function AdminPhotos() {
             <div className="filter-chip-label">{t('photos.filters.byType')}</div>
             <Select
               value={activeType}
-              onChange={(e) => setActiveType(e.target.value as any)}
-              options={[
-                { label: t('photos.filters.all'), value: 'all' },
-                { label: t('photos.galleryType.event'), value: 'event' },
-                { label: t('photos.galleryType.team'), value: 'team' },
-                { label: t('photos.galleryType.athlete'), value: 'athlete' },
-                { label: t('photos.galleryType.season'), value: 'season' },
-                { label: t('photos.galleryType.organization'), value: 'organization' },
-              ]}
+              onChange={(e) => setActiveType(e.target.value as GalleryTypeFilter)}
+              options={galleryTypeOptions}
             />
           </div>
 
@@ -240,29 +244,28 @@ export default function AdminPhotos() {
           </div>
         </div>
 
-        <div className="stats-grid">
-          <StatCard label={t('photos.stats.totalGalleries')} value={totals.galleries} />
-          <StatCard label={t('photos.stats.totalPhotos')} value={totals.photos} />
-          <StatCard label={t('photos.pendingApproval.adminMessage', { count: totals.pending })} value={totals.pending} />
-        </div>
+        <TopLevelStats
+          className="stats-grid"
+          ariaLabel="Gallery summary metrics"
+          items={[
+            { id: 'galleries', label: t('photos.stats.totalGalleries'), value: totals.galleries },
+            { id: 'photos', label: t('photos.stats.totalPhotos'), value: totals.photos },
+            { id: 'pending', label: t('photos.pendingApproval.adminMessage', { count: totals.pending }), value: totals.pending, tone: totals.pending > 0 ? 'warning' : 'default' },
+          ]}
+        />
 
-        <div className="tabs-row">
-          {[
-            { key: 'all', label: t('photos.filters.all') },
-            { key: 'event', label: t('photos.galleryType.event') },
-            { key: 'team', label: t('photos.galleryType.team') },
-            { key: 'athlete', label: t('photos.galleryType.athlete') },
-            { key: 'season', label: t('photos.galleryType.season') },
-            { key: 'organization', label: t('photos.galleryType.organization') },
-          ].map((tab) => (
-            <Button
-              key={tab.key}
-              variant={activeType === tab.key ? 'primary' : 'secondary'}
-              size="compact"
-              onClick={() => setActiveType(tab.key as any)}
+        <div className="tabs-row pa-tabs-list" role="tablist" aria-label={t('photos.filters.byType')}>
+          {galleryTypeOptions.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              role="tab"
+              aria-selected={activeType === tab.value}
+              className={`pa-tabs-trigger ${activeType === tab.value ? 'active' : ''}`}
+              onClick={() => setActiveType(tab.value)}
             >
               {tab.label}
-            </Button>
+            </button>
           ))}
         </div>
 

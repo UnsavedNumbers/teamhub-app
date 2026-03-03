@@ -18,6 +18,7 @@ import { checkGuardianMatch, debounce } from '../../utils/guardianMatching'
 import { useSportFieldDefinitions } from '../../hooks/useSportFieldDefinitions'
 import { useAthleteSportProfile } from '../../hooks/useAthleteSportProfile'
 import { PhotoSection } from '@/components/galleries/PhotoSection'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import { redactPII, redactEmail, redactPhone } from '../../utils/dataRedaction'
 import { canViewMedicalInfo } from '../../utils/permissions'
 import { hasAnyRole } from '../../utils/roleHelpers'
@@ -933,56 +934,43 @@ export default function AthleteDetail() {
         />
 
         {/* Stats Cards */}
-        <div className="oa-athlete-stats-grid oa-mesh-pattern">
-            <div
-              className={`oa-athlete-stat-card oa-mesh-pattern ${activeTeams > 0 ? 'oa-athlete-stat-card--clickable' : ''}`}
-              onClick={activeTeams > 0 ? () => handleTabChange('teams') : undefined}
-            >
-              <p className="oa-athlete-stat-label">
-                {t('admin.athletes.stats.activeTeams')}
-              </p>
-              <p className="oa-athlete-stat-value">
-                {activeTeams}
-              </p>
-            </div>
-            <div className="oa-athlete-stat-card oa-mesh-pattern">
-              <p className="oa-athlete-stat-label">
-                <span className="material-symbols-outlined oa-athlete-stat-icon">groups</span>
-                {t('admin.athletes.stats.totalTeams')}
-              </p>
-              <p className="oa-athlete-stat-value">
-                {totalTeams}
-              </p>
-            </div>
-            <div
-              className={`oa-athlete-stat-card oa-mesh-pattern ${playsCount > 0 ? 'oa-athlete-stat-card--clickable' : ''}`}
-              onClick={playsCount > 0 ? () => handleTabChange('sports') : undefined}
-            >
-              <p className="oa-athlete-stat-label">
-                <span className="material-symbols-outlined oa-athlete-stat-icon">sports</span>
-                {t('admin.athletes.stats.sportsPlayed')}
-              </p>
-              <p className="oa-athlete-stat-value">
-                {playsCount}
-              </p>
-            </div>
-            <div
-              className={`oa-athlete-stat-card oa-mesh-pattern ${(guardians.length > 0 || pendingInvites.length > 0) ? 'oa-athlete-stat-card--clickable' : ''}`}
-              onClick={(guardians.length > 0 || pendingInvites.length > 0) ? () => handleTabChange('guardians') : undefined}
-            >
-              <p className="oa-athlete-stat-label">
-                <span className="material-symbols-outlined oa-athlete-stat-icon">family_history</span>
-                {t('admin.athletes.stats.guardians')}
-              </p>
-              <p className="oa-athlete-stat-value">
-                {guardians.filter(g => g.status === 'active').length}{pendingInvites.length > 0 ? ` (+${pendingInvites.length})` : ''}
-              </p>
-            </div>
-        </div>
+        <TopLevelStats
+          ariaLabel="Athlete summary metrics"
+          className="oa-athlete-top-stats"
+          items={[
+            {
+              id: 'active-teams',
+              label: t('admin.athletes.stats.activeTeams'),
+              value: activeTeams,
+              onClick: activeTeams > 0 ? () => handleTabChange('teams') : undefined,
+            },
+            {
+              id: 'total-teams',
+              label: t('admin.athletes.stats.totalTeams'),
+              value: totalTeams,
+              icon: 'groups',
+            },
+            {
+              id: 'sports-played',
+              label: t('admin.athletes.stats.sportsPlayed'),
+              value: playsCount,
+              icon: 'sports',
+              onClick: playsCount > 0 ? () => handleTabChange('sports') : undefined,
+            },
+            {
+              id: 'guardians',
+              label: t('admin.athletes.stats.guardians'),
+              value: guardians.filter(g => g.status === 'active').length,
+              icon: 'family_history',
+              meta: pendingInvites.length > 0 ? `+${pendingInvites.length} pending` : undefined,
+              onClick: (guardians.length > 0 || pendingInvites.length > 0) ? () => handleTabChange('guardians') : undefined,
+            },
+          ]}
+        />
 
         {/* Tabs */}
-        <div className="mb-6 border-b border-slate-200 dark:border-slate-700">
-          <div className="flex gap-8">
+        <div className="oa-tabs">
+          <div className="pa-tabs-list oa-athlete-detail-tabs" role="tablist" aria-label="Athlete detail tabs">
             {[
               { value: 'overview', label: t('admin.athletes.tabs.overview') },
               { value: 'sport_profiles', label: 'Sport Profiles' },
@@ -994,16 +982,15 @@ export default function AthleteDetail() {
             ].map((tab) => (
               <button
                 key={tab.value}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab.value}
                 onClick={() => handleTabChange(tab.value)}
-                className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
-                  activeTab === tab.value
-                    ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
+                className={`pa-tabs-trigger oa-athlete-detail-tab-trigger ${activeTab === tab.value ? 'active' : ''}`}
               >
                 {tab.label}
                 {tab.badge && (
-                  <span className="ml-2 w-2 h-2 rounded-full bg-amber-500 inline-block" />
+                  <span className="oa-athlete-detail-tab-badge" />
                 )}
               </button>
             ))}

@@ -19,6 +19,7 @@ import { getChildById } from '../../data/fake/fakeUsers'
 import { getActiveTeamMembershipsForChild, getTeamWithDetails } from '../../data/fake/fakeTeams'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import AthleteAvatar from '../../components/portal/AthleteAvatar'
 import { useUserContext } from '../../hooks/useUserContext'
 import { showError, showSuccess } from '../../utils/toast'
@@ -402,20 +403,15 @@ export default function FanAthleteProfile() {
       </div>
 
       {/* Stats */}
-      <div className="fan-entity-stats">
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{profile.follower_count || 0}</span>
-          <span className="fan-entity-stat-label">Followers</span>
-        </div>
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{taggedPhotos.length}</span>
-          <span className="fan-entity-stat-label">Photos</span>
-        </div>
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{achievements.length}</span>
-          <span className="fan-entity-stat-label">Achievements</span>
-        </div>
-      </div>
+      <TopLevelStats
+        className="fan-entity-stats"
+        ariaLabel="Athlete profile summary metrics"
+        items={[
+          { id: 'followers', label: 'Followers', value: profile.follower_count || 0 },
+          { id: 'photos', label: 'Photos', value: taggedPhotos.length },
+          { id: 'achievements', label: 'Achievements', value: achievements.length },
+        ]}
+      />
 
       {/* Bio Section */}
       {profile.bio && (

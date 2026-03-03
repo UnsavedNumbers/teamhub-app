@@ -246,8 +246,8 @@ export default function SubOrganizations() {
         subtitle={t('admin.subOrgs.newSubtitle')}
       />
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="oa-tabs">
+        <TabsList className="oa-mb-6">
           <TabsTrigger value="sub-orgs">
             {t('admin.subOrgs.tabs.subOrgs')} ({subOrgs.length})
           </TabsTrigger>

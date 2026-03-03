@@ -535,8 +535,7 @@ export default function LevelDetail() {
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(to top, var(--oa-n900), transparent)',
-              opacity: 0.9,
+              background: 'rgba(15, 23, 42, 0.72)',
             }}
           />
           <div

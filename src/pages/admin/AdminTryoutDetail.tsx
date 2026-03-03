@@ -16,11 +16,27 @@ import {
 import { AdminPageHeader, Badge, Button, Card } from '../../components/admin'
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import '../../styles/orgAdmin.css'
 
 type DetailTab = 'overview' | 'registrations' | 'evaluators' | 'evaluations' | 'results'
+interface TryoutResultRow {
+  id: string
+  athleteName: string
+  status: TryoutRegistration['status']
+  averageScore: number | null
+  evaluationCount: number
+  notes: string | null
+}
 
 const DETAIL_TABS: DetailTab[] = ['overview', 'registrations', 'evaluators', 'evaluations', 'results']
+
+function formatTryoutDateValue(value: string | null | undefined, fallback: string): string {
+  if (!value) return fallback
+  const [year, month, day] = value.split('-')
+  if (!year || !month || !day) return fallback
+  return `${month}-${day}-${year}`
+}
 
 export default function AdminTryoutDetail() {
   const { tryoutId } = useParams<{ tryoutId: string }>()
@@ -98,6 +114,94 @@ export default function AdminTryoutDetail() {
     return Math.round((completed / registrations.length) * 100)
   }, [evaluations, registrations])
 
+  const resultRows = useMemo<TryoutResultRow[]>(() => {
+    const evaluationsByRegistration = new Map<string, TryoutEvaluation[]>()
+    for (const evaluation of evaluations) {
+      const current = evaluationsByRegistration.get(evaluation.registration_id) ?? []
+      current.push(evaluation)
+      evaluationsByRegistration.set(evaluation.registration_id, current)
+    }
+
+    return registrations
+      .map((registration) => {
+        const registrationEvaluations = evaluationsByRegistration.get(registration.id) ?? []
+        const averageScore = registrationEvaluations.length > 0
+          ? Number((registrationEvaluations.reduce((sum, item) => sum + item.score, 0) / registrationEvaluations.length).toFixed(1))
+          : null
+
+        return {
+          id: registration.id,
+          athleteName: registration.child
+            ? `${registration.child.first_name} ${registration.child.last_name}`
+            : t('common.unknown'),
+          status: registration.status,
+          averageScore,
+          evaluationCount: registrationEvaluations.length,
+          notes: registrationEvaluations.map((item) => item.notes).find((value) => Boolean(value)) ?? registration.notes ?? null,
+        }
+      })
+      .sort((a, b) => (b.averageScore ?? -1) - (a.averageScore ?? -1))
+  }, [evaluations, registrations, t])
+
+  const resultsColumns: ColumnConfig<TryoutResultRow>[] = [
+    {
+      id: 'athlete',
+      label: t('admin.tryouts.registrations.columns.athlete' as TranslationKey),
+      render: (row) => row.athleteName,
+    },
+    {
+      id: 'decision',
+      label: 'Decision',
+      render: (row) => (
+        <Badge
+          variant={
+            row.status === 'accepted' || row.status === 'offered'
+              ? 'success'
+              : row.status === 'waitlisted'
+                ? 'warning'
+                : row.status === 'declined' || row.status === 'rejected' || row.status === 'not_selected'
+                  ? 'danger'
+                  : 'neutral'
+          }
+        >
+          {t(`admin.tryouts.registrations.statuses.${row.status}` as TranslationKey)}
+        </Badge>
+      ),
+    },
+    {
+      id: 'score',
+      label: 'Avg Score',
+      render: (row) => (row.averageScore != null ? row.averageScore.toFixed(1) : t('common.table.emptyValue')),
+    },
+    {
+      id: 'evaluations',
+      label: 'Evaluations',
+      render: (row) => row.evaluationCount,
+    },
+    {
+      id: 'notes',
+      label: t('admin.tryouts.registrations.columns.notes' as TranslationKey),
+      render: (row) => row.notes || t('common.table.emptyValue'),
+    },
+  ]
+
+  const resultsSummary = useMemo(() => {
+    return {
+      accepted: resultRows.filter((row) => row.status === 'accepted' || row.status === 'offered').length,
+      waitlisted: resultRows.filter((row) => row.status === 'waitlisted').length,
+      declined: resultRows.filter((row) => ['declined', 'rejected', 'not_selected'].includes(row.status)).length,
+      avgScore:
+        resultRows.filter((row) => row.averageScore != null).length > 0
+          ? Number(
+              (
+                resultRows.reduce((sum, row) => sum + (row.averageScore ?? 0), 0) /
+                resultRows.filter((row) => row.averageScore != null).length
+              ).toFixed(1),
+            )
+          : 0,
+    }
+  }, [resultRows])
+
   const setActiveTab = (tab: DetailTab) => {
     if (!DETAIL_TABS.includes(tab)) return
     setSearchParams((current) => {
@@ -150,33 +254,25 @@ export default function AdminTryoutDetail() {
 
       {error && <Card className="oa-text-danger oa-mb-4">{error}</Card>}
 
-      <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-2 lg:oa-grid-cols-4 oa-gap-4 oa-mb-6">
-        <Card>
-          <div className="oa-stat-label">{t('admin.tryouts.detail.stats.date' as TranslationKey)}</div>
-          <div className="oa-stat-value">{tryout.tryout_date ?? t('common.tbd')}</div>
-        </Card>
-        <Card>
-          <div className="oa-stat-label">{t('admin.tryouts.detail.stats.registrations' as TranslationKey)}</div>
-          <div className="oa-stat-value">{registrations.length}</div>
-        </Card>
-        <Card>
-          <div className="oa-stat-label">{t('admin.tryouts.detail.stats.evaluators' as TranslationKey)}</div>
-          <div className="oa-stat-value">{evaluators.length}</div>
-        </Card>
-        <Card>
-          <div className="oa-stat-label">{t('admin.tryouts.detail.stats.completion' as TranslationKey)}</div>
-          <div className="oa-stat-value">{completionRate}%</div>
-        </Card>
-      </div>
+      <TopLevelStats
+        className="oa-mb-6"
+        ariaLabel="Tryout detail summary metrics"
+        items={[
+          { id: 'date', label: t('admin.tryouts.detail.stats.date' as TranslationKey), value: formatTryoutDateValue(tryout.tryout_date, t('common.tbd')) },
+          { id: 'registrations', label: t('admin.tryouts.detail.stats.registrations' as TranslationKey), value: registrations.length },
+          { id: 'evaluators', label: t('admin.tryouts.detail.stats.evaluators' as TranslationKey), value: evaluators.length },
+          { id: 'completion', label: t('admin.tryouts.detail.stats.completion' as TranslationKey), value: `${completionRate}%` },
+        ]}
+      />
 
-      <div className="oa-segmented oa-mb-4" role="tablist" aria-label={t('admin.tryouts.detail.tabs.ariaLabel' as TranslationKey)}>
+      <div className="pa-tabs-list oa-mb-4" role="tablist" aria-label={t('admin.tryouts.detail.tabs.ariaLabel' as TranslationKey)}>
         {DETAIL_TABS.map((tab) => (
           <button
             key={tab}
             type="button"
             role="tab"
             aria-selected={activeTab === tab}
-            className={`oa-segmented-item ${activeTab === tab ? 'active' : ''}`}
+            className={`pa-tabs-trigger ${activeTab === tab ? 'active' : ''}`}
             onClick={() => setActiveTab(tab)}
           >
             {t(`admin.tryouts.detail.tabs.${tab}` as TranslationKey)}
@@ -271,14 +367,29 @@ export default function AdminTryoutDetail() {
         <Card>
           <h3 className="oa-h3 oa-mb-3">{t('admin.tryouts.detail.resultsTitle' as TranslationKey)}</h3>
           <p className="oa-body-m oa-mb-4">{t('admin.tryouts.detail.resultsBody' as TranslationKey)}</p>
-          <div className="oa-flex oa-gap-2">
-            <Button variant="secondary" onClick={() => navigate(`/admin/tryouts/${tryout.id}/evaluation`)}>
-              {t('admin.tryouts.evaluation.actions.open' as TranslationKey)}
-            </Button>
-            <Button variant="secondary" onClick={() => navigate('/portal/tryouts/registrations')}>
-              {t('portal.tryouts.registrations.title' as TranslationKey)}
-            </Button>
-          </div>
+
+          <TopLevelStats
+            className="oa-mb-4"
+            ariaLabel="Tryout results summary metrics"
+            items={[
+              { id: 'offers', label: 'Offers', value: resultsSummary.accepted, tone: resultsSummary.accepted > 0 ? 'success' : 'default' },
+              { id: 'waitlisted', label: 'Waitlisted', value: resultsSummary.waitlisted, tone: resultsSummary.waitlisted > 0 ? 'warning' : 'default' },
+              { id: 'declined', label: 'No Offer', value: resultsSummary.declined, tone: resultsSummary.declined > 0 ? 'danger' : 'default' },
+              { id: 'avg', label: 'Avg Score', value: resultsSummary.avgScore > 0 ? resultsSummary.avgScore.toFixed(1) : '—' },
+            ]}
+          />
+
+          <OrgDataTable
+            columns={resultsColumns}
+            rows={resultRows}
+            loading={loading}
+            emptyMessage={t('admin.tryouts.registrations.empty' as TranslationKey)}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            totalCount={resultRows.length}
+            onPageChange={setPage}
+            onRowsPerPageChange={setRowsPerPage}
+          />
         </Card>
       )}
     </div>

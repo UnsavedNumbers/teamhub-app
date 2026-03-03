@@ -9,9 +9,7 @@
 }
 
 .dashboard-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--pa-space-4);
+  margin-bottom: 0;
 }
 
 .dashboard-section-title {

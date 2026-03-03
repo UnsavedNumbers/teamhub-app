@@ -17,6 +17,21 @@ export interface AthleteCardData {
     org_id?: string | null
     primary_sport?: { id?: string; name: string } | null
     primary_team?: { id?: string; name: string } | null
+    sports?: Array<{ id?: string; name: string }>
+    teams?: Array<{
+        id: string
+        name: string
+        org_id?: string | null
+        sport_id?: string | null
+        sport_name?: string | null
+        season_id?: string | null
+        role?: string | null
+        position?: string | null
+        jersey_number?: string | null
+    }>
+    roles?: string[]
+    positions?: string[]
+    jersey_numbers?: string[]
 }
 
 interface AthletesGridProps {
@@ -52,6 +67,7 @@ export default function AthletesGrid({
     onSelectionChange,
 }: AthletesGridProps) {
     const { context } = useUserContext()
+
     const calculateAge = (birthdate?: string | null) => {
         if (!birthdate) return null
         const today = new Date()
@@ -73,6 +89,90 @@ export default function AthletesGrid({
             prefer_not_to_say: 'Prefer not to say',
         }
         return labels[gender] || gender
+    }
+
+    const getAthleteInitials = (athlete: AthleteCardData) => {
+        return `${athlete.first_name?.[0] || ''}${athlete.last_name?.[0] || ''}`.toUpperCase() || 'A'
+    }
+
+    const uniqueValues = (values: Array<string | null | undefined>) => {
+        return Array.from(
+            new Set(
+                values
+                    .map((value) => value?.trim())
+                    .filter((value): value is string => Boolean(value))
+            )
+        )
+    }
+
+    const formatEnumLabel = (value?: string | null) => {
+        if (!value) return null
+        return value
+            .split('_')
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' ')
+    }
+
+    const getSportNames = (athlete: AthleteCardData) => {
+        return uniqueValues([
+            ...(athlete.sports?.map((sport) => sport.name) ?? []),
+            athlete.primary_sport?.name ?? null,
+            ...(athlete.teams?.map((team) => team.sport_name ?? null) ?? []),
+        ])
+    }
+
+    const getTeamNames = (athlete: AthleteCardData) => {
+        return uniqueValues([
+            ...(athlete.teams?.map((team) => team.name) ?? []),
+            athlete.primary_team?.name ?? null,
+        ])
+    }
+
+    const getRoleLabels = (athlete: AthleteCardData) => {
+        return uniqueValues([
+            ...(athlete.roles?.map((role) => formatEnumLabel(role)) ?? []),
+            ...(athlete.teams?.map((team) => formatEnumLabel(team.role)) ?? []),
+        ])
+    }
+
+    const getPositionLabels = (athlete: AthleteCardData) => {
+        return uniqueValues([
+            ...(athlete.positions ?? []),
+            ...(athlete.teams?.map((team) => team.position ?? null) ?? []),
+        ])
+    }
+
+    const getJerseyNumbers = (athlete: AthleteCardData) => {
+        return uniqueValues([
+            ...(athlete.jersey_numbers ?? []),
+            ...(athlete.teams?.map((team) => team.jersey_number ?? null) ?? []),
+            athlete.jersey_number != null ? String(athlete.jersey_number) : null,
+        ])
+    }
+
+    const summarizeValues = (values: string[], limit: number) => {
+        if (values.length <= limit) return values
+        return [...values.slice(0, limit), `+${values.length - limit} more`]
+    }
+
+    const getMarkerValue = (athlete: AthleteCardData, age: number | null) => {
+        const teamCount = getTeamNames(athlete).length
+        const sportCount = getSportNames(athlete).length
+
+        if (teamCount > 0) return String(teamCount)
+        if (sportCount > 0) return String(sportCount)
+        if (age != null) return String(age)
+        return '--'
+    }
+
+    const getMarkerLabel = (athlete: AthleteCardData, age: number | null) => {
+        const teamCount = getTeamNames(athlete).length
+        const sportCount = getSportNames(athlete).length
+
+        if (teamCount > 0) return teamCount === 1 ? 'TEAM' : 'TEAMS'
+        if (sportCount > 0) return sportCount === 1 ? 'SPORT' : 'SPORTS'
+        if (age != null) return 'AGE'
+        return 'INFO'
     }
 
     const toggleSelection = (id: string) => {
@@ -195,8 +295,7 @@ export default function AthletesGrid({
                                         photoSize="256"
                                         className="w-full h-full object-cover"
                                     />
-                                    {/* Gradient overlay */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                                    <div className="absolute inset-0 bg-black/25" />
                                 </div>
 
                                 {/* Content */}
@@ -272,26 +371,56 @@ export default function AthletesGrid({
                     })}
                 </div>
             ) : (
-                <div className="space-y-3">
+                <div className="oa-ticket-list oa-ticket-list--material oa-ticket-list--athletes">
                     {athletes.map((athlete) => {
                         const age = calculateAge(athlete.birthdate)
+                        const genderLabel = getGenderLabel(athlete.gender)
                         const displayName = `${athlete.first_name} ${athlete.last_name}`
                         const isSelected = selectedIds?.has(athlete.id)
+                        const sportNames = getSportNames(athlete)
+                        const teamNames = getTeamNames(athlete)
+                        const roleLabels = getRoleLabels(athlete)
+                        const positionLabels = getPositionLabels(athlete)
+                        const jerseyNumbers = getJerseyNumbers(athlete)
+                        const markerValue = getMarkerValue(athlete, age)
+                        const markerLabel = getMarkerLabel(athlete, age)
+                        const summaryItems = [
+                            age !== null ? `Age ${age}` : null,
+                            genderLabel !== 'Not specified' ? genderLabel : null,
+                            teamNames.length > 0 ? `${teamNames.length} ${teamNames.length === 1 ? 'team' : 'teams'}` : null,
+                            sportNames.length > 0 ? `${sportNames.length} ${sportNames.length === 1 ? 'sport' : 'sports'}` : null,
+                        ].filter((value): value is string => Boolean(value))
+                        const relationshipRows = [
+                            sportNames.length > 0 ? { label: 'Sports', values: summarizeValues(sportNames, 3) } : null,
+                            teamNames.length > 0 ? { label: 'Teams', values: summarizeValues(teamNames, 3) } : null,
+                            [...roleLabels, ...positionLabels, ...jerseyNumbers.map((jerseyNumber) => `#${jerseyNumber}`)].length > 0
+                                ? {
+                                    label: 'Assignments',
+                                    values: summarizeValues(
+                                        uniqueValues([
+                                            ...roleLabels,
+                                            ...positionLabels,
+                                            ...jerseyNumbers.map((jerseyNumber) => `#${jerseyNumber}`),
+                                        ]),
+                                        4
+                                    ),
+                                }
+                                : null,
+                        ].filter((row): row is { label: string; values: string[] } => Boolean(row))
 
                         return (
-                            <div
+                            <article
                                 key={athlete.id}
-                                className="group flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all hover:shadow-md"
+                                className={cn(
+                                    'group oa-ticket-list__row oa-ticket-list__row--ledger oa-ticket-list__row--athlete-ledger',
+                                    selectable && 'oa-ticket-list__row--athlete-selectable'
+                                )}
                                 onClick={() => onAthleteClick(athlete)}
-                                style={{
-                                    background: 'var(--org-surface-primary, #fff)',
-                                    border: '1px solid var(--org-border-default, #e5e7eb)',
-                                }}
                             >
                                 {/* Selection Checkbox */}
                                 {selectable && (
                                     <div
-                                        className="shrink-0"
+                                        className="oa-athlete-ledger__select"
                                         onClick={(e) => {
                                             e.stopPropagation()
                                             toggleSelection(athlete.id)
@@ -313,55 +442,122 @@ export default function AthletesGrid({
                                 )}
 
                                 {/* Avatar */}
-                                <div className="shrink-0 w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                                    <AthleteAvatar
-                                        athlete={{ ...athlete, org_id: athlete.org_id ?? context?.orgId ?? undefined, has_profile_photo: athlete.has_profile_photo ?? !!athlete.photo_url } as unknown as Athlete}
-                                        photoSize="256"
-                                        className="w-full h-full object-cover"
-                                    />
+                                <div className="oa-athlete-ledger__avatar-wrap">
+                                    <div className="oa-athlete-ledger__avatar">
+                                        <AthleteAvatar
+                                            athlete={{ ...athlete, org_id: athlete.org_id ?? context?.orgId ?? undefined, has_profile_photo: athlete.has_profile_photo ?? !!athlete.photo_url } as unknown as Athlete}
+                                            photoSize="256"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    {!athlete.photo_url && !athlete.has_profile_photo && (
+                                        <span className="oa-athlete-ledger__initials" aria-hidden="true">
+                                            {getAthleteInitials(athlete)}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="oa-ticket-list__count oa-ticket-list__count--athlete" aria-label={`${markerLabel} ${markerValue}`}>
+                                    <span className="oa-ticket-list__count-value">{markerValue}</span>
+                                    <span className="oa-ticket-list__count-label">{markerLabel}</span>
                                 </div>
 
                                 {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold truncate" style={{ color: 'var(--org-text-primary, #111)' }}>
-                                        {displayName}
-                                    </h3>
-                                    <div className="flex flex-wrap gap-2 text-xs mt-0.5" style={{ color: 'var(--org-text-secondary, #6b7280)' }}>
-                                        {age !== null && <span>Age {age}</span>}
-                                        {athlete.jersey_number && <span>#{athlete.jersey_number}</span>}
-                                        {athlete.primary_sport && <span>{athlete.primary_sport.name}</span>}
-                                        {athlete.primary_team && <span>{athlete.primary_team.name}</span>}
+                                <div className="oa-ticket-list__content oa-ticket-list__content--ledger oa-ticket-list__content--athlete">
+                                    <button
+                                        type="button"
+                                        className="oa-ticket-list__title-link oa-ticket-list__title-link--button"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            onAthleteClick(athlete)
+                                        }}
+                                    >
+                                        <span className="oa-ticket-list__event-name">{displayName}</span>
+                                    </button>
+
+                                    <div className="oa-ticket-list__order-meta oa-ticket-list__order-meta--athlete">
+                                        {summaryItems.map((item, index) => (
+                                            <span key={`${athlete.id}-summary-${item}`} className="oa-athlete-ledger__meta-summary">
+                                                {index > 0 && (
+                                                    <span className="oa-ticket-list__supporting-dot" aria-hidden="true">|</span>
+                                                )}
+                                                <span>{item}</span>
+                                            </span>
+                                        ))}
                                     </div>
+
+                                    {relationshipRows.length > 0 && (
+                                        <div className="oa-athlete-ledger__detail-list">
+                                            {relationshipRows.map((row) => (
+                                                <div key={`${athlete.id}-${row.label}`} className="oa-athlete-ledger__detail-row">
+                                                    <span className="oa-athlete-ledger__detail-label">{row.label}</span>
+                                                    <div className="oa-athlete-ledger__detail-values">
+                                                        {row.values.map((value) => (
+                                                            <span
+                                                                key={`${athlete.id}-${row.label}-${value}`}
+                                                                className={cn(
+                                                                    'oa-athlete-ledger__detail-chip',
+                                                                    value.startsWith('+') && 'oa-athlete-ledger__detail-chip--overflow'
+                                                                )}
+                                                            >
+                                                                {value}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Actions */}
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                        className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors"
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            onEdit(athlete)
-                                        }}
-                                        title="Edit"
-                                    >
-                                        <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                                            edit
-                                        </span>
-                                    </button>
-                                    <button
-                                        className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-50 transition-colors"
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            onDelete(athlete)
-                                        }}
-                                        title="Delete"
-                                    >
-                                        <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#dc2626' }}>
-                                            delete
-                                        </span>
-                                    </button>
+                                <div className="oa-ticket-list__side oa-ticket-list__side--ledger oa-ticket-list__side--athlete">
+                                    <div className="oa-ticket-list__actions oa-ticket-list__actions--ledger">
+                                        <button
+                                            className="oa-ticket-list__icon-btn oa-ticket-list__icon-btn--view"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                onAthleteClick(athlete)
+                                            }}
+                                            title="View"
+                                            aria-label={`View ${displayName}`}
+                                            type="button"
+                                        >
+                                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                                                visibility
+                                            </span>
+                                        </button>
+                                        <button
+                                            className="oa-ticket-list__icon-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                onEdit(athlete)
+                                            }}
+                                            title="Edit"
+                                            aria-label={`Edit ${displayName}`}
+                                            type="button"
+                                        >
+                                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                                                edit
+                                            </span>
+                                        </button>
+                                        <button
+                                            className="oa-ticket-list__icon-btn oa-ticket-list__icon-btn--delete"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                onDelete(athlete)
+                                            }}
+                                            title="Delete"
+                                            aria-label={`Delete ${displayName}`}
+                                            type="button"
+                                        >
+                                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                                                delete
+                                            </span>
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
+                            </article>
                         )
                     })}
                 </div>

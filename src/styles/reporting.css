@@ -181,9 +181,10 @@ html.dark .reporting-content {
 .reporting-metric-card {
   background: var(--org-surface-card, #ffffff);
   border: 1px solid var(--org-border-default, #e2e8f0);
-  border-radius: 12px;
+  border-left: 8px solid var(--org-btn-primary-bg, #137fec);
+  border-radius: 0;
   padding: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 18px 40px -20px rgba(15, 23, 42, 0.25);
   transition: all 0.2s ease;
 }
 

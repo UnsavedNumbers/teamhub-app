@@ -118,9 +118,6 @@
 }
 
 .admin-photos-page .stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--pa-space-3);
   margin-bottom: var(--pa-space-4);
 }
 
@@ -131,7 +128,7 @@
   margin-bottom: var(--pa-space-4);
 }
 
-.admin-photos-page .tabs-row .pa-btn {
+.admin-photos-page .tabs-row .pa-tabs-trigger {
   text-transform: none;
 }
 

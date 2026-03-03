@@ -10,7 +10,6 @@ import { NotificationRecord } from '../types/notifications'
 import type { NotificationCursor } from '../data/services/messagesService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle } from '../components/portal/Typography'
-import EmptyState from '../components/portal/EmptyState'
 import NotificationErrorBoundary from '../components/common/NotificationErrorBoundary'
 import { showError, showSuccess } from '../utils/toast'
 import { cn } from '../utils/cn'
@@ -398,10 +397,28 @@ export default function Notifications() {
     return 'notifications' // default
   }
 
-  const getColorClass = (action: string) => {
-    if (action.includes('urgent')) return 'text-red-500'
-    if (action.includes('payment')) return 'text-emerald-600'
-    return 'text-[var(--org-btn-primary-bg)]'
+  const formatTime = (value: string) =>
+    new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+  const formatRelativeTime = (value: string) => {
+    const created = new Date(value).getTime()
+    const diffMs = Date.now() - created
+    const minutes = Math.max(0, Math.floor(diffMs / 60000))
+    if (minutes < 1) return 'Just now'
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+    const days = Math.floor(hours / 24)
+    return `${days} day${days === 1 ? '' : 's'} ago`
+  }
+
+  const getStatusTag = (notification: NotificationRecord, isUnread: boolean) => {
+    if (notification.archived_at) return { label: 'Archived', tone: 'muted' as const }
+    if (isUnread) return { label: 'New', tone: 'accent' as const }
+    if (notification.action.includes('payment')) return { label: 'Logged', tone: 'muted' as const }
+    if (notification.action.includes('message')) return { label: 'Updated', tone: 'muted' as const }
+    if (notification.action.includes('event')) return { label: 'Updated', tone: 'muted' as const }
+    return { label: 'Info', tone: 'muted' as const }
   }
 
   if (!auth) return null
@@ -554,171 +571,142 @@ export default function Notifications() {
         </aside>
 
         {/* Notification Feed Content */}
-        <section className="flex-1 flex flex-col border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50">
-          
-          {/* Feed Header */}
-          <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-wrap justify-between items-end gap-4">
-            <div className="flex flex-col gap-2">
-              <h2 className="text-slate-900 dark:text-white text-xl sm:text-2xl font-bold leading-none tracking-tight">Activity Feed</h2>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">
-                {filteredNotifications.length} updates
-              </p>
+        <section className="portal-notif-feed">
+          <div className="portal-notif-feed__header">
+            <div className="portal-notif-feed__heading">
+              <p className="portal-notif-feed__micro">Family activity stream</p>
+              <h2 className="portal-notif-feed__title">Notifications</h2>
+              <p className="portal-notif-feed__subtitle">{filteredNotifications.length} updates</p>
             </div>
-            <button 
+            <button
               onClick={handleMarkAllRead}
-              className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-[var(--org-link-color)] transition-colors mb-2"
+              className="portal-notif-feed__markall"
+              disabled={notifications.every((n) => n.read_at)}
             >
-              <span className="material-symbols-outlined text-lg">done_all</span>
+              <span className="material-symbols-outlined">done_all</span>
               Mark all as read
             </button>
           </div>
 
-          {/* Tabs */}
-          <div className="px-4 sm:px-6 border-b border-slate-200 dark:border-slate-700">
-            <div className="flex gap-8 overflow-x-auto">
-              <button 
-                onClick={() => setActiveTab('all')}
-                className={`border-b-2 py-3 text-sm font-semibold transition-colors whitespace-nowrap ${
-                  activeTab === 'all' 
-                    ? 'border-[var(--org-btn-primary-bg)] text-slate-900 dark:text-white' 
-                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
+          <div className="portal-notif-feed__tabs" role="tablist">
+            {(['all', 'unread', 'archived'] as const).map((tab) => (
+              <button
+                key={tab}
+                role="tab"
+                aria-selected={activeTab === tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn('portal-notif-feed__tab', activeTab === tab && 'is-active')}
               >
-                All Activity
+                {tab === 'all' && 'All Activity'}
+                {tab === 'unread' && 'Unread'}
+                {tab === 'archived' && 'Archived'}
               </button>
-              <button 
-                onClick={() => setActiveTab('unread')}
-                className={`border-b-2 py-3 text-sm font-semibold transition-colors whitespace-nowrap ${
-                  activeTab === 'unread' 
-                    ? 'border-[var(--org-btn-primary-bg)] text-slate-900 dark:text-white' 
-                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Unread
-              </button>
-              <button 
-                onClick={() => setActiveTab('archived')}
-                className={`border-b-2 py-3 text-sm font-semibold transition-colors whitespace-nowrap ${
-                  activeTab === 'archived' 
-                    ? 'border-[var(--org-btn-primary-bg)] text-slate-900 dark:text-white' 
-                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Archived
-              </button>
-            </div>
+            ))}
           </div>
 
-          {/* Notification List (The Stream) */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="portal-notif-feed__list">
             {loading ? (
-              <div className="p-4 space-y-3">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-24 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+              <div className="portal-notif-feed__loading">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="portal-notif-feed__skeleton" />
                 ))}
               </div>
             ) : filteredNotifications.length === 0 ? (
-              <div className="p-8">
-                <EmptyState
-                  icon="notifications_off"
-                  title="No notifications found"
-                  description="You are all caught up."
-                />
+              <div className="portal-notif-feed__empty">
+                <div className="portal-notif-feed__empty-icon">
+                  <span className="material-symbols-outlined" aria-hidden>
+                    notifications_off
+                  </span>
+                </div>
+                <div>
+                  <h3 className="portal-notif-feed__empty-title">No notifications found</h3>
+                  <p className="portal-notif-feed__empty-copy">You are all caught up.</p>
+                </div>
               </div>
             ) : (
-              groupedNotifications.map((group, groupIdx) => (
-                <div key={groupIdx}>
-                  {/* Date Header */}
+              groupedNotifications.map((group) => (
+                <div key={group.label} className="portal-notif-group">
                   {group.label !== 'Today' && (
-                    <div className="bg-slate-50 dark:bg-slate-800/40 px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-slate-700">
-                      <span className="tracking-[0.15em] text-xs font-bold text-slate-400 uppercase">{group.label}</span>
+                    <div className="portal-notif-group__header">
+                      <span className="portal-notif-feed__micro">{group.label}</span>
                     </div>
                   )}
-
-                  {/* Items */}
                   {group.items.map((notification) => {
-                    const timeStr = new Date(notification.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
                     const isUnread = !notification.read_at
-                    
+                    const isArchived = Boolean(notification.archived_at)
+                    const icon = getIcon(notification.action)
+                    const statusTag = getStatusTag(notification, isUnread)
+                    const metaLabel =
+                      notification.role_context?.toUpperCase() ||
+                      notification.action.replace(/_/g, ' ').toUpperCase()
                     return (
-                      <div 
-                        key={notification.id} 
-                        className={`group flex flex-col md:flex-row md:items-center p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 transition-colors ${
-                          isUnread ? 'bg-white dark:bg-slate-900/40' : 'bg-slate-50/60 dark:bg-slate-900/20'
-                        } hover:bg-slate-50 dark:hover:bg-slate-800/50`}
+                      <article
+                        key={notification.id}
+                        className={cn(
+                          'portal-notif-row',
+                          isUnread && 'portal-notif-row--unread',
+                          isArchived && 'portal-notif-row--archived'
+                        )}
                       >
-                       <div className="flex items-start md:items-center w-full gap-4 md:gap-8">
-                          
-                          {/* Time Column */}
-                          <div className="min-w-[84px] md:min-w-[108px] pt-1 md:pt-0">
-                             <h2 className={`text-xl md:text-2xl font-bold tabular-nums whitespace-nowrap ${isUnread ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
-                               {timeStr}
-                             </h2>
+                        <div className="portal-notif-row__time">{formatTime(notification.created_at)}</div>
+                        <div className="portal-notif-row__icon">
+                          <span className="material-symbols-outlined portal-notif-row__icon-symbol">{icon}</span>
+                          <span
+                            className={cn(
+                              'portal-notif-label',
+                              statusTag.tone === 'accent'
+                                ? 'portal-notif-label--accent'
+                                : 'portal-notif-label--muted'
+                            )}
+                          >
+                            {statusTag.label}
+                          </span>
+                        </div>
+                        <div className="portal-notif-row__body">
+                          <div className="portal-notif-row__title-line">
+                            <h3 className="portal-notif-row__title">{notification.title}</h3>
+                            {notification.presentation_type === 'urgent' && (
+                              <span className="portal-notif-row__meta-chip">Urgent</span>
+                            )}
+                            {notification.role_context && (
+                              <span className="portal-notif-row__meta-chip">{notification.role_context.toUpperCase()}</span>
+                            )}
                           </div>
-
-                          {/* Icon & Content Container */}
-                          <div className="flex items-start gap-4 md:gap-6 flex-1">
-                            
-                            {/* Icon Column */}
-                            <div className="flex flex-col items-center pt-1 md:pt-0">
-                               <span className={`material-symbols-outlined text-2xl md:text-3xl font-light ${isUnread ? getColorClass(notification.action) : 'text-slate-400'}`}>
-                                 {getIcon(notification.action)}
-                               </span>
-                               {isUnread && (
-                                 <span className="tracking-[0.15em] text-[0.65rem] font-bold text-[var(--org-btn-primary-bg)] mt-1 uppercase">New</span>
-                               )}
-                            </div>
-
-                            {/* Text Content */}
-                            <div className={`flex flex-col ${!isUnread && 'opacity-60'}`}>
-                               <div className="flex flex-wrap gap-2 items-center mb-1">
-                                <h3 className={`text-base md:text-lg font-semibold ${isUnread ? 'text-slate-900 dark:text-white' : 'line-through text-slate-900 dark:text-white'}`}>
-                                  {notification.title}
-                                </h3>
-                                {/* Mobile-only status chips could go here */}
-                               </div>
-                               <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-sm">
-                                  {notification.body}
-                               </p>
-                               {/* Actions */}
-                               <div className="flex flex-wrap gap-4 mt-3 items-center">
-                                 {notification.link_url && (
-                                    <Link to={notification.link_url} className="text-sm font-semibold text-[var(--org-link-color)] hover:underline flex items-center gap-1">
-                                       View details <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                                   </Link>
-                                 )}
-                                 {/* Actions */}
-                                 {isUnread && (
-                                    <button 
-                                      onClick={() => handleMarkRead(notification.id)}
-                                      className="text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                                    >
-                                      Dismiss
-                                    </button>
-                                 )}
-                                 {!notification.archived_at && activeTab !== 'archived' && (
-                                    <button 
-                                      onClick={() => handleArchive(notification.id)}
-                                      className="text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                                    >
-                                      Archive
-                                    </button>
-                                 )}
-                               </div>
-                            </div>
-                          </div>
-              
-                          {/* Desktop Meta Column */}
-                          <div className="hidden md:flex flex-col items-end gap-2 min-w-[100px]">
-                            {/* We don't always have a tag, but if we did: */}
-                             {notification.role_context && (
-                                <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-slate-700 text-xs font-bold text-slate-500 dark:text-slate-300 uppercase">
-                                  {notification.role_context}
+                          <p className="portal-notif-row__text">{notification.body}</p>
+                          <div className="portal-notif-row__actions">
+                            {notification.link_url && (
+                              <Link to={notification.link_url} className="portal-notif-row__action-link">
+                                View details
+                                <span className="material-symbols-outlined portal-notif-row__action-icon">
+                                  arrow_forward
                                 </span>
-                             )}
+                              </Link>
+                            )}
+                            {isUnread && (
+                              <button
+                                type="button"
+                                className="portal-notif-row__action-button"
+                                onClick={() => handleMarkRead(notification.id)}
+                              >
+                                Mark read
+                              </button>
+                            )}
+                            {!notification.archived_at && activeTab !== 'archived' && (
+                              <button
+                                type="button"
+                                className="portal-notif-row__action-button"
+                                onClick={() => handleArchive(notification.id)}
+                              >
+                                Archive
+                              </button>
+                            )}
                           </div>
-                       </div>
-                      </div>
+                        </div>
+                        <div className="portal-notif-row__meta">
+                          <span className="portal-notif-row__meta-chip">{metaLabel}</span>
+                          <span className="portal-notif-row__meta-time">{formatRelativeTime(notification.created_at)}</span>
+                        </div>
+                      </article>
                     )
                   })}
                 </div>
@@ -726,27 +714,23 @@ export default function Notifications() {
             )}
           </div>
 
-          {/* Offline Indicator */}
           {isOffline && (
-            <div className="px-4 sm:px-6 py-3 bg-yellow-50 dark:bg-yellow-900/20 border-t border-yellow-200 dark:border-yellow-800">
-              <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
-                <span className="material-symbols-outlined">wifi_off</span>
-                <span className="text-sm font-medium">You're offline. Some features may be unavailable.</span>
-              </div>
+            <div className="portal-notif-feed__offline">
+              <span className="material-symbols-outlined">wifi_off</span>
+              <span>You're offline. Some features may be unavailable.</span>
             </div>
           )}
 
-          {/* Load More Footer - only if we have data and next cursor */}
           {!loading && filteredNotifications.length > 0 && nextCursor && (
-            <div className="p-4 sm:p-6 border-t border-slate-200 dark:border-slate-700 flex justify-center">
-              <button 
+            <div className="portal-notif-feed__footer">
+              <button
                 onClick={handleLoadMore}
                 disabled={loadingMore || isOffline}
-                className="org-btn-secondary flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="portal-notif-feed__loadmore"
               >
                 {loadingMore ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current"></div>
+                    <div className="portal-notif-feed__spinner" />
                     Loading...
                   </>
                 ) : (

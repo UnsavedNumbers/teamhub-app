@@ -5,6 +5,7 @@ import { useT } from '../../i18n/useI18n'
 import type { TranslationKey } from '../../i18n'
 import { getCoachAssignedTryouts, getCoachTryoutDashboardStats, type Tryout } from '../../data/services/tryoutsService'
 import { AdminPageHeader, Badge, Button, Card } from '../../components/admin'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import '../../styles/orgAdmin.css'
 
 type StatusFilter = 'all' | 'open' | 'closed' | 'completed'
@@ -62,29 +63,28 @@ export default function CoachTryouts() {
 
       {error && <Card className="oa-text-danger oa-mb-4">{error}</Card>}
 
-      <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-3 oa-gap-4 oa-mb-4">
-        <Card>
-          <div className="oa-stat-label">{t('admin.tryouts.coach.assignments' as TranslationKey)}</div>
-          <div className="oa-stat-value">{rows.length}</div>
-        </Card>
-        <Card>
-          <div className="oa-stat-label">{t('admin.tryouts.coach.pendingEvaluations' as TranslationKey)}</div>
-          <div className="oa-stat-value">{pendingEvaluations}</div>
-        </Card>
-        <Card>
-          <label className="oa-label">{t('admin.tryouts.coach.filterLabel' as TranslationKey)}</label>
-          <select
-            className="oa-input"
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-          >
-            <option value="all">{t('common.all')}</option>
-            <option value="open">{t('admin.tryouts.status.open' as TranslationKey)}</option>
-            <option value="closed">{t('admin.tryouts.status.closed' as TranslationKey)}</option>
-            <option value="completed">{t('admin.tryouts.status.completed' as TranslationKey)}</option>
-          </select>
-        </Card>
-      </div>
+      <TopLevelStats
+        className="oa-mb-4"
+        ariaLabel="Coach tryout summary metrics"
+        items={[
+          { id: 'assignments', label: t('admin.tryouts.coach.assignments' as TranslationKey), value: rows.length },
+          { id: 'pending', label: t('admin.tryouts.coach.pendingEvaluations' as TranslationKey), value: pendingEvaluations, tone: pendingEvaluations > 0 ? 'warning' : 'default' },
+        ]}
+      />
+
+      <Card className="oa-mb-4">
+        <label className="oa-label">{t('admin.tryouts.coach.filterLabel' as TranslationKey)}</label>
+        <select
+          className="oa-input"
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+        >
+          <option value="all">{t('common.all')}</option>
+          <option value="open">{t('admin.tryouts.status.open' as TranslationKey)}</option>
+          <option value="closed">{t('admin.tryouts.status.closed' as TranslationKey)}</option>
+          <option value="completed">{t('admin.tryouts.status.completed' as TranslationKey)}</option>
+        </select>
+      </Card>
 
       <Card>
         {loading ? (

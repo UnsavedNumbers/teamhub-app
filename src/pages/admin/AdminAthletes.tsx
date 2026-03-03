@@ -171,7 +171,17 @@ export default function AdminAthletes() {
             if (filters.search) {
                 const searchLower = filters.search.toLowerCase()
                 filteredAthletes = filteredAthletes.filter((a: AthleteCardData) =>
-                    `${a.first_name} ${a.last_name}`.toLowerCase().includes(searchLower)
+                    [
+                        `${a.first_name} ${a.last_name}`,
+                        ...(a.sports?.map((sport) => sport.name) ?? []),
+                        ...(a.teams?.map((team) => team.name) ?? []),
+                        ...(a.roles ?? []),
+                        ...(a.positions ?? []),
+                        ...(a.jersey_numbers ?? []).map((jerseyNumber) => `#${jerseyNumber}`),
+                    ]
+                        .join(' ')
+                        .toLowerCase()
+                        .includes(searchLower)
                 )
             }
 
@@ -185,14 +195,16 @@ export default function AdminAthletes() {
             // Team filter
             if (filters.teamIds.length > 0) {
                 filteredAthletes = filteredAthletes.filter((a: AthleteCardData) =>
-                    a.primary_team && filters.teamIds.includes(a.primary_team.id as string)
+                    a.teams?.some((team) => filters.teamIds.includes(team.id)) ||
+                    (a.primary_team && filters.teamIds.includes(a.primary_team.id as string))
                 )
             }
 
             // Sport filter
             if (filters.sportIds.length > 0) {
                 filteredAthletes = filteredAthletes.filter((a: AthleteCardData) =>
-                    a.primary_sport && filters.sportIds.includes(a.primary_sport.id as string)
+                    a.sports?.some((sport) => sport.id && filters.sportIds.includes(sport.id)) ||
+                    (a.primary_sport && filters.sportIds.includes(a.primary_sport.id as string))
                 )
             }
 

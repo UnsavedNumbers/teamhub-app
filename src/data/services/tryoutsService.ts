@@ -2,15 +2,19 @@ import { FAKE_DATA_DELAY_MS, USE_FAKE_DATA } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { getGuardianCanonicalUserId } from '../fake/userContext'
 import {
+  fakeTryoutEvaluators,
   fakeTryoutEvaluations,
   fakeTryoutRegistrations,
+  fakeTryoutSessions,
   fakeTryouts,
   getRegistrationsForChild as getFakeRegistrationsForChild,
   getTryoutById as getFakeTryoutById,
+  getTryoutEvaluatorsForTryout as getFakeTryoutEvaluatorsForTryout,
+  getTryoutSessionsForTryout as getFakeTryoutSessionsForTryout,
   getTryoutsForOrg as getFakeTryoutsForOrg,
   isChildRegisteredForTryout as isChildRegisteredForTryoutFake,
 } from '../fake/fakeTryouts'
-import { getChildById } from '../fake/fakeUsers'
+import { getChildById, getUserById } from '../fake/fakeUsers'
 import { getChildrenForUserId, getFamiliesForUserId } from '../fake/relationships'
 import { supabase } from '../../lib/supabase'
 import { createServiceResponse } from './responseHelpers'
@@ -225,9 +229,6 @@ function normalizeStatus(status: unknown): TryoutStatus {
 
 function normalizeRegistrationStatus(status: unknown): TryoutRegistrationStatus {
   if (typeof status !== 'string') return 'registered'
-  if (status === 'confirmed') return 'registered'
-  if (status === 'pending') return 'registered'
-  if (status === 'cancelled') return 'withdrawn'
   if (REGISTRATION_STATUSES.has(status as TryoutRegistrationStatus)) {
     return status as TryoutRegistrationStatus
   }
@@ -413,9 +414,9 @@ function mapFakeRegistration(raw: any): TryoutRegistration {
     family_id: child?.family_id ?? '',
     status: normalizeRegistrationStatus(raw.status),
     notes: raw.notes_from_parent ?? null,
-    offer_deadline: null,
-    session_id: null,
-    payment_status: null,
+    offer_deadline: raw.offer_deadline ?? null,
+    session_id: raw.session_id ?? null,
+    payment_status: (raw.payment_status as TryoutRegistration['payment_status']) ?? null,
     created_at: raw.created_at ?? null,
     updated_at: raw.updated_at ?? null,
     child: child
@@ -423,6 +424,57 @@ function mapFakeRegistration(raw: any): TryoutRegistration {
           id: child.id,
           first_name: child.first_name,
           last_name: child.last_name,
+        }
+      : undefined,
+  }
+}
+
+function mapFakeEvaluator(raw: any): TryoutEvaluator {
+  const coach = getUserById(raw.coach_id)
+  const [firstName = '', ...lastNameParts] = (coach?.display_name ?? '').split(' ')
+  return {
+    id: String(raw.id),
+    tryout_id: String(raw.tryout_id),
+    coach_id: String(raw.coach_id),
+    assigned_at: raw.assigned_at ?? null,
+    coach: coach
+      ? {
+          id: coach.id,
+          first_name: firstName,
+          last_name: lastNameParts.join(' '),
+          email: coach.email,
+        }
+      : undefined,
+  }
+}
+
+function mapFakeEvaluation(raw: any): TryoutEvaluation {
+  const registration = fakeTryoutRegistrations.find((row) => row.id === raw.registration_id)
+  const child = registration ? getChildById(registration.athlete_id) : null
+  const scores = [raw.skill_score, raw.athleticism_score, raw.attitude_score].filter((value: unknown) => typeof value === 'number') as number[]
+  const averageScore = scores.length > 0 ? Number((scores.reduce((sum, value) => sum + value, 0) / scores.length).toFixed(1)) : 0
+
+  return {
+    id: String(raw.id),
+    registration_id: String(raw.registration_id),
+    coach_id: String(raw.evaluated_by_user_id),
+    category: String(raw.category ?? 'overall'),
+    score: averageScore,
+    notes: raw.notes ?? null,
+    session_id: raw.session_id ?? null,
+    created_at: raw.created_at ?? null,
+    updated_at: raw.updated_at ?? null,
+    registration: registration
+      ? {
+          id: registration.id,
+          athlete_id: registration.athlete_id,
+          child: child
+            ? {
+                id: child.id,
+                first_name: child.first_name,
+                last_name: child.last_name,
+              }
+            : undefined,
         }
       : undefined,
   }
@@ -478,7 +530,10 @@ export async function getTryouts(
   }
 
   if (USE_FAKE_DATA) {
-    const mapped = getFakeTryoutsForOrg(resolvedOrgId).map(mapFakeTryout)
+    const mapped = getFakeTryoutsForOrg(resolvedOrgId).map((item) => ({
+      ...mapFakeTryout(item),
+      registration_count: fakeTryoutRegistrations.filter((row) => row.tryout_id === item.id).length,
+    }))
     return createServiceResponse(filterTryouts(mapped, options), null)
   }
 
@@ -806,6 +861,14 @@ export async function getAdminTryoutRegistrations(
     return createServiceResponse([], new Error('You do not have permission to view registrations for this tryout.'))
   }
 
+  if (USE_FAKE_DATA) {
+    const rows = fakeTryoutRegistrations
+      .filter((row) => row.tryout_id === tryoutId)
+      .map(mapFakeRegistration)
+      .sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))
+    return createServiceResponse(rows, null)
+  }
+
   return getTryoutRegistrations(context, tryoutId)
 }
 
@@ -958,21 +1021,20 @@ export async function getTryoutSessions(
     const tryout = getFakeTryoutById(tryoutId)
     if (!tryout) return createServiceResponse([], null)
 
+    const sessions = getFakeTryoutSessionsForTryout(tryoutId)
     return createServiceResponse(
-      [
-        {
-          id: `session-${tryout.id}`,
-          tryout_id: tryout.id,
-          session_date: tryout.tryout_date,
-          start_time: tryout.start_time,
-          end_time: tryout.end_time ?? null,
-          location: tryout.location ?? null,
-          session_type: 'initial',
-          capacity: tryout.max_participants ?? null,
-          created_at: tryout.created_at,
-          updated_at: tryout.updated_at,
-        },
-      ],
+      (sessions.length > 0 ? sessions : [{
+        id: `session-${tryout.id}`,
+        tryout_id: tryout.id,
+        session_date: tryout.tryout_date,
+        start_time: tryout.start_time,
+        end_time: tryout.end_time ?? null,
+        location: tryout.location ?? null,
+        session_type: 'initial',
+        capacity: tryout.max_participants ?? null,
+        created_at: tryout.created_at,
+        updated_at: tryout.updated_at,
+      }]).map(mapSessionRow),
       null,
     )
   }
@@ -1013,7 +1075,26 @@ export async function replaceTryoutSessions(
   }
 
   if (USE_FAKE_DATA) {
-    return createServiceResponse(sessions.map((session) => ({ ...session, tryout_id: tryoutId })), null)
+    const normalized = sessions.map((session, index) => ({
+      id: session.id || `session-${tryoutId}-${index + 1}`,
+      tryout_id: tryoutId,
+      session_date: session.session_date,
+      start_time: session.start_time,
+      end_time: session.end_time ?? null,
+      location: session.location ?? null,
+      session_type: session.session_type ?? 'initial',
+      capacity: typeof session.capacity === 'number' ? session.capacity : null,
+      created_at: session.created_at ?? new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }))
+
+    for (let index = fakeTryoutSessions.length - 1; index >= 0; index -= 1) {
+      if (fakeTryoutSessions[index].tryout_id === tryoutId) {
+        fakeTryoutSessions.splice(index, 1)
+      }
+    }
+    fakeTryoutSessions.push(...(normalized as any))
+    return createServiceResponse(normalized.map(mapSessionRow), null)
   }
 
   try {
@@ -1053,7 +1134,15 @@ export async function getTryoutEvaluators(
   await maybeDelay()
   if (!tryoutId) return createServiceResponse([], new Error('Tryout ID is required.'))
 
-  if (USE_FAKE_DATA) return createServiceResponse([], null)
+  if (USE_FAKE_DATA) {
+    return createServiceResponse(
+      getFakeTryoutEvaluatorsForTryout(tryoutId)
+        .map(mapFakeEvaluator)
+        .sort((a, b) => (a.assigned_at ?? '').localeCompare(b.assigned_at ?? '')),
+      null,
+    )
+  }
+  
 
   try {
     const { data, error } = await supabaseAny
@@ -1108,15 +1197,17 @@ export async function assignTryoutEvaluator(
   if (!coachId) return createServiceResponse(null, new Error('Coach ID is required.'))
 
   if (USE_FAKE_DATA) {
-    return createServiceResponse(
-      {
-        id: `eval-${Date.now()}`,
-        tryout_id: tryoutId,
-        coach_id: coachId,
-        assigned_at: new Date().toISOString(),
-      },
-      null,
-    )
+    const existing = fakeTryoutEvaluators.find((item) => item.tryout_id === tryoutId && item.coach_id === coachId)
+    if (existing) return createServiceResponse(mapFakeEvaluator(existing), null)
+
+    const created = {
+      id: `eval-${Date.now()}`,
+      tryout_id: tryoutId,
+      coach_id: coachId,
+      assigned_at: new Date().toISOString(),
+    }
+    fakeTryoutEvaluators.push(created as any)
+    return createServiceResponse(mapFakeEvaluator(created), null)
   }
 
   try {
@@ -1156,7 +1247,11 @@ export async function removeTryoutEvaluator(
   if (!tryoutId) return createServiceResponse(false, new Error('Tryout ID is required.'))
   if (!coachId) return createServiceResponse(false, new Error('Coach ID is required.'))
 
-  if (USE_FAKE_DATA) return createServiceResponse(true, null)
+  if (USE_FAKE_DATA) {
+    const index = fakeTryoutEvaluators.findIndex((item) => item.tryout_id === tryoutId && item.coach_id === coachId)
+    if (index >= 0) fakeTryoutEvaluators.splice(index, 1)
+    return createServiceResponse(true, null)
+  }
 
   try {
     const { error } = await supabaseAny.from(EVALUATOR_TABLE).delete().eq('tryout_id', tryoutId).eq('coach_id', coachId)
@@ -1182,9 +1277,16 @@ export async function getCoachAssignedTryouts(
   if (!resolvedOrgId) return createServiceResponse([], new Error('Organization is required to load coach assignments.'))
 
   if (USE_FAKE_DATA) {
+    const assignedTryoutIds = new Set(
+      fakeTryoutEvaluators
+        .filter((item) => item.coach_id === context.userId)
+        .map((item) => item.tryout_id),
+    )
+
     const rows = getFakeTryoutsForOrg(resolvedOrgId)
+      .filter((item) => assignedTryoutIds.has(item.id))
       .map(mapFakeTryout)
-      .filter((tryout) => tryout.status === 'open' || tryout.status === 'closed')
+      .filter((tryout) => tryout.status === 'open' || tryout.status === 'closed' || tryout.status === 'completed')
     return createServiceResponse(rows, null)
   }
 
@@ -1228,34 +1330,45 @@ export async function upsertTryoutEvaluation(
 
   if (USE_FAKE_DATA) {
     const now = new Date().toISOString()
-    const id = `score-${Date.now()}`
-    fakeTryoutEvaluations.push({
-      id,
-      registration_id: input.registrationId,
-      evaluated_by_user_id: context.userId,
-      decision: 'pending',
-      skill_score: input.score,
-      athleticism_score: input.score,
-      attitude_score: input.score,
-      notes: input.notes ?? null,
-      created_at: now,
-      updated_at: now,
-    } as any)
+    const existing = fakeTryoutEvaluations.find(
+      (item) => item.registration_id === input.registrationId && item.evaluated_by_user_id === context.userId && (item.category ?? 'overall') === category,
+    )
 
-    return createServiceResponse(
-      {
-        id,
+    if (existing) {
+      existing.skill_score = input.score
+      existing.athleticism_score = input.score
+      existing.attitude_score = input.score
+      existing.notes = input.notes ?? null
+      existing.category = category
+      existing.session_id = input.sessionId ?? null
+      existing.updated_at = now
+    } else {
+      fakeTryoutEvaluations.push({
+        id: `score-${Date.now()}`,
         registration_id: input.registrationId,
-        coach_id: context.userId,
-        category,
-        score: input.score,
+        evaluated_by_user_id: context.userId,
+        decision: 'pending',
+        skill_score: input.score,
+        athleticism_score: input.score,
+        attitude_score: input.score,
         notes: input.notes ?? null,
+        category,
         session_id: input.sessionId ?? null,
         created_at: now,
         updated_at: now,
-      },
-      null,
+      } as any)
+    }
+
+    const registration = fakeTryoutRegistrations.find((item) => item.id === input.registrationId)
+    if (registration && ['registered', 'checked_in', 'pending', 'confirmed'].includes(registration.status)) {
+      registration.status = 'evaluated'
+      registration.updated_at = now
+    }
+
+    const saved = fakeTryoutEvaluations.find(
+      (item) => item.registration_id === input.registrationId && item.evaluated_by_user_id === context.userId && (item.category ?? 'overall') === category,
     )
+    return createServiceResponse(saved ? mapFakeEvaluation(saved) : null, null)
   }
 
   try {
@@ -1309,17 +1422,7 @@ export async function getTryoutEvaluations(
     const registrationIds = new Set(registrations.map((row) => row.id))
     const mapped = fakeTryoutEvaluations
       .filter((row) => registrationIds.has(row.registration_id))
-      .map((row) => ({
-        id: row.id,
-        registration_id: row.registration_id,
-        coach_id: row.evaluated_by_user_id,
-        category: 'overall',
-        score: Number(row.skill_score ?? 0),
-        notes: row.notes ?? null,
-        session_id: null,
-        created_at: row.created_at ?? null,
-        updated_at: row.updated_at ?? null,
-      }))
+      .map(mapFakeEvaluation)
     return createServiceResponse(mapped, null)
   }
 
@@ -1374,13 +1477,26 @@ export async function getAdminTryoutDashboardStats(
     .sort((a, b) => (a.tryout_date ?? '').localeCompare(b.tryout_date ?? ''))
     .slice(0, 3)
 
-  const registrations = await getTryoutRegistrations(context)
-  if (registrations.error) return createServiceResponse(null, registrations.error)
-  const registrationRows = registrations.data ?? []
-  const pendingRegistrations = registrationRows.filter((row) => row.status === 'registered' || row.status === 'waitlisted').length
+  let resolvedRegistrationRows: TryoutRegistration[] = []
+  if (USE_FAKE_DATA) {
+    resolvedRegistrationRows = fakeTryoutRegistrations
+      .filter((row) => tryouts.some((tryout) => tryout.id === row.tryout_id))
+      .map(mapFakeRegistration)
+  } else {
+    const registrations = await getTryoutRegistrations(context)
+    if (registrations.error) return createServiceResponse(null, registrations.error)
+    resolvedRegistrationRows = registrations.data ?? []
+  }
+  const pendingRegistrations = resolvedRegistrationRows.filter((row) => ['registered', 'pending', 'confirmed', 'waitlisted'].includes(row.status)).length
 
   let upcomingSessions = 0
-  if (!USE_FAKE_DATA) {
+  if (USE_FAKE_DATA) {
+    const today = new Date().toISOString().slice(0, 10)
+    const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
+    upcomingSessions = fakeTryoutSessions.filter(
+      (session) => tryouts.some((tryout) => tryout.id === session.tryout_id) && session.session_date >= today && session.session_date <= nextWeek,
+    ).length
+  } else {
     const today = new Date().toISOString().slice(0, 10)
     const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
     const { data: sessionRows } = await supabaseAny

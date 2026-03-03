@@ -12,12 +12,52 @@ import {
   type TryoutRegistration,
 } from '../../data/services/tryoutsService'
 import { AdminPageHeader, Badge, Button, Card, Input } from '../../components/admin'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import { showError, showSuccess } from '../../utils/toast'
 import '../../styles/orgAdmin.css'
 
 interface DraftEvaluation {
   score: string
   notes: string
+}
+
+const registrationStatusVariant: Record<TryoutRegistration['status'], 'success' | 'danger' | 'warning' | 'info' | 'neutral'> = {
+  registered: 'neutral',
+  checked_in: 'info',
+  evaluated: 'success',
+  offered: 'info',
+  accepted: 'success',
+  declined: 'danger',
+  rejected: 'danger',
+  withdrawn: 'warning',
+  waitlisted: 'warning',
+  not_selected: 'neutral',
+  pending: 'warning',
+  confirmed: 'success',
+  cancelled: 'danger',
+}
+
+function getAthleteInitials(registration: TryoutRegistration): string {
+  const first = registration.child?.first_name?.trim().charAt(0) ?? ''
+  const last = registration.child?.last_name?.trim().charAt(0) ?? ''
+  return `${first}${last}`.toUpperCase() || 'NA'
+}
+
+function formatScoreMarker(score: string): string {
+  const numericScore = Number(score)
+  if (!Number.isFinite(numericScore) || numericScore <= 0) return '--'
+  return String(Math.round(numericScore)).padStart(2, '0')
+}
+
+function formatTimestamp(value: string | null | undefined): string | null {
+  if (!value) return null
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return null
+  return new Intl.DateTimeFormat('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+  }).format(parsed)
 }
 
 function buildInitialDrafts(
@@ -107,6 +147,16 @@ export default function TryoutEvaluation() {
     return Number((total / evaluations.length).toFixed(1))
   }, [evaluations])
 
+  const evaluationsByRegistration = useMemo(() => {
+    const entries = new Map<string, TryoutEvaluation>()
+    for (const evaluation of evaluations) {
+      if (!entries.has(evaluation.registration_id)) {
+        entries.set(evaluation.registration_id, evaluation)
+      }
+    }
+    return entries
+  }, [evaluations])
+
   const saveEvaluation = useCallback(
     async (registration: TryoutRegistration) => {
       const draft = drafts[registration.id]
@@ -160,81 +210,137 @@ export default function TryoutEvaluation() {
         }
       />
 
-      <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-3 oa-gap-4 oa-mb-4">
-        <Card>
-          <div className="oa-stat-label">{t('admin.tryouts.evaluation.stats.registrations' as TranslationKey)}</div>
-          <div className="oa-stat-value">{registrations.length}</div>
-        </Card>
-        <Card>
-          <div className="oa-stat-label">{t('admin.tryouts.evaluation.stats.completed' as TranslationKey)}</div>
-          <div className="oa-stat-value">{evaluations.length}</div>
-        </Card>
-        <Card>
-          <div className="oa-stat-label">{t('admin.tryouts.evaluation.stats.average' as TranslationKey)}</div>
-          <div className="oa-stat-value">{averageScore}</div>
-        </Card>
-      </div>
+      <TopLevelStats
+        className="oa-mb-4"
+        ariaLabel="Tryout evaluation summary metrics"
+        items={[
+          { id: 'registrations', label: t('admin.tryouts.evaluation.stats.registrations' as TranslationKey), value: registrations.length },
+          { id: 'completed', label: t('admin.tryouts.evaluation.stats.completed' as TranslationKey), value: evaluations.length },
+          { id: 'average', label: t('admin.tryouts.evaluation.stats.average' as TranslationKey), value: averageScore },
+        ]}
+      />
 
       {error && <Card className="oa-text-danger oa-mb-4">{error}</Card>}
 
-      <Card>
-        {loading ? (
+      {loading ? (
+        <Card>
           <div className="oa-skeleton" style={{ height: '220px' }} />
-        ) : registrations.length === 0 ? (
+        </Card>
+      ) : registrations.length === 0 ? (
+        <Card>
           <p className="oa-body-m oa-text-muted">{t('admin.tryouts.evaluation.empty' as TranslationKey)}</p>
-        ) : (
-          <div className="oa-flex oa-flex-col oa-gap-4">
-            {registrations.map((registration) => {
-              const draft = drafts[registration.id] ?? { score: '', notes: '' }
-              const isSaving = Boolean(savingById[registration.id])
-              const athleteName = registration.child
-                ? `${registration.child.first_name} ${registration.child.last_name}`
-                : t('common.unknown')
+        </Card>
+      ) : (
+        <div className="oa-card oa-shadow-sm oa-ticket-list oa-ticket-list--material oa-ticket-list--athletes">
+          {registrations.map((registration) => {
+            const draft = drafts[registration.id] ?? { score: '', notes: '' }
+            const isSaving = Boolean(savingById[registration.id])
+            const existingEvaluation = evaluationsByRegistration.get(registration.id)
+            const athleteName = registration.child
+              ? `${registration.child.first_name} ${registration.child.last_name}`
+              : t('common.unknown')
+            const hasSavedEvaluation = Boolean(existingEvaluation)
+            const updatedLabel = formatTimestamp(existingEvaluation?.updated_at ?? existingEvaluation?.created_at)
 
-              return (
-                <div key={registration.id} className="oa-card">
-                  <div className="oa-flex oa-items-center oa-justify-between oa-gap-3 oa-mb-3">
-                    <div>
-                      <p className="oa-body-m" style={{ fontWeight: 700 }}>{athleteName}</p>
-                      <p className="oa-body-s oa-text-muted">{t(`admin.tryouts.registrations.statuses.${registration.status}` as TranslationKey)}</p>
-                    </div>
-                    <Badge variant={registration.status === 'accepted' ? 'success' : 'neutral'}>
-                      {t('admin.tryouts.evaluation.scoreLabel' as TranslationKey)}
+            return (
+              <article
+                key={registration.id}
+                className="oa-ticket-list__row oa-ticket-list__row--ledger oa-ticket-list__row--athlete-ledger"
+              >
+                <div className="oa-athlete-ledger__avatar-wrap" aria-hidden="true">
+                  <div className="oa-athlete-ledger__avatar">
+                    <span className="oa-athlete-ledger__initials">{getAthleteInitials(registration)}</span>
+                  </div>
+                </div>
+
+                <div
+                  className="oa-ticket-list__count oa-ticket-list__count--athlete"
+                  aria-label={`${t('admin.tryouts.evaluation.scoreLabel' as TranslationKey)} ${formatScoreMarker(draft.score)}`}
+                >
+                  <span className="oa-ticket-list__count-value">{formatScoreMarker(draft.score)}</span>
+                  <span className="oa-ticket-list__count-label">
+                    {t('admin.tryouts.evaluation.scoreLabel' as TranslationKey)}
+                  </span>
+                </div>
+
+                <div className="oa-ticket-list__content oa-ticket-list__content--ledger oa-ticket-list__content--athlete">
+                  <div className="oa-ticket-list__event-name">{athleteName}</div>
+
+                  <div className="oa-ticket-list__order-meta oa-ticket-list__order-meta--athlete">
+                    <Badge variant={registrationStatusVariant[registration.status]}>
+                      {t(`admin.tryouts.registrations.statuses.${registration.status}` as TranslationKey)}
                     </Badge>
+                    <Badge variant={hasSavedEvaluation ? 'success' : 'neutral'}>
+                      {hasSavedEvaluation ? 'Saved' : 'Pending evaluation'}
+                    </Badge>
+                    {registration.payment_status && (
+                      <Badge variant={registration.payment_status === 'paid' ? 'success' : registration.payment_status === 'failed' ? 'danger' : 'warning'}>
+                        {registration.payment_status}
+                      </Badge>
+                    )}
+                    {updatedLabel && <span className="oa-athlete-ledger__meta-summary">Updated {updatedLabel}</span>}
                   </div>
 
-                  <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-3 oa-gap-3">
-                    <Input
-                      type="number"
-                      min="1"
-                      max="10"
-                      step="1"
-                      label={t('admin.tryouts.evaluation.fields.score' as TranslationKey)}
-                      value={draft.score}
-                      onChange={(event) =>
-                        setDrafts((previous) => ({
-                          ...previous,
-                          [registration.id]: { ...draft, score: event.target.value },
-                        }))
-                      }
-                    />
-                    <div className="sm:oa-col-span-2">
-                      <label className="oa-label">{t('admin.tryouts.evaluation.fields.notes' as TranslationKey)}</label>
-                      <textarea
-                        className="oa-input oa-textarea"
-                        rows={3}
-                        value={draft.notes}
-                        onChange={(event) =>
-                          setDrafts((previous) => ({
-                            ...previous,
-                            [registration.id]: { ...draft, notes: event.target.value },
-                          }))
-                        }
-                      />
+                  <div className="oa-athlete-ledger__detail-list">
+                    <div className="oa-athlete-ledger__detail-row">
+                      <div className="oa-athlete-ledger__detail-label">
+                        {t('admin.tryouts.evaluation.fields.score' as TranslationKey)}
+                      </div>
+                      <div className="oa-athlete-ledger__detail-values">
+                        <div style={{ width: '112px', maxWidth: '100%' }}>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="10"
+                            step="1"
+                            value={draft.score}
+                            onChange={(event) =>
+                              setDrafts((previous) => ({
+                                ...previous,
+                                [registration.id]: { ...draft, score: event.target.value },
+                              }))
+                            }
+                          />
+                        </div>
+                        <span className="oa-athlete-ledger__detail-chip">
+                          {hasSavedEvaluation ? 'Existing evaluation on file' : 'No saved evaluation yet'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="oa-athlete-ledger__detail-row">
+                      <div className="oa-athlete-ledger__detail-label">
+                        {t('admin.tryouts.evaluation.fields.notes' as TranslationKey)}
+                      </div>
+                      <div className="oa-athlete-ledger__detail-values" style={{ width: '100%' }}>
+                        <textarea
+                          className="oa-input oa-textarea"
+                          rows={3}
+                          style={{ width: '100%', maxWidth: '560px' }}
+                          value={draft.notes}
+                          onChange={(event) =>
+                            setDrafts((previous) => ({
+                              ...previous,
+                              [registration.id]: { ...draft, notes: event.target.value },
+                            }))
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
+                </div>
 
-                  <div className="oa-flex oa-justify-end oa-mt-3">
+                <div className="oa-ticket-list__side oa-ticket-list__side--ledger oa-ticket-list__side--athlete">
+                  <div className="oa-ticket-list__summary oa-ticket-list__summary--ledger">
+                    <span className="oa-ticket-list__summary-detail">
+                      {hasSavedEvaluation ? 'Ready to update' : 'Ready to save'}
+                    </span>
+                    <span className="oa-ticket-list__summary-detail">
+                      {draft.notes.trim().length > 0 ? 'Notes added' : 'No notes'}
+                    </span>
+                  </div>
+
+                  <div className="oa-ticket-list__actions oa-ticket-list__actions--ledger">
                     <Button variant="primary" disabled={isSaving} onClick={() => void saveEvaluation(registration)}>
                       {isSaving
                         ? t('common.saving')
@@ -242,11 +348,11 @@ export default function TryoutEvaluation() {
                     </Button>
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </Card>
+              </article>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

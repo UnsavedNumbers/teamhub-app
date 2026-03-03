@@ -19,6 +19,7 @@ import { getTeamMembersForSeason, getTeamWithDetails } from '../../data/fake/fak
 import { getChildById } from '../../data/fake/fakeUsers'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import AthleteAvatar from '../../components/portal/AthleteAvatar'
 import { useUserContext } from '../../hooks/useUserContext'
 import { showError, showSuccess } from '../../utils/toast'
@@ -321,20 +322,15 @@ export default function FanTeamProfile() {
       </div>
 
       {/* Stats Bar */}
-      <div className="fan-entity-stats">
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{profile.follower_count || 0}</span>
-          <span className="fan-entity-stat-label">Followers</span>
-        </div>
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{profile.athlete_count || roster.length}</span>
-          <span className="fan-entity-stat-label">Athletes</span>
-        </div>
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{upcomingEvents.length}</span>
-          <span className="fan-entity-stat-label">Upcoming</span>
-        </div>
-      </div>
+      <TopLevelStats
+        className="fan-entity-stats"
+        ariaLabel="Team profile summary metrics"
+        items={[
+          { id: 'followers', label: 'Followers', value: profile.follower_count || 0 },
+          { id: 'athletes', label: 'Athletes', value: profile.athlete_count || roster.length },
+          { id: 'upcoming', label: 'Upcoming', value: upcomingEvents.length },
+        ]}
+      />
 
       {/* About Section */}
       {profile.description && (

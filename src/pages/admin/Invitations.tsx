@@ -374,8 +374,8 @@ export default function Invitations() {
                     </Card>
                 )}
 
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'invites' | 'requests' | 'analytics')}>
-                    <TabsList className="mb-6">
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'invites' | 'requests' | 'analytics')} className="oa-tabs">
+                    <TabsList className="oa-mb-6">
                         <TabsTrigger value="invites">
                             {t('admin.invitations.guardianInvites')}
                             {guardianInvites.length > 0 && (

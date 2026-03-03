@@ -10,6 +10,7 @@ import { useReporting } from '../../../contexts/ReportingContext'
 import { useT } from '../../../i18n/useI18n'
 import { TimeSeriesChart, BarChart, PieChart } from '../../../components/reporting/charts'
 import { ExportButton } from '../../../components/reporting/ExportButton'
+import { TopLevelStats } from '../../../components/common/TopLevelStats'
 
 function ErrorsReportContent() {
   const t = useT()
@@ -37,16 +38,14 @@ function ErrorsReportContent() {
   return (
     <>
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
-        <div className="oa-kpi-card">
-          <p className="oa-kpi-label">Payment Failures</p>
-          <p className="oa-kpi-value">{totalPaymentFailures}</p>
-        </div>
-        <div className="oa-kpi-card">
-          <p className="oa-kpi-label">Failed Check-ins</p>
-          <p className="oa-kpi-value">{errorsMetrics.failedCheckIns}</p>
-        </div>
-      </div>
+      <TopLevelStats
+        className="oa-mb-8"
+        ariaLabel="Errors summary metrics"
+        items={[
+          { id: 'payment-failures', label: 'Payment Failures', value: totalPaymentFailures, tone: totalPaymentFailures > 0 ? 'danger' : 'default' },
+          { id: 'failed-checkins', label: 'Failed Check-ins', value: errorsMetrics.failedCheckIns, tone: errorsMetrics.failedCheckIns > 0 ? 'warning' : 'default' },
+        ]}
+      />
 
       {/* Payment Failures Over Time */}
       {errorsMetrics.paymentFailuresOverTime && errorsMetrics.paymentFailuresOverTime.length > 0 && (

@@ -5,7 +5,7 @@
  */
 
 import { Page } from '@playwright/test'
-import { getLink } from '../../src/utils/routes'
+import { getLink, getRoute } from '../../src/utils/routes'
 import type { Role } from './config'
 
 // ============================================================================
@@ -18,6 +18,109 @@ export interface RouteTask {
   requiresIdResolution?: boolean
   listRouteKey?: string
   idSelector?: string
+}
+
+type RouteMatcher = {
+  regex: RegExp
+  paramNames: string[]
+  routeSegments: string[]
+}
+
+const INVALID_PARAM_VALUES = new Set(['list', 'create', 'new', 'edit', 'update', 'delete'])
+
+function buildRouteMatcher(routeKey: string): RouteMatcher | null {
+  const route = getRoute(routeKey)
+  if (!route) return null
+
+  const paramNames: string[] = []
+  const routeSegments = route.path.split('/').filter(Boolean)
+  const patternParts = route.path.split('/').map((segment) => {
+    if (segment.startsWith(':')) {
+      paramNames.push(segment.slice(1))
+      return '([^/?#]+)'
+    }
+    return segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  })
+
+  const regex = new RegExp(`^${patternParts.join('/')}(?:/)?(?:[?#].*)?$`)
+  return { regex, paramNames, routeSegments }
+}
+
+function extractParamsFromPath(pathname: string, matcher: RouteMatcher): Record<string, string> | null {
+  const match = pathname.match(matcher.regex)
+  if (!match) return null
+
+  const params: Record<string, string> = {}
+  for (let i = 0; i < matcher.paramNames.length; i++) {
+    const rawValue = decodeURIComponent(match[i + 1] || '').trim()
+    if (!rawValue || INVALID_PARAM_VALUES.has(rawValue.toLowerCase())) {
+      return null
+    }
+    params[matcher.paramNames[i]] = rawValue
+  }
+
+  return params
+}
+
+function extractParamsFromPathLoose(pathname: string, matcher: RouteMatcher): Record<string, string> | null {
+  const pathSegments = pathname.split('/').filter(Boolean)
+  if (pathSegments.length < matcher.routeSegments.length) {
+    return null
+  }
+
+  const params: Record<string, string> = {}
+
+  for (let index = 0; index < matcher.routeSegments.length; index++) {
+    const routeSegment = matcher.routeSegments[index]
+    const value = decodeURIComponent(pathSegments[index] || '').trim()
+
+    if (!routeSegment.startsWith(':')) {
+      if (routeSegment !== value) {
+        return null
+      }
+      continue
+    }
+
+    if (!value || INVALID_PARAM_VALUES.has(value.toLowerCase())) {
+      return null
+    }
+
+    params[routeSegment.slice(1)] = value
+  }
+
+  return Object.keys(params).length > 0 ? params : null
+}
+
+function getStaticPathPrefix(matcher: RouteMatcher): string {
+  const staticSegments: string[] = []
+  for (const segment of matcher.routeSegments) {
+    if (segment.startsWith(':')) break
+    staticSegments.push(segment)
+  }
+
+  if (staticSegments.length === 0) {
+    return '/'
+  }
+
+  return `/${staticSegments.join('/')}/`
+}
+
+function toPathname(candidate: string, baseUrl: string): string | null {
+  if (!candidate) return null
+
+  try {
+    if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
+      return new URL(candidate).pathname
+    }
+
+    if (candidate.startsWith('/')) {
+      return new URL(candidate, baseUrl).pathname
+    }
+
+    return new URL(`/${candidate.replace(/^\/+/, '')}`, baseUrl).pathname
+  } catch {
+    return null
+  }
 }
 
 // ============================================================================
@@ -42,7 +145,7 @@ export function getRoutesForRole(role: Role): RouteTask[] {
           routeKey: 'admin.teams.detail',
           requiresIdResolution: true,
           listRouteKey: 'admin.teams.list',
-          idSelector: '[data-testid="team-row"], a[href*="/admin/teams/"]',
+          idSelector: '[data-testid="team-row"], [data-testid="open-team"], a[href*="/admin/teams/"]',
         },
         { routeKey: 'admin.seasons.list' },
         {
@@ -58,7 +161,7 @@ export function getRoutesForRole(role: Role): RouteTask[] {
           routeKey: 'admin.athletes.detail',
           requiresIdResolution: true,
           listRouteKey: 'admin.athletes.list',
-          idSelector: '[data-testid="athlete-row"], a[href*="/admin/athletes/"]',
+          idSelector: 'div.group.relative.rounded-xl.overflow-hidden.cursor-pointer, div.group.flex.items-center.gap-4.p-4.rounded-xl.cursor-pointer, [data-testid="athlete-row"], [data-testid="open-athlete"], a[href*="/admin/athletes/"]',
         },
         { routeKey: 'admin.guardians.list' },
         {
@@ -69,12 +172,6 @@ export function getRoutesForRole(role: Role): RouteTask[] {
         },
         { routeKey: 'admin.guardianRequests' },
         { routeKey: 'admin.ticketingEvents.list' },
-        {
-          routeKey: 'admin.ticketingEvents.detail',
-          requiresIdResolution: true,
-          listRouteKey: 'admin.ticketingEvents.list',
-          idSelector: '[data-testid="event-row"], a[href*="/admin/ticketing/events/"]',
-        },
         { routeKey: 'admin.ticketingEvents.seatMaps.list' },
         { routeKey: 'admin.ticketingOrders' },
         { routeKey: 'admin.ticketingScanner' },
@@ -91,15 +188,9 @@ export function getRoutesForRole(role: Role): RouteTask[] {
         { routeKey: 'admin.notifications' },
         { routeKey: 'admin.contactRequests.list' },
         { routeKey: 'admin.announcements.list' },
-        {
-          routeKey: 'admin.announcements.detail',
-          requiresIdResolution: true,
-          listRouteKey: 'admin.announcements.list',
-          idSelector: '[data-testid="announcement-row"], a[href*="/admin/announcements/"]',
-        },
         { routeKey: 'admin.travel.list' },
         {
-          routeKey: 'admin.travel.detail',
+          routeKey: 'admin.travel.edit',
           requiresIdResolution: true,
           listRouteKey: 'admin.travel.list',
           idSelector: '[data-testid="travel-row"], a[href*="/admin/travel/"]',
@@ -123,7 +214,7 @@ export function getRoutesForRole(role: Role): RouteTask[] {
           routeKey: 'admin.videos.detail',
           requiresIdResolution: true,
           listRouteKey: 'admin.videos.list',
-          idSelector: '[data-testid="video-row"], a[href*="/admin/videos/"]',
+          idSelector: 'a[href^="/admin/videos/"]:not([href="/admin/videos"]):not([href="/admin/videos/upload"]), [data-testid="video-row"], [data-testid="open-video"], a[href*="/admin/videos/"]',
         },
         { routeKey: 'admin.videos.upload' },
         { routeKey: 'admin.settings' },
@@ -139,13 +230,13 @@ export function getRoutesForRole(role: Role): RouteTask[] {
           routeKey: 'admin.teams.detail',
           requiresIdResolution: true,
           listRouteKey: 'admin.teams.list',
-          idSelector: '[data-testid="team-row"], a[href*="/admin/teams/"]',
+          idSelector: '[data-testid="team-row"], [data-testid="open-team"], a[href*="/admin/teams/"]',
         },
         {
           routeKey: 'admin.teams.roster',
           requiresIdResolution: true,
           listRouteKey: 'admin.teams.list',
-          idSelector: '[data-testid="team-row"], a[href*="/admin/teams/"]',
+          idSelector: '[data-testid="team-row"], [data-testid="open-team"], a[href*="/admin/teams/"]',
           params: {}, // Will be populated with team ID from resolution
         },
         { routeKey: 'admin.events.list' },
@@ -156,19 +247,13 @@ export function getRoutesForRole(role: Role): RouteTask[] {
           idSelector: '[data-testid="event-row"], a[href*="/admin/events/"]',
         },
         { routeKey: 'admin.announcements.list' },
-        {
-          routeKey: 'admin.announcements.detail',
-          requiresIdResolution: true,
-          listRouteKey: 'admin.announcements.list',
-          idSelector: '[data-testid="announcement-row"], a[href*="/admin/announcements/"]',
-        },
         { routeKey: 'admin.attendance' },
         { routeKey: 'admin.videos.list' },
         {
           routeKey: 'admin.videos.detail',
           requiresIdResolution: true,
           listRouteKey: 'admin.videos.list',
-          idSelector: '[data-testid="video-row"], a[href*="/admin/videos/"]',
+          idSelector: 'a[href^="/admin/videos/"]:not([href="/admin/videos"]):not([href="/admin/videos/upload"]), [data-testid="video-row"], [data-testid="open-video"], a[href*="/admin/videos/"]',
         },
         { routeKey: 'admin.photos.list' },
         {
@@ -186,12 +271,6 @@ export function getRoutesForRole(role: Role): RouteTask[] {
       return [
         { routeKey: 'portal.dashboard' },
         { routeKey: 'portal.athletes' },
-        {
-          routeKey: 'portal.athletes.profile',
-          requiresIdResolution: true,
-          listRouteKey: 'portal.athletes',
-          idSelector: '[data-testid="athlete-row"], a[href*="/portal/athletes/"]',
-        },
         { routeKey: 'portal.calendar' },
         {
           routeKey: 'portal.eventDetail',
@@ -201,49 +280,49 @@ export function getRoutesForRole(role: Role): RouteTask[] {
         },
         { routeKey: 'portal.payments' },
         {
-          routeKey: 'portal.payments.detail',
+          routeKey: 'portal.paymentDetail',
           requiresIdResolution: true,
           listRouteKey: 'portal.payments',
           idSelector: '[data-testid="payment-row"], a[href*="/portal/payments/"]',
         },
-        { routeKey: 'portal.huddles.announcements' },
+        { routeKey: 'portal.announcements' },
         {
           routeKey: 'portal.announcementDetail',
           requiresIdResolution: true,
-          listRouteKey: 'portal.huddles.announcements',
-          idSelector: '[data-testid="announcement-row"], a[href*="/portal/messages/"]',
+          listRouteKey: 'portal.announcements',
+          idSelector: '[data-testid="announcement-row"], a[href*="/portal/announcements/"]',
         },
         { routeKey: 'portal.photos' },
         {
-          routeKey: 'portal.photos.gallery',
+          routeKey: 'portal.photosGallery',
           requiresIdResolution: true,
           listRouteKey: 'portal.photos',
           idSelector: '[data-testid="gallery-row"], a[href*="/portal/photos/gallery/"]',
         },
         { routeKey: 'portal.videos' },
         {
-          routeKey: 'portal.videos.detail',
+          routeKey: 'portal.videoDetail',
           requiresIdResolution: true,
           listRouteKey: 'portal.videos',
           idSelector: '[data-testid="video-row"], a[href*="/portal/videos/"]',
         },
         { routeKey: 'portal.uniforms' },
         {
-          routeKey: 'portal.uniforms.detail',
+          routeKey: 'portal.uniformKitDetail',
           requiresIdResolution: true,
           listRouteKey: 'portal.uniforms',
           idSelector: '[data-testid="uniform-row"], a[href*="/portal/uniforms/"]',
         },
         { routeKey: 'portal.travel' },
         {
-          routeKey: 'portal.travel.detail',
+          routeKey: 'portal.travelDetail',
           requiresIdResolution: true,
           listRouteKey: 'portal.travel',
           idSelector: '[data-testid="travel-row"], a[href*="/portal/travel/"]',
         },
         { routeKey: 'portal.tryouts' },
         {
-          routeKey: 'portal.tryouts.detail',
+          routeKey: 'portal.tryoutDetail',
           requiresIdResolution: true,
           listRouteKey: 'portal.tryouts',
           idSelector: '[data-testid="tryout-row"], a[href*="/portal/tryouts/"]',
@@ -267,36 +346,30 @@ export function getRoutesForRole(role: Role): RouteTask[] {
           idSelector: '[data-testid="event-row"], a[href*="/portal/calendar/events/"]',
         },
         { routeKey: 'portal.athletes' },
-        {
-          routeKey: 'portal.athletes.profile',
-          requiresIdResolution: true,
-          listRouteKey: 'portal.athletes',
-          idSelector: '[data-testid="athlete-row"], a[href*="/portal/athletes/"]',
-        },
-        { routeKey: 'portal.huddles.announcements' },
+        { routeKey: 'portal.announcements' },
         {
           routeKey: 'portal.announcementDetail',
           requiresIdResolution: true,
-          listRouteKey: 'portal.huddles.announcements',
-          idSelector: '[data-testid="announcement-row"], a[href*="/portal/messages/"]',
+          listRouteKey: 'portal.announcements',
+          idSelector: '[data-testid="announcement-row"], a[href*="/portal/announcements/"]',
         },
         { routeKey: 'portal.photos' },
         {
-          routeKey: 'portal.photos.gallery',
+          routeKey: 'portal.photosGallery',
           requiresIdResolution: true,
           listRouteKey: 'portal.photos',
           idSelector: '[data-testid="gallery-row"], a[href*="/portal/photos/gallery/"]',
         },
         { routeKey: 'portal.videos' },
         {
-          routeKey: 'portal.videos.detail',
+          routeKey: 'portal.videoDetail',
           requiresIdResolution: true,
           listRouteKey: 'portal.videos',
           idSelector: '[data-testid="video-row"], a[href*="/portal/videos/"]',
         },
         { routeKey: 'portal.tryouts' },
         {
-          routeKey: 'portal.tryouts.detail',
+          routeKey: 'portal.tryoutDetail',
           requiresIdResolution: true,
           listRouteKey: 'portal.tryouts',
           idSelector: '[data-testid="tryout-row"], a[href*="/portal/tryouts/"]',
@@ -311,30 +384,30 @@ export function getRoutesForRole(role: Role): RouteTask[] {
         { routeKey: 'fan.home' },
         { routeKey: 'fan.schedule' },
         {
-          routeKey: 'fan.eventDetail',
+          routeKey: 'fan.events.detail',
           requiresIdResolution: true,
           listRouteKey: 'fan.schedule',
           idSelector: '[data-testid="event-row"], a[href*="/fan/events/"]',
         },
-        { routeKey: 'fan.photos' },
+        { routeKey: 'fan.photos.list' },
         {
           routeKey: 'fan.photos.gallery',
           requiresIdResolution: true,
-          listRouteKey: 'fan.photos',
+          listRouteKey: 'fan.photos.list',
           idSelector: '[data-testid="gallery-row"], a[href*="/fan/photos/gallery/"]',
         },
-        { routeKey: 'fan.videos' },
+        { routeKey: 'fan.videos.list' },
         {
           routeKey: 'fan.videos.detail',
           requiresIdResolution: true,
-          listRouteKey: 'fan.videos',
+          listRouteKey: 'fan.videos.list',
           idSelector: '[data-testid="video-row"], a[href*="/fan/videos/"]',
         },
-        { routeKey: 'fan.tickets' },
+        { routeKey: 'fan.tickets.list' },
         {
           routeKey: 'fan.tickets.detail',
           requiresIdResolution: true,
-          listRouteKey: 'fan.tickets',
+          listRouteKey: 'fan.tickets.list',
           idSelector: '[data-testid="ticket-row"], a[href*="/fan/tickets/"]',
         },
         { routeKey: 'fan.following' },
@@ -354,7 +427,7 @@ export function getRoutesForRole(role: Role): RouteTask[] {
           routeKey: 'admin.teams.detail',
           requiresIdResolution: true,
           listRouteKey: 'admin.teams.list',
-          idSelector: '[data-testid="team-row"], a[href*="/admin/teams/"]',
+          idSelector: '[data-testid="team-row"], [data-testid="open-team"], a[href*="/admin/teams/"]',
         },
         { routeKey: 'admin.events.list' },
         {
@@ -397,172 +470,166 @@ export async function resolveDynamicSegment(
     await page.waitForLoadState('networkidle')
     await page.waitForTimeout(1000) // Give time for list to render
 
-    // Try to find first row
-    const rowSelector = task.idSelector || '[data-testid*="-row"], tr, [class*="row"]'
-    const firstRow = page.locator(rowSelector).first()
-
-    const isVisible = await firstRow.isVisible({ timeout: 5000 }).catch(() => false)
-    if (!isVisible) {
-      console.warn(`[Routes] No items found in list for ${task.listRouteKey}, skipping ${task.routeKey}`)
+    const matcher = buildRouteMatcher(task.routeKey)
+    if (!matcher || matcher.paramNames.length === 0) {
+      console.warn(`[Routes] Could not build route matcher for ${task.routeKey}`)
       return null
     }
 
-    // Look for View or Edit button within the row (prefer View for detail pages)
-    // These buttons typically navigate to detail/edit pages
-    let href: string | null = null
-    
-    // Try to find View button first (for detail pages)
-    const viewButton = firstRow.locator('button:has-text("View"), button:has-text("view")').first()
-    const viewButtonExists = await viewButton.count().catch(() => 0) > 0
-    
-    if (viewButtonExists) {
-      // Click View button and get the URL it navigates to (most reliable)
-      const currentUrl = page.url()
-      try {
-        await viewButton.click({ timeout: 5000 })
-        await page.waitForURL(/\/admin\/|\/portal\/|\/fan\//, { timeout: 5000 })
-        href = page.url()
-        
-        // Go back to list
-        await page.goBack({ waitUntil: 'domcontentloaded', timeout: 5000 })
-        await page.waitForLoadState('networkidle')
-      } catch {
-        console.warn(`[Routes] Could not navigate via View button for ${task.routeKey}`)
+    const findParamsFromCandidate = (candidate: string | null): Record<string, string> | null => {
+      if (!candidate) return null
+      const pathname = toPathname(candidate, baseUrl)
+      if (!pathname) return null
+      return extractParamsFromPath(pathname, matcher) || extractParamsFromPathLoose(pathname, matcher)
+    }
+
+    const routePrefix = getStaticPathPrefix(matcher)
+
+    const selectorCandidates = Array.from(new Set([
+      task.idSelector,
+      `a[href^="${routePrefix}"]`,
+      `a[href*="${routePrefix}"]`,
+      '[data-testid$="-row"]',
+      'tr.oa-clickable',
+      'tbody tr',
+      '.ios-event-row',
+      '[class*="cursor-pointer"]',
+      '[role="row"]',
+    ].filter(Boolean) as string[]))
+
+    // Poll for async list content (cards/rows/links) before giving up.
+    // Some pages hydrate role/data state after initial network idle.
+    let listContentDetected = false
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const hrefValues = new Set<string>()
+      const html = await page.content()
+      const attrRegex = /\b(?:href|data-href|data-link)=(['"])(.*?)\1/g
+      let attrMatch: RegExpExecArray | null = attrRegex.exec(html)
+      while (attrMatch) {
+        const value = (attrMatch[2] || '').trim()
+        if (value) {
+          hrefValues.add(value)
+        }
+        attrMatch = attrRegex.exec(html)
+      }
+
+      const hrefCandidates = Array.from(hrefValues)
+      const prioritizedHrefCandidates = hrefCandidates.filter((href) => {
+        const pathname = toPathname(href, baseUrl)
+        return pathname?.startsWith(routePrefix) || false
+      })
+
+      for (const href of [...prioritizedHrefCandidates, ...hrefCandidates]) {
+        const params = findParamsFromCandidate(href)
+        if (params) {
+          console.log(`[Routes] Resolved ${Object.entries(params).map(([k, v]) => `${k}=${v}`).join(', ')} for ${task.routeKey}`)
+          return params
+        }
+      }
+
+      for (const selector of selectorCandidates) {
+        const count = await page.locator(selector).count().catch(() => 0)
+        if (count > 0) {
+          listContentDetected = true
+          break
+        }
+      }
+
+      if (listContentDetected) {
+        break
+      }
+
+      await page.waitForTimeout(500)
+    }
+
+    // Strategy 1: One more href/data-href/data-link pass after polling window.
+    const hrefValues = new Set<string>()
+    const html = await page.content()
+    const attrRegex = /\b(?:href|data-href|data-link)=(['"])(.*?)\1/g
+    let attrMatch: RegExpExecArray | null = attrRegex.exec(html)
+    while (attrMatch) {
+      const value = (attrMatch[2] || '').trim()
+      if (value) {
+        hrefValues.add(value)
+      }
+      attrMatch = attrRegex.exec(html)
+    }
+
+    const hrefCandidates = Array.from(hrefValues)
+    const prioritizedHrefCandidates = hrefCandidates.filter((href) => {
+      const pathname = toPathname(href, baseUrl)
+      return pathname?.startsWith(routePrefix) || false
+    })
+
+    for (const href of [...prioritizedHrefCandidates, ...hrefCandidates]) {
+      const params = findParamsFromCandidate(href)
+      if (params) {
+        console.log(`[Routes] Resolved ${Object.entries(params).map(([k, v]) => `${k}=${v}`).join(', ')} for ${task.routeKey}`)
+        return params
       }
     }
-    
-    // If no View button, try Edit button
-    if (!href) {
-      const editButton = firstRow.locator('button:has-text("Edit"), button:has-text("edit"), button[icon="edit"]').first()
-      const editButtonExists = await editButton.count().catch(() => 0) > 0
-      
-      if (editButtonExists) {
-        // Click Edit button and get the URL it navigates to
-        const currentUrl = page.url()
+
+    // Strategy 2: Click likely row/card elements and detect route change.
+    const resetToList = async () => {
+      await page.goto(`${baseUrl}${listUrl}`, { waitUntil: 'domcontentloaded' })
+      await page.waitForLoadState('networkidle')
+      await page.waitForTimeout(500)
+    }
+
+    for (const selector of selectorCandidates) {
+      const rows = page.locator(selector)
+      const rowCount = await rows.count().catch(() => 0)
+      const limit = Math.min(rowCount, 60)
+
+      for (let index = 0; index < limit; index++) {
+        const row = rows.nth(index)
+        const rowVisible = await row.isVisible({ timeout: 1000 }).catch(() => false)
+        if (!rowVisible) continue
+
+        const directHref = await row.getAttribute('href').catch(() => null)
+        const directDataHref = await row.getAttribute('data-href').catch(() => null)
+        const directDataLink = await row.getAttribute('data-link').catch(() => null)
+
+        const directParams =
+          findParamsFromCandidate(directHref) ||
+          findParamsFromCandidate(directDataHref) ||
+          findParamsFromCandidate(directDataLink)
+
+        if (directParams) {
+          console.log(`[Routes] Resolved ${Object.entries(directParams).map(([k, v]) => `${k}=${v}`).join(', ')} for ${task.routeKey}`)
+          return directParams
+        }
+
+        const nestedHref = await row.locator('a[href]').first().getAttribute('href').catch(() => null)
+        const nestedParams = findParamsFromCandidate(nestedHref)
+        if (nestedParams) {
+          console.log(`[Routes] Resolved ${Object.entries(nestedParams).map(([k, v]) => `${k}=${v}`).join(', ')} for ${task.routeKey}`)
+          return nestedParams
+        }
+
+        const beforeUrl = page.url()
         try {
-          await editButton.click({ timeout: 5000 })
-          await page.waitForURL(/\/admin\/|\/portal\/|\/fan\//, { timeout: 5000 })
-          href = page.url()
-          
-          // Go back to list
-          await page.goBack({ waitUntil: 'domcontentloaded', timeout: 5000 })
-          await page.waitForLoadState('networkidle')
+          await row.click({ timeout: 3000 })
+          await page.waitForTimeout(700)
         } catch {
-          console.warn(`[Routes] Could not navigate via Edit button for ${task.routeKey}`)
+          continue
+        }
+
+        const afterUrl = page.url()
+        if (afterUrl !== beforeUrl) {
+          const navigatedParams = findParamsFromCandidate(afterUrl)
+          if (navigatedParams) {
+            console.log(`[Routes] Resolved ${Object.entries(navigatedParams).map(([k, v]) => `${k}=${v}`).join(', ')} for ${task.routeKey}`)
+            return navigatedParams
+          }
+
+          await resetToList()
         }
       }
     }
-    
-    // Fallback: try to get href from row link or data attributes
-    if (!href) {
-      href = await firstRow.locator('a[href*="/"]').first().getAttribute('href').catch(() => null)
-      
-      if (!href) {
-        href = await firstRow.evaluate((el) => {
-          const dataHref = el.getAttribute('data-href') || el.getAttribute('data-link')
-          if (dataHref) return dataHref
-          
-          // Try to find a link within the row
-          const link = el.querySelector('a[href]')
-          if (link) return (link as HTMLAnchorElement).href
-          
-          return null
-        }).catch(() => null)
-      }
-    }
-    
-    // Last resort: click the row itself (if clickable)
-    if (!href) {
-      const currentUrl = page.url()
-      try {
-        await firstRow.click({ timeout: 5000 })
-        await page.waitForURL(/\/admin\/|\/portal\/|\/fan\//, { timeout: 5000 })
-        href = page.url()
-        
-        // Go back to list
-        await page.goBack({ waitUntil: 'domcontentloaded', timeout: 5000 })
-        await page.waitForLoadState('networkidle')
-      } catch {
-        console.warn(`[Routes] Could not get href or navigate for ${task.routeKey}`)
-        return null
-      }
-    }
 
-    if (!href) {
-      console.warn(`[Routes] Could not find URL for ${task.routeKey}`)
-      return null
-    }
-
-    // Extract ID from href/URL - handle UUIDs, numeric IDs, and slugs
-    // Examples: 
-    //   /admin/teams/550e8400-e29b-41d4-a716-446655440000 (UUID)
-    //   /admin/teams/123 (numeric)
-    //   /admin/teams/team-u10-soccer-001 (slug)
-    //   /admin/videos/mock-video-2 (slug)
-    //   /portal/photos/gallery/mock-gallery-3 (nested slug)
-    const urlPath = href.startsWith('http') ? new URL(href).pathname : href
-    
-    // Split path and get the last meaningful segment (skip empty segments)
-    const segments = urlPath.split('/').filter(Boolean)
-    if (segments.length === 0) {
-      console.warn(`[Routes] Could not extract ID from ${href} (path: ${urlPath})`)
-      return null
-    }
-    
-    // Get the last segment as ID (works for both simple and nested paths)
-    // For nested paths like /portal/photos/gallery/mock-gallery-3, we want "mock-gallery-3"
-    const id = segments[segments.length - 1]
-    
-    // Validate it looks like an ID (not empty, not just a route name like "list" or "create")
-    const routeNames = ['list', 'create', 'new', 'edit', 'update', 'delete']
-    if (!id || id.length < 1 || routeNames.includes(id.toLowerCase())) {
-      console.warn(`[Routes] Could not extract valid ID from ${href} (path: ${urlPath}, last segment: ${id})`)
-      return null
-    }
-    
-    // Determine param name from route key
-    // Check route definition to get exact param name
-    let paramName = 'id'
-    
-    try {
-      // Try to get the route definition to find the actual param name
-      const routePath = getLink(task.routeKey)
-      // Extract param names from path (e.g., :eventId, :id)
-      const paramMatches = routePath.match(/:\w+/g)
-      if (paramMatches && paramMatches.length > 0) {
-        // Use the first param (remove the colon)
-        paramName = paramMatches[0].slice(1)
-      } else {
-        // Fallback to heuristics
-        if (task.routeKey.includes('event') && !task.routeKey.includes('events.list')) {
-          paramName = 'eventId'
-        } else if (task.routeKey.includes('announcement')) {
-          paramName = 'announcementId'
-        } else if (task.routeKey.includes('tryout')) {
-          paramName = 'tryoutId'
-        } else if (task.routeKey.includes('ticket')) {
-          paramName = 'ticketId'
-        } else if (task.routeKey.includes('kit') || (task.routeKey.includes('uniform') && task.routeKey.includes('detail'))) {
-          paramName = 'kitId'
-        }
-      }
-    } catch {
-      // If getLink fails, use heuristics
-      if (task.routeKey.includes('event') && !task.routeKey.includes('events.list')) {
-        paramName = 'eventId'
-      } else if (task.routeKey.includes('announcement')) {
-        paramName = 'announcementId'
-      } else if (task.routeKey.includes('tryout')) {
-        paramName = 'tryoutId'
-      } else if (task.routeKey.includes('ticket')) {
-        paramName = 'ticketId'
-      } else if (task.routeKey.includes('kit') || (task.routeKey.includes('uniform') && task.routeKey.includes('detail'))) {
-        paramName = 'kitId'
-      }
-    }
-
-    console.log(`[Routes] Resolved ${paramName}=${id} for ${task.routeKey}`)
-    return { [paramName]: id }
+    console.warn(`[Routes] No items found in list for ${task.listRouteKey}, skipping ${task.routeKey}`)
+    return null
   } catch (error) {
     console.warn(`[Routes] Failed to resolve ID for ${task.routeKey}:`, error)
     return null

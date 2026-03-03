@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, StatCard, Badge, FilterBar, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState } from '../../components/platformAdmin'
+import { PageHeader, Badge, FilterBar, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState } from '../../components/platformAdmin'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import { useQueryParams } from '../../hooks/useQueryParams'
 import { 
   formatCurrency, 
@@ -227,23 +228,15 @@ export default function PlatformPayments() {
       />
 
       {/* Stats */}
-      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-3 pa-gap-4 pa-mb-4">
-        <StatCard
-          label="Total Volume"
-          value={formatCurrency(stats.totalVolume)}
-          icon="payments"
-        />
-        <StatCard
-          label="Successful"
-          value={stats.successCount}
-          icon="check_circle"
-        />
-        <StatCard
-          label="Failed"
-          value={stats.failedCount}
-          icon="error"
-        />
-      </div>
+      <TopLevelStats
+        className="pa-mb-4"
+        ariaLabel="Platform payments summary metrics"
+        items={[
+          { id: 'volume', label: 'Total Volume', value: formatCurrency(stats.totalVolume), icon: 'payments' },
+          { id: 'successful', label: 'Successful', value: stats.successCount, icon: 'check_circle', tone: 'success' },
+          { id: 'failed', label: 'Failed', value: stats.failedCount, icon: 'error', tone: stats.failedCount > 0 ? 'danger' : 'default' },
+        ]}
+      />
 
       <FilterBar
         searchValue={search}

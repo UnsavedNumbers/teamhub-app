@@ -12,6 +12,7 @@ import { getSeason, deleteSeason } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
 import { AdminPageHeader, Card, Button, ConfirmDialog } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import { getLink } from '../../utils/routes'
 import { supabase } from '../../lib/supabase'
 import SeasonTeamsSlideOver from '../../components/admin/SeasonTeamsSlideOver'
@@ -552,41 +553,24 @@ export default function SeasonDetail() {
           </Card>
 
           {/* Season Stats Card */}
-          <Card>
+          <div className="season-detail-stats-block">
             <div className="season-detail-card-header">
               <h3 className="season-detail-card-title">{t('admin.seasonDetail.seasonStats')}</h3>
               <span className="material-symbols-outlined season-detail-card-icon" aria-hidden>
                 insights
               </span>
             </div>
-            <div className="season-detail-stats-grid">
-              <div className="season-detail-stat-box">
-                <p className="season-detail-stat-label">{t('admin.seasonDetail.statRegistered')}</p>
-                <p className="season-detail-stat-value">
-                  {statsLoading ? '—' : formatNumber(stats?.registeredAthletes ?? 0)}
-                </p>
-              </div>
-              <div className="season-detail-stat-box">
-                <p className="season-detail-stat-label">{t('admin.seasonDetail.statGames')}</p>
-                <p className="season-detail-stat-value">
-                  {statsLoading ? '—' : stats?.gamesCount ?? 0}
-                </p>
-              </div>
-              <div className="season-detail-stat-box">
-                <p className="season-detail-stat-label">{t('admin.seasonDetail.statVenues')}</p>
-                <p className="season-detail-stat-value">
-                  {statsLoading ? '—' : stats?.venuesCount ?? 0}
-                </p>
-              </div>
-              <div className="season-detail-stat-box">
-                <p className="season-detail-stat-label">{t('admin.seasonDetail.statStaff')}</p>
-                <p className="season-detail-stat-value">
-                  {statsLoading ? '—' : stats?.staffCount ?? 0}
-                </p>
-              </div>
-            </div>
-          </Card>
-
+            <TopLevelStats
+              className="season-detail-stats-grid"
+              ariaLabel="Season summary metrics"
+              items={[
+                { id: 'registered', label: t('admin.seasonDetail.statRegistered'), value: statsLoading ? '-' : formatNumber(stats?.registeredAthletes ?? 0) },
+                { id: 'games', label: t('admin.seasonDetail.statGames'), value: statsLoading ? '-' : stats?.gamesCount ?? 0 },
+                { id: 'venues', label: t('admin.seasonDetail.statVenues'), value: statsLoading ? '-' : stats?.venuesCount ?? 0 },
+                { id: 'staff', label: t('admin.seasonDetail.statStaff'), value: statsLoading ? '-' : stats?.staffCount ?? 0 },
+              ]}
+            />
+          </div>
           <Card className="season-detail-galleries-card">
             <div className="season-detail-galleries-hero">
               <div className="season-detail-galleries-hero-text">
@@ -723,3 +707,4 @@ function formatNumber(num: number): string {
   }
   return num.toString()
 }
+

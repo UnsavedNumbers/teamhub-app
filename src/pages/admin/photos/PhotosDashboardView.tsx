@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Card,
-  StatCard,
   Button,
   InlineNotice,
 } from '@/components/platformAdmin'
+import { TopLevelStats } from '@/components/common/TopLevelStats'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
 import { 
@@ -132,24 +132,20 @@ export function PhotosDashboardView() {
       )}
 
       {/* Overview Cards */}
-      <div className="dashboard-stats-grid">
-        <StatCard 
-          label={t('photos.stats.totalPhotos')} 
-          value={stats.totalPhotos} 
-        />
-        <StatCard 
-          label={t('photos.dashboard.recentActivity')} 
-          value={stats.recentCount}
-        />
-        <StatCard 
-          label={t('photos.pendingApproval.adminMessage', { count: stats.pending })} 
-          value={stats.pending} 
-        />
-        <StatCard 
-          label={t('photos.dashboard.storageUsed')} 
-          value={storageInfo ? (storageInfo.limit > 0 ? `${formatStorage(storageInfo.currentUsage)} / ${formatStorage(storageInfo.limit)} GB` : `${formatStorage(storageInfo.currentUsage)} GB`) : '0 GB'}
-        />
-      </div>
+      <TopLevelStats
+        className="dashboard-stats-grid"
+        ariaLabel="Photos dashboard summary metrics"
+        items={[
+          { id: 'photos', label: t('photos.stats.totalPhotos'), value: stats.totalPhotos },
+          { id: 'recent', label: t('photos.dashboard.recentActivity'), value: stats.recentCount },
+          { id: 'pending', label: t('photos.pendingApproval.adminMessage', { count: stats.pending }), value: stats.pending, tone: stats.pending > 0 ? 'warning' : 'default' },
+          {
+            id: 'storage',
+            label: t('photos.dashboard.storageUsed'),
+            value: storageInfo ? (storageInfo.limit > 0 ? `${formatStorage(storageInfo.currentUsage)} / ${formatStorage(storageInfo.limit)} GB` : `${formatStorage(storageInfo.currentUsage)} GB`) : '0 GB',
+          },
+        ]}
+      />
 
       {/* Storage Limit Warning */}
       {storageInfo && storageInfo.limit > 0 && storageInfo.currentUsage >= storageInfo.limit && (

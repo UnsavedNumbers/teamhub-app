@@ -1474,11 +1474,11 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           justifyContent: 'center',
           fontSize: '40px',
           background: statusType === 'success'
-            ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)'
+            ? 'rgba(34, 197, 94, 0.1)'
             : statusType === 'error'
-            ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%)'
+            ? 'rgba(239, 68, 68, 0.1)'
             : statusType === 'warning'
-            ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(251, 191, 36, 0.05) 100%)'
+            ? 'rgba(251, 191, 36, 0.1)'
             : 'rgba(0, 0, 0, 0.03)',
           border: statusType === 'success'
             ? '2px solid rgba(34, 197, 94, 0.2)'
@@ -1590,7 +1590,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
 
       {connectStatus && payoutsPaused && (
         <div style={{ 
-          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.04) 100%)',
+          background: 'rgba(239, 68, 68, 0.08)',
           border: '1px solid rgba(239, 68, 68, 0.2)',
           borderRadius: '12px',
           padding: '20px',
@@ -1622,7 +1622,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
 
       {connectStatus && !payoutsPaused && hasDueRequirements && (
         <div style={{ 
-          background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(251, 191, 36, 0.04) 100%)',
+          background: 'rgba(251, 191, 36, 0.08)',
           border: '1px solid rgba(251, 191, 36, 0.3)',
           borderRadius: '12px',
           padding: '20px',

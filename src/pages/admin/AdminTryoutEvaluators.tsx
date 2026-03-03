@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getOrganizationMembersForOrg, getUserById } from '../../data/fake/fakeUsers'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import type { TranslationKey } from '../../i18n'
@@ -67,11 +69,33 @@ export default function AdminTryoutEvaluators() {
 
     const [evaluatorsResponse, coachesResponse] = await Promise.all([
       getTryoutEvaluators(context, tryoutId),
-      supabase
-        .from('organization_members')
-        .select('user_id, role, user:users!organization_members_user_id_fkey(id, first_name, last_name, email)')
-        .eq('org_id', tryoutResponse.data.org_id)
-        .eq('role', 'coach'),
+      USE_FAKE_DATA
+        ? Promise.resolve({
+            data: getOrganizationMembersForOrg(tryoutResponse.data.org_id)
+              .filter((membership) => membership.roles.includes('coach'))
+              .map((membership) => {
+                const user = getUserById(membership.user_id)
+                const [firstName = '', ...lastNameParts] = (user?.display_name ?? '').split(' ')
+                return {
+                  user_id: membership.user_id,
+                  role: 'coach',
+                  user: user
+                    ? {
+                        id: user.id,
+                        first_name: firstName,
+                        last_name: lastNameParts.join(' '),
+                        email: user.email,
+                      }
+                    : null,
+                }
+              }),
+            error: null,
+          })
+        : supabase
+            .from('organization_members')
+            .select('user_id, role, user:users!organization_members_user_id_fkey(id, first_name, last_name, email)')
+            .eq('org_id', tryoutResponse.data.org_id)
+            .eq('role', 'coach'),
     ])
 
     if (evaluatorsResponse.error) {

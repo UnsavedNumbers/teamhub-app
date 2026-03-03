@@ -450,7 +450,16 @@ function inDateRange(value: string | null | undefined, start: Date, end: Date): 
 
 class DemoProvider implements Provider {
   async getOrgDashboardKpis(orgId: string): Promise<ServiceResponse<OrgDashboardKpisDto>> {
-    const effectiveOrgId = orgId || DEMO_ORG_A_ID
+    const requestedOrgId = orgId || DEMO_ORG_A_ID
+    const requestedOrgTeams = getTeamsForOrg(requestedOrgId)
+    const requestedOrgSeasons = getSeasonsForOrg(requestedOrgId)
+
+    // Demo sessions can carry non-seeded org ids; in that case use canonical seeded org data.
+    const effectiveOrgId =
+      requestedOrgTeams.length > 0 || requestedOrgSeasons.length > 0
+        ? requestedOrgId
+        : DEMO_ORG_A_ID
+
     const teams = getTeamsForOrg(effectiveOrgId)
     const teamMemberships = getChildTeamMemberships().filter((membership) =>
       teams.some((team) => team.id === membership.teamId),

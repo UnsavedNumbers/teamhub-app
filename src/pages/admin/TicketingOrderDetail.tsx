@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useOrganization } from '@/contexts/OrganizationContext'
+import { USE_FAKE_DATA } from '@/data/config'
 import { getTicketOrderByIdAdmin, processTicketOrderRefund, manuallyCompleteTicketOrder } from '@/data/services/ticketingService'
 import { formatCurrency } from '@/types/ticketing'
 import { showSuccess, showError } from '@/utils/toast'
@@ -42,7 +43,7 @@ export default function TicketingOrderDetail() {
   const order = orderResponse || null
 
   // Verify order belongs to current org
-  if (order && orgId && order.org_id !== orgId) {
+  if (order && orgId && !USE_FAKE_DATA && order.org_id !== orgId) {
     return (
       <div className="oa-root">
         <AdminPageHeader title="Order Not Found" />

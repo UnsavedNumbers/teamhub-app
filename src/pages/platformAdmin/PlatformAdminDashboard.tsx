@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useT } from '../../i18n/useI18n'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { StatCard, PageHeader, Card, Badge, EmptyState, OfflineBanner } from '../../components/platformAdmin'
+import { PageHeader, Card, Badge, EmptyState, OfflineBanner } from '../../components/platformAdmin'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import { formatCurrency } from '../../utils/platformAdminMasking'
 import type { AdminPlatformHealth, AdminAuditLog } from '../../types/platformAdmin.types'
 import { mapEventLogsToAuditLogs, type AdminEventLog } from '../../utils/auditLogMapper'
@@ -181,68 +182,20 @@ export default function PlatformAdminDashboard() {
         </div>
       )}
 
-      {/* Stats Row 1: Organizations & Users */}
-      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4">
-        <StatCard
-          label={t('platformAdmin.dashboard.activeOrganizations')}
-          value={health?.active_organizations ?? 0}
-          icon="apartment"
-          onClick={() => navigate('/platform-admin/organizations')}
-        />
-        <StatCard
-          label={t('platformAdmin.dashboard.trialOrganizations')}
-          value={health?.trial_organizations ?? 0}
-          icon="schedule"
-          meta={t('platformAdmin.dashboard.suspendedOrganizations', { count: health?.suspended_organizations ?? 0 })}
-          onClick={() => navigate('/platform-admin/organizations')}
-        />
-        <StatCard
-          label={t('platformAdmin.dashboard.totalUsers')}
-          value={health?.total_users ?? 0}
-          icon="group"
-          meta={t('platformAdmin.dashboard.platformAdmins', { count: health?.platform_admin_count ?? 0 })}
-          onClick={() => navigate('/platform-admin/users')}
-        />
-        <StatCard
-          label="Payment Volume"
-          value={formatCurrency(health?.total_payment_volume_cents ?? 0)}
-          icon="payments"
-          onClick={() => navigate('/platform-admin/payments')}
-        />
-      </div>
-
-      {/* Stats Row 2: Payments & Structure */}
-      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4 pa-mt-5">
-        <StatCard
-          label="Successful Payments"
-          value={health?.successful_payments ?? 0}
-          icon="check_circle"
-          delta={
-            health?.successful_payments
-              ? { value: 'Last 30 days', direction: 'neutral' as const }
-              : undefined
-          }
-          onClick={() => navigate('/platform-admin/payments')}
-        />
-        <StatCard
-          label="Failed Payments"
-          value={health?.failed_payments ?? 0}
-          icon="error"
-          onClick={() => navigate('/platform-admin/payments')}
-        />
-        <StatCard
-          label="Total Teams"
-          value={health?.total_teams ?? 0}
-          icon="groups"
-          onClick={() => navigate('/platform-admin/structure')}
-        />
-        <StatCard
-          label="Total Children"
-          value={health?.total_children ?? 0}
-          icon="child_care"
-          onClick={() => navigate('/platform-admin/users')}
-        />
-      </div>
+      <TopLevelStats
+        className="pa-mb-5"
+        ariaLabel="Platform dashboard summary metrics"
+        items={[
+          { id: 'active-orgs', label: t('platformAdmin.dashboard.activeOrganizations'), value: health?.active_organizations ?? 0, icon: 'apartment', onClick: () => navigate('/platform-admin/organizations') },
+          { id: 'trial-orgs', label: t('platformAdmin.dashboard.trialOrganizations'), value: health?.trial_organizations ?? 0, icon: 'schedule', meta: t('platformAdmin.dashboard.suspendedOrganizations', { count: health?.suspended_organizations ?? 0 }), onClick: () => navigate('/platform-admin/organizations') },
+          { id: 'users', label: t('platformAdmin.dashboard.totalUsers'), value: health?.total_users ?? 0, icon: 'group', meta: t('platformAdmin.dashboard.platformAdmins', { count: health?.platform_admin_count ?? 0 }), onClick: () => navigate('/platform-admin/users') },
+          { id: 'volume', label: 'Payment Volume', value: formatCurrency(health?.total_payment_volume_cents ?? 0), icon: 'payments', onClick: () => navigate('/platform-admin/payments') },
+          { id: 'successful-payments', label: 'Successful Payments', value: health?.successful_payments ?? 0, icon: 'check_circle', meta: health?.successful_payments ? 'Last 30 days' : undefined, tone: 'success', onClick: () => navigate('/platform-admin/payments') },
+          { id: 'failed-payments', label: 'Failed Payments', value: health?.failed_payments ?? 0, icon: 'error', tone: (health?.failed_payments ?? 0) > 0 ? 'danger' : 'default', onClick: () => navigate('/platform-admin/payments') },
+          { id: 'teams', label: 'Total Teams', value: health?.total_teams ?? 0, icon: 'groups', onClick: () => navigate('/platform-admin/structure') },
+          { id: 'children', label: 'Total Children', value: health?.total_children ?? 0, icon: 'child_care', onClick: () => navigate('/platform-admin/users') },
+        ]}
+      />
 
       {/* Recent Activity */}
       <div className="pa-mt-5">
@@ -314,3 +267,5 @@ export default function PlatformAdminDashboard() {
     </div>
   )
 }
+
+

@@ -101,6 +101,36 @@ const eventStatusVariant: Record<TicketedEvent['status'], 'success' | 'warning' 
   completed: 'info',
 }
 
+function formatEventDateParts(start: string) {
+  const date = new Date(start)
+  return {
+    month: new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date).toUpperCase(),
+    day: new Intl.DateTimeFormat('en-US', { day: '2-digit' }).format(date),
+  }
+}
+
+function getEventDetailPath(eventId?: string | null) {
+  if (!eventId) return null
+  return `${getLink('admin.events.detail', { id: eventId })}?view=ticketing`
+}
+
+function getEventSalesCount(event: TicketedEvent) {
+  if (event.tickets_sold != null) return event.tickets_sold
+  if (event.capacity_total != null) return event.capacity_total
+  return 0
+}
+
+function getEventSalesLabel(event: TicketedEvent) {
+  if (event.capacity_total != null) {
+    return `${event.tickets_sold ?? 0} / ${event.capacity_total}`
+  }
+  return `${event.tickets_sold ?? 0} sold`
+}
+
+function getEventVenueLabel(event: TicketedEvent) {
+  return event.venue?.name || event.venue_name || 'Venue TBD'
+}
+
 const fetchOrgSlug = async (orgId: string) => {
   const { data, error } = await getOrganizationSlug(orgId)
   if (error || !data) {
@@ -687,45 +717,97 @@ function ListView({
   onDelete: (id: string) => void
 }) {
   return (
-    <div className="oa-card oa-shadow-sm oa-ticket-list">
-      {events.map((event) => (
-        <div key={event.id} className="oa-ticket-list__row">
-          <div className="oa-ticket-list__info">
-            <div className="oa-ticket-list__chips">
-              <Badge variant={eventStatusVariant[event.status] || 'neutral'}>{event.status}</Badge>
-              {event.sale_status && (
-                <Badge variant={saleStatusTone[event.sale_status].variant}>{saleStatusTone[event.sale_status].label}</Badge>
+    <div className="oa-card oa-shadow-sm oa-ticket-list oa-ticket-list--material oa-ticket-list--events">
+      {events.map((event) => {
+        const eventDate = formatEventDateParts(event.starts_at)
+        const detailPath = getEventDetailPath(event.event_id)
+
+        return (
+          <article key={event.id} className="oa-ticket-list__row oa-ticket-list__row--ledger oa-ticket-list__row--event-ledger">
+            <div className="oa-ticket-list__stamp" aria-hidden="true">
+              <span className="oa-ticket-list__stamp-month">{eventDate.month}</span>
+              <span className="oa-ticket-list__stamp-day">{eventDate.day}</span>
+            </div>
+
+            <div className="oa-ticket-list__count oa-ticket-list__count--event" aria-label={getEventSalesLabel(event)}>
+              <span className="oa-ticket-list__count-value">{getEventSalesCount(event)}</span>
+              <span className="oa-ticket-list__count-label">SOLD</span>
+            </div>
+
+            <div className="oa-ticket-list__content oa-ticket-list__content--ledger oa-ticket-list__content--event">
+              {detailPath ? (
+                <Link to={detailPath} className="oa-ticket-list__title-link">
+                  <span className="oa-ticket-list__event-name">{event.title}</span>
+                </Link>
+              ) : (
+                <div className="oa-ticket-list__event-name">{event.title}</div>
               )}
+
+              <div className="oa-ticket-list__order-meta oa-ticket-list__order-meta--event">
+                <span className="oa-ticket-list__order-number">{formatDateTimeRange(event.starts_at, event.ends_at, event.timezone)}</span>
+                <Badge variant={eventStatusVariant[event.status] || 'neutral'}>{EVENT_STATUS_OPTIONS.find((option) => option.value === event.status)?.label || event.status}</Badge>
+                {event.sale_status && (
+                  <Badge variant={saleStatusTone[event.sale_status].variant}>{saleStatusTone[event.sale_status].label}</Badge>
+                )}
+              </div>
+
+              <div className="oa-ticket-list__supporting">
+                <span>{getEventVenueLabel(event)}</span>
+                {event.program?.name && (
+                  <>
+                    <span className="oa-ticket-list__supporting-dot" aria-hidden="true">|</span>
+                    <span>{event.program.name}</span>
+                  </>
+                )}
+                {event.opponent && (
+                  <>
+                    <span className="oa-ticket-list__supporting-dot" aria-hidden="true">|</span>
+                    <span>{event.is_home ? 'Home' : 'Away'} vs {event.opponent}</span>
+                  </>
+                )}
+              </div>
+
+              <div className="oa-ticket-list__event-caption">{getEventSalesLabel(event)}</div>
             </div>
-            <div className="oa-ticket-list__titles">
-              <div 
-                className="oa-ticket-list__title" 
-                style={{ cursor: 'pointer' }}
-                onClick={() => onView(event.id, event.event_id)}
-              >
-                {event.title}
+
+            <div className="oa-ticket-list__side oa-ticket-list__side--ledger oa-ticket-list__side--event">
+              <div className="oa-ticket-list__summary oa-ticket-list__summary--ledger">
+                <span className="oa-ticket-list__price">{formatCurrency(event.revenue_cents || 0)}</span>
               </div>
-              <div className="oa-ticket-list__meta">
-                {formatDateTimeRange(event.starts_at, event.ends_at, event.timezone)}
-                {event.venue?.name ? ` | ${event.venue.name}` : ''}
-              </div>
-              <div className="oa-ticket-list__meta oa-ticket-list__meta--sub">
-                {event.program?.name ? `${event.program.name}` : ''}{event.opponent ? ` | ${event.is_home ? 'Home' : 'Away'} vs ${event.opponent}` : ''}
+
+              <div className="oa-ticket-list__actions oa-ticket-list__actions--ledger">
+                <Button
+                  variant="ghost"
+                  size="dense"
+                  className="oa-ticket-list__icon-btn oa-ticket-list__icon-btn--view"
+                  onClick={() => onView(event.id, event.event_id)}
+                  icon="visibility"
+                  aria-label={`View ${event.title}`}
+                  title="View event"
+                />
+                <Button
+                  variant="ghost"
+                  size="dense"
+                  className="oa-ticket-list__icon-btn"
+                  onClick={() => onDuplicate(event.id)}
+                  icon="content_copy"
+                  aria-label={`Duplicate ${event.title}`}
+                  title="Duplicate event"
+                />
+                <Button
+                  variant="ghost"
+                  size="dense"
+                  className="oa-ticket-list__icon-btn oa-ticket-list__icon-btn--delete"
+                  onClick={() => onDelete(event.id)}
+                  icon="delete"
+                  aria-label={`Delete ${event.title}`}
+                  title="Delete event"
+                />
               </div>
             </div>
-          </div>
-          <div className="oa-ticket-list__actions">
-            {(event.ticket_progress_pct != null || event.capacity_total != null) && (
-              <div className="oa-ticket-list__stat">
-                {event.tickets_sold ?? 0}/{event.capacity_total ?? '?'}
-              </div>
-            )}
-            <div className="oa-ticket-list__price">{formatCurrency(event.revenue_cents || 0)}</div>
-            <Button variant="secondary" size="dense" onClick={() => onDuplicate(event.id)} icon="content_copy" />
-            <Button variant="danger" size="dense" onClick={() => onDelete(event.id)} icon="delete" />
-          </div>
-        </div>
-      ))}
+          </article>
+        )
+      })}
     </div>
   )
 }

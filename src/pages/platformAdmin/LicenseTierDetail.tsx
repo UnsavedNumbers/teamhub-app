@@ -762,7 +762,7 @@ export default function LicenseTierDetail() {
                   <div 
                     className="pa-card" 
                     style={{ 
-                      background: 'linear-gradient(135deg, var(--pa-success-bg) 0%, rgba(34, 197, 94, 0.05) 100%)',
+                      background: 'var(--pa-success-bg)',
                       border: '1px solid var(--pa-success)',
                       borderRadius: 'var(--pa-radius-lg)',
                       padding: 'var(--pa-space-5)',
