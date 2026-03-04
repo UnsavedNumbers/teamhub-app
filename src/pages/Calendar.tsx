@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+import { supabase } from '../lib/supabase'
 import { 
   getCalendarEvents,
   updateRSVP, 
@@ -18,6 +19,7 @@ import type { CalendarEvent as FanCalendarEvent } from '../types/staffAndFan'
 import { getContactForCategory } from '../data/services/organizationContactsService'
 import { USE_FAKE_DATA } from '../data/config'
 import { getTeamById as getFakeTeamById } from '../data/fake/fakeTeams'
+import { getChildTeamMemberships } from '../data/fake/fakeTeams'
 import { 
     CalendarEvent, 
     CalendarViewMode, 
@@ -36,12 +38,18 @@ import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import CalendarGrid from '../components/calendar/CalendarGrid'
+import AddToCalendarActions from '../components/calendar/AddToCalendarActions'
 import EventFilters from '../components/calendar/EventFilters'
 import RSVPButton from '../components/calendar/RSVPButton'
 import GeneralRSVPForm from '../components/calendar/GeneralRSVPForm'
 import EventCard from '../components/calendar/EventCard'
 import { type SportInfo } from '../utils/sportContext'
 import { useI18n } from '../i18n/useI18n'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
+import { readCalendarCache, writeCalendarCache } from '../features/calendar/cache'
+import type { CalendarExportEvent } from '../features/calendar/addToCalendar'
+import { buildIcsDataUrl, sanitizeCalendarFilename } from '../features/calendar/addToCalendar'
+import { getLink, RouteKeys } from '../utils/routes'
 import {
     filterByClassification,
     countByClassification,
@@ -67,38 +75,73 @@ const UPCOMING_RANGE_DAYS = 30
 
 type TimeContext = 'upcoming' | 'past' | 'all'
 
-// Helper to generate calendar link
-function generateCalendarLink(event: CalendarEvent): string | null {
-    try {
-        const startDate = new Date(event.start_time)
-        const endDate = new Date(event.end_time)
-        
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-            return null
-        }
-        
-        const start = startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-        const end = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-        const location = event.event_location 
-            ? `${event.event_location.venue_name || ''} ${formatEventLocation(event.event_location)}`.trim()
-            : event.location || ''
-        const title = event.title || 'Event'
-        
-        const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-DTSTART:${start}
-DTEND:${end}
-SUMMARY:${title.replace(/[,;\\]/g, '')}
-LOCATION:${location.replace(/[,;\\]/g, '')}
-END:VEVENT
-END:VCALENDAR`
-        
-        return `data:text/calendar;charset=utf8,${encodeURIComponent(icsContent)}`
-    } catch (err) {
-        console.error('Error generating calendar link:', err)
-        return null
-    }
+function getCalendarPageCacheScope(userId: string | undefined, fanView: boolean): string {
+  return `portal-calendar:${userId ?? 'anonymous'}:${fanView ? 'fan' : 'org'}`
+}
+
+function toCalendarExportEvent(event: CalendarEvent): CalendarExportEvent {
+  const location = event.event_location
+    ? [event.event_location.venue_name, formatEventLocation(event.event_location)]
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+    : event.location
+
+  return {
+    id: event.id,
+    title: event.title,
+    startTime: event.start_time,
+    endTime: event.end_time,
+    location: location || null,
+    description: event.notes,
+    url: typeof window === 'undefined'
+      ? undefined
+      : `${window.location.origin}${getLink(RouteKeys.PORTAL_EVENT_DETAIL, { eventId: event.id })}`,
+  }
+}
+
+function toFanCalendarExportEvent(event: FanCalendarEvent): CalendarExportEvent {
+  return {
+    id: event.id,
+    title: event.title,
+    startTime: event.start_time,
+    endTime: event.end_time,
+    location: event.location,
+    description: event.description,
+    url: typeof window === 'undefined'
+      ? undefined
+      : `${window.location.origin}${getLink(RouteKeys.FAN_EVENT_DETAIL, { eventId: event.id })}`,
+  }
+}
+
+function downloadEventsAsCalendar(events: CalendarEvent[], fallbackName: string): boolean {
+  const icsUrl = buildIcsDataUrl(events.map(toCalendarExportEvent))
+  if (!icsUrl || typeof document === 'undefined') {
+    return false
+  }
+
+  const link = document.createElement('a')
+  link.href = icsUrl
+  link.download = `${sanitizeCalendarFilename(fallbackName, 'schedule')}.ics`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  return true
+}
+
+function downloadFanEventsAsCalendar(events: FanCalendarEvent[], fallbackName: string): boolean {
+  const icsUrl = buildIcsDataUrl(events.map(toFanCalendarExportEvent))
+  if (!icsUrl || typeof document === 'undefined') {
+    return false
+  }
+
+  const link = document.createElement('a')
+  link.href = icsUrl
+  link.download = `${sanitizeCalendarFilename(fallbackName, 'schedule')}.ics`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  return true
 }
 
 export default function Calendar() {
@@ -110,7 +153,7 @@ export default function Calendar() {
   
   // Safe translation helper with fallbacks
   // Wraps the t() function to handle missing keys gracefully
-  const safeT = (key: string, fallback: string = key): string => {
+  const safeT = useCallback((key: string, fallback: string = key): string => {
     try {
       // Type assertion needed because t() expects specific keys, but we want to handle dynamic keys
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -122,7 +165,7 @@ export default function Calendar() {
       console.warn(`Translation failed for key: ${key}`, error)
       return fallback
     }
-  }
+  }, [t])
 
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [fanEvents, setFanEvents] = useState<FanCalendarEvent[]>([])
@@ -133,6 +176,7 @@ export default function Calendar() {
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [children, setChildren] = useState<Array<{ id: string; first_name: string; last_name: string }>>([])
+  const [childTeamIdsByChild, setChildTeamIdsByChild] = useState<Record<string, string[]>>({})
   const [eventSports, setEventSports] = useState<Record<string, SportInfo | null>>({})
   const [error, setError] = useState<string | null>(null)
   const [rsvpLoading, setRsvpLoading] = useState<Record<string, boolean>>({})
@@ -149,6 +193,7 @@ export default function Calendar() {
   const [userSelectedTab, setUserSelectedTab] = useState(false)
   
   const { context, isReady } = useUserContext()
+  const { isOnline } = useOnlineStatus()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   
@@ -205,6 +250,9 @@ export default function Calendar() {
     if (!isReady || !context) return
     setLoading(true)
     setError(null)
+    const cacheScope = getCalendarPageCacheScope(context.userId, fanView)
+    let nextFanEvents: FanCalendarEvent[] = []
+    let nextEventSports: Record<string, SportInfo | null> = {}
     
     try {
       if (fanView) {
@@ -213,7 +261,8 @@ export default function Calendar() {
           console.error('Error fetching fan calendar:', fanError)
           setFanEvents([])
         } else {
-          setFanEvents((fanData?.events || []) as FanCalendarEvent[])
+          nextFanEvents = (fanData?.events || []) as FanCalendarEvent[]
+          setFanEvents(nextFanEvents)
         }
       }
 
@@ -271,8 +320,47 @@ export default function Calendar() {
       const { data: childrenData, error: childrenError } = await getAthletes(context)
       if (childrenError) {
         console.error('Error fetching children:', childrenError)
+        setChildTeamIdsByChild({})
       } else {
-        setChildren(childrenData || [])
+        const nextChildren = childrenData || []
+        setChildren(nextChildren)
+
+        if (nextChildren.length === 0) {
+          setChildTeamIdsByChild({})
+        } else if (USE_FAKE_DATA) {
+          const memberships = getChildTeamMemberships()
+          const nextChildTeamIdsByChild = nextChildren.reduce<Record<string, string[]>>((accumulator, child) => {
+            accumulator[child.id] = memberships
+              .filter((membership) => membership.childId === child.id)
+              .map((membership) => membership.teamId)
+            return accumulator
+          }, {})
+          setChildTeamIdsByChild(nextChildTeamIdsByChild)
+        } else {
+          const childIds = nextChildren.map((child) => child.id)
+          const { data: membershipRows, error: membershipsError } = await supabase
+            .from('team_memberships')
+            .select('athlete_id, team_id')
+            .in('athlete_id', childIds)
+
+          if (membershipsError) {
+            console.error('Error fetching child team memberships:', membershipsError)
+            setChildTeamIdsByChild({})
+          } else {
+            const nextChildTeamIdsByChild = childIds.reduce<Record<string, string[]>>((accumulator, childId) => {
+              accumulator[childId] = []
+              return accumulator
+            }, {})
+
+            for (const membership of membershipRows || []) {
+              if (!membership?.athlete_id || !membership?.team_id) continue
+              nextChildTeamIdsByChild[membership.athlete_id] ||= []
+              nextChildTeamIdsByChild[membership.athlete_id].push(membership.team_id)
+            }
+
+            setChildTeamIdsByChild(nextChildTeamIdsByChild)
+          }
+        }
       }
 
       // Use lightweight calendar query for list views (faster, fewer joins)
@@ -286,9 +374,22 @@ export default function Calendar() {
 
       if (eventsError) {
         console.error('Error fetching events:', eventsError)
-        setError(eventsError.message || 'Failed to load events')
-        setEvents([])
-        setEventSports({})
+        const cached = readCalendarCache<{
+          events: CalendarEvent[]
+          fanEvents: FanCalendarEvent[]
+          eventSports: Record<string, SportInfo | null>
+        }>(cacheScope)
+
+        if (cached) {
+          setEvents(cached.data.events)
+          setFanEvents(cached.data.fanEvents)
+          setEventSports(cached.data.eventSports)
+          setError(isOnline ? (eventsError.message || 'Failed to load events') : safeT('common.error.offline', 'You appear to be offline. Please reconnect and try again.'))
+        } else {
+          setError(eventsError.message || 'Failed to load events')
+          setEvents([])
+          setEventSports({})
+        }
       } else {
           // Events are already filtered server-side via the query params
           const filtered = (data || []).map(mapSummaryToCalendarEvent)
@@ -351,7 +452,7 @@ export default function Calendar() {
               }
             }
 
-            const nextEventSports: Record<string, SportInfo | null> = {}
+            nextEventSports = {}
             for (const event of filtered) {
               if (!event.team_id) {
                 nextEventSports[event.id] = null
@@ -379,11 +480,28 @@ export default function Calendar() {
 
             setEventSports(nextEventSports)
           }
+
+          writeCalendarCache(cacheScope, {
+            events: filtered,
+            fanEvents: nextFanEvents,
+            eventSports: nextEventSports,
+          })
       }
     } catch (err) {
       console.error('Unexpected error in fetchData:', err)
+      const cached = readCalendarCache<{
+        events: CalendarEvent[]
+        fanEvents: FanCalendarEvent[]
+        eventSports: Record<string, SportInfo | null>
+      }>(cacheScope)
+      if (cached) {
+        setEvents(cached.data.events)
+        setFanEvents(cached.data.fanEvents)
+        setEventSports(cached.data.eventSports)
+      } else {
+        setEvents([])
+      }
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
-      setEvents([])
     } finally {
       setLoading(false)
     }
@@ -401,7 +519,7 @@ export default function Calendar() {
     } catch (err) {
         console.warn('Failed to load scheduling contact', err)
     }
-  }, [context, isReady, currentDate, viewMode, filters])
+  }, [context, fanView, isOnline, isReady, currentDate, safeT, timeContext, viewMode, filters, mapSummaryToCalendarEvent])
 
   // Restore state from query params on mount
   useEffect(() => {
@@ -592,7 +710,7 @@ export default function Calendar() {
 
   // Classify and filter events based on current state
   const now = getNow()
-  const allEvents = fanView ? [] : events // Fan events handled separately for now
+  const allEvents = fanView ? [] : events // Fan events handled separately in the fan calendar branch below
   
   // Apply filters first (event type, team, show canceled)
   const filteredEvents = allEvents.filter(event => {
@@ -608,9 +726,15 @@ export default function Calendar() {
     
     // Child filter (for guardian view)
     if (filters.childIds.length > 0) {
-      // Check if event is related to any of the selected children's teams
-      // This is simplified - in reality you'd check athlete-team relationships
-      return true // Placeholder
+      const selectedTeamIds = new Set(
+        filters.childIds.flatMap((childId) => childTeamIdsByChild[childId] ?? []),
+      )
+
+      if (selectedTeamIds.size === 0 || !event.team_id) {
+        return false
+      }
+
+      return selectedTeamIds.has(event.team_id)
     }
     
     return true
@@ -677,16 +801,10 @@ export default function Calendar() {
   const isAdmin = context?.roles.includes('org_admin') ?? false
   const isFan = fanView
   
-  // Check if user has tickets for an event
-  const hasTickets = (_event: CalendarEvent): boolean => {
-    // TODO: Check if user owns tickets for this event
-    return false
-  }
-
   return (
       <PortalLayout
         breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
           { label: safeT('calendar.title', 'Calendar') },
         ]}
       >
@@ -704,11 +822,29 @@ export default function Calendar() {
             
             <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
               {(isCoach || isAdmin || isStaff) && (
-                 <Button onClick={() => navigate('/portal/calendar/new')} className="w-full sm:w-auto">
+                 <Button onClick={() => navigate(getLink(RouteKeys.PORTAL_CALENDAR_CREATE))} className="w-full sm:w-auto">
                     <Icon name="add" className="mr-2" />
                     Create Event
                  </Button>
               )}
+
+                <Button
+                variant="secondary"
+                onClick={() => {
+                  const exportSucceeded = fanView
+                    ? downloadFanEventsAsCalendar(fanEvents, 'fan-schedule')
+                    : downloadEventsAsCalendar(displayEvents, 'portal-schedule')
+
+                  if (!exportSucceeded) {
+                    setError(safeT('calendar.errors.exportFailed', 'Unable to generate a calendar file for the current selection.'))
+                  }
+                }}
+                disabled={loading || (fanView ? fanEvents.length === 0 : displayEvents.length === 0)}
+                className="w-full sm:w-auto"
+              >
+                <Icon name="calendar_add_on" className="mr-2" />
+                {safeT('calendar.event.addToCalendar', 'Add to Calendar')}
+              </Button>
 
               <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 w-full sm:w-auto">
                 {(['agenda', 'week', 'month'] as CalendarViewMode[]).map((v) => (
@@ -769,6 +905,22 @@ export default function Calendar() {
                 All
               </button>
             </div>
+          )}
+
+          {!isOnline && (
+            <Card className="p-4 mb-4 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+              <div className="flex items-start gap-3">
+                <Icon name="wifi_off" className="text-amber-600 dark:text-amber-300 mt-0.5" />
+                <div>
+                  <p className="font-bold text-amber-900 dark:text-amber-100">
+                    {safeT('calendar.errors.offlineTitle', 'You are offline')}
+                  </p>
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    {safeT('calendar.errors.offlineDescription', 'Cached events remain available when present, but live updates are paused until your connection returns.')}
+                  </p>
+                </div>
+              </div>
+            </Card>
           )}
           
           {/* Fan View Toggle */}
@@ -880,7 +1032,7 @@ export default function Calendar() {
                     </Card>
                   ) : (
                     <CalendarGrid 
-                        events={fanEvents.map((fe: any) => ({
+                        events={fanEvents.map((fe) => ({
                           id: fe.id,
                           title: fe.title,
                           start_time: fe.start_time,
@@ -938,13 +1090,13 @@ export default function Calendar() {
                             Events will appear here once scheduled.
                           </p>
                           {(isCoach || isAdmin || isStaff) && (
-                            <Button onClick={() => navigate('/portal/calendar/new')}>
+                            <Button onClick={() => navigate(getLink(RouteKeys.PORTAL_CALENDAR_CREATE))}>
                               <Icon name="add" className="mr-2" />
                               Create First Event
                             </Button>
                           )}
                           {isGuardian && (
-                            <Button variant="secondary" onClick={() => navigate('/portal/athletes')}>
+                            <Button variant="secondary" onClick={() => navigate(getLink(RouteKeys.PORTAL_ATHLETES))}>
                               View Teams
                             </Button>
                           )}
@@ -959,7 +1111,8 @@ export default function Calendar() {
                     
                     // Scenario 2: Exactly one upcoming event (spotlight layout)
                     if (timeContext === 'upcoming' && counts.upcoming === 1 && nextUpcomingEvent) {
-                      const calendarLink = generateCalendarLink(nextUpcomingEvent)
+                      const calendarExportEvent = toCalendarExportEvent(nextUpcomingEvent)
+                      const ticketedEventId = nextUpcomingEvent.ticketed_event?.id ?? null
                       const eventMapUrl = nextUpcomingEvent.event_location 
                         ? getEventLocationMapsUrl(nextUpcomingEvent.event_location)
                         : nextUpcomingEvent.location
@@ -1027,15 +1180,14 @@ export default function Calendar() {
                             
                             {/* Actions */}
                             <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
-                              {calendarLink && (isGuardian || isAthlete) && (
-                                <a
-                                  href={calendarLink}
-                                  download={`${nextUpcomingEvent.title.replace(/[^a-z0-9]/gi, '_')}.ics`}
-                                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors text-sm font-medium"
-                                >
-                                  <Icon name="event" size="text-sm" />
-                                  Add to Calendar
-                                </a>
+                              {(isGuardian || isAthlete) && (
+                                <AddToCalendarActions
+                                  event={calendarExportEvent}
+                                  layout="inline"
+                                  googleVariant="secondary"
+                                  icsVariant="secondary"
+                                  buttonClassName="px-4 py-2"
+                                />
                               )}
                               
                               {eventMapUrl && (
@@ -1050,19 +1202,12 @@ export default function Calendar() {
                                 </a>
                               )}
                               
-                              {nextUpcomingEvent.ticketed_event && (
+                              {ticketedEventId && (
                                 <>
-                                  {hasTickets(nextUpcomingEvent) ? (
-                                    <Button
-                                      variant="secondary"
-                                      onClick={() => navigate(`/portal/my-tickets`)}
-                                    >
-                                      View My Tickets
-                                    </Button>
-                                  ) : (isGuardian || isFan) ? (
+                                  {(isGuardian || isFan) ? (
                                     <Button
                                       variant="primary"
-                                      onClick={() => navigate(`/portal/tickets/event/${nextUpcomingEvent.ticketed_event?.id}`)}
+                                      onClick={() => navigate(getLink(RouteKeys.PORTAL_TICKET_EVENT_DETAIL, { eventId: ticketedEventId }))}
                                     >
                                       Buy Tickets
                                     </Button>
@@ -1122,7 +1267,7 @@ export default function Calendar() {
                           </Card>
                           {(isCoach || isAdmin) && (
                             <div className="flex justify-center">
-                              <Button onClick={() => navigate('/portal/calendar/new')}>
+                              <Button onClick={() => navigate(getLink(RouteKeys.PORTAL_CALENDAR_CREATE))}>
                                 <Icon name="add" className="mr-2" />
                                 Create Event
                               </Button>
@@ -1130,7 +1275,7 @@ export default function Calendar() {
                           )}
                           {isGuardian && (
                             <div className="flex justify-center">
-                              <Button variant="secondary" onClick={() => navigate('/portal/calendar')}>
+                              <Button variant="secondary" onClick={() => navigate(getLink(RouteKeys.PORTAL_CALENDAR))}>
                                 View Full Calendar
                               </Button>
                             </div>
@@ -1310,6 +1455,20 @@ export default function Calendar() {
                         )}
                     </div>
 
+                    {(isGuardian || isAthlete) && (
+                      <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white mb-3">
+                          {safeT('calendar.event.addToCalendar', 'Add to Calendar')}
+                        </h4>
+                        <AddToCalendarActions
+                          event={toCalendarExportEvent(selectedEvent)}
+                          googleVariant="secondary"
+                          icsVariant="secondary"
+                          buttonClassName="w-full justify-center"
+                        />
+                      </div>
+                    )}
+
                     <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
                         <Button
                             variant="secondary"
@@ -1320,7 +1479,10 @@ export default function Calendar() {
                                 if (filters.teamIds.length > 0) params.set('teams', filters.teamIds.join(','))
                                 if (filters.childIds.length > 0) params.set('children', filters.childIds.join(','))
                                 if (filters.eventTypes.length > 0) params.set('types', filters.eventTypes.join(','))
-                                navigate(`/portal/calendar/events/${selectedEvent.id}?${params.toString()}`)
+                                const detailPath = fanView
+                                  ? getLink(RouteKeys.FAN_EVENT_DETAIL, { eventId: selectedEvent.id })
+                                  : getLink(RouteKeys.PORTAL_EVENT_DETAIL, { eventId: selectedEvent.id })
+                                navigate(params.toString() ? `${detailPath}?${params.toString()}` : detailPath)
                                 setSelectedEvent(null)
                             }}
                             className="w-full"

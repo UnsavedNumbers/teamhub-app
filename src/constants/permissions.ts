@@ -98,6 +98,8 @@ export const PERMISSIONS = {
   STAFF_MANAGE_ROSTER: 'can_manage_roster',
   STAFF_SEND_NOTIFICATIONS: 'can_send_notifications',
   STAFF_MANAGE_STAFF: 'can_manage_staff',
+  STAFF_VIEW_PII: 'can_view_pii',
+  STAFF_VIEW_MEDICAL: 'can_view_medical',
 } as const
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS]
@@ -133,4 +135,6 @@ export const DEFAULT_STAFF_PERMISSIONS = {
   [PERMISSIONS.STAFF_MANAGE_ROSTER]: false,
   [PERMISSIONS.STAFF_SEND_NOTIFICATIONS]: false,
   [PERMISSIONS.STAFF_MANAGE_STAFF]: false,
+  [PERMISSIONS.STAFF_VIEW_PII]: false,
+  [PERMISSIONS.STAFF_VIEW_MEDICAL]: false,
 } as const

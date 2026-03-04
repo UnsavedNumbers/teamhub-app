@@ -11,6 +11,8 @@ export const STAFF_PERMISSION_LABEL_KEYS: Record<StaffPermissionKey, Translation
   can_manage_roster: 'admin.staff.permissionLabels.can_manage_roster',
   can_send_notifications: 'admin.staff.permissionLabels.can_send_notifications',
   can_manage_staff: 'admin.staff.permissionLabels.can_manage_staff',
+  can_view_pii: 'admin.staff.permissionLabels.can_view_pii',
+  can_view_medical: 'admin.staff.permissionLabels.can_view_medical',
 } as const
 
 export const STAFF_PERMISSION_KEYS = Object.keys(

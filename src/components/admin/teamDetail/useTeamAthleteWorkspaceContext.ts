@@ -5,8 +5,10 @@ import { getAthleteSports } from '../../../data/services/athleteSportsService'
 import { getAthleteGuardians, getAthleteInvites } from '../../../data/services/guardianService'
 import { getAthleteTeamMemberships } from '../../../data/services/teamsService'
 import { getFeeAssignmentsForTeam } from '../../../data/services/paymentsService'
+import { getAthleteSensitiveAccess } from '../../../data/services/sensitiveAccessService'
 import { supabase } from '../../../lib/supabase'
 import type { TeamAthleteWorkspaceData, TeamDetailPermissions } from './types'
+import { canAccessSensitiveData } from '../../../utils/sensitiveAccess'
 
 const EMPTY_ATTENDANCE = {
   totalRecordedEvents: 0,
@@ -44,6 +46,7 @@ export function useTeamAthleteWorkspaceContext({
   const isMountedRef = useRef(true)
   const [state, setState] = useState<TeamAthleteWorkspaceData>({
     athlete: null,
+    sensitiveAccess: null,
     sports: [],
     guardians: [],
     pendingInvites: [],
@@ -69,6 +72,7 @@ export function useTeamAthleteWorkspaceContext({
         setState((previous) => ({
           ...previous,
           athlete: null,
+          sensitiveAccess: null,
           sports: [],
           guardians: [],
           pendingInvites: [],
@@ -86,11 +90,14 @@ export function useTeamAthleteWorkspaceContext({
     setState((previous) => ({ ...previous, loading: true, error: null }))
 
     try {
-      const athletePromise = getAthleteById(context, athleteId)
+      const sensitiveAccessResult = await getAthleteSensitiveAccess(athleteId, orgId)
+      const sensitiveAccess = sensitiveAccessResult.data
+      const canViewSensitivePii = permissions.canViewGuardians && canAccessSensitiveData(sensitiveAccess, 'pii', 'read')
+      const athletePromise = getAthleteById(context, athleteId, sensitiveAccess)
       const sportsPromise = getAthleteSports(athleteId, orgId)
       const teamsPromise = getAthleteTeamMemberships(context, athleteId)
-      const guardiansPromise = permissions.canViewGuardians ? getAthleteGuardians(athleteId, orgId) : Promise.resolve({ data: [], error: null })
-      const invitesPromise = permissions.canViewGuardians ? getAthleteInvites(athleteId, orgId) : Promise.resolve({ data: [], error: null })
+      const guardiansPromise = canViewSensitivePii ? getAthleteGuardians(athleteId, orgId) : Promise.resolve({ data: [], error: null })
+      const invitesPromise = canViewSensitivePii ? getAthleteInvites(athleteId, orgId) : Promise.resolve({ data: [], error: null })
       const paymentsPromise = permissions.canViewPayments
         ? getFeeAssignmentsForTeam(context, teamId, seasonId ?? null)
         : Promise.resolve({ data: [], error: null })
@@ -203,6 +210,7 @@ export function useTeamAthleteWorkspaceContext({
       setState((previous) => ({
         ...previous,
         athlete: athleteResult.data,
+        sensitiveAccess,
         sports: sportsResult.data ?? [],
         guardians: guardiansResult.data ?? [],
         pendingInvites: invitesResult.data ?? [],
@@ -247,6 +255,7 @@ export function useTeamAthleteWorkspaceContext({
         setState((previous) => ({
           ...previous,
           athlete: null,
+          sensitiveAccess: null,
           sports: [],
           guardians: [],
           pendingInvites: [],

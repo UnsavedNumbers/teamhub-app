@@ -7,6 +7,7 @@ import { QUERY_CONFIG } from './constants/api'
 import './index.css'
 import './styles/toast.css'
 import App from './App.tsx'
+import { registerServiceWorker } from './lib/pwa/registerServiceWorker'
 
 // Initialize debug logging system (localhost only)
 if (import.meta.env.DEV) {
@@ -66,6 +67,8 @@ function Root() {
 
   return app
 }
+
+void registerServiceWorker()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -20,6 +20,7 @@ export interface UserNotificationPreference {
   notification_type_id: string
   in_app_enabled: boolean
   email_enabled: boolean
+  push_enabled: boolean
   created_at: string
   updated_at: string
 }
@@ -112,6 +113,7 @@ export async function getDefaultPreferences(
           notification_type_id: type.id,
           in_app_enabled: type.default_in_app_enabled,
           email_enabled: type.default_email_enabled && emailAvailable, // Only enable if template exists
+          push_enabled: false,
           created_at: '',
           updated_at: '',
           notification_type: type,
@@ -139,7 +141,8 @@ export async function updatePreference(
   role: NotificationRole,
   notificationTypeId: string,
   inAppEnabled: boolean,
-  emailEnabled: boolean
+  emailEnabled: boolean,
+  pushEnabled: boolean
 ): Promise<{ data: UserNotificationPreference | null; error: Error | null }> {
   try {
     const canonicalRole = role === 'parent' ? 'guardian' : role
@@ -166,6 +169,7 @@ export async function updatePreference(
           notification_type_id: notificationTypeId,
           in_app_enabled: inAppEnabled,
           email_enabled: emailEnabled,
+          push_enabled: pushEnabled,
         },
         {
           onConflict: 'user_id,org_id,role,notification_type_id',
@@ -209,6 +213,7 @@ export async function updatePreferencesBatch(
     notificationTypeId: string
     inAppEnabled: boolean
     emailEnabled: boolean
+    pushEnabled: boolean
   }>
 ): Promise<{ data: UserNotificationPreference[]; error: Error | null }> {
   try {
@@ -237,6 +242,7 @@ export async function updatePreferencesBatch(
       notification_type_id: pref.notificationTypeId,
       in_app_enabled: pref.inAppEnabled,
       email_enabled: pref.emailEnabled,
+      push_enabled: pref.pushEnabled,
     }))
 
     const { data, error } = await supabase
@@ -318,6 +324,7 @@ export async function getPreference(
             notification_type_id: notificationTypeId,
             in_app_enabled: type.default_in_app_enabled,
             email_enabled: type.default_email_enabled && emailAvailable,
+            push_enabled: false,
             created_at: '',
             updated_at: '',
             notification_type: type,
@@ -414,8 +421,8 @@ export async function shouldDeliverNotificationBatchRelational(
   orgId: string,
   role: NotificationRole,
   notificationTypeId: string
-): Promise<Map<string, { inApp: boolean; email: boolean }>> {
-  const result = new Map<string, { inApp: boolean; email: boolean }>()
+): Promise<Map<string, { inApp: boolean; email: boolean; push: boolean }>> {
+  const result = new Map<string, { inApp: boolean; email: boolean; push: boolean }>()
 
   if (userIds.length === 0) {
     return result
@@ -431,7 +438,7 @@ export async function shouldDeliverNotificationBatchRelational(
     if (typeError || !notificationType) {
       // If type not found, default to disabled
       userIds.forEach((userId) => {
-        result.set(userId, { inApp: false, email: false })
+        result.set(userId, { inApp: false, email: false, push: false })
       })
       return result
     }
@@ -442,20 +449,26 @@ export async function shouldDeliverNotificationBatchRelational(
     // Get user preferences in batch
     const { data: preferences, error } = await supabase
       .from('user_notification_preferences')
-      .select('user_id, in_app_enabled, email_enabled')
+      .select('user_id, in_app_enabled, email_enabled, push_enabled')
       .in('user_id', userIds)
       .eq('org_id', orgId)
       .eq('role', canonicalRole)
       .eq('notification_type_id', notificationTypeId)
 
     // Create map of user preferences
-    const prefMap = new Map<string, { inApp: boolean; email: boolean }>()
+    const prefMap = new Map<string, { inApp: boolean; email: boolean; push: boolean }>()
     if (!error && preferences) {
-      const prefs = preferences as unknown as Array<{ user_id: string; in_app_enabled: boolean | null; email_enabled: boolean | null }>
+      const prefs = preferences as unknown as Array<{
+        user_id: string
+        in_app_enabled: boolean | null
+        email_enabled: boolean | null
+        push_enabled: boolean | null
+      }>
       for (const pref of prefs) {
         prefMap.set(pref.user_id, {
           inApp: !!pref.in_app_enabled,
           email: !!(pref.email_enabled && emailAvailable), // Only enable email if template is active
+          push: !!pref.push_enabled,
         })
       }
     }
@@ -470,6 +483,7 @@ export async function shouldDeliverNotificationBatchRelational(
         result.set(userId, {
           inApp: notificationType.default_in_app_enabled,
           email: notificationType.default_email_enabled && emailAvailable,
+          push: false,
         })
       }
     })
@@ -485,7 +499,7 @@ export async function shouldDeliverNotificationBatchRelational(
     })
     // On error, default to enabled (fail open)
     userIds.forEach((userId) => {
-      result.set(userId, { inApp: true, email: false }) // Email disabled on error
+      result.set(userId, { inApp: true, email: false, push: false }) // Email disabled on error
     })
     return result
   }

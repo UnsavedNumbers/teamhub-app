@@ -190,6 +190,7 @@ export async function loadNotificationGroupsFromRelational(
             enabled: pref ? pref.in_app_enabled : true,
             emailAvailable, // Store for use in UI gating
             emailEnabled: pref ? (pref.email_enabled && emailAvailable) : false,
+            pushEnabled: pref ? !!pref.push_enabled : false,
           } as any // Extend action with email info
         })
       )
@@ -197,11 +198,15 @@ export async function loadNotificationGroupsFromRelational(
       // Determine group-level settings
       const allEnabled = actions.every(a => a.enabled)
       const hasEmailAvailable = actions.some((a: any) => a.emailAvailable)
+      const hasPushEnabled = actions.some((a: any) => a.pushEnabled)
       // Build channels list - include email only if available for at least one action
       // Keep email in channels if any action has email available (for UI display)
       const channels: DeliveryChannel[] = ['in_app']
       if (hasEmailAvailable) {
         channels.push('email')
+      }
+      if (hasPushEnabled) {
+        channels.push('push')
       }
       
       return {
@@ -230,6 +235,7 @@ export async function convertNotificationGroupsToRelational(
   notificationTypeId: string
   inAppEnabled: boolean
   emailEnabled: boolean
+  pushEnabled: boolean
 }>> {
   const { getNotificationTypeIdFromAction } = await import('../data/services/notificationTypeMapper')
   const { isEmailAvailable } = await import('../data/services/notificationTypesService')
@@ -238,6 +244,7 @@ export async function convertNotificationGroupsToRelational(
     notificationTypeId: string
     inAppEnabled: boolean
     emailEnabled: boolean
+    pushEnabled: boolean
   }> = []
   
   for (const group of groups) {
@@ -248,11 +255,13 @@ export async function convertNotificationGroupsToRelational(
       const emailAvailable = await isEmailAvailable(typeId)
       // Email is enabled if: channel includes 'email', email is available, and action is enabled
       const emailEnabled = group.channels.includes('email') && emailAvailable && action.enabled
+      const pushEnabled = group.channels.includes('push') && action.enabled
       
       preferences.push({
         notificationTypeId: typeId,
         inAppEnabled: action.enabled,
         emailEnabled,
+        pushEnabled,
       })
     }
   }

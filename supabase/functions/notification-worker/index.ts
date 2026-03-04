@@ -27,6 +27,71 @@ const MAX_RETRIES = 3
 const INITIAL_RETRY_DELAY_MS = 60000 // 1 minute
 const MAX_RETRY_DELAY_MS = 3600000 // 1 hour
 
+interface OneSignalNotificationResult {
+  success: boolean
+  messageId?: string
+  error?: string
+}
+
+async function sendOneSignalPushNotification(
+  appId: string,
+  restApiKey: string,
+  targetUserId: string,
+  payload: Record<string, unknown>
+): Promise<OneSignalNotificationResult> {
+  const title = typeof payload.title === 'string' ? payload.title.trim() : ''
+  const body = typeof payload.body === 'string' ? payload.body.trim() : ''
+  const linkUrl = typeof payload.link_url === 'string' ? payload.link_url : undefined
+
+  if (!title || !body) {
+    return { success: false, error: 'Push payload must include title and body' }
+  }
+
+  const requestBody: Record<string, unknown> = {
+    app_id: appId,
+    include_aliases: {
+      external_id: [targetUserId],
+    },
+    target_channel: 'push',
+    headings: { en: title },
+    contents: { en: body },
+    data: payload,
+  }
+
+  if (linkUrl) {
+    requestBody.url = linkUrl
+  }
+
+  const response = await fetch('https://onesignal.com/api/v1/notifications', {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${restApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  })
+
+  const responseText = await response.text()
+  let parsed: Record<string, unknown> | null = null
+
+  try {
+    parsed = responseText ? (JSON.parse(responseText) as Record<string, unknown>) : null
+  } catch {
+    parsed = null
+  }
+
+  if (!response.ok) {
+    const apiError = parsed && typeof parsed.errors === 'object' ? JSON.stringify(parsed.errors) : responseText
+    return {
+      success: false,
+      error: apiError || `Push provider responded with status ${response.status}`,
+    }
+  }
+
+  const messageId = parsed && typeof parsed.id === 'string' ? parsed.id : undefined
+  return { success: true, messageId }
+}
+
 // Calculate next retry time with exponential backoff
 function calculateNextRetry(retryCount: number): Date {
   const delayMs = Math.min(
@@ -240,6 +305,82 @@ serve(async (req) => {
             })
             .eq('id', entry.id)
           results.push({ id: entry.id, status: 'failed', error: errorMessage })
+        }
+      }
+    }
+
+    // Process push entries in unified outbox
+    const { data: pushOutboxEntries, error: pushOutboxError } = await supabase
+      .from('notifications_outbox')
+      .select('*')
+      .eq('channel', 'push')
+      .eq('status', 'queued')
+      .order('created_at', { ascending: true })
+      .limit(20)
+
+    if (!pushOutboxError && pushOutboxEntries && pushOutboxEntries.length > 0) {
+      const oneSignalAppId = Deno.env.get('ONESIGNAL_APP_ID')
+      const oneSignalRestApiKey = Deno.env.get('ONESIGNAL_REST_API_KEY')
+
+      if (!oneSignalAppId || !oneSignalRestApiKey) {
+        for (const entry of pushOutboxEntries) {
+          await supabase
+            .from('notifications_outbox')
+            .update({
+              status: 'failed',
+              error_message: 'Push provider is not configured',
+              processed_at: new Date().toISOString(),
+            })
+            .eq('id', entry.id)
+
+          results.push({ id: entry.id, status: 'failed', error: 'Push provider is not configured' })
+        }
+      } else {
+        for (const entry of pushOutboxEntries) {
+          try {
+            const payload = (entry.payload_json ?? {}) as Record<string, unknown>
+            const pushResult = await sendOneSignalPushNotification(
+              oneSignalAppId,
+              oneSignalRestApiKey,
+              entry.target_user_id,
+              payload
+            )
+
+            if (pushResult.success) {
+              await supabase
+                .from('notifications_outbox')
+                .update({
+                  status: 'sent',
+                  processed_at: new Date().toISOString(),
+                })
+                .eq('id', entry.id)
+
+              results.push({ id: entry.id, status: 'sent', pushId: pushResult.messageId })
+            } else {
+              await supabase
+                .from('notifications_outbox')
+                .update({
+                  status: 'failed',
+                  error_message: pushResult.error || 'Push send failed',
+                  processed_at: new Date().toISOString(),
+                })
+                .eq('id', entry.id)
+
+              results.push({ id: entry.id, status: 'failed', error: pushResult.error || 'Push send failed' })
+            }
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown push error'
+            await supabase
+              .from('notifications_outbox')
+              .update({
+                status: 'failed',
+                error_message: errorMessage,
+                processed_at: new Date().toISOString(),
+              })
+              .eq('id', entry.id)
+
+            results.push({ id: entry.id, status: 'failed', error: errorMessage })
+          }
         }
       }
     }

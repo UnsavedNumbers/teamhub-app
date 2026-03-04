@@ -29,6 +29,8 @@ import type { NotificationRole } from '../types/notifications'
 import { mergeNotificationPreferences, canonicalRole, loadNotificationGroupsFromRelational, convertNotificationGroupsToRelational } from '../utils/notificationPreferencesConfig'
 import { updatePreferencesBatch } from '../data/services/userNotificationPreferencesService'
 import { showSuccess, showError } from '../utils/toast'
+import { isBrowserPushSupported, isOneSignalConfigured } from '../lib/push/oneSignalWeb'
+import { enablePushForUser, revokePushForUser, syncPushSubscription } from '../data/services/pushSubscriptionService'
 import { CheckCircle, Mail, Loader2, AlertCircle, BellOff } from 'lucide-react'
 import { LocationAutocomplete } from '../components/common/LocationAutocomplete'
 import type { StructuredAddress, HomeLocation } from '../types/location'
@@ -50,6 +52,8 @@ interface ChildWithGuardians extends Child {
   pendingInvites: PendingGuardianInvite[]
 }
 
+type SettingsTab = 'account' | 'family' | 'theme' | 'language' | 'notifications' | 'support' | 'legal'
+
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 
 export default function Settings() {
@@ -66,12 +70,15 @@ export default function Settings() {
   const [children, setChildren] = useState<ChildWithGuardians[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab>('account')
 
   const [notificationGroups, setNotificationGroups] = useState<NotificationGroup[]>([])
   const [savingNotifications, setSavingNotifications] = useState(false)
   const [loadingNotifications, setLoadingNotifications] = useState(true)
   const [notificationsError, setNotificationsError] = useState<string | null>(null)
   const [isOffline, setIsOffline] = useState(false)
+  const [pushChannelSupported, setPushChannelSupported] = useState(false)
+  const pushSyncInFlight = useRef(false)
 
   const [homeAddressInput, setHomeAddressInput] = useState('')
   const [homeAddressDisplay, setHomeAddressDisplay] = useState('')
@@ -114,6 +121,39 @@ export default function Settings() {
     isMountedRef.current = true
     return () => { isMountedRef.current = false }
   }, [])
+
+  useEffect(() => {
+    setPushChannelSupported(isOneSignalConfigured() && isBrowserPushSupported())
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const syncPushState = async () => {
+      if (!isReady || !user?.id || pushSyncInFlight.current) return
+      if (!isOneSignalConfigured() || !isBrowserPushSupported()) return
+
+      pushSyncInFlight.current = true
+      try {
+        const result = await syncPushSubscription({
+          userId: user.id,
+          orgId: context.orgId ?? null,
+        })
+
+        if (!cancelled && result.error && navigator.onLine) {
+          console.error('Failed to sync push subscription state:', result.error)
+        }
+      } finally {
+        pushSyncInFlight.current = false
+      }
+    }
+
+    void syncPushState()
+
+    return () => {
+      cancelled = true
+    }
+  }, [context.orgId, isReady, user?.id])
 
   // Offline detection
   useEffect(() => {
@@ -537,7 +577,51 @@ export default function Settings() {
   )
 
   const handleToggleChannel = useCallback(
-    (groupId: NotificationGroup['id'], channel: 'in_app' | 'email' | 'push', next: boolean) => {
+    async (groupId: NotificationGroup['id'], channel: 'in_app' | 'email' | 'push', next: boolean) => {
+      if (channel === 'push') {
+        if (!user?.id || !isReady) {
+          showError(t('common.error.permissionDenied'))
+          return
+        }
+
+        if (!isOneSignalConfigured() || !isBrowserPushSupported()) {
+          showError(t('common.featureNotAvailable'))
+          return
+        }
+
+        if (next) {
+          setSavingNotifications(true)
+          const result = await enablePushForUser({
+            userId: user.id,
+            orgId: context.orgId ?? null,
+          })
+          setSavingNotifications(false)
+
+          if (!result.success) {
+            if (result.reason === 'permission_denied') {
+              showError(t('common.error.permissionDenied'))
+            } else if (!navigator.onLine) {
+              showError(t('common.error.offline'))
+            } else {
+              showError(t('common.error.loadFailed'))
+            }
+            return
+          }
+        } else {
+          setSavingNotifications(true)
+          const result = await revokePushForUser({
+            userId: user.id,
+            orgId: context.orgId ?? null,
+          })
+          setSavingNotifications(false)
+
+          if (!result.success) {
+            showError(t('common.error.updateFailed'))
+            return
+          }
+        }
+      }
+
       setNotificationGroups((prev) => {
         const updated = prev.map((group) =>
           group.id === groupId
@@ -553,7 +637,7 @@ export default function Settings() {
         return updated
       })
     },
-    [persistNotificationGroups]
+    [context.orgId, isReady, persistNotificationGroups, t, user?.id]
   )
 
   const handleUpdateDigestWindow = useCallback(
@@ -793,6 +877,16 @@ export default function Settings() {
     { value: 'es', label: t('portal.settings.language.spanish') },
   ]
 
+  const settingsTabs: { id: SettingsTab; label: string }[] = [
+    { id: 'account', label: t('portal.settings.account.title') },
+    { id: 'family', label: t('portal.settings.family.title') },
+    { id: 'theme', label: 'Theme' },
+    { id: 'language', label: t('portal.settings.language.title') },
+    { id: 'notifications', label: t('portal.settings.notifications.title') },
+    { id: 'support', label: t('portal.settings.support.title') },
+    { id: 'legal', label: t('portal.settings.legal.title') },
+  ]
+
   return (
       <PortalLayout
         breadcrumbs={[
@@ -839,7 +933,25 @@ export default function Settings() {
             </Card>
           )}
 
+          <section>
+            <div className="pa-tabs-list" role="tablist" aria-label={t('portal.settings.title')}>
+              {settingsTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeSettingsTab === tab.id}
+                  className={`pa-tabs-trigger ${activeSettingsTab === tab.id ? 'active' : ''}`}
+                  onClick={() => setActiveSettingsTab(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
           {/* Account */}
+          {activeSettingsTab === 'account' && (
           <section>
             <SectionHeader className="mb-4">{t('portal.settings.account.title')}</SectionHeader>
             <Card className="overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
@@ -928,8 +1040,10 @@ export default function Settings() {
               </div>
             </Card>
           </section>
+          )}
 
           {/* Family */}
+          {activeSettingsTab === 'family' && (
           <section>
             <div className="flex items-center justify-between mb-4">
               <SectionHeader>{t('portal.settings.family.title')}</SectionHeader>
@@ -1075,8 +1189,10 @@ export default function Settings() {
               ))}
             </div>
           </section>
+          )}
 
           {/* Theme */}
+          {activeSettingsTab === 'theme' && (
           <section>
             <SectionHeader className="mb-4">Theme</SectionHeader>
             <Card className="p-6">
@@ -1086,8 +1202,10 @@ export default function Settings() {
               <ThemeSelector />
             </Card>
           </section>
+          )}
 
           {/* Language */}
+          {activeSettingsTab === 'language' && (
           <section>
             <SectionHeader className="mb-4">{t('portal.settings.language.title')}</SectionHeader>
             <Card className="p-6">
@@ -1116,8 +1234,10 @@ export default function Settings() {
               </div>
             </Card>
           </section>
+          )}
 
           {/* Notifications */}
+          {activeSettingsTab === 'notifications' && (
           <section>
             <SectionHeader className="mb-3 sm:mb-4">{t('portal.settings.notifications.title')}</SectionHeader>
             <Card className="p-4 sm:p-6">
@@ -1217,14 +1337,17 @@ export default function Settings() {
                   onToggleQuietHours={handleToggleQuietHours}
                   onUpdateQuietHours={handleUpdateQuietHours}
                   onUpdateTimezone={handleUpdateTimezone}
+                  pushChannelSupported={pushChannelSupported}
                   saving={savingNotifications}
                 />
               )}
             </Card>
           </section>
+          )}
 
-          {/* Support & Legal */}
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          {/* Support */}
+          {activeSettingsTab === 'support' && (
+          <section>
             <Card className="p-4 sm:p-6">
                <SectionHeader className="mb-3 sm:mb-4">{t('portal.settings.support.title')}</SectionHeader>
                <ul className="space-y-2 sm:space-y-3 text-sm">
@@ -1233,6 +1356,12 @@ export default function Settings() {
                  <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[var(--org-link-color)] min-h-[44px] py-1"><span>{t('portal.settings.support.reportProblem')}</span> <Icon name="chevron_right" className="flex-shrink-0" /></a></li>
                </ul>
             </Card>
+          </section>
+          )}
+
+          {/* Legal */}
+          {activeSettingsTab === 'legal' && (
+          <section>
             <Card className="p-4 sm:p-6">
                <SectionHeader className="mb-3 sm:mb-4">{t('portal.settings.legal.title')}</SectionHeader>
                <ul className="space-y-2 sm:space-y-3 text-sm">
@@ -1243,6 +1372,7 @@ export default function Settings() {
                <p className="mt-3 sm:mt-4 text-xs text-slate-400">{t('portal.settings.legal.version', { version: '2.4.0', build: '592' })}</p>
             </Card>
           </section>
+          )}
         </div>
 
         {/* Email Change Modal */}

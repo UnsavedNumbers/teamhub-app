@@ -3,6 +3,7 @@ import type { AthleteSportWithDetails } from '../../../data/services/athleteSpor
 import type { AthleteTeamMembershipDisplay } from '../../../data/services/teamsService'
 import type { PendingGuardianInvite, Guardian } from '../../../types/family'
 import type { AttendanceStatus } from '../../../types/attendance'
+import type { SensitiveAthleteAccess } from '../../../utils/sensitiveAccess'
 
 export type TeamDetailPrimaryTab = 'overview' | 'schedule' | 'attendance' | 'payments' | 'staff' | 'settings' | 'media'
 export type AthleteWorkspaceTab = 'summary' | 'profile' | 'sports' | 'teams' | 'guardians' | 'medical' | 'media'
@@ -89,6 +90,7 @@ export interface AthletePaymentSummary {
 
 export interface TeamAthleteWorkspaceData {
   athlete: Athlete | null
+  sensitiveAccess: SensitiveAthleteAccess | null
   sports: AthleteSportWithDetails[]
   guardians: Guardian[]
   pendingInvites: PendingGuardianInvite[]

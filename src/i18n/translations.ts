@@ -2009,6 +2009,10 @@ export const en = {
             loadFailed: 'Failed to load calendar events',
             rsvpFailed: 'Failed to update RSVP',
             invalidDateRange: 'Invalid date range',
+            exportFailed: 'Unable to generate a calendar file for the current selection.',
+            offlineTitle: 'You are offline',
+            offlineDescription: 'Cached events remain available when present, but live updates are paused until your connection returns.',
+            cachedEventDescription: 'Showing the most recently cached version of this event until a live connection is available.',
         },
     },
     admin: {
@@ -2051,7 +2055,7 @@ export const en = {
             greetingAfternoon: 'Good Afternoon',
             greetingEvening: 'Good Evening',
             // Layout selector
-            layoutLabel: 'Dashboard Layout',
+            layoutLabel: 'Dashboard View',
             layoutStadium: 'Stadium',
             layoutEditorial: 'Editorial',
             layoutAthlete: 'Athlete',
@@ -8859,6 +8863,10 @@ export const es = {
             loadFailed: 'Error al cargar eventos del calendario',
             rsvpFailed: 'Error al actualizar RSVP',
             invalidDateRange: 'Rango de fechas inv?lido',
+            exportFailed: 'No se pudo generar un archivo de calendario para la selecci?n actual.',
+            offlineTitle: 'Est?s sin conexi?n',
+            offlineDescription: 'Los eventos en cach? siguen disponibles cuando existen, pero las actualizaciones en vivo se reanudar?n cuando vuelva la conexi?n.',
+            cachedEventDescription: 'Se muestra la versi?n m?s reciente en cach? de este evento hasta que vuelva a estar disponible una conexi?n en vivo.',
         },
         photos: {
             title: 'Fotos y Videos',
@@ -8983,7 +8991,7 @@ export const es = {
             greetingAfternoon: 'Buenas Tardes',
             greetingEvening: 'Buenas Noches',
             // Layout selector
-            layoutLabel: 'Dise?o del Panel',
+            layoutLabel: 'Vista del Panel',
             layoutStadium: 'Estadio',
             layoutEditorial: 'Editorial',
             layoutAthlete: 'Atleta',

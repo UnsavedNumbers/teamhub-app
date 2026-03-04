@@ -960,16 +960,18 @@ export default function AdminDashboard() {
         subtitle={orgName || t('admin.dashboard.subtitle')}
         actions={
           <div className="oa-flex oa-items-center oa-gap-3" style={{ flexWrap: 'wrap' }}>
-            <Select
-              options={layoutOptions}
-              value={layout}
-              onChange={e => handleLayoutChange(e.target.value as DashboardLayout)}
-              aria-label={t('admin.dashboard.layoutLabel')}
-              style={{ minWidth: 180 }}
-            />
-            <Button variant="secondary" onClick={fetchDashboardData} icon="refresh">
-              {t('admin.dashboard.refresh')}
-            </Button>
+            <div className="oa-flex oa-flex-col oa-gap-1">
+              <span className="oa-text-xs oa-font-semibold oa-uppercase oa-tracking-wide oa-text-muted">
+                {t('admin.dashboard.layoutLabel')}
+              </span>
+              <Select
+                options={layoutOptions}
+                value={layout}
+                onChange={e => handleLayoutChange(e.target.value as DashboardLayout)}
+                aria-label={t('admin.dashboard.layoutLabel')}
+                style={{ minWidth: 180 }}
+              />
+            </div>
           </div>
         }
       />

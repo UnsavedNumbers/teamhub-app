@@ -16,12 +16,17 @@ import { getOrganizationById } from '../../data/fake/fakeOrganizations'
 import { getSeasonById, getTeamById } from '../../data/fake/fakeTeams'
 import { getFakeTicketedEventByCalendarEventId, getFakeTicketTypesForEvent, getFakeTicketedEventById } from '../../data/fake/fakeTicketingEvents'
 import { followOrg, getBookmarkedEvents, getFollowedOrgs } from '../../data/services/fanService'
+import AddToCalendarActions from '../../components/calendar/AddToCalendarActions'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import BookmarkButton from '../../components/fan/BookmarkButton'
 import NearbyAmenities from '../../components/portal/NearbyAmenities'
 import { showError, showSuccess } from '../../utils/toast'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { appendTicketCheckoutRole } from '../../utils/ticketCheckoutRole'
+import { useOnlineStatus } from '../../hooks/useOnlineStatus'
+import { readCalendarCache, writeCalendarCache } from '../../features/calendar/cache'
+import type { CalendarExportEvent } from '../../features/calendar/addToCalendar'
+import { isValidUUID } from '../../utils/routeValidation'
 import '../../styles/fan.css'
 import '../../styles/fan-layouts.css'
 
@@ -206,6 +211,24 @@ function buildFakeEventDetail(eventId: string): EventDetail | null {
   }
 }
 
+function getFanEventDetailCacheScope(eventId: string): string {
+  return `fan-event-detail:${eventId}`
+}
+
+function toCalendarExportEvent(event: EventDetail, fullAddress: string): CalendarExportEvent {
+  return {
+    id: event.id,
+    title: event.title,
+    startTime: event.start_time,
+    endTime: event.end_time,
+    location: fullAddress || event.location,
+    description: event.description || event.notes,
+    url: typeof window === 'undefined'
+      ? undefined
+      : `${window.location.origin}${getLink(RouteKeys.FAN_EVENT_DETAIL, { eventId: event.id })}`,
+  }
+}
+
 // Weather icon mapping
 const getWeatherIcon = (condition: string | null): string => {
   if (!condition) return 'wb_sunny'
@@ -252,6 +275,7 @@ export default function FanEventDetail() {
   
   const { eventId } = useParams<{ eventId: string }>()
   const navigate = useNavigate()
+  const { isOnline } = useOnlineStatus()
 
   // State
   const [event, setEvent] = useState<EventDetail | null>(null)
@@ -272,10 +296,13 @@ export default function FanEventDetail() {
     durationInTraffic?: string
   } | null>(null)
   const [loadingCommute, setLoadingCommute] = useState(false)
+  const [usingCachedEvent, setUsingCachedEvent] = useState(false)
 
   const loadEventDetail = useCallback(async (id: string) => {
     setLoading(true)
     setError(null)
+    setUsingCachedEvent(false)
+    const cacheScope = getFanEventDetailCacheScope(id)
 
     try {
       if (USE_FAKE_DATA) {
@@ -287,6 +314,7 @@ export default function FanEventDetail() {
         }
 
         setEvent(fakeEvent)
+        writeCalendarCache(cacheScope, fakeEvent)
         if (fakeEvent.org_id) {
           checkFollowStatus(fakeEvent.org_id)
         }
@@ -343,6 +371,13 @@ export default function FanEventDetail() {
       }
 
       if (!data) {
+        const cached = readCalendarCache<EventDetail>(cacheScope)
+        if (cached) {
+          setEvent(cached.data)
+          setUsingCachedEvent(true)
+          setLoading(false)
+          return
+        }
         setError('Event not found')
         setLoading(false)
         return
@@ -401,6 +436,7 @@ export default function FanEventDetail() {
       }
 
       setEvent(eventDetail)
+      writeCalendarCache(cacheScope, eventDetail)
 
       // Check if following the org
       if (org?.id) {
@@ -411,7 +447,13 @@ export default function FanEventDetail() {
       checkBookmarkStatus(id)
     } catch (err) {
       console.error('Error loading event:', err)
-      setError('Failed to load event details')
+      const cached = readCalendarCache<EventDetail>(cacheScope)
+      if (cached) {
+        setEvent(cached.data)
+        setUsingCachedEvent(true)
+      } else {
+        setError('Failed to load event details')
+      }
     } finally {
       setLoading(false)
     }
@@ -466,15 +508,34 @@ export default function FanEventDetail() {
   }
 
   useEffect(() => {
-    if (eventId) {
-      loadEventDetail(eventId)
+    if (!eventId) {
+      setError('Event not found')
+      setLoading(false)
+      return
     }
+
+    if (!USE_FAKE_DATA && !isValidUUID(eventId)) {
+      setError('Invalid event link')
+      setLoading(false)
+      return
+    }
+
+    loadEventDetail(eventId)
   }, [eventId, loadEventDetail])
 
   // Fetch commute summary when we have both start and destination
   useEffect(() => {
     const fetchCommuteSummary = async () => {
-      const destination = getFullAddress()
+      const eventStartTime = event?.start_time ?? ''
+      const destination = [
+        event?.venue_address,
+        event?.venue_city,
+        event?.venue_state,
+        event?.venue_zip,
+      ]
+        .filter(Boolean)
+        .join(', ')
+
       if (!commuteStartLocation || !destination) {
         setCommuteSummary(null)
         return
@@ -484,8 +545,8 @@ export default function FanEventDetail() {
       setCommuteSummary(null)
       
       try {
-        if (USE_FAKE_DATA && event) {
-          setCommuteSummary(buildFakeCommuteSummary(commuteStartLocation, destination, event.start_time))
+        if (USE_FAKE_DATA && eventStartTime) {
+          setCommuteSummary(buildFakeCommuteSummary(commuteStartLocation, destination, eventStartTime))
           return
         }
 
@@ -590,7 +651,7 @@ export default function FanEventDetail() {
   }
 
   // Get full address
-  const getFullAddress = (): string => {
+  const getFullAddress = useCallback((): string => {
     if (!event) return ''
     const parts = [
       event.venue_address,
@@ -599,7 +660,7 @@ export default function FanEventDetail() {
       event.venue_zip,
     ].filter(Boolean)
     return parts.join(', ')
-  }
+  }, [event])
 
   // Handle share
   const handleShare = async (platform: 'copy' | 'twitter' | 'facebook') => {
@@ -689,6 +750,7 @@ export default function FanEventDetail() {
 
   const status = getEventStatus()
   const fullAddress = getFullAddress()
+  const calendarExportEvent = toCalendarExportEvent(event, fullAddress)
   return (
     <div className="fan-event-detail">
       {/* Breadcrumb */}
@@ -712,6 +774,20 @@ export default function FanEventDetail() {
       <div className="fan-event-layout">
         {/* Main Content */}
         <div className="fan-event-main">
+          {(!isOnline || usingCachedEvent) && (
+            <section className="fan-event-card">
+              <h2 className="fan-event-card-title">
+                <span className="material-symbols-outlined">wifi_off</span>
+                Offline mode
+              </h2>
+              <p className="fan-event-sidebar-text">
+                {usingCachedEvent
+                  ? 'Showing the last cached version of this event.'
+                  : 'Live updates are unavailable until your connection returns.'}
+              </p>
+            </section>
+          )}
+
           {/* Header Section */}
           <header className="fan-event-header-section">
             {/* Status Badge */}
@@ -962,7 +1038,7 @@ export default function FanEventDetail() {
                       setIsFollowingOrg(true)
                       showSuccess(`Now following ${event.org_name}`)
                     }
-                  } catch (err) {
+                  } catch {
                     showError('Failed to follow organization')
                   }
                 }}
@@ -978,6 +1054,14 @@ export default function FanEventDetail() {
           <div className="fan-event-sidebar-card">
             <h3 className="fan-event-sidebar-title">Quick Actions</h3>
             <div className="fan-event-quick-actions">
+              <div style={{ marginBottom: '12px' }}>
+                <AddToCalendarActions
+                  event={calendarExportEvent}
+                  googleVariant="secondary"
+                  icsVariant="secondary"
+                  buttonClassName="w-full justify-center"
+                />
+              </div>
               {fullAddress && (
                 <button 
                   className="fan-event-quick-action"

@@ -32,7 +32,7 @@ export function MedicalInfoForm({
   onSave,
   onCancel,
 }: MedicalInfoFormProps) {
-  const { medical, loading, updating, hasPermission, updateMedical, error } = 
+  const { medical, loading, updating, hasPermission, canUpdate, updateMedical, error } = 
     useAthleteMedical(athleteId)
 
   // Form state
@@ -138,7 +138,7 @@ export function MedicalInfoForm({
             id="medical_notes"
             value={medicalNotes}
             onChange={(e) => setMedicalNotes(e.target.value)}
-            disabled={updating}
+            disabled={updating || !canUpdate}
             rows={4}
             className="form-textarea"
             placeholder="List any medical conditions, medications, or important health information coaches should know about..."
@@ -157,7 +157,7 @@ export function MedicalInfoForm({
             id="allergies"
             value={allergies}
             onChange={(e) => setAllergies(e.target.value)}
-            disabled={updating}
+            disabled={updating || !canUpdate}
             rows={3}
             className="form-textarea"
             placeholder="List any known allergies (food, medication, environmental)..."
@@ -185,7 +185,7 @@ export function MedicalInfoForm({
                 type="text"
                 value={emergencyName}
                 onChange={(e) => setEmergencyName(e.target.value)}
-                disabled={updating}
+                disabled={updating || !canUpdate}
                 className="form-input"
                 placeholder="Full name"
               />
@@ -200,7 +200,7 @@ export function MedicalInfoForm({
                 id="emergency_relationship"
                 value={emergencyRelationship}
                 onChange={(e) => setEmergencyRelationship(e.target.value)}
-                disabled={updating}
+                disabled={updating || !canUpdate}
                 className="form-select"
               >
                 <option value="">Select relationship</option>
@@ -225,7 +225,7 @@ export function MedicalInfoForm({
                 type="tel"
                 value={emergencyPhone}
                 onChange={(e) => setEmergencyPhone(e.target.value)}
-                disabled={updating}
+                disabled={updating || !canUpdate}
                 className="form-input"
                 placeholder="(555) 123-4567"
               />
@@ -244,7 +244,7 @@ export function MedicalInfoForm({
             Cancel
           </Button>
         )}
-        <Button variant="primary" onClick={handleSave} disabled={updating || !hasChanges || !emergencyName || !emergencyRelationship || !emergencyPhone}>
+        <Button variant="primary" onClick={handleSave} disabled={!canUpdate || updating || !hasChanges || !emergencyName || !emergencyRelationship || !emergencyPhone}>
           {updating ? (
             <>
               <span className="btn-spinner"></span>
@@ -253,14 +253,14 @@ export function MedicalInfoForm({
           ) : (
             <>
               <span className="material-symbols-outlined">save</span>
-              <span>Save Medical Info</span>
+              <span>{canUpdate ? 'Save Medical Info' : 'Read Only'}</span>
             </>
           )}
         </Button>
       </div>
 
       {/* Unsaved changes warning */}
-      {hasChanges && !updating && (
+      {hasChanges && !updating && canUpdate && (
         <div className="form-unsaved-warning">
           <span className="material-symbols-outlined">info</span>
           <span>You have unsaved changes</span>

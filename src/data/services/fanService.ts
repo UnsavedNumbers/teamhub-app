@@ -23,6 +23,7 @@ import { getFakeTicketingEvents } from '../fake/fakeTicketingEvents'
 import { getMockGalleriesForOrg } from '../fake/mockGalleries'
 import { getOrganizationById } from '../fake/fakeOrganizations'
 import { getAthleteProfileV2Fan } from './unifiedAthleteProfileV2Service'
+import { readCalendarCache, writeCalendarCache } from '../../features/calendar/cache'
 import type {
   FanOrgFollow,
   FanEventBookmark,
@@ -38,6 +39,16 @@ import type {
 import * as fakeService from '../fake/fanFakeService'
 
 const supabaseAny = supabase as any
+
+function getFanCalendarCacheScope(userId: string, request: GetCalendarRequest): string {
+  const normalized = {
+    start_date: request.start_date ?? null,
+    end_date: request.end_date ?? null,
+    org_ids: [...(request.org_ids ?? [])].sort(),
+    sources: [...(request.sources ?? [])].sort(),
+  }
+  return `fan-calendar:${userId}:${JSON.stringify(normalized)}`
+}
 
 function shouldUseFakeData(): boolean {
   return USE_FAKE_DATA || isInDemoSession()
@@ -350,6 +361,22 @@ export async function getFanCalendar(
         error: new Error(t('portal.fan.errors.authenticationRequired')),
       }
     }
+    const cacheScope = getFanCalendarCacheScope(userId, request)
+    const clientCache = readCalendarCache<GetCalendarResponse>(cacheScope)
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine && clientCache) {
+      debug.perf.end('fanService.getFanCalendar')
+      debug.data('FanService.getFanCalendar', 'Response (offline client cache)', {
+        eventCount: clientCache.data.events.length,
+      })
+      return {
+        data: {
+          ...clientCache.data,
+          from_cache: true,
+        },
+        error: null,
+      }
+    }
 
     // Check cache first (use maybeSingle to avoid error when no rows found)
     const { data: cacheData } = await supabaseAny.from('fan_calendar_cache')
@@ -359,14 +386,16 @@ export async function getFanCalendar(
       .maybeSingle()
 
     if (cacheData) {
+      const cachedResponse: GetCalendarResponse = {
+        events: cacheData.calendar_data.events as CalendarEvent[],
+        generated_at: cacheData.generated_at,
+        from_cache: true,
+      }
+      writeCalendarCache(cacheScope, cachedResponse)
       debug.perf.end('fanService.getFanCalendar')
       debug.data('FanService.getFanCalendar', 'Response (cached)', { eventCount: cacheData.calendar_data.events?.length || 0 })
       return {
-        data: {
-          events: cacheData.calendar_data.events as CalendarEvent[],
-          generated_at: cacheData.generated_at,
-          from_cache: true,
-        },
+        data: cachedResponse,
         error: null,
       }
     }
@@ -384,18 +413,43 @@ export async function getFanCalendar(
     // RPC returns { events: [...], generated_at: ... }
     const rpcResult = data as { events?: unknown[]; generated_at?: string } | null
     const events = Array.isArray(rpcResult?.events) ? rpcResult.events : []
+    const response: GetCalendarResponse = {
+      events: events as CalendarEvent[],
+      generated_at: rpcResult?.generated_at || new Date().toISOString(),
+      from_cache: false,
+    }
+    writeCalendarCache(cacheScope, response)
 
     debug.perf.end('fanService.getFanCalendar')
     debug.data('FanService.getFanCalendar', 'Response', { eventCount: events.length })
     return {
-      data: {
-        events: events as CalendarEvent[],
-        generated_at: rpcResult?.generated_at || new Date().toISOString(),
-        from_cache: false,
-      },
+      data: response,
       error: null,
     }
   } catch (err) {
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id
+      if (userId) {
+        const fallback = readCalendarCache<GetCalendarResponse>(getFanCalendarCacheScope(userId, request))
+        if (fallback) {
+          debug.perf.end('fanService.getFanCalendar')
+          debug.data('FanService.getFanCalendar', 'Response (stale client cache)', {
+            eventCount: fallback.data.events.length,
+          })
+          return {
+            data: {
+              ...fallback.data,
+              from_cache: true,
+            },
+            error: null,
+          }
+        }
+      }
+    } catch {
+      // Ignore fallback read failures and return the original error below.
+    }
+
     debug.perf.end('fanService.getFanCalendar')
     debug.error('FanService.getFanCalendar', 'Failed to get fan calendar', { error: err, request })
     return {

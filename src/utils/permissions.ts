@@ -6,7 +6,9 @@
  */
 
 import type { Organization } from '@/contexts/OrganizationContext'
+import type { StaffPermissions } from '@/types/staffAndFan'
 import { hasAnyRole } from './roleHelpers'
+import { canAccessSensitiveData, type SensitiveAthleteAccess } from './sensitiveAccess'
 
 export type ResourceType = 
   | 'organization'
@@ -49,6 +51,8 @@ export interface PermissionContext {
   athleteId?: string | null
   resourceOrgId?: string | null
   resourceTeamId?: string | null
+  sensitiveAccess?: SensitiveAthleteAccess | null
+  staffPermissions?: StaffPermissions | null
 }
 
 /**
@@ -170,45 +174,50 @@ function canCoachAccess(
  * Staff permissions: permission-flag controlled
  */
 function canStaffAccess(
-  _context: PermissionContext,
+  context: PermissionContext,
   resourceType: ResourceType,
   action: Action
 ): boolean {
-  // Staff permissions are controlled by permission flags in organization_members.permissions
-  // For now, staff have read-only access to most resources
-  // TODO: Implement permission flag checking from org.permissions JSONB field
-  
-  const readOnlyResources: ResourceType[] = [
-    'event',
-    'facility',
-    'announcement',
-    'travel',
-    'uniform',
-    'ticketing',
-  ]
+  const permissions = context.staffPermissions
+  if (!permissions) return false
 
-  if (readOnlyResources.includes(resourceType)) {
-    return action === 'read' || action === 'scan' // Staff can scan tickets
+  if (resourceType === 'medical') {
+    return permissions.can_view_medical === true && action === 'read'
   }
 
-  // Staff cannot access sensitive resources
-  const restrictedResources: ResourceType[] = [
-    'organization',
-    'sport',
-    'program',
-    'level',
-    'team',
-    'season',
-    'payment',
-    'billing',
-    'user',
-    'report',
-    'guardian',
-    'medical',
-    'pii',
-  ]
+  if (resourceType === 'pii') {
+    return permissions.can_view_pii === true && action === 'read'
+  }
 
-  return !restrictedResources.includes(resourceType)
+  if (resourceType === 'ticketing') {
+    if (action === 'scan') return permissions.can_scan_tickets === true
+    if (action === 'read') return permissions.can_view_attendees === true || permissions.can_scan_tickets === true
+    return false
+  }
+
+  if (resourceType === 'event') {
+    if (action === 'read') return permissions.can_view_attendees === true || permissions.can_manage_events === true
+    return permissions.can_manage_events === true && (action === 'create' || action === 'update' || action === 'manage')
+  }
+
+  if (resourceType === 'payment' || resourceType === 'billing' || resourceType === 'report') {
+    return permissions.can_view_financials === true && (action === 'read' || action === 'export')
+  }
+
+  if (resourceType === 'athlete' || resourceType === 'team') {
+    return permissions.can_manage_roster === true && (action === 'read' || action === 'create' || action === 'update' || action === 'assign')
+  }
+
+  if (resourceType === 'announcement') {
+    if (action === 'read') return true
+    return permissions.can_send_notifications === true && (action === 'create' || action === 'manage')
+  }
+
+  if (resourceType === 'user') {
+    return permissions.can_manage_staff === true && (action === 'read' || action === 'invite' || action === 'manage')
+  }
+
+  return false
 }
 
 /**
@@ -300,35 +309,11 @@ export function canViewPaymentAmounts(context: PermissionContext): boolean {
  */
 export function canViewMedicalInfo(
   context: PermissionContext,
-  _athleteId: string
+  athleteId: string
 ): boolean {
-  const { org, userId } = context
-  if (!org) return false
-
-  const roles = org.roles || []
-  const isOrgAdmin = roles.includes('org_admin')
-  const isParent = roles.includes('parent')
-  const isAthlete = roles.includes('athlete')
-
-  // Org admins can view all medical info
-  if (isOrgAdmin) {
-    return true
-  }
-
-  // Parents can view medical info for their linked athletes
-  if (isParent) {
-    // TODO: Check if athleteId is linked to this parent via athlete_guardians
-    return true // Simplified for now - should check guardian linkage
-  }
-
-  // Athletes can view their own medical info
-  if (isAthlete && userId) {
-    // TODO: Check if athleteId matches user's athlete record
-    return true // Simplified for now
-  }
-
-  // Coaches and staff cannot view medical info
-  return false
+  if (!context.org || !athleteId) return false
+  if (context.sensitiveAccess?.athleteId !== athleteId) return false
+  return canAccessSensitiveData(context.sensitiveAccess, 'medical', 'read')
 }
 
 /**
@@ -341,28 +326,11 @@ export function canViewPII(
   const { org, userId } = context
   if (!org) return false
 
-  const roles = org.roles || []
-  const isOrgAdmin = roles.includes('org_admin')
-  const isParent = roles.includes('parent')
-
-  // Org admins can view all PII
-  if (isOrgAdmin) {
-    return true
-  }
-
-  // Parents can view PII for their linked athletes/guardians
-  if (isParent) {
-    // TODO: Check if targetUserId is linked to this parent
-    return true // Simplified for now
-  }
-
-  // Users can always view their own PII
   if (targetUserId && userId === targetUserId) {
     return true
   }
 
-  // Coaches, staff, and athletes cannot view others' PII
-  return false
+  return canAccessSensitiveData(context.sensitiveAccess, 'pii', 'read')
 }
 
 /**

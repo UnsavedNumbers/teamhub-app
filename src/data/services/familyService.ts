@@ -14,7 +14,9 @@ import { captureEvent } from '../../lib/analytics/analytics'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { normalizeSupabaseResponse } from './responseHelpers'
 import { getAthleteSports } from './athleteSportsService'
+import { getAthleteSensitiveAccess } from './sensitiveAccessService'
 import { getTierLimit, isLimitExceeded } from './tierLimitsService'
+import { canAccessSensitiveData, type SensitiveAthleteAccess } from '../../utils/sensitiveAccess'
 import {
     fakeFamilies,
     fakeChildren,
@@ -1159,7 +1161,8 @@ export async function searchAthletes(
  */
 export async function getAthleteById(
     context: UserContext,
-    athleteId: string
+    athleteId: string,
+    sensitiveAccess?: SensitiveAthleteAccess | null
 ): Promise<{ data: Child | null; error: Error | null }> {
     console.groupCollapsed(`%cgetAthleteById: ${athleteId}`, 'color: #666; font-weight: bold;');
     debug.data('FamilyService.getAthleteById', 'Request', { athleteId, orgId: context.orgId })
@@ -1247,10 +1250,45 @@ export async function getAthleteById(
     // Real Data
     try {
         console.log('[getAthleteById] Fetching athlete:', athleteId)
-        
+
+        const accessResult = sensitiveAccess
+            ? { data: sensitiveAccess, error: null }
+            : await getAthleteSensitiveAccess(athleteId, context.orgId)
+        const access = accessResult.data
+        const canViewPii = canAccessSensitiveData(access, 'pii', 'read')
+        const canViewMedical = canAccessSensitiveData(access, 'medical', 'read')
+        const athleteSelect = [
+            'id',
+            'org_id',
+            'family_id',
+            'first_name',
+            'last_name',
+            'birthdate',
+            'gender',
+            'preferred_name',
+            'jersey_number',
+            'profile_photo_updated_at',
+            'has_profile_photo',
+            'height_cm',
+            'weight_kg',
+            'shoe_size_value',
+            'shoe_size_system',
+            'shoe_width',
+            'tshirt_size',
+            'shorts_size',
+            'dominant_hand',
+            'created_at',
+            'updated_at',
+            'deleted_at',
+        ]
+
+        if (canViewPii) {
+            athleteSelect.push('phone', 'email')
+        }
+
         const { data, error } = await supabase
             .from('athletes')
-            .select('*')
+            .select(athleteSelect.join(', '))
             .eq('id', athleteId)
             .is('deleted_at', null)
             .single()
@@ -1269,6 +1307,33 @@ export async function getAthleteById(
 
         if (!data) {
             return { data: null, error: null }
+        }
+
+        let medicalData: {
+            medical_notes: string | null
+            allergies: string | null
+            emergency_contact: {
+                name?: string | null
+                phone?: string | null
+                relationship?: string | null
+                email?: string | null
+            } | null
+        } | null = null
+
+        if (canViewMedical) {
+            try {
+                const { data: medicalRow, error: medicalError } = await supabase
+                    .from('athlete_medical_private')
+                    .select('medical_notes, allergies, emergency_contact')
+                    .eq('athlete_id', athleteId)
+                    .maybeSingle()
+
+                if (!medicalError) {
+                    medicalData = medicalRow as typeof medicalData
+                }
+            } catch (err) {
+                console.warn('[getAthleteById] Error loading athlete medical data:', err)
+            }
         }
 
         // Check if athlete has active guardian using RPC function
@@ -1314,16 +1379,25 @@ export async function getAthleteById(
             gender: data.gender as Gender | null,
             preferred_name: data.preferred_name ?? null,
             jersey_number: data.jersey_number ?? null,
-            medical_notes: data.medical_notes ?? null,
-            allergies: data.allergies ?? null,
-            phone: (data as any).phone ?? null,
-            email: (data as any).email ?? null,
-            emergency_contact_name: data.emergency_contact_name ?? null,
-            emergency_contact_phone: data.emergency_contact_phone ?? null,
+            medical_notes: medicalData?.medical_notes ?? null,
+            allergies: medicalData?.allergies ?? null,
+            phone: canViewPii ? (data as any).phone ?? null : null,
+            email: canViewPii ? (data as any).email ?? null : null,
+            emergency_contact_name: canViewMedical ? medicalData?.emergency_contact?.name ?? null : null,
+            emergency_contact_phone: canViewMedical ? medicalData?.emergency_contact?.phone ?? null : null,
             photo_url: null, // @deprecated - Use profile_photo_updated_at instead
             profile_photo_updated_at: (data as any).profile_photo_updated_at ?? null,
             has_profile_photo: (data as any).has_profile_photo ?? false,
-            org_id: context.orgId, // Include org_id for photo URL generation
+            org_id: (data as any).org_id ?? context.orgId,
+            height_cm: (data as any).height_cm ?? null,
+            weight_kg: (data as any).weight_kg ?? null,
+            shoe_size_value: (data as any).shoe_size_value ?? null,
+            shoe_size_system: (data as any).shoe_size_system ?? null,
+            shoe_width: (data as any).shoe_width ?? null,
+            tshirt_size: (data as any).tshirt_size ?? null,
+            shorts_size: (data as any).shorts_size ?? null,
+            dominant_hand: (data as any).dominant_hand ?? null,
+            emergency_contact: canViewMedical ? medicalData?.emergency_contact ?? null : null,
             created_at: data.created_at ?? new Date().toISOString(),
             updated_at: data.updated_at ?? new Date().toISOString(),
             deleted_at: data.deleted_at,

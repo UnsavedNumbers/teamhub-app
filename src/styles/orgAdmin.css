@@ -292,7 +292,7 @@ html.dark .oa-sidebar-header {
 .oa-nav-link-top.expanded {
     background: var(--org-surface-tint, var(--pa-n200));
     color: var(--org-btn-primary-bg, var(--pa-n900));
-    box-shadow: inset 3px 0 0 var(--org-btn-primary-bg, var(--pa-n900));
+    box-shadow: none;
 }
 
 .oa-nav-link-top .material-symbols-outlined {
@@ -344,7 +344,7 @@ html.dark .oa-nav-link-top.active,
 html.dark .oa-nav-link-top.expanded {
     background: var(--org-surface-tint, rgba(255, 255, 255, 0.14));
     color: var(--org-btn-primary-bg, var(--pa-white));
-    box-shadow: inset 3px 0 0 var(--org-btn-primary-bg, var(--pa-white));
+    box-shadow: none;
 }
 
 html.dark .oa-nav-link-top.oa-nav-dashboard,
@@ -408,7 +408,7 @@ html.dark .oa-nav-link-top.oa-nav-dashboard.active:hover {
 .oa-sidebar .oa-nav-link.active {
     background: var(--org-surface-tint, var(--pa-n200));
     color: var(--org-btn-primary-bg, var(--pa-n900));
-    box-shadow: inset 3px 0 0 var(--org-btn-primary-bg, var(--pa-n900));
+    box-shadow: none;
 }
 
 html.dark .oa-sidebar .oa-nav-link {
@@ -423,7 +423,7 @@ html.dark .oa-sidebar .oa-nav-link:hover {
 html.dark .oa-sidebar .oa-nav-link.active {
     background: var(--org-surface-tint, rgba(255, 255, 255, 0.15));
     color: var(--org-btn-primary-bg, var(--pa-text-primary));
-    box-shadow: inset 3px 0 0 var(--org-btn-primary-bg, var(--pa-white));
+    box-shadow: none;
 }
 
 .oa-sidebar-footer {
@@ -2732,7 +2732,7 @@ html.dark .oa-datepicker-day--selected:hover {
 .oa-theme-active .pa-nav-link-top.expanded {
     background: var(--org-surface-tint, var(--pa-n200));
     color: var(--org-btn-primary-bg, var(--pa-n900));
-    box-shadow: inset 3px 0 0 var(--org-btn-primary-bg, var(--pa-n900));
+    box-shadow: none;
 }
 
 .oa-theme-active .pa-nav-link-top .material-symbols-outlined {
@@ -2763,7 +2763,7 @@ html.dark .oa-theme-active .pa-nav-link-top.active,
 html.dark .oa-theme-active .pa-nav-link-top.expanded {
     background: var(--org-surface-tint, rgba(255, 255, 255, 0.14));
     color: var(--org-btn-primary-bg, var(--pa-white));
-    box-shadow: inset 3px 0 0 var(--org-btn-primary-bg, var(--pa-white));
+    box-shadow: none;
 }
 
 html.dark .oa-theme-active .pa-nav-link-top .material-symbols-outlined {
@@ -10680,17 +10680,17 @@ html.dark .oa-bulk-invite-history-table tbody tr:hover {
     align-items: center;
     gap: 4px;
     padding: 16px 12px;
-    background: rgba(255, 255, 255, .08);
+    background: var(--org-btn-primary-bg, #7c3aed);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, .12);
+    border: 1px solid color-mix(in srgb, var(--org-btn-primary-bg, #7c3aed) 75%, #ffffff 25%);
     border-radius: 12px;
     transition: background 180ms ease, transform 180ms ease;
     min-width: 0;
 }
 
 .dash-glass-stat:hover {
-    background: rgba(255, 255, 255, .15);
+    background: color-mix(in srgb, var(--org-btn-primary-bg, #7c3aed) 88%, #ffffff 12%);
 }
 
 .dash-glass-icon  { font-size: 24px; }
@@ -11150,14 +11150,15 @@ html.dark .dash-activity-msg {
 .dash-editorial-stat {
     padding: 24px 16px;
     text-align: center;
-    border-right: 1px solid rgba(255, 255, 255, .06);
+    background: var(--org-btn-primary-bg, #7c3aed);
+    border-right: 1px solid color-mix(in srgb, var(--org-btn-primary-bg, #7c3aed) 82%, #ffffff 18%);
     transition: background 180ms ease;
 }
 
 .dash-editorial-stat:last-child { border-right: none; }
 
 .dash-editorial-stat:hover {
-    background: rgba(255, 255, 255, .04);
+    background: color-mix(in srgb, var(--org-btn-primary-bg, #7c3aed) 88%, #ffffff 12%);
 }
 
 .dash-editorial-stat-val {

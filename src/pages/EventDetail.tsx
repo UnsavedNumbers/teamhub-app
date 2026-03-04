@@ -15,17 +15,22 @@ import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import AddToCalendarActions from '../components/calendar/AddToCalendarActions'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
 import { PhotoSection } from '../components/galleries/PhotoSection'
 import { ConfirmDialog } from '../components/admin/ConfirmDialog'
 import { useT } from '../i18n/useI18n'
 import { getLink, RouteKeys } from '@/utils/routes'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
+import { readCalendarCache, writeCalendarCache } from '../features/calendar/cache'
+import type { CalendarExportEvent } from '../features/calendar/addToCalendar'
 import BookmarkButton from '../components/fan/BookmarkButton'
 import { useQuery } from '@tanstack/react-query'
 import { getBookmarkedEvents } from '../data/services/fanService'
 import type { FanEventBookmark } from '../types/staffAndFan'
 import { USE_FAKE_DATA } from '../data/config'
+import { isValidUUID } from '../utils/routeValidation'
 
 interface Event {
   id: string
@@ -126,61 +131,6 @@ function lyftLink(address: string | null | undefined): string | null {
   return `https://lyft.com/ride?destination[address]=${dest}`
 }
 
-function googleCalendarLink(event: { title: string; startTime: string; endTime: string; location?: string; notes?: string }): string | null {
-  try {
-    const startDate = new Date(event.startTime)
-    const endDate = new Date(event.endTime)
-    
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      console.error('Invalid date in calendar link:', event)
-      return null
-    }
-    
-    const start = startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const end = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const details = event.notes ? encodeURIComponent(event.notes) : ''
-    const location = event.location ? encodeURIComponent(event.location) : ''
-    const text = encodeURIComponent(event.title || 'Event')
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}/${end}&details=${details}&location=${location}`
-  } catch (err) {
-    console.error('Error generating Google Calendar link:', err)
-    return null
-  }
-}
-
-function appleCalendarLink(event: { title: string; startTime: string; endTime: string; location?: string }): string | null {
-  try {
-    const startDate = new Date(event.startTime)
-    const endDate = new Date(event.endTime)
-    
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      console.error('Invalid date in calendar link:', event)
-      return null
-    }
-    
-    // Download .ics file format
-    const start = startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const end = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const location = event.location || ''
-    const title = event.title || 'Event'
-    
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-DTSTART:${start}
-DTEND:${end}
-SUMMARY:${title.replace(/[,;\\]/g, '')}
-LOCATION:${location.replace(/[,;\\]/g, '')}
-END:VEVENT
-END:VCALENDAR`
-    
-    return `data:text/calendar;charset=utf8,${encodeURIComponent(icsContent)}`
-  } catch (err) {
-    console.error('Error generating Apple Calendar link:', err)
-    return null
-  }
-}
-
 function formatTimezoneDisplay(timeZone: string | null | undefined, referenceDate: string): string {
   if (!timeZone) return ''
 
@@ -233,11 +183,30 @@ async function copyToClipboard(text: string): Promise<{ success: boolean; error?
   }
 }
 
+function getEventDetailCacheScope(eventId: string): string {
+  return `portal-event-detail:${eventId}`
+}
+
+function toCalendarExportEvent(event: Event, venueAddress: string): CalendarExportEvent {
+  return {
+    id: event.id,
+    title: event.title,
+    startTime: event.start_time,
+    endTime: event.end_time,
+    location: venueAddress || event.location,
+    description: event.notes,
+    url: typeof window === 'undefined'
+      ? undefined
+      : `${window.location.origin}${getLink(RouteKeys.PORTAL_EVENT_DETAIL, { eventId: event.id })}`,
+  }
+}
+
 export default function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>()
   const t = useT()
   const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
+  const { isOnline } = useOnlineStatus()
 
   // Add lifecycle logging
   useDebugLifecycle('EventDetail', { eventId })
@@ -273,6 +242,7 @@ export default function EventDetail() {
   } | null>(null)
   const [loadingWeather, setLoadingWeather] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [usingCachedEvent, setUsingCachedEvent] = useState(false)
 
   const { data: bookmarkedEventsData } = useQuery({
     queryKey: ['bookmarked-events'],
@@ -445,9 +415,15 @@ export default function EventDetail() {
 
   const fetchData = useCallback(async () => {
     if (!isReady || !eventId) return
+    if (!USE_FAKE_DATA && !isValidUUID(eventId)) {
+      navigate(getLink(RouteKeys.PORTAL_CALENDAR))
+      return
+    }
     
     setLoading(true)
     setEventSport(null)
+    setUsingCachedEvent(false)
+    const cacheScope = getEventDetailCacheScope(eventId)
     
     try {
       // Fetch event details
@@ -469,6 +445,12 @@ export default function EventDetail() {
       if (!isMountedRef.current) return
 
       if (eventError || !eventData) {
+        const cached = readCalendarCache<Event>(cacheScope)
+        if (cached) {
+          setEvent(cached.data)
+          setUsingCachedEvent(true)
+          return
+        }
         // Preserve query params when redirecting back to calendar
         const searchParams = new URLSearchParams(location.search)
         const calendarPath = getLink(RouteKeys.PORTAL_CALENDAR)
@@ -479,7 +461,7 @@ export default function EventDetail() {
         return
       }
 
-      setEvent({
+      const nextEvent: Event = {
         id: eventData.id,
         title: eventData.title,
         type: eventData.type,
@@ -506,7 +488,10 @@ export default function EventDetail() {
           ticket_types: eventData.ticketed_event.ticket_types || [],
           ticket_banner_url: eventData.ticketed_event.ticket_banner_url || null,
         } : null,
-      })
+      }
+
+      setEvent(nextEvent)
+      writeCalendarCache(cacheScope, nextEvent)
 
       console.log('[EventDetail] Set event state:', {
         hasTicketedEvent: !!eventData.ticketed_event,
@@ -548,6 +533,11 @@ export default function EventDetail() {
       }
     } catch (err) {
       console.error('Error fetching event details:', err)
+      const cached = eventId ? readCalendarCache<Event>(getEventDetailCacheScope(eventId)) : null
+      if (cached) {
+        setEvent(cached.data)
+        setUsingCachedEvent(true)
+      }
     } finally {
       if (isMountedRef.current) {
         setLoading(false)
@@ -715,6 +705,7 @@ export default function EventDetail() {
     : null
   const bannerUrl = customBannerUrl || (event.ticketed_event ? sportTravelBannerUrl : null)
   const timezoneLabel = formatTimezoneDisplay(event.timezone, event.start_time)
+  const calendarExportEvent = toCalendarExportEvent(event, venueAddress)
   
   return (
     <PortalLayout
@@ -876,6 +867,24 @@ export default function EventDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {(!isOnline || usingCachedEvent) && (
+        <Card className="mb-6 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+          <div className="p-4 flex items-start gap-3">
+            <Icon name="wifi_off" className="text-amber-600 dark:text-amber-300 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-900 dark:text-amber-100">
+                {t('calendar.errors.offlineTitle')}
+              </p>
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                {usingCachedEvent
+                  ? t('calendar.errors.cachedEventDescription')
+                  : t('calendar.errors.offlineDescription')}
+              </p>
+            </div>
+          </div>
+        </Card>
       )}
 
       {/* Quick Summary Banner - Mobile only when hero exists, always when no hero */}
@@ -1181,61 +1190,12 @@ export default function EventDetail() {
                 {t('calendar.event.addToCalendar')}
               </div>
               <div className="pt-12">
-                {googleCalendarLink({
-                  title: event.title,
-                  startTime: event.start_time,
-                  endTime: event.end_time,
-                  location: venueAddress || '',
-                }) ? (
-                  <a
-                    href={googleCalendarLink({
-                      title: event.title,
-                      startTime: event.start_time,
-                      endTime: event.end_time,
-                      location: venueAddress || '',
-                    })!}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block"
-                  >
-                    <Button variant="primary" className="w-full">
-                      <Icon name="event" size="text-sm" className="mr-2" />
-                      {t('calendar.event.googleCalendar')}
-                    </Button>
-                  </a>
-                ) : (
-                  <Button variant="primary" className="w-full" disabled>
-                    <Icon name="event" size="text-sm" className="mr-2" />
-                    {t('calendar.event.googleCalendar')}
-                  </Button>
-                )}
-                {appleCalendarLink({
-                  title: event.title,
-                  startTime: event.start_time,
-                  endTime: event.end_time,
-                  location: venueAddress || '',
-                }) ? (
-                  <a
-                    href={appleCalendarLink({
-                      title: event.title,
-                      startTime: event.start_time,
-                      endTime: event.end_time,
-                      location: venueAddress || '',
-                    })!}
-                    download={`${event.title}.ics`}
-                    className="block mt-4"
-                  >
-                    <Button variant="primary" className="w-full">
-                      <Icon name="event" size="text-sm" className="mr-2" />
-                      {t('calendar.event.appleCalendar')}
-                    </Button>
-                  </a>
-                ) : (
-                  <Button variant="primary" className="w-full mt-4" disabled>
-                    <Icon name="event" size="text-sm" className="mr-2" />
-                    {t('calendar.event.appleCalendar')}
-                  </Button>
-                )}
+                <AddToCalendarActions
+                  event={calendarExportEvent}
+                  googleVariant="primary"
+                  icsVariant="primary"
+                  buttonClassName="w-full justify-center"
+                />
               </div>
             </Card>
           )}

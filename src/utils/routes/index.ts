@@ -115,6 +115,7 @@ export const RouteKeys = {
     // Portal
     PORTAL_DASHBOARD: 'portal.dashboard',
     PORTAL_CALENDAR: 'portal.calendar',
+    PORTAL_CALENDAR_CREATE: 'portal.calendarCreate',
     PORTAL_EVENT_DETAIL: 'portal.eventDetail',
     PORTAL_EVENT_EDIT: 'portal.eventEdit',
     PORTAL_TRAVEL: 'portal.travel',

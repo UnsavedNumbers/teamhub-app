@@ -31,6 +31,11 @@ const portal = {
         icon: 'calendar_month',
         description: 'View all events',
     },
+    calendarCreate: {
+        path: '/portal/calendar/new',
+        label: 'New Event',
+        icon: 'add',
+    },
     eventDetail: {
         path: '/portal/calendar/events/:eventId',
         params: ['eventId'] as const,

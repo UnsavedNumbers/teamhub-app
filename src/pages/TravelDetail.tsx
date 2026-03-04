@@ -18,11 +18,13 @@ import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import AddToCalendarActions from '../components/calendar/AddToCalendarActions'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
 import { PhotoSection } from '../components/galleries/PhotoSection'
 import { useNeighborhoodSummaryDirect } from '../hooks/useVenueInsights'
 import { useT } from '../i18n/useI18n'
+import type { CalendarExportEvent } from '../features/calendar/addToCalendar'
 
 interface MeetingLocation {
   name: string
@@ -81,58 +83,21 @@ function lyftLink(address: string | null | undefined): string | null {
   return `https://lyft.com/ride?destination[address]=${dest}`
 }
 
-function googleCalendarLink(event: { title: string; startTime: string; endTime: string; location?: string; notes?: string }): string | null {
-  try {
-    const startDate = new Date(event.startTime)
-    const endDate = new Date(event.endTime)
-    
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      console.error('Invalid date in calendar link:', event)
-      return null
-    }
-    
-    const start = startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const end = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const details = event.notes ? encodeURIComponent(event.notes) : ''
-    const location = event.location ? encodeURIComponent(event.location) : ''
-    const text = encodeURIComponent(event.title || 'Event')
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}/${end}&details=${details}&location=${location}`
-  } catch (err) {
-    console.error('Error generating Google Calendar link:', err)
-    return null
-  }
-}
-
-function appleCalendarLink(event: { title: string; startTime: string; endTime: string; location?: string }): string | null {
-  try {
-    const startDate = new Date(event.startTime)
-    const endDate = new Date(event.endTime)
-    
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      console.error('Invalid date in calendar link:', event)
-      return null
-    }
-    
-    // Download .ics file format
-    const start = startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const end = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const location = event.location || ''
-    const title = event.title || 'Event'
-    
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-DTSTART:${start}
-DTEND:${end}
-SUMMARY:${title.replace(/[,;\\]/g, '')}
-LOCATION:${location.replace(/[,;\\]/g, '')}
-END:VEVENT
-END:VCALENDAR`
-    
-    return `data:text/calendar;charset=utf8,${encodeURIComponent(icsContent)}`
-  } catch (err) {
-    console.error('Error generating Apple Calendar link:', err)
-    return null
+function toTravelCalendarExportEvent(event: {
+  id: string
+  title: string
+  startTime: string
+  endTime: string
+  location?: string | null
+  description?: string | null
+}): CalendarExportEvent {
+  return {
+    id: event.id,
+    title: event.title,
+    startTime: event.startTime,
+    endTime: event.endTime,
+    location: event.location,
+    description: event.description,
   }
 }
 
@@ -1011,35 +976,20 @@ export default function TravelDetail() {
                           </p>
                           {/* venue row removed (duplicate shown in VenueInsights header) */}
                         </div>
-                        {googleCalendarLink({
-                          title: event.title,
-                          startTime: event.start_time,
-                          endTime: event.end_time,
-                          location: event.event_location?.venue_name || '',
-                          notes: event.notes || '',
-                        }) ? (
-                          <a
-                            href={googleCalendarLink({
-                              title: event.title,
-                              startTime: event.start_time,
-                              endTime: event.end_time,
-                              location: event.event_location?.venue_name || '',
-                              notes: event.notes || '',
-                            })!}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <Button variant="secondary" className="text-xs px-3 py-1">
-                              <Icon name="calendar_today" size="text-xs" className="mr-1" />
-                              Add to Calendar
-                            </Button>
-                          </a>
-                        ) : (
-                          <Button variant="secondary" className="text-xs px-3 py-1" disabled>
-                            <Icon name="calendar_today" size="text-xs" className="mr-1" />
-                            Add to Calendar
-                          </Button>
-                        )}
+                        <AddToCalendarActions
+                          event={toTravelCalendarExportEvent({
+                            id: event.id,
+                            title: event.title,
+                            startTime: event.start_time,
+                            endTime: event.end_time,
+                            location: event.event_location?.venue_name || '',
+                            description: event.notes || '',
+                          })}
+                          layout="inline"
+                          googleVariant="secondary"
+                          icsVariant="secondary"
+                          buttonClassName="text-xs px-3 py-1"
+                        />
                       </div>
                       {/* Venue Information (Area Summary, etc.): use place_id from event_locations for this event */}
                       {(() => {
@@ -1272,65 +1222,19 @@ export default function TravelDetail() {
               <Icon name="calendar_add_on" size="text-xl" />
               Add to Calendar
             </CardTitle>
-            <div>
-              {googleCalendarLink({
+            <AddToCalendarActions
+              event={toTravelCalendarExportEvent({
+                id: plan.id,
                 title: plan.title,
                 startTime: plan.start_date,
                 endTime: plan.end_date,
                 location: plan.location,
-                notes: plan.notes || '',
-              }) ? (
-                <a
-                  href={googleCalendarLink({
-                    title: plan.title,
-                    startTime: plan.start_date,
-                    endTime: plan.end_date,
-                    location: plan.location,
-                    notes: plan.notes || '',
-                  })!}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block mb-3"
-                >
-                  <Button variant="secondary" className="w-full text-sm justify-start">
-                    <Icon name="event" size="text-sm" className="mr-2" />
-                    Google Calendar
-                  </Button>
-                </a>
-              ) : (
-                <Button variant="secondary" className="w-full text-sm justify-start mb-3" disabled>
-                  <Icon name="event" size="text-sm" className="mr-2" />
-                  Google Calendar
-                </Button>
-              )}
-              {appleCalendarLink({
-                title: plan.title,
-                startTime: plan.start_date,
-                endTime: plan.end_date,
-                location: plan.location,
-              }) ? (
-                <a
-                  href={appleCalendarLink({
-                    title: plan.title,
-                    startTime: plan.start_date,
-                    endTime: plan.end_date,
-                    location: plan.location,
-                  })!}
-                  download={`${plan.title.replace(/[^a-z0-9]/gi, '_')}.ics`}
-                  className="block"
-                >
-                  <Button variant="primary" className="w-full text-sm justify-start">
-                    <Icon name="event" size="text-sm" className="mr-2" />
-                    Apple Calendar
-                  </Button>
-                </a>
-              ) : (
-                <Button variant="primary" className="w-full text-sm justify-start" disabled>
-                  <Icon name="event" size="text-sm" className="mr-2" />
-                  Apple Calendar
-                </Button>
-              )}
-            </div>
+                description: plan.notes || '',
+              })}
+              buttonClassName="w-full text-sm justify-start"
+              googleVariant="secondary"
+              icsVariant="primary"
+            />
           </Card>
 
           {/* Lodging */}

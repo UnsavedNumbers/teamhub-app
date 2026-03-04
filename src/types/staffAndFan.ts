@@ -23,6 +23,8 @@ export interface StaffPermissions {
   can_manage_roster?: boolean
   can_send_notifications?: boolean
   can_manage_staff?: boolean
+  can_view_pii?: boolean
+  can_view_medical?: boolean
 }
 
 /**

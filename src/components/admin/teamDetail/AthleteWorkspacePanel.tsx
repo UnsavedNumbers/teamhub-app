@@ -83,6 +83,8 @@ export function AthleteWorkspacePanel({
   const [selectedSportCode, setSelectedSportCode] = useState<SportCode | null>(null)
 
   const athlete = workspace.athlete
+  const canViewWorkspacePii = workspace.sensitiveAccess?.canViewPii === true
+  const canViewWorkspaceMedical = workspace.sensitiveAccess?.canViewMedical === true
   const teamSportCode = normalizeSportCode(team.sport?.name)
   const availableSportCodes = useMemo(
     () => workspace.sports
@@ -92,8 +94,8 @@ export function AthleteWorkspacePanel({
   )
 
   const visibleTabs = WORKSPACE_TABS.filter((tab) => {
-    if (tab.id === 'guardians') return permissions.canViewGuardians
-    if (tab.id === 'medical') return permissions.canViewMedical
+    if (tab.id === 'guardians') return permissions.canViewGuardians && canViewWorkspacePii
+    if (tab.id === 'medical') return permissions.canViewMedical && canViewWorkspaceMedical
     if (tab.id === 'media') return permissions.canViewMedia
     return true
   })
@@ -279,7 +281,7 @@ export function AthleteWorkspacePanel({
               <SummaryMetric label="Recorded Attendance" value={workspace.attendanceSummary.totalRecordedEvents.toString()} tone="neutral" />
               <SummaryMetric label="Attendance Rate" value={workspace.attendanceSummary.attendanceRate != null ? `${workspace.attendanceSummary.attendanceRate}%` : 'No data'} tone="success" />
               <SummaryMetric label="Sports" value={workspace.sports.length.toString()} tone="neutral" />
-              <SummaryMetric label="Guardians" value={permissions.canViewGuardians ? workspace.guardians.length.toString() : 'Restricted'} tone="neutral" />
+              <SummaryMetric label="Guardians" value={permissions.canViewGuardians && canViewWorkspacePii ? workspace.guardians.length.toString() : 'Restricted'} tone="neutral" />
             </div>
 
             <Card title="Upcoming Team Events" className="team-detail-subcard">
@@ -401,7 +403,7 @@ export function AthleteWorkspacePanel({
           </div>
         )}
 
-        {activeTab === 'guardians' && permissions.canViewGuardians && (
+        {activeTab === 'guardians' && permissions.canViewGuardians && canViewWorkspacePii && (
           <div className="team-detail-tab-panel">
             <Card title="Guardians" className="team-detail-subcard">
               {workspace.guardians.length === 0 && workspace.pendingInvites.length === 0 ? (
@@ -444,7 +446,7 @@ export function AthleteWorkspacePanel({
           </div>
         )}
 
-        {activeTab === 'medical' && permissions.canViewMedical && (
+        {activeTab === 'medical' && permissions.canViewMedical && canViewWorkspaceMedical && (
           <div className="team-detail-tab-panel">
             <Card title="Medical Information" className="team-detail-subcard">
               <MedicalInfoForm athleteId={athlete.id} athleteName={displayName} onSave={() => void workspace.refresh()} />

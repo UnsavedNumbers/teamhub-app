@@ -190,16 +190,43 @@ serve(async (req) => {
     }
 
     // Generate magic link for the shared demo user to sign them in
-    // Resolve per-environment URL from env vars only (no request-origin inference)
-    const explicitDemoUrl = Deno.env.get("DEMO_APP_URL")
-    const fallbackEnvUrl = Deno.env.get("SITE_URL") || Deno.env.get("APP_URL")
-    const isLocalEnvironment = supabaseUrl.includes("localhost") || supabaseUrl.includes("127.0.0.1")
-    let siteUrl = explicitDemoUrl || fallbackEnvUrl || (isLocalEnvironment
-      ? DEMO_APP_URL_LOCAL
-      : DEMO_APP_URL_PROD)
+    // Use the request origin to determine the correct redirect URL
+    // This ensures demo.youthsports.team redirects to demo.youthsports.team, etc.
+    let siteUrl: string
+
+    // Try to get origin from request headers (set by reverse proxy / browser)
+    const requestOrigin = req.headers.get("Origin")
+    const forwardedHost = req.headers.get("X-Forwarded-Host")
+    const forwardedProto = req.headers.get("X-Forwarded-Proto") || "https"
+    const hostHeader = req.headers.get("Host")
+
+    // Build site URL from request context
+    if (requestOrigin && requestOrigin.startsWith("http")) {
+      // Use Origin header if present (sent by browsers for cross-origin requests)
+      siteUrl = requestOrigin
+    } else if (forwardedHost) {
+      // Use X-Forwarded-Host (set by CDN / reverse proxy like Cloudflare, nginx)
+      siteUrl = `${forwardedProto}://${forwardedHost}`
+    } else if (hostHeader) {
+      // Fall back to Host header
+      const proto = req.headers.get("X-Forwarded-Proto") ||
+                   (hostHeader.includes("localhost") || hostHeader.includes("127.0.0.1") ? "http" : "https")
+      siteUrl = `${proto}://${hostHeader}`
+    } else {
+      // Final fallback to environment variables or hardcoded values
+      const explicitDemoUrl = Deno.env.get("DEMO_APP_URL")
+      const fallbackEnvUrl = Deno.env.get("SITE_URL") || Deno.env.get("APP_URL")
+      const isLocalEnvironment = supabaseUrl.includes("localhost") || supabaseUrl.includes("127.0.0.1")
+      siteUrl = explicitDemoUrl || fallbackEnvUrl || (isLocalEnvironment
+        ? DEMO_APP_URL_LOCAL
+        : DEMO_APP_URL_PROD)
+    }
+
     // Ensure siteUrl doesn't end with a slash
     siteUrl = siteUrl.replace(/\/$/, "")
     const redirectTo = `${siteUrl}${DEMO_AUTH_CALLBACK_PATH}?demo=true`
+
+    console.log("Demo enter: Using redirect URL:", redirectTo)
 
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "magiclink",
