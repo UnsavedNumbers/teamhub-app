@@ -5,6 +5,7 @@ import { useOrganization } from '../../contexts/OrganizationContext'
 import { getAthleteById } from '../../data/services/familyService'
 import { getAthleteSports } from '../../data/services/athleteSportsService'
 import { getAthleteGuardians, linkGuardianToAthlete, removeGuardianFromAthlete, validateGuardianEmail, getAthleteInvites, cancelInvite, resendInvite } from '../../data/services/guardianService'
+import { getAthleteSensitiveAccess } from '../../data/services/sensitiveAccessService'
 import AthleteAvatar from '../../components/portal/AthleteAvatar'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
@@ -18,13 +19,15 @@ import { checkGuardianMatch, debounce } from '../../utils/guardianMatching'
 import { useSportFieldDefinitions } from '../../hooks/useSportFieldDefinitions'
 import { useAthleteSportProfile } from '../../hooks/useAthleteSportProfile'
 import { PhotoSection } from '@/components/galleries/PhotoSection'
+import { MedicalInfoForm } from '../../components/athleteProfiles/MedicalInfoForm'
 import { TopLevelStats } from '../../components/common/TopLevelStats'
 import { redactPII, redactEmail, redactPhone } from '../../utils/dataRedaction'
-import { canViewMedicalInfo } from '../../utils/permissions'
+import { canViewMedicalInfo, canViewPII } from '../../utils/permissions'
 import { hasAnyRole } from '../../utils/roleHelpers'
 import type { Athlete, Guardian, GuardianMatch, PendingGuardianInvite } from '../../types/family'
 import type { AthleteSportWithDetails } from '../../data/services/athleteSportsService'
 import type { SportCode } from '../../types/sports'
+import type { SensitiveAthleteAccess } from '../../utils/sensitiveAccess'
 import '../../styles/orgAdmin.css'
 
 interface TeamMembership {
@@ -43,6 +46,7 @@ export default function AthleteDetail() {
   const t = useT()
   const { currentOrganization } = useOrganization()
   const [athlete, setAthlete] = useState<Athlete | null>(null)
+  const [sensitiveAccess, setSensitiveAccess] = useState<SensitiveAthleteAccess | null>(null)
   const [sports, setSports] = useState<AthleteSportWithDetails[]>([])
   const [guardians, setGuardians] = useState<Guardian[]>([])
   const [pendingInvites, setPendingInvites] = useState<PendingGuardianInvite[]>([])
@@ -90,9 +94,11 @@ export default function AthleteDetail() {
     org: currentOrganization,
     userId: context.userId,
     athleteId: athleteId || undefined,
-  }), [currentOrganization, context.userId, athleteId])
+    sensitiveAccess,
+  }), [currentOrganization, context.userId, athleteId, sensitiveAccess])
   
   const canViewMedical = athleteId ? canViewMedicalInfo(permissionContext, athleteId) : false
+  const canViewSensitivePii = canViewPII(permissionContext)
 
   // Sport Profile Data Hooks
   const { profile: sportProfile, loading: sportProfileLoading } = useAthleteSportProfile(
@@ -110,6 +116,7 @@ export default function AthleteDetail() {
 
   const fetchAthleteData = useCallback(async () => {
     if (!athleteId || !isReady) {
+      setSensitiveAccess(null)
       setLoading(false)
       return
     }
@@ -118,8 +125,13 @@ export default function AthleteDetail() {
     setError(null)
 
     try {
+      const { data: accessSnapshot } = await getAthleteSensitiveAccess(athleteId, context.orgId)
+      if (isMountedRef.current) {
+        setSensitiveAccess(accessSnapshot)
+      }
+
       // Fetch athlete
-      const { data: athleteData, error: athleteError } = await getAthleteById(context, athleteId)
+      const { data: athleteData, error: athleteError } = await getAthleteById(context, athleteId, accessSnapshot)
 
       if (athleteError || !athleteData) {
         if (isMountedRef.current) {
@@ -147,23 +159,26 @@ export default function AthleteDetail() {
         setSports(sportsData)
       }
 
-      // Fetch guardians
-      const { data: guardiansData } = await getAthleteGuardians(athleteId, context.orgId)
-      if (isMountedRef.current && guardiansData) {
-        setGuardians(guardiansData)
-      }
+      if (accessSnapshot.canViewPii) {
+        const { data: guardiansData } = await getAthleteGuardians(athleteId, context.orgId)
+        if (isMountedRef.current && guardiansData) {
+          setGuardians(guardiansData)
+        }
 
-      // Fetch pending invites
-      const { data: invitesData } = await getAthleteInvites(athleteId, context.orgId)
-      if (isMountedRef.current && invitesData) {
-        setPendingInvites(invitesData.map(invite => ({
-          id: invite.id,
-          email: invite.email,
-          status: invite.status,
-          expires_at: invite.expires_at,
-          created_at: invite.created_at,
-          token: invite.token
-        })))
+        const { data: invitesData } = await getAthleteInvites(athleteId, context.orgId)
+        if (isMountedRef.current && invitesData) {
+          setPendingInvites(invitesData.map(invite => ({
+            id: invite.id,
+            email: invite.email,
+            status: invite.status,
+            expires_at: invite.expires_at,
+            created_at: invite.created_at,
+            token: invite.token
+          })))
+        }
+      } else if (isMountedRef.current) {
+        setGuardians([])
+        setPendingInvites([])
       }
 
       // Fetch team memberships
@@ -201,6 +216,7 @@ export default function AthleteDetail() {
     } catch (err) {
       console.error('Error fetching athlete data:', err)
       if (isMountedRef.current) {
+        setSensitiveAccess(null)
         setError(err instanceof Error ? err.message : t('admin.athletes.errorLoading'))
         setLoading(false)
       }
@@ -756,7 +772,7 @@ export default function AthleteDetail() {
         </Button>
       ),
     },
-  ], [t, handleRemoveGuardianClick, isLinkingGuardian, isRemovingGuardian])
+  ], [t, handleRemoveGuardianClick, isLinkingGuardian, isRemovingGuardian, permissionContext])
 
   // Pending invites table columns
   const pendingInviteColumns: TableColumn<PendingGuardianInvite>[] = useMemo(() => [
@@ -821,7 +837,7 @@ export default function AthleteDetail() {
         ) : null
       ),
     },
-  ], [t, handleResendInvite, handleCancelInvite, inviteActionLoading, currentOrganization])
+  ], [t, handleResendInvite, handleCancelInvite, inviteActionLoading, currentOrganization, permissionContext])
 
 
   // Early returns - after all hooks
@@ -1215,7 +1231,7 @@ export default function AthleteDetail() {
         {activeTab === 'guardians' && (
             <div className="space-y-6">
               {/* Pending Invites Section */}
-              {pendingInvites.length > 0 && (
+              {canViewSensitivePii && pendingInvites.length > 0 && (
                 <Card className="p-6">
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="oa-card-title" style={{ margin: 0 }}>{t('admin.athletes.guardians.pendingInvites')}</h2>
@@ -1232,7 +1248,7 @@ export default function AthleteDetail() {
               <Card className="p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="oa-card-title" style={{ margin: 0 }}>{t('admin.athletes.guardians.title')}</h2>
-                  {hasAnyRole(currentOrganization, ['org_admin']) && (
+                  {hasAnyRole(currentOrganization, ['org_admin']) && canViewSensitivePii && (
                     <OrgAdminButton
                       variant="primary"
                       icon="person_add"
@@ -1243,7 +1259,9 @@ export default function AthleteDetail() {
                     </OrgAdminButton>
                   )}
                 </div>
-                {guardians.length === 0 && pendingInvites.length === 0 ? (
+                {!canViewSensitivePii ? (
+                  <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>Access restricted.</p>
+                ) : guardians.length === 0 && pendingInvites.length === 0 ? (
                   <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.guardians.empty')}</p>
                 ) : guardians.length === 0 ? (
                   <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.guardians.noActiveGuardians')}</p>
@@ -1253,7 +1271,7 @@ export default function AthleteDetail() {
               </Card>
 
               {/* Link Guardian button - only for org admins */}
-              {hasAnyRole(currentOrganization, ['org_admin']) && (
+              {hasAnyRole(currentOrganization, ['org_admin']) && canViewSensitivePii && (
                 <div className="flex justify-end gap-4 pt-2">
                   <OrgAdminButton
                     variant="primary"
@@ -1271,30 +1289,11 @@ export default function AthleteDetail() {
         {activeTab === 'medical' && (
           canViewMedical ? (
             <div className="space-y-6">
-                <Card className="p-6">
-                  <h2 className="oa-card-title mb-6">{t('admin.athletes.medical.title')}</h2>
-                  {athlete.medical_notes ? (
-                    <div>
-                      <label className="oa-label">{t('admin.athletes.medical.notes')}</label>
-                      <p className="oa-body-m" style={{ whiteSpace: 'pre-wrap', marginTop: 'var(--oa-space-2)' }}>{athlete.medical_notes}</p>
-                    </div>
-                  ) : (
-                    <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.medical.noNotes')}</p>
-                  )}
-                </Card>
-
-                <Card className="p-6">
-                  <h2 className="oa-card-title mb-6">{t('admin.athletes.medical.allergies')}</h2>
-                  {athlete.allergies ? (
-                    <div>
-                      <label className="oa-label">{t('admin.athletes.medical.knownAllergies')}</label>
-                      <p className="oa-body-m" style={{ whiteSpace: 'pre-wrap', marginTop: 'var(--oa-space-2)' }}>{athlete.allergies}</p>
-                    </div>
-                  ) : (
-                    <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.medical.noAllergies')}</p>
-                  )}
-                </Card>
-              </div>
+              <Card className="p-6">
+                <h2 className="oa-card-title mb-6">{t('admin.athletes.medical.title')}</h2>
+                <MedicalInfoForm athleteId={athlete.id} athleteName={getDisplayName(athlete)} />
+              </Card>
+            </div>
             ) : (
               <div className="space-y-6">
                 <Card className="p-6">

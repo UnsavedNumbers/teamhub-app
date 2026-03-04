@@ -15,6 +15,11 @@ import type { DemoAllowedRole } from '@/types/demoManagement'
 import { getDemoOrg } from '@/data/services/demoOrgService'
 import { supabase } from '@/lib/supabase'
 
+function isLocalHostname(hostname: string): boolean {
+  const host = hostname.toLowerCase()
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1'
+}
+
 export default function UserContextDropdown() {
   const { user, profile, signOut } = useAuth()
   const orgContext = useContext(OrganizationContext)
@@ -424,6 +429,7 @@ export default function UserContextDropdown() {
                             headers: {
                               'Content-Type': 'application/json',
                               'Authorization': `Bearer ${currentSession.access_token}`,
+                              'X-App-Origin': window.location.origin,
                             },
                             body: JSON.stringify({
                               role,
@@ -433,8 +439,14 @@ export default function UserContextDropdown() {
                           if (!result.success || !result.redirect_url) {
                             throw new Error(result.error || 'Failed to switch role')
                           }
+                          const parsedRedirect = new URL(result.redirect_url, window.location.origin)
+                          const currentHostIsLocal = isLocalHostname(window.location.hostname)
+                          const redirectHostIsLocal = isLocalHostname(parsedRedirect.hostname)
+                          if (!currentHostIsLocal && redirectHostIsLocal) {
+                            throw new Error('Safety check blocked an invalid redirect target.')
+                          }
                           // Redirect to magic link to sign in as new role
-                          window.location.href = result.redirect_url
+                          window.location.href = parsedRedirect.toString()
                         } catch (err) {
                           console.error('Failed to switch role:', err)
                           alert(err instanceof Error ? err.message : 'Failed to switch role')

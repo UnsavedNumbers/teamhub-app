@@ -42,6 +42,76 @@ const DEMO_APP_URL_LOCAL = "http://localhost:5173"
 const DEMO_APP_URL_PROD = "https://demo.youthsports.team"
 const DEMO_AUTH_CALLBACK_PATH = "/portal/auth/callback"
 
+function normalizeOrigin(value: string | null): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  try {
+    const url = new URL(trimmed)
+    return url.origin.replace(/\/$/, "")
+  } catch {
+    return null
+  }
+}
+
+function inferOriginFromReferer(referer: string | null): string | null {
+  if (!referer) return null
+  try {
+    return new URL(referer).origin.replace(/\/$/, "")
+  } catch {
+    return null
+  }
+}
+
+function isLocalHostOrigin(origin: string): boolean {
+  try {
+    const host = new URL(origin).hostname.toLowerCase()
+    return host === "localhost" || host === "127.0.0.1" || host === "::1"
+  } catch {
+    return false
+  }
+}
+
+function resolveDemoSiteUrl(req: Request, supabaseUrl: string): string {
+  const xAppOrigin = normalizeOrigin(req.headers.get("X-App-Origin"))
+  const requestOrigin = normalizeOrigin(req.headers.get("Origin"))
+  const refererOrigin = inferOriginFromReferer(req.headers.get("Referer"))
+  const forwardedHost = req.headers.get("X-Forwarded-Host")?.trim()
+  const forwardedProto = req.headers.get("X-Forwarded-Proto")?.trim() || "https"
+  const hostHeader = req.headers.get("Host")?.trim()
+
+  const candidateFromHeaders = xAppOrigin || requestOrigin || refererOrigin
+  if (candidateFromHeaders) {
+    return candidateFromHeaders
+  }
+
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`.replace(/\/$/, "")
+  }
+
+  if (hostHeader) {
+    const proto = hostHeader.includes("localhost") || hostHeader.includes("127.0.0.1") ? "http" : "https"
+    return `${proto}://${hostHeader}`.replace(/\/$/, "")
+  }
+
+  const explicitDemoUrl = normalizeOrigin(Deno.env.get("DEMO_APP_URL") ?? null)
+  const fallbackEnvUrl = normalizeOrigin(Deno.env.get("SITE_URL") ?? Deno.env.get("APP_URL") ?? null)
+  const isLocalEnvironment = supabaseUrl.includes("localhost") || supabaseUrl.includes("127.0.0.1")
+
+  if (explicitDemoUrl) {
+    return explicitDemoUrl
+  }
+
+  if (fallbackEnvUrl) {
+    if (!isLocalEnvironment && isLocalHostOrigin(fallbackEnvUrl)) {
+      return DEMO_APP_URL_PROD
+    }
+    return fallbackEnvUrl
+  }
+
+  return isLocalEnvironment ? DEMO_APP_URL_LOCAL : DEMO_APP_URL_PROD
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -189,41 +259,16 @@ serve(async (req) => {
       }, 500)
     }
 
-    // Generate magic link for the shared demo user to sign them in
-    // Use the request origin to determine the correct redirect URL
-    // This ensures demo.youthsports.team redirects to demo.youthsports.team, etc.
-    let siteUrl: string
-
-    // Try to get origin from request headers (set by reverse proxy / browser)
-    const requestOrigin = req.headers.get("Origin")
-    const forwardedHost = req.headers.get("X-Forwarded-Host")
-    const forwardedProto = req.headers.get("X-Forwarded-Proto") || "https"
-    const hostHeader = req.headers.get("Host")
-
-    // Build site URL from request context
-    if (requestOrigin && requestOrigin.startsWith("http")) {
-      // Use Origin header if present (sent by browsers for cross-origin requests)
-      siteUrl = requestOrigin
-    } else if (forwardedHost) {
-      // Use X-Forwarded-Host (set by CDN / reverse proxy like Cloudflare, nginx)
-      siteUrl = `${forwardedProto}://${forwardedHost}`
-    } else if (hostHeader) {
-      // Fall back to Host header
-      const proto = req.headers.get("X-Forwarded-Proto") ||
-                   (hostHeader.includes("localhost") || hostHeader.includes("127.0.0.1") ? "http" : "https")
-      siteUrl = `${proto}://${hostHeader}`
-    } else {
-      // Final fallback to environment variables or hardcoded values
-      const explicitDemoUrl = Deno.env.get("DEMO_APP_URL")
-      const fallbackEnvUrl = Deno.env.get("SITE_URL") || Deno.env.get("APP_URL")
-      const isLocalEnvironment = supabaseUrl.includes("localhost") || supabaseUrl.includes("127.0.0.1")
-      siteUrl = explicitDemoUrl || fallbackEnvUrl || (isLocalEnvironment
-        ? DEMO_APP_URL_LOCAL
-        : DEMO_APP_URL_PROD)
+    // Generate magic link for the shared demo user to sign them in.
+    // Prefer current request origin/context and avoid localhost fallbacks in prod.
+    const isLocalEnvironment = supabaseUrl.includes("localhost") || supabaseUrl.includes("127.0.0.1")
+    let siteUrl = resolveDemoSiteUrl(req, supabaseUrl)
+    if (!isLocalEnvironment && isLocalHostOrigin(siteUrl)) {
+      console.error("[demo-enter] Unsafe localhost redirect host resolved in non-local environment; forcing production demo host", {
+        resolvedSiteUrl: siteUrl,
+      })
+      siteUrl = DEMO_APP_URL_PROD
     }
-
-    // Ensure siteUrl doesn't end with a slash
-    siteUrl = siteUrl.replace(/\/$/, "")
     const redirectTo = `${siteUrl}${DEMO_AUTH_CALLBACK_PATH}?demo=true`
 
     console.log("Demo enter: Using redirect URL:", redirectTo)

@@ -30,6 +30,11 @@ const ROLE_LABELS: Record<DemoAllowedRole, string> = {
   fan: 'Fan',
 }
 
+function isLocalHostname(hostname: string): boolean {
+  const host = hostname.toLowerCase()
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1'
+}
+
 export default function DemoEntry() {
   const { t } = useI18n()
   const { resolvedTheme } = useTheme()
@@ -159,6 +164,7 @@ export default function DemoEntry() {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseAnonKey}`,
+          'X-App-Origin': window.location.origin,
         },
         body: JSON.stringify({
           code: normalizedCode,
@@ -170,6 +176,19 @@ export default function DemoEntry() {
 
       if (!result.success || !result.redirect_url) {
         setError(result.error || 'Failed to enter demo. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      const parsedRedirect = new URL(result.redirect_url, window.location.origin)
+      const currentHostIsLocal = isLocalHostname(window.location.hostname)
+      const redirectHostIsLocal = isLocalHostname(parsedRedirect.hostname)
+      if (!currentHostIsLocal && redirectHostIsLocal) {
+        console.error('[DemoEntry] Blocked unsafe localhost redirect on non-local host', {
+          currentOrigin: window.location.origin,
+          redirectUrl: parsedRedirect.toString(),
+        })
+        setError('Safety check blocked an invalid redirect target. Please try again or contact support.')
         setLoading(false)
         return
       }
@@ -186,7 +205,7 @@ export default function DemoEntry() {
       }
 
       // Redirect to the magic link which will sign the user in
-      window.location.href = result.redirect_url
+      window.location.href = parsedRedirect.toString()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to enter demo.')
       setLoading(false)
