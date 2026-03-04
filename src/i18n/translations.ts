@@ -2742,6 +2742,8 @@ export const en = {
                 can_manage_roster: 'Manage roster',
                 can_send_notifications: 'Send notifications',
                 can_manage_staff: 'Manage staff',
+                can_view_pii: 'View personal information',
+                can_view_medical: 'View medical information',
             },
         },
         userDetail: {
@@ -9621,6 +9623,8 @@ export const es = {
                 can_manage_roster: 'Gestionar roster',
                 can_send_notifications: 'Enviar notificaciones',
                 can_manage_staff: 'Gestionar personal',
+                can_view_pii: 'Ver información personal',
+                can_view_medical: 'Ver información médica',
             },
         },
         userDetail: {

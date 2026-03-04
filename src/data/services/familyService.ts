@@ -1249,6 +1249,44 @@ export async function getAthleteById(
 
     // Real Data
     try {
+        type AthleteRow = {
+            id: string
+            org_id: string | null
+            family_id: string | null
+            first_name: string
+            last_name: string
+            birthdate: string | null
+            gender: string | null
+            preferred_name: string | null
+            jersey_number: string | null
+            profile_photo_updated_at: string | null
+            has_profile_photo: boolean | null
+            height_cm: number | null
+            weight_kg: number | null
+            shoe_size_value: string | null
+            shoe_size_system: string | null
+            shoe_width: string | null
+            tshirt_size: string | null
+            shorts_size: string | null
+            dominant_hand: string | null
+            phone?: string | null
+            email?: string | null
+            created_at: string | null
+            updated_at: string | null
+            deleted_at: string | null
+        }
+
+        type AthleteMedicalRow = {
+            medical_notes: string | null
+            allergies: string | null
+            emergency_contact: {
+                name?: string | null
+                phone?: string | null
+                relationship?: string | null
+                email?: string | null
+            } | null
+        }
+
         console.log('[getAthleteById] Fetching athlete:', athleteId)
 
         const accessResult = sensitiveAccess
@@ -1309,16 +1347,9 @@ export async function getAthleteById(
             return { data: null, error: null }
         }
 
-        let medicalData: {
-            medical_notes: string | null
-            allergies: string | null
-            emergency_contact: {
-                name?: string | null
-                phone?: string | null
-                relationship?: string | null
-                email?: string | null
-            } | null
-        } | null = null
+        const athleteRow = data as unknown as AthleteRow
+
+        let medicalData: AthleteMedicalRow | null = null
 
         if (canViewMedical) {
             try {
@@ -1328,8 +1359,8 @@ export async function getAthleteById(
                     .eq('athlete_id', athleteId)
                     .maybeSingle()
 
-                if (!medicalError) {
-                    medicalData = medicalRow as typeof medicalData
+                if (!medicalError && medicalRow) {
+                    medicalData = medicalRow as AthleteMedicalRow
                 }
             } catch (err) {
                 console.warn('[getAthleteById] Error loading athlete medical data:', err)
@@ -1371,36 +1402,36 @@ export async function getAthleteById(
 
         // Return athlete with sports data
         const athlete = {
-            id: data.id,
-            family_id: data.family_id,
-            first_name: data.first_name,
-            last_name: data.last_name,
-            date_of_birth: data.birthdate || '',
-            gender: data.gender as Gender | null,
-            preferred_name: data.preferred_name ?? null,
-            jersey_number: data.jersey_number ?? null,
+            id: athleteRow.id,
+            family_id: athleteRow.family_id,
+            first_name: athleteRow.first_name,
+            last_name: athleteRow.last_name,
+            date_of_birth: athleteRow.birthdate || '',
+            gender: athleteRow.gender as Gender | null,
+            preferred_name: athleteRow.preferred_name ?? null,
+            jersey_number: athleteRow.jersey_number ?? null,
             medical_notes: medicalData?.medical_notes ?? null,
             allergies: medicalData?.allergies ?? null,
-            phone: canViewPii ? (data as any).phone ?? null : null,
-            email: canViewPii ? (data as any).email ?? null : null,
+            phone: canViewPii ? athleteRow.phone ?? null : null,
+            email: canViewPii ? athleteRow.email ?? null : null,
             emergency_contact_name: canViewMedical ? medicalData?.emergency_contact?.name ?? null : null,
             emergency_contact_phone: canViewMedical ? medicalData?.emergency_contact?.phone ?? null : null,
             photo_url: null, // @deprecated - Use profile_photo_updated_at instead
-            profile_photo_updated_at: (data as any).profile_photo_updated_at ?? null,
-            has_profile_photo: (data as any).has_profile_photo ?? false,
-            org_id: (data as any).org_id ?? context.orgId,
-            height_cm: (data as any).height_cm ?? null,
-            weight_kg: (data as any).weight_kg ?? null,
-            shoe_size_value: (data as any).shoe_size_value ?? null,
-            shoe_size_system: (data as any).shoe_size_system ?? null,
-            shoe_width: (data as any).shoe_width ?? null,
-            tshirt_size: (data as any).tshirt_size ?? null,
-            shorts_size: (data as any).shorts_size ?? null,
-            dominant_hand: (data as any).dominant_hand ?? null,
+            profile_photo_updated_at: athleteRow.profile_photo_updated_at ?? null,
+            has_profile_photo: athleteRow.has_profile_photo ?? false,
+            org_id: athleteRow.org_id ?? context.orgId,
+            height_cm: athleteRow.height_cm ?? null,
+            weight_kg: athleteRow.weight_kg ?? null,
+            shoe_size_value: athleteRow.shoe_size_value ?? null,
+            shoe_size_system: athleteRow.shoe_size_system ?? null,
+            shoe_width: athleteRow.shoe_width ?? null,
+            tshirt_size: athleteRow.tshirt_size ?? null,
+            shorts_size: athleteRow.shorts_size ?? null,
+            dominant_hand: athleteRow.dominant_hand ?? null,
             emergency_contact: canViewMedical ? medicalData?.emergency_contact ?? null : null,
-            created_at: data.created_at ?? new Date().toISOString(),
-            updated_at: data.updated_at ?? new Date().toISOString(),
-            deleted_at: data.deleted_at,
+            created_at: athleteRow.created_at ?? new Date().toISOString(),
+            updated_at: athleteRow.updated_at ?? new Date().toISOString(),
+            deleted_at: athleteRow.deleted_at,
             sports: sports,
             has_active_guardian: hasActiveGuardian
         } as unknown as Child
