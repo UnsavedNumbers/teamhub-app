@@ -25,6 +25,7 @@ import { PhotoSection } from '../components/galleries/PhotoSection'
 import { useNeighborhoodSummaryDirect } from '../hooks/useVenueInsights'
 import { useT } from '../i18n/useI18n'
 import type { CalendarExportEvent } from '../features/calendar/addToCalendar'
+import { getLink, RouteKeys } from '../utils/routes'
 
 interface MeetingLocation {
   name: string
@@ -153,15 +154,16 @@ export default function TravelDetail() {
 
   // Validate route param
   useEffect(() => {
+    const componentId = componentIdRef.current
     effectRunCountRef.current++
-    console.log(`[TravelDetail:${componentIdRef.current}] Effect #${effectRunCountRef.current} - Route validation`, {
+    console.log(`[TravelDetail:${componentId}] Effect #${effectRunCountRef.current} - Route validation`, {
       timestamp: new Date().toISOString(),
       id,
       isReady,
     })
     if (isReady && (!id || typeof id !== 'string' || id.trim() === '')) {
-      console.error(`[TravelDetail:${componentIdRef.current}] Invalid travel plan ID in route params`)
-      navigate('/portal/travel', { replace: true })
+      console.error(`[TravelDetail:${componentId}] Invalid travel plan ID in route params`)
+      navigate(getLink(RouteKeys.PORTAL_TRAVEL), { replace: true })
     }
   }, [id, isReady, navigate])
   
@@ -192,27 +194,33 @@ export default function TravelDetail() {
   const { data: neighborhoodSummaryResult, isLoading: neighborhoodSummaryLoading } = useNeighborhoodSummaryDirect(venuePlaceIdForSummary)
 
   useEffect(() => {
+    const componentId = componentIdRef.current
+    const renderCountAtMount = renderCountRef.current
+    const effectRunsAtMount = effectRunCountRef.current
+    const fetchPlanCallsAtMount = fetchPlanCountRef.current
+    const fetchEventsCallsAtMount = fetchEventsCountRef.current
     const mountTime = new Date().toISOString()
-    console.log(`[TravelDetail:${componentIdRef.current}] MOUNT`, { timestamp: mountTime })
+    console.log(`[TravelDetail:${componentId}] MOUNT`, { timestamp: mountTime })
     isMountedRef.current = true
     return () => {
       const unmountTime = new Date().toISOString()
-      console.log(`[TravelDetail:${componentIdRef.current}] UNMOUNT`, { 
+      console.log(`[TravelDetail:${componentId}] UNMOUNT`, {
         timestamp: unmountTime,
         mountTime,
-        renderCount: renderCountRef.current,
-        effectRuns: effectRunCountRef.current,
-        fetchPlanCalls: fetchPlanCountRef.current,
-        fetchEventsCalls: fetchEventsCountRef.current,
+        renderCount: renderCountAtMount,
+        effectRuns: effectRunsAtMount,
+        fetchPlanCalls: fetchPlanCallsAtMount,
+        fetchEventsCalls: fetchEventsCallsAtMount,
       })
       isMountedRef.current = false
     }
   }, [])
 
   useEffect(() => {
+    const componentId = componentIdRef.current
     effectRunCountRef.current++
     const effectId = effectRunCountRef.current
-    console.log(`[TravelDetail:${componentIdRef.current}] Effect #${effectId} - Fetch plan`, {
+    console.log(`[TravelDetail:${componentId}] Effect #${effectId} - Fetch plan`, {
       timestamp: new Date().toISOString(),
       isReady,
       id,
@@ -221,7 +229,7 @@ export default function TravelDetail() {
     })
 
     if (!isReady || !id) {
-      console.log(`[TravelDetail:${componentIdRef.current}] Effect #${effectId} - Early return`, {
+      console.log(`[TravelDetail:${componentId}] Effect #${effectId} - Early return`, {
         reason: !isReady ? 'not ready' : 'no id',
       })
       if (!id) {
@@ -237,7 +245,7 @@ export default function TravelDetail() {
       fetchPlanCountRef.current++
       const fetchId = fetchPlanCountRef.current
       const fetchStartTime = Date.now()
-      console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} START`, {
+      console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} START`, {
         timestamp: new Date().toISOString(),
         id,
         effectId,
@@ -245,17 +253,17 @@ export default function TravelDetail() {
 
       try {
         if (!isMountedRef.current) {
-          console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Aborted (unmounted)`)
+          console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Aborted (unmounted)`)
           return
         }
         setLoading(true)
         setError(null)
         
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Calling getTravelPlanById`)
+        console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Calling getTravelPlanById`)
         const apiStartTime = Date.now()
         const { data, error: fetchError } = await getTravelPlanById(context, id!)
         const apiDuration = Date.now() - apiStartTime
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - getTravelPlanById completed`, {
+        console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - getTravelPlanById completed`, {
           duration: `${apiDuration}ms`,
           hasData: !!data,
           hasError: !!fetchError,
@@ -263,18 +271,18 @@ export default function TravelDetail() {
         })
         
         if (!isMountedRef.current) {
-          console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Aborted after API (unmounted)`)
+          console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Aborted after API (unmounted)`)
           return
         }
 
         if (fetchError || !data) {
-          console.error(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Error:`, fetchError)
+          console.error(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Error:`, fetchError)
           setError(fetchError || new Error('Travel plan not found'))
           setLoading(false)
           return
         }
 
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Setting plan state`)
+        console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Setting plan state`)
         setPlan(data)
 
         // Fetch team name
@@ -284,7 +292,7 @@ export default function TravelDetail() {
           if (USE_FAKE_DATA) {
             setTeamName(data.team?.name || 'Travel Team')
           } else {
-            console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Fetching team name`)
+            console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Fetching team name`)
             const teamStartTime = Date.now()
             const { data: teamData, error: teamError } = await supabase
               .from('teams')
@@ -293,7 +301,7 @@ export default function TravelDetail() {
               .eq('org_id', context.orgId)
               .single()
             const teamDuration = Date.now() - teamStartTime
-            console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Team fetch completed`, {
+            console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Team fetch completed`, {
               duration: `${teamDuration}ms`,
               hasData: !!teamData,
               hasError: !!teamError,
@@ -308,7 +316,7 @@ export default function TravelDetail() {
           }
         } catch (err) {
           if (!isMountedRef.current) return
-          console.error(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Team fetch error:`, err)
+          console.error(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Team fetch error:`, err)
           setTeamName(USE_FAKE_DATA ? (data.team?.name || 'Travel Team') : 'Unknown Team')
         }
 
@@ -318,7 +326,7 @@ export default function TravelDetail() {
           if (USE_FAKE_DATA) {
             setEmergencyContact(null)
           } else {
-            console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Fetching emergency contact`)
+            console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Fetching emergency contact`)
             const coachStartTime = Date.now()
             const { data: coachData, error: coachError } = await supabase
               .from('organization_members')
@@ -328,7 +336,7 @@ export default function TravelDetail() {
               .limit(1)
               .maybeSingle()
             const coachDuration = Date.now() - coachStartTime
-            console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Coach fetch completed`, {
+            console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Coach fetch completed`, {
               duration: `${coachDuration}ms`,
               hasData: !!coachData,
               hasError: !!coachError,
@@ -349,14 +357,14 @@ export default function TravelDetail() {
           }
         } catch (err) {
           if (!isMountedRef.current) return
-          console.error(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Coach fetch error:`, err)
+          console.error(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Coach fetch error:`, err)
         }
         
 
         
         // Fetch resolved travel contacts
         try {
-            console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Resolving contacts`)
+            console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Resolving contacts`)
             const { data: contactsData, error: contactsError } = await resolveAllTravelContactsForPlan(context, id!)
             if (contactsError) throw contactsError
 
@@ -399,11 +407,11 @@ export default function TravelDetail() {
         }
       } catch (err) {
         if (!isMountedRef.current) return
-        console.error(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchPlanCountRef.current} - Unexpected error:`, err)
+        console.error(`[TravelDetail:${componentId}] fetchPlan #${fetchPlanCountRef.current} - Unexpected error:`, err)
         setError(err instanceof Error ? err : new Error('Failed to load travel plan'))
       } finally {
         const totalDuration = Date.now() - fetchStartTime
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchPlanCountRef.current} - COMPLETE`, {
+        console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchPlanCountRef.current} - COMPLETE`, {
           duration: `${totalDuration}ms`,
           isMounted: isMountedRef.current,
         })
@@ -414,12 +422,13 @@ export default function TravelDetail() {
     }
 
     fetchPlan()
-  }, [id, context.orgId, isReady, location.key]) // location.key changes when navigating back
+  }, [context, id, isReady, location.key]) // location.key changes when navigating back
 
   useEffect(() => {
+    const componentId = componentIdRef.current
     effectRunCountRef.current++
     const effectId = effectRunCountRef.current
-    console.log(`[TravelDetail:${componentIdRef.current}] Effect #${effectId} - Fetch events`, {
+    console.log(`[TravelDetail:${componentId}] Effect #${effectId} - Fetch events`, {
       timestamp: new Date().toISOString(),
       hasPlan: !!plan,
       planId: plan?.id,
@@ -428,7 +437,7 @@ export default function TravelDetail() {
     })
 
     if (!plan || !isReady) {
-      console.log(`[TravelDetail:${componentIdRef.current}] Effect #${effectId} - Early return`, {
+      console.log(`[TravelDetail:${componentId}] Effect #${effectId} - Early return`, {
         reason: !plan ? 'no plan' : 'not ready',
       })
       return
@@ -441,14 +450,14 @@ export default function TravelDetail() {
       fetchEventsCountRef.current++
       const fetchId = fetchEventsCountRef.current
       const fetchStartTime = Date.now()
-      console.log(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} START`, {
+      console.log(`[TravelDetail:${componentId}] fetchEvents #${fetchId} START`, {
         timestamp: new Date().toISOString(),
         planId: currentPlan.id,
         effectId,
       })
 
       if (cancelled || !isMountedRef.current) {
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - Aborted`, {
+        console.log(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - Aborted`, {
           cancelled,
           isMounted: isMountedRef.current,
         })
@@ -461,7 +470,7 @@ export default function TravelDetail() {
         const endDate = new Date(currentPlan.end_date)
         endDate.setHours(23, 59, 59, 999)
 
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - Calling getEvents`)
+        console.log(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - Calling getEvents`)
         const apiStartTime = Date.now()
         const { data, error: fetchError } = await getEvents(context, {
           startDate,
@@ -469,7 +478,7 @@ export default function TravelDetail() {
           teamId: currentPlan.team_id,
         })
         const apiDuration = Date.now() - apiStartTime
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - getEvents completed`, {
+        console.log(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - getEvents completed`, {
           duration: `${apiDuration}ms`,
           hasData: !!data,
           dataLength: data?.length,
@@ -478,7 +487,7 @@ export default function TravelDetail() {
         })
 
         if (cancelled || !isMountedRef.current) {
-          console.log(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - Aborted after API`, {
+          console.log(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - Aborted after API`, {
             cancelled,
             isMounted: isMountedRef.current,
           })
@@ -486,23 +495,23 @@ export default function TravelDetail() {
         }
 
         if (fetchError) {
-          console.error(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - Error:`, fetchError)
+          console.error(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - Error:`, fetchError)
           setEventsError(fetchError)
           setTripEvents([])
         } else {
-          console.log(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - Setting events state`, {
+          console.log(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - Setting events state`, {
             count: data?.length || 0,
           })
           setTripEvents(data || [])
         }
       } catch (err) {
         if (cancelled || !isMountedRef.current) return
-        console.error(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - Unexpected error:`, err)
+        console.error(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - Unexpected error:`, err)
         setEventsError(err instanceof Error ? err : new Error('Failed to load events'))
         setTripEvents([])
       } finally {
         const totalDuration = Date.now() - fetchStartTime
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - COMPLETE`, {
+        console.log(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - COMPLETE`, {
           duration: `${totalDuration}ms`,
           cancelled,
           isMounted: isMountedRef.current,
@@ -516,10 +525,10 @@ export default function TravelDetail() {
     fetchEvents()
 
     return () => {
-      console.log(`[TravelDetail:${componentIdRef.current}] Effect #${effectId} - Cleanup (cancelling fetchEvents)`)
+      console.log(`[TravelDetail:${componentId}] Effect #${effectId} - Cleanup (cancelling fetchEvents)`)
       cancelled = true
     }
-  }, [plan?.id, plan?.start_date, plan?.end_date, plan?.team_id, context.orgId, isReady])
+  }, [context, isReady, plan])
 
   function formatEventTime(dateStr: string) {
     return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
@@ -561,8 +570,8 @@ export default function TravelDetail() {
     return (
       <PortalLayout
         breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Travel', path: '/portal/travel' },
+          { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
+          { label: 'Travel', path: getLink(RouteKeys.PORTAL_TRAVEL) },
           { label: 'Loading...' },
         ]}
       >
@@ -577,8 +586,8 @@ export default function TravelDetail() {
     return (
       <PortalLayout
         breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Travel', path: '/portal/travel' },
+          { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
+          { label: 'Travel', path: getLink(RouteKeys.PORTAL_TRAVEL) },
           { label: 'Error' },
         ]}
       >
@@ -589,7 +598,7 @@ export default function TravelDetail() {
             {error?.message || 'Travel plan not found'}
           </p>
           <div className="flex gap-4 justify-center">
-            <Button variant="primary" onClick={() => navigate('/portal/travel')}>
+            <Button variant="primary" onClick={() => navigate(getLink(RouteKeys.PORTAL_TRAVEL))}>
               <Icon name="arrow_back" size="text-sm" className="mr-2" />
               Back to Travel
             </Button>
@@ -608,8 +617,8 @@ export default function TravelDetail() {
   return (
     <PortalLayout
       breadcrumbs={[
-        { label: 'Home', path: '/portal/dashboard' },
-        { label: 'Travel', path: '/portal/travel' },
+        { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
+        { label: 'Travel', path: getLink(RouteKeys.PORTAL_TRAVEL) },
         { label: plan.title },
       ]}
     >

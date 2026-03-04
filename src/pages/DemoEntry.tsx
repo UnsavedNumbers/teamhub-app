@@ -35,6 +35,32 @@ function isLocalHostname(hostname: string): boolean {
   return host === 'localhost' || host === '127.0.0.1' || host === '::1'
 }
 
+function sanitizeMagicLinkUrl(rawUrl: string): string {
+  const currentOrigin = window.location.origin
+  const currentHostIsLocal = isLocalHostname(window.location.hostname)
+
+  try {
+    const url = new URL(rawUrl, currentOrigin)
+
+    if (!currentHostIsLocal && isLocalHostname(url.hostname)) {
+      return new URL(url.pathname + url.search + url.hash, currentOrigin).toString()
+    }
+
+    const nested = url.searchParams.get('redirect_to')
+    if (!nested) return url.toString()
+
+    const nestedUrl = new URL(nested, currentOrigin)
+    if (!currentHostIsLocal && isLocalHostname(nestedUrl.hostname)) {
+      const rewritten = new URL(nestedUrl.pathname + nestedUrl.search + nestedUrl.hash, currentOrigin)
+      url.searchParams.set('redirect_to', rewritten.toString())
+    }
+
+    return url.toString()
+  } catch {
+    return rawUrl
+  }
+}
+
 export default function DemoEntry() {
   const { t } = useI18n()
   const { resolvedTheme } = useTheme()
@@ -180,18 +206,7 @@ export default function DemoEntry() {
         return
       }
 
-      const parsedRedirect = new URL(result.redirect_url, window.location.origin)
-      const currentHostIsLocal = isLocalHostname(window.location.hostname)
-      const redirectHostIsLocal = isLocalHostname(parsedRedirect.hostname)
-      if (!currentHostIsLocal && redirectHostIsLocal) {
-        console.error('[DemoEntry] Blocked unsafe localhost redirect on non-local host', {
-          currentOrigin: window.location.origin,
-          redirectUrl: parsedRedirect.toString(),
-        })
-        setError('Safety check blocked an invalid redirect target. Please try again or contact support.')
-        setLoading(false)
-        return
-      }
+      const safeRedirectUrl = sanitizeMagicLinkUrl(result.redirect_url)
 
       // Set a flag in sessionStorage to indicate this is a demo callback
       // This helps HostHomeRoute detect demo callbacks even if redirect URL doesn't preserve query params
@@ -205,7 +220,7 @@ export default function DemoEntry() {
       }
 
       // Redirect to the magic link which will sign the user in
-      window.location.href = parsedRedirect.toString()
+      window.location.href = safeRedirectUrl
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to enter demo.')
       setLoading(false)

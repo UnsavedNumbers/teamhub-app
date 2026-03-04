@@ -86,7 +86,7 @@ export default function PortalWorkspaceLayout() {
           />
         )}
 
-        <main className="portal-workspace-main min-w-0 flex-1 overflow-auto">
+        <main className="portal-workspace-main min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
           <div className="w-full p-4 sm:p-6 lg:p-8">
             <Outlet />
           </div>

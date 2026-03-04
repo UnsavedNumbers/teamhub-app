@@ -1649,6 +1649,11 @@
 .portal-workspace-main {
   min-height: calc(100vh - 3.5rem);
 }
+
+.portal-workspace-header {
+  overflow-x: hidden;
+}
+
 .dark .portal-grid-bg {
   background-image: linear-gradient(to right, rgb(30 41 59 / 0.5) 1px, transparent 1px),
     linear-gradient(to bottom, rgb(30 41 59 / 0.5) 1px, transparent 1px);

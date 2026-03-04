@@ -6,7 +6,7 @@ import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { supabase } from '../lib/supabase'
 import { getEventDetails, updateRSVP, getAthletes, deleteEvent } from '../data/services'
 import { useOrganization } from '../contexts/OrganizationContext'
-import type { RSVPStatus } from '../types/calendar'
+import type { EventLocation, RSVPStatus } from '../types/calendar'
 import { getSportFromEvent, type SportInfo } from '../utils/sportContext'
 import { getSportImagePath } from '../utils/sportImages'
 import { getDisplayLocation } from '../utils/homeLocation'
@@ -43,13 +43,7 @@ interface Event {
   location: string | null
   notes: string | null
   team: { name: string; id: string }
-  event_location?: {
-    place_id: string | null
-    venue_name: string | null
-    venue_address: string | null
-    latitude: number | null
-    longitude: number | null
-  } | null
+  event_location?: EventLocationDetails | null
   ticketed_event?: {
     id: string
     status: string
@@ -131,6 +125,21 @@ function lyftLink(address: string | null | undefined): string | null {
   return `https://lyft.com/ride?destination[address]=${dest}`
 }
 
+type EventLocationDetails = Pick<
+  EventLocation,
+  | 'place_id'
+  | 'venue_name'
+  | 'address_line1'
+  | 'address_line2'
+  | 'city'
+  | 'state'
+  | 'postal_code'
+  | 'latitude'
+  | 'longitude'
+> & {
+  venue_address?: string | null
+}
+
 function formatTimezoneDisplay(timeZone: string | null | undefined, referenceDate: string): string {
   if (!timeZone) return ''
 
@@ -187,7 +196,7 @@ function getEventDetailCacheScope(eventId: string): string {
   return `portal-event-detail:${eventId}`
 }
 
-function toCalendarExportEvent(event: Event, venueAddress: string): CalendarExportEvent {
+function toCalendarExportEvent(event: Event, venueAddress: string | null): CalendarExportEvent {
   return {
     id: event.id,
     title: event.title,
@@ -428,9 +437,10 @@ export default function EventDetail() {
     try {
       // Fetch event details
       const { data: eventData, error: eventError } = await getEventDetails(context, eventId)
+      let resolvedEventLocation: EventLocationDetails | null = eventData?.event_location ?? null
 
       // If event_location is missing due to RLS, try to fetch it directly
-      if (eventData && !eventData.event_location) {
+      if (eventData && !resolvedEventLocation) {
         const { data: locationData, error: locationError } = await supabase
           .from('event_locations')
           .select('*')
@@ -438,7 +448,7 @@ export default function EventDetail() {
           .maybeSingle()
 
         if (!locationError && locationData && isMountedRef.current) {
-          ;(eventData as any).event_location = locationData
+          resolvedEventLocation = locationData as EventLocationDetails
         }
       }
 
@@ -469,18 +479,23 @@ export default function EventDetail() {
         end_time: eventData.end_time,
         timezone: eventData.timezone,
         arrival_time: eventData.arrival_time,
-        location: buildVenueAddress(eventData.event_location || null),
+        location: buildVenueAddress(resolvedEventLocation),
         notes: eventData.notes,
         team: {
           name: eventData.team?.name ?? 'Team',
           id: eventData.team?.id ?? ''
         },
-        event_location: eventData.event_location ? {
-          place_id: eventData.event_location.place_id,
-          venue_name: eventData.event_location.venue_name,
-          venue_address: buildVenueAddress(eventData.event_location),
-          latitude: eventData.event_location.latitude ?? null,
-          longitude: eventData.event_location.longitude ?? null,
+        event_location: resolvedEventLocation ? {
+          place_id: resolvedEventLocation.place_id,
+          venue_name: resolvedEventLocation.venue_name,
+          venue_address: buildVenueAddress(resolvedEventLocation),
+          address_line1: resolvedEventLocation.address_line1,
+          address_line2: resolvedEventLocation.address_line2,
+          city: resolvedEventLocation.city,
+          state: resolvedEventLocation.state,
+          postal_code: resolvedEventLocation.postal_code,
+          latitude: resolvedEventLocation.latitude ?? null,
+          longitude: resolvedEventLocation.longitude ?? null,
         } : null,
         ticketed_event: eventData.ticketed_event ? {
           id: eventData.ticketed_event.id,
@@ -554,7 +569,7 @@ export default function EventDetail() {
     let cancelled = false
 
     const loadOrgSlug = async () => {
-      const { data, error } = await supabase.rpc('get_org_slug_by_id' as any, { p_org_id: context.orgId })
+      const { data, error } = await supabase.rpc('get_org_slug_by_id', { p_org_id: context.orgId })
 
       if (!cancelled && !error && data) {
         setOrgSlug(data as string)
@@ -690,7 +705,8 @@ export default function EventDetail() {
     ? `${calendarPath}?${searchParams.toString()}`
     : calendarPath
   const dashboardPath = getLink(RouteKeys.PORTAL_DASHBOARD)
-  const venueAddress = (event.event_location as any)?.venue_address || event.location
+  const eventLocation = event.event_location
+  const venueAddress = eventLocation?.venue_address || event.location
   
   // Check if event ended more than 24 hours ago
   const eventEndDate = new Date(event.end_time)
@@ -966,14 +982,14 @@ export default function EventDetail() {
                   <CardTitle className="text-xl mb-4">{event.event_location.venue_name}</CardTitle>
                 )}
                 <div className="mb-4 text-slate-700 dark:text-slate-300">
-                  {(event.event_location as any)?.address_line1 && (
-                    <p className="text-base">{(event.event_location as any).address_line1}</p>
+                  {eventLocation?.address_line1 && (
+                    <p className="text-base">{eventLocation.address_line1}</p>
                   )}
-                  {(event.event_location as any)?.address_line2 && (
-                    <p className="text-base">{(event.event_location as any).address_line2}</p>
+                  {eventLocation?.address_line2 && (
+                    <p className="text-base">{eventLocation.address_line2}</p>
                   )}
                   <p className="text-base">
-                    {[(event.event_location as any)?.city, (event.event_location as any)?.state, (event.event_location as any)?.postal_code].filter(Boolean).join(', ')}
+                    {[eventLocation?.city, eventLocation?.state, eventLocation?.postal_code].filter(Boolean).join(', ')}
                   </p>
                 </div>
 

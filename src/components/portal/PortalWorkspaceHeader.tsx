@@ -119,33 +119,55 @@ export default function PortalWorkspaceHeader({
   }, [navigate])
 
   return (
-    <header className="portal-workspace-header sticky top-0 z-40 flex h-14 items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900">
-      {showMenuButton && (
-        <button
-          type="button"
-          onClick={onMenuClick}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-          aria-label="Open menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-      )}
+    <header className="portal-workspace-header sticky top-0 z-40 border-b border-slate-200 bg-white px-4 py-2 dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+          {showMenuButton && (
+            <button
+              type="button"
+              onClick={onMenuClick}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              aria-label="Open menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          )}
 
-      <Link
-        to={getLink('portal.dashboard')}
-        className="flex shrink-0 items-center gap-2 overflow-hidden"
-      >
-        <img
-          src={`${logoSrc}?theme=${resolvedTheme}`}
-          alt="YouthSports.team"
-          className="h-8 w-auto"
-        />
-        <span className="hidden truncate text-sm font-semibold text-slate-800 dark:text-slate-100 sm:inline">
-          {currentOrganization?.name ?? 'Youth Sports'}
-        </span>
-      </Link>
+          <Link
+            to={getLink('portal.dashboard')}
+            className="flex min-w-0 shrink items-center gap-2 overflow-hidden"
+          >
+            <img
+              src={`${logoSrc}?theme=${resolvedTheme}`}
+              alt="YouthSports.team"
+              className="h-8 w-auto shrink-0"
+            />
+            <span className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100 sm:inline">
+              {currentOrganization?.name ?? 'Youth Sports'}
+            </span>
+          </Link>
+        </div>
 
-      <div className="min-w-0 flex-1 max-w-xl">
+        <div className="hidden shrink-0 items-center gap-2 sm:flex">
+          {currentOrganization && (
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300 md:inline">
+              {roleLabel}
+            </span>
+          )}
+          <DemoModeBadge />
+          <NotificationBell viewAllPath="/portal/notifications" />
+          <ThemeToggle variant="icon-only" />
+          <UserContextDropdown />
+        </div>
+      </div>
+
+      <div className="mt-2 flex items-center justify-end gap-2 sm:hidden">
+        <NotificationBell viewAllPath="/portal/notifications" />
+        <ThemeToggle variant="icon-only" />
+        <UserContextDropdown />
+      </div>
+
+      <div className="mt-2 hidden min-w-0 sm:block">
         <div ref={searchRef} className="relative">
           <form onSubmit={handleSearchSubmit}>
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -202,18 +224,6 @@ export default function PortalWorkspaceHeader({
             </div>
           )}
         </div>
-      </div>
-
-      <div className="flex shrink-0 items-center gap-2 ml-auto">
-        {currentOrganization && (
-          <span className="hidden rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300 md:inline">
-            {roleLabel}
-          </span>
-        )}
-        <DemoModeBadge />
-        <NotificationBell viewAllPath="/portal/notifications" />
-        <ThemeToggle variant="icon-only" />
-        <UserContextDropdown />
       </div>
     </header>
   )

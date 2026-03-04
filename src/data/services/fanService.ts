@@ -38,7 +38,24 @@ import type {
 } from '../../types/staffAndFan'
 import * as fakeService from '../fake/fanFakeService'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabaseAny = supabase as any
+
+interface FollowedOrgRow {
+  id: string
+  user_id: string
+  org_id: string
+  source: string
+  created_at: string
+  org: {
+    id: string
+    name: string
+    slug: string
+    logo_url: string | null
+    city: string | null
+    state: string | null
+  } | null
+}
 
 function getFanCalendarCacheScope(userId: string, request: GetCalendarRequest): string {
   const normalized = {
@@ -182,7 +199,7 @@ export async function getFollowedOrgs(): Promise<{ data: FanOrgFollow[]; error: 
 
     if (error) throw error
 
-    const normalized = (data || []).map((follow: any) => ({
+    const normalized = ((data || []) as FollowedOrgRow[]).map((follow) => ({
       ...follow,
       org: follow.org
         ? {
@@ -1003,12 +1020,12 @@ export async function getAthleteProfile(athleteId: string): Promise<{ data: Enti
     // Prefer v2 fan RPC (supports identity IDs and athlete IDs), then fallback to legacy.
     const v2Result = await getAthleteProfileV2Fan(athleteId)
     if (v2Result.data && !v2Result.error) {
-      const payload = v2Result.data as Record<string, any>
+      const payload = v2Result.data as Record<string, unknown>
       if (!payload.error) {
         debug.perf.end('fanService.getAthleteProfile')
         debug.data('FanService.getAthleteProfile', 'Response (v2)', { athleteId, found: true })
         return {
-          data: payload as EntityProfile,
+          data: payload as unknown as EntityProfile,
           error: null,
         }
       }

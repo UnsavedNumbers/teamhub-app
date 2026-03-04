@@ -20,6 +20,32 @@ function isLocalHostname(hostname: string): boolean {
   return host === 'localhost' || host === '127.0.0.1' || host === '::1'
 }
 
+function sanitizeMagicLinkUrl(rawUrl: string): string {
+  const currentOrigin = window.location.origin
+  const currentHostIsLocal = isLocalHostname(window.location.hostname)
+
+  try {
+    const url = new URL(rawUrl, currentOrigin)
+
+    if (!currentHostIsLocal && isLocalHostname(url.hostname)) {
+      return new URL(url.pathname + url.search + url.hash, currentOrigin).toString()
+    }
+
+    const nested = url.searchParams.get('redirect_to')
+    if (!nested) return url.toString()
+
+    const nestedUrl = new URL(nested, currentOrigin)
+    if (!currentHostIsLocal && isLocalHostname(nestedUrl.hostname)) {
+      const rewritten = new URL(nestedUrl.pathname + nestedUrl.search + nestedUrl.hash, currentOrigin)
+      url.searchParams.set('redirect_to', rewritten.toString())
+    }
+
+    return url.toString()
+  } catch {
+    return rawUrl
+  }
+}
+
 export default function UserContextDropdown() {
   const { user, profile, signOut } = useAuth()
   const orgContext = useContext(OrganizationContext)
@@ -439,14 +465,9 @@ export default function UserContextDropdown() {
                           if (!result.success || !result.redirect_url) {
                             throw new Error(result.error || 'Failed to switch role')
                           }
-                          const parsedRedirect = new URL(result.redirect_url, window.location.origin)
-                          const currentHostIsLocal = isLocalHostname(window.location.hostname)
-                          const redirectHostIsLocal = isLocalHostname(parsedRedirect.hostname)
-                          if (!currentHostIsLocal && redirectHostIsLocal) {
-                            throw new Error('Safety check blocked an invalid redirect target.')
-                          }
+                          const safeRedirectUrl = sanitizeMagicLinkUrl(result.redirect_url)
                           // Redirect to magic link to sign in as new role
-                          window.location.href = parsedRedirect.toString()
+                          window.location.href = safeRedirectUrl
                         } catch (err) {
                           console.error('Failed to switch role:', err)
                           alert(err instanceof Error ? err.message : 'Failed to switch role')

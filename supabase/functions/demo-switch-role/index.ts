@@ -110,6 +110,24 @@ function resolveDemoSiteUrl(req: Request, supabaseUrl: string): string {
   return isLocalEnvironment ? DEMO_APP_URL_LOCAL : DEMO_APP_URL_PROD
 }
 
+function sanitizeActionLink(actionLink: string, expectedSiteUrl: string): string {
+  try {
+    const linkUrl = new URL(actionLink)
+    const redirectParam = linkUrl.searchParams.get("redirect_to")
+    if (!redirectParam) return actionLink
+
+    const redirectUrl = new URL(redirectParam)
+    if (!isLocalHostOrigin(redirectUrl.origin)) return actionLink
+
+    const expectedOrigin = new URL(expectedSiteUrl).origin
+    const rewrittenRedirect = new URL(redirectUrl.pathname + redirectUrl.search + redirectUrl.hash, expectedOrigin)
+    linkUrl.searchParams.set("redirect_to", rewrittenRedirect.toString())
+    return linkUrl.toString()
+  } catch {
+    return actionLink
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -295,9 +313,12 @@ serve(async (req) => {
       }, 500)
     }
 
+    const rawActionLink = linkData.properties.action_link
+    const safeActionLink = sanitizeActionLink(rawActionLink, siteUrl)
+
     return json(req, {
       success: true,
-      redirect_url: linkData.properties.action_link,
+      redirect_url: safeActionLink,
       message: "Role switched successfully",
     }, 200)
 
