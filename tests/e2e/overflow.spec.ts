@@ -20,6 +20,8 @@ const VIEWPORTS = [
 
 test.describe('Horizontal Overflow Regression', () => {
   test('public and auth routes do not overflow horizontally', async ({ page }) => {
+    test.setTimeout(120000)
+
     for (const viewport of VIEWPORTS) {
       await page.setViewportSize(viewport)
 

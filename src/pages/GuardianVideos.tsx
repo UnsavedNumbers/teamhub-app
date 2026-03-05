@@ -119,7 +119,7 @@ export default function GuardianVideos() {
       </div>
 
       {/* Search + Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <div className="mobile-stack-controls mb-6 sm:items-center">
         <div className="relative flex-1">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
             <Icon name="search" size="text-lg" />
@@ -138,7 +138,7 @@ export default function GuardianVideos() {
             <select
               value={teamId ?? ''}
               onChange={(e) => setTeamId(e.target.value || null)}
-              className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-2.5 min-w-[140px] focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
+              className="w-full sm:w-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-2.5 min-w-0 sm:min-w-[140px] focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
               aria-label="Filter by team"
             >
               <option value="">All teams</option>
@@ -156,7 +156,7 @@ export default function GuardianVideos() {
               setSortBy(by)
               setSortOrder(order)
             }}
-            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-2.5 min-w-[160px] focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
+            className="w-full sm:w-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-2.5 min-w-0 sm:min-w-[160px] focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
             aria-label="Sort"
           >
             <option value="recorded_at-desc">Newest first</option>

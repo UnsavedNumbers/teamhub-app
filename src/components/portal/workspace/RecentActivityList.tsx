@@ -76,16 +76,16 @@ export function RecentActivityList({
                     {Icon ? <Icon className="h-4 w-4" /> : <span className="h-2 w-2 rounded-full bg-slate-500 dark:bg-slate-400" />}
                   </div>
                   <div className="min-w-0 flex-1 pt-0.5">
-                    <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">
+                    <p className="line-clamp-2 text-sm font-bold text-slate-900 sm:line-clamp-1 dark:text-slate-100">
                       {item.title}
                     </p>
                     {item.subtitle && (
-                      <p className="mt-0.5 truncate text-xs font-medium text-slate-600 dark:text-slate-400">
+                      <p className="mt-0.5 line-clamp-2 text-xs font-medium text-slate-600 sm:line-clamp-1 dark:text-slate-400">
                         {item.subtitle}
                       </p>
                     )}
                     {item.contextLabel && (
-                      <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500 dark:text-slate-500">
+                      <p className="mt-0.5 line-clamp-2 text-[11px] font-medium text-slate-500 sm:line-clamp-1 dark:text-slate-500">
                         {item.contextLabel}
                       </p>
                     )}

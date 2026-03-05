@@ -1,4 +1,5 @@
 import type { DemoOrgPOC } from '../types/demoManagement'
+import { invokeApiOperation } from './apiManagerService'
 
 export interface SendApprovalEmailResult {
   success: boolean
@@ -31,15 +32,6 @@ export async function sendApprovalEmail(
   primaryPoc: DemoOrgPOC | null,
   org?: { name: string; city?: string | null; state?: string | null; country: string; timezone: string; org_type?: string | null; sports_sponsored: string[]; notes?: string | null }
 ): Promise<SendApprovalEmailResult> {
-  const webhookUrl = import.meta.env.VITE_DEMO_RESULT_WEBHOOK_URL
-
-  if (!webhookUrl || typeof webhookUrl !== 'string' || !webhookUrl.trim()) {
-    return {
-      success: false,
-      error: 'Webhook URL not configured',
-    }
-  }
-
   if (!primaryPoc) {
     console.warn('No primary POC found for demo org', orgId)
   }
@@ -71,15 +63,6 @@ export async function sendRejectionWebhook(
   primaryPoc: DemoOrgPOC | null,
   org?: { name: string; city?: string | null; state?: string | null; country: string; timezone: string; org_type?: string | null; sports_sponsored: string[]; notes?: string | null }
 ): Promise<SendApprovalEmailResult> {
-  const webhookUrl = import.meta.env.VITE_DEMO_RESULT_WEBHOOK_URL
-
-  if (!webhookUrl || typeof webhookUrl !== 'string' || !webhookUrl.trim()) {
-    return {
-      success: false,
-      error: 'Webhook URL not configured',
-    }
-  }
-
   const payload: DemoResultPayload = {
     type: 'demo_rejected',
     demo_org_id: orgId,
@@ -102,15 +85,6 @@ export async function sendRejectionWebhook(
 }
 
 async function sendDemoResultWebhook(payload: DemoResultPayload): Promise<SendApprovalEmailResult> {
-  const webhookUrl = import.meta.env.VITE_DEMO_RESULT_WEBHOOK_URL
-
-  if (!webhookUrl || typeof webhookUrl !== 'string' || !webhookUrl.trim()) {
-    return {
-      success: false,
-      error: 'Webhook URL not configured',
-    }
-  }
-
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return {
       success: false,
@@ -118,48 +92,26 @@ async function sendDemoResultWebhook(payload: DemoResultPayload): Promise<SendAp
     }
   }
 
-  const controller = typeof AbortController !== 'undefined' 
-    ? new AbortController() 
-    : null
-  const timeoutId = controller 
-    ? setTimeout(() => controller.abort(), 10000)
-    : null
-
   try {
-    const response = await fetch(webhookUrl.trim(), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      signal: controller?.signal,
+    const idempotencyKey = `${payload.type}:${payload.demo_org_id}:${payload.reviewed_at}`
+    const response = await invokeApiOperation<{ statusCode: number }>({
+      operation: 'automation.sendDemoResult',
+      input: payload as unknown as Record<string, unknown>,
+      idempotencyKey,
     })
 
-    if (timeoutId) clearTimeout(timeoutId)
-
     if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error')
       return {
         success: false,
-        statusCode: response.status,
-        error: `Webhook returned ${response.status}: ${errorText}`,
+        error: `${response.error.message} [${response.error.code}]`,
       }
     }
 
     return {
       success: true,
-      statusCode: response.status,
+      statusCode: response.data.statusCode,
     }
   } catch (error) {
-    if (timeoutId) clearTimeout(timeoutId)
-
-    if (error instanceof Error && error.name === 'AbortError') {
-      return {
-        success: false,
-        error: 'Request timed out',
-      }
-    }
-
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

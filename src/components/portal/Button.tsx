@@ -11,7 +11,7 @@ export default function Button<E extends ElementType = 'button'>({ variant = 'pr
   
   const variantClasses = {
     primary: 'org-btn-primary',
-    secondary: 'border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white',
+    secondary: 'border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-900 dark:text-gray-100',
   }
 
   const Tag = as ?? 'button'

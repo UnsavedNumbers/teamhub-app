@@ -255,7 +255,7 @@ function EventTicketCarousel({ group }: { group: EventTicketGroup }) {
         <button
           onClick={handleResend}
           disabled={isResending}
-          className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold bg-[#f0f2f5] dark:bg-[#2a3441] text-[#111418] dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-[#344050] transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider min-w-[140px]"
+          className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2 text-xs font-bold bg-[#f0f2f5] dark:bg-[#2a3441] text-[#111418] dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-[#344050] transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider min-w-0 sm:min-w-[140px]"
           title="Resend ticket email"
         >
           {isResending ? (
@@ -331,7 +331,7 @@ function EventTicketCarousel({ group }: { group: EventTicketGroup }) {
           <button
             type="button"
             onClick={() => handleWalletClick('Google')}
-            className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
+            className="flex min-w-0 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
           >
             <span className="material-symbols-outlined">add_to_home_screen</span>
             <span className="truncate uppercase">Add to Google Wallet</span>
@@ -340,7 +340,7 @@ function EventTicketCarousel({ group }: { group: EventTicketGroup }) {
           <button
             type="button"
             onClick={() => handleWalletClick('Apple')}
-            className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-white dark:bg-gray-800 border-2 border-[#f0f2f4] dark:border-gray-700 text-[#111418] dark:text-white text-base font-bold leading-normal tracking-[0.015em] w-full hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="flex min-w-0 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-white dark:bg-gray-800 border-2 border-[#f0f2f4] dark:border-gray-700 text-[#111418] dark:text-white text-base font-bold leading-normal tracking-[0.015em] w-full hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <span className="material-symbols-outlined">phone_iphone</span>
             <span className="truncate">Add to Apple Wallet</span>
@@ -349,7 +349,7 @@ function EventTicketCarousel({ group }: { group: EventTicketGroup }) {
           <button
             type="button"
             onClick={handlePrint}
-            className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-12 px-5 bg-[#f0f2f4] dark:bg-gray-800 text-sm font-bold text-[#111418] dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="flex min-w-0 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-12 px-5 bg-[#f0f2f4] dark:bg-gray-800 text-sm font-bold text-[#111418] dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
             <span className="material-symbols-outlined text-base">print</span>
             <span className="truncate uppercase">Print Ticket</span>
@@ -549,7 +549,7 @@ export default function MyTickets() {
   return (
     <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
       <div className="mb-6 sm:mb-8">
-        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 sm:gap-6">
+        <div className="mobile-stack-controls mb-6 sm:mb-8 sm:items-end sm:justify-between sm:gap-6">
           <div className="flex-1">
             <PageTitle>My Tickets</PageTitle>
             <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">

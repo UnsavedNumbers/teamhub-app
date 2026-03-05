@@ -430,9 +430,9 @@ export default function FanVideos() {
       </div>
 
       {/* Filter Bar */}
-      <div className="mb-6 flex flex-wrap items-center gap-4">
+      <div className="mobile-stack-controls mb-6 sm:items-center">
         {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-md">
+        <div className="relative flex-1 min-w-0 sm:min-w-[200px] max-w-md">
           <Icon 
             name="search" 
             size="text-lg" 
@@ -452,7 +452,7 @@ export default function FanVideos() {
           <select
             value={selectedOrgId || ''}
             onChange={(e) => setSelectedOrgId(e.target.value || null)}
-            className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white min-w-[160px]"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-gray-200 bg-white min-w-0 sm:min-w-[160px]"
           >
             <option value="">All Organizations</option>
             {orgOptions.map(org => (
@@ -465,7 +465,7 @@ export default function FanVideos() {
         <select
           value={sortOrder}
           onChange={(e) => setSortOrder(e.target.value as 'recent' | 'oldest' | 'popular')}
-          className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white min-w-[140px]"
+          className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-gray-200 bg-white min-w-0 sm:min-w-[140px]"
         >
           <option value="recent">{t('common.mostRecent')}</option>
           <option value="oldest">{t('photos.filters.oldest')}</option>

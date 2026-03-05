@@ -72,6 +72,19 @@ function isLocalHostOrigin(origin: string): boolean {
   }
 }
 
+function isLocalRequestOrigin(req: Request): boolean {
+  const xAppOrigin = normalizeOrigin(req.headers.get("X-App-Origin"))
+  if (xAppOrigin) return isLocalHostOrigin(xAppOrigin)
+
+  const requestOrigin = normalizeOrigin(req.headers.get("Origin"))
+  if (requestOrigin) return isLocalHostOrigin(requestOrigin)
+
+  const refererOrigin = inferOriginFromReferer(req.headers.get("Referer"))
+  if (refererOrigin) return isLocalHostOrigin(refererOrigin)
+
+  return false
+}
+
 function resolveDemoSiteUrl(req: Request, supabaseUrl: string): string {
   const xAppOrigin = normalizeOrigin(req.headers.get("X-App-Origin"))
   const requestOrigin = normalizeOrigin(req.headers.get("Origin"))
@@ -115,13 +128,17 @@ function resolveDemoSiteUrl(req: Request, supabaseUrl: string): string {
 function sanitizeActionLink(actionLink: string, expectedSiteUrl: string): string {
   try {
     const linkUrl = new URL(actionLink)
+    const expectedOrigin = new URL(expectedSiteUrl).origin
+    if (linkUrl.origin !== expectedOrigin && linkUrl.pathname === DEMO_AUTH_CALLBACK_PATH) {
+      return new URL(linkUrl.pathname + linkUrl.search + linkUrl.hash, expectedOrigin).toString()
+    }
+
     const redirectParam = linkUrl.searchParams.get("redirect_to")
     if (!redirectParam) return actionLink
 
     const redirectUrl = new URL(redirectParam)
-    if (!isLocalHostOrigin(redirectUrl.origin)) return actionLink
+    if (redirectUrl.origin === expectedOrigin) return actionLink
 
-    const expectedOrigin = new URL(expectedSiteUrl).origin
     const rewrittenRedirect = new URL(redirectUrl.pathname + redirectUrl.search + redirectUrl.hash, expectedOrigin)
     linkUrl.searchParams.set("redirect_to", rewrittenRedirect.toString())
     return linkUrl.toString()
@@ -281,9 +298,11 @@ serve(async (req) => {
     // Prefer current request origin/context and avoid localhost fallbacks in prod.
     const isLocalEnvironment = supabaseUrl.includes("localhost") || supabaseUrl.includes("127.0.0.1")
     let siteUrl = resolveDemoSiteUrl(req, supabaseUrl)
-    if (!isLocalEnvironment && isLocalHostOrigin(siteUrl)) {
+    const localRequestOrigin = isLocalRequestOrigin(req)
+    if (!isLocalEnvironment && isLocalHostOrigin(siteUrl) && !localRequestOrigin) {
       console.error("[demo-enter] Unsafe localhost redirect host resolved in non-local environment; forcing production demo host", {
         resolvedSiteUrl: siteUrl,
+        localRequestOrigin,
       })
       siteUrl = DEMO_APP_URL_PROD
     }
@@ -308,8 +327,43 @@ serve(async (req) => {
     }
 
     const rawActionLink = linkData.properties.action_link
-    const safeActionLink = sanitizeActionLink(rawActionLink, siteUrl)
+    const hashedToken = linkData.properties.hashed_token
 
+    // Verify OTP server-side to get session tokens directly.
+    // This bypasses the Supabase Auth redirect allowlist entirely,
+    // so localhost and any origin work without config changes.
+    let sessionTokens: { access_token: string; refresh_token: string } | null = null
+    try {
+      const { data: verifyData, error: verifyError } = await supabaseAdmin.auth.verifyOtp({
+        token_hash: hashedToken,
+        type: "magiclink",
+      })
+
+      if (!verifyError && verifyData?.session) {
+        sessionTokens = {
+          access_token: verifyData.session.access_token,
+          refresh_token: verifyData.session.refresh_token,
+        }
+        console.log("[demo-enter] OTP verified server-side, returning session tokens directly")
+      } else {
+        console.error("[demo-enter] OTP verification failed, falling back to action link", verifyError)
+      }
+    } catch (verifyErr) {
+      console.error("[demo-enter] OTP verification exception, falling back to action link", verifyErr)
+    }
+
+    // If server-side verification succeeded, return tokens directly
+    if (sessionTokens) {
+      return json(req, {
+        success: true,
+        access_token: sessionTokens.access_token,
+        refresh_token: sessionTokens.refresh_token,
+        message: "Demo session created successfully",
+      }, 200)
+    }
+
+    // Fallback: return sanitized action link (browser redirect through Supabase)
+    const safeActionLink = sanitizeActionLink(rawActionLink, siteUrl)
     return json(req, {
       success: true,
       redirect_url: safeActionLink,

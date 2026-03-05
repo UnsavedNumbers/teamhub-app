@@ -571,7 +571,7 @@ export default function Notifications() {
         </aside>
 
         {/* Notification Feed Content */}
-        <section className="portal-notif-feed">
+        <section className="portal-notif-feed flex-1 min-w-0">
           <div className="portal-notif-feed__header">
             <div className="portal-notif-feed__heading">
               <p className="portal-notif-feed__micro">Family activity stream</p>

@@ -80,14 +80,16 @@ html.dark .oa-root a:focus-visible {
     margin-left: 280px;
     transition: margin-left var(--pa-motion-slow) var(--pa-ease-out);
     min-width: 0;
-    width: 100%;
-    max-width: 100%;
+    width: calc(100% - 280px);
+    max-width: calc(100% - 280px);
     overflow-x: hidden;
 }
 
 @media (max-width: 1023px) {
     .oa-main {
         margin-left: 0;
+        width: 100%;
+        max-width: 100%;
         padding-top: 60px;
     }
 }

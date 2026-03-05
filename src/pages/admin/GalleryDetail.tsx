@@ -719,7 +719,7 @@ export default function GalleryDetail() {
                     />
                     {viewMode === 'list' && (
                       <div className="oa-flex oa-justify-between oa-items-center oa-mt-6">
-                        <div className="oa-flex oa-items-center oa-gap-2 whitespace-nowrap">
+                        <div className="oa-flex oa-items-center oa-gap-2 sm:whitespace-nowrap">
                           <span className="oa-text-sm oa-text-muted mr-2">{t('common.table.rowsPerPage')}</span>
                           <select
                             className="oa-input oa-w-28"

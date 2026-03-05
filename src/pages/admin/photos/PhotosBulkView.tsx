@@ -252,7 +252,7 @@ export function PhotosBulkView() {
               icon="delete"
               onClick={() => setShowDeleteConfirm(true)}
               disabled={selectedIds.size === 0 || deleting}
-              className="whitespace-nowrap"
+              className="sm:whitespace-nowrap"
             >
               {t('photos.bulk.deleteEmpty')}
             </Button>
@@ -261,7 +261,7 @@ export function PhotosBulkView() {
               icon="merge_type"
               disabled
               title={t('photos.bulk.comingSoon')}
-              className="whitespace-nowrap"
+              className="sm:whitespace-nowrap"
             >
               {t('photos.bulk.mergeGalleries')}
             </Button>
@@ -270,7 +270,7 @@ export function PhotosBulkView() {
               icon="label"
               disabled
               title={t('photos.bulk.comingSoon')}
-              className="whitespace-nowrap"
+              className="sm:whitespace-nowrap"
             >
               {t('photos.bulk.bulkTag')}
             </Button>
@@ -279,7 +279,7 @@ export function PhotosBulkView() {
               icon="lock"
               disabled
               title={t('photos.bulk.comingSoon')}
-              className="whitespace-nowrap"
+              className="sm:whitespace-nowrap"
             >
               {t('photos.bulk.batchPermissions')}
             </Button>
@@ -288,7 +288,7 @@ export function PhotosBulkView() {
               icon="archive"
               disabled
               title={t('photos.bulk.comingSoon')}
-              className="whitespace-nowrap"
+              className="sm:whitespace-nowrap"
             >
               {t('photos.bulk.archive')}
             </Button>
@@ -297,7 +297,7 @@ export function PhotosBulkView() {
               icon="description"
               disabled
               title={t('photos.bulk.comingSoon')}
-              className="whitespace-nowrap"
+              className="sm:whitespace-nowrap"
             >
               {t('photos.bulk.generateReport')}
             </Button>

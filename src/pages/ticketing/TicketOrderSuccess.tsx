@@ -225,7 +225,7 @@ export default function TicketOrderSuccess() {
           <div className="flex flex-col gap-3 py-6">
             <Link
               to={myTicketsLink}
-              className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
+              className="flex min-w-0 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
             >
               <span className="material-symbols-outlined">confirmation_number</span>
               <span className="truncate uppercase">View All My Tickets</span>
@@ -235,7 +235,7 @@ export default function TicketOrderSuccess() {
             <button
               onClick={handleResendTickets}
               disabled={isResending}
-              className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-12 px-5 bg-white dark:bg-gray-900 text-[#111418] dark:text-white border-2 border-gray-300 dark:border-gray-700 text-base font-bold leading-normal tracking-[0.015em] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex min-w-0 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-12 px-5 bg-white dark:bg-gray-900 text-[#111418] dark:text-white border-2 border-gray-300 dark:border-gray-700 text-base font-bold leading-normal tracking-[0.015em] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="material-symbols-outlined text-lg">
                 {isResending ? 'hourglass_empty' : 'forward_to_inbox'}

@@ -215,7 +215,7 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
             {!order.purchaser_user_id && (
               <Link
                 to={getLink(RouteKeys.PORTAL_ORG_TICKETS, { orgSlug: orgSlug || '' })}
-                className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
+                className="flex min-w-0 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
               >
                 <span className="material-symbols-outlined">confirmation_number</span>
                 <span className="truncate uppercase">View More Events</span>
@@ -225,7 +225,7 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
             {order.purchaser_user_id && (
               <Link
                 to={myTicketsLink}
-                className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
+                className="flex min-w-0 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
               >
                 <span className="material-symbols-outlined">confirmation_number</span>
                 <span className="truncate uppercase">View All My Tickets</span>

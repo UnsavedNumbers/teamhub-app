@@ -812,7 +812,7 @@ export default function EventDetail() {
                           }
                         }}
                         disabled={!orgSlug || !event.ticketed_event?.id}
-                        className="mt-1 whitespace-nowrap"
+                        className="mt-1"
                       >
                         {t('calendar.event.getTickets')}
                       </Button>
@@ -952,7 +952,7 @@ export default function EventDetail() {
                     }
                     }}
                     disabled={!orgSlug || !event.ticketed_event?.id}
-                    className="w-full whitespace-nowrap"
+                    className="w-full"
                   >
                     {t('calendar.event.getTickets')}
                   </Button>

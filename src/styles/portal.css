@@ -1146,10 +1146,10 @@
 .portal-notif-feed {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0;
   border: 1px solid var(--pa-border-default, #e2e8f0);
-  border-radius: 16px;
   background: var(--pa-surface, #fff);
-  box-shadow: var(--pa-shadow-card, 0 10px 30px rgba(15, 23, 42, 0.04));
   overflow: hidden;
 }
 
@@ -1651,7 +1651,7 @@
 }
 
 .portal-workspace-header {
-  overflow-x: hidden;
+  overflow: visible;
 }
 
 .dark .portal-grid-bg {

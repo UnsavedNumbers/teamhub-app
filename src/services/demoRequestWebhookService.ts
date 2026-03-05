@@ -5,6 +5,7 @@
  */
 
 import { getBaseUrl } from '../utils/host'
+import { invokeApiOperation } from './apiManagerService'
 
 // ============================================================================
 // Payload Types
@@ -47,16 +48,6 @@ export interface DemoRequestWebhookResult {
 export async function sendDemoRequestWebhook(
   payload: DemoRequestPayload
 ): Promise<DemoRequestWebhookResult> {
-  const webhookUrl = import.meta.env.VITE_DEMO_REQUEST_WEBHOOK_URL
-
-  if (!webhookUrl || typeof webhookUrl !== 'string' || !webhookUrl.trim()) {
-    console.warn('Demo request webhook URL not configured')
-    return {
-      success: false,
-      error: 'Webhook URL not configured',
-    }
-  }
-
   // Check offline mode
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return {
@@ -65,49 +56,24 @@ export async function sendDemoRequestWebhook(
     }
   }
 
-  // Set up timeout (10 seconds)
-  const controller = typeof AbortController !== 'undefined' 
-    ? new AbortController() 
-    : null
-  const timeoutId = controller 
-    ? setTimeout(() => controller.abort(), 10000)
-    : null
-
   try {
-    const response = await fetch(webhookUrl.trim(), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      signal: controller?.signal,
+    const response = await invokeApiOperation<{ statusCode: number }>({
+      operation: 'automation.sendDemoRequest',
+      input: payload as unknown as Record<string, unknown>,
     })
 
-    if (timeoutId) clearTimeout(timeoutId)
-
     if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error')
       return {
         success: false,
-        statusCode: response.status,
-        error: `Webhook returned ${response.status}: ${errorText}`,
+        error: `${response.error.message} [${response.error.code}]`,
       }
     }
 
     return {
       success: true,
-      statusCode: response.status,
+      statusCode: response.data.statusCode,
     }
   } catch (error) {
-    if (timeoutId) clearTimeout(timeoutId)
-
-    if (error instanceof Error && error.name === 'AbortError') {
-      return {
-        success: false,
-        error: 'Request timed out',
-      }
-    }
-
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

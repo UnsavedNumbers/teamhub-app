@@ -480,8 +480,8 @@ export default function Travel() {
             {/* Filters Bar */}
             {filtersOpen && (
                 <Card className="mb-6 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="flex flex-wrap gap-4">
-                        <div className="flex-1 min-w-[200px]">
+                    <div className="mobile-stack-controls">
+                        <div className="flex-1 min-w-0 sm:min-w-[200px]">
                             <label className="form-label">Season</label>
                             <select 
                                 value={seasonFilter} 
@@ -492,7 +492,7 @@ export default function Travel() {
                                 {seasonOptions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
-                        <div className="flex-1 min-w-[200px]">
+                        <div className="flex-1 min-w-0 sm:min-w-[200px]">
                             <label className="form-label">Team</label>
                             <select 
                                 value={teamFilter} 

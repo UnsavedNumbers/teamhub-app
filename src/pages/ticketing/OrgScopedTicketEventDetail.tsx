@@ -421,7 +421,7 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
             <div className="flex flex-col items-start md:flex-row md:items-center gap-4 md:gap-6 w-full md:w-auto">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>calendar_month</span>
-                <span className="text-sm font-medium text-[#617589] dark:text-gray-400 whitespace-nowrap">{dateFormatted}</span>
+                <span className="text-sm font-medium text-[#617589] dark:text-gray-400 whitespace-normal break-words leading-5 md:whitespace-nowrap">{dateFormatted}</span>
               </div>
               <div className="flex items-center gap-2 min-w-0">
                 <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>location_on</span>
@@ -431,7 +431,7 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
               </div>
               <div className="flex items-center gap-2 min-w-0">
                 <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>schedule</span>
-                <span className="text-sm font-medium text-[#617589] dark:text-gray-400 whitespace-nowrap">Doors open at {timeFormatted}</span>
+                <span className="text-sm font-medium text-[#617589] dark:text-gray-400 whitespace-normal break-words leading-5 md:whitespace-nowrap">Doors open at {timeFormatted}</span>
               </div>
             </div>
           </div>

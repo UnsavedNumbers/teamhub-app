@@ -478,12 +478,12 @@ export default function GuardianDashboardContent() {
             View all →
           </Link>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:flex sm:gap-4 sm:overflow-x-auto sm:pb-3">
+        <div className="grid grid-cols-1 gap-3 lg:flex lg:gap-4 lg:overflow-x-auto lg:pb-3">
           {announcements?.slice(0, 4).map((a) => (
             <Link
               key={a.id}
               to={`/portal/announcements/${a.id}`}
-              className="group flex flex-col rounded-xl bg-slate-50 p-5 transition-colors hover:bg-slate-100 sm:min-w-[240px] dark:bg-slate-900/70 dark:hover:bg-slate-900"
+              className="group flex flex-col rounded-xl bg-slate-50 p-5 transition-colors hover:bg-slate-100 lg:min-w-[240px] lg:shrink-0 dark:bg-slate-900/70 dark:hover:bg-slate-900"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-800">
                 <span className="text-base leading-none" aria-hidden>
@@ -496,7 +496,7 @@ export default function GuardianDashboardContent() {
           ))}
           <Link
             to={getLink('portal.photos')}
-            className="flex flex-col items-center justify-center rounded-xl bg-slate-50 p-8 text-slate-500 transition-colors hover:bg-slate-100 sm:min-w-[240px] dark:bg-slate-900/70 dark:text-slate-400 dark:hover:bg-slate-900"
+            className="flex flex-col items-center justify-center rounded-xl bg-slate-50 p-8 text-slate-500 transition-colors hover:bg-slate-100 lg:min-w-[240px] lg:shrink-0 dark:bg-slate-900/70 dark:text-slate-400 dark:hover:bg-slate-900"
           >
             <span className="text-sm font-bold uppercase tracking-wide">Photos</span>
           </Link>
