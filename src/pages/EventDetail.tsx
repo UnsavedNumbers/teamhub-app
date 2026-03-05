@@ -16,6 +16,7 @@ import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import AddToCalendarActions from '../components/calendar/AddToCalendarActions'
+import { VenueMapActionButtons, VenueRideShareButtons } from '../components/portal/VenueActionButtons'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
 import { PhotoSection } from '../components/galleries/PhotoSection'
@@ -31,6 +32,7 @@ import { getBookmarkedEvents } from '../data/services/fanService'
 import type { FanEventBookmark } from '../types/staffAndFan'
 import { USE_FAKE_DATA } from '../data/config'
 import { isValidUUID } from '../utils/routeValidation'
+import { appleMapsLink, copyToClipboard, googleMapsLink, lyftLink, uberLink, wazeLink } from '../utils/venueActionLinks'
 
 interface Event {
   id: string
@@ -94,37 +96,6 @@ function buildVenueAddress(location: { venue_name?: string | null; venue_address
   return parts.filter(Boolean).join(', ')
 }
 
-// Helper functions for links and integrations
-function googleMapsLink(query: string | null | undefined): string | null {
-  if (!query || query.trim() === '') return null
-  const q = encodeURIComponent(query.trim())
-  return `https://www.google.com/maps/search/?api=1&query=${q}`
-}
-
-function appleMapsLink(query: string | null | undefined): string | null {
-  if (!query || query.trim() === '') return null
-  const q = encodeURIComponent(query.trim())
-  return `https://maps.apple.com/?q=${q}`
-}
-
-function wazeLink(query: string | null | undefined): string | null {
-  if (!query || query.trim() === '') return null
-  const q = encodeURIComponent(query.trim())
-  return `https://waze.com/ul?q=${q}`
-}
-
-function uberLink(address: string | null | undefined): string | null {
-  if (!address || address.trim() === '') return null
-  const dest = encodeURIComponent(address.trim())
-  return `https://m.uber.com/ul/?action=setPickup&dropoff[formatted_address]=${dest}`
-}
-
-function lyftLink(address: string | null | undefined): string | null {
-  if (!address || address.trim() === '') return null
-  const dest = encodeURIComponent(address.trim())
-  return `https://lyft.com/ride?destination[address]=${dest}`
-}
-
 type EventLocationDetails = Pick<
   EventLocation,
   | 'place_id'
@@ -163,32 +134,6 @@ function formatTimezoneDisplay(timeZone: string | null | undefined, referenceDat
     return longName || shortName || timeZone
   } catch {
     return timeZone
-  }
-}
-
-async function copyToClipboard(text: string): Promise<{ success: boolean; error?: Error }> {
-  try {
-    if (!navigator.clipboard || !navigator.clipboard.writeText) {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea')
-      textArea.value = text
-      textArea.style.position = 'fixed'
-      textArea.style.opacity = '0'
-      document.body.appendChild(textArea)
-      textArea.select()
-      try {
-        document.execCommand('copy')
-        document.body.removeChild(textArea)
-        return { success: true }
-      } catch (err) {
-        document.body.removeChild(textArea)
-        return { success: false, error: err instanceof Error ? err : new Error('Failed to copy') }
-      }
-    }
-    await navigator.clipboard.writeText(text)
-    return { success: true }
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err : new Error('Failed to copy to clipboard') }
   }
 }
 
@@ -234,6 +179,8 @@ export default function EventDetail() {
   })
   const [isEditingCommute, setIsEditingCommute] = useState(false)
   const [commuteInputValue, setCommuteInputValue] = useState(commuteStartLocation)
+    const [geolocating, setGeolocating] = useState(false)
+    const [geolocationError, setGeolocationError] = useState<string | null>(null)
   const [commuteSummary, setCommuteSummary] = useState<{
     distance: string
     duration: string
@@ -657,6 +604,42 @@ export default function EventDetail() {
   }
 
   function handleSaveCommuteLocation() {
+      function handleUseCurrentLocation() {
+        if (!navigator.geolocation) {
+          setGeolocationError('Location is not supported by this browser.')
+          return
+        }
+
+        setGeolocating(true)
+        setGeolocationError(null)
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude.toFixed(6)
+            const lng = position.coords.longitude.toFixed(6)
+            const currentLocation = `${lat}, ${lng}`
+            setCommuteInputValue(currentLocation)
+            setGeolocating(false)
+          },
+          (error) => {
+            const message = error.code === error.PERMISSION_DENIED
+              ? 'Location permission was denied. Enable location access and try again.'
+              : error.code === error.POSITION_UNAVAILABLE
+                ? 'Current location is unavailable right now.'
+                : error.code === error.TIMEOUT
+                  ? 'Timed out while getting your current location.'
+                  : 'Unable to get your current location.'
+            setGeolocationError(message)
+            setGeolocating(false)
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 12000,
+            maximumAge: 60000,
+          },
+        )
+      }
+                    Add All to Calendar
     const trimmed = commuteInputValue.trim()
     setCommuteStartLocation(trimmed)
     localStorage.setItem('commuteStartLocation', trimmed)
@@ -997,57 +980,15 @@ export default function EventDetail() {
                 <div className="mb-4">
                   <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Open in Maps</p>
                   <div className="flex flex-wrap gap-2">
-                    {googleMapsLink(venueAddress) ? (
-                      <a href={googleMapsLink(venueAddress)!} target="_blank" rel="noreferrer">
-                        <Button variant="primary" className="text-sm px-4 py-2">
-                          <Icon name="map" size="text-sm" className="mr-2" />
-                          Google Maps
-                        </Button>
-                      </a>
-                    ) : (
-                      <Button variant="primary" className="text-sm px-4 py-2" disabled>
-                        <Icon name="map" size="text-sm" className="mr-2" />
-                        Google Maps
-                      </Button>
-                    )}
-                    {appleMapsLink(venueAddress) ? (
-                      <a href={appleMapsLink(venueAddress)!} target="_blank" rel="noreferrer">
-                        <Button variant="secondary" className="text-sm px-4 py-2">
-                          <Icon name="map" size="text-sm" className="mr-2" />
-                          Apple Maps
-                        </Button>
-                      </a>
-                    ) : (
-                      <Button variant="secondary" className="text-sm px-4 py-2" disabled>
-                        <Icon name="map" size="text-sm" className="mr-2" />
-                        Apple Maps
-                      </Button>
-                    )}
-                    {wazeLink(venueAddress) ? (
-                      <a href={wazeLink(venueAddress)!} target="_blank" rel="noreferrer">
-                        <Button variant="secondary" className="text-sm px-4 py-2">
-                          <Icon name="navigation" size="text-sm" className="mr-2" />
-                          Waze
-                        </Button>
-                      </a>
-                    ) : (
-                      <Button variant="secondary" className="text-sm px-4 py-2" disabled>
-                        <Icon name="navigation" size="text-sm" className="mr-2" />
-                        Waze
-                      </Button>
-                    )}
-                    <Button 
-                      variant="secondary" 
-                      className="text-sm px-4 py-2"
-                      onClick={() => handleCopy(venueAddress, 'Address')}
-                    >
-                      <Icon name={copiedText === 'Address' ? 'check' : 'content_copy'} size="text-sm" className="mr-2" />
-                      {copiedText === 'Address' ? 'Copied!' : 'Copy Address'}
-                    </Button>
-                    {copyError && copiedText === 'Address' && (
-                      <span className="text-xs text-red-500">{copyError}</span>
-                    )}
-                  </div>
+                  <VenueMapActionButtons
+                    googleUrl={googleMapsLink(venueAddress)}
+                    appleUrl={appleMapsLink(venueAddress)}
+                    wazeUrl={wazeLink(venueAddress)}
+                    onCopyAddress={() => handleCopy(venueAddress, 'Address')}
+                    copied={copiedText === 'Address'}
+                    copyError={copyError && copiedText === 'Address' ? copyError : null}
+                    fullWidth
+                  />
                 </div>
 
                 {/* Ride-Share Shortcuts */}
@@ -1055,33 +996,11 @@ export default function EventDetail() {
                   <div>
                     <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Need a Ride?</p>
                     <div className="flex flex-wrap gap-2">
-                      {uberLink(venueAddress) ? (
-                        <a href={uberLink(venueAddress)!} target="_blank" rel="noreferrer">
-                          <Button variant="secondary" className="text-sm px-4 py-2">
-                            <Icon name="local_taxi" size="text-sm" className="mr-2" />
-                            Uber
-                          </Button>
-                        </a>
-                      ) : (
-                        <Button variant="secondary" className="text-sm px-4 py-2" disabled>
-                          <Icon name="local_taxi" size="text-sm" className="mr-2" />
-                          Uber
-                        </Button>
-                      )}
-                      {lyftLink(venueAddress) ? (
-                        <a href={lyftLink(venueAddress)!} target="_blank" rel="noreferrer">
-                          <Button variant="secondary" className="text-sm px-4 py-2">
-                            <Icon name="local_taxi" size="text-sm" className="mr-2" />
-                            Lyft
-                          </Button>
-                        </a>
-                      ) : (
-                        <Button variant="secondary" className="text-sm px-4 py-2" disabled>
-                          <Icon name="local_taxi" size="text-sm" className="mr-2" />
-                          Lyft
-                        </Button>
-                      )}
-                    </div>
+                    <VenueRideShareButtons
+                      uberUrl={uberLink(venueAddress)}
+                      lyftUrl={lyftLink(venueAddress)}
+                      fullWidth
+                    />
                   </div>
                 )}
               </div>
@@ -1341,6 +1260,17 @@ export default function EventDetail() {
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)]"
                       autoFocus
                     />
+                    <button
+                      type="button"
+                      onClick={handleUseCurrentLocation}
+                      disabled={geolocating}
+                      className="text-left text-xs font-semibold text-[var(--org-link-color)] hover:underline disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {geolocating ? 'Getting current location…' : 'Use my current location'}
+                    </button>
+                    {geolocationError && (
+                      <p className="text-xs text-red-500">{geolocationError}</p>
+                    )}
                     <div className="flex gap-2">
                       <Button
                         variant="primary"

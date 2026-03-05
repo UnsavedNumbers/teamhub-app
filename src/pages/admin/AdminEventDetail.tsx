@@ -14,6 +14,8 @@ import { formatEventDate, formatEventTimeRange } from '@/types/calendar'
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { ConfirmDialog, Card } from '@/components/admin'
 import TicketedEventDetail from '@/pages/admin/TicketedEventDetail'
+import { VenueMapActionButtons, VenueRideShareButtons } from '@/components/portal/VenueActionButtons'
+import { appleMapsLink, copyToClipboard, googleMapsLink, lyftLink, uberLink, wazeLink } from '@/utils/venueActionLinks'
 import '../../styles/orgAdmin.css'
 
 interface CommuteSummary {
@@ -50,11 +52,6 @@ function buildVenueAddress(location: EventLocation | null | undefined): string {
   if (cityParts.length > 0) parts.push(cityParts.join(', '))
 
   return parts.join(', ')
-}
-
-function googleMapsLink(query: string | null | undefined): string | null {
-  if (!query || query.trim() === '') return null
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query.trim())}`
 }
 
 function getDirectionsUrl(origin: string | null | undefined, destination: string | null | undefined): string | null {
@@ -197,6 +194,8 @@ export default function AdminEventDetail() {
   const [commuteInputValue, setCommuteInputValue] = useState(commuteStartLocation)
   const [commuteSummary, setCommuteSummary] = useState<CommuteSummary | null>(null)
   const [loadingCommute, setLoadingCommute] = useState(false)
+  const [copiedVenueAddress, setCopiedVenueAddress] = useState(false)
+  const [venueCopyError, setVenueCopyError] = useState<string | null>(null)
 
   const [weatherData, setWeatherData] = useState<WeatherSummary | null>(null)
   const [loadingWeather, setLoadingWeather] = useState(false)
@@ -205,6 +204,26 @@ export default function AdminEventDetail() {
     if (!event?.event_location) return ''
     return buildVenueAddress(event.event_location)
   }, [event?.event_location])
+
+  const handleCopyVenueAddress = useCallback(async () => {
+    if (!venueAddress) {
+      setVenueCopyError('Nothing to copy')
+      setTimeout(() => setVenueCopyError(null), 3000)
+      return
+    }
+
+    const result = await copyToClipboard(venueAddress)
+    if (result.success) {
+      setCopiedVenueAddress(true)
+      setVenueCopyError(null)
+      setTimeout(() => setCopiedVenueAddress(false), 2000)
+      return
+    }
+
+    setVenueCopyError(result.error?.message || 'Failed to copy address')
+    setTimeout(() => setVenueCopyError(null), 3000)
+  }, [venueAddress])
+
   const effectiveCommuteStartLocation = useMemo(() => {
     if (commuteStartLocation.trim()) return commuteStartLocation.trim()
     if (USE_FAKE_DATA) return DEFAULT_FAKE_COMMUTE_ORIGIN
@@ -1026,13 +1045,21 @@ export default function AdminEventDetail() {
                       <div className="oa-stat-item__value">{venueAddress || t('admin.events.detailPage.notSet')}</div>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {googleMapsLink(venueAddress) && (
-                      <a href={googleMapsLink(venueAddress)!} target="_blank" rel="noreferrer" className="oa-btn oa-btn--secondary oa-btn--compact">
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>map</span>
-                        {t('admin.events.detailPage.openInMaps')}
-                      </a>
-                    )}
+                  <div className="space-y-3">
+                    <VenueMapActionButtons
+                      googleUrl={googleMapsLink(venueAddress)}
+                      appleUrl={appleMapsLink(venueAddress)}
+                      wazeUrl={wazeLink(venueAddress)}
+                      onCopyAddress={handleCopyVenueAddress}
+                      copied={copiedVenueAddress}
+                      copyError={venueCopyError}
+                      fullWidth
+                    />
+                    <VenueRideShareButtons
+                      uberUrl={uberLink(venueAddress)}
+                      lyftUrl={lyftLink(venueAddress)}
+                      fullWidth
+                    />
                     {event.external_link && (
                       <a href={event.external_link} target="_blank" rel="noreferrer" className="oa-btn oa-btn--secondary oa-btn--compact">
                         <span className="material-symbols-outlined" style={{ fontSize: 18 }}>open_in_new</span>

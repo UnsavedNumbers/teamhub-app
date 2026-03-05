@@ -20,6 +20,7 @@ import AddToCalendarActions from '../../components/calendar/AddToCalendarActions
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import BookmarkButton from '../../components/fan/BookmarkButton'
 import NearbyAmenities from '../../components/portal/NearbyAmenities'
+import { VenueMapActionButtons, VenueRideShareButtons } from '../../components/portal/VenueActionButtons'
 import { showError, showSuccess } from '../../utils/toast'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { appendTicketCheckoutRole } from '../../utils/ticketCheckoutRole'
@@ -27,6 +28,7 @@ import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 import { readCalendarCache, writeCalendarCache } from '../../features/calendar/cache'
 import type { CalendarExportEvent } from '../../features/calendar/addToCalendar'
 import { isValidUUID } from '../../utils/routeValidation'
+import { appleMapsLink, copyToClipboard, googleMapsLink, lyftLink, uberLink, wazeLink } from '../../utils/venueActionLinks'
 import '../../styles/fan.css'
 import '../../styles/fan-layouts.css'
 
@@ -296,6 +298,8 @@ export default function FanEventDetail() {
     durationInTraffic?: string
   } | null>(null)
   const [loadingCommute, setLoadingCommute] = useState(false)
+  const [copiedVenueAddress, setCopiedVenueAddress] = useState(false)
+  const [venueCopyError, setVenueCopyError] = useState<string | null>(null)
   const [usingCachedEvent, setUsingCachedEvent] = useState(false)
 
   const loadEventDetail = useCallback(async (id: string) => {
@@ -705,6 +709,26 @@ export default function FanEventDetail() {
     }
   }
 
+  const handleCopyVenueAddress = async () => {
+    const address = getFullAddress()
+    if (!address) {
+      setVenueCopyError('Nothing to copy')
+      setTimeout(() => setVenueCopyError(null), 3000)
+      return
+    }
+
+    const result = await copyToClipboard(address)
+    if (result.success) {
+      setCopiedVenueAddress(true)
+      setVenueCopyError(null)
+      setTimeout(() => setCopiedVenueAddress(false), 2000)
+      return
+    }
+
+    setVenueCopyError(result.error?.message || 'Failed to copy address')
+    setTimeout(() => setVenueCopyError(null), 3000)
+  }
+
   // Handle get tickets
   const handleGetTickets = () => {
     if (event?.ticket_event_id) {
@@ -915,13 +939,30 @@ export default function FanEventDetail() {
                 {fullAddress && (
                   <p className="fan-event-venue-address">{fullAddress}</p>
                 )}
-                <button
-                  className="fan-event-directions-btn"
-                  onClick={openInMaps}
-                >
-                  <span className="material-symbols-outlined">directions</span>
-                  Get Directions
-                </button>
+                {fullAddress && (
+                  <div style={{ marginTop: '12px' }}>
+                    <p className="fan-commute-label">Open in Maps</p>
+                    <VenueMapActionButtons
+                      googleUrl={googleMapsLink(fullAddress)}
+                      appleUrl={appleMapsLink(fullAddress)}
+                      wazeUrl={wazeLink(fullAddress)}
+                      onCopyAddress={handleCopyVenueAddress}
+                      copied={copiedVenueAddress}
+                      copyError={venueCopyError}
+                      fullWidth
+                    />
+                  </div>
+                )}
+                {fullAddress && (
+                  <div style={{ marginTop: '12px' }}>
+                    <p className="fan-commute-label">Need a Ride?</p>
+                    <VenueRideShareButtons
+                      uberUrl={uberLink(fullAddress)}
+                      lyftUrl={lyftLink(fullAddress)}
+                      fullWidth
+                    />
+                  </div>
+                )}
               </div>
             </section>
           )}

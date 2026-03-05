@@ -843,7 +843,7 @@ export default function Calendar() {
                 className="w-full sm:w-auto"
               >
                 <Icon name="calendar_add_on" className="mr-2" />
-                {safeT('calendar.event.addToCalendar', 'Add to Calendar')}
+                {safeT('calendar.event.addAllToCalendar', 'Add All to Calendar')}
               </Button>
 
               <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1 w-full sm:w-auto">

@@ -21,11 +21,13 @@ import Icon from '../components/portal/Icon'
 import AddToCalendarActions from '../components/calendar/AddToCalendarActions'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
+import { VenueMapActionButtons, VenueRideShareButtons } from '../components/portal/VenueActionButtons'
 import { PhotoSection } from '../components/galleries/PhotoSection'
 import { useNeighborhoodSummaryDirect } from '../hooks/useVenueInsights'
 import { useT } from '../i18n/useI18n'
 import type { CalendarExportEvent } from '../features/calendar/addToCalendar'
 import { getLink, RouteKeys } from '../utils/routes'
+import { appleMapsLink, copyToClipboard, googleMapsLink, lyftLink, uberLink, wazeLink } from '../utils/venueActionLinks'
 
 interface MeetingLocation {
   name: string
@@ -53,37 +55,6 @@ function parseMeetingLocations(value: unknown): MeetingLocation[] {
     .filter(Boolean) as MeetingLocation[]
 }
 
-// Helper functions for links and integrations
-function googleMapsLink(query: string | null | undefined): string | null {
-  if (!query || query.trim() === '') return null
-  const q = encodeURIComponent(query.trim())
-  return `https://www.google.com/maps/search/?api=1&query=${q}`
-}
-
-function appleMapsLink(query: string | null | undefined): string | null {
-  if (!query || query.trim() === '') return null
-  const q = encodeURIComponent(query.trim())
-  return `https://maps.apple.com/?q=${q}`
-}
-
-function wazeLink(query: string | null | undefined): string | null {
-  if (!query || query.trim() === '') return null
-  const q = encodeURIComponent(query.trim())
-  return `https://waze.com/ul?q=${q}`
-}
-
-function uberLink(address: string | null | undefined): string | null {
-  if (!address || address.trim() === '') return null
-  const dest = encodeURIComponent(address.trim())
-  return `https://m.uber.com/ul/?action=setPickup&dropoff[formatted_address]=${dest}`
-}
-
-function lyftLink(address: string | null | undefined): string | null {
-  if (!address || address.trim() === '') return null
-  const dest = encodeURIComponent(address.trim())
-  return `https://lyft.com/ride?destination[address]=${dest}`
-}
-
 function toTravelCalendarExportEvent(event: {
   id: string
   title: string
@@ -99,32 +70,6 @@ function toTravelCalendarExportEvent(event: {
     endTime: event.endTime,
     location: event.location,
     description: event.description,
-  }
-}
-
-async function copyToClipboard(text: string): Promise<{ success: boolean; error?: Error }> {
-  try {
-    if (!navigator.clipboard || !navigator.clipboard.writeText) {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea')
-      textArea.value = text
-      textArea.style.position = 'fixed'
-      textArea.style.opacity = '0'
-      document.body.appendChild(textArea)
-      textArea.select()
-      try {
-        document.execCommand('copy')
-        document.body.removeChild(textArea)
-        return { success: true }
-      } catch (err) {
-        document.body.removeChild(textArea)
-        return { success: false, error: err instanceof Error ? err : new Error('Failed to copy') }
-      }
-    }
-    await navigator.clipboard.writeText(text)
-    return { success: true }
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err : new Error('Failed to copy to clipboard') }
   }
 }
 
@@ -669,7 +614,7 @@ export default function TravelDetail() {
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Left Column - Main Info */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="min-w-0 lg:col-span-2 space-y-6">
           {/* Navigation & Timing */}
           {plan.venue_name && plan.venue_address && (
             <div>
@@ -698,92 +643,25 @@ export default function TravelDetail() {
                 {/* Smart Map Links */}
                 <div className="mb-4">
                   <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Open in Maps</p>
-                  <div className="flex flex-wrap gap-2">
-                    {googleMapsLink(plan.venue_address) ? (
-                      <a href={googleMapsLink(plan.venue_address)!} target="_blank" rel="noreferrer">
-                        <Button variant="primary" className="text-sm px-4 py-2">
-                          <Icon name="map" size="text-sm" className="mr-2" />
-                          Google Maps
-                        </Button>
-                      </a>
-                    ) : (
-                      <Button variant="primary" className="text-sm px-4 py-2" disabled>
-                        <Icon name="map" size="text-sm" className="mr-2" />
-                        Google Maps
-                      </Button>
-                    )}
-                    {appleMapsLink(plan.venue_address) ? (
-                      <a href={appleMapsLink(plan.venue_address)!} target="_blank" rel="noreferrer">
-                        <Button variant="secondary" className="text-sm px-4 py-2">
-                          <Icon name="map" size="text-sm" className="mr-2" />
-                          Apple Maps
-                        </Button>
-                      </a>
-                    ) : (
-                      <Button variant="secondary" className="text-sm px-4 py-2" disabled>
-                        <Icon name="map" size="text-sm" className="mr-2" />
-                        Apple Maps
-                      </Button>
-                    )}
-                    {wazeLink(plan.venue_address) ? (
-                      <a href={wazeLink(plan.venue_address)!} target="_blank" rel="noreferrer">
-                        <Button variant="secondary" className="text-sm px-4 py-2">
-                          <Icon name="navigation" size="text-sm" className="mr-2" />
-                          Waze
-                        </Button>
-                      </a>
-                    ) : (
-                      <Button variant="secondary" className="text-sm px-4 py-2" disabled>
-                        <Icon name="navigation" size="text-sm" className="mr-2" />
-                        Waze
-                      </Button>
-                    )}
-                    <Button 
-                      variant="secondary" 
-                      className="text-sm px-4 py-2"
-                      onClick={() => plan.venue_address && handleCopy(plan.venue_address, 'Address')}
-                      disabled={!plan.venue_address}
-                    >
-                      <Icon name={copiedText === 'Address' ? 'check' : 'content_copy'} size="text-sm" className="mr-2" />
-                      {copiedText === 'Address' ? 'Copied!' : 'Copy Address'}
-                    </Button>
-                    {copyError && copiedText === 'Address' && (
-                      <span className="text-xs text-red-500">{copyError}</span>
-                    )}
-                  </div>
+                  <VenueMapActionButtons
+                    googleUrl={googleMapsLink(plan.venue_address)}
+                    appleUrl={appleMapsLink(plan.venue_address)}
+                    wazeUrl={wazeLink(plan.venue_address)}
+                    onCopyAddress={() => plan.venue_address && handleCopy(plan.venue_address, 'Address')}
+                    copied={copiedText === 'Address'}
+                    copyError={copyError && copiedText === 'Address' ? copyError : null}
+                    fullWidth
+                  />
                 </div>
 
                 {/* Ride-Share Shortcuts */}
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Need a Ride?</p>
-                  <div className="flex flex-wrap gap-2">
-                    {uberLink(plan.venue_address) ? (
-                      <a href={uberLink(plan.venue_address)!} target="_blank" rel="noreferrer">
-                        <Button variant="secondary" className="text-sm px-4 py-2">
-                          <Icon name="local_taxi" size="text-sm" className="mr-2" />
-                          Uber
-                        </Button>
-                      </a>
-                    ) : (
-                      <Button variant="secondary" className="text-sm px-4 py-2" disabled>
-                        <Icon name="local_taxi" size="text-sm" className="mr-2" />
-                        Uber
-                      </Button>
-                    )}
-                    {lyftLink(plan.venue_address) ? (
-                      <a href={lyftLink(plan.venue_address)!} target="_blank" rel="noreferrer">
-                        <Button variant="secondary" className="text-sm px-4 py-2">
-                          <Icon name="local_taxi" size="text-sm" className="mr-2" />
-                          Lyft
-                        </Button>
-                      </a>
-                    ) : (
-                      <Button variant="secondary" className="text-sm px-4 py-2" disabled>
-                        <Icon name="local_taxi" size="text-sm" className="mr-2" />
-                        Lyft
-                      </Button>
-                    )}
-                  </div>
+                  <VenueRideShareButtons
+                    uberUrl={uberLink(plan.venue_address)}
+                    lyftUrl={lyftLink(plan.venue_address)}
+                    fullWidth
+                  />
                 </div>
                 </div>
               </Card>
@@ -976,8 +854,8 @@ export default function TravelDetail() {
                 <div className="space-y-4">
                   {tripEvents.map((event) => (
                     <div key={event.id} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0 last:pb-0">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
+                      <div className="mb-2 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 flex-1">
                           <CardTitle className="text-lg mb-1">{event.title}</CardTitle>
                           <p className="text-sm font-bold text-gray-500 dark:text-gray-400">
                             {new Date(event.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{' '}
@@ -985,20 +863,22 @@ export default function TravelDetail() {
                           </p>
                           {/* venue row removed (duplicate shown in VenueInsights header) */}
                         </div>
-                        <AddToCalendarActions
-                          event={toTravelCalendarExportEvent({
-                            id: event.id,
-                            title: event.title,
-                            startTime: event.start_time,
-                            endTime: event.end_time,
-                            location: event.event_location?.venue_name || '',
-                            description: event.notes || '',
-                          })}
-                          layout="inline"
-                          googleVariant="secondary"
-                          icsVariant="secondary"
-                          buttonClassName="text-xs px-3 py-1"
-                        />
+                        <div className="w-full sm:w-[220px]">
+                          <AddToCalendarActions
+                            event={toTravelCalendarExportEvent({
+                              id: event.id,
+                              title: event.title,
+                              startTime: event.start_time,
+                              endTime: event.end_time,
+                              location: event.event_location?.venue_name || '',
+                              description: event.notes || '',
+                            })}
+                            layout="stack"
+                            googleVariant="secondary"
+                            icsVariant="secondary"
+                            buttonClassName="w-full justify-center text-xs px-3 py-1"
+                          />
+                        </div>
                       </div>
                       {/* Venue Information (Area Summary, etc.): use place_id from event_locations for this event */}
                       {(() => {
@@ -1089,9 +969,9 @@ export default function TravelDetail() {
                               <Icon name="phone" size="text-lg" />
                             </a>
                           )}
-                          {contact.email && (
-                            <a href={`mailto:${contact.email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Email">
-                              <Icon name="email" size="text-lg" />
+                          {contact.phone && (
+                            <a href={`sms:${contact.phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Message">
+                              <Icon name="sms" size="text-lg" />
                             </a>
                           )}
                         </div>
@@ -1126,9 +1006,9 @@ export default function TravelDetail() {
                               <Icon name="phone" size="text-lg" />
                             </a>
                           )}
-                          {contact.email && (
-                            <a href={`mailto:${contact.email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Email">
-                              <Icon name="email" size="text-lg" />
+                          {contact.phone && (
+                            <a href={`sms:${contact.phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Message">
+                              <Icon name="sms" size="text-lg" />
                             </a>
                           )}
                         </div>
@@ -1163,9 +1043,9 @@ export default function TravelDetail() {
                             <Icon name="phone" size="text-lg" />
                           </a>
                         )}
-                        {email && (
-                          <a href={`mailto:${email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Email">
-                            <Icon name="email" size="text-lg" />
+                        {phone && (
+                          <a href={`sms:${phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Message">
+                            <Icon name="sms" size="text-lg" />
                           </a>
                         )}
                       </div>

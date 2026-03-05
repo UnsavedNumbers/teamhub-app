@@ -26,6 +26,8 @@ import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
 import EmptyState from '@/components/platformAdmin/EmptyState'
 import PublicUrlShare from '@/components/ticketing/PublicUrlShare'
+import { VenueMapActionButtons, VenueRideShareButtons } from '@/components/portal/VenueActionButtons'
+import { appleMapsLink, copyToClipboard, googleMapsLink, lyftLink, uberLink, wazeLink } from '@/utils/venueActionLinks'
 import { useT } from '@/i18n/useI18n'
 import '../../styles/orgAdmin.css'
 
@@ -126,6 +128,8 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
   const [statusChangeTarget, setStatusChangeTarget] = useState<TicketType | null>(null)
   const [pendingVisibilityChange, setPendingVisibilityChange] = useState<'visible' | 'hidden' | null>(null)
   const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false)
+  const [copiedVenueAddress, setCopiedVenueAddress] = useState(false)
+  const [venueCopyError, setVenueCopyError] = useState<string | null>(null)
 
   const {
     data: event,
@@ -447,6 +451,26 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
   const venueLabel = event.venue_name
     ? `${event.venue_name} (${[event.venue_city, event.venue_state].filter(Boolean).join(', ')})`
     : [event.venue_city, event.venue_state].filter(Boolean).join(', ') || t('ticketing.detail.values.tbd')
+  const venueAddress = [event.venue_name, event.venue_city, event.venue_state].filter(Boolean).join(', ')
+
+  const handleCopyVenueAddress = async () => {
+    if (!venueAddress) {
+      setVenueCopyError('Nothing to copy')
+      setTimeout(() => setVenueCopyError(null), 3000)
+      return
+    }
+
+    const result = await copyToClipboard(venueAddress)
+    if (result.success) {
+      setCopiedVenueAddress(true)
+      setVenueCopyError(null)
+      setTimeout(() => setCopiedVenueAddress(false), 2000)
+      return
+    }
+
+    setVenueCopyError(result.error?.message || 'Failed to copy address')
+    setTimeout(() => setVenueCopyError(null), 3000)
+  }
 
   const lastUpdatedAt = (() => {
     const updatedAt = new Date(event.updated_at)
@@ -688,6 +712,25 @@ export default function TicketedEventDetail({ ticketedEventId, embedded = false 
             <p className="oa-ticketing-meta-item__value">{publicDescription}</p>
           </div>
         </div>
+
+        {venueAddress && (
+          <div className="oa-grid oa-grid-cols-1 md:oa-grid-cols-2 oa-gap-4" style={{ marginTop: 'var(--pa-space-4)' }}>
+            <VenueMapActionButtons
+              googleUrl={googleMapsLink(venueAddress)}
+              appleUrl={appleMapsLink(venueAddress)}
+              wazeUrl={wazeLink(venueAddress)}
+              onCopyAddress={handleCopyVenueAddress}
+              copied={copiedVenueAddress}
+              copyError={venueCopyError}
+              fullWidth
+            />
+            <VenueRideShareButtons
+              uberUrl={uberLink(venueAddress)}
+              lyftUrl={lyftLink(venueAddress)}
+              fullWidth
+            />
+          </div>
+        )}
 
         {bannerUrl && (
           <div style={{ marginTop: 'var(--pa-space-4)' }}>

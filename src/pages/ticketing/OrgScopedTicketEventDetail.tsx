@@ -21,7 +21,9 @@ import { OrgScopedRoute } from '@/components/OrgScopedRoute'
 import { showError } from '@/utils/toast'
 import { useOffline } from '@/hooks/useOffline'
 import SeatSelector from '@/components/ticketing/SeatSelector'
+import { VenueMapActionButtons, VenueRideShareButtons } from '@/components/portal/VenueActionButtons'
 import { validateAdjacentSeats } from '@/utils/ticketingHelpers'
+import { appleMapsLink, copyToClipboard, googleMapsLink, lyftLink, uberLink, wazeLink } from '@/utils/venueActionLinks'
 import { useT } from '@/i18n/useI18n'
 import { resolveTicketCheckoutRole } from '@/utils/ticketCheckoutRole'
 import { useOptionalAuth } from '@/hooks/useAuth'
@@ -50,6 +52,8 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
   const [emailTouched, setEmailTouched] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [expandedTicketType, setExpandedTicketType] = useState<TicketType | null>(null)
+  const [copiedVenueAddress, setCopiedVenueAddress] = useState(false)
+  const [venueCopyError, setVenueCopyError] = useState<string | null>(null)
 
   const eventQuery = useQuery<TicketedEvent, Error>({
     queryKey: ['ticketed-event', eventId, org.id],
@@ -341,6 +345,7 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
   const venue = event.venue_name
     ? `${event.venue_name}${event.venue_city ? `, ${event.venue_city}` : ''}${event.venue_state ? ` ${event.venue_state}` : ''}`
     : 'Location TBD'
+  const venueAddress = [event.venue_name, event.venue_city, event.venue_state].filter(Boolean).join(', ')
   const dateFormatted = eventDate.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -372,6 +377,25 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
     !ticketTypesQuery.isLoading &&
     !ticketTypesQuery.isError &&
     hasAvailableTickets
+
+  const handleCopyVenueAddress = useCallback(async () => {
+    if (!venueAddress) {
+      setVenueCopyError('Nothing to copy')
+      setTimeout(() => setVenueCopyError(null), 3000)
+      return
+    }
+
+    const result = await copyToClipboard(venueAddress)
+    if (result.success) {
+      setCopiedVenueAddress(true)
+      setVenueCopyError(null)
+      setTimeout(() => setCopiedVenueAddress(false), 2000)
+      return
+    }
+
+    setVenueCopyError(result.error?.message || 'Failed to copy address')
+    setTimeout(() => setVenueCopyError(null), 3000)
+  }, [venueAddress])
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white">
@@ -436,6 +460,29 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
             </div>
           </div>
         </div>
+
+        {venueAddress && (
+          <div className="bg-white dark:bg-gray-900 border-b border-[#f0f2f4] dark:border-gray-800 py-5">
+            <div className="max-w-[1200px] mx-auto px-6 md:px-10">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <VenueMapActionButtons
+                  googleUrl={googleMapsLink(venueAddress)}
+                  appleUrl={appleMapsLink(venueAddress)}
+                  wazeUrl={wazeLink(venueAddress)}
+                  onCopyAddress={handleCopyVenueAddress}
+                  copied={copiedVenueAddress}
+                  copyError={venueCopyError}
+                  fullWidth
+                />
+                <VenueRideShareButtons
+                  uberUrl={uberLink(venueAddress)}
+                  lyftUrl={lyftLink(venueAddress)}
+                  fullWidth
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="max-w-[1200px] mx-auto px-6 md:px-10 py-12">
           <div className="flex flex-col lg:flex-row gap-10">
