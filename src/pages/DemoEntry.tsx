@@ -195,6 +195,7 @@ export default function DemoEntry() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          apikey: supabaseAnonKey,
           'Authorization': `Bearer ${supabaseAnonKey}`,
           'X-App-Origin': window.location.origin,
         },
@@ -206,8 +207,14 @@ export default function DemoEntry() {
 
       const result: { success: boolean; redirect_url?: string; access_token?: string; refresh_token?: string; error?: string; message?: string } = await response.json()
 
+      if (!response.ok) {
+        setError(result.error || result.message || 'Failed to enter demo. Please try again.')
+        setLoading(false)
+        return
+      }
+
       if (!result.success) {
-        setError(result.error || 'Failed to enter demo. Please try again.')
+        setError(result.error || result.message || 'Failed to enter demo. Please try again.')
         setLoading(false)
         return
       }
