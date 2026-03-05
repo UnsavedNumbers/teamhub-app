@@ -12,6 +12,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
 import { searchPortalEntities, type PortalSearchResult } from '../../data/services/portalSearchService'
 import { cn } from '../../utils/cn'
+import PwaInstallCta from '../pwa/PwaInstallCta'
 
 interface PortalWorkspaceHeaderProps {
   onMenuClick?: () => void
@@ -225,6 +226,10 @@ export default function PortalWorkspaceHeader({
               {roleLabel}
             </span>
           )}
+          <PwaInstallCta
+            compactOnMobile={false}
+            buttonClassName="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-neutral-900 dark:text-gray-200 dark:hover:bg-neutral-800"
+          />
           <DemoModeBadge />
           <NotificationBell viewAllPath="/portal/notifications" neutralPalette={neutralPalette} />
           <ThemeToggle variant="icon-only" />
@@ -233,6 +238,11 @@ export default function PortalWorkspaceHeader({
       </div>
 
       <div className="mt-2 flex items-center justify-end gap-2 sm:hidden">
+        <PwaInstallCta
+          hideLabel
+          compactOnMobile
+          buttonClassName="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
+        />
         <NotificationBell viewAllPath="/portal/notifications" neutralPalette={neutralPalette} />
         <ThemeToggle variant="icon-only" />
         <UserContextDropdown neutralPalette={neutralPalette} />

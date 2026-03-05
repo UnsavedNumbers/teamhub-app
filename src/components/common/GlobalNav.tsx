@@ -3,6 +3,7 @@ import ThemeSwitcher from './ThemeSwitcher'
 import UserContextDropdown from './UserContextDropdown'
 import NotificationBell from './NotificationBell'
 import { DemoModeBadge } from '../demo/DemoModeBadge'
+import PwaInstallCta from '../pwa/PwaInstallCta'
 
 interface GlobalNavProps {
   variant: 'admin' | 'platform-admin'
@@ -33,6 +34,11 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
 
       {/* Right section */}
       <div className="gn-right">
+        <PwaInstallCta
+          compactOnMobile={false}
+          buttonClassName="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+        />
+
         {/* Demo Mode Badge */}
         <DemoModeBadge />
 

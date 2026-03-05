@@ -17,6 +17,7 @@ import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 import { athleteNavSections } from '../../utils/routes/navigation'
 import { TeamSwitcher } from './TeamSwitcher'
 import { useCoachTeamSelection } from '../../hooks/useCoachTeamSelection'
+import PwaInstallCta from '../pwa/PwaInstallCta'
 
 // ============================================================================
 // ORGANIZATION ADMIN MENU STRUCTURE
@@ -620,6 +621,11 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
 
       {/* Right section */}
       <div className="gn-right">
+        <PwaInstallCta
+          compactOnMobile={false}
+          buttonClassName="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-neutral-900 dark:text-gray-200 dark:hover:bg-neutral-800"
+        />
+
         {/* Demo Mode Badge */}
         <DemoModeBadge />
 
