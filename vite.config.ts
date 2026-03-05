@@ -56,7 +56,7 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['pwa-icon.svg'],
+        includeAssets: ['images/logo-icon.png'],
         manifest: {
           name: 'Youth Sports',
           short_name: 'YouthSports',
@@ -68,9 +68,9 @@ export default defineConfig(({ mode }) => {
           scope: '/',
           icons: [
             {
-              src: '/pwa-icon.svg',
-              sizes: 'any',
-              type: 'image/svg+xml',
+              src: '/images/logo-icon.png',
+              sizes: '1000x1000',
+              type: 'image/png',
               purpose: 'any maskable',
             },
           ],
